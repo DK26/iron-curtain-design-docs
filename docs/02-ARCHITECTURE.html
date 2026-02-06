@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-53643061.js";
+            window.path_to_searchindex_js = "searchindex-4f94752b.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-d8a85e3a.js"></script>
@@ -231,7 +231,23 @@
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// All sim-layer coordinates use fixed-point
-pub type SimCoord = i32;  // 1 unit = 1/256 of a cell
+pub type SimCoord = i32;  // 1 unit = 1/SCALE of a cell (see P002)
+
+/// Position is 3D-aware from day one.
+/// RA1 game module sets z = 0 everywhere (flat isometric).
+/// RA2/TS game module uses z for terrain elevation, bridges, aircraft altitude.
+pub struct WorldPos {
+    pub x: SimCoord,
+    pub y: SimCoord,
+    pub z: SimCoord,  // 0 for flat games (RA1), meaningful for elevated terrain (RA2/TS)
+}
+
+/// Cell position on the grid — also 3D-aware.
+pub struct CellPos {
+    pub x: i32,
+    pub y: i32,
+    pub z: i32,  // layer / elevation level (0 for RA1)
+}
 
 /// The sim is a pure function: state + orders → new state
 pub struct Simulation {
@@ -289,26 +305,19 @@ impl Simulation {
 <h2 id="ecs-design"><a class="header" href="#ecs-design">ECS Design</a></h2>
 <p>ECS is a natural fit for RTS: hundreds of units with composable behaviors.</p>
 <h3 id="component-model-mirrors-openra-traits"><a class="header" href="#component-model-mirrors-openra-traits">Component Model (mirrors OpenRA Traits)</a></h3>
-<p>OpenRA’s “traits” are effectively components. Map them directly:</p>
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th>OpenRA Trait</th><th>ECS Component</th><th>Purpose</th></tr>
-</thead>
-<tbody>
-<tr><td><code>Health</code></td><td><code>Health { current: i32, max: i32 }</code></td><td>Hit points</td></tr>
-<tr><td><code>Mobile</code></td><td><code>Mobile { speed: i32, locomotor: LocomotorType }</code></td><td>Can move</td></tr>
-<tr><td><code>Attackable</code></td><td><code>Attackable { armor: ArmorType }</code></td><td>Can be damaged</td></tr>
-<tr><td><code>Armament</code></td><td><code>Armament { weapon: WeaponId, cooldown: u32 }</code></td><td>Can attack</td></tr>
-<tr><td><code>Building</code></td><td><code>Building { footprint: Vec&lt;CellPos&gt; }</code></td><td>Occupies cells</td></tr>
-<tr><td><code>Buildable</code></td><td><code>Buildable { cost: i32, time: u32, prereqs: Vec&lt;StructId&gt; }</code></td><td>Can be built</td></tr>
-<tr><td><code>Selectable</code></td><td><code>Selectable { bounds: Rect, priority: u8 }</code></td><td>Player can select</td></tr>
-<tr><td><code>Harvester</code></td><td><code>Harvester { capacity: i32, resource: ResourceType }</code></td><td>Gathers ore</td></tr>
-<tr><td><code>Producible</code></td><td><code>Producible { queue: QueueType }</code></td><td>Produced from building</td></tr>
-</tbody>
-</table>
-</div>
-<h3 id="system-execution-order-deterministic-fixed"><a class="header" href="#system-execution-order-deterministic-fixed">System Execution Order (deterministic, fixed)</a></h3>
+<p>OpenRA’s “traits” are effectively components. Map them directly. The table below shows the <strong>RA1 game module’s</strong> default components. Other game modules (RA2, TD) register additional components — the ECS is open for extension without modifying the engine core.</p>
+<p>| OpenRA Trait | ECS Component | Purpose |
+| <code>Health</code> | <code>Health { current: i32, max: i32 }</code> | Hit points |
+| <code>Mobile</code> | <code>Mobile { speed: i32, locomotor: LocomotorType }</code> | Can move |
+| <code>Attackable</code> | <code>Attackable { armor: ArmorType }</code> | Can be damaged |
+| <code>Armament</code> | <code>Armament { weapon: WeaponId, cooldown: u32 }</code> | Can attack |
+| <code>Building</code> | <code>Building { footprint: Vec&lt;CellPos&gt; }</code> | Occupies cells |
+| <code>Buildable</code> | <code>Buildable { cost: i32, time: u32, prereqs: Vec&lt;StructId&gt; }</code> | Can be built |
+| <code>Selectable</code> | <code>Selectable { bounds: Rect, priority: u8 }</code> | Player can select |
+| <code>Harvester</code> | <code>Harvester { capacity: i32, resource: ResourceType }</code> | Gathers ore |
+| <code>Producible</code> | <code>Producible { queue: QueueType }</code> | Produced from building |</p>
+<h3 id="system-execution-order-deterministic-configurable-per-game-module"><a class="header" href="#system-execution-order-deterministic-configurable-per-game-module">System Execution Order (deterministic, configurable per game module)</a></h3>
+<p>The <strong>RA1 game module</strong> registers this system execution order:</p>
 <pre><code>Per tick:
   1. apply_orders()        — Process all player commands
   2. production_system()   — Advance build queues
@@ -319,27 +328,24 @@ impl Simulation {
   7. trigger_system()      — Check mission/map triggers
   8. fog_system()          — Update visibility
 </code></pre>
-<p>Order is fixed and documented. Changing it changes gameplay and breaks replay compatibility.</p>
+<p>Order is fixed <em>per game module</em> and documented. Changing it changes gameplay and breaks replay compatibility.</p>
+<p>A different game module (e.g., RA2) can insert additional systems (garrison, mind control, prism forwarding) at defined points. The engine runs whatever systems the active game module registers, in the order it specifies. The engine itself doesn’t know which game is running — it just executes the registered system pipeline deterministically.</p>
 <h2 id="game-loop"><a class="header" href="#game-loop">Game Loop</a></h2>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
-</span>pub struct GameLoop&lt;N: NetworkModel&gt; {
+</span>pub struct GameLoop&lt;N: NetworkModel, I: InputSource&gt; {
     sim: Simulation,
     renderer: Renderer,
     network: N,
-    input: InputHandler,
+    input: I,
     local_player: PlayerId,
 }
 
-impl&lt;N: NetworkModel&gt; GameLoop&lt;N&gt; {
+impl&lt;N: NetworkModel, I: InputSource&gt; GameLoop&lt;N, I&gt; {
     fn frame(&amp;mut self) {
         // 1. Gather local input with sub-tick timestamps
         for order in self.input.drain_orders() {
-            self.network.submit_order(TimestampedOrder {
-                player: self.local_player,
-                order,
-                sub_tick_time: self.frame_time_within_tick(),
-            });
+            self.network.submit_order(order);
         }
 
         // 2. Advance sim as far as confirmed orders allow
@@ -356,10 +362,81 @@ impl&lt;N: NetworkModel&gt; GameLoop&lt;N&gt; {
     }
 }
 <span class="boring">}</span></code></pre>
-<p><strong>Key property:</strong> <code>GameLoop</code> is generic over <code>N: NetworkModel</code>. It has zero knowledge of whether it’s running single-player, lockstep multiplayer, rollback, or cross-engine play. This is the central architectural guarantee.</p>
+<p><strong>Key property:</strong> <code>GameLoop</code> is generic over <code>N: NetworkModel</code> and <code>I: InputSource</code>. It has zero knowledge of whether it’s running single-player or multiplayer, or whether input comes from a mouse, touchscreen, or gamepad. This is the central architectural guarantee.</p>
 <h2 id="pathfinding"><a class="header" href="#pathfinding">Pathfinding</a></h2>
 <p><strong>Decision:</strong> Hierarchical A* or flowfields — leap ahead of OpenRA’s basic A*.</p>
 <p>OpenRA uses standard A* which struggles with large unit groups. Hierarchical pathfinding or flowfields handle mass unit movement far better and are well-suited to the grid-based terrain.</p>
+<h2 id="platform-portability"><a class="header" href="#platform-portability">Platform Portability</a></h2>
+<p>The engine must not create obstacles for any platform. Desktop is the primary dev target, but every architectural choice must be portable to browser (WASM), mobile (Android/iOS), and consoles without rework.</p>
+<h3 id="portability-design-rules"><a class="header" href="#portability-design-rules">Portability Design Rules</a></h3>
+<ol>
+<li>
+<p><strong>Input is abstracted behind a trait.</strong> <code>InputSource</code> produces <code>PlayerOrder</code>s — it knows nothing about mice, keyboards, touchscreens, or gamepads. The game loop consumes orders, not raw input events. Each platform provides its own <code>InputSource</code> implementation.</p>
+</li>
+<li>
+<p><strong>UI layout is responsive.</strong> No hardcoded pixel positions. The sidebar, minimap, and build queue use constraint-based layout that adapts to screen size and aspect ratio. Mobile/tablet may use a completely different layout (bottom bar instead of sidebar). <code>ra-ui</code> provides layout <em>profiles</em>, not a single fixed layout.</p>
+</li>
+<li>
+<p><strong>Click-to-world is abstracted behind a trait.</strong> Isometric screen→cell (desktop), touch→cell (mobile), and raycast→cell (3D mod) all implement the same <code>ScreenToWorld</code> trait, producing a <code>CellPos</code>. No isometric math hardcoded in the game loop.</p>
+</li>
+<li>
+<p><strong>Render quality is configurable per device.</strong> FPS cap, particle density, post-FX toggles, resolution scaling, shadow quality — all runtime-configurable. Mobile caps at 30fps; desktop targets 60-240fps. The renderer reads a <code>RenderSettings</code> resource, not compile-time constants.</p>
+</li>
+<li>
+<p><strong>No raw filesystem I/O.</strong> All asset loading goes through Bevy’s asset system, never <code>std::fs</code> directly. Mobile and browser have sandboxed filesystems; WASM has no filesystem at all. Save games use platform-appropriate storage (e.g., <code>localStorage</code> on web, app sandbox on mobile).</p>
+</li>
+<li>
+<p><strong>App lifecycle is handled.</strong> Mobile and consoles require suspend/resume/save-on-background. The snapshottable sim makes this trivial — <code>snapshot()</code> on suspend, <code>restore()</code> on resume. This must be an engine-level lifecycle hook, not an afterthought.</p>
+</li>
+<li>
+<p><strong>Audio backend is abstracted.</strong> Bevy handles this, but no code should assume a specific audio API. Platform-specific audio routing (e.g., phone speaker vs headphones, console audio mixing policies) is Bevy’s concern.</p>
+</li>
+</ol>
+<h3 id="platform-target-matrix"><a class="header" href="#platform-target-matrix">Platform Target Matrix</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Platform</th><th>Graphics API</th><th>Input Model</th><th>Key Challenge</th><th>Phase</th></tr>
+</thead>
+<tbody>
+<tr><td>Windows / macOS / Linux</td><td>Vulkan / Metal / DX12</td><td>Mouse + keyboard</td><td>Primary target</td><td>1</td></tr>
+<tr><td>Steam Deck</td><td>Vulkan (native Linux)</td><td>Gamepad + touchpad</td><td>Gamepad UI controls</td><td>3</td></tr>
+<tr><td>Browser (WASM)</td><td>WebGPU / WebGL2</td><td>Mouse + keyboard + touch</td><td>Download size, no filesystem</td><td>7</td></tr>
+<tr><td>Android / iOS</td><td>Vulkan / Metal (via wgpu)</td><td>Touch + on-screen controls</td><td>Touch RTS controls, battery, screen size</td><td>8+</td></tr>
+<tr><td>Xbox</td><td>DX12 (via GDK)</td><td>Gamepad</td><td>NDA SDK, certification</td><td>8+</td></tr>
+<tr><td>PlayStation</td><td>AGC (proprietary)</td><td>Gamepad</td><td>wgpu doesn’t support AGC yet, NDA SDK</td><td>Future</td></tr>
+<tr><td>Nintendo Switch</td><td>NVN / Vulkan</td><td>Gamepad + touch (handheld)</td><td>NDA SDK, limited GPU</td><td>Future</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="input-abstraction"><a class="header" href="#input-abstraction">Input Abstraction</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Platform-agnostic input source. Each platform implements this.
+pub trait InputSource {
+    /// Drain pending player orders from whatever input device is active.
+    fn drain_orders(&amp;mut self) -&gt; Vec&lt;TimestampedOrder&gt;;
+
+    /// Optional: hint about input capabilities for UI adaptation.
+    fn capabilities(&amp;self) -&gt; InputCapabilities;
+}
+
+pub struct InputCapabilities {
+    pub has_mouse: bool,
+    pub has_keyboard: bool,
+    pub has_touch: bool,
+    pub has_gamepad: bool,
+    pub screen_size: ScreenClass,  // Phone, Tablet, Desktop, TV
+}
+
+pub enum ScreenClass {
+    Phone,    // &lt; 7" — bottom bar UI, large touch targets
+    Tablet,   // 7-13" — sidebar OK, touch targets
+    Desktop,  // 13"+ — full sidebar, mouse precision
+    TV,       // 40"+ — large text, gamepad radial menus
+}
+<span class="boring">}</span></code></pre>
+<p><code>ra-ui</code> reads <code>InputCapabilities</code> to choose the appropriate layout profile. The sim never sees any of this.</p>
 <h2 id="crate-dependency-graph"><a class="header" href="#crate-dependency-graph">Crate Dependency Graph</a></h2>
 <pre><code>ra-protocol  (shared types: PlayerOrder, TimestampedOrder)
     ↑
@@ -374,6 +451,137 @@ impl&lt;N: NetworkModel&gt; GameLoop&lt;N&gt; {
     └── ra-engine   (depends on: everything above)
 </code></pre>
 <p><strong>Critical boundary:</strong> <code>ra-sim</code> never imports from <code>ra-net</code>. <code>ra-net</code> never imports from <code>ra-sim</code>. They only share <code>ra-protocol</code>.</p>
+<h2 id="multi-game-extensibility-game-modules"><a class="header" href="#multi-game-extensibility-game-modules">Multi-Game Extensibility (Game Modules)</a></h2>
+<p>The engine is designed as a <strong>game-agnostic RTS framework</strong> with Red Alert as the first game module. The same engine should be able to run RA2, Tiberian Dawn, Dune 2000, or an original game as a different game module — like OpenRA runs TD, RA, and D2K on one engine.</p>
+<h3 id="game-module-concept"><a class="header" href="#game-module-concept">Game Module Concept</a></h3>
+<p>A game module is a bundle of:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Each supported game implements this trait.
+pub trait GameModule {
+    /// Register ECS components (unit types, mechanics) into the world.
+    fn register_components(&amp;self, world: &amp;mut World);
+
+    /// Return the ordered system pipeline for this game's simulation tick.
+    fn system_pipeline(&amp;self) -&gt; Vec&lt;Box&lt;dyn System&gt;&gt;;
+
+    /// Register format loaders (e.g., .vxl for RA2, .shp for RA1).
+    fn register_format_loaders(&amp;self, registry: &amp;mut FormatRegistry);
+
+    /// Register render backends (sprite renderer, voxel renderer, etc.).
+    fn register_renderers(&amp;self, registry: &amp;mut RenderRegistry);
+
+    /// YAML rule schema for this game's unit definitions.
+    fn rule_schema(&amp;self) -&gt; RuleSchema;
+}
+<span class="boring">}</span></code></pre>
+<h3 id="what-the-engine-provides-game-agnostic"><a class="header" href="#what-the-engine-provides-game-agnostic">What the engine provides (game-agnostic)</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Layer</th><th>Game-Agnostic</th><th>Game-Module-Specific</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Sim core</strong></td><td><code>Simulation</code>, <code>apply_tick()</code>, <code>snapshot()</code>, state hashing, order validation pipeline</td><td>Components, systems, rules, resource types</td></tr>
+<tr><td><strong>Positions</strong></td><td><code>WorldPos { x, y, z }</code>, <code>CellPos { x, y, z }</code>, pathfinding grid</td><td>Whether Z is used (RA1: flat, RA2: elevation)</td></tr>
+<tr><td><strong>Networking</strong></td><td><code>NetworkModel</code> trait, relay server, lockstep, replays</td><td><code>PlayerOrder</code> variants (game-specific commands)</td></tr>
+<tr><td><strong>Rendering</strong></td><td>Camera, sprite batching, post-FX pipeline, UI framework</td><td>Sprite renderer (RA1), voxel renderer (RA2), terrain elevation</td></tr>
+<tr><td><strong>Modding</strong></td><td>YAML loader, Lua runtime, WASM sandbox, workshop</td><td>Rule schemas, API surface exposed to scripts</td></tr>
+<tr><td><strong>Formats</strong></td><td><code>.mix</code> parser, archive loading</td><td><code>.shp</code> variant (RA1), <code>.vxl</code>/<code>.hva</code> (RA2), map format</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="ra2-extension-points"><a class="header" href="#ra2-extension-points">RA2 Extension Points</a></h3>
+<p>RA2 / Tiberian Sun would add these to the existing engine without modifying the core:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Extension</th><th>What It Adds</th><th>Engine Change Required</th></tr>
+</thead>
+<tbody>
+<tr><td>Voxel models (<code>.vxl</code>, <code>.hva</code>)</td><td>New format parsers</td><td>None — additive to <code>ra-formats</code></td></tr>
+<tr><td>Terrain elevation</td><td>Z-axis in pathfinding, ramps, cliffs</td><td>None — <code>WorldPos.z</code> and <code>CellPos.z</code> are already there</td></tr>
+<tr><td>Voxel rendering</td><td>GPU voxel-to-sprite at runtime</td><td>New render backend in <code>RenderRegistry</code></td></tr>
+<tr><td>Garrison mechanic</td><td><code>Garrisonable</code>, <code>Garrisoned</code> components + system</td><td>New components + system in pipeline</td></tr>
+<tr><td>Mind control</td><td><code>MindController</code>, <code>MindControlled</code> components + system</td><td>New components + system in pipeline</td></tr>
+<tr><td>IFV weapon swap</td><td><code>WeaponOverride</code> component</td><td>New component</td></tr>
+<tr><td>Prism forwarding</td><td><code>PrismForwarder</code> component + chain calculation system</td><td>New component + system</td></tr>
+<tr><td>Bridges / tunnels</td><td>Layered pathing with Z transitions</td><td>Uses existing <code>CellPos.z</code></td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="scope-boundary-the-isometric-cc-family"><a class="header" href="#scope-boundary-the-isometric-cc-family">Scope Boundary: The Isometric C&amp;C Family</a></h3>
+<p>Multi-game extensibility targets the <strong>isometric C&amp;C family</strong>: Red Alert, Red Alert 2, Tiberian Sun, Tiberian Dawn, and Dune 2000 (plus expansions and total conversions in the same visual paradigm). These games share:</p>
+<ul>
+<li>Fixed isometric camera</li>
+<li>Grid-based terrain (with optional elevation for TS/RA2)</li>
+<li>Sprite and/or voxel-to-sprite rendering</li>
+<li><code>.mix</code> archives and related format lineage</li>
+<li>Discrete cell-based pathfinding (flowfields, hierarchical A*)</li>
+</ul>
+<p><strong>C&amp;C Generals and later 3D titles (C&amp;C3, RA3) are out of scope.</strong> They use free-rotating 3D cameras, mesh-based rendering, continuous-space pathfinding (navmesh), and completely unrelated file formats (<code>.big</code>, <code>.w3d</code>). Supporting them would require replacing ~60% of the engine (renderer, pathfinding, coordinate system, format parsers) — at that point it’s a separate project borrowing the sim core, not a game module.</p>
+<p>If a Generals-class game is desired in the future, the correct approach is to extract the game-agnostic crates (<code>ra-sim</code>, <code>ra-protocol</code>, <code>ra-net</code>, <code>ra-script</code>) into a shared RTS framework library and build a 3D frontend independently. The <code>GameModule</code> trait and deterministic sim architecture make this feasible without forking.</p>
+<h3 id="3d-rendering-as-a-mod-not-a-game-module"><a class="header" href="#3d-rendering-as-a-mod-not-a-game-module">3D Rendering as a Mod (Not a Game Module)</a></h3>
+<p>While 3D C&amp;C titles are out of scope as <em>game modules</em>, the architecture explicitly supports <strong>3D rendering mods</strong> for isometric-family games. A “3D Red Alert” mod replaces the visual presentation while the simulation, networking, pathfinding, and rules are completely unchanged.</p>
+<p>This works because the sim/render split is absolute — the sim has no concept of camera, sprites, or visual style. Bevy already ships a full 3D pipeline (PBR materials, GLTF loading, skeletal animation, dynamic lighting, shadows), so a 3D render mod leverages existing infrastructure.</p>
+<p><strong>What changes vs. what doesn’t:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Layer</th><th>3D Mod Changes?</th><th>Details</th></tr>
+</thead>
+<tbody>
+<tr><td>Simulation</td><td>No</td><td>Same tick, same rules, same grid</td></tr>
+<tr><td>Pathfinding</td><td>No</td><td>Grid-based flowfields still work (SC2 is 3D but uses grid pathing)</td></tr>
+<tr><td>Networking</td><td>No</td><td>Orders are orders</td></tr>
+<tr><td>Rules / YAML</td><td>No</td><td>Tank still costs 800, has 400 HP</td></tr>
+<tr><td>Rendering</td><td>Yes</td><td>Sprites → GLTF meshes, isometric camera → free 3D camera</td></tr>
+<tr><td>Input mapping</td><td>Yes</td><td>Click-to-world changes from isometric transform to 3D raycast</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Architectural requirements to enable this:</strong></p>
+<ol>
+<li><strong><code>Renderable</code> trait is mod-swappable.</strong> A WASM Tier 3 mod can register a 3D render backend that replaces the default sprite renderer.</li>
+<li><strong>Camera system is configurable.</strong> Default is fixed isometric; a 3D mod substitutes a free-rotating perspective camera. The camera is purely a render concern — the sim has no camera concept.</li>
+<li><strong>Asset pipeline accepts 3D models.</strong> Bevy natively loads GLTF/GLB. The mod maps unit IDs to 3D model paths in YAML:</li>
+</ol>
+<pre><code class="language-yaml"># Classic 2D (default)
+rifle_infantry:
+  render:
+    type: sprite
+    sequences: e1
+
+# 3D mod override
+rifle_infantry:
+  render:
+    type: mesh
+    model: models/infantry/rifle.glb
+    animations:
+      idle: Idle
+      move: Run
+      attack: Shoot
+</code></pre>
+<ol start="4">
+<li><strong>Click-to-world abstracted behind trait.</strong> Isometric screen→cell is a linear transform. 3D perspective screen→cell is a raycast. Both produce a <code>CellPos</code>.</li>
+<li><strong>Terrain rendering decoupled from terrain data.</strong> The sim’s grid is authoritative. A 3D mod provides visual terrain geometry that matches the grid layout.</li>
+</ol>
+<p><strong>Key benefits:</strong></p>
+<ul>
+<li><strong>Cross-view multiplayer.</strong> A player running 3D can play against a player running classic isometric — the sim is identical. Like StarCraft Remastered’s graphics toggle, but more radical.</li>
+<li><strong>Cross-view replays.</strong> Watch any replay in 2D or 3D.</li>
+<li><strong>Orthogonal to gameplay mods.</strong> A balance mod works in both views. A 3D graphics mod stacks with a gameplay mod.</li>
+</ul>
+<p>This is a <strong>Tier 3 (WASM) mod</strong> — it replaces a rendering backend, which is too deep for YAML or Lua. See <code>04-MODDING.md</code> for details.</p>
+<h3 id="design-rules-for-multi-game-safety"><a class="header" href="#design-rules-for-multi-game-safety">Design Rules for Multi-Game Safety</a></h3>
+<ol>
+<li><strong>No game-specific enums in engine core.</strong> Don’t put <code>enum ResourceType { Ore, Gems }</code> in <code>ra-sim</code>. Resource types come from YAML rules / game module registration.</li>
+<li><strong>Position is always 3D.</strong> <code>WorldPos</code> and <code>CellPos</code> carry Z. RA1 sets it to 0. The cost is one extra <code>i32</code> per position — negligible.</li>
+<li><strong>System pipeline is data, not code.</strong> The game module returns its system list; the engine executes it. No hardcoded <code>harvester_system()</code> call in engine core.</li>
+<li><strong>Render through <code>Renderable</code> trait.</strong> Sprites and voxels implement the same trait. The renderer doesn’t know what it’s drawing.</li>
+<li><strong>Format loaders are pluggable.</strong> <code>ra-formats</code> provides parsers; the game module tells the asset pipeline which ones to use.</li>
+<li><strong><code>PlayerOrder</code> is extensible.</strong> Use an enum with a <code>Custom(GameSpecificOrder)</code> variant, or make orders generic over the game module.</li>
+</ol>
 
                     </main>
 

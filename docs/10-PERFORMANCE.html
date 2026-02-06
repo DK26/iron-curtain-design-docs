@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-53643061.js";
+            window.path_to_searchindex_js = "searchindex-4f94752b.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-d8a85e3a.js"></script>
@@ -409,16 +409,16 @@ fn movement_system(mut query: Query&lt;(&amp;mut Position, &amp;Velocity)&gt;) {
 <div class="table-wrapper">
 <table>
 <thead>
-<tr><th>Metric</th><th>Weak Machine (2 core, 4GB)</th><th>Mid Machine (8 core, 16GB)</th><th>Strong Machine (16 core, 32GB)</th></tr>
+<tr><th>Metric</th><th>Weak Machine (2 core, 4GB)</th><th>Mid Machine (8 core, 16GB)</th><th>Strong Machine (16 core, 32GB)</th><th>Mobile (phone/tablet)</th><th>Browser (WASM)</th></tr>
 </thead>
 <tbody>
-<tr><td>Smooth battle size</td><td>500 units</td><td>2000 units</td><td>3000+ units</td></tr>
-<tr><td>Tick time budget</td><td>66ms (15 tps)</td><td>66ms (15 tps)</td><td>33ms (30 tps)</td></tr>
-<tr><td>Actual tick time (target)</td><td>&lt; 40ms</td><td>&lt; 10ms</td><td>&lt; 5ms</td></tr>
-<tr><td>Render framerate</td><td>60fps</td><td>144fps</td><td>240fps</td></tr>
-<tr><td>RAM usage (1000 units)</td><td>&lt; 150MB</td><td>&lt; 200MB</td><td>&lt; 200MB</td></tr>
-<tr><td>Startup to menu</td><td>&lt; 3 seconds</td><td>&lt; 1 second</td><td>&lt; 1 second</td></tr>
-<tr><td>Per-tick heap allocation</td><td>0 bytes</td><td>0 bytes</td><td>0 bytes</td></tr>
+<tr><td>Smooth battle size</td><td>500 units</td><td>2000 units</td><td>3000+ units</td><td>200 units</td><td>300 units</td></tr>
+<tr><td>Tick time budget</td><td>66ms (15 tps)</td><td>66ms (15 tps)</td><td>33ms (30 tps)</td><td>66ms (15 tps)</td><td>66ms (15 tps)</td></tr>
+<tr><td>Actual tick time (target)</td><td>&lt; 40ms</td><td>&lt; 10ms</td><td>&lt; 5ms</td><td>&lt; 50ms</td><td>&lt; 40ms</td></tr>
+<tr><td>Render framerate</td><td>60fps</td><td>144fps</td><td>240fps</td><td>30fps</td><td>60fps</td></tr>
+<tr><td>RAM usage (1000 units)</td><td>&lt; 150MB</td><td>&lt; 200MB</td><td>&lt; 200MB</td><td>&lt; 100MB</td><td>&lt; 100MB</td></tr>
+<tr><td>Startup to menu</td><td>&lt; 3 seconds</td><td>&lt; 1 second</td><td>&lt; 1 second</td><td>&lt; 5 seconds</td><td>&lt; 8 seconds (incl. download)</td></tr>
+<tr><td>Per-tick heap allocation</td><td>0 bytes</td><td>0 bytes</td><td>0 bytes</td><td>0 bytes</td><td>0 bytes</td></tr>
 </tbody>
 </table>
 </div>

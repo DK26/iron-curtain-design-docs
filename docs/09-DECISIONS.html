@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-53643061.js";
+            window.path_to_searchindex_js = "searchindex-4f94752b.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-d8a85e3a.js"></script>
@@ -424,6 +424,36 @@
 <li>Phase 7: full visual pipeline (dynamic lighting, particles, weather, cinematic camera)</li>
 </ul>
 <p><strong>Design principle:</strong> The game should look like Red Alert remembered through rose-tinted glasses. Better than you remember, but unmistakably Red Alert.</p>
+<hr>
+<h2 id="d018-multi-game-extensibility-game-modules"><a class="header" href="#d018-multi-game-extensibility-game-modules">D018: Multi-Game Extensibility (Game Modules)</a></h2>
+<p><strong>Decision:</strong> Design the engine as a game-agnostic RTS framework. Red Alert is the first “game module”; RA2, Tiberian Dawn, and original games should be addable as additional modules without modifying core engine code.</p>
+<p><strong>Rationale:</strong></p>
+<ul>
+<li>OpenRA already proves this works — runs TD, RA, and D2K on one engine via different trait/component sets</li>
+<li>The ECS architecture naturally supports this (composable components, pluggable systems)</li>
+<li>Prevents RA1 assumptions from hardening into architectural constraints that require rewrites later</li>
+<li>Broadens the project’s audience and contributor base</li>
+<li>RA2 is the most-requested extension — community interest is proven (Chrono Divide exists)</li>
+</ul>
+<p><strong>Concrete changes (baked in from Phase 0):</strong></p>
+<ol>
+<li><code>WorldPos</code> and <code>CellPos</code> carry a Z coordinate from day one (RA1 sets z=0)</li>
+<li>System execution order is registered per game module, not hardcoded in engine</li>
+<li>No game-specific enums in engine core — resource types, unit categories come from YAML / module registration</li>
+<li>Renderer uses a <code>Renderable</code> trait — sprite and voxel backends implement it equally</li>
+<li><code>GameModule</code> trait bundles component registration, system pipeline, format loaders, and render backends</li>
+<li><code>PlayerOrder</code> is extensible to game-specific commands</li>
+</ol>
+<p><strong>What this does NOT mean:</strong></p>
+<ul>
+<li>We don’t build RA2 support now. Red Alert is the sole focus until it ships.</li>
+<li>We don’t add speculative abstractions. Only the six concrete changes above.</li>
+<li>We don’t rename crates from <code>ra-*</code> — the project identity is Red Alert. Game modules extend it.</li>
+</ul>
+<p><strong>Scope boundary — the isometric C&amp;C family:</strong>
+Game module extensibility targets: Red Alert, RA2, Tiberian Sun, Tiberian Dawn, Dune 2000. These share the isometric camera, grid-based terrain, sprite/voxel rendering, and <code>.mix</code> format lineage. <strong>3D titles (Generals, C&amp;C3, RA3) are out of scope as game modules</strong> — they require free-rotating cameras, mesh rendering, navmesh pathfinding, and unrelated formats. ~60% of the engine wouldn’t carry over. If desired later, extract the game-agnostic sim core into a shared RTS framework crate and build a 3D frontend independently.</p>
+<p>However, <strong>3D rendering mods for isometric-family games are explicitly supported.</strong> A “3D Red Alert” Tier 3 mod can replace sprites with GLTF meshes and the isometric camera with a free 3D camera — without changing the sim, networking, or pathfinding. Bevy’s built-in 3D pipeline makes this feasible. Cross-view multiplayer (2D vs 3D players in the same game) works because the sim is view-agnostic. See <code>02-ARCHITECTURE.md</code> § “3D Rendering as a Mod”.</p>
+<p><strong>Phase:</strong> Baked into architecture from Phase 0. RA2 module is a potential Phase 8+ project.</p>
 <hr>
 <h2 id="pending-decisions"><a class="header" href="#pending-decisions">PENDING DECISIONS</a></h2>
 <div class="table-wrapper">

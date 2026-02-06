@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-53643061.js";
+            window.path_to_searchindex_js = "searchindex-4f94752b.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-d8a85e3a.js"></script>
@@ -370,6 +370,56 @@ pub enum NetworkAccess {
     // NEVER unrestricted
 }
 <span class="boring">}</span></code></pre>
+<h3 id="3d-rendering-mods-tier-3-showcase"><a class="header" href="#3d-rendering-mods-tier-3-showcase">3D Rendering Mods (Tier 3 Showcase)</a></h3>
+<p>The most powerful example of Tier 3 modding: replacing the entire visual presentation with 3D rendering. A “3D Red Alert” mod swaps sprites for GLTF meshes and the isometric camera for a free-rotating 3D camera — while the simulation, networking, pathfinding, and rules are completely unchanged.</p>
+<p>This works because Bevy already ships a full 3D pipeline. The mod doesn’t build a 3D engine — it uses Bevy’s existing 3D renderer through the WASM mod API.</p>
+<p><strong>A 3D render mod implements:</strong></p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>// WASM mod: replaces the default sprite renderer
+impl Renderable for MeshRenderer {
+    fn render(&amp;self, entity: EntityId, state: &amp;RenderState, ctx: &amp;mut RenderContext) {
+        let model = self.models.get(entity.unit_type);
+        let animation = match state.activity {
+            Activity::Idle =&gt; &amp;model.idle,
+            Activity::Moving =&gt; &amp;model.walk,
+            Activity::Attacking =&gt; &amp;model.attack,
+        };
+        ctx.draw_mesh(model.mesh, state.world_pos, state.facing, animation);
+    }
+}
+
+impl CameraController for FreeCam3D {
+    fn screen_to_cell(&amp;self, screen_pos: Vec2, terrain: &amp;TerrainData) -&gt; CellPos {
+        // 3D raycast against terrain mesh → grid cell
+        let ray = self.camera.screen_to_ray(screen_pos);
+        terrain.raycast(ray).to_cell_pos()
+    }
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Assets are mapped in YAML (mod overrides unit render definitions):</strong></p>
+<pre><code class="language-yaml"># 3d_mod/render_overrides.yaml
+rifle_infantry:
+  render:
+    type: mesh
+    model: models/infantry/rifle.glb
+    animations:
+      idle: Idle
+      move: Run
+      attack: Shoot
+      death: Death
+
+medium_tank:
+  render:
+    type: mesh
+    model: models/vehicles/medium_tank.glb
+    turret: models/vehicles/medium_tank_turret.glb
+    animations:
+      idle: Idle
+      move: Drive
+</code></pre>
+<p><strong>Cross-view multiplayer is a natural consequence.</strong> Since the mod only changes rendering, a player using the 3D mod can play against a player using classic isometric sprites. The sim produces identical state; each client just draws it differently. Replays are viewable in either mode.</p>
+<p>See <code>02-ARCHITECTURE.md</code> § “3D Rendering as a Mod” for the full architectural rationale.</p>
 <h2 id="tera-templating--mission-templates-phase-6"><a class="header" href="#tera-templating--mission-templates-phase-6">Tera Templating &amp; Mission Templates (Phase 6)</a></h2>
 <h3 id="tera-as-the-template-engine"><a class="header" href="#tera-as-the-template-engine">Tera as the Template Engine</a></h3>
 <p>Tera is a Rust-native Jinja2-compatible template engine. It handles two roles in the modding system:</p>
