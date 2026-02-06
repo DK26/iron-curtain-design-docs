@@ -1,0 +1,2170 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Iron Curtain — Design Documentation</title>
+        <meta name="robots" content="noindex">
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Design docs for a Rust-native Red Alert RTS engine">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="favicon-8114d1fc.png">
+        <link rel="stylesheet" href="css/variables-8adf115d.css">
+        <link rel="stylesheet" href="css/general-2459343d.css">
+        <link rel="stylesheet" href="css/chrome-ae938929.css">
+        <link rel="stylesheet" href="css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "searchindex-f7729c0f.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc-d8a85e3a.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Iron Curtain — Design Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="iron-curtain--design-documentation"><a class="header" href="#iron-curtain--design-documentation">Iron Curtain — Design Documentation</a></h1>
+<h2 id="project-rust-native-red-alert-rts-engine"><a class="header" href="#project-rust-native-red-alert-rts-engine">Project: Rust-Native Red Alert RTS Engine</a></h2>
+<p><strong>Status:</strong> Pre-development (design phase)
+<strong>Date:</strong> 2026-02-06
+<strong>Codename:</strong> Iron Curtain</p>
+<h2 id="what-this-is"><a class="header" href="#what-this-is">What This Is</a></h2>
+<p>A Rust-native RTS engine that supports OpenRA resource formats (<code>.mix</code>, <code>.shp</code>, <code>.pal</code>, YAML rules), reimagines internals with modern architecture, and aims to eventually supersede OpenRA by offering superior performance, modding, and portability. Not a clone or port — a genuine improvement with OpenRA mod compatibility as the migration path.</p>
+<h2 id="document-index"><a class="header" href="#document-index">Document Index</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>#</th><th>Document</th><th>Purpose</th><th>Read When…</th></tr>
+</thead>
+<tbody>
+<tr><td>01</td><td><code>01-VISION.md</code></td><td>Project goals, competitive landscape, why this should exist</td><td>You need to understand the project’s purpose and market position</td></tr>
+<tr><td>02</td><td><code>02-ARCHITECTURE.md</code></td><td>Core architecture: crate structure, ECS, sim/render split, game loop</td><td>You need to make any structural or code-level decision</td></tr>
+<tr><td>03</td><td><code>03-NETCODE.md</code></td><td>Network models, CS2 sub-tick insights, relay server, pluggable trait</td><td>You’re working on multiplayer, networking, or the sim/network boundary</td></tr>
+<tr><td>04</td><td><code>04-MODDING.md</code></td><td>YAML rules, Lua scripting, WASM modules, templating</td><td>You’re working on data formats, scripting, or mod support</td></tr>
+<tr><td>05</td><td><code>05-FORMATS.md</code></td><td>File formats, original source code insights, compatibility layer</td><td>You’re working on asset loading, ra-formats crate, or OpenRA interop</td></tr>
+<tr><td>06</td><td><code>06-SECURITY.md</code></td><td>Threat model, vulnerabilities, mitigations for online play</td><td>You’re working on networking, modding sandbox, or anti-cheat</td></tr>
+<tr><td>07</td><td><code>07-CROSS-ENGINE.md</code></td><td>Cross-engine compatibility, protocol adapters, reconciliation</td><td>You’re exploring OpenRA interop or multi-engine play</td></tr>
+<tr><td>08</td><td><code>08-ROADMAP.md</code></td><td>36-month development plan with phased milestones</td><td>You need to plan work or understand phase dependencies</td></tr>
+<tr><td>09</td><td><code>09-DECISIONS.md</code></td><td>Decision log with rationale for every major choice</td><td>You want to understand WHY a decision was made, or revisit one</td></tr>
+<tr><td>10</td><td><code>10-PERFORMANCE.md</code></td><td>Efficiency-first performance philosophy, targets, profiling</td><td>You’re optimizing a system, choosing algorithms, or adding parallelism</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="key-architectural-invariants"><a class="header" href="#key-architectural-invariants">Key Architectural Invariants</a></h2>
+<p>These are non-negotiable across the entire project:</p>
+<ol>
+<li><strong>Simulation is pure and deterministic.</strong> No I/O, no floats, no network awareness. Takes orders, produces state. Period.</li>
+<li><strong>Network model is pluggable via trait.</strong> Game loop is generic over <code>NetworkModel</code>. Swapping lockstep for rollback touches zero sim code.</li>
+<li><strong>Modding is tiered.</strong> YAML (data) → Lua (scripting) → WASM (power). Each tier is optional and sandboxed.</li>
+<li><strong>Bevy as framework.</strong> ECS scheduling, rendering, asset pipeline, audio — Bevy handles infrastructure so we focus on game logic. Custom render passes and SIMD only where profiling justifies it.</li>
+<li><strong>Efficiency-first performance.</strong> Better algorithms, cache-friendly ECS, zero-allocation hot paths, simulation LOD, amortized work — THEN multi-core as a bonus layer. A 2-core laptop must run 500 units smoothly.</li>
+<li><strong>Efficiency-first performance.</strong> Better algorithms, cache-friendly ECS, zero-allocation hot paths, simulation LOD, amortized work — THEN multi-core as a bonus layer. A 2-core laptop must run 500 units smoothly.</li>
+<li><strong>Real YAML, not MiniYAML.</strong> Standard <code>serde_yaml</code> with inheritance resolved at load time.</li>
+<li><strong>OpenRA compatibility is at the data/community layer, not the simulation layer.</strong> Same mods, same maps, shared server browser — but not bit-identical simulation.</li>
+<li><strong>Full resource compatibility with Red Alert and OpenRA.</strong> Every .mix, .shp, .pal, .aud, .oramap, and YAML rule file from the original game and OpenRA must load correctly. This is non-negotiable — the community’s existing work is sacred.</li>
+</ol>
+<h2 id="crate-structure-overview"><a class="header" href="#crate-structure-overview">Crate Structure Overview</a></h2>
+<pre><code>iron-curtain/
+├── ra-formats     # .mix, .shp, .pal, YAML parsing, MiniYAML converter
+├── ra-sim         # Deterministic simulation (Bevy FixedUpdate systems)
+├── ra-protocol    # PlayerOrder, TimestampedOrder, OrderCodec trait
+├── ra-net         # NetworkModel trait + implementations (Bevy plugins)
+├── ra-render      # Isometric rendering, shaders, post-FX (Bevy plugin)
+├── ra-ui          # Game chrome: sidebar, minimap, build queue (Bevy UI)
+├── ra-audio       # .aud playback, EVA, music (Bevy audio plugin)
+├── ra-script      # Lua + WASM mod runtimes
+├── ra-ai          # Skirmish AI, mission scripting
+├── ra-llm         # LLM mission/campaign generation, adaptive difficulty
+└── ra-game        # Top-level Bevy App, ties all plugins together
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="01--vision--competitive-landscape"><a class="header" href="#01--vision--competitive-landscape">01 — Vision &amp; Competitive Landscape</a></h1>
+<h2 id="project-vision"><a class="header" href="#project-vision">Project Vision</a></h2>
+<p>Build a Rust-native RTS engine that:</p>
+<ul>
+<li>Supports OpenRA resource formats (<code>.mix</code>, <code>.shp</code>, <code>.pal</code>, YAML rules)</li>
+<li>Reimagines internals with modern architecture (not a port)</li>
+<li>Offers superior performance, modding, portability, and multiplayer</li>
+<li>Provides OpenRA mod compatibility as the zero-cost migration path</li>
+</ul>
+<h2 id="why-this-deserves-to-exist"><a class="header" href="#why-this-deserves-to-exist">Why This Deserves to Exist</a></h2>
+<h3 id="capabilities-beyond-openra-and-the-remastered-collection"><a class="header" href="#capabilities-beyond-openra-and-the-remastered-collection">Capabilities Beyond OpenRA and the Remastered Collection</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Capability</th><th>Remastered Collection</th><th>OpenRA</th><th>Iron Curtain</th></tr>
+</thead>
+<tbody>
+<tr><td>Engine</td><td>Original C++ with patches</td><td>C# / .NET (2007)</td><td>Rust + Bevy (2026)</td></tr>
+<tr><td>Platforms</td><td>Windows, Xbox</td><td>Windows, macOS, Linux</td><td>All + Browser + Mobile</td></tr>
+<tr><td>Max units (smooth)</td><td>~200 (original engine limits)</td><td>~300-500 (community reports lag beyond)</td><td>2000+ target</td></tr>
+<tr><td>Modding</td><td>Steam Workshop maps, limited API</td><td>MiniYAML + C# (recompile for deep mods)</td><td>YAML + Lua + WASM (no recompile ever)</td></tr>
+<tr><td>AI content</td><td>Fixed campaigns</td><td>Fixed campaigns + community missions</td><td>LLM-generated missions and campaigns</td></tr>
+<tr><td>Multiplayer</td><td>Rebuilt but server issues reported</td><td>Lockstep with frequent desyncs</td><td>Relay server, desync diagnosis, signed replays</td></tr>
+<tr><td>Graphics pipeline</td><td>Fixed 4K sprite upscale</td><td>SDL/OpenGL basic rendering</td><td>Bevy + wgpu: shaders, post-FX, dynamic lighting, particles</td></tr>
+<tr><td>Source</td><td>Closed</td><td>Open (GPL)</td><td>Open (GPL)</td></tr>
+<tr><td>Community assets</td><td>Separate ecosystem</td><td>18 years of maps/mods</td><td>Loads all OpenRA assets + migration tools</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="new-capabilities-not-found-elsewhere"><a class="header" href="#new-capabilities-not-found-elsewhere">New Capabilities Not Found Elsewhere</a></h3>
+<p><strong>LLM-Generated Missions and Campaigns</strong></p>
+<p>An in-game interface where players describe a scenario in natural language and receive a fully playable mission — map layout, objectives, enemy AI, triggers, briefing text. Generated content is standard YAML + Lua, fully editable and shareable.</p>
+<p>Future extensions: multi-mission campaign generation, adaptive difficulty that responds to player style, cooperative scenario generation for multiplayer.</p>
+<p>This transforms Red Alert from a game with finite content to a game with infinite content.</p>
+<p><strong>Bevy Rendering Pipeline</strong></p>
+<p>Building on Bevy’s modern rendering stack unlocks visual capabilities impossible on OpenRA’s SDL/OpenGL or the Remastered Collection’s fixed pipeline:</p>
+<ul>
+<li>Post-processing: bloom, color grading, screen-space reflections on water</li>
+<li>Dynamic lighting: explosions illuminate surroundings, day/night cycles</li>
+<li>GPU particle systems: smoke, fire, debris, weather</li>
+<li>Shader effects: chrono-shift shimmer, iron curtain glow, tesla arcs, nuclear flash</li>
+<li>Smooth camera: sub-pixel rendering, cinematic replay camera, smooth zoom</li>
+<li>HD asset pipeline alongside classic sprites</li>
+</ul>
+<p>The visual goal: Red Alert as you remember it through rose-tinted glasses — classic aesthetic, modern polish.</p>
+<p><strong>In-Engine Map Editor</strong></p>
+<p>OpenRA’s map editor is a standalone tool. Our editor runs inside the game with live preview, instant testing, and direct publishing. Lower barrier to content creation.</p>
+<h3 id="openras-limitations-what-we-improve-on"><a class="header" href="#openras-limitations-what-we-improve-on">OpenRA’s Limitations (what we improve on)</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Area</th><th>OpenRA Today</th><th>Our Engine</th></tr>
+</thead>
+<tbody>
+<tr><td>Runtime</td><td>C# / .NET — GC pauses, heavy runtime</td><td>Rust — no GC, predictable perf</td></tr>
+<tr><td>Threading</td><td>Single-threaded game loop</td><td>Parallel systems via ECS</td></tr>
+<tr><td>Modding</td><td>Powerful but requires C# for deep mods</td><td>YAML + Lua + WASM (no compile step)</td></tr>
+<tr><td>Map editor</td><td>Separate tool, recently improved</td><td>In-engine editor (Phase 6)</td></tr>
+<tr><td>Multiplayer</td><td>Desyncs common, hard to debug</td><td>Snapshottable sim enables desync pinpointing</td></tr>
+<tr><td>Portability</td><td>Desktop only (Mono/.NET)</td><td>Native + WASM (browser) + mobile</td></tr>
+<tr><td>Engine age</td><td>Started 2007, showing architectural debt</td><td>Clean-sheet modern design</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="what-makes-people-actually-switch"><a class="header" href="#what-makes-people-actually-switch">What Makes People Actually Switch</a></h3>
+<ol>
+<li><strong>Better performance</strong> — visible: bigger maps, more units, no stutters</li>
+<li><strong>Better modding</strong> — WASM scripting, in-engine editor, hot reload</li>
+<li><strong>Runs everywhere</strong> — browser via WASM, mobile, Steam Deck natively</li>
+<li><strong>Better multiplayer</strong> — desync debugging, smoother netcode, relay server</li>
+<li><strong>OpenRA mod compatibility</strong> — existing community migrates without losing work</li>
+</ol>
+<p>Item 5 is the linchpin. If existing mods just work, migration cost drops to near zero.</p>
+<h2 id="competitive-landscape"><a class="header" href="#competitive-landscape">Competitive Landscape</a></h2>
+<h3 id="active-projects"><a class="header" href="#active-projects">Active Projects</a></h3>
+<p><strong>OpenRA</strong> (C#) — The project to beat</p>
+<ul>
+<li>14.8k GitHub stars, actively maintained</li>
+<li>Latest release: 20250330 (March 2025) — new map editor, HD asset support, post-processing</li>
+<li>Mature community, mod ecosystem, server infrastructure</li>
+</ul>
+<p><strong>Vanilla Conquer</strong> (C++)</p>
+<ul>
+<li>Cross-platform builds of actual EA source code</li>
+<li>Not reimagination — just making original compile on modern systems</li>
+<li>Useful reference for original engine behavior</li>
+</ul>
+<p><strong>Chrono Divide</strong> (TypeScript)</p>
+<ul>
+<li>Red Alert 2 running in browser, working multiplayer</li>
+<li>Proof that browser-based RTS is viable</li>
+<li>Study their architecture for WASM target</li>
+</ul>
+<h3 id="deadarchived-projects-lessons-learned"><a class="header" href="#deadarchived-projects-lessons-learned">Dead/Archived Projects (lessons learned)</a></h3>
+<p><strong>Chronoshift</strong> (C++) — Archived July 2020</p>
+<ul>
+<li>Binary-level reimplementation attempt, only English 3.03 beta patch</li>
+<li>Never reached playable state</li>
+<li><strong>Lesson:</strong> 1:1 binary compatibility is a dead end</li>
+</ul>
+<p><strong>OpenRedAlert</strong> (C++)</p>
+<ul>
+<li>Based on ancient FreeCNC/FreeRA, barely maintained</li>
+<li><strong>Lesson:</strong> Building on old foundations doesn’t work long-term</li>
+</ul>
+<h3 id="key-finding"><a class="header" href="#key-finding">Key Finding</a></h3>
+<p><strong>No Rust-based Red Alert or OpenRA ports exist.</strong> The field is completely open.</p>
+<h2 id="ea-source-release-february-2025"><a class="header" href="#ea-source-release-february-2025">EA Source Release (February 2025)</a></h2>
+<p>EA released original Red Alert source code under GPL v3. Benefits:</p>
+<ul>
+<li>Understand exactly how original game logic works (damage, pathfinding, AI)</li>
+<li>Verify Rust implementation against original behavior</li>
+<li>Combined with OpenRA’s 17 years of refinements: “how it originally worked” + “how it should work”</li>
+</ul>
+<p>Repository: https://github.com/electronicarts/CnC_Red_Alert</p>
+<h2 id="timing-assessment"><a class="header" href="#timing-assessment">Timing Assessment</a></h2>
+<ul>
+<li>EA source just released (fresh community interest)</li>
+<li>Rust gamedev ecosystem mature (wgpu stable, ECS crates proven)</li>
+<li>No competition in Rust RTS space</li>
+<li>OpenRA showing architectural age despite active development</li>
+<li>WASM/browser gaming increasingly viable</li>
+</ul>
+<p><strong>Verdict:</strong> Window of opportunity is open now.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="02--core-architecture"><a class="header" href="#02--core-architecture">02 — Core Architecture</a></h1>
+<h2 id="decision-no-bevy"><a class="header" href="#decision-no-bevy">Decision: No Bevy</a></h2>
+<p><strong>Rationale:</strong></p>
+<ul>
+<li>Bevy is pre-1.0 with frequent breaking changes — building on shifting ground</li>
+<li>2D isometric RTS is not its sweet spot</li>
+<li>Would require building tile rendering, sprite layering, RTS UI, networking from scratch on top of Bevy anyway</li>
+<li>Would fight two architectures simultaneously (Bevy’s paradigms + OpenRA’s game concepts)</li>
+<li>Bevy’s UI (<code>bevy_ui</code>) is nowhere near what an RTS HUD needs</li>
+</ul>
+<p><strong>Instead: Library-based stack</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Concern</th><th>Library</th><th>Rationale</th></tr>
+</thead>
+<tbody>
+<tr><td>Windowing</td><td><code>winit</code></td><td>Standard, stable, cross-platform</td></tr>
+<tr><td>Rendering</td><td><code>wgpu</code></td><td>Low-level control for isometric sprite engine, WebGPU for browser</td></tr>
+<tr><td>ECS</td><td><code>hecs</code> or <code>shipyard</code></td><td>Lightweight, or custom trait system mirroring OpenRA semantics</td></tr>
+<tr><td>Dev tools</td><td><code>egui</code></td><td>Immediate-mode debug overlays</td></tr>
+<tr><td>Game UI</td><td>Custom on <code>wgpu</code></td><td>C&amp;C sidebar too specific for generic UI libs</td></tr>
+<tr><td>Scripting</td><td><code>mlua</code></td><td>Lua embedding</td></tr>
+<tr><td>Mod runtime</td><td><code>wasmtime</code> / <code>wasmer</code></td><td>WASM sandboxed execution</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="simulation--render-split-critical-architecture"><a class="header" href="#simulation--render-split-critical-architecture">Simulation / Render Split (Critical Architecture)</a></h2>
+<p>The simulation and renderer are completely decoupled from day one.</p>
+<pre><code>┌─────────────────────────────────────────────┐
+│                  GameLoop&lt;N&gt;                 │
+│                                             │
+│  Input → Network → Sim (fixed tick) → Render│
+│                                             │
+│  Sim runs at fixed tick rate (e.g., 15/sec) │
+│  Renderer interpolates between sim states   │
+│  Renderer can run at any FPS independently  │
+└─────────────────────────────────────────────┘
+</code></pre>
+<h3 id="simulation-properties"><a class="header" href="#simulation-properties">Simulation Properties</a></h3>
+<ul>
+<li><strong>Deterministic:</strong> Same inputs → identical outputs on every platform</li>
+<li><strong>Pure:</strong> No I/O, no floats in game logic, no network awareness</li>
+<li><strong>Fixed-point math:</strong> <code>i32</code>/<code>i64</code> with known scale (never <code>f32</code>/<code>f64</code> in sim)</li>
+<li><strong>Snapshottable:</strong> Full state serializable for replays, save games, desync debugging, rollback</li>
+<li><strong>Headless-capable:</strong> Can run without renderer (dedicated servers, AI training, automated testing)</li>
+</ul>
+<h3 id="simulation-core-types"><a class="header" href="#simulation-core-types">Simulation Core Types</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// All sim-layer coordinates use fixed-point
+pub type SimCoord = i32;  // 1 unit = 1/256 of a cell
+
+/// The sim is a pure function: state + orders → new state
+pub struct Simulation {
+    world: World,          // ECS world (all entities + components)
+    tick: u64,             // Current tick number
+    rng: DeterministicRng, // Seeded, reproducible RNG
+}
+
+impl Simulation {
+    /// THE critical function. Pure, deterministic, no I/O.
+    pub fn apply_tick(&amp;mut self, orders: &amp;TickOrders) {
+        // 1. Apply orders (sorted by sub-tick timestamp)
+        for (player, order, timestamp) in orders.chronological() {
+            self.execute_order(player, order);
+        }
+        // 2. Run systems: movement, combat, harvesting, AI, production
+        self.run_systems();
+        // 3. Advance tick
+        self.tick += 1;
+    }
+
+    /// Snapshot for rollback / desync debugging / save games
+    pub fn snapshot(&amp;self) -&gt; SimSnapshot { /* serialize everything */ }
+    pub fn restore(&amp;mut self, snap: &amp;SimSnapshot) { /* deserialize */ }
+
+    /// Hash for desync detection
+    pub fn state_hash(&amp;self) -&gt; u64 { /* hash critical state */ }
+
+    /// Surgical correction for cross-engine reconciliation
+    pub fn apply_correction(&amp;mut self, correction: &amp;EntityCorrection) {
+        // Directly set an entity's field — only used by reconciler
+    }
+}
+<span class="boring">}</span></code></pre>
+<h3 id="order-validation-inside-sim-deterministic"><a class="header" href="#order-validation-inside-sim-deterministic">Order Validation (inside sim, deterministic)</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>impl Simulation {
+    fn execute_order(&amp;mut self, player: PlayerId, order: &amp;PlayerOrder) {
+        match self.validate_order(player, order) {
+            OrderValidity::Valid =&gt; self.apply_order(player, order),
+            OrderValidity::Rejected(reason) =&gt; {
+                self.record_suspicious_activity(player, reason);
+                // All honest clients also reject → stays in sync
+            }
+        }
+    }
+    
+    fn validate_order(&amp;self, player: PlayerId, order: &amp;PlayerOrder) -&gt; OrderValidity {
+        // Every order type validated: ownership, affordability, prerequisites, placement
+        // This is deterministic — all clients agree on what to reject
+    }
+}
+<span class="boring">}</span></code></pre>
+<h2 id="ecs-design"><a class="header" href="#ecs-design">ECS Design</a></h2>
+<p>ECS is a natural fit for RTS: hundreds of units with composable behaviors.</p>
+<h3 id="component-model-mirrors-openra-traits"><a class="header" href="#component-model-mirrors-openra-traits">Component Model (mirrors OpenRA Traits)</a></h3>
+<p>OpenRA’s “traits” are effectively components. Map them directly:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>OpenRA Trait</th><th>ECS Component</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>Health</code></td><td><code>Health { current: i32, max: i32 }</code></td><td>Hit points</td></tr>
+<tr><td><code>Mobile</code></td><td><code>Mobile { speed: i32, locomotor: LocomotorType }</code></td><td>Can move</td></tr>
+<tr><td><code>Attackable</code></td><td><code>Attackable { armor: ArmorType }</code></td><td>Can be damaged</td></tr>
+<tr><td><code>Armament</code></td><td><code>Armament { weapon: WeaponId, cooldown: u32 }</code></td><td>Can attack</td></tr>
+<tr><td><code>Building</code></td><td><code>Building { footprint: Vec&lt;CellPos&gt; }</code></td><td>Occupies cells</td></tr>
+<tr><td><code>Buildable</code></td><td><code>Buildable { cost: i32, time: u32, prereqs: Vec&lt;StructId&gt; }</code></td><td>Can be built</td></tr>
+<tr><td><code>Selectable</code></td><td><code>Selectable { bounds: Rect, priority: u8 }</code></td><td>Player can select</td></tr>
+<tr><td><code>Harvester</code></td><td><code>Harvester { capacity: i32, resource: ResourceType }</code></td><td>Gathers ore</td></tr>
+<tr><td><code>Producible</code></td><td><code>Producible { queue: QueueType }</code></td><td>Produced from building</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="system-execution-order-deterministic-fixed"><a class="header" href="#system-execution-order-deterministic-fixed">System Execution Order (deterministic, fixed)</a></h3>
+<pre><code>Per tick:
+  1. apply_orders()        — Process all player commands
+  2. production_system()   — Advance build queues
+  3. harvester_system()    — Gather/deliver resources
+  4. movement_system()     — Move all mobile entities
+  5. combat_system()       — Resolve attacks, apply damage
+  6. death_system()        — Remove destroyed entities
+  7. trigger_system()      — Check mission/map triggers
+  8. fog_system()          — Update visibility
+</code></pre>
+<p>Order is fixed and documented. Changing it changes gameplay and breaks replay compatibility.</p>
+<h2 id="game-loop"><a class="header" href="#game-loop">Game Loop</a></h2>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct GameLoop&lt;N: NetworkModel&gt; {
+    sim: Simulation,
+    renderer: Renderer,
+    network: N,
+    input: InputHandler,
+    local_player: PlayerId,
+}
+
+impl&lt;N: NetworkModel&gt; GameLoop&lt;N&gt; {
+    fn frame(&amp;mut self) {
+        // 1. Gather local input with sub-tick timestamps
+        for order in self.input.drain_orders() {
+            self.network.submit_order(TimestampedOrder {
+                player: self.local_player,
+                order,
+                sub_tick_time: self.frame_time_within_tick(),
+            });
+        }
+
+        // 2. Advance sim as far as confirmed orders allow
+        while let Some(tick_orders) = self.network.poll_tick() {
+            self.sim.apply_tick(&amp;tick_orders);
+            self.network.report_sync_hash(
+                self.sim.tick(),
+                self.sim.state_hash(),
+            );
+        }
+
+        // 3. Render always runs, interpolates between sim states
+        self.renderer.draw(&amp;self.sim, self.interpolation_factor());
+    }
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Key property:</strong> <code>GameLoop</code> is generic over <code>N: NetworkModel</code>. It has zero knowledge of whether it’s running single-player, lockstep multiplayer, rollback, or cross-engine play. This is the central architectural guarantee.</p>
+<h2 id="pathfinding"><a class="header" href="#pathfinding">Pathfinding</a></h2>
+<p><strong>Decision:</strong> Hierarchical A* or flowfields — leap ahead of OpenRA’s basic A*.</p>
+<p>OpenRA uses standard A* which struggles with large unit groups. Hierarchical pathfinding or flowfields handle mass unit movement far better and are well-suited to the grid-based terrain.</p>
+<h2 id="crate-dependency-graph"><a class="header" href="#crate-dependency-graph">Crate Dependency Graph</a></h2>
+<pre><code>ra-protocol  (shared types: PlayerOrder, TimestampedOrder)
+    ↑
+    ├── ra-sim      (depends on: ra-protocol, ra-formats)
+    ├── ra-net      (depends on: ra-protocol)
+    ├── ra-formats  (standalone — .mix, .shp, .pal, YAML)
+    ├── ra-render   (depends on: ra-sim for reading state)
+    ├── ra-ui       (depends on: ra-sim, ra-render)
+    ├── ra-audio    (depends on: ra-formats)
+    ├── ra-script   (depends on: ra-sim, ra-protocol)
+    ├── ra-ai       (depends on: ra-sim, ra-protocol)
+    └── ra-engine   (depends on: everything above)
+</code></pre>
+<p><strong>Critical boundary:</strong> <code>ra-sim</code> never imports from <code>ra-net</code>. <code>ra-net</code> never imports from <code>ra-sim</code>. They only share <code>ra-protocol</code>.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="03--network-architecture"><a class="header" href="#03--network-architecture">03 — Network Architecture</a></h1>
+<h2 id="core-design-pluggable-network-model"><a class="header" href="#core-design-pluggable-network-model">Core Design: Pluggable Network Model</a></h2>
+<p>The network layer is fully abstracted behind a trait. The simulation and game loop never know which network model is running.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub trait NetworkModel: Send + Sync {
+    /// Local player submits an order
+    fn submit_order(&amp;mut self, order: TimestampedOrder);
+    /// Poll for the next tick's confirmed orders (None = not ready yet)
+    fn poll_tick(&amp;mut self) -&gt; Option&lt;TickOrders&gt;;
+    /// Report local sim hash for desync detection
+    fn report_sync_hash(&amp;mut self, tick: u64, hash: u64);
+    /// Connection/sync status
+    fn status(&amp;self) -&gt; NetworkStatus;
+    /// Diagnostic info (latency, packet loss, etc.)
+    fn diagnostics(&amp;self) -&gt; NetworkDiagnostics;
+}
+<span class="boring">}</span></code></pre>
+<h3 id="planned-implementations"><a class="header" href="#planned-implementations">Planned Implementations</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Implementation</th><th>Use Case</th><th>Priority</th></tr>
+</thead>
+<tbody>
+<tr><td><code>LocalNetwork</code></td><td>Single player, tests</td><td>Phase 2</td></tr>
+<tr><td><code>ReplayPlayback</code></td><td>Watching replays</td><td>Phase 2</td></tr>
+<tr><td><code>LockstepNetwork</code></td><td>OpenRA-style multiplayer</td><td>Phase 5</td></tr>
+<tr><td><code>RelayLockstepNetwork</code></td><td>Relay server with time authority</td><td>Phase 5</td></tr>
+<tr><td><code>FogAuthoritativeNetwork</code></td><td>Anti-maphack (server runs sim)</td><td>Future</td></tr>
+<tr><td><code>RollbackNetwork</code></td><td>GGPO-style (requires sim snapshots)</td><td>Future</td></tr>
+<tr><td><code>ProtocolAdapter&lt;N&gt;</code></td><td>Cross-engine compatibility wrapper</td><td>Future</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="benefits-of-trait-abstraction"><a class="header" href="#benefits-of-trait-abstraction">Benefits of Trait Abstraction</a></h3>
+<ul>
+<li>Sim never touches networking concerns</li>
+<li>Full testability (run entire sim with <code>LocalNetwork</code>)</li>
+<li>Community can contribute better netcode without understanding game logic</li>
+<li>Players could choose network model in lobby (if both agree)</li>
+<li>Cross-engine adapters wrap existing models transparently</li>
+</ul>
+<h2 id="shared-protocol-types"><a class="header" href="#shared-protocol-types">Shared Protocol Types</a></h2>
+<p>Defined in <code>ra-protocol</code> crate — the ONLY shared dependency between sim and net:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>#[derive(Clone, Serialize, Deserialize, Hash)]
+pub enum PlayerOrder {
+    Move { unit_ids: Vec&lt;UnitId&gt;, target: CellPos },
+    Attack { unit_ids: Vec&lt;UnitId&gt;, target: Target },
+    Build { structure: StructureType, position: CellPos },
+    SetRallyPoint { building: BuildingId, position: CellPos },
+    Sell { building: BuildingId },
+    // ... every possible player action
+}
+
+/// Sub-tick timestamp on every order (CS2-inspired)
+#[derive(Clone, Serialize, Deserialize)]
+pub struct TimestampedOrder {
+    pub player: PlayerId,
+    pub order: PlayerOrder,
+    pub sub_tick_time: f64,  // fractional time within the tick window
+}
+
+pub struct TickOrders {
+    pub tick: u64,
+    pub orders: Vec&lt;TimestampedOrder&gt;,
+}
+
+impl TickOrders {
+    /// CS2-style: process in chronological order within the tick
+    pub fn chronological(&amp;self) -&gt; impl Iterator&lt;Item = &amp;TimestampedOrder&gt; {
+        let mut sorted = self.orders.clone();
+        sorted.sort_by(|a, b| a.sub_tick_time.partial_cmp(&amp;b.sub_tick_time).unwrap());
+        sorted.into_iter()
+    }
+}
+<span class="boring">}</span></code></pre>
+<h2 id="cs2-sub-tick-what-we-borrow"><a class="header" href="#cs2-sub-tick-what-we-borrow">CS2 Sub-Tick: What We Borrow</a></h2>
+<h3 id="what-cs2-does"><a class="header" href="#what-cs2-does">What CS2 Does</a></h3>
+<p>Counter-Strike 2 introduced “sub-tick” architecture: instead of processing all actions at discrete tick boundaries, the client timestamps every input with sub-tick precision. The server collects inputs from all clients and processes them in chronological order within each tick window. The server still ticks at 64Hz, but events are ordered by their actual timestamps.</p>
+<h3 id="whats-relevant-for-rts"><a class="header" href="#whats-relevant-for-rts">What’s Relevant for RTS</a></h3>
+<p>The core idea — <strong>timestamped orders processed in chronological order within a tick</strong> — produces fairer results for edge cases:</p>
+<ul>
+<li>Two players grabbing the same crate → the one who clicked first gets it</li>
+<li>Engineer vs engineer racing to capture a building → chronological winner</li>
+<li>Simultaneous attack orders → processed in actual order, not arrival order</li>
+</ul>
+<h3 id="whats-not-relevant"><a class="header" href="#whats-not-relevant">What’s NOT Relevant</a></h3>
+<p>CS2 is client-server authoritative with prediction and interpolation. An RTS with hundreds of units can’t afford server-authoritative simulation — the bandwidth would be enormous. We stay with deterministic lockstep (clients run identical sims), so CS2’s prediction/reconciliation doesn’t directly apply.</p>
+<h2 id="network-model-details"><a class="header" href="#network-model-details">Network Model Details</a></h2>
+<h3 id="model-1-lockstep-with-input-delay-starting-model"><a class="header" href="#model-1-lockstep-with-input-delay-starting-model">Model 1: Lockstep with Input Delay (starting model)</a></h3>
+<pre><code>Local input at tick 50 → scheduled for tick 53 (3-tick delay)
+Remote input has 3 ticks to arrive before we need it
+Delay dynamically adjusted based on connection quality
+</code></pre>
+<p>This is what OpenRA and most RTS games use. The “lag” players feel is intentional input delay, not network stalling.</p>
+<h3 id="model-2-relay-server-with-time-authority-recommended-default"><a class="header" href="#model-2-relay-server-with-time-authority-recommended-default">Model 2: Relay Server with Time Authority (recommended default)</a></h3>
+<pre><code>┌────────┐         ┌──────────────┐         ┌────────┐
+│Player A│────────▶│ Relay Server │◀────────│Player B│
+│        │◀────────│  (timestamped│────────▶│        │
+└────────┘         │   ordering)  │         └────────┘
+                   └──────────────┘
+</code></pre>
+<p>The relay server does NOT run the sim. It:</p>
+<ol>
+<li>Receives timestamped orders from all players</li>
+<li>Orders them chronologically (CS2 insight)</li>
+<li>Broadcasts canonical tick order to all clients</li>
+<li>Detects lag switches and cheating attempts</li>
+<li>Handles NAT traversal (no port forwarding needed)</li>
+</ol>
+<p><strong>Anti-lag-switch mechanism:</strong></p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>impl RelayServer {
+    fn process_tick(&amp;mut self, tick: u64) {
+        let deadline = Instant::now() + self.tick_deadline; // e.g., 120ms
+        
+        for player in &amp;self.players {
+            match self.receive_orders_from(player, deadline) {
+                Ok(orders) =&gt; self.tick_orders.add(player, orders),
+                Err(Timeout) =&gt; {
+                    // Missed deadline → strikes system
+                    // Game never stalls for honest players
+                    self.tick_orders.add(player, PlayerOrder::Idle);
+                }
+            }
+        }
+        self.broadcast_tick_orders(tick);
+    }
+}
+<span class="boring">}</span></code></pre>
+<h3 id="model-3-fog-authoritative-server-anti-maphack"><a class="header" href="#model-3-fog-authoritative-server-anti-maphack">Model 3: Fog-Authoritative Server (anti-maphack)</a></h3>
+<p>Server runs full sim, sends each client only entities they should see. Breaks pure lockstep (clients run partial sims), requires server compute per game. See <code>06-SECURITY.md</code> for details.</p>
+<h3 id="model-4-rollback--ggpo-style-experimental-future"><a class="header" href="#model-4-rollback--ggpo-style-experimental-future">Model 4: Rollback / GGPO-style (experimental future)</a></h3>
+<p>Requires snapshottable sim (already designed). Client predicts with local input, rolls back on misprediction. Expensive for RTS (re-simulating hundreds of entities), but feasible with Rust’s performance. See GGPO documentation for reference implementation.</p>
+<h2 id="desync-detection--debugging"><a class="header" href="#desync-detection--debugging">Desync Detection &amp; Debugging</a></h2>
+<p>Every <code>NetworkModel</code> must accept <code>report_sync_hash()</code>. The system works:</p>
+<ol>
+<li>Each client hashes their sim state after each tick</li>
+<li>Hashes are compared (by relay server, or exchanged P2P)</li>
+<li>On mismatch → desync detected at specific tick</li>
+<li>Because sim is snapshottable, dump full state and diff to pinpoint exact divergence</li>
+</ol>
+<p>This is a <strong>killer feature OpenRA lacks</strong>. OpenRA desyncs are common and nearly impossible to debug. Our architecture makes them diagnosable.</p>
+<h2 id="ordercodec-wire-format-abstraction"><a class="header" href="#ordercodec-wire-format-abstraction">OrderCodec: Wire Format Abstraction</a></h2>
+<p>For future cross-engine play and protocol versioning:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub trait OrderCodec: Send + Sync {
+    fn encode(&amp;self, order: &amp;TimestampedOrder) -&gt; Result&lt;Vec&lt;u8&gt;&gt;;
+    fn decode(&amp;self, bytes: &amp;[u8]) -&gt; Result&lt;TimestampedOrder&gt;;
+    fn protocol_id(&amp;self) -&gt; ProtocolId;
+}
+
+/// Native format — fast, compact, versioned
+pub struct NativeCodec { version: u32 }
+
+/// Translates to/from OpenRA's wire format
+pub struct OpenRACodec {
+    order_map: OrderTranslationTable,
+    coord_transform: CoordTransform,
+}
+<span class="boring">}</span></code></pre>
+<p>See <code>07-CROSS-ENGINE.md</code> for full cross-engine compatibility design.</p>
+<h2 id="replay-system"><a class="header" href="#replay-system">Replay System</a></h2>
+<p>Replays are a natural byproduct of the architecture:</p>
+<pre><code>Replay file = initial state + sequence of TickOrders
+Playback = feed TickOrders through Simulation via ReplayPlayback NetworkModel
+</code></pre>
+<p>Replays are signed by the relay server for tamper-proofing (see <code>06-SECURITY.md</code>).</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="04--modding-system"><a class="header" href="#04--modding-system">04 — Modding System</a></h1>
+<h2 id="three-tier-architecture"><a class="header" href="#three-tier-architecture">Three-Tier Architecture</a></h2>
+<pre><code>Ease of use ▲
+             │  ┌─────────────────────────┐
+             │  │  YAML rules / data       │  ← 80% of mods (Tier 1)
+             │  │  (units, weapons, maps)  │
+             │  ├─────────────────────────┤
+             │  │  Lua scripts             │  ← missions, AI, abilities (Tier 2)
+             │  │  (event hooks, triggers) │
+             │  ├─────────────────────────┤
+             │  │  WASM modules            │  ← new mechanics, total conversions (Tier 3)
+             │  │  (Rust/C/AssemblyScript) │
+             │  └─────────────────────────┘
+Power      ▼
+</code></pre>
+<p>Each tier is optional. A modder who wants to change tank cost never sees code. A modder building a total conversion uses WASM.</p>
+<h2 id="tier-1-data-driven-yaml-rules"><a class="header" href="#tier-1-data-driven-yaml-rules">Tier 1: Data-Driven (YAML Rules)</a></h2>
+<h3 id="decision-real-yaml-not-miniyaml"><a class="header" href="#decision-real-yaml-not-miniyaml">Decision: Real YAML, Not MiniYAML</a></h3>
+<p>OpenRA uses “MiniYAML” — a custom dialect that uses tabs, has custom inheritance (<code>^</code>, <code>@</code>), and doesn’t comply with the YAML spec. Standard parsers choke on it.</p>
+<p><strong>Our approach:</strong> Standard YAML with <code>serde_yaml</code>, inheritance resolved at load time.</p>
+<p><strong>Rationale:</strong></p>
+<ul>
+<li><code>serde</code> + <code>serde_yaml</code> → typed Rust struct deserialization for free</li>
+<li>Every text editor has YAML support, linters, formatters</li>
+<li>JSON-schema validation catches errors before the game loads</li>
+<li>No custom parser to maintain</li>
+</ul>
+<h3 id="example-unit-definition"><a class="header" href="#example-unit-definition">Example Unit Definition</a></h3>
+<pre><code class="language-yaml"># units/allies/infantry.yaml
+units:
+  rifle_infantry:
+    inherits: _base_soldier
+    display:
+      name: "Rifle Infantry"
+      icon: e1icon
+      sequences: e1
+    buildable:
+      cost: 100
+      time: 5.0
+      queue: infantry
+      prerequisites: [barracks]
+    health:
+      max: 50
+      armor: none
+    mobile:
+      speed: 56
+      locomotor: foot
+    combat:
+      weapon: m1_carbine
+      attack_sequence: shoot
+</code></pre>
+<h3 id="inheritance-system"><a class="header" href="#inheritance-system">Inheritance System</a></h3>
+<p>Templates use <code>_</code> prefix convention (not spawnable units):</p>
+<pre><code class="language-yaml"># templates/_base_soldier.yaml
+_base_soldier:
+  mobile:
+    locomotor: foot
+    turn_speed: 5
+  health:
+    armor: none
+  selectable:
+    bounds: [12, 18]
+    voice: generic_infantry
+</code></pre>
+<p>Inheritance is resolved at load time in Rust. Fields from <code>_base_soldier</code> are merged, then overridden by the child definition.</p>
+<h3 id="rust-deserialization"><a class="header" href="#rust-deserialization">Rust Deserialization</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>#[derive(Deserialize)]
+struct UnitDef {
+    inherits: Option&lt;String&gt;,
+    display: DisplayInfo,
+    buildable: Option&lt;BuildableInfo&gt;,
+    health: HealthInfo,
+    mobile: Option&lt;MobileInfo&gt;,
+    combat: Option&lt;CombatInfo&gt;,
+}
+<span class="boring">}</span></code></pre>
+<h3 id="miniyaml-migration"><a class="header" href="#miniyaml-migration">MiniYAML Migration</a></h3>
+<p>Part of <code>ra-formats</code> crate: a <code>miniyaml2yaml</code> converter tool that translates existing OpenRA mod data to standard YAML. One-time migration per mod.</p>
+<h3 id="why-not-toml--ron--json"><a class="header" href="#why-not-toml--ron--json">Why Not TOML / RON / JSON?</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Format</th><th>Verdict</th><th>Reason</th></tr>
+</thead>
+<tbody>
+<tr><td>TOML</td><td>Reject</td><td>Awkward for deeply nested game data</td></tr>
+<tr><td>RON</td><td>Reject</td><td>Modders won’t know it, thin editor support</td></tr>
+<tr><td>JSON</td><td>Reject</td><td>Too verbose, no comments, miserable for hand-editing</td></tr>
+<tr><td>YAML</td><td>Accept</td><td>Human-readable, universal tooling, serde integration</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="tier-2-lua-scripting"><a class="header" href="#tier-2-lua-scripting">Tier 2: Lua Scripting</a></h2>
+<h3 id="decision-lua-over-python"><a class="header" href="#decision-lua-over-python">Decision: Lua over Python</a></h3>
+<p><strong>Why Lua:</strong></p>
+<ul>
+<li>Tiny runtime (~200KB)</li>
+<li>Designed for embedding — exists for this purpose</li>
+<li>Deterministic (provide fixed-point math bindings, no floats)</li>
+<li>Trivially sandboxable (control exactly what functions are available)</li>
+<li>Industry standard: Factorio, WoW, Garry’s Mod, Dota 2, Roblox</li>
+<li><code>mlua</code> or <code>rlua</code> crates are mature</li>
+<li>Any modder can learn in an afternoon</li>
+</ul>
+<p><strong>Why NOT Python:</strong></p>
+<ul>
+<li>Floating-point non-determinism breaks lockstep multiplayer</li>
+<li>GC pauses (reintroduces the problem Rust solves)</li>
+<li>50-100x slower than native (hot paths run every tick for every unit)</li>
+<li>Embedding CPython is heavy (~15-30MB)</li>
+<li>Sandboxing is basically unsolvable — security disaster for community mods</li>
+<li><code>import os; os.system("rm -rf /")</code> is one mod away</li>
+</ul>
+<h3 id="lua-api-examples"><a class="header" href="#lua-api-examples">Lua API Examples</a></h3>
+<pre><code class="language-lua">-- Mission scripting
+function OnPlayerEnterArea(player, area)
+  if area == "bridge_crossing" then
+    SpawnReinforcements("allies", {"Tank", "Tank"}, "north")
+    PlayEVA("reinforcements_arrived")
+  end
+end
+
+-- Custom unit behavior
+Hooks.OnUnitCreated("ChronoTank", function(unit)
+  unit:AddAbility("chronoshift", {
+    cooldown = 120,
+    range = 15,
+    onActivate = function(target_cell)
+      PlayEffect("chrono_flash", unit.position)
+      unit:Teleport(target_cell)
+      PlayEffect("chrono_flash", target_cell)
+    end
+  })
+end)
+</code></pre>
+<h3 id="lua-sandbox-rules"><a class="header" href="#lua-sandbox-rules">Lua Sandbox Rules</a></h3>
+<ul>
+<li>Only engine-provided functions available (no <code>io</code>, <code>os</code>, <code>require</code> from filesystem)</li>
+<li>Fixed-point math provided via engine bindings (no raw floats)</li>
+<li>Execution time limits per tick</li>
+<li>Memory limits per mod</li>
+</ul>
+<h2 id="tier-3-wasm-modules"><a class="header" href="#tier-3-wasm-modules">Tier 3: WASM Modules</a></h2>
+<h3 id="rationale"><a class="header" href="#rationale">Rationale</a></h3>
+<ul>
+<li>Near-native performance for complex mods</li>
+<li>Perfectly sandboxed by design (WASM’s memory model)</li>
+<li>Deterministic execution (critical for multiplayer)</li>
+<li>Modders write in Rust, C, Go, AssemblyScript, or even Python compiled to WASM</li>
+<li><code>wasmtime</code> or <code>wasmer</code> crates</li>
+</ul>
+<h3 id="wasm-host-api-security-boundary"><a class="header" href="#wasm-host-api-security-boundary">WASM Host API (Security Boundary)</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>// The WASM host functions are the ONLY API mods can call.
+// The API surface IS the security boundary.
+
+#[wasm_host_fn]
+fn get_unit_position(unit_id: u32) -&gt; Option&lt;(i32, i32)&gt; {
+    let unit = sim.get_unit(unit_id)?;
+    // CHECK: is this unit visible to the mod's player?
+    if !sim.is_visible_to(mod_player, unit.position) {
+        return None;  // Mod cannot see fogged units
+    }
+    Some(unit.position)
+}
+
+// There is no get_all_units() function.
+// There is no get_enemy_state() function.
+<span class="boring">}</span></code></pre>
+<h3 id="mod-capabilities-system"><a class="header" href="#mod-capabilities-system">Mod Capabilities System</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct ModCapabilities {
+    pub read_own_state: bool,
+    pub read_visible_state: bool,
+    // Can NEVER read fogged state (API doesn't exist)
+    pub issue_orders: bool,           // For AI mods
+    pub filesystem: FileAccess,       // Usually None
+    pub network: NetworkAccess,       // Usually None
+}
+
+pub enum NetworkAccess {
+    None,                          // Most mods
+    AllowList(Vec&lt;String&gt;),        // UI mods fetching assets
+    // NEVER unrestricted
+}
+<span class="boring">}</span></code></pre>
+<h2 id="tera-templating-phase-6-nice-to-have"><a class="header" href="#tera-templating-phase-6-nice-to-have">Tera Templating (Phase 6, Nice-to-Have)</a></h2>
+<p>Optional preprocessing for YAML/Lua generation. Eliminates copy-paste for faction variants.</p>
+<pre><code class="language-jinja">{% for faction in ["allies", "soviet"] %}
+{% for tier in [1, 2, 3] %}
+{{ faction }}_tank_t{{ tier }}:
+  inherits: _base_tank
+  health:
+    max: {{ 200 + tier * 100 }}
+  buildable:
+    cost: {{ 500 + tier * 300 }}
+{% endfor %}
+{% endfor %}
+</code></pre>
+<p>Load-time only (zero runtime cost). ~50 lines to integrate. Not a foundation piece.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="05--file-formats--original-source-insights"><a class="header" href="#05--file-formats--original-source-insights">05 — File Formats &amp; Original Source Insights</a></h1>
+<h2 id="formats-to-support-ra-formats-crate"><a class="header" href="#formats-to-support-ra-formats-crate">Formats to Support (ra-formats crate)</a></h2>
+<h3 id="binary-formats-from-original-game--openra"><a class="header" href="#binary-formats-from-original-game--openra">Binary Formats (from original game / OpenRA)</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Format</th><th>Purpose</th><th>Notes</th></tr>
+</thead>
+<tbody>
+<tr><td><code>.mix</code></td><td>Archive container</td><td>Flat archive, hash-based file lookup, no compression</td></tr>
+<tr><td><code>.shp</code></td><td>Sprite sheets</td><td>Frame-based, palette-indexed</td></tr>
+<tr><td><code>.tmp</code></td><td>Terrain tiles</td><td>Isometric tile data</td></tr>
+<tr><td><code>.pal</code></td><td>Color palettes</td><td>256-color palettes, multiple per scenario</td></tr>
+<tr><td><code>.aud</code></td><td>Audio</td><td>Westwood’s audio format, IMA ADPCM compressed</td></tr>
+<tr><td><code>.vqa</code></td><td>Video</td><td>Cutscenes (VQ vector quantization)</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="text-formats"><a class="header" href="#text-formats">Text Formats</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Format</th><th>Purpose</th><th>Notes</th></tr>
+</thead>
+<tbody>
+<tr><td><code>.ini</code> (original)</td><td>Game rules</td><td>Original Red Alert format</td></tr>
+<tr><td>MiniYAML (OpenRA)</td><td>Game rules, maps, manifests</td><td>Custom dialect, needs converter</td></tr>
+<tr><td>YAML (ours)</td><td>Game rules, maps, manifests</td><td>Standard spec-compliant YAML</td></tr>
+<tr><td><code>.oramap</code></td><td>OpenRA map package</td><td>ZIP archive containing map.yaml + terrain + actors</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="ra-formats-crate-goals"><a class="header" href="#ra-formats-crate-goals">ra-formats Crate Goals</a></h3>
+<ol>
+<li>Parse all above formats reliably</li>
+<li>Extensive tests against known-good OpenRA data</li>
+<li><code>miniyaml2yaml</code> converter tool</li>
+<li>CLI tool to dump/inspect/validate RA assets</li>
+<li>Useful as standalone crate (builds project credibility)</li>
+<li>Released open source early (Phase 0 deliverable)</li>
+</ol>
+<h2 id="insights-from-eas-original-source-code"><a class="header" href="#insights-from-eas-original-source-code">Insights from EA’s Original Source Code</a></h2>
+<p>Repository: https://github.com/electronicarts/CnC_Red_Alert (GPL v3, archived Feb 2025)</p>
+<h3 id="code-statistics"><a class="header" href="#code-statistics">Code Statistics</a></h3>
+<ul>
+<li>290 C++ header files, 296 implementation files, 14 x86 assembly files</li>
+<li>~222,000 lines of C++ code</li>
+<li>430+ <code>#ifdef WIN32</code> checks (no other platform implemented)</li>
+<li>Built with Watcom C/C++ v10.6 and Borland Turbo Assembler v4.0</li>
+</ul>
+<h3 id="keep-eventorder-queue-system"><a class="header" href="#keep-eventorder-queue-system">Keep: Event/Order Queue System</a></h3>
+<p>The original uses <code>OutList</code> (local player commands) and <code>DoList</code> (confirmed orders from all players), both containing <code>EventClass</code> objects:</p>
+<pre><code class="language-cpp">// From CONQUER.CPP
+OutList.Add(EventClass(EventClass::IDLE, TargetClass(tech)));
+</code></pre>
+<p>Player actions → events → queue → deterministic processing each tick. This is the same pattern as our <code>PlayerOrder → TickOrders → Simulation::apply_tick()</code> pipeline. Westwood validated this in 1996.</p>
+<h3 id="keep-integer-math-for-determinism"><a class="header" href="#keep-integer-math-for-determinism">Keep: Integer Math for Determinism</a></h3>
+<p>The original uses integer math everywhere for game logic — positions, damage, timing. No floats in the simulation. This is why multiplayer worked. Our <code>FixedPoint</code> / <code>SimCoord</code> approach mirrors this.</p>
+<h3 id="keep-data-driven-rules-ini--miniyaml--yaml"><a class="header" href="#keep-data-driven-rules-ini--miniyaml--yaml">Keep: Data-Driven Rules (INI → MiniYAML → YAML)</a></h3>
+<p>Original reads unit stats and game rules from <code>.ini</code> files at runtime. This data-driven philosophy is what made C&amp;C so moddable. The lineage: <code>INI → MiniYAML → YAML</code> — each step more expressive, same philosophy.</p>
+<h3 id="keep-mix-archive-concept"><a class="header" href="#keep-mix-archive-concept">Keep: MIX Archive Concept</a></h3>
+<p>Simple flat archive with hash-based lookup. No compression in the archive itself (individual files may be compressed). For <code>ra-formats</code>: read MIX as-is for compatibility; native format can modernize.</p>
+<h3 id="keep-compression-flexibility"><a class="header" href="#keep-compression-flexibility">Keep: Compression Flexibility</a></h3>
+<p>Original implements LCW, LZO, and LZW compression. LZO was settled on for save games:</p>
+<pre><code class="language-cpp">// From SAVELOAD.CPP
+LZOPipe pipe(LZOPipe::COMPRESS, SAVE_BLOCK_SIZE);
+// LZWPipe pipe(LZWPipe::COMPRESS, SAVE_BLOCK_SIZE);  // tried, abandoned
+// LCWPipe pipe(LCWPipe::COMPRESS, SAVE_BLOCK_SIZE);   // tried, abandoned
+</code></pre>
+<h3 id="leave-behind-session-type-branching"><a class="header" href="#leave-behind-session-type-branching">Leave Behind: Session Type Branching</a></h3>
+<p>Original code is riddled with network-type checks embedded in game logic:</p>
+<pre><code class="language-cpp">if (Session.Type == GAME_IPX || Session.Type == GAME_INTERNET) { ... }
+</code></pre>
+<p>This is the anti-pattern our <code>NetworkModel</code> trait eliminates. Separate code paths for IPX, Westwood Online, MPlayer, TEN, modem — all interleaved with <code>#ifdef</code>. The developer disliked the Westwood Online API enough to write a complete wrapper around it.</p>
+<h3 id="leave-behind-platform-specific-rendering"><a class="header" href="#leave-behind-platform-specific-rendering">Leave Behind: Platform-Specific Rendering</a></h3>
+<p>DirectDraw surface management with comments like “Aaaarrgghh!” when hardware allocation fails. Manual VGA mode detection. Custom command-line parsing. <code>wgpu</code> solves all of this.</p>
+<h3 id="leave-behind-manual-memory-checking"><a class="header" href="#leave-behind-manual-memory-checking">Leave Behind: Manual Memory Checking</a></h3>
+<p>The game allocates 13MB and checks if it succeeds. Checks that <code>sleep(1000)</code> actually advances the system clock. Checks free disk space. None of this translates to modern development.</p>
+<h3 id="interesting-historical-details"><a class="header" href="#interesting-historical-details">Interesting Historical Details</a></h3>
+<ul>
+<li>Code path for 640x400 display mode with special VGA fallback</li>
+<li><code>#ifdef FIXIT_CSII</code> for Aftermath expansion — comment explains they broke the ability to build vanilla Red Alert executables and had to fix it later</li>
+<li>Developer comments reference “Counterstrike” in VCS headers (<code>$Header: /CounterStrike/...</code>)</li>
+<li>MPEG movie playback code exists but is disabled</li>
+<li>Game refuses to start if launched from <code>f:\projects\c&amp;c0</code> (the network share)</li>
+</ul>
+<h2 id="coordinate-system-translation"><a class="header" href="#coordinate-system-translation">Coordinate System Translation</a></h2>
+<p>For cross-engine compatibility, coordinate transforms must be explicit:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct CoordTransform {
+    pub our_scale: i32,       // our subdivisions per cell
+    pub openra_scale: i32,    // 1024 for OpenRA (WDist/WPos)
+    pub original_scale: i32,  // original game's lepton system
+}
+
+impl CoordTransform {
+    pub fn to_wpos(&amp;self, pos: &amp;CellPos) -&gt; (i32, i32) {
+        ((pos.x * self.openra_scale) / self.our_scale,
+         (pos.y * self.openra_scale) / self.our_scale)
+    }
+    pub fn from_wpos(&amp;self, x: i32, y: i32) -&gt; CellPos {
+        CellPos {
+            x: (x * self.our_scale) / self.openra_scale,
+            y: (y * self.our_scale) / self.openra_scale,
+        }
+    }
+}
+<span class="boring">}</span></code></pre>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="06--security--threat-model"><a class="header" href="#06--security--threat-model">06 — Security &amp; Threat Model</a></h1>
+<h2 id="fundamental-constraint"><a class="header" href="#fundamental-constraint">Fundamental Constraint</a></h2>
+<p>In deterministic lockstep, every client runs the full simulation. Every player has <strong>complete game state in memory</strong> at all times. This shapes every vulnerability and mitigation.</p>
+<h2 id="threat-matrix-by-network-model"><a class="header" href="#threat-matrix-by-network-model">Threat Matrix by Network Model</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Threat</th><th>Pure P2P Lockstep</th><th>Relay Server Lockstep</th><th>Authoritative Fog Server</th></tr>
+</thead>
+<tbody>
+<tr><td>Maphack</td><td><strong>OPEN</strong></td><td><strong>OPEN</strong></td><td><strong>BLOCKED</strong> ✓</td></tr>
+<tr><td>Order injection</td><td>Sim rejects</td><td>Server rejects</td><td>Server rejects</td></tr>
+<tr><td>Lag switch</td><td><strong>OPEN</strong></td><td><strong>BLOCKED</strong> ✓</td><td><strong>BLOCKED</strong> ✓</td></tr>
+<tr><td>Desync exploit</td><td>Possible</td><td>Server-only analysis</td><td>N/A</td></tr>
+<tr><td>Replay tampering</td><td><strong>OPEN</strong></td><td>Signed ✓</td><td>Signed ✓</td></tr>
+<tr><td>WASM mod cheating</td><td>Sandbox</td><td>Sandbox</td><td>Sandbox</td></tr>
+<tr><td>Reconciler abuse</td><td>N/A</td><td>N/A</td><td>Bounded + signed ✓</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Recommendation:</strong> Relay server is the minimum for ranked/competitive play. Fog-authoritative server for high-stakes tournaments.</p>
+<h2 id="vulnerability-1-maphack-architectural-limit"><a class="header" href="#vulnerability-1-maphack-architectural-limit">Vulnerability 1: Maphack (Architectural Limit)</a></h2>
+<h3 id="the-problem"><a class="header" href="#the-problem">The Problem</a></h3>
+<p>Both clients must simulate everything (enemy movement, production, harvesting), so all game state exists in process memory. Fog of war is a rendering filter — the data is always there.</p>
+<p>Every lockstep RTS has this problem: OpenRA, StarCraft, Age of Empires.</p>
+<h3 id="mitigations-partial-not-solutions"><a class="header" href="#mitigations-partial-not-solutions">Mitigations (partial, not solutions)</a></h3>
+<p><strong>Memory obfuscation</strong> (raises bar for casual cheats):</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct ObfuscatedWorld {
+    inner: World,
+    xor_key: u64,  // rotated every N ticks
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Partitioned memory</strong> (harder to scan):</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct PartitionedWorld {
+    visible: World,              // Normal memory
+    hidden: ObfuscatedStore,     // Encrypted, scattered, decoy entries
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Actual solution: Fog-Authoritative Server</strong>
+Server runs full sim, sends each client only entities they can see. Breaks pure lockstep. Requires server compute per game.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct FogAuthoritativeNetwork {
+    known_entities: HashSet&lt;EntityId&gt;,
+}
+impl NetworkModel for FogAuthoritativeNetwork {
+    fn poll_tick(&amp;mut self) -&gt; Option&lt;TickOrders&gt; {
+        // Returns orders AND visibility deltas:
+        // "Entity 47 entered your vision at (30, 8)"
+        // "Entity 23 left your vision"
+    }
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Trade-off:</strong> Relay server (just forwards orders) = cheap VPS handles thousands of games. Authoritative sim server = real CPU per game.</p>
+<h2 id="vulnerability-2-order-injection--spoofing"><a class="header" href="#vulnerability-2-order-injection--spoofing">Vulnerability 2: Order Injection / Spoofing</a></h2>
+<h3 id="the-problem-1"><a class="header" href="#the-problem-1">The Problem</a></h3>
+<p>Malicious client sends impossible orders (build without resources, control enemy units).</p>
+<h3 id="mitigation-deterministic-validation-in-sim"><a class="header" href="#mitigation-deterministic-validation-in-sim">Mitigation: Deterministic Validation in Sim</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>fn validate_order(&amp;self, player: PlayerId, order: &amp;PlayerOrder) -&gt; OrderValidity {
+    match order {
+        PlayerOrder::Build { structure, position } =&gt; {
+            let house = self.player_state(player);
+            if house.credits &lt; structure.cost() { return Rejected(InsufficientFunds); }
+            if !house.has_prerequisite(structure) { return Rejected(MissingPrerequisite); }
+            if !self.can_place_building(player, structure, position) { return Rejected(InvalidPlacement); }
+            Valid
+        }
+        PlayerOrder::Move { unit_ids, .. } =&gt; {
+            for id in unit_ids {
+                if self.unit_owner(*id) != Some(player) { return Rejected(NotOwner); }
+            }
+            Valid
+        }
+        // Every order type validated
+    }
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Key:</strong> Validation is deterministic and inside the sim. All clients run the same validation → all agree on rejections → no desync. Relay server also validates before broadcasting (defense in depth).</p>
+<h2 id="vulnerability-3-lag-switch-timing-manipulation"><a class="header" href="#vulnerability-3-lag-switch-timing-manipulation">Vulnerability 3: Lag Switch (Timing Manipulation)</a></h2>
+<h3 id="the-problem-2"><a class="header" href="#the-problem-2">The Problem</a></h3>
+<p>Player deliberately delays packets → opponent’s game stalls → attacker gets extra thinking time.</p>
+<h3 id="mitigation-relay-server-with-time-authority"><a class="header" href="#mitigation-relay-server-with-time-authority">Mitigation: Relay Server with Time Authority</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>impl RelayServer {
+    fn process_tick(&amp;mut self, tick: u64) {
+        let deadline = Instant::now() + self.tick_deadline;
+        for player in &amp;self.players {
+            match self.receive_orders_from(player, deadline) {
+                Ok(orders) =&gt; self.tick_orders.add(player, orders),
+                Err(Timeout) =&gt; {
+                    self.player_budgets[player].strikes += 1;
+                    if strikes &gt; 3 {
+                        // Drop or use last known orders
+                        self.tick_orders.add(player, PlayerOrder::RepeatLast);
+                    } else {
+                        self.tick_orders.add(player, PlayerOrder::Idle);
+                    }
+                }
+            }
+        }
+        // Game never stalls for honest players
+        self.broadcast_tick_orders(tick);
+    }
+}
+<span class="boring">}</span></code></pre>
+<p>Server owns the clock. Miss the window → your orders are dropped. Lag switch only punishes the attacker.</p>
+<h2 id="vulnerability-4-desync-exploit-for-information-gathering"><a class="header" href="#vulnerability-4-desync-exploit-for-information-gathering">Vulnerability 4: Desync Exploit for Information Gathering</a></h2>
+<h3 id="the-problem-3"><a class="header" href="#the-problem-3">The Problem</a></h3>
+<p>Cheating client intentionally causes desync, then analyzes desync report to extract hidden state.</p>
+<h3 id="mitigation-server-side-only-desync-analysis"><a class="header" href="#mitigation-server-side-only-desync-analysis">Mitigation: Server-Side Only Desync Analysis</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct DesyncReport {
+    pub tick: u64,
+    pub player_hashes: HashMap&lt;PlayerId, u64&gt;,
+    // Full state diffs are SERVER-SIDE ONLY
+    // Never transmitted to clients
+}
+<span class="boring">}</span></code></pre>
+<p>Never send full state dumps to clients. Clients only learn “desync detected at tick N.” Admins can review server-side diffs.</p>
+<h2 id="vulnerability-5-wasm-mod-as-attack-vector"><a class="header" href="#vulnerability-5-wasm-mod-as-attack-vector">Vulnerability 5: WASM Mod as Attack Vector</a></h2>
+<h3 id="the-problem-4"><a class="header" href="#the-problem-4">The Problem</a></h3>
+<p>Malicious mod reads entity positions, sends data to external overlay, or subtly modifies local sim.</p>
+<h3 id="mitigation-capability-based-api-design"><a class="header" href="#mitigation-capability-based-api-design">Mitigation: Capability-Based API Design</a></h3>
+<p>The WASM host API surface IS the security boundary:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct ModCapabilities {
+    pub read_own_state: bool,
+    pub read_visible_state: bool,
+    // read_fogged_state doesn't exist as a capability — the API function doesn't exist
+    pub issue_orders: bool,
+    pub filesystem: FileAccess,    // Usually None
+    pub network: NetworkAccess,    // Usually None
+}
+
+pub enum NetworkAccess {
+    None,
+    AllowList(Vec&lt;String&gt;),
+    // Never unrestricted
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Key principle:</strong> Don’t expose <code>get_all_units()</code> or <code>get_enemy_state()</code>. Only expose <code>get_visible_units()</code> which checks fog. Mods literally cannot request hidden data because the function doesn’t exist.</p>
+<h2 id="vulnerability-6-replay-tampering"><a class="header" href="#vulnerability-6-replay-tampering">Vulnerability 6: Replay Tampering</a></h2>
+<h3 id="the-problem-5"><a class="header" href="#the-problem-5">The Problem</a></h3>
+<p>Modified replay files to fake tournament results.</p>
+<h3 id="mitigation-signed-hash-chain"><a class="header" href="#mitigation-signed-hash-chain">Mitigation: Signed Hash Chain</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct SignedReplay {
+    pub data: ReplayData,
+    pub server_signature: Ed25519Signature,
+    pub hash_chain: Vec&lt;(u64, u64)&gt;,  // tick, cumulative_hash
+}
+
+impl SignedReplay {
+    pub fn verify(&amp;self, server_public_key: &amp;PublicKey) -&gt; bool {
+        // 1. Verify server signature
+        // 2. Verify hash chain integrity (tampering any tick invalidates all subsequent)
+    }
+}
+<span class="boring">}</span></code></pre>
+<h2 id="vulnerability-7-reconciler-as-attack-surface"><a class="header" href="#vulnerability-7-reconciler-as-attack-surface">Vulnerability 7: Reconciler as Attack Surface</a></h2>
+<h3 id="the-problem-6"><a class="header" href="#the-problem-6">The Problem</a></h3>
+<p>If the client accepts “corrections” from an external authority (cross-engine reconciler), a fake server could send malicious corrections.</p>
+<h3 id="mitigation-bounded-and-authenticated-corrections"><a class="header" href="#mitigation-bounded-and-authenticated-corrections">Mitigation: Bounded and Authenticated Corrections</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>fn is_sane_correction(&amp;self, c: &amp;EntityCorrection) -&gt; bool {
+    match &amp;c.field {
+        CorrectionField::Position(new_pos) =&gt; {
+            let current = self.sim.entity_position(c.entity);
+            let max_drift = MAX_UNIT_SPEED * self.ticks_since_sync;
+            current.distance_to(new_pos) &lt;= max_drift
+        }
+        CorrectionField::Credits(amount) =&gt; {
+            *amount &gt;= 0 &amp;&amp; 
+            (*amount - self.last_known_credits).abs() &lt;= MAX_CREDIT_DELTA
+        }
+    }
+}
+<span class="boring">}</span></code></pre>
+<p>All corrections must be: signed by the authority, bounded to physically possible values, and rejectable if suspicious.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="07--cross-engine-compatibility"><a class="header" href="#07--cross-engine-compatibility">07 — Cross-Engine Compatibility</a></h1>
+<h2 id="the-three-layers-of-compatibility"><a class="header" href="#the-three-layers-of-compatibility">The Three Layers of Compatibility</a></h2>
+<pre><code>Layer 3:  Protocol compatibility    (can they talk?)          → Achievable
+Layer 2:  Simulation compatibility  (do they agree on state?) → Hard wall
+Layer 1:  Data compatibility        (do they load same rules?)→ Very achievable
+</code></pre>
+<h2 id="layer-1-data-compatibility-do-this"><a class="header" href="#layer-1-data-compatibility-do-this">Layer 1: Data Compatibility (DO THIS)</a></h2>
+<p>Load the same YAML rules, maps, unit definitions, weapon stats as OpenRA.</p>
+<ul>
+<li><code>ra-formats</code> crate parses MiniYAML and converts to standard YAML</li>
+<li>Same maps work on both engines</li>
+<li>Existing mod data migrates automatically</li>
+<li><strong>Status:</strong> Core part of Phase 0, already planned</li>
+</ul>
+<h2 id="layer-2-simulation-compatibility-the-hard-wall"><a class="header" href="#layer-2-simulation-compatibility-the-hard-wall">Layer 2: Simulation Compatibility (THE HARD WALL)</a></h2>
+<p>For lockstep multiplayer, both engines must produce <strong>bit-identical</strong> results every tick. This is nearly impossible because:</p>
+<ul>
+<li><strong>Pathfinding order:</strong> Tie resolution depends on internal data structures (C# <code>Dictionary</code> vs Rust <code>HashMap</code> iteration order)</li>
+<li><strong>Fixed-point details:</strong> OpenRA uses <code>WDist</code>/<code>WPos</code>/<code>WAngle</code> with 1024 subdivisions. Must match exactly — same rounding, same overflow</li>
+<li><strong>System execution order:</strong> Does movement resolve before combat? OpenRA’s <code>World.Tick()</code> has a specific order</li>
+<li><strong>RNG:</strong> Must use identical algorithm, same seed, advanced same number of times in same order</li>
+<li><strong>Language-level edge cases:</strong> Integer division rounding, overflow behavior between C# and Rust</li>
+</ul>
+<p><strong>Conclusion:</strong> Achieving bit-identical simulation requires bug-for-bug reimplementation of OpenRA in Rust. That’s a port, not our own engine.</p>
+<h2 id="layer-3-protocol-compatibility-achievable-but-pointless-alone"><a class="header" href="#layer-3-protocol-compatibility-achievable-but-pointless-alone">Layer 3: Protocol Compatibility (ACHIEVABLE BUT POINTLESS ALONE)</a></h2>
+<p>OpenRA’s network protocol is open source — simple TCP, frame-based lockstep, <code>Order</code> objects. Could implement it. But protocol compatibility without simulation compatibility → connect, start, desync in seconds.</p>
+<h2 id="realistic-strategy-progressive-compatibility-levels"><a class="header" href="#realistic-strategy-progressive-compatibility-levels">Realistic Strategy: Progressive Compatibility Levels</a></h2>
+<h3 id="level-0-shared-lobby-separate-games-phase-5"><a class="header" href="#level-0-shared-lobby-separate-games-phase-5">Level 0: Shared Lobby, Separate Games (Phase 5)</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub trait CommunityBridge {
+    fn publish_game(&amp;self, game: &amp;GameLobby) -&gt; Result&lt;()&gt;;
+    fn browse_games(&amp;self) -&gt; Result&lt;Vec&lt;GameListing&gt;&gt;;
+    fn fetch_map(&amp;self, hash: &amp;str) -&gt; Result&lt;MapData&gt;;
+    fn share_replay(&amp;self, replay: &amp;ReplayData) -&gt; Result&lt;()&gt;;
+}
+<span class="boring">}</span></code></pre>
+<p>Implement OpenRA’s master server protocol. Games show up in same browser. Your-engine players play your-engine players. Same community, different executables.</p>
+<h3 id="level-1-replay-compatibility-phase-5-6"><a class="header" href="#level-1-replay-compatibility-phase-5-6">Level 1: Replay Compatibility (Phase 5-6)</a></h3>
+<p>Decode OpenRA replay files via <code>OpenRACodec</code>, feed through your sim. They’ll desync eventually, but can watch most of a replay before drift. Useful and shippable.</p>
+<h3 id="level-2-casual-cross-play-with-periodic-resync-future"><a class="header" href="#level-2-casual-cross-play-with-periodic-resync-future">Level 2: Casual Cross-Play with Periodic Resync (Future)</a></h3>
+<p>Both engines run their sim. Every N ticks, authoritative checkpoint broadcast. On desync, reconciler snaps entities to authoritative positions. Visible as slight rubber-banding. Acceptable for casual play.</p>
+<h3 id="level-3-competitive-cross-play-via-embedded-authority-future"><a class="header" href="#level-3-competitive-cross-play-via-embedded-authority-future">Level 3: Competitive Cross-Play via Embedded Authority (Future)</a></h3>
+<p>Your client embeds a headless OpenRA sim process. OpenRA sim is the authority. Your Rust sim runs ahead for prediction and smooth rendering. Reconciler corrects drift. Like FPS client-side prediction, but for RTS.</p>
+<h3 id="level-4-true-lockstep-cross-play-probably-never"><a class="header" href="#level-4-true-lockstep-cross-play-probably-never">Level 4: True Lockstep Cross-Play (Probably Never)</a></h3>
+<p>Requires bit-identical sim. Effectively a port. Architecture doesn’t prevent it, but not worth pursuing.</p>
+<h2 id="architecture-for-compatibility"><a class="header" href="#architecture-for-compatibility">Architecture for Compatibility</a></h2>
+<h3 id="ordercodec-wire-format-translation"><a class="header" href="#ordercodec-wire-format-translation">OrderCodec: Wire Format Translation</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub trait OrderCodec: Send + Sync {
+    fn encode(&amp;self, order: &amp;TimestampedOrder) -&gt; Result&lt;Vec&lt;u8&gt;&gt;;
+    fn decode(&amp;self, bytes: &amp;[u8]) -&gt; Result&lt;TimestampedOrder&gt;;
+    fn protocol_id(&amp;self) -&gt; ProtocolId;
+}
+
+pub struct OpenRACodec {
+    order_map: OrderTranslationTable,
+    coord_transform: CoordTransform,
+}
+
+impl OrderCodec for OpenRACodec {
+    fn encode(&amp;self, order: &amp;TimestampedOrder) -&gt; Result&lt;Vec&lt;u8&gt;&gt; {
+        match &amp;order.order {
+            PlayerOrder::Move { unit_ids, target } =&gt; {
+                let wpos = self.coord_transform.to_wpos(target);
+                openra_wire::encode_move(unit_ids, wpos)
+            }
+            // ... other order types
+        }
+    }
+}
+<span class="boring">}</span></code></pre>
+<h3 id="simreconciler-external-state-correction"><a class="header" href="#simreconciler-external-state-correction">SimReconciler: External State Correction</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub trait SimReconciler: Send + Sync {
+    fn check(&amp;mut self, local_tick: u64, local_hash: u64) -&gt; ReconcileAction;
+    fn receive_authority_state(&amp;mut self, state: AuthState);
+}
+
+pub enum ReconcileAction {
+    InSync,                              // Authority agrees
+    Correct(Vec&lt;EntityCorrection&gt;),      // Minor drift — patch entities
+    Resync(SimSnapshot),                 // Major divergence — reload snapshot
+    Autonomous,                          // No authority — local sim is truth
+}
+<span class="boring">}</span></code></pre>
+<h3 id="protocoladapter-transparent-network-wrapping"><a class="header" href="#protocoladapter-transparent-network-wrapping">ProtocolAdapter: Transparent Network Wrapping</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct ProtocolAdapter&lt;N: NetworkModel&gt; {
+    inner: N,
+    codec: Box&lt;dyn OrderCodec&gt;,
+    reconciler: Option&lt;Box&lt;dyn SimReconciler&gt;&gt;,
+}
+
+impl&lt;N: NetworkModel&gt; NetworkModel for ProtocolAdapter&lt;N&gt; {
+    // Wraps any NetworkModel to speak a foreign protocol
+    // GameLoop has no idea it's talking to OpenRA
+}
+<span class="boring">}</span></code></pre>
+<h3 id="usage"><a class="header" href="#usage">Usage</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>// Native play — nothing special
+let game = GameLoop::new(sim, renderer, LockstepNetwork::new(server));
+
+// OpenRA-compatible play — just wrap the network
+let adapted = ProtocolAdapter {
+    inner: OpenRALockstepNetwork::new(openra_server),
+    codec: Box::new(OpenRACodec::new()),
+    reconciler: Some(Box::new(OpenRAReconciler::new())),
+};
+let game = GameLoop::new(sim, renderer, adapted);
+// GameLoop is identical. Zero changes.
+<span class="boring">}</span></code></pre>
+<h2 id="what-to-build-now-phase-0-to-keep-the-door-open"><a class="header" href="#what-to-build-now-phase-0-to-keep-the-door-open">What to Build Now (Phase 0) to Keep the Door Open</a></h2>
+<p>Costs almost nothing today, enables everything later:</p>
+<ol>
+<li><strong><code>OrderCodec</code> trait</strong> in <code>ra-protocol</code> — orders are wire-format-agnostic from day one</li>
+<li><strong><code>CoordTransform</code></strong> in <code>ra-formats</code> — coordinate systems are explicit, not implicit</li>
+<li><strong><code>Simulation::snapshot()</code>/<code>restore()</code>/<code>apply_correction()</code></strong> — sim is correctable from outside</li>
+<li><strong><code>ProtocolAdapter</code> slot</strong> in <code>NetworkModel</code> trait — network layer is wrappable</li>
+</ol>
+<p>None of these add complexity to the sim or game loop. They’re just ensuring the right seams exist.</p>
+<h2 id="what-not-to-chase"><a class="header" href="#what-not-to-chase">What NOT to Chase</a></h2>
+<ul>
+<li>Don’t try to match OpenRA’s sim behavior bit-for-bit</li>
+<li>Don’t try to connect to OpenRA game servers for actual gameplay</li>
+<li>Don’t compromise your architecture for cross-engine edge cases</li>
+<li>Focus on making switching easy and the experience better, not on co-existing</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="08--development-roadmap-36-months"><a class="header" href="#08--development-roadmap-36-months">08 — Development Roadmap (36 Months)</a></h1>
+<h2 id="phase-dependencies"><a class="header" href="#phase-dependencies">Phase Dependencies</a></h2>
+<pre><code>Phase 0 (Foundation)
+  └→ Phase 1 (Rendering + Bevy visual pipeline)
+       └→ Phase 2 (Simulation) ← CRITICAL MILESTONE
+            ├→ Phase 3 (Game Chrome)
+            │    └→ Phase 4 (AI &amp; Single Player)
+            │         └→ Phase 5 (Multiplayer)
+            │              └→ Phase 6 (Modding &amp; Ecosystem)
+            │                   └→ Phase 7 (LLM Missions + Polish)
+            └→ [Test infrastructure, CI, headless sim tests]
+</code></pre>
+<h2 id="phase-0-foundation--format-literacy-months-13"><a class="header" href="#phase-0-foundation--format-literacy-months-13">Phase 0: Foundation &amp; Format Literacy (Months 1–3)</a></h2>
+<p><strong>Goal:</strong> Read everything OpenRA reads, produce nothing visible yet.</p>
+<h3 id="deliverables"><a class="header" href="#deliverables">Deliverables</a></h3>
+<ul>
+<li><code>ra-formats</code> crate: parse <code>.mix</code> archives, SHP/TMP sprites, <code>.aud</code> audio, <code>.pal</code> palettes</li>
+<li>Parse OpenRA YAML manifests, map format, rule definitions</li>
+<li><code>miniyaml2yaml</code> converter tool</li>
+<li>CLI tool to dump/inspect/validate RA assets</li>
+<li>Extensive tests against known-good OpenRA data</li>
+</ul>
+<h3 id="key-architecture-work"><a class="header" href="#key-architecture-work">Key Architecture Work</a></h3>
+<ul>
+<li>Define <code>PlayerOrder</code> enum in <code>ra-protocol</code> crate</li>
+<li>Define <code>OrderCodec</code> trait (for future cross-engine compatibility)</li>
+<li>Define <code>CoordTransform</code> (coordinate system translation)</li>
+<li>Study OpenRA architecture: Game loop, World/Actor/Trait hierarchy, OrderManager, mod manifest system</li>
+</ul>
+<h3 id="release"><a class="header" href="#release">Release</a></h3>
+<p>Open source <code>ra-formats</code> early. Useful standalone, builds credibility and community interest.</p>
+<h3 id="exit-criteria"><a class="header" href="#exit-criteria">Exit Criteria</a></h3>
+<ul>
+<li>Can parse any OpenRA mod’s YAML rules into typed Rust structs</li>
+<li>Can extract and display sprites from .mix archives</li>
+<li>Can convert MiniYAML to standard YAML losslessly</li>
+</ul>
+<h2 id="phase-1-rendering-slice-months-36"><a class="header" href="#phase-1-rendering-slice-months-36">Phase 1: Rendering Slice (Months 3–6)</a></h2>
+<p><strong>Goal:</strong> Render a map with units standing on it. No gameplay. Demonstrate Bevy’s visual capabilities.</p>
+<h3 id="deliverables-1"><a class="header" href="#deliverables-1">Deliverables</a></h3>
+<ul>
+<li>Bevy-based isometric tile renderer with palette-aware shading</li>
+<li>Sprite animation system (idle, move, attack frames)</li>
+<li>Shroud/fog-of-war rendering</li>
+<li>Camera: smooth scroll, zoom, minimap</li>
+<li>Load OpenRA map, render correctly</li>
+<li>Basic post-processing: bloom on explosions, color grading</li>
+<li>Shader prototypes: chrono-shift shimmer, tesla coil glow (visual showcase)</li>
+</ul>
+<h3 id="key-architecture-work-1"><a class="header" href="#key-architecture-work-1">Key Architecture Work</a></h3>
+<ul>
+<li>Bevy plugin structure: <code>ra-render</code> as a Bevy plugin reading from sim state</li>
+<li>Interpolation between sim ticks for smooth animation at arbitrary FPS</li>
+<li>HD asset pipeline: support high-res sprites alongside classic 8-bit assets</li>
+</ul>
+<h3 id="release-1"><a class="header" href="#release-1">Release</a></h3>
+<p>“Red Alert map rendered in Rust at 4K 144fps with modern post-processing” — visual showcase generates buzz.</p>
+<h3 id="exit-criteria-1"><a class="header" href="#exit-criteria-1">Exit Criteria</a></h3>
+<ul>
+<li>Can load and render any OpenRA Red Alert map</li>
+<li>Sprites animate correctly (idle loops)</li>
+<li>Camera controls feel responsive</li>
+<li>Maintains 144fps at 4K on mid-range hardware</li>
+</ul>
+<h2 id="phase-2-simulation-core-months-612--critical"><a class="header" href="#phase-2-simulation-core-months-612--critical">Phase 2: Simulation Core (Months 6–12) — CRITICAL</a></h2>
+<p><strong>Goal:</strong> Units move, shoot, die. The engine exists.</p>
+<h3 id="deliverables-2"><a class="header" href="#deliverables-2">Deliverables</a></h3>
+<ul>
+<li>ECS-based simulation layer (<code>ra-sim</code>)</li>
+<li>Components mirroring OpenRA traits: Mobile, Health, Attackable, Armament, Building, Buildable, Harvester</li>
+<li>Fixed-point coordinate system (no floats in sim)</li>
+<li>Deterministic RNG</li>
+<li>Pathfinding: Hierarchical A* or flowfields</li>
+<li>Order system: Player inputs → Orders → deterministic sim application</li>
+<li><code>LocalNetwork</code> and <code>ReplayPlayback</code> NetworkModel implementations</li>
+<li>Sim snapshot/restore for save games and future rollback</li>
+</ul>
+<h3 id="key-architecture-work-2"><a class="header" href="#key-architecture-work-2">Key Architecture Work</a></h3>
+<ul>
+<li><strong>Sim/network boundary enforced:</strong> <code>ra-sim</code> has zero imports from <code>ra-net</code></li>
+<li><strong><code>NetworkModel</code> trait defined and proven</strong> with at least <code>LocalNetwork</code> implementation</li>
+<li><strong>System execution order documented and fixed</strong></li>
+<li><strong>State hashing for desync detection</strong></li>
+</ul>
+<h3 id="release-2"><a class="header" href="#release-2">Release</a></h3>
+<p>Units moving, shooting, dying — headless sim + rendered. Record replay file. Play it back.</p>
+<h3 id="exit-criteria-2"><a class="header" href="#exit-criteria-2">Exit Criteria</a></h3>
+<ul>
+<li>Can run 1000-unit battle headless at &gt; 60 ticks/second</li>
+<li>Replay file records and plays back correctly (bit-identical)</li>
+<li>State hash matches between two independent runs with same inputs</li>
+</ul>
+<h2 id="phase-3-game-chrome-months-1216"><a class="header" href="#phase-3-game-chrome-months-1216">Phase 3: Game Chrome (Months 12–16)</a></h2>
+<p><strong>Goal:</strong> It feels like Red Alert.</p>
+<h3 id="deliverables-3"><a class="header" href="#deliverables-3">Deliverables</a></h3>
+<ul>
+<li>Sidebar UI: build queues, power bar, credits display, radar minimap</li>
+<li>Unit selection: box select, ctrl-groups, tab cycling</li>
+<li>Build placement with validity checking</li>
+<li>Audio: EVA voice lines, unit responses, ambient, music (<code>.aud</code> playback)</li>
+<li>Custom UI layer on <code>wgpu</code> for game HUD</li>
+<li><code>egui</code> for dev tools/debug overlays</li>
+</ul>
+<h3 id="exit-criteria-3"><a class="header" href="#exit-criteria-3">Exit Criteria</a></h3>
+<ul>
+<li>Single-player skirmish against scripted dummy AI (first “playable” milestone)</li>
+<li>Feels like Red Alert to someone who’s played it before</li>
+</ul>
+<h2 id="phase-4-ai--single-player-months-1620"><a class="header" href="#phase-4-ai--single-player-months-1620">Phase 4: AI &amp; Single Player (Months 16–20)</a></h2>
+<p><strong>Goal:</strong> Campaign missions and skirmish AI.</p>
+<h3 id="deliverables-4"><a class="header" href="#deliverables-4">Deliverables</a></h3>
+<ul>
+<li>Lua-based scripting for mission scripts</li>
+<li>WASM mod runtime (basic)</li>
+<li>Basic skirmish AI: harvest, build, attack patterns</li>
+<li>Campaign mission loading (OpenRA mission format)</li>
+</ul>
+<h3 id="key-architecture-work-3"><a class="header" href="#key-architecture-work-3">Key Architecture Work</a></h3>
+<ul>
+<li>Lua sandbox with engine bindings</li>
+<li>WASM host API with capability system (see <code>06-SECURITY.md</code>)</li>
+</ul>
+<h3 id="exit-criteria-4"><a class="header" href="#exit-criteria-4">Exit Criteria</a></h3>
+<ul>
+<li>Can play through first few Allied and Soviet campaign missions</li>
+<li>Skirmish AI provides a basic challenge</li>
+</ul>
+<h2 id="phase-5-multiplayer-months-2026"><a class="header" href="#phase-5-multiplayer-months-2026">Phase 5: Multiplayer (Months 20–26)</a></h2>
+<p><strong>Goal:</strong> Deterministic lockstep multiplayer, but better than OpenRA.</p>
+<h3 id="deliverables-5"><a class="header" href="#deliverables-5">Deliverables</a></h3>
+<ul>
+<li><code>LockstepNetwork</code> implementation (input delay model)</li>
+<li><code>RelayLockstepNetwork</code> implementation (relay server with time authority)</li>
+<li>Desync detection and server-side debugging tools (killer feature)</li>
+<li>Lobby system, game browser, NAT traversal via relay</li>
+<li>Replay system (already enabled by Phase 2 architecture)</li>
+<li><code>CommunityBridge</code> for shared server browser with OpenRA</li>
+</ul>
+<h3 id="key-architecture-work-4"><a class="header" href="#key-architecture-work-4">Key Architecture Work</a></h3>
+<ul>
+<li>Sub-tick timestamped orders (CS2 insight)</li>
+<li>Relay server anti-lag-switch mechanism</li>
+<li>Signed replay chain</li>
+<li>Order validation in sim (anti-cheat)</li>
+</ul>
+<h3 id="exit-criteria-5"><a class="header" href="#exit-criteria-5">Exit Criteria</a></h3>
+<ul>
+<li>Two players can play a full game over the internet</li>
+<li>Desync, if it occurs, is automatically diagnosed to specific tick and entity</li>
+<li>Games appear in shared server browser alongside OpenRA games</li>
+</ul>
+<h2 id="phase-6-modding--ecosystem-months-2632"><a class="header" href="#phase-6-modding--ecosystem-months-2632">Phase 6: Modding &amp; Ecosystem (Months 26–32)</a></h2>
+<p><strong>Goal:</strong> This is where you win long-term.</p>
+<h3 id="deliverables-6"><a class="header" href="#deliverables-6">Deliverables</a></h3>
+<ul>
+<li>Full OpenRA YAML rule compatibility (existing mods load)</li>
+<li>WASM mod scripting with full capability system</li>
+<li>In-engine map editor (OpenRA’s biggest UX gap)</li>
+<li>Asset hot-reloading for mod development</li>
+<li>Mod manager + workshop-style distribution</li>
+<li>Tera templating for YAML generation (nice-to-have)</li>
+</ul>
+<h3 id="exit-criteria-6"><a class="header" href="#exit-criteria-6">Exit Criteria</a></h3>
+<ul>
+<li>Someone ports an existing OpenRA mod (Tiberian Dawn, Dune 2000) and it runs</li>
+<li>In-engine map editor is more capable than OpenRA’s standalone tool</li>
+</ul>
+<h2 id="phase-7-ai-content--polish-months-3236"><a class="header" href="#phase-7-ai-content--polish-months-3236">Phase 7: AI Content &amp; Polish (Months 32–36+)</a></h2>
+<p><strong>Goal:</strong> LLM-generated missions, visual polish, and feature parity.</p>
+<h3 id="deliverables--ai-content-generation"><a class="header" href="#deliverables--ai-content-generation">Deliverables — AI Content Generation</a></h3>
+<ul>
+<li><code>ra-llm</code> crate: LLM integration for mission generation</li>
+<li>In-game mission generator UI: describe scenario → playable mission</li>
+<li>Generated output: standard YAML map + Lua trigger scripts + briefing text</li>
+<li>Difficulty scaling: same scenario at different challenge levels</li>
+<li>Mission sharing: rate, remix, publish generated missions</li>
+<li>Campaign generation: connected multi-mission storylines (experimental)</li>
+<li>Adaptive difficulty: AI observes playstyle, generates targeted challenges (experimental)</li>
+</ul>
+<h3 id="deliverables--visual-polish-bevy-rendering"><a class="header" href="#deliverables--visual-polish-bevy-rendering">Deliverables — Visual Polish (Bevy Rendering)</a></h3>
+<ul>
+<li>Full post-processing pipeline: bloom, color grading, ambient occlusion</li>
+<li>Dynamic lighting: explosions, muzzle flash, day/night cycle (optional game mode)</li>
+<li>GPU particle systems: smoke trails, fire propagation, weather (rain, snow)</li>
+<li>Polished shader effects: chrono-shift, iron curtain, gap generator, nuke flash</li>
+<li>Cinematic replay camera with smooth interpolation</li>
+</ul>
+<h3 id="deliverables--platform--ecosystem"><a class="header" href="#deliverables--platform--ecosystem">Deliverables — Platform &amp; Ecosystem</a></h3>
+<ul>
+<li>Feature parity checklist vs OpenRA</li>
+<li>Web build via WASM (play in browser)</li>
+<li>Mobile touch controls</li>
+<li>Accessibility features</li>
+<li>Community infrastructure: website, mod registry, matchmaking server</li>
+</ul>
+<h3 id="exit-criteria-7"><a class="header" href="#exit-criteria-7">Exit Criteria</a></h3>
+<ul>
+<li>A competitive OpenRA player can switch and feel at home</li>
+<li>LLM mission generator produces varied, fun, playable missions</li>
+<li>Browser version is playable</li>
+<li>At least one total conversion mod exists on the platform</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="09--decision-log"><a class="header" href="#09--decision-log">09 — Decision Log</a></h1>
+<p>Every major design decision, with rationale and alternatives considered. Reference this when revisiting or challenging a decision.</p>
+<hr>
+<h2 id="d001-language--rust"><a class="header" href="#d001-language--rust">D001: Language — Rust</a></h2>
+<p><strong>Decision:</strong> Build the engine in Rust.</p>
+<p><strong>Rationale:</strong></p>
+<ul>
+<li>No GC pauses (C# / .NET is OpenRA’s known weakness in large battles)</li>
+<li>Memory safety without runtime cost</li>
+<li>Fearless concurrency for parallel ECS systems</li>
+<li>First-class WASM compilation target (browser, modding sandbox)</li>
+<li>Modern tooling (cargo, crates.io, clippy, miri)</li>
+<li>No competition in Rust RTS space — wide open field</li>
+</ul>
+<p><strong>Alternatives considered:</strong></p>
+<ul>
+<li>C++ (manual memory management, no safety guarantees, build system pain)</li>
+<li>C# (would just be another OpenRA — no differentiation)</li>
+<li>Zig (too immature ecosystem for this scope)</li>
+</ul>
+<hr>
+<h2 id="d002-framework--bevy-revised-from-original-no-bevy-decision"><a class="header" href="#d002-framework--bevy-revised-from-original-no-bevy-decision">D002: Framework — Bevy (REVISED from original “No Bevy” decision)</a></h2>
+<p><strong>Decision:</strong> Use Bevy as the game framework.</p>
+<p><strong>Original decision:</strong> Custom library stack (winit + wgpu + hecs). This was overridden.</p>
+<p><strong>Why the reversal:</strong></p>
+<ul>
+<li>The 2-4 months building engine infrastructure (sprite batching, cameras, audio, input, asset pipeline, hot reload) is time NOT spent on the sim, netcode, and modding — the things that differentiate this project</li>
+<li>Bevy’s ECS IS our architecture — no “fighting two systems.” OpenRA traits map directly to Bevy components</li>
+<li><code>FixedUpdate</code> + <code>.chain()</code> gives deterministic sim scheduling natively</li>
+<li>Bevy’s plugin system makes pluggable networking cleaner than the original trait-based design</li>
+<li>Headless mode (<code>MinimalPlugins</code>) for dedicated servers is built in</li>
+<li>WASM/browser target is tested by community</li>
+<li><code>bevy_reflect</code> enables advanced modding capabilities</li>
+<li>Breaking API changes are manageable: pin version per phase, upgrade between phases</li>
+</ul>
+<p><strong>Risk mitigation:</strong></p>
+<ul>
+<li>Breaking changes → version pinning per development phase</li>
+<li>Not isometric-specific → build isometric layer on Bevy’s 2D (still less work than raw wgpu)</li>
+<li>Performance concerns → Bevy uses rayon internally, <code>par_iter()</code> for data parallelism, and allows custom render passes and SIMD where needed</li>
+</ul>
+<hr>
+<h2 id="d003-data-format--real-yaml-not-miniyaml"><a class="header" href="#d003-data-format--real-yaml-not-miniyaml">D003: Data Format — Real YAML, Not MiniYAML</a></h2>
+<p><strong>Decision:</strong> Use standard spec-compliant YAML with <code>serde_yaml</code>. Not OpenRA’s MiniYAML.</p>
+<p><strong>Rationale:</strong></p>
+<ul>
+<li>Standard YAML parsers, linters, formatters, editor support all work</li>
+<li><code>serde_yaml</code> → typed Rust struct deserialization for free</li>
+<li>JSON-schema validation catches errors before game loads</li>
+<li>No custom parser to maintain</li>
+<li>Inheritance resolved at load time as a processing pass, not a parser feature</li>
+</ul>
+<p><strong>Alternatives considered:</strong></p>
+<ul>
+<li>MiniYAML as-is (rejected — custom parser, no tooling support, not spec-compliant)</li>
+<li>TOML (rejected — awkward for deeply nested game data)</li>
+<li>RON (rejected — modders won’t know it, thin editor support)</li>
+<li>JSON (rejected — too verbose, no comments)</li>
+</ul>
+<p><strong>Migration:</strong> <code>miniyaml2yaml</code> converter tool in <code>ra-formats</code> crate.</p>
+<hr>
+<h2 id="d004-modding--lua-not-python-for-scripting"><a class="header" href="#d004-modding--lua-not-python-for-scripting">D004: Modding — Lua (Not Python) for Scripting</a></h2>
+<p><strong>Decision:</strong> Use Lua for Tier 2 scripting. Do NOT use Python.</p>
+<p><strong>Rationale against Python:</strong></p>
+<ul>
+<li>Floating-point non-determinism breaks lockstep multiplayer</li>
+<li>GC pauses (reintroduces the problem Rust solves)</li>
+<li>50-100x slower than native (hot paths run every tick for every unit)</li>
+<li>Embedding CPython is heavy (~15-30MB)</li>
+<li>Sandboxing is unsolvable — security disaster for community mods</li>
+</ul>
+<p><strong>Rationale for Lua:</strong></p>
+<ul>
+<li>Tiny runtime (~200KB), designed for embedding</li>
+<li>Deterministic (provide fixed-point bindings, avoid floats)</li>
+<li>Trivially sandboxable (control available functions)</li>
+<li>Industry standard: Factorio, WoW, Dota 2, Roblox</li>
+<li><code>mlua</code>/<code>rlua</code> crates are mature</li>
+<li>Any modder can learn in an afternoon</li>
+</ul>
+<hr>
+<h2 id="d005-modding--wasm-for-power-users-tier-3"><a class="header" href="#d005-modding--wasm-for-power-users-tier-3">D005: Modding — WASM for Power Users (Tier 3)</a></h2>
+<p><strong>Decision:</strong> WASM modules via <code>wasmtime</code>/<code>wasmer</code> for advanced mods.</p>
+<p><strong>Rationale:</strong></p>
+<ul>
+<li>Near-native performance</li>
+<li>Perfectly sandboxed by design</li>
+<li>Deterministic execution (critical for multiplayer)</li>
+<li>Modders can write in Rust, C, Go, AssemblyScript, or Python-to-WASM</li>
+<li>Leapfrogs OpenRA (requires C# for deep mods)</li>
+</ul>
+<hr>
+<h2 id="d006-networking--pluggable-via-trait"><a class="header" href="#d006-networking--pluggable-via-trait">D006: Networking — Pluggable via Trait</a></h2>
+<p><strong>Decision:</strong> Abstract all networking behind a <code>NetworkModel</code> trait. Game loop is generic over it.</p>
+<p><strong>Rationale:</strong></p>
+<ul>
+<li>Sim never touches networking concerns (clean boundary)</li>
+<li>Full testability (run sim with <code>LocalNetwork</code>)</li>
+<li>Community can contribute netcode without understanding game logic</li>
+<li>Enables future models: rollback, client-server, cross-engine adapters</li>
+<li>Players could choose model in lobby</li>
+</ul>
+<p><strong>Key invariant:</strong> <code>ra-sim</code> has zero imports from <code>ra-net</code>. They only share <code>ra-protocol</code>.</p>
+<hr>
+<h2 id="d007-networking--relay-server-as-default"><a class="header" href="#d007-networking--relay-server-as-default">D007: Networking — Relay Server as Default</a></h2>
+<p><strong>Decision:</strong> Default multiplayer uses relay server with time authority, not pure P2P.</p>
+<p><strong>Rationale:</strong></p>
+<ul>
+<li>Blocks lag switches (server owns the clock)</li>
+<li>Enables sub-tick chronological ordering (CS2 insight)</li>
+<li>Handles NAT traversal (no port forwarding)</li>
+<li>Enables order validation before broadcast (anti-cheat)</li>
+<li>Signed replays</li>
+<li>Cheap to run (doesn’t run sim, just forwards orders)</li>
+</ul>
+<p><strong>Alternatives available:</strong> Pure P2P lockstep, fog-authoritative server, rollback — all implementable as <code>NetworkModel</code> variants.</p>
+<hr>
+<h2 id="d008-sub-tick-timestamps-on-orders"><a class="header" href="#d008-sub-tick-timestamps-on-orders">D008: Sub-Tick Timestamps on Orders</a></h2>
+<p><strong>Decision:</strong> Every order carries a sub-tick timestamp. Orders within a tick are processed in chronological order.</p>
+<p><strong>Rationale (inspired by CS2):</strong></p>
+<ul>
+<li>Fairer results for edge cases (two players competing for same resource/building)</li>
+<li>Trivial to implement (just attach timestamp at input layer)</li>
+<li>Network model preserves but doesn’t depend on timestamps</li>
+<li>If a future model ignores timestamps, no breakage</li>
+</ul>
+<hr>
+<h2 id="d009-simulation--fixed-point-math-no-floats"><a class="header" href="#d009-simulation--fixed-point-math-no-floats">D009: Simulation — Fixed-Point Math, No Floats</a></h2>
+<p><strong>Decision:</strong> All sim-layer calculations use integer/fixed-point arithmetic. Floats allowed only for rendering interpolation.</p>
+<p><strong>Rationale:</strong></p>
+<ul>
+<li>Required for deterministic lockstep (floats can produce different results across platforms)</li>
+<li>Original Red Alert used integer math — proven approach</li>
+<li>OpenRA uses <code>WDist</code>/<code>WPos</code>/<code>WAngle</code> with 1024 subdivisions — same principle</li>
+</ul>
+<hr>
+<h2 id="d010-simulation--snapshottable-state"><a class="header" href="#d010-simulation--snapshottable-state">D010: Simulation — Snapshottable State</a></h2>
+<p><strong>Decision:</strong> Full sim state must be serializable/deserializable at any tick.</p>
+<p><strong>Rationale enables:</strong></p>
+<ul>
+<li>Save games (trivially)</li>
+<li>Replay system (initial state + orders)</li>
+<li>Desync debugging (diff snapshots between clients at divergence point)</li>
+<li>Rollback netcode (restore state N frames back, replay with corrected inputs)</li>
+<li>Cross-engine reconciliation (restore from authoritative checkpoint)</li>
+<li>Automated testing (load known state, apply inputs, verify result)</li>
+</ul>
+<hr>
+<h2 id="d011-cross-engine-play--community-layer-not-sim-layer"><a class="header" href="#d011-cross-engine-play--community-layer-not-sim-layer">D011: Cross-Engine Play — Community Layer, Not Sim Layer</a></h2>
+<p><strong>Decision:</strong> Cross-engine compatibility targets data/community layer. NOT bit-identical simulation.</p>
+<p><strong>Rationale:</strong></p>
+<ul>
+<li>Bit-identical sim requires bug-for-bug reimplementation (that’s a port, not our engine)</li>
+<li>Community interop is valuable and achievable: shared server browser, maps, mod format</li>
+<li>Architecture keeps the door open for deeper interop later (OrderCodec, SimReconciler, ProtocolAdapter)</li>
+<li>Progressive levels: shared lobby → replay viewing → casual cross-play → competitive cross-play</li>
+</ul>
+<hr>
+<h2 id="d012-security--validate-orders-in-sim"><a class="header" href="#d012-security--validate-orders-in-sim">D012: Security — Validate Orders in Sim</a></h2>
+<p><strong>Decision:</strong> Every order is validated inside the simulation before execution. Validation is deterministic.</p>
+<p><strong>Rationale:</strong></p>
+<ul>
+<li>All clients run same validation → agree on rejections → no desync</li>
+<li>Defense in depth with relay server validation</li>
+<li>Repeated rejections indicate cheating (loggable)</li>
+<li>No separate “anti-cheat” system — validation IS anti-cheat</li>
+</ul>
+<hr>
+<h2 id="d013-pathfinding--hierarchical-a-or-flowfields"><a class="header" href="#d013-pathfinding--hierarchical-a-or-flowfields">D013: Pathfinding — Hierarchical A* or Flowfields</a></h2>
+<p><strong>Decision:</strong> Use advanced pathfinding (hierarchical A* or flowfields), not basic A*.</p>
+<p><strong>Rationale:</strong></p>
+<ul>
+<li>OpenRA uses basic A* which struggles with large unit groups</li>
+<li>Hierarchical/flowfield pathfinding handles mass movement far better</li>
+<li>Well-suited to grid-based terrain</li>
+<li>One of the visible performance improvements that makes people switch</li>
+</ul>
+<hr>
+<h2 id="d014-templating--tera-in-phase-6-nice-to-have"><a class="header" href="#d014-templating--tera-in-phase-6-nice-to-have">D014: Templating — Tera in Phase 6 (Nice-to-Have)</a></h2>
+<p><strong>Decision:</strong> Add Tera template engine for YAML/Lua generation. Phase 6. Not foundational.</p>
+<p><strong>Rationale:</strong></p>
+<ul>
+<li>Eliminates copy-paste for faction variants, bulk unit generation</li>
+<li>Load-time only (zero runtime cost)</li>
+<li>~50 lines to integrate</li>
+<li>Optional — no mod depends on it</li>
+</ul>
+<hr>
+<h2 id="d015-performance--efficiency-first-not-thread-first"><a class="header" href="#d015-performance--efficiency-first-not-thread-first">D015: Performance — Efficiency-First, Not Thread-First</a></h2>
+<p><strong>Decision:</strong> Performance is achieved through algorithmic efficiency, cache-friendly data layout, adaptive workload, zero allocation, and amortized computation. Multi-core scaling is a bonus layer on top, not the foundation.</p>
+<p><strong>Principle:</strong> The engine must run a 500-unit battle smoothly on a 2-core, 4GB machine from 2012. Multi-core machines get higher unit counts as a natural consequence of the work-stealing scheduler.</p>
+<p><strong>The Efficiency Pyramid (ordered by impact):</strong></p>
+<ol>
+<li>Algorithmic efficiency (flowfields, spatial hash, hierarchical pathfinding)</li>
+<li>Cache-friendly ECS layout (hot/warm/cold component separation)</li>
+<li>Simulation LOD (skip work that doesn’t affect the outcome)</li>
+<li>Amortized work (stagger expensive systems across ticks)</li>
+<li>Zero-allocation hot paths (pre-allocated scratch buffers)</li>
+<li>Work-stealing parallelism (rayon via Bevy — bonus, not foundation)</li>
+</ol>
+<p><strong>Inspired by:</strong> Datadog Vector’s pipeline efficiency, Tokio’s work-stealing runtime. These systems are fast because they waste nothing, not because they use more hardware.</p>
+<p><strong>Anti-pattern rejected:</strong> “Just parallelize it” as the default answer. Parallelism without algorithmic efficiency is adding lanes to a highway with broken traffic lights.</p>
+<p>See <code>10-PERFORMANCE.md</code> for full details, targets, and implementation patterns.</p>
+<hr>
+<h2 id="d016-llm-generated-missions-and-campaigns"><a class="header" href="#d016-llm-generated-missions-and-campaigns">D016: LLM-Generated Missions and Campaigns</a></h2>
+<p><strong>Decision:</strong> Integrate LLM-powered mission generation as a first-class feature (Phase 7), with an in-game UI for describing scenarios in natural language.</p>
+<p><strong>Rationale:</strong></p>
+<ul>
+<li>Transforms Red Alert from finite content to infinite content</li>
+<li>Generated output is standard YAML + Lua — fully editable, shareable, learnable</li>
+<li>No other RTS (Red Alert or otherwise) offers this capability</li>
+<li>LLM quality is sufficient for terrain layout, objective design, AI behavior scripting</li>
+<li>Modular: <code>ra-llm</code> crate is optional, game works without it</li>
+</ul>
+<p><strong>Scope:</strong></p>
+<ul>
+<li>Phase 7: single mission generation (terrain, objectives, enemy composition, triggers, briefing)</li>
+<li>Future: multi-mission campaigns, adaptive difficulty, cooperative scenario design</li>
+</ul>
+<p><strong>Implementation approach:</strong></p>
+<ul>
+<li>LLM generates YAML map definition + Lua trigger scripts</li>
+<li>Same format as hand-crafted missions — no special runtime</li>
+<li>Validation pass ensures generated content is playable (valid unit types, reachable objectives)</li>
+<li>Can use local models or API-based models (user choice)</li>
+</ul>
+<hr>
+<h2 id="d017-bevy-rendering-pipeline-for-visual-enhancement"><a class="header" href="#d017-bevy-rendering-pipeline-for-visual-enhancement">D017: Bevy Rendering Pipeline for Visual Enhancement</a></h2>
+<p><strong>Decision:</strong> Leverage Bevy’s modern rendering pipeline (wgpu, shaders, post-processing) to deliver visual quality beyond both OpenRA and the Remastered Collection while maintaining the classic isometric aesthetic.</p>
+<p><strong>Rationale:</strong></p>
+<ul>
+<li>OpenRA uses SDL/OpenGL with basic sprite rendering — no post-processing, no dynamic lighting</li>
+<li>Remastered Collection has 4K sprites but a fixed rendering pipeline — no shader effects</li>
+<li>Bevy + wgpu enables: bloom, color grading, dynamic lighting, GPU particles, custom shaders</li>
+<li>Classic aesthetic preserved — these are enhancements, not a style change</li>
+<li>Shader effects bring special abilities to life: chrono-shift shimmer, tesla arcs, nuclear flash</li>
+</ul>
+<p><strong>Scope:</strong></p>
+<ul>
+<li>Phase 1: basic post-processing prototypes (bloom, color grading)</li>
+<li>Phase 3: polished effects for game chrome</li>
+<li>Phase 7: full visual pipeline (dynamic lighting, particles, weather, cinematic camera)</li>
+</ul>
+<p><strong>Design principle:</strong> The game should look like Red Alert remembered through rose-tinted glasses. Better than you remember, but unmistakably Red Alert.</p>
+<hr>
+<h2 id="pending-decisions"><a class="header" href="#pending-decisions">PENDING DECISIONS</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>ID</th><th>Topic</th><th>Needs Resolution By</th></tr>
+</thead>
+<tbody>
+<tr><td>P001</td><td><del>ECS crate choice</del> — RESOLVED: Bevy’s built-in ECS</td><td>Resolved</td></tr>
+<tr><td>P002</td><td>Fixed-point scale (256? 1024? match OpenRA’s 1024?)</td><td>Phase 2 start</td></tr>
+<tr><td>P003</td><td>Audio library choice</td><td>Phase 3 start</td></tr>
+<tr><td>P004</td><td>Lobby/matchmaking protocol specifics</td><td>Phase 5 start</td></tr>
+<tr><td>P005</td><td>Map editor architecture (in-engine vs separate process)</td><td>Phase 6 start</td></tr>
+<tr><td>P006</td><td>License choice (GPL v3 to match EA source? MIT? Apache?)</td><td>Phase 0 start</td></tr>
+</tbody>
+</table>
+</div>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="10--performance-philosophy--strategy"><a class="header" href="#10--performance-philosophy--strategy">10 — Performance Philosophy &amp; Strategy</a></h1>
+<h2 id="core-principle-efficiency-not-brute-force"><a class="header" href="#core-principle-efficiency-not-brute-force">Core Principle: Efficiency, Not Brute Force</a></h2>
+<p><strong>Performance goal: a 2012 laptop with 2 cores and 4GB RAM runs a 500-unit battle smoothly. A modern machine handles 3000 units without sweating.</strong></p>
+<p>We don’t achieve this by throwing threads at the problem. We achieve it by wasting almost nothing — like Datadog Vector’s pipeline or Tokio’s runtime. Every cycle does useful work. Every byte of memory is intentional. Multi-core is a bonus that emerges naturally, not a crutch the engine depends on.</p>
+<p>This is a first-class project goal and a primary differentiator over OpenRA.</p>
+<h2 id="the-efficiency-pyramid"><a class="header" href="#the-efficiency-pyramid">The Efficiency Pyramid</a></h2>
+<p>Ordered by impact. Each layer works on a single core. Only the top layer requires multiple cores.</p>
+<pre><code>                    ┌──────────────┐
+                    │ Work-stealing │  Bonus: scales to N cores
+                    │ (rayon/Bevy)  │  (automatic, zero config)
+                  ┌─┴──────────────┴─┐
+                  │  Zero-allocation  │  No heap churn in hot paths
+                  │  hot paths        │  (scratch buffers, reuse)
+                ┌─┴──────────────────┴─┐
+                │  Amortized work       │  Spread cost across ticks
+                │  (staggered updates)  │  (1/4 of units per tick)
+              ┌─┴──────────────────────┴─┐
+              │  Simulation LOD           │  Skip work that doesn't
+              │  (adaptive detail)        │  affect the outcome
+            ┌─┴──────────────────────────┴─┐
+            │  Cache-friendly ECS layout    │  Data access patterns
+            │  (hot/warm/cold separation)   │  that respect the hardware
+          ┌─┴──────────────────────────────┴─┐
+          │  Algorithmic efficiency            │  Better algorithms beat
+          │  (O(n) beats O(n²) on any CPU)    │  more cores every time
+          └────────────────────────────────────┘
+              ▲ MOST IMPACT — start here
+</code></pre>
+<h2 id="layer-1-algorithmic-efficiency"><a class="header" href="#layer-1-algorithmic-efficiency">Layer 1: Algorithmic Efficiency</a></h2>
+<p>Better algorithms on one core beat bad algorithms on eight cores. This is where 90% of the performance comes from.</p>
+<h3 id="pathfinding-flowfields-replace-per-unit-a"><a class="header" href="#pathfinding-flowfields-replace-per-unit-a">Pathfinding: Flowfields Replace Per-Unit A*</a></h3>
+<p>When 50 units move to the same area, OpenRA computes 50 separate A* paths.</p>
+<pre><code>OpenRA (per-unit A*):
+  50 units × ~200 nodes explored × ~10 ops/node = ~100,000 operations
+
+Flowfield:
+  1 field × ~2000 cells × ~5 ops/cell              = ~10,000 operations
+  50 units × 1 lookup each                          =       50 operations
+  Total                                             = ~10,050 operations
+
+10x reduction. No threading involved.
+</code></pre>
+<p>The 51st unit ordered to the same area costs zero — the field already exists. Flowfields amortize across all units sharing a destination.</p>
+<h3 id="spatial-indexing-grid-hash-replaces-brute-force-range-checks"><a class="header" href="#spatial-indexing-grid-hash-replaces-brute-force-range-checks">Spatial Indexing: Grid Hash Replaces Brute-Force Range Checks</a></h3>
+<p>“Which enemies are in range of this turret?”</p>
+<pre><code>Brute force: 1000 units × 1000 units = 1,000,000 distance checks/tick
+Spatial hash: 1000 units × ~8 nearby   =     8,000 distance checks/tick
+
+125x reduction. No threading involved.
+</code></pre>
+<p>A spatial hash grid divides the map into cells. Each entity registers in its cell. Range queries only check nearby cells. O(1) lookup per cell, O(k) per query where k is the number of nearby entities (typically &lt; 20).</p>
+<h3 id="hierarchical-pathfinding-coarse-then-fine"><a class="header" href="#hierarchical-pathfinding-coarse-then-fine">Hierarchical Pathfinding: Coarse Then Fine</a></h3>
+<p>Break the map into ~32x32 cell chunks. Path between chunks first (few nodes, fast), then path within the current chunk only. Most of the map is never pathfinded at all. Units approaching a new chunk compute the next fine-grained path just before entering.</p>
+<h2 id="layer-2-cache-friendly-data-layout"><a class="header" href="#layer-2-cache-friendly-data-layout">Layer 2: Cache-Friendly Data Layout</a></h2>
+<h3 id="ecs-archetype-storage-bevy-provides-this"><a class="header" href="#ecs-archetype-storage-bevy-provides-this">ECS Archetype Storage (Bevy provides this)</a></h3>
+<pre><code>OOP (cache-hostile, how OpenRA works):
+  Unit objects on heap: [pos, health, vel, name, sprite, audio, ...]
+  Iterating 1000 positions touches 1000 scattered memory locations
+  Cache miss rate: high — each unit object spans multiple cache lines
+
+ECS archetype storage (cache-friendly):
+  Positions:  [p0, p1, p2, ... p999]   ← 8KB contiguous, fits in L1 cache
+  Healths:    [h0, h1, h2, ... h999]   ← 4KB contiguous, fits in L1 cache
+  Movement system reads positions sequentially → perfect cache utilization
+</code></pre>
+<p>1000 units × 8-byte positions = 8KB. L1 cache on any CPU since ~2008 is at least 32KB. The entire position array fits in L1. Movement for 1000 units runs from the fastest memory on the chip.</p>
+<h3 id="hot--warm--cold-separation"><a class="header" href="#hot--warm--cold-separation">Hot / Warm / Cold Separation</a></h3>
+<pre><code>HOT (every tick, must be contiguous):
+  Position (8B), Velocity (8B), Health (4B), SimLOD (1B), FogVisible (1B)
+  → ~22 bytes per entity × 1000 = 22KB — fits in L1
+
+WARM (some ticks, when relevant):
+  Armament (16B), PathState (32B), BuildQueue (24B), HarvesterCargo (8B)
+  → Separate archetype arrays, pulled into cache only when needed
+
+COLD (rarely accessed, lives in Resources):
+  UnitDef (name, icon, prereqs), SpriteSheet refs, AudioClip refs
+  → Loaded once, referenced by ID, never iterated in hot loops
+</code></pre>
+<p>Design components to be small. A Position is 2 integers, not a struct with name, description, and sprite reference. The movement system pulls only positions and velocities — 16 bytes per entity, 16KB for 1000 units, pure L1.</p>
+<h2 id="layer-3-simulation-lod-adaptive-detail"><a class="header" href="#layer-3-simulation-lod-adaptive-detail">Layer 3: Simulation LOD (Adaptive Detail)</a></h2>
+<p>Not all units need full processing every tick. A harvester driving across an empty map with no enemies nearby doesn’t need per-tick pathfinding, collision detection, or animation state updates.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub enum SimLOD {
+    /// Full processing: pathfinding, collision, precise targeting
+    Full,
+    /// Reduced: simplified pathing, broadphase collision only
+    Reduced,
+    /// Minimal: advance along pre-computed path, check arrival
+    Minimal,
+}
+
+fn assign_sim_lod(
+    unit_pos: CellPos,
+    in_combat: bool,
+    near_enemy: bool,
+    near_friendly_base: bool,  // deterministic — same on all clients
+) -&gt; SimLOD {
+    if in_combat || near_enemy { SimLOD::Full }
+    else if near_friendly_base { SimLOD::Reduced }
+    else { SimLOD::Minimal }
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Determinism requirement:</strong> LOD assignment must be based on game state (not camera position), so all clients assign the same LOD. “Near enemy” and “near base” are deterministic queries.</p>
+<p><strong>Impact:</strong> In a typical game, only 20-30% of units are in active combat at any moment. The other 70-80% use Reduced or Minimal processing. Effective per-tick cost drops proportionally.</p>
+<h2 id="layer-4-amortized-work-staggered-updates"><a class="header" href="#layer-4-amortized-work-staggered-updates">Layer 4: Amortized Work (Staggered Updates)</a></h2>
+<p>Expensive systems don’t need to process all entities every tick. Spread the cost evenly.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>fn pathfinding_system(
+    tick: Res&lt;CurrentTick&gt;,
+    query: Query&lt;(Entity, &amp;Position, &amp;MoveTarget, &amp;SimLOD), With&lt;NeedsPath&gt;&gt;,
+    nav: Res&lt;NavMesh&gt;,
+) {
+    let group = tick.0 % 4;  // 4 groups, each updated every 4 ticks
+    
+    for (entity, pos, target, lod) in &amp;query {
+        let should_update = match lod {
+            SimLOD::Full    =&gt; entity.index() % 4 == group,    // every 4 ticks
+            SimLOD::Reduced =&gt; entity.index() % 8 == (group * 2) % 8,  // every 8 ticks
+            SimLOD::Minimal =&gt; false,  // never replan, just follow existing path
+        };
+        
+        if should_update {
+            recompute_path(entity, pos, target, &amp;nav);
+        }
+    }
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Result:</strong> Pathfinding cost per tick drops 75% for Full-LOD units, 87.5% for Reduced, 100% for Minimal. Combined with SimLOD, a 1000-unit game might recompute ~50 paths per tick instead of 1000.</p>
+<h3 id="stagger-schedule"><a class="header" href="#stagger-schedule">Stagger Schedule</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>System</th><th>Full LOD</th><th>Reduced LOD</th><th>Minimal LOD</th></tr>
+</thead>
+<tbody>
+<tr><td>Pathfinding replan</td><td>Every 4 ticks</td><td>Every 8 ticks</td><td>Never (follow path)</td></tr>
+<tr><td>Fog visibility</td><td>Every tick</td><td>Every 2 ticks</td><td>Every 4 ticks</td></tr>
+<tr><td>AI re-evaluation</td><td>Every 2 ticks</td><td>Every 4 ticks</td><td>Every 8 ticks</td></tr>
+<tr><td>Collision detection</td><td>Every tick</td><td>Every 2 ticks</td><td>Broadphase only</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Determinism preserved:</strong> The stagger schedule is based on entity ID and tick number — deterministic on all clients.</p>
+<h2 id="layer-5-zero-allocation-hot-paths"><a class="header" href="#layer-5-zero-allocation-hot-paths">Layer 5: Zero-Allocation Hot Paths</a></h2>
+<p>Heap allocation is expensive: the allocator touches cold memory, fragments the heap, and (in C#) creates GC pressure. Rust eliminates GC, but allocation itself still costs cache misses.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Pre-allocated scratch space reused every tick
+/// Initialized once at game start, never reallocated
+pub struct TickScratch {
+    damage_events: Vec&lt;DamageEvent&gt;,       // capacity: 4096
+    path_open_set: BinaryHeap&lt;PathNode&gt;,   // capacity: 8192
+    path_closed_set: HashSet&lt;CellPos&gt;,     // capacity: 8192
+    visible_cells: BitVec,                 // capacity: map_width × map_height
+    validated_orders: Vec&lt;ValidatedOrder&gt;,  // capacity: 256
+    combat_pairs: Vec&lt;(Entity, Entity)&gt;,   // capacity: 2048
+}
+
+impl TickScratch {
+    fn reset(&amp;mut self) {
+        // .clear() sets length to 0 but keeps allocated memory
+        // Zero bytes allocated on heap during the hot loop
+        self.damage_events.clear();
+        self.path_open_set.clear();
+        self.path_closed_set.clear();
+        self.visible_cells.fill(false);
+        self.validated_orders.clear();
+        self.combat_pairs.clear();
+    }
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Per-tick allocation target: zero bytes.</strong> All temporary data goes into pre-allocated scratch buffers. <code>clear()</code> resets without deallocating. The hot loop touches only warm memory.</p>
+<p>This alone is why Rust beats C# for games. OpenRA allocates thousands of small objects per tick (iterators, LINQ results, temporary collections, event args). Each one is a potential GC trigger. Our engine allocates nothing.</p>
+<h2 id="layer-6-work-stealing-parallelism-bonus-scaling"><a class="header" href="#layer-6-work-stealing-parallelism-bonus-scaling">Layer 6: Work-Stealing Parallelism (Bonus Scaling)</a></h2>
+<p>After layers 1-5, the engine is already fast on a single core. Parallelism scales it further on better hardware.</p>
+<h3 id="how-bevy--rayon-work-stealing-operates"><a class="header" href="#how-bevy--rayon-work-stealing-operates">How Bevy + rayon Work-Stealing Operates</a></h3>
+<p>Rayon (used internally by Bevy) creates exactly one thread per CPU core. No more, no less. Work is distributed via lock-free work-stealing queues:</p>
+<pre><code>2-core laptop:
+  Thread 0: [pathfind units 0-499]
+  Thread 1: [pathfind units 500-999]
+  → Both busy, no waste
+
+8-core desktop:
+  Thread 0: [pathfind units 0-124]
+  Thread 1: [pathfind units 125-249]
+  ...
+  Thread 7: [pathfind units 875-999]
+  → All busy, 4x faster than laptop
+
+16-core workstation:
+  → Same code, 16 threads, even faster
+  → No configuration change
+</code></pre>
+<p>No thread is ever idle if work exists. No thread is ever created or destroyed during gameplay. This is the Tokio/Vector model applied to CPU-bound game logic.</p>
+<h3 id="where-parallelism-actually-helps"><a class="header" href="#where-parallelism-actually-helps">Where Parallelism Actually Helps</a></h3>
+<p>Only systems where per-entity work is independent and costly:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>// YES — pathfinding is expensive and independent per unit
+fn pathfinding_system(query: Query&lt;...&gt;, nav: Res&lt;NavMesh&gt;) {
+    let results: Vec&lt;_&gt; = query.par_iter()
+        .filter(|(_, _, _, lod)| lod.should_update_path(tick))
+        .map(|(entity, pos, target, _)| {
+            (entity, nav.find_path(pos, &amp;target.dest))
+        })
+        .collect();
+    
+    // Sort for determinism, then apply sequentially
+    apply_sorted(results);
+}
+
+// NO — movement is cheap per unit, parallelism overhead not worth it
+fn movement_system(mut query: Query&lt;(&amp;mut Position, &amp;Velocity)&gt;) {
+    // Just iterate. Adding and subtracting integers.
+    // Parallelism overhead would exceed the computation itself.
+    for (mut pos, vel) in &amp;mut query {
+        pos.x += vel.dx;
+        pos.y += vel.dy;
+    }
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Rule of thumb:</strong> Only parallelize systems where per-entity work exceeds ~1 microsecond. Simple arithmetic on components is faster to iterate sequentially than to distribute.</p>
+<h2 id="performance-targets"><a class="header" href="#performance-targets">Performance Targets</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Metric</th><th>Weak Machine (2 core, 4GB)</th><th>Mid Machine (8 core, 16GB)</th><th>Strong Machine (16 core, 32GB)</th></tr>
+</thead>
+<tbody>
+<tr><td>Smooth battle size</td><td>500 units</td><td>2000 units</td><td>3000+ units</td></tr>
+<tr><td>Tick time budget</td><td>66ms (15 tps)</td><td>66ms (15 tps)</td><td>33ms (30 tps)</td></tr>
+<tr><td>Actual tick time (target)</td><td>&lt; 40ms</td><td>&lt; 10ms</td><td>&lt; 5ms</td></tr>
+<tr><td>Render framerate</td><td>60fps</td><td>144fps</td><td>240fps</td></tr>
+<tr><td>RAM usage (1000 units)</td><td>&lt; 150MB</td><td>&lt; 200MB</td><td>&lt; 200MB</td></tr>
+<tr><td>Startup to menu</td><td>&lt; 3 seconds</td><td>&lt; 1 second</td><td>&lt; 1 second</td></tr>
+<tr><td>Per-tick heap allocation</td><td>0 bytes</td><td>0 bytes</td><td>0 bytes</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="performance-vs-openra-projected"><a class="header" href="#performance-vs-openra-projected">Performance vs. OpenRA (Projected)</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>What</th><th>OpenRA (C#)</th><th>Our Engine</th><th>Why</th></tr>
+</thead>
+<tbody>
+<tr><td>500 unit tick</td><td>~30-60ms (single thread, GC spikes to 100ms+)</td><td>~8ms (algorithmic + cache)</td><td>Flowfields, spatial hash, ECS layout</td></tr>
+<tr><td>Memory per unit</td><td>~2-4KB (C# objects + GC metadata)</td><td>~200-400 bytes (ECS packed)</td><td>No GC metadata, no vtable, no boxing</td></tr>
+<tr><td>GC pause</td><td>5-50ms unpredictable spikes</td><td>0ms (doesn’t exist)</td><td>Rust ownership + zero-alloc hot paths</td></tr>
+<tr><td>Pathfinding 50 units</td><td>50 × A* = ~2ms</td><td>1 flowfield + 50 lookups = ~0.1ms</td><td>Algorithm change, not hardware change</td></tr>
+<tr><td>Memory fragmentation</td><td>Increases over game duration</td><td>Stable (pre-allocated pools)</td><td>Scratch buffers, no per-tick allocation</td></tr>
+<tr><td>2-core scaling</td><td>1x (single-threaded)</td><td>~1.5x (work-stealing helps where applicable)</td><td>rayon adaptive</td></tr>
+<tr><td>8-core scaling</td><td>1x (single-threaded)</td><td>~3-5x (diminishing returns on game logic)</td><td>rayon work-stealing</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="profiling--regression-strategy"><a class="header" href="#profiling--regression-strategy">Profiling &amp; Regression Strategy</a></h2>
+<h3 id="automated-benchmarks-ci"><a class="header" href="#automated-benchmarks-ci">Automated Benchmarks (CI)</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>#[bench] fn bench_tick_100_units()  { tick_bench(100); }
+#[bench] fn bench_tick_500_units()  { tick_bench(500); }
+#[bench] fn bench_tick_1000_units() { tick_bench(1000); }
+#[bench] fn bench_tick_2000_units() { tick_bench(2000); }
+
+#[bench] fn bench_flowfield_generation() { ... }
+#[bench] fn bench_spatial_query_1000() { ... }
+#[bench] fn bench_fog_recalc_full_map() { ... }
+
+#[bench] fn bench_snapshot_1000_units() { ... }
+#[bench] fn bench_restore_1000_units() { ... }
+<span class="boring">}</span></code></pre>
+<h3 id="regression-rule"><a class="header" href="#regression-rule">Regression Rule</a></h3>
+<p>CI fails if any benchmark regresses &gt; 10% from the rolling average. Performance is a ratchet — it only goes up.</p>
+<h3 id="profile-before-parallelize"><a class="header" href="#profile-before-parallelize">Profile Before Parallelize</a></h3>
+<p>Never add <code>par_iter()</code> without profiling first. Measure single-threaded. If a system takes &gt; 1ms, consider parallelizing. If it takes &lt; 0.1ms, sequential is faster (avoids coordination overhead).</p>
+<h2 id="decision-record"><a class="header" href="#decision-record">Decision Record</a></h2>
+<h3 id="d015-performance--efficiency-first-not-thread-first-1"><a class="header" href="#d015-performance--efficiency-first-not-thread-first-1">D015: Performance — Efficiency-First, Not Thread-First</a></h3>
+<p><strong>Decision:</strong> Performance is achieved through algorithmic efficiency, cache-friendly data layout, adaptive workload, zero allocation, and amortized computation. Multi-core scaling is a bonus layer on top, not the foundation.</p>
+<p><strong>Principle:</strong> The engine must run a 500-unit battle smoothly on a 2-core, 4GB machine from 2012. Multi-core machines get higher unit counts as a natural consequence of the work-stealing scheduler.</p>
+<p><strong>Inspired by:</strong> Datadog Vector’s pipeline efficiency, Tokio’s work-stealing runtime, axum’s zero-overhead request handling. These systems are fast because they waste nothing, not because they use more hardware.</p>
+<p><strong>Anti-pattern:</strong> “Just parallelize it” as the answer to performance questions. Parallelism without algorithmic efficiency is like adding lanes to a highway with broken traffic lights.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr-ef4e11c1.min.js"></script>
+        <script src="mark-09e88c2c.min.js"></script>
+        <script src="searcher-c2a407aa.js"></script>
+
+        <script src="clipboard-1626706a.min.js"></script>
+        <script src="highlight-abc7f01d.js"></script>
+        <script src="book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+        <script>
+        window.addEventListener('load', function() {
+            window.setTimeout(window.print, 100);
+        });
+        </script>
+
+
+    </div>
+    </body>
+</html>

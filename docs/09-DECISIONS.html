@@ -1,0 +1,501 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Decision Log - Iron Curtain — Design Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Design docs for a Rust-native Red Alert RTS engine">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="favicon-8114d1fc.png">
+        <link rel="stylesheet" href="css/variables-8adf115d.css">
+        <link rel="stylesheet" href="css/general-2459343d.css">
+        <link rel="stylesheet" href="css/chrome-ae938929.css">
+        <link rel="stylesheet" href="css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "searchindex-f7729c0f.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc-d8a85e3a.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Iron Curtain — Design Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs/edit/main/src/09-DECISIONS.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="09--decision-log"><a class="header" href="#09--decision-log">09 — Decision Log</a></h1>
+<p>Every major design decision, with rationale and alternatives considered. Reference this when revisiting or challenging a decision.</p>
+<hr>
+<h2 id="d001-language--rust"><a class="header" href="#d001-language--rust">D001: Language — Rust</a></h2>
+<p><strong>Decision:</strong> Build the engine in Rust.</p>
+<p><strong>Rationale:</strong></p>
+<ul>
+<li>No GC pauses (C# / .NET is OpenRA’s known weakness in large battles)</li>
+<li>Memory safety without runtime cost</li>
+<li>Fearless concurrency for parallel ECS systems</li>
+<li>First-class WASM compilation target (browser, modding sandbox)</li>
+<li>Modern tooling (cargo, crates.io, clippy, miri)</li>
+<li>No competition in Rust RTS space — wide open field</li>
+</ul>
+<p><strong>Alternatives considered:</strong></p>
+<ul>
+<li>C++ (manual memory management, no safety guarantees, build system pain)</li>
+<li>C# (would just be another OpenRA — no differentiation)</li>
+<li>Zig (too immature ecosystem for this scope)</li>
+</ul>
+<hr>
+<h2 id="d002-framework--bevy-revised-from-original-no-bevy-decision"><a class="header" href="#d002-framework--bevy-revised-from-original-no-bevy-decision">D002: Framework — Bevy (REVISED from original “No Bevy” decision)</a></h2>
+<p><strong>Decision:</strong> Use Bevy as the game framework.</p>
+<p><strong>Original decision:</strong> Custom library stack (winit + wgpu + hecs). This was overridden.</p>
+<p><strong>Why the reversal:</strong></p>
+<ul>
+<li>The 2-4 months building engine infrastructure (sprite batching, cameras, audio, input, asset pipeline, hot reload) is time NOT spent on the sim, netcode, and modding — the things that differentiate this project</li>
+<li>Bevy’s ECS IS our architecture — no “fighting two systems.” OpenRA traits map directly to Bevy components</li>
+<li><code>FixedUpdate</code> + <code>.chain()</code> gives deterministic sim scheduling natively</li>
+<li>Bevy’s plugin system makes pluggable networking cleaner than the original trait-based design</li>
+<li>Headless mode (<code>MinimalPlugins</code>) for dedicated servers is built in</li>
+<li>WASM/browser target is tested by community</li>
+<li><code>bevy_reflect</code> enables advanced modding capabilities</li>
+<li>Breaking API changes are manageable: pin version per phase, upgrade between phases</li>
+</ul>
+<p><strong>Risk mitigation:</strong></p>
+<ul>
+<li>Breaking changes → version pinning per development phase</li>
+<li>Not isometric-specific → build isometric layer on Bevy’s 2D (still less work than raw wgpu)</li>
+<li>Performance concerns → Bevy uses rayon internally, <code>par_iter()</code> for data parallelism, and allows custom render passes and SIMD where needed</li>
+</ul>
+<hr>
+<h2 id="d003-data-format--real-yaml-not-miniyaml"><a class="header" href="#d003-data-format--real-yaml-not-miniyaml">D003: Data Format — Real YAML, Not MiniYAML</a></h2>
+<p><strong>Decision:</strong> Use standard spec-compliant YAML with <code>serde_yaml</code>. Not OpenRA’s MiniYAML.</p>
+<p><strong>Rationale:</strong></p>
+<ul>
+<li>Standard YAML parsers, linters, formatters, editor support all work</li>
+<li><code>serde_yaml</code> → typed Rust struct deserialization for free</li>
+<li>JSON-schema validation catches errors before game loads</li>
+<li>No custom parser to maintain</li>
+<li>Inheritance resolved at load time as a processing pass, not a parser feature</li>
+</ul>
+<p><strong>Alternatives considered:</strong></p>
+<ul>
+<li>MiniYAML as-is (rejected — custom parser, no tooling support, not spec-compliant)</li>
+<li>TOML (rejected — awkward for deeply nested game data)</li>
+<li>RON (rejected — modders won’t know it, thin editor support)</li>
+<li>JSON (rejected — too verbose, no comments)</li>
+</ul>
+<p><strong>Migration:</strong> <code>miniyaml2yaml</code> converter tool in <code>ra-formats</code> crate.</p>
+<hr>
+<h2 id="d004-modding--lua-not-python-for-scripting"><a class="header" href="#d004-modding--lua-not-python-for-scripting">D004: Modding — Lua (Not Python) for Scripting</a></h2>
+<p><strong>Decision:</strong> Use Lua for Tier 2 scripting. Do NOT use Python.</p>
+<p><strong>Rationale against Python:</strong></p>
+<ul>
+<li>Floating-point non-determinism breaks lockstep multiplayer</li>
+<li>GC pauses (reintroduces the problem Rust solves)</li>
+<li>50-100x slower than native (hot paths run every tick for every unit)</li>
+<li>Embedding CPython is heavy (~15-30MB)</li>
+<li>Sandboxing is unsolvable — security disaster for community mods</li>
+</ul>
+<p><strong>Rationale for Lua:</strong></p>
+<ul>
+<li>Tiny runtime (~200KB), designed for embedding</li>
+<li>Deterministic (provide fixed-point bindings, avoid floats)</li>
+<li>Trivially sandboxable (control available functions)</li>
+<li>Industry standard: Factorio, WoW, Dota 2, Roblox</li>
+<li><code>mlua</code>/<code>rlua</code> crates are mature</li>
+<li>Any modder can learn in an afternoon</li>
+</ul>
+<hr>
+<h2 id="d005-modding--wasm-for-power-users-tier-3"><a class="header" href="#d005-modding--wasm-for-power-users-tier-3">D005: Modding — WASM for Power Users (Tier 3)</a></h2>
+<p><strong>Decision:</strong> WASM modules via <code>wasmtime</code>/<code>wasmer</code> for advanced mods.</p>
+<p><strong>Rationale:</strong></p>
+<ul>
+<li>Near-native performance</li>
+<li>Perfectly sandboxed by design</li>
+<li>Deterministic execution (critical for multiplayer)</li>
+<li>Modders can write in Rust, C, Go, AssemblyScript, or Python-to-WASM</li>
+<li>Leapfrogs OpenRA (requires C# for deep mods)</li>
+</ul>
+<hr>
+<h2 id="d006-networking--pluggable-via-trait"><a class="header" href="#d006-networking--pluggable-via-trait">D006: Networking — Pluggable via Trait</a></h2>
+<p><strong>Decision:</strong> Abstract all networking behind a <code>NetworkModel</code> trait. Game loop is generic over it.</p>
+<p><strong>Rationale:</strong></p>
+<ul>
+<li>Sim never touches networking concerns (clean boundary)</li>
+<li>Full testability (run sim with <code>LocalNetwork</code>)</li>
+<li>Community can contribute netcode without understanding game logic</li>
+<li>Enables future models: rollback, client-server, cross-engine adapters</li>
+<li>Players could choose model in lobby</li>
+</ul>
+<p><strong>Key invariant:</strong> <code>ra-sim</code> has zero imports from <code>ra-net</code>. They only share <code>ra-protocol</code>.</p>
+<hr>
+<h2 id="d007-networking--relay-server-as-default"><a class="header" href="#d007-networking--relay-server-as-default">D007: Networking — Relay Server as Default</a></h2>
+<p><strong>Decision:</strong> Default multiplayer uses relay server with time authority, not pure P2P.</p>
+<p><strong>Rationale:</strong></p>
+<ul>
+<li>Blocks lag switches (server owns the clock)</li>
+<li>Enables sub-tick chronological ordering (CS2 insight)</li>
+<li>Handles NAT traversal (no port forwarding)</li>
+<li>Enables order validation before broadcast (anti-cheat)</li>
+<li>Signed replays</li>
+<li>Cheap to run (doesn’t run sim, just forwards orders)</li>
+</ul>
+<p><strong>Alternatives available:</strong> Pure P2P lockstep, fog-authoritative server, rollback — all implementable as <code>NetworkModel</code> variants.</p>
+<hr>
+<h2 id="d008-sub-tick-timestamps-on-orders"><a class="header" href="#d008-sub-tick-timestamps-on-orders">D008: Sub-Tick Timestamps on Orders</a></h2>
+<p><strong>Decision:</strong> Every order carries a sub-tick timestamp. Orders within a tick are processed in chronological order.</p>
+<p><strong>Rationale (inspired by CS2):</strong></p>
+<ul>
+<li>Fairer results for edge cases (two players competing for same resource/building)</li>
+<li>Trivial to implement (just attach timestamp at input layer)</li>
+<li>Network model preserves but doesn’t depend on timestamps</li>
+<li>If a future model ignores timestamps, no breakage</li>
+</ul>
+<hr>
+<h2 id="d009-simulation--fixed-point-math-no-floats"><a class="header" href="#d009-simulation--fixed-point-math-no-floats">D009: Simulation — Fixed-Point Math, No Floats</a></h2>
+<p><strong>Decision:</strong> All sim-layer calculations use integer/fixed-point arithmetic. Floats allowed only for rendering interpolation.</p>
+<p><strong>Rationale:</strong></p>
+<ul>
+<li>Required for deterministic lockstep (floats can produce different results across platforms)</li>
+<li>Original Red Alert used integer math — proven approach</li>
+<li>OpenRA uses <code>WDist</code>/<code>WPos</code>/<code>WAngle</code> with 1024 subdivisions — same principle</li>
+</ul>
+<hr>
+<h2 id="d010-simulation--snapshottable-state"><a class="header" href="#d010-simulation--snapshottable-state">D010: Simulation — Snapshottable State</a></h2>
+<p><strong>Decision:</strong> Full sim state must be serializable/deserializable at any tick.</p>
+<p><strong>Rationale enables:</strong></p>
+<ul>
+<li>Save games (trivially)</li>
+<li>Replay system (initial state + orders)</li>
+<li>Desync debugging (diff snapshots between clients at divergence point)</li>
+<li>Rollback netcode (restore state N frames back, replay with corrected inputs)</li>
+<li>Cross-engine reconciliation (restore from authoritative checkpoint)</li>
+<li>Automated testing (load known state, apply inputs, verify result)</li>
+</ul>
+<hr>
+<h2 id="d011-cross-engine-play--community-layer-not-sim-layer"><a class="header" href="#d011-cross-engine-play--community-layer-not-sim-layer">D011: Cross-Engine Play — Community Layer, Not Sim Layer</a></h2>
+<p><strong>Decision:</strong> Cross-engine compatibility targets data/community layer. NOT bit-identical simulation.</p>
+<p><strong>Rationale:</strong></p>
+<ul>
+<li>Bit-identical sim requires bug-for-bug reimplementation (that’s a port, not our engine)</li>
+<li>Community interop is valuable and achievable: shared server browser, maps, mod format</li>
+<li>Architecture keeps the door open for deeper interop later (OrderCodec, SimReconciler, ProtocolAdapter)</li>
+<li>Progressive levels: shared lobby → replay viewing → casual cross-play → competitive cross-play</li>
+</ul>
+<hr>
+<h2 id="d012-security--validate-orders-in-sim"><a class="header" href="#d012-security--validate-orders-in-sim">D012: Security — Validate Orders in Sim</a></h2>
+<p><strong>Decision:</strong> Every order is validated inside the simulation before execution. Validation is deterministic.</p>
+<p><strong>Rationale:</strong></p>
+<ul>
+<li>All clients run same validation → agree on rejections → no desync</li>
+<li>Defense in depth with relay server validation</li>
+<li>Repeated rejections indicate cheating (loggable)</li>
+<li>No separate “anti-cheat” system — validation IS anti-cheat</li>
+</ul>
+<hr>
+<h2 id="d013-pathfinding--hierarchical-a-or-flowfields"><a class="header" href="#d013-pathfinding--hierarchical-a-or-flowfields">D013: Pathfinding — Hierarchical A* or Flowfields</a></h2>
+<p><strong>Decision:</strong> Use advanced pathfinding (hierarchical A* or flowfields), not basic A*.</p>
+<p><strong>Rationale:</strong></p>
+<ul>
+<li>OpenRA uses basic A* which struggles with large unit groups</li>
+<li>Hierarchical/flowfield pathfinding handles mass movement far better</li>
+<li>Well-suited to grid-based terrain</li>
+<li>One of the visible performance improvements that makes people switch</li>
+</ul>
+<hr>
+<h2 id="d014-templating--tera-in-phase-6-nice-to-have"><a class="header" href="#d014-templating--tera-in-phase-6-nice-to-have">D014: Templating — Tera in Phase 6 (Nice-to-Have)</a></h2>
+<p><strong>Decision:</strong> Add Tera template engine for YAML/Lua generation. Phase 6. Not foundational.</p>
+<p><strong>Rationale:</strong></p>
+<ul>
+<li>Eliminates copy-paste for faction variants, bulk unit generation</li>
+<li>Load-time only (zero runtime cost)</li>
+<li>~50 lines to integrate</li>
+<li>Optional — no mod depends on it</li>
+</ul>
+<hr>
+<h2 id="d015-performance--efficiency-first-not-thread-first"><a class="header" href="#d015-performance--efficiency-first-not-thread-first">D015: Performance — Efficiency-First, Not Thread-First</a></h2>
+<p><strong>Decision:</strong> Performance is achieved through algorithmic efficiency, cache-friendly data layout, adaptive workload, zero allocation, and amortized computation. Multi-core scaling is a bonus layer on top, not the foundation.</p>
+<p><strong>Principle:</strong> The engine must run a 500-unit battle smoothly on a 2-core, 4GB machine from 2012. Multi-core machines get higher unit counts as a natural consequence of the work-stealing scheduler.</p>
+<p><strong>The Efficiency Pyramid (ordered by impact):</strong></p>
+<ol>
+<li>Algorithmic efficiency (flowfields, spatial hash, hierarchical pathfinding)</li>
+<li>Cache-friendly ECS layout (hot/warm/cold component separation)</li>
+<li>Simulation LOD (skip work that doesn’t affect the outcome)</li>
+<li>Amortized work (stagger expensive systems across ticks)</li>
+<li>Zero-allocation hot paths (pre-allocated scratch buffers)</li>
+<li>Work-stealing parallelism (rayon via Bevy — bonus, not foundation)</li>
+</ol>
+<p><strong>Inspired by:</strong> Datadog Vector’s pipeline efficiency, Tokio’s work-stealing runtime. These systems are fast because they waste nothing, not because they use more hardware.</p>
+<p><strong>Anti-pattern rejected:</strong> “Just parallelize it” as the default answer. Parallelism without algorithmic efficiency is adding lanes to a highway with broken traffic lights.</p>
+<p>See <code>10-PERFORMANCE.md</code> for full details, targets, and implementation patterns.</p>
+<hr>
+<h2 id="d016-llm-generated-missions-and-campaigns"><a class="header" href="#d016-llm-generated-missions-and-campaigns">D016: LLM-Generated Missions and Campaigns</a></h2>
+<p><strong>Decision:</strong> Integrate LLM-powered mission generation as a first-class feature (Phase 7), with an in-game UI for describing scenarios in natural language.</p>
+<p><strong>Rationale:</strong></p>
+<ul>
+<li>Transforms Red Alert from finite content to infinite content</li>
+<li>Generated output is standard YAML + Lua — fully editable, shareable, learnable</li>
+<li>No other RTS (Red Alert or otherwise) offers this capability</li>
+<li>LLM quality is sufficient for terrain layout, objective design, AI behavior scripting</li>
+<li>Modular: <code>ra-llm</code> crate is optional, game works without it</li>
+</ul>
+<p><strong>Scope:</strong></p>
+<ul>
+<li>Phase 7: single mission generation (terrain, objectives, enemy composition, triggers, briefing)</li>
+<li>Future: multi-mission campaigns, adaptive difficulty, cooperative scenario design</li>
+</ul>
+<p><strong>Implementation approach:</strong></p>
+<ul>
+<li>LLM generates YAML map definition + Lua trigger scripts</li>
+<li>Same format as hand-crafted missions — no special runtime</li>
+<li>Validation pass ensures generated content is playable (valid unit types, reachable objectives)</li>
+<li>Can use local models or API-based models (user choice)</li>
+</ul>
+<hr>
+<h2 id="d017-bevy-rendering-pipeline-for-visual-enhancement"><a class="header" href="#d017-bevy-rendering-pipeline-for-visual-enhancement">D017: Bevy Rendering Pipeline for Visual Enhancement</a></h2>
+<p><strong>Decision:</strong> Leverage Bevy’s modern rendering pipeline (wgpu, shaders, post-processing) to deliver visual quality beyond both OpenRA and the Remastered Collection while maintaining the classic isometric aesthetic.</p>
+<p><strong>Rationale:</strong></p>
+<ul>
+<li>OpenRA uses SDL/OpenGL with basic sprite rendering — no post-processing, no dynamic lighting</li>
+<li>Remastered Collection has 4K sprites but a fixed rendering pipeline — no shader effects</li>
+<li>Bevy + wgpu enables: bloom, color grading, dynamic lighting, GPU particles, custom shaders</li>
+<li>Classic aesthetic preserved — these are enhancements, not a style change</li>
+<li>Shader effects bring special abilities to life: chrono-shift shimmer, tesla arcs, nuclear flash</li>
+</ul>
+<p><strong>Scope:</strong></p>
+<ul>
+<li>Phase 1: basic post-processing prototypes (bloom, color grading)</li>
+<li>Phase 3: polished effects for game chrome</li>
+<li>Phase 7: full visual pipeline (dynamic lighting, particles, weather, cinematic camera)</li>
+</ul>
+<p><strong>Design principle:</strong> The game should look like Red Alert remembered through rose-tinted glasses. Better than you remember, but unmistakably Red Alert.</p>
+<hr>
+<h2 id="pending-decisions"><a class="header" href="#pending-decisions">PENDING DECISIONS</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>ID</th><th>Topic</th><th>Needs Resolution By</th></tr>
+</thead>
+<tbody>
+<tr><td>P001</td><td><del>ECS crate choice</del> — RESOLVED: Bevy’s built-in ECS</td><td>Resolved</td></tr>
+<tr><td>P002</td><td>Fixed-point scale (256? 1024? match OpenRA’s 1024?)</td><td>Phase 2 start</td></tr>
+<tr><td>P003</td><td>Audio library choice</td><td>Phase 3 start</td></tr>
+<tr><td>P004</td><td>Lobby/matchmaking protocol specifics</td><td>Phase 5 start</td></tr>
+<tr><td>P005</td><td>Map editor architecture (in-engine vs separate process)</td><td>Phase 6 start</td></tr>
+<tr><td>P006</td><td>License choice (GPL v3 to match EA source? MIT? Apache?)</td><td>Phase 0 start</td></tr>
+</tbody>
+</table>
+</div>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="08-ROADMAP.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="10-PERFORMANCE.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="08-ROADMAP.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="10-PERFORMANCE.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr-ef4e11c1.min.js"></script>
+        <script src="mark-09e88c2c.min.js"></script>
+        <script src="searcher-c2a407aa.js"></script>
+
+        <script src="clipboard-1626706a.min.js"></script>
+        <script src="highlight-abc7f01d.js"></script>
+        <script src="book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>
