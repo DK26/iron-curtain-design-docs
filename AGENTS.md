@@ -149,6 +149,12 @@ Phase 7 (Months 32-36) → LLM Missions + Polish: mission generator, visual effe
 | `RollbackNetwork`         | GGPO-style                         | Future |
 | `ProtocolAdapter<N>`      | Cross-engine wrapper               | Future |
 
+**Connection methods** (below `NetworkModel`, transport-layer): direct IP, join codes (rendezvous + hole-punch), QR codes, relay fallback. See `src/03-NETCODE.md`.
+
+**Tracking servers** (`TrackingServer` trait): game directory for discovery. Official + community-hosted + OpenRA shared browser. Not a relay — no game data flows through it.
+
+**Multi-player scaling:** Architecture supports N players. Relay server recommended for 4+. No hard player limit — practical limit is sim cost (more players = more units) and input delay (worst connection dominates). Team games, FFA, and spectators all supported.
+
 ## Security Model
 
 - **Maphack:** Architectural limit in lockstep (all clients have full state). Partial mitigation via memory obfuscation. Real fix: fog-authoritative server.
