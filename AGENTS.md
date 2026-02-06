@@ -34,6 +34,8 @@ Violating any of these is a bug. Do not propose designs that break them.
 
 9. **Engine core is game-agnostic.** No game-specific enums, resource types, or unit categories in engine core. Positions are 3D (`WorldPos { x, y, z }`). System pipeline is registered per game module, not hardcoded. Renderer uses a `Renderable` trait. RA1 sets z=0 and registers sprite rendering — but the engine doesn't know that.
 
+10. **Platform-agnostic by design.** Input is abstracted behind `InputSource` trait (not hardcoded to mouse/keyboard). UI layout is responsive (adapts to screen size via `ScreenClass`). No raw `std::fs` — all assets go through Bevy's asset system. Render quality is runtime-configurable. App lifecycle (suspend/resume) uses sim snapshots. The architecture must not create obstacles for any platform: desktop, browser, mobile, console.
+
 ## Crate Structure
 
 ```
@@ -102,13 +104,13 @@ Phase 7 (Months 32-36) → LLM Missions + Polish: mission generator, visual effe
 
 ## Performance Targets
 
-| Metric              | 2-core laptop | 8-core desktop | 16-core workstation |
-| ------------------- | ------------- | -------------- | ------------------- |
-| Smooth battle       | 500 units     | 2000 units     | 3000+ units         |
-| Tick time           | < 40ms        | < 10ms         | < 5ms               |
-| Render FPS          | 60            | 144            | 240                 |
-| RAM (1000 units)    | < 150MB       | < 200MB        | < 200MB             |
-| Per-tick allocation | 0 bytes       | 0 bytes        | 0 bytes             |
+| Metric              | 2-core laptop | 8-core desktop | 16-core workstation | Mobile (phone/tablet) | Browser (WASM) |
+| ------------------- | ------------- | -------------- | ------------------- | --------------------- | -------------- |
+| Smooth battle       | 500 units     | 2000 units     | 3000+ units         | 200 units             | 300 units      |
+| Tick time           | < 40ms        | < 10ms         | < 5ms               | < 50ms                | < 40ms         |
+| Render FPS          | 60            | 144            | 240                 | 30                    | 60             |
+| RAM (1000 units)    | < 150MB       | < 200MB        | < 200MB             | < 100MB               | < 100MB        |
+| Per-tick allocation | 0 bytes       | 0 bytes        | 0 bytes             | 0 bytes               | 0 bytes        |
 
 ## Performance Efficiency Pyramid (in order of impact)
 

@@ -170,12 +170,12 @@ fn pathfinding_system(
 
 ### Stagger Schedule
 
-| System | Full LOD | Reduced LOD | Minimal LOD |
-|--------|----------|-------------|-------------|
-| Pathfinding replan | Every 4 ticks | Every 8 ticks | Never (follow path) |
-| Fog visibility | Every tick | Every 2 ticks | Every 4 ticks |
-| AI re-evaluation | Every 2 ticks | Every 4 ticks | Every 8 ticks |
-| Collision detection | Every tick | Every 2 ticks | Broadphase only |
+| System              | Full LOD      | Reduced LOD   | Minimal LOD         |
+| ------------------- | ------------- | ------------- | ------------------- |
+| Pathfinding replan  | Every 4 ticks | Every 8 ticks | Never (follow path) |
+| Fog visibility      | Every tick    | Every 2 ticks | Every 4 ticks       |
+| AI re-evaluation    | Every 2 ticks | Every 4 ticks | Every 8 ticks       |
+| Collision detection | Every tick    | Every 2 ticks | Broadphase only     |
 
 **Determinism preserved:** The stagger schedule is based on entity ID and tick number — deterministic on all clients.
 
@@ -274,27 +274,27 @@ fn movement_system(mut query: Query<(&mut Position, &Velocity)>) {
 
 ## Performance Targets
 
-| Metric | Weak Machine (2 core, 4GB) | Mid Machine (8 core, 16GB) | Strong Machine (16 core, 32GB) |
-|--------|---------------------------|---------------------------|-------------------------------|
-| Smooth battle size | 500 units | 2000 units | 3000+ units |
-| Tick time budget | 66ms (15 tps) | 66ms (15 tps) | 33ms (30 tps) |
-| Actual tick time (target) | < 40ms | < 10ms | < 5ms |
-| Render framerate | 60fps | 144fps | 240fps |
-| RAM usage (1000 units) | < 150MB | < 200MB | < 200MB |
-| Startup to menu | < 3 seconds | < 1 second | < 1 second |
-| Per-tick heap allocation | 0 bytes | 0 bytes | 0 bytes |
+| Metric                    | Weak Machine (2 core, 4GB) | Mid Machine (8 core, 16GB) | Strong Machine (16 core, 32GB) | Mobile (phone/tablet) | Browser (WASM)               |
+| ------------------------- | -------------------------- | -------------------------- | ------------------------------ | --------------------- | ---------------------------- |
+| Smooth battle size        | 500 units                  | 2000 units                 | 3000+ units                    | 200 units             | 300 units                    |
+| Tick time budget          | 66ms (15 tps)              | 66ms (15 tps)              | 33ms (30 tps)                  | 66ms (15 tps)         | 66ms (15 tps)                |
+| Actual tick time (target) | < 40ms                     | < 10ms                     | < 5ms                          | < 50ms                | < 40ms                       |
+| Render framerate          | 60fps                      | 144fps                     | 240fps                         | 30fps                 | 60fps                        |
+| RAM usage (1000 units)    | < 150MB                    | < 200MB                    | < 200MB                        | < 100MB               | < 100MB                      |
+| Startup to menu           | < 3 seconds                | < 1 second                 | < 1 second                     | < 5 seconds           | < 8 seconds (incl. download) |
+| Per-tick heap allocation  | 0 bytes                    | 0 bytes                    | 0 bytes                        | 0 bytes               | 0 bytes                      |
 
 ## Performance vs. OpenRA (Projected)
 
-| What | OpenRA (C#) | Our Engine | Why |
-|------|-------------|------------|-----|
-| 500 unit tick | ~30-60ms (single thread, GC spikes to 100ms+) | ~8ms (algorithmic + cache) | Flowfields, spatial hash, ECS layout |
-| Memory per unit | ~2-4KB (C# objects + GC metadata) | ~200-400 bytes (ECS packed) | No GC metadata, no vtable, no boxing |
-| GC pause | 5-50ms unpredictable spikes | 0ms (doesn't exist) | Rust ownership + zero-alloc hot paths |
-| Pathfinding 50 units | 50 × A* = ~2ms | 1 flowfield + 50 lookups = ~0.1ms | Algorithm change, not hardware change |
-| Memory fragmentation | Increases over game duration | Stable (pre-allocated pools) | Scratch buffers, no per-tick allocation |
-| 2-core scaling | 1x (single-threaded) | ~1.5x (work-stealing helps where applicable) | rayon adaptive |
-| 8-core scaling | 1x (single-threaded) | ~3-5x (diminishing returns on game logic) | rayon work-stealing |
+| What                 | OpenRA (C#)                                   | Our Engine                                   | Why                                     |
+| -------------------- | --------------------------------------------- | -------------------------------------------- | --------------------------------------- |
+| 500 unit tick        | ~30-60ms (single thread, GC spikes to 100ms+) | ~8ms (algorithmic + cache)                   | Flowfields, spatial hash, ECS layout    |
+| Memory per unit      | ~2-4KB (C# objects + GC metadata)             | ~200-400 bytes (ECS packed)                  | No GC metadata, no vtable, no boxing    |
+| GC pause             | 5-50ms unpredictable spikes                   | 0ms (doesn't exist)                          | Rust ownership + zero-alloc hot paths   |
+| Pathfinding 50 units | 50 × A* = ~2ms                                | 1 flowfield + 50 lookups = ~0.1ms            | Algorithm change, not hardware change   |
+| Memory fragmentation | Increases over game duration                  | Stable (pre-allocated pools)                 | Scratch buffers, no per-tick allocation |
+| 2-core scaling       | 1x (single-threaded)                          | ~1.5x (work-stealing helps where applicable) | rayon adaptive                          |
+| 8-core scaling       | 1x (single-threaded)                          | ~3-5x (diminishing returns on game logic)    | rayon work-stealing                     |
 
 ## Profiling & Regression Strategy
 

@@ -163,23 +163,19 @@ A different game module (e.g., RA2) can insert additional systems (garrison, min
 ## Game Loop
 
 ```rust
-pub struct GameLoop<N: NetworkModel> {
+pub struct GameLoop<N: NetworkModel, I: InputSource> {
     sim: Simulation,
     renderer: Renderer,
     network: N,
-    input: InputHandler,
+    input: I,
     local_player: PlayerId,
 }
 
-impl<N: NetworkModel> GameLoop<N> {
+impl<N: NetworkModel, I: InputSource> GameLoop<N, I> {
     fn frame(&mut self) {
         // 1. Gather local input with sub-tick timestamps
         for order in self.input.drain_orders() {
-            self.network.submit_order(TimestampedOrder {
-                player: self.local_player,
-                order,
-                sub_tick_time: self.frame_time_within_tick(),
-            });
+            self.network.submit_order(order);
         }
 
         // 2. Advance sim as far as confirmed orders allow
@@ -197,13 +193,75 @@ impl<N: NetworkModel> GameLoop<N> {
 }
 ```
 
-**Key property:** `GameLoop` is generic over `N: NetworkModel`. It has zero knowledge of whether it's running single-player, lockstep multiplayer, rollback, or cross-engine play. This is the central architectural guarantee.
+**Key property:** `GameLoop` is generic over `N: NetworkModel` and `I: InputSource`. It has zero knowledge of whether it's running single-player or multiplayer, or whether input comes from a mouse, touchscreen, or gamepad. This is the central architectural guarantee.
 
 ## Pathfinding
 
 **Decision:** Hierarchical A* or flowfields — leap ahead of OpenRA's basic A*.
 
 OpenRA uses standard A* which struggles with large unit groups. Hierarchical pathfinding or flowfields handle mass unit movement far better and are well-suited to the grid-based terrain.
+
+## Platform Portability
+
+The engine must not create obstacles for any platform. Desktop is the primary dev target, but every architectural choice must be portable to browser (WASM), mobile (Android/iOS), and consoles without rework.
+
+### Portability Design Rules
+
+1. **Input is abstracted behind a trait.** `InputSource` produces `PlayerOrder`s — it knows nothing about mice, keyboards, touchscreens, or gamepads. The game loop consumes orders, not raw input events. Each platform provides its own `InputSource` implementation.
+
+2. **UI layout is responsive.** No hardcoded pixel positions. The sidebar, minimap, and build queue use constraint-based layout that adapts to screen size and aspect ratio. Mobile/tablet may use a completely different layout (bottom bar instead of sidebar). `ra-ui` provides layout *profiles*, not a single fixed layout.
+
+3. **Click-to-world is abstracted behind a trait.** Isometric screen→cell (desktop), touch→cell (mobile), and raycast→cell (3D mod) all implement the same `ScreenToWorld` trait, producing a `CellPos`. No isometric math hardcoded in the game loop.
+
+4. **Render quality is configurable per device.** FPS cap, particle density, post-FX toggles, resolution scaling, shadow quality — all runtime-configurable. Mobile caps at 30fps; desktop targets 60-240fps. The renderer reads a `RenderSettings` resource, not compile-time constants.
+
+5. **No raw filesystem I/O.** All asset loading goes through Bevy's asset system, never `std::fs` directly. Mobile and browser have sandboxed filesystems; WASM has no filesystem at all. Save games use platform-appropriate storage (e.g., `localStorage` on web, app sandbox on mobile).
+
+6. **App lifecycle is handled.** Mobile and consoles require suspend/resume/save-on-background. The snapshottable sim makes this trivial — `snapshot()` on suspend, `restore()` on resume. This must be an engine-level lifecycle hook, not an afterthought.
+
+7. **Audio backend is abstracted.** Bevy handles this, but no code should assume a specific audio API. Platform-specific audio routing (e.g., phone speaker vs headphones, console audio mixing policies) is Bevy's concern.
+
+### Platform Target Matrix
+
+| Platform                | Graphics API              | Input Model                | Key Challenge                            | Phase  |
+| ----------------------- | ------------------------- | -------------------------- | ---------------------------------------- | ------ |
+| Windows / macOS / Linux | Vulkan / Metal / DX12     | Mouse + keyboard           | Primary target                           | 1      |
+| Steam Deck              | Vulkan (native Linux)     | Gamepad + touchpad         | Gamepad UI controls                      | 3      |
+| Browser (WASM)          | WebGPU / WebGL2           | Mouse + keyboard + touch   | Download size, no filesystem             | 7      |
+| Android / iOS           | Vulkan / Metal (via wgpu) | Touch + on-screen controls | Touch RTS controls, battery, screen size | 8+     |
+| Xbox                    | DX12 (via GDK)            | Gamepad                    | NDA SDK, certification                   | 8+     |
+| PlayStation             | AGC (proprietary)         | Gamepad                    | wgpu doesn't support AGC yet, NDA SDK    | Future |
+| Nintendo Switch         | NVN / Vulkan              | Gamepad + touch (handheld) | NDA SDK, limited GPU                     | Future |
+
+### Input Abstraction
+
+```rust
+/// Platform-agnostic input source. Each platform implements this.
+pub trait InputSource {
+    /// Drain pending player orders from whatever input device is active.
+    fn drain_orders(&mut self) -> Vec<TimestampedOrder>;
+
+    /// Optional: hint about input capabilities for UI adaptation.
+    fn capabilities(&self) -> InputCapabilities;
+}
+
+pub struct InputCapabilities {
+    pub has_mouse: bool,
+    pub has_keyboard: bool,
+    pub has_touch: bool,
+    pub has_gamepad: bool,
+    pub screen_size: ScreenClass,  // Phone, Tablet, Desktop, TV
+}
+
+pub enum ScreenClass {
+    Phone,    // < 7" — bottom bar UI, large touch targets
+    Tablet,   // 7-13" — sidebar OK, touch targets
+    Desktop,  // 13"+ — full sidebar, mouse precision
+    TV,       // 40"+ — large text, gamepad radial menus
+}
+```
+
+`ra-ui` reads `InputCapabilities` to choose the appropriate layout profile. The sim never sees any of this.
 
 ## Crate Dependency Graph
 
