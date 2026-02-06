@@ -277,6 +277,71 @@ RA2 / Tiberian Sun would add these to the existing engine without modifying the 
 | Prism forwarding              | `PrismForwarder` component + chain calculation system  | New component + system                                |
 | Bridges / tunnels             | Layered pathing with Z transitions                     | Uses existing `CellPos.z`                             |
 
+### Scope Boundary: The Isometric C&C Family
+
+Multi-game extensibility targets the **isometric C&C family**: Red Alert, Red Alert 2, Tiberian Sun, Tiberian Dawn, and Dune 2000 (plus expansions and total conversions in the same visual paradigm). These games share:
+
+- Fixed isometric camera
+- Grid-based terrain (with optional elevation for TS/RA2)
+- Sprite and/or voxel-to-sprite rendering
+- `.mix` archives and related format lineage
+- Discrete cell-based pathfinding (flowfields, hierarchical A*)
+
+**C&C Generals and later 3D titles (C&C3, RA3) are out of scope.** They use free-rotating 3D cameras, mesh-based rendering, continuous-space pathfinding (navmesh), and completely unrelated file formats (`.big`, `.w3d`). Supporting them would require replacing ~60% of the engine (renderer, pathfinding, coordinate system, format parsers) — at that point it's a separate project borrowing the sim core, not a game module.
+
+If a Generals-class game is desired in the future, the correct approach is to extract the game-agnostic crates (`ra-sim`, `ra-protocol`, `ra-net`, `ra-script`) into a shared RTS framework library and build a 3D frontend independently. The `GameModule` trait and deterministic sim architecture make this feasible without forking.
+
+### 3D Rendering as a Mod (Not a Game Module)
+
+While 3D C&C titles are out of scope as *game modules*, the architecture explicitly supports **3D rendering mods** for isometric-family games. A "3D Red Alert" mod replaces the visual presentation while the simulation, networking, pathfinding, and rules are completely unchanged.
+
+This works because the sim/render split is absolute — the sim has no concept of camera, sprites, or visual style. Bevy already ships a full 3D pipeline (PBR materials, GLTF loading, skeletal animation, dynamic lighting, shadows), so a 3D render mod leverages existing infrastructure.
+
+**What changes vs. what doesn't:**
+
+| Layer         | 3D Mod Changes? | Details                                                            |
+| ------------- | --------------- | ------------------------------------------------------------------ |
+| Simulation    | No              | Same tick, same rules, same grid                                   |
+| Pathfinding   | No              | Grid-based flowfields still work (SC2 is 3D but uses grid pathing) |
+| Networking    | No              | Orders are orders                                                  |
+| Rules / YAML  | No              | Tank still costs 800, has 400 HP                                   |
+| Rendering     | Yes             | Sprites → GLTF meshes, isometric camera → free 3D camera           |
+| Input mapping | Yes             | Click-to-world changes from isometric transform to 3D raycast      |
+
+**Architectural requirements to enable this:**
+
+1. **`Renderable` trait is mod-swappable.** A WASM Tier 3 mod can register a 3D render backend that replaces the default sprite renderer.
+2. **Camera system is configurable.** Default is fixed isometric; a 3D mod substitutes a free-rotating perspective camera. The camera is purely a render concern — the sim has no camera concept.
+3. **Asset pipeline accepts 3D models.** Bevy natively loads GLTF/GLB. The mod maps unit IDs to 3D model paths in YAML:
+
+```yaml
+# Classic 2D (default)
+rifle_infantry:
+  render:
+    type: sprite
+    sequences: e1
+
+# 3D mod override
+rifle_infantry:
+  render:
+    type: mesh
+    model: models/infantry/rifle.glb
+    animations:
+      idle: Idle
+      move: Run
+      attack: Shoot
+```
+
+4. **Click-to-world abstracted behind trait.** Isometric screen→cell is a linear transform. 3D perspective screen→cell is a raycast. Both produce a `CellPos`.
+5. **Terrain rendering decoupled from terrain data.** The sim's grid is authoritative. A 3D mod provides visual terrain geometry that matches the grid layout.
+
+**Key benefits:**
+- **Cross-view multiplayer.** A player running 3D can play against a player running classic isometric — the sim is identical. Like StarCraft Remastered's graphics toggle, but more radical.
+- **Cross-view replays.** Watch any replay in 2D or 3D.
+- **Orthogonal to gameplay mods.** A balance mod works in both views. A 3D graphics mod stacks with a gameplay mod.
+
+This is a **Tier 3 (WASM) mod** — it replaces a rendering backend, which is too deep for YAML or Lua. See `04-MODDING.md` for details.
+
 ### Design Rules for Multi-Game Safety
 
 1. **No game-specific enums in engine core.** Don't put `enum ResourceType { Ore, Gems }` in `ra-sim`. Resource types come from YAML rules / game module registration.

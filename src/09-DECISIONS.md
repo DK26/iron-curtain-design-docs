@@ -306,6 +306,11 @@ See `10-PERFORMANCE.md` for full details, targets, and implementation patterns.
 - We don't add speculative abstractions. Only the six concrete changes above.
 - We don't rename crates from `ra-*` — the project identity is Red Alert. Game modules extend it.
 
+**Scope boundary — the isometric C&C family:**
+Game module extensibility targets: Red Alert, RA2, Tiberian Sun, Tiberian Dawn, Dune 2000. These share the isometric camera, grid-based terrain, sprite/voxel rendering, and `.mix` format lineage. **3D titles (Generals, C&C3, RA3) are out of scope as game modules** — they require free-rotating cameras, mesh rendering, navmesh pathfinding, and unrelated formats. ~60% of the engine wouldn't carry over. If desired later, extract the game-agnostic sim core into a shared RTS framework crate and build a 3D frontend independently.
+
+However, **3D rendering mods for isometric-family games are explicitly supported.** A "3D Red Alert" Tier 3 mod can replace sprites with GLTF meshes and the isometric camera with a free 3D camera — without changing the sim, networking, or pathfinding. Bevy's built-in 3D pipeline makes this feasible. Cross-view multiplayer (2D vs 3D players in the same game) works because the sim is view-agnostic. See `02-ARCHITECTURE.md` § "3D Rendering as a Mod".
+
 **Phase:** Baked into architecture from Phase 0. RA2 module is a potential Phase 8+ project.
 
 ---

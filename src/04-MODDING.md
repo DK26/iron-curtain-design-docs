@@ -208,6 +208,65 @@ pub enum NetworkAccess {
 }
 ```
 
+### 3D Rendering Mods (Tier 3 Showcase)
+
+The most powerful example of Tier 3 modding: replacing the entire visual presentation with 3D rendering. A "3D Red Alert" mod swaps sprites for GLTF meshes and the isometric camera for a free-rotating 3D camera — while the simulation, networking, pathfinding, and rules are completely unchanged.
+
+This works because Bevy already ships a full 3D pipeline. The mod doesn't build a 3D engine — it uses Bevy's existing 3D renderer through the WASM mod API.
+
+**A 3D render mod implements:**
+
+```rust
+// WASM mod: replaces the default sprite renderer
+impl Renderable for MeshRenderer {
+    fn render(&self, entity: EntityId, state: &RenderState, ctx: &mut RenderContext) {
+        let model = self.models.get(entity.unit_type);
+        let animation = match state.activity {
+            Activity::Idle => &model.idle,
+            Activity::Moving => &model.walk,
+            Activity::Attacking => &model.attack,
+        };
+        ctx.draw_mesh(model.mesh, state.world_pos, state.facing, animation);
+    }
+}
+
+impl CameraController for FreeCam3D {
+    fn screen_to_cell(&self, screen_pos: Vec2, terrain: &TerrainData) -> CellPos {
+        // 3D raycast against terrain mesh → grid cell
+        let ray = self.camera.screen_to_ray(screen_pos);
+        terrain.raycast(ray).to_cell_pos()
+    }
+}
+```
+
+**Assets are mapped in YAML (mod overrides unit render definitions):**
+
+```yaml
+# 3d_mod/render_overrides.yaml
+rifle_infantry:
+  render:
+    type: mesh
+    model: models/infantry/rifle.glb
+    animations:
+      idle: Idle
+      move: Run
+      attack: Shoot
+      death: Death
+
+medium_tank:
+  render:
+    type: mesh
+    model: models/vehicles/medium_tank.glb
+    turret: models/vehicles/medium_tank_turret.glb
+    animations:
+      idle: Idle
+      move: Drive
+```
+
+**Cross-view multiplayer is a natural consequence.** Since the mod only changes rendering, a player using the 3D mod can play against a player using classic isometric sprites. The sim produces identical state; each client just draws it differently. Replays are viewable in either mode.
+
+See `02-ARCHITECTURE.md` § "3D Rendering as a Mod" for the full architectural rationale.
+
 ## Tera Templating & Mission Templates (Phase 6)
 
 ### Tera as the Template Engine
