@@ -5,7 +5,7 @@
 
 ## What This Project Is
 
-**Iron Curtain** is a Rust-native RTS engine for Red Alert. Not a port of OpenRA — a clean-sheet redesign that loads OpenRA's assets, mods, and maps while delivering better performance, modding, and multiplayer. The project is in pre-development (design phase) as of 2026-02.
+**Iron Curtain** is a Rust-native RTS engine, initially targeting Red Alert. Not a port of OpenRA — a clean-sheet redesign that loads OpenRA's assets, mods, and maps while delivering better performance, modding, and multiplayer. The engine is **game-agnostic at its core** — Red Alert is the first game module; RA2, Tiberian Dawn, and original games are future modules on the same engine (D018). The project is in pre-development (design phase) as of 2026-02.
 
 - **Language:** Rust
 - **Framework:** Bevy (ECS, rendering, audio, asset pipeline)
@@ -31,6 +31,8 @@ Violating any of these is a bug. Do not propose designs that break them.
 7. **OpenRA compatibility is at the data/community layer, not the simulation layer.** Same mods, same maps, shared server browser — but NOT bit-identical simulation. We do not port OpenRA bug-for-bug.
 
 8. **Full resource compatibility.** Every `.mix`, `.shp`, `.pal`, `.aud`, `.oramap`, and YAML rule file from Red Alert and OpenRA must load correctly. The community's existing work is sacred.
+
+9. **Engine core is game-agnostic.** No game-specific enums, resource types, or unit categories in engine core. Positions are 3D (`WorldPos { x, y, z }`). System pipeline is registered per game module, not hardcoded. Renderer uses a `Renderable` trait. RA1 sets z=0 and registers sprite rendering — but the engine doesn't know that.
 
 ## Crate Structure
 
@@ -73,6 +75,7 @@ These are settled. Don't re-litigate unless the user explicitly wants to revisit
 | D015 | Efficiency-first, not thread-first            | Algorithmic efficiency → cache layout → sim LOD → amortize → zero-alloc → THEN parallelism                       |
 | D016 | LLM-generated missions (Phase 7)              | Infinite content; output is standard YAML+Lua; `ra-llm` crate is optional                                        |
 | D017 | Bevy rendering pipeline                       | Post-processing, dynamic lighting, GPU particles, shader effects; classic aesthetic, modern polish               |
+| D018 | Multi-game extensibility (game modules)       | Engine is game-agnostic; RA1 is first module; RA2/TD/custom are future modules; `GameModule` trait               |
 
 ## Pending Decisions
 
@@ -119,7 +122,7 @@ Phase 7 (Months 32-36) → LLM Missions + Polish: mission generator, visual effe
 ## Simulation Architecture
 
 - **Deterministic tick:** `Simulation::apply_tick(&mut self, orders: &TickOrders)` — pure function
-- **System order (fixed, documented):** apply_orders → production → harvesting → movement → combat → death → triggers → fog
+- **System order (fixed per game module, documented):** RA1 default: apply_orders → production → harvesting → movement → combat → death → triggers → fog. Other game modules register their own pipeline.
 - **State hashing:** `state_hash()` every tick for desync detection
 - **Snapshots:** `snapshot()` / `restore()` for save games, replays, rollback, desync debugging
 - **Order validation:** Every order validated deterministically inside sim before execution (ownership, affordability, prerequisites, placement)
@@ -136,6 +139,8 @@ Phase 7 (Months 32-36) → LLM Missions + Polish: mission generator, visual effe
 | Buildable    | `Buildable { cost, time, prereqs }` | Can be built      |
 | Selectable   | `Selectable { bounds, priority }`   | Player can select |
 | Harvester    | `Harvester { capacity, resource }`  | Gathers ore       |
+
+These are the **RA1 game module's** default components. Other game modules (RA2, TD) register additional components — the ECS is open for extension.
 
 ## Network Models
 

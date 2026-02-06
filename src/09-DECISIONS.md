@@ -282,6 +282,34 @@ See `10-PERFORMANCE.md` for full details, targets, and implementation patterns.
 
 ---
 
+## D018: Multi-Game Extensibility (Game Modules)
+
+**Decision:** Design the engine as a game-agnostic RTS framework. Red Alert is the first "game module"; RA2, Tiberian Dawn, and original games should be addable as additional modules without modifying core engine code.
+
+**Rationale:**
+- OpenRA already proves this works — runs TD, RA, and D2K on one engine via different trait/component sets
+- The ECS architecture naturally supports this (composable components, pluggable systems)
+- Prevents RA1 assumptions from hardening into architectural constraints that require rewrites later
+- Broadens the project's audience and contributor base
+- RA2 is the most-requested extension — community interest is proven (Chrono Divide exists)
+
+**Concrete changes (baked in from Phase 0):**
+1. `WorldPos` and `CellPos` carry a Z coordinate from day one (RA1 sets z=0)
+2. System execution order is registered per game module, not hardcoded in engine
+3. No game-specific enums in engine core — resource types, unit categories come from YAML / module registration
+4. Renderer uses a `Renderable` trait — sprite and voxel backends implement it equally
+5. `GameModule` trait bundles component registration, system pipeline, format loaders, and render backends
+6. `PlayerOrder` is extensible to game-specific commands
+
+**What this does NOT mean:**
+- We don't build RA2 support now. Red Alert is the sole focus until it ships.
+- We don't add speculative abstractions. Only the six concrete changes above.
+- We don't rename crates from `ra-*` — the project identity is Red Alert. Game modules extend it.
+
+**Phase:** Baked into architecture from Phase 0. RA2 module is a potential Phase 8+ project.
+
+---
+
 ## PENDING DECISIONS
 
 | ID   | Topic                                                         | Needs Resolution By |

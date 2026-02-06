@@ -7,22 +7,23 @@ Build a Rust-native RTS engine that:
 - Reimagines internals with modern architecture (not a port)
 - Offers superior performance, modding, portability, and multiplayer
 - Provides OpenRA mod compatibility as the zero-cost migration path
+- Is **game-agnostic at the engine layer** — Red Alert is the first game module; RA2, Tiberian Dawn, and original games are future modules on the same engine
 
 ## Why This Deserves to Exist
 
 ### Capabilities Beyond OpenRA and the Remastered Collection
 
-| Capability | Remastered Collection | OpenRA | Iron Curtain |
-|------------|----------------------|--------|--------------|
-| Engine | Original C++ with patches | C# / .NET (2007) | Rust + Bevy (2026) |
-| Platforms | Windows, Xbox | Windows, macOS, Linux | All + Browser + Mobile |
-| Max units (smooth) | ~200 (original engine limits) | ~300-500 (community reports lag beyond) | 2000+ target |
-| Modding | Steam Workshop maps, limited API | MiniYAML + C# (recompile for deep mods) | YAML + Lua + WASM (no recompile ever) |
-| AI content | Fixed campaigns | Fixed campaigns + community missions | LLM-generated missions and campaigns |
-| Multiplayer | Rebuilt but server issues reported | Lockstep with frequent desyncs | Relay server, desync diagnosis, signed replays |
-| Graphics pipeline | Fixed 4K sprite upscale | SDL/OpenGL basic rendering | Bevy + wgpu: shaders, post-FX, dynamic lighting, particles |
-| Source | Closed | Open (GPL) | Open (GPL) |
-| Community assets | Separate ecosystem | 18 years of maps/mods | Loads all OpenRA assets + migration tools |
+| Capability         | Remastered Collection              | OpenRA                                  | Iron Curtain                                               |
+| ------------------ | ---------------------------------- | --------------------------------------- | ---------------------------------------------------------- |
+| Engine             | Original C++ with patches          | C# / .NET (2007)                        | Rust + Bevy (2026)                                         |
+| Platforms          | Windows, Xbox                      | Windows, macOS, Linux                   | All + Browser + Mobile                                     |
+| Max units (smooth) | ~200 (original engine limits)      | ~300-500 (community reports lag beyond) | 2000+ target                                               |
+| Modding            | Steam Workshop maps, limited API   | MiniYAML + C# (recompile for deep mods) | YAML + Lua + WASM (no recompile ever)                      |
+| AI content         | Fixed campaigns                    | Fixed campaigns + community missions    | LLM-generated missions and campaigns                       |
+| Multiplayer        | Rebuilt but server issues reported | Lockstep with frequent desyncs          | Relay server, desync diagnosis, signed replays             |
+| Graphics pipeline  | Fixed 4K sprite upscale            | SDL/OpenGL basic rendering              | Bevy + wgpu: shaders, post-FX, dynamic lighting, particles |
+| Source             | Closed                             | Open (GPL)                              | Open (GPL)                                                 |
+| Community assets   | Separate ecosystem                 | 18 years of maps/mods                   | Loads all OpenRA assets + migration tools                  |
 
 ### New Capabilities Not Found Elsewhere
 
@@ -53,15 +54,15 @@ OpenRA's map editor is a standalone tool. Our editor runs inside the game with l
 
 ### OpenRA's Limitations (what we improve on)
 
-| Area | OpenRA Today | Our Engine |
-|------|-------------|------------|
-| Runtime | C# / .NET — GC pauses, heavy runtime | Rust — no GC, predictable perf |
-| Threading | Single-threaded game loop | Parallel systems via ECS |
-| Modding | Powerful but requires C# for deep mods | YAML + Lua + WASM (no compile step) |
-| Map editor | Separate tool, recently improved | In-engine editor (Phase 6) |
-| Multiplayer | Desyncs common, hard to debug | Snapshottable sim enables desync pinpointing |
-| Portability | Desktop only (Mono/.NET) | Native + WASM (browser) + mobile |
-| Engine age | Started 2007, showing architectural debt | Clean-sheet modern design |
+| Area        | OpenRA Today                             | Our Engine                                   |
+| ----------- | ---------------------------------------- | -------------------------------------------- |
+| Runtime     | C# / .NET — GC pauses, heavy runtime     | Rust — no GC, predictable perf               |
+| Threading   | Single-threaded game loop                | Parallel systems via ECS                     |
+| Modding     | Powerful but requires C# for deep mods   | YAML + Lua + WASM (no compile step)          |
+| Map editor  | Separate tool, recently improved         | In-engine editor (Phase 6)                   |
+| Multiplayer | Desyncs common, hard to debug            | Snapshottable sim enables desync pinpointing |
+| Portability | Desktop only (Mono/.NET)                 | Native + WASM (browser) + mobile             |
+| Engine age  | Started 2007, showing architectural debt | Clean-sheet modern design                    |
 
 ### What Makes People Actually Switch
 
