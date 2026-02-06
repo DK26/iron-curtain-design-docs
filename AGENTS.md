@@ -200,6 +200,9 @@ When you need deeper detail, read the specific design doc:
 
 ## Working With This Codebase
 
+### mdbook
+- **Never run `mdbook build`, `mdbook serve`, or any mdbook command.** The book is built manually by the maintainer when ready. Only edit the markdown source files in `src/`.
+
 ### Code Style
 - Idiomatic Rust. Use `clippy` and `rustfmt`.
 - Prefer zero-allocation patterns in hot paths. Use `Vec::clear()` over `Vec::new()`.
