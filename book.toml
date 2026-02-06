@@ -1,0 +1,12 @@
+[book]
+title = "Iron Curtain — Design Documentation"
+description = "Design docs for a Rust-native Red Alert RTS engine"
+authors = ["Iron Curtain contributors"]
+language = "en"
+
+[build]
+build-dir = "docs"
+
+[output.html]
+git-repository-url = "https://github.com/DK26/iron-curtain-design-docs"
+edit-url-template = "https://github.com/DK26/iron-curtain-design-docs/edit/main/{path}"

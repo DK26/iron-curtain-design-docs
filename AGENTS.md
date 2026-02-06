@@ -179,18 +179,18 @@ Key insight from EA source: original uses `OutList`/`DoList` pattern for order q
 
 When you need deeper detail, read the specific design doc:
 
-| Topic                                                          | Read                 |
-| -------------------------------------------------------------- | -------------------- |
-| Goals, competitive landscape, why this exists                  | `01-VISION.md`       |
-| Crate structure, ECS, sim/render split, game loop code         | `02-ARCHITECTURE.md` |
-| NetworkModel trait, relay server, CS2 sub-tick, lockstep       | `03-NETCODE.md`      |
-| YAML rules, Lua scripting, WASM modules, sandboxing            | `04-MODDING.md`      |
-| File formats, EA source code insights, coordinate systems      | `05-FORMATS.md`      |
-| Threat model, maphack, order validation, replay signing        | `06-SECURITY.md`     |
-| Cross-engine play, OrderCodec, SimReconciler, ProtocolAdapter  | `07-CROSS-ENGINE.md` |
-| 36-month phased roadmap with exit criteria                     | `08-ROADMAP.md`      |
-| Full decision log with rationale and alternatives              | `09-DECISIONS.md`    |
-| Efficiency pyramid, profiling, performance targets, benchmarks | `10-PERFORMANCE.md`  |
+| Topic                                                          | Read                     |
+| -------------------------------------------------------------- | ------------------------ |
+| Goals, competitive landscape, why this exists                  | `src/01-VISION.md`       |
+| Crate structure, ECS, sim/render split, game loop code         | `src/02-ARCHITECTURE.md` |
+| NetworkModel trait, relay server, CS2 sub-tick, lockstep       | `src/03-NETCODE.md`      |
+| YAML rules, Lua scripting, WASM modules, sandboxing            | `src/04-MODDING.md`      |
+| File formats, EA source code insights, coordinate systems      | `src/05-FORMATS.md`      |
+| Threat model, maphack, order validation, replay signing        | `src/06-SECURITY.md`     |
+| Cross-engine play, OrderCodec, SimReconciler, ProtocolAdapter  | `src/07-CROSS-ENGINE.md` |
+| 36-month phased roadmap with exit criteria                     | `src/08-ROADMAP.md`      |
+| Full decision log with rationale and alternatives              | `src/09-DECISIONS.md`    |
+| Efficiency pyramid, profiling, performance targets, benchmarks | `src/10-PERFORMANCE.md`  |
 
 ## Working With This Codebase
 
@@ -202,16 +202,16 @@ When you need deeper detail, read the specific design doc:
 - System execution order in `ra-sim` is fixed and documented. Adding a new system requires deciding where in the order it runs and documenting why.
 
 ### When Adding a New Feature
-1. Check `09-DECISIONS.md` — has this been decided already?
-2. Check the roadmap (`08-ROADMAP.md`) — which phase does this belong to?
+1. Check `src/09-DECISIONS.md` — has this been decided already?
+2. Check the roadmap (`src/08-ROADMAP.md`) — which phase does this belong to?
 3. Respect the crate boundaries — especially `ra-sim` ↔ `ra-net` via `ra-protocol` only.
-4. If it touches performance, read `10-PERFORMANCE.md` and follow the efficiency pyramid (algorithm first, threading last).
+4. If it touches performance, read `src/10-PERFORMANCE.md` and follow the efficiency pyramid (algorithm first, threading last).
 5. If it touches networking, ensure the sim remains unaware — work through the `NetworkModel` trait.
 6. If it touches modding, respect the tiered model and sandbox constraints.
 
 ### Known Duplication to Fix
-- `00-INDEX.md` lists invariant #5 twice (duplicate line)
-- Performance details appear in both `09-DECISIONS.md` (D015) and `10-PERFORMANCE.md` — the latter is canonical
+- `src/00-INDEX.md` lists invariant #5 twice (duplicate line)
+- Performance details appear in both `src/09-DECISIONS.md` (D015) and `src/10-PERFORMANCE.md` — the latter is canonical
 
 ### Reference Material
 - EA Red Alert source: https://github.com/electronicarts/CnC_Red_Alert (GPL v3)

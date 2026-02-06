@@ -208,21 +208,21 @@ If you've spent years building an OpenRA mod, Iron Curtain is your upgrade path 
 
 📐 **Design phase** — architecture documents finalized, implementation beginning.
 
-See the [design documents](docs/) for the complete technical foundation:
+See the [design documents](src/) for the complete technical foundation:
 
-| Document                                   | Contents                                              |
-| ------------------------------------------ | ----------------------------------------------------- |
-| [00-INDEX](docs/00-INDEX.md)               | Navigation and architectural invariants               |
-| [01-VISION](docs/01-VISION.md)             | Project goals and competitive landscape               |
-| [02-ARCHITECTURE](docs/02-ARCHITECTURE.md) | Core architecture, ECS, sim/render split              |
-| [03-NETCODE](docs/03-NETCODE.md)           | Pluggable networking, relay server, sub-tick ordering |
-| [04-MODDING](docs/04-MODDING.md)           | YAML + Lua + WASM modding tiers                       |
-| [05-FORMATS](docs/05-FORMATS.md)           | File format support, original source insights         |
-| [06-SECURITY](docs/06-SECURITY.md)         | Threat model and mitigations                          |
-| [07-CROSS-ENGINE](docs/07-CROSS-ENGINE.md) | OpenRA interop strategy                               |
-| [08-ROADMAP](docs/08-ROADMAP.md)           | 36-month development plan                             |
-| [09-DECISIONS](docs/09-DECISIONS.md)       | Decision log with rationale                           |
-| [10-PERFORMANCE](docs/10-PERFORMANCE.md)   | Efficiency-first performance philosophy               |
+| Document                                  | Contents                                              |
+| ----------------------------------------- | ----------------------------------------------------- |
+| [00-INDEX](src/00-INDEX.md)               | Navigation and architectural invariants               |
+| [01-VISION](src/01-VISION.md)             | Project goals and competitive landscape               |
+| [02-ARCHITECTURE](src/02-ARCHITECTURE.md) | Core architecture, ECS, sim/render split              |
+| [03-NETCODE](src/03-NETCODE.md)           | Pluggable networking, relay server, sub-tick ordering |
+| [04-MODDING](src/04-MODDING.md)           | YAML + Lua + WASM modding tiers                       |
+| [05-FORMATS](src/05-FORMATS.md)           | File format support, original source insights         |
+| [06-SECURITY](src/06-SECURITY.md)         | Threat model and mitigations                          |
+| [07-CROSS-ENGINE](src/07-CROSS-ENGINE.md) | OpenRA interop strategy                               |
+| [08-ROADMAP](src/08-ROADMAP.md)           | 36-month development plan                             |
+| [09-DECISIONS](src/09-DECISIONS.md)       | Decision log with rationale                           |
+| [10-PERFORMANCE](src/10-PERFORMANCE.md)   | Efficiency-first performance philosophy               |
 
 ## Contributing
 
