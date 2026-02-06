@@ -284,11 +284,12 @@ See `10-PERFORMANCE.md` for full details, targets, and implementation patterns.
 
 ## PENDING DECISIONS
 
-| ID | Topic | Needs Resolution By |
-|----|-------|-------------------|
-| P001 | ~~ECS crate choice~~ — RESOLVED: Bevy's built-in ECS | Resolved |
-| P002 | Fixed-point scale (256? 1024? match OpenRA's 1024?) | Phase 2 start |
-| P003 | Audio library choice | Phase 3 start |
-| P004 | Lobby/matchmaking protocol specifics | Phase 5 start |
-| P005 | Map editor architecture (in-engine vs separate process) | Phase 6 start |
-| P006 | License choice (GPL v3 to match EA source? MIT? Apache?) | Phase 0 start |
+| ID   | Topic                                                         | Needs Resolution By |
+| ---- | ------------------------------------------------------------- | ------------------- |
+| P001 | ~~ECS crate choice~~ — RESOLVED: Bevy's built-in ECS          | Resolved            |
+| P002 | Fixed-point scale (256? 1024? match OpenRA's 1024?)           | Phase 2 start       |
+| P003 | Audio library choice                                          | Phase 3 start       |
+| P004 | Lobby/matchmaking protocol specifics                          | Phase 5 start       |
+| P005 | Map editor architecture (in-engine vs separate process)       | Phase 6 start       |
+| P006 | License choice (GPL v3 to match EA source? MIT? Apache?)      | Phase 0 start       |
+| P007 | Workshop: single source vs multi-source (see `04-MODDING.md`) | Phase 6 start       |
