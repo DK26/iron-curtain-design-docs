@@ -160,6 +160,8 @@ These are the **RA1 game module's** default components. Other game modules (RA2,
 
 **Tracking servers** (`TrackingServer` trait): game directory for discovery. Official + community-hosted + OpenRA shared browser. Not a relay — no game data flows through it.
 
+**Backend infrastructure:** Both tracking servers and relay servers are stateless, containerized Rust binaries. Ship as container images with docker-compose.yaml (community self-hosting) and Helm charts (k8s). Federation — client aggregates listings from multiple tracking servers. No single point of failure. Community self-hosting is a first-class use case. See `src/03-NETCODE.md` § "Backend Infrastructure".
+
 **Multi-player scaling:** Architecture supports N players. Relay server recommended for 4+. No hard player limit — practical limit is sim cost (more players = more units) and input delay (worst connection dominates). Team games, FFA, and spectators all supported.
 
 ## Security Model
