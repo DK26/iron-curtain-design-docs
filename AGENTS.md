@@ -131,16 +131,17 @@ Phase 7 (Months 32-36) → LLM Missions + Polish: mission generator, visual effe
 
 ## ECS Component Model (maps from OpenRA Traits)
 
-| OpenRA Trait | ECS Component                       | Purpose           |
-| ------------ | ----------------------------------- | ----------------- |
-| Health       | `Health { current, max }`           | Hit points        |
-| Mobile       | `Mobile { speed, locomotor }`       | Can move          |
-| Attackable   | `Attackable { armor }`              | Can be damaged    |
-| Armament     | `Armament { weapon, cooldown }`     | Can attack        |
-| Building     | `Building { footprint }`            | Occupies cells    |
-| Buildable    | `Buildable { cost, time, prereqs }` | Can be built      |
-| Selectable   | `Selectable { bounds, priority }`   | Player can select |
-| Harvester    | `Harvester { capacity, resource }`  | Gathers ore       |
+| OpenRA Trait | ECS Component                       | Purpose                                             |
+| ------------ | ----------------------------------- | --------------------------------------------------- |
+| Health       | `Health { current, max }`           | Hit points                                          |
+| Mobile       | `Mobile { speed, locomotor }`       | Can move                                            |
+| Attackable   | `Attackable { armor }`              | Can be damaged                                      |
+| Armament     | `Armament { weapon, cooldown }`     | Can attack                                          |
+| Building     | `Building { footprint }`            | Occupies cells                                      |
+| Buildable    | `Buildable { cost, time, prereqs }` | Can be built                                        |
+| Selectable   | `Selectable { bounds, priority }`   | Player can select                                   |
+| Harvester    | `Harvester { capacity, resource }`  | Gathers ore                                         |
+| *(any)*      | `AiMeta { summary, role, … }`       | LLM/AI-readable context (optional on all resources) |
 
 These are the **RA1 game module's** default components. Other game modules (RA2, TD) register additional components — the ECS is open for extension.
 
@@ -194,18 +195,18 @@ Key insight from EA source: original uses `OutList`/`DoList` pattern for order q
 
 When you need deeper detail, read the specific design doc:
 
-| Topic                                                          | Read                     |
-| -------------------------------------------------------------- | ------------------------ |
-| Goals, competitive landscape, why this exists                  | `src/01-VISION.md`       |
-| Crate structure, ECS, sim/render split, game loop code         | `src/02-ARCHITECTURE.md` |
-| NetworkModel trait, relay server, CS2 sub-tick, lockstep       | `src/03-NETCODE.md`      |
-| YAML rules, Lua scripting, WASM modules, sandboxing            | `src/04-MODDING.md`      |
-| File formats, EA source code insights, coordinate systems      | `src/05-FORMATS.md`      |
-| Threat model, maphack, order validation, replay signing        | `src/06-SECURITY.md`     |
-| Cross-engine play, OrderCodec, SimReconciler, ProtocolAdapter  | `src/07-CROSS-ENGINE.md` |
-| 36-month phased roadmap with exit criteria                     | `src/08-ROADMAP.md`      |
-| Full decision log with rationale and alternatives              | `src/09-DECISIONS.md`    |
-| Efficiency pyramid, profiling, performance targets, benchmarks | `src/10-PERFORMANCE.md`  |
+| Topic                                                            | Read                     |
+| ---------------------------------------------------------------- | ------------------------ |
+| Goals, competitive landscape, why this exists                    | `src/01-VISION.md`       |
+| Crate structure, ECS, sim/render split, game loop code           | `src/02-ARCHITECTURE.md` |
+| NetworkModel trait, relay server, CS2 sub-tick, lockstep         | `src/03-NETCODE.md`      |
+| YAML rules, Lua scripting, WASM modules, sandboxing, AI metadata | `src/04-MODDING.md`      |
+| File formats, EA source code insights, coordinate systems        | `src/05-FORMATS.md`      |
+| Threat model, maphack, order validation, replay signing          | `src/06-SECURITY.md`     |
+| Cross-engine play, OrderCodec, SimReconciler, ProtocolAdapter    | `src/07-CROSS-ENGINE.md` |
+| 36-month phased roadmap with exit criteria                       | `src/08-ROADMAP.md`      |
+| Full decision log with rationale and alternatives                | `src/09-DECISIONS.md`    |
+| Efficiency pyramid, profiling, performance targets, benchmarks   | `src/10-PERFORMANCE.md`  |
 
 ## Working With This Codebase
 
@@ -226,6 +227,7 @@ When you need deeper detail, read the specific design doc:
 4. If it touches performance, read `src/10-PERFORMANCE.md` and follow the efficiency pyramid (algorithm first, threading last).
 5. If it touches networking, ensure the sim remains unaware — work through the `NetworkModel` trait.
 6. If it touches modding, respect the tiered model and sandbox constraints.
+7. If adding a new resource type (unit, weapon, structure, map), include an `ai:` metadata block with `summary`, `role`, and `tactical_notes` at minimum. See `src/04-MODDING.md` § "AI-Readable Resource Metadata".
 
 ### Known Duplication to Fix
 - `src/00-INDEX.md` lists invariant #5 twice (duplicate line)

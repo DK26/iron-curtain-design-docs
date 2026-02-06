@@ -44,6 +44,17 @@ units:
       name: "Rifle Infantry"
       icon: e1icon
       sequences: e1
+    ai:
+      summary: "Cheap expendable anti-infantry scout"
+      role: [anti_infantry, scout, garrison]
+      strengths: [cheap, fast_to_build, effective_vs_infantry]
+      weaknesses: [fragile, useless_vs_armor, no_anti_air]
+      tactical_notes: >
+        Best used in groups of 5+ for early harassment or
+        garrisoning buildings. Not cost-effective against
+        anything armored. Pair with anti-tank units.
+      counters: [tank, apc, attack_dog]
+      countered_by: [tank, flamethrower, grenadier]
     buildable:
       cost: 100
       time: 5.0
@@ -86,10 +97,25 @@ Inheritance is resolved at load time in Rust. Fields from `_base_soldier` are me
 struct UnitDef {
     inherits: Option<String>,
     display: DisplayInfo,
+    ai: Option<AiMeta>,
     buildable: Option<BuildableInfo>,
     health: HealthInfo,
     mobile: Option<MobileInfo>,
     combat: Option<CombatInfo>,
+}
+
+/// LLM/AI-readable metadata for any game resource.
+/// Consumed by ra-llm (mission generation), ra-ai (skirmish AI),
+/// and workshop search (semantic matching).
+#[derive(Deserialize, Serialize)]
+struct AiMeta {
+    summary: String,                    // one-line natural language description
+    role: Vec<String>,                  // semantic tags: anti_infantry, scout, siege, etc.
+    strengths: Vec<String>,             // what this unit is good at
+    weaknesses: Vec<String>,            // what this unit is bad at
+    tactical_notes: Option<String>,     // free-text tactical guidance for AI/LLM
+    counters: Vec<String>,              // unit types this is effective against
+    countered_by: Vec<String>,          // unit types that counter this
 }
 ```
 
@@ -578,9 +604,93 @@ pub trait WorkshopClient: Send + Sync {
 
 pub struct ResourcePackage {
     pub meta: ResourceMeta,           // name, author, version, description, tags
+    pub ai_meta: Option<AiResourceMeta>, // LLM-readable description (see below)
     pub category: ResourceCategory,   // Mod, Map, Mission, MissionTemplate, Campaign, Asset
     pub files: Vec<PackageFile>,      // the actual content (YAML, Lua, sprites, etc.)
     pub dependencies: Vec<ResourceId>,// other workshop items this requires
     pub compatibility: VersionInfo,   // engine version + mod version this targets
 }
+
+/// LLM/AI-readable metadata for workshop resources.
+/// Enables intelligent browsing, selection, and composition by ra-llm.
+pub struct AiResourceMeta {
+    pub summary: String,              // one-line: "A 4-player desert skirmish map with limited ore"
+    pub purpose: String,              // when/why to use this: "Best for competitive 2v2 with scarce resources"
+    pub gameplay_tags: Vec<String>,   // semantic: ["desert", "2v2", "competitive", "scarce_resources"]
+    pub difficulty: Option<String>,   // for missions/campaigns: "hard", "beginner-friendly"
+    pub composition_hints: Option<String>, // how this combines with other resources
+}
 ```
+
+## AI-Readable Resource Metadata
+
+Every game resource — units, weapons, structures, maps, mods, templates — carries structured metadata designed for consumption by LLMs and AI systems. This is not documentation for humans (that's `display.name` and README files). This is **machine-readable semantic context** that enables AI to reason about game content.
+
+### Why This Matters
+
+Traditional game data is structured for the engine: cost, health, speed, damage. An LLM reading `cost: 100, health: 50, speed: 56, weapon: m1_carbine` can parse the numbers but cannot infer *purpose*. It doesn't know that rifle infantry is a cheap scout, that it's useless against tanks, or that it should be built in groups of 5+.
+
+The `ai:` metadata block bridges this gap. It gives LLMs and AI systems the strategic and tactical context that experienced players carry in their heads.
+
+### What Consumes It
+
+| Consumer                          | How It Uses `ai:` Metadata                                                                                                                                                       |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`ra-llm` (mission generation)** | Selects appropriate units for scenarios. "A hard mission" → picks units with `role: siege` and high counters. "A stealth mission" → picks units with `role: scout, infiltrator`. |
+| **`ra-ai` (skirmish AI)**         | Reads `counters`/`countered_by` for build decisions. Knows to build anti-air when enemy has `role: air`. Reads `tactical_notes` for positioning hints.                           |
+| **Workshop search**               | Semantic search: "a map for beginners" matches `difficulty: beginner-friendly`. "Something for a tank rush" matches `gameplay_tags: ["open_terrain", "abundant_resources"]`.     |
+| **Future in-game AI advisor**     | "What should I build?" → reads enemy composition's `countered_by`, suggests units with matching `role`.                                                                          |
+| **Mod compatibility analysis**    | Detects when a mod changes a unit's `role` or `counters` in ways that affect balance.                                                                                            |
+
+### Metadata Format (on game resources)
+
+The `ai:` block is optional on every resource type. It follows a consistent schema:
+
+```yaml
+# On units / weapons / structures:
+ai:
+  summary: "One-line natural language description"
+  role: [semantic, tags, for, classification]
+  strengths: [what, this, excels, at]
+  weaknesses: [what, this, is, bad, at]
+  tactical_notes: "Free-text tactical guidance for AI reasoning"
+  counters: [unit_types, this, beats]
+  countered_by: [unit_types, that, beat, this]
+
+# On maps:
+ai:
+  summary: "4-player island map with contested center bridge"
+  gameplay_tags: [islands, naval, chokepoint, 4player]
+  tactical_notes: "Control the center bridge for resource access. Naval early game is critical."
+
+# On weapons:
+ai:
+  summary: "Long-range anti-structure artillery"
+  role: [siege, anti_structure]
+  strengths: [long_range, high_structure_damage, area_of_effect]
+  weaknesses: [slow_fire_rate, inaccurate_vs_moving, minimum_range]
+```
+
+### Metadata Format (on workshop resources)
+
+Workshop resources carry `AiResourceMeta` in their package manifest:
+
+```yaml
+# workshop manifest for a mission template
+ai_meta:
+  summary: "Defend a bridge against 5 waves of Soviet armor"
+  purpose: "Good for practicing defensive tactics with limited resources"
+  gameplay_tags: [defense, bridge, waves, armor, intermediate]
+  difficulty: "intermediate"
+  composition_hints: "Pairs well with the 'reinforcements' scene template for a harder variant"
+```
+
+This metadata is indexed by the workshop server for semantic search. When an LLM needs to find "a scene template for an ambush in a forest," it searches `gameplay_tags` and `summary`, not filenames.
+
+### Design Rules
+
+1. **`ai:` is always optional.** Resources work without it. Legacy content and OpenRA imports won't have it initially — it can be added incrementally, by humans or by LLMs.
+2. **Human-written is preferred, LLM-generated is acceptable.** When a modder publishes to the workshop without `ai_meta`, the system can offer to auto-generate it from the resource's data (unit stats, map layout, etc.). The modder reviews and approves.
+3. **Tags use a controlled vocabulary.** `role`, `strengths`, `weaknesses`, `counters`, and `gameplay_tags` draw from a published tag dictionary (extensible by mods). This prevents tag drift where the same concept has five spellings.
+4. **`tactical_notes` is free-text.** This is the field where nuance lives. "Build 5+ to be cost-effective" or "Position behind walls for maximum effectiveness" — advice that can't be captured in tags.
+5. **Metadata is part of the YAML spec, not a sidecar.** It lives in the same file as the resource definition. No separate metadata files to lose or desync.
