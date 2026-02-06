@@ -1,25 +1,27 @@
 # 02 — Core Architecture
 
-## Decision: No Bevy
+## Decision: Bevy
 
-**Rationale:**
-- Bevy is pre-1.0 with frequent breaking changes — building on shifting ground
-- 2D isometric RTS is not its sweet spot
-- Would require building tile rendering, sprite layering, RTS UI, networking from scratch on top of Bevy anyway
-- Would fight two architectures simultaneously (Bevy's paradigms + OpenRA's game concepts)
-- Bevy's UI (`bevy_ui`) is nowhere near what an RTS HUD needs
+**Rationale (revised — see D002 in `src/09-DECISIONS.md`):**
+- ECS *is* our architecture — Bevy gives it to us with scheduling, queries, and parallel system execution out of the box
+- Saves 2–4 months of engine plumbing (windowing, asset pipeline, audio, rendering scaffolding)
+- Plugin system maps naturally to pluggable networking (`NetworkModel` as a Bevy plugin)
+- Bevy's 2D + 3D rendering pipeline covers both classic isometric sprites and future 3D mods
+- `wgpu` is Bevy's backend — we still get low-level control via custom render passes where profiling justifies it
+- Breaking API changes are manageable: pin Bevy version per development phase, upgrade between phases
 
-**Instead: Library-based stack**
+**Bevy provides:**
 
-| Concern     | Library               | Rationale                                                         |
-| ----------- | --------------------- | ----------------------------------------------------------------- |
-| Windowing   | `winit`               | Standard, stable, cross-platform                                  |
-| Rendering   | `wgpu`                | Low-level control for isometric sprite engine, WebGPU for browser |
-| ECS         | `hecs` or `shipyard`  | Lightweight, or custom trait system mirroring OpenRA semantics    |
-| Dev tools   | `egui`                | Immediate-mode debug overlays                                     |
-| Game UI     | Custom on `wgpu`      | C&C sidebar too specific for generic UI libs                      |
-| Scripting   | `mlua`                | Lua embedding                                                     |
-| Mod runtime | `wasmtime` / `wasmer` | WASM sandboxed execution                                          |
+| Concern     | Bevy Subsystem         | Notes                                                   |
+| ----------- | ---------------------- | ------------------------------------------------------- |
+| Windowing   | `bevy_winit`           | Cross-platform, handles lifecycle events                |
+| Rendering   | `bevy_render` + `wgpu` | Custom isometric sprite passes + standard 3D pipeline   |
+| ECS         | `bevy_ecs`             | Archetypes, system scheduling, change detection         |
+| Asset I/O   | `bevy_asset`           | Hot-reloading, platform-agnostic (WASM/mobile-safe)     |
+| Audio       | `bevy_audio`           | Platform-routed; `ra-audio` wraps for .aud/.ogg/EVA     |
+| Dev tools   | `egui` via `bevy_egui` | Immediate-mode debug overlays                           |
+| Scripting   | `mlua` (Bevy resource) | Lua embedding, integrated as non-send resource          |
+| Mod runtime | `wasmtime` / `wasmer`  | WASM sandboxed execution (Bevy system, not Bevy plugin) |
 
 ## Simulation / Render Split (Critical Architecture)
 
@@ -27,9 +29,9 @@ The simulation and renderer are completely decoupled from day one.
 
 ```
 ┌─────────────────────────────────────────────┐
-│                  GameLoop<N>                 │
+│             GameLoop<N, I>                  │
 │                                             │
-│  Input → Network → Sim (fixed tick) → Render│
+│  Input(I) → Network(N) → Sim (tick) → Render│
 │                                             │
 │  Sim runs at fixed tick rate (e.g., 15/sec) │
 │  Renderer interpolates between sim states   │
