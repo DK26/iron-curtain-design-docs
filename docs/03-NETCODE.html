@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-f7729c0f.js";
+            window.path_to_searchindex_js = "searchindex-53643061.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-d8a85e3a.js"></script>
@@ -353,6 +353,146 @@ pub struct OpenRACodec {
 Playback = feed TickOrders through Simulation via ReplayPlayback NetworkModel
 </code></pre>
 <p>Replays are signed by the relay server for tamper-proofing (see <code>06-SECURITY.md</code>).</p>
+<h2 id="connection-establishment"><a class="header" href="#connection-establishment">Connection Establishment</a></h2>
+<p>Connection method is a concern <em>below</em> <code>NetworkModel</code>. By the time a <code>NetworkModel</code> is constructed, transport is already established. The discovery/connection flow:</p>
+<pre><code>Discovery (tracking server / join code / direct IP / QR)
+  → Connection establishment (hole-punch / direct TCP+UDP)
+    → NetworkModel constructed (LockstepNetwork or RelayLockstepNetwork)
+      → Game loop runs — sim doesn't know or care how connection happened
+</code></pre>
+<h3 id="direct-ip"><a class="header" href="#direct-ip">Direct IP</a></h3>
+<p>Classic approach. Host shares <code>IP:port</code>, other player connects.</p>
+<ul>
+<li>Simplest to implement (TCP connect, done)</li>
+<li>Requires host to have a reachable IP (port forwarding or same LAN)</li>
+<li>Good for LAN parties, dedicated server setups, and power users</li>
+</ul>
+<h3 id="join-code-recommended-for-casual"><a class="header" href="#join-code-recommended-for-casual">Join Code (Recommended for Casual)</a></h3>
+<p>Host contacts a lightweight rendezvous server. Server assigns a short code (e.g., <code>IRON-7K3M</code>). Joiner sends code to same server. Server brokers a UDP hole-punch between both players.</p>
+<pre><code>┌────────┐     1. register     ┌──────────────┐     2. resolve    ┌────────┐
+│  Host  │ ──────────────────▶ │  Rendezvous  │ ◀──────────────── │ Joiner │
+│        │ ◀── code: IRON-7K3M│    Server     │  code: IRON-7K3M──▶       │
+│        │     3. hole-punch   │  (stateless)  │  3. hole-punch   │        │
+│        │ ◀═══════════════════╪══════════════════════════════════▶│        │
+└────────┘    direct P2P conn  └──────────────┘                   └────────┘
+</code></pre>
+<ul>
+<li>No port forwarding needed (UDP hole-punch works through most NATs)</li>
+<li>Rendezvous server is stateless and trivial — it only brokers introductions, never sees game data</li>
+<li>Codes are short-lived (expire after use or timeout)</li>
+<li>Industry standard: Among Us, Deep Rock Galactic, It Takes Two</li>
+</ul>
+<h3 id="qr-code"><a class="header" href="#qr-code">QR Code</a></h3>
+<p>Same as join code, encoded as QR. Player scans from phone → opens game client with code pre-filled. Ideal for couch play, LAN events, and streaming (viewers scan to join).</p>
+<h3 id="via-relay-server"><a class="header" href="#via-relay-server">Via Relay Server</a></h3>
+<p>When direct P2P fails (symmetric NAT, corporate firewalls), fall back to relay. The relay server is already designed for this (Model 2). Connection through relay also provides lag-switch protection and sub-tick ordering as a bonus.</p>
+<h3 id="via-tracking-server"><a class="header" href="#via-tracking-server">Via Tracking Server</a></h3>
+<p>Player browses public game listings, picks one, client connects directly to the host (or relay). See Tracking Servers section below.</p>
+<h2 id="tracking-servers-game-browser"><a class="header" href="#tracking-servers-game-browser">Tracking Servers (Game Browser)</a></h2>
+<p>A tracking server (also called master server) lets players discover and publish games. It is NOT a relay — no game data flows through it. It’s a directory.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Tracking server API — implemented by ra-net, consumed by ra-ui
+pub trait TrackingServer: Send + Sync {
+    /// Host publishes their game to the directory
+    fn publish(&amp;self, listing: &amp;GameListing) -&gt; Result&lt;ListingId&gt;;
+    /// Host updates their listing (player count, status)
+    fn update(&amp;self, id: ListingId, listing: &amp;GameListing) -&gt; Result&lt;()&gt;;
+    /// Host removes their listing (game started or cancelled)
+    fn unpublish(&amp;self, id: ListingId) -&gt; Result&lt;()&gt;;
+    /// Browser fetches current listings with optional filters
+    fn browse(&amp;self, filter: &amp;BrowseFilter) -&gt; Result&lt;Vec&lt;GameListing&gt;&gt;;
+}
+
+pub struct GameListing {
+    pub host: ConnectionInfo,     // IP:port, relay ID, or join code
+    pub map: MapMeta,             // name, hash, player count
+    pub rules: RulesMeta,         // mod, version, custom rules
+    pub players: Vec&lt;PlayerInfo&gt;, // current players in lobby
+    pub status: LobbyStatus,     // waiting, in_progress, full
+    pub engine: EngineId,         // "iron-curtain" or "openra" (for cross-browser)
+}
+<span class="boring">}</span></code></pre>
+<h3 id="official-tracking-server"><a class="header" href="#official-tracking-server">Official Tracking Server</a></h3>
+<p>We run one. Games appear here by default. Free, community-operated, no account required to browse (account required to host, to prevent spam).</p>
+<h3 id="custom-tracking-servers"><a class="header" href="#custom-tracking-servers">Custom Tracking Servers</a></h3>
+<p>Communities, clans, and tournament organizers run their own. The client supports a list of tracking server URLs in settings. This is the Quake/Source master server model — decentralized, resilient.</p>
+<pre><code class="language-yaml"># settings.yaml
+tracking_servers:
+  - url: "https://track.ironcurtain.gg"    # official
+  - url: "https://rts.myclan.com/track"     # clan server
+  - url: "https://openra.net/master"        # OpenRA shared browser (Level 0 compat)
+</code></pre>
+<h3 id="openra-shared-browser"><a class="header" href="#openra-shared-browser">OpenRA Shared Browser</a></h3>
+<p>Implementing the OpenRA master server protocol means Iron Curtain games can appear in OpenRA’s game browser (and vice versa), tagged by engine. Players see the full community. This is the Level 0 cross-engine compatibility from <code>07-CROSS-ENGINE.md</code>.</p>
+<h3 id="tracking-server-implementation"><a class="header" href="#tracking-server-implementation">Tracking Server Implementation</a></h3>
+<p>The server itself is trivial — a REST or WebSocket API backed by an in-memory store with TTL expiry. No database needed. Listings expire if the host stops sending heartbeats. A single cheap VPS handles thousands of concurrent listings.</p>
+<h2 id="multi-player-scaling-beyond-2-players"><a class="header" href="#multi-player-scaling-beyond-2-players">Multi-Player Scaling (Beyond 2 Players)</a></h2>
+<p>The architecture supports N players with no structural changes. Every design element — deterministic lockstep, sub-tick ordering, relay server, desync detection — works for 2, 4, 8, or more players.</p>
+<h3 id="how-each-component-scales"><a class="header" href="#how-each-component-scales">How Each Component Scales</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Component</th><th>2 players</th><th>N players</th><th>Bottleneck</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Lockstep sim</strong></td><td>Both run identical sim</td><td>All N run identical sim</td><td>No change — sim processes <code>TickOrders</code> regardless of source count</td></tr>
+<tr><td><strong>Sub-tick ordering</strong></td><td>Sort 2 players’ orders</td><td>Sort N players’ orders</td><td>Negligible — orders per tick is small (players issue ~0-5 orders/tick)</td></tr>
+<tr><td><strong>Relay server</strong></td><td>Collects from 2, broadcasts to 2</td><td>Collects from N, broadcasts to N</td><td>Linear in N. Bandwidth is tiny (orders are small)</td></tr>
+<tr><td><strong>Desync detection</strong></td><td>Compare 2 hashes</td><td>Compare N hashes</td><td>Trivial — one hash per player per tick</td></tr>
+<tr><td><strong>Input delay</strong></td><td>Tuned to worst of 2 connections</td><td>Tuned to worst of N connections</td><td><strong>Real bottleneck</strong> — one laggy player affects everyone</td></tr>
+<tr><td><strong>Direct P2P</strong></td><td>1 connection</td><td>N×(N-1)/2 mesh connections</td><td>Mesh doesn’t scale. Use star topology or relay for &gt;4 players</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="p2p-topology-for-multi-player"><a class="header" href="#p2p-topology-for-multi-player">P2P Topology for Multi-Player</a></h3>
+<p>Direct P2P lockstep with 2-3 players uses a full mesh (everyone connects to everyone). Beyond that, use a star topology where one player acts as host:</p>
+<pre><code>2-3 players: full mesh (every client sends to every other)
+  A ↔ B ↔ C ↔ A
+
+4+ players: star via host (one player collects and rebroadcasts)
+  B → A ← C        A = host, collects orders, broadcasts canonical tick
+      ↑
+      D
+
+4+ players: relay server (recommended)
+  B → R ← C        R = relay, all benefits of Model 2
+      ↑
+      D
+</code></pre>
+<p>For 4+ players, the relay server is strongly recommended. It solves:</p>
+<ul>
+<li>NAT traversal for all players (not just host)</li>
+<li>Lag-switch protection for all players (not just host-enforced)</li>
+<li>No single player has hosting advantage (relay is neutral authority)</li>
+<li>Sub-tick ordering is globally fair</li>
+</ul>
+<h3 id="the-real-scaling-limit-sim-cost-not-network"><a class="header" href="#the-real-scaling-limit-sim-cost-not-network">The Real Scaling Limit: Sim Cost, Not Network</a></h3>
+<p>With N players, the sim has more units, more orders, and more state to process. This is a <strong>sim performance</strong> concern, not a network concern:</p>
+<ul>
+<li>2-player game: ~200-500 units typically</li>
+<li>4-player FFA or 2v2: ~400-1000 units</li>
+<li>8-player: ~800-2000 units</li>
+</ul>
+<p>The performance targets in <code>10-PERFORMANCE.md</code> already account for this. The efficiency pyramid (flowfields, spatial hash, sim LOD, amortized work) is designed for 2000+ units on mid-range hardware. An 8-player game is within budget.</p>
+<h3 id="team-games-2v2-3v3-4v4"><a class="header" href="#team-games-2v2-3v3-4v4">Team Games (2v2, 3v3, 4v4)</a></h3>
+<p>Team games work identically to FFA. Each player submits orders for their own units. The sim processes all orders from all players in sub-tick chronological order. Alliances, shared vision, and team chat are sim-layer and UI-layer concerns — the network model doesn’t distinguish between ally and enemy.</p>
+<h3 id="observers--spectators"><a class="header" href="#observers--spectators">Observers / Spectators</a></h3>
+<p>Observers receive <code>TickOrders</code> but never submit any. They run the sim locally (full state, all players’ perspective). In a relay server setup, the relay can optionally delay the observer feed by N ticks to prevent live coaching.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct ObserverConnection {
+    pub delay_ticks: u64,        // e.g., 30 ticks (~2 seconds) for anti-coaching
+    pub receive_only: bool,      // true — observer never submits orders
+}
+<span class="boring">}</span></code></pre>
+<h3 id="player-limits"><a class="header" href="#player-limits">Player Limits</a></h3>
+<p>No hard architectural limit. Practical limits:</p>
+<ul>
+<li><strong>Lockstep input delay</strong> — scales with the worst connection among N players. Beyond ~8 players, the slowest player’s latency dominates everyone’s experience.</li>
+<li><strong>Order volume</strong> — N players generating orders simultaneously. Still tiny bandwidth (orders are small structs, not state).</li>
+<li><strong>Sim cost</strong> — more players = more units = more computation. The efficiency pyramid handles this up to the hardware’s limit.</li>
+</ul>
 
                     </main>
 

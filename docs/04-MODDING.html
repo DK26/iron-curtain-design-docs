@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-f7729c0f.js";
+            window.path_to_searchindex_js = "searchindex-53643061.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-d8a85e3a.js"></script>
@@ -370,8 +370,21 @@ pub enum NetworkAccess {
     // NEVER unrestricted
 }
 <span class="boring">}</span></code></pre>
-<h2 id="tera-templating-phase-6-nice-to-have"><a class="header" href="#tera-templating-phase-6-nice-to-have">Tera Templating (Phase 6, Nice-to-Have)</a></h2>
-<p>Optional preprocessing for YAML/Lua generation. Eliminates copy-paste for faction variants.</p>
+<h2 id="tera-templating--mission-templates-phase-6"><a class="header" href="#tera-templating--mission-templates-phase-6">Tera Templating &amp; Mission Templates (Phase 6)</a></h2>
+<h3 id="tera-as-the-template-engine"><a class="header" href="#tera-as-the-template-engine">Tera as the Template Engine</a></h3>
+<p>Tera is a Rust-native Jinja2-compatible template engine. It handles two roles in the modding system:</p>
+<ol>
+<li><strong>YAML/Lua generation</strong> — eliminates copy-paste for faction variants, bulk unit definitions</li>
+<li><strong>Mission templates</strong> — parameterized, reusable mission blueprints (like Helm charts for K8s)</li>
+</ol>
+<p>Load-time only (zero runtime cost). Tera is the right fit because:</p>
+<ul>
+<li>Rust-native (<code>tera</code> crate), no external dependencies</li>
+<li>Jinja2 syntax — widely known, documented, tooling exists</li>
+<li>Supports loops, conditionals, includes, macros, filters, inheritance</li>
+<li>Deterministic output (no randomness unless explicitly seeded via context)</li>
+</ul>
+<h3 id="unitrule-templating-original-use-case"><a class="header" href="#unitrule-templating-original-use-case">Unit/Rule Templating (Original Use Case)</a></h3>
 <pre><code class="language-jinja">{% for faction in ["allies", "soviet"] %}
 {% for tier in [1, 2, 3] %}
 {{ faction }}_tank_t{{ tier }}:
@@ -383,7 +396,272 @@ pub enum NetworkAccess {
 {% endfor %}
 {% endfor %}
 </code></pre>
-<p>Load-time only (zero runtime cost). ~50 lines to integrate. Not a foundation piece.</p>
+<h3 id="mission-templates-helm-style-parameterized-missions"><a class="header" href="#mission-templates-helm-style-parameterized-missions">Mission Templates (Helm-Style Parameterized Missions)</a></h3>
+<p>A mission template is a reusable mission blueprint with parameterized values. The template defines the structure (map layout, objectives, triggers, enemy composition); the user (or LLM) supplies values to produce a concrete, playable mission.</p>
+<p><strong>Template structure:</strong></p>
+<pre><code>templates/
+  bridge_defense/
+    template.yaml        # Tera template for map + rules
+    triggers.lua.tera    # Tera template for Lua trigger scripts
+    values.yaml          # Default parameter values
+    schema.yaml          # Parameter schema (names, types, constraints, descriptions)
+    preview.png          # Thumbnail for workshop browser
+    README.md            # Description, author, usage notes
+</code></pre>
+<p><strong>Schema (what parameters the template accepts):</strong></p>
+<pre><code class="language-yaml"># schema.yaml — defines the knobs for this template
+parameters:
+  map_size:
+    type: enum
+    options: [small, medium, large]
+    default: medium
+    description: "Overall map dimensions"
+  
+  player_faction:
+    type: enum
+    options: [allies, soviet]
+    default: allies
+    description: "Player's faction"
+  
+  enemy_waves:
+    type: integer
+    min: 3
+    max: 20
+    default: 8
+    description: "Number of enemy attack waves"
+  
+  difficulty:
+    type: enum
+    options: [easy, normal, hard, brutal]
+    default: normal
+    description: "Controls enemy unit count and AI aggression"
+  
+  reinforcement_type:
+    type: enum
+    options: [infantry, armor, air, mixed]
+    default: mixed
+    description: "What reinforcements the player receives"
+  
+  enable_naval:
+    type: boolean
+    default: false
+    description: "Include river crossings and naval units"
+</code></pre>
+<p><strong>Template (references parameters):</strong></p>
+<pre><code class="language-jinja">{# template.yaml — bridge defense mission #}
+mission:
+  name: "Bridge Defense — {{ difficulty | title }}"
+  briefing: &gt;
+    Commander, hold the {{ map_size }} bridge crossing against
+    {{ enemy_waves }} waves of {{ "Soviet" if player_faction == "allies" else "Allied" }} forces.
+    {% if enable_naval %}Enemy naval units will approach from the river.{% endif %}
+
+map:
+  size: {{ {"small": [64, 64], "medium": [96, 96], "large": [128, 128]}[map_size] }}
+
+actors:
+  player_base:
+    faction: {{ player_faction }}
+    units:
+      {% for i in range(end={"easy": 8, "normal": 5, "hard": 3, "brutal": 2}[difficulty]) %}
+      - type: {{ reinforcement_type }}_defender_{{ i }}
+      {% endfor %}
+
+waves:
+  count: {{ enemy_waves }}
+  escalation: {{ {"easy": 1.1, "normal": 1.3, "hard": 1.5, "brutal": 2.0}[difficulty] }}
+</code></pre>
+<p><strong>Rendering a template into a playable mission:</strong></p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use tera::{Tera, Context};
+
+pub fn render_mission_template(
+    template_dir: &amp;Path,
+    values: &amp;HashMap&lt;String, Value&gt;,
+) -&gt; Result&lt;RenderedMission&gt; {
+    let schema = load_schema(template_dir.join("schema.yaml"))?;
+    let merged = merge_with_defaults(values, &amp;schema)?;  // fill in defaults
+    validate_values(&amp;merged, &amp;schema)?;                   // check types, ranges, enums
+
+    let mut tera = Tera::new(template_dir.join("*.tera").to_str().unwrap())?;
+    let mut ctx = Context::new();
+    for (k, v) in &amp;merged {
+        ctx.insert(k, v);
+    }
+
+    Ok(RenderedMission {
+        map_yaml: tera.render("template.yaml", &amp;ctx)?,
+        triggers_lua: tera.render("triggers.lua.tera", &amp;ctx)?,
+        // Standard mission format — indistinguishable from hand-crafted
+    })
+}
+<span class="boring">}</span></code></pre>
+<h3 id="llm--templates"><a class="header" href="#llm--templates">LLM + Templates</a></h3>
+<p>The LLM doesn’t need to generate everything from scratch. It can:</p>
+<ol>
+<li><strong>Select a template</strong> from the workshop based on the user’s description</li>
+<li><strong>Fill in values</strong> — the LLM generates a <code>values.yaml</code>, not an entire mission</li>
+<li><strong>Validate</strong> — schema constraints catch hallucinated values before rendering</li>
+<li><strong>Compose</strong> — chain multiple scene and mission templates for campaigns (e.g., “3 missions: base building → bridge defense → final assault”)</li>
+</ol>
+<p>This is dramatically more reliable than raw generation. The template constrains the LLM’s output to valid parameter space, and the schema validates it. The LLM becomes a smart form-filler, not an unconstrained code generator.</p>
+<h3 id="scene-templates-composable-building-blocks"><a class="header" href="#scene-templates-composable-building-blocks">Scene Templates (Composable Building Blocks)</a></h3>
+<p>Inspired by Operation Flashpoint / ArmA’s mission editor: scene templates are <strong>sub-mission components</strong> — reusable, pre-scripted building blocks that snap together inside a mission. Each scene template has its own trigger logic, AI behavior, and Lua scripts already written and tested. The user or LLM only fills in parameters.</p>
+<p><strong>Template hierarchy:</strong></p>
+<pre><code>Scene Template    — a single scripted encounter or event
+  ↓ composed into
+Mission Template  — a full mission assembled from scenes + overall structure
+  ↓ sequenced into
+Campaign          — ordered mission sequence with narrative
+</code></pre>
+<p><strong>Built-in scene template library (examples):</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Scene Template</th><th>Parameters</th><th>Pre-built Logic</th></tr>
+</thead>
+<tbody>
+<tr><td><code>ambush</code></td><td>location, attacker_units, trigger_zone, delay</td><td>Units hide until player enters zone, then attack from cover</td></tr>
+<tr><td><code>patrol</code></td><td>waypoints, unit_composition, alert_radius</td><td>Units cycle waypoints, engage if player detected within radius</td></tr>
+<tr><td><code>convoy_escort</code></td><td>route, convoy_units, ambush_points[], escort_units</td><td>Convoy follows route, ambushes trigger at defined points</td></tr>
+<tr><td><code>defend_position</code></td><td>position, waves[], interval, reinforcement_schedule</td><td>Enemies attack in waves with escalating strength</td></tr>
+<tr><td><code>base_building</code></td><td>start_resources, available_structures, tech_tree_limit</td><td>Player builds base, unlocked structures based on tech level</td></tr>
+<tr><td><code>timed_objective</code></td><td>target, time_limit, failure_trigger</td><td>Player must complete objective before timer expires</td></tr>
+<tr><td><code>reinforcements</code></td><td>trigger, units, entry_point, delay</td><td>Units arrive from map edge when trigger fires</td></tr>
+<tr><td><code>scripted_scene</code></td><td>actors[], dialogue[], camera_positions[]</td><td>Non-interactive cutscene or briefing with camera movement</td></tr>
+<tr><td><code>extraction</code></td><td>pickup_zone, transport_type, signal_trigger</td><td>Player moves units to extraction zone, transport arrives</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Scene template structure:</strong></p>
+<pre><code>scenes/
+  ambush/
+    scene.lua.tera       # Tera-templated Lua trigger logic
+    schema.yaml          # Parameters: location, units, trigger_zone, etc.
+    values.yaml          # Defaults
+    README.md            # Usage, preview, notes
+</code></pre>
+<p><strong>Composing scenes into a mission template:</strong></p>
+<pre><code class="language-yaml"># mission_templates/commando_raid/template.yaml
+mission:
+  name: "Behind Enemy Lines — {{ difficulty | title }}"
+  briefing: &gt;
+    Infiltrate the Soviet base. Destroy the radar, 
+    then extract before reinforcements arrive.
+
+scenes:
+  - template: scripted_scene
+    values:
+      actors: [tanya]
+      dialogue: ["Let's do this quietly..."]
+      camera_positions: [{{ insertion_point }}]
+
+  - template: patrol
+    values:
+      waypoints: {{ outer_patrol_route }}
+      unit_composition: [guard, guard, dog]
+      alert_radius: 5
+
+  - template: ambush
+    values:
+      location: {{ radar_approach }}
+      attacker_units: [guard, guard, grenadier]
+      trigger_zone: { center: {{ radar_position }}, radius: 4 }
+
+  - template: timed_objective
+    values:
+      target: radar_building
+      time_limit: {{ {"easy": 300, "normal": 180, "hard": 120}[difficulty] }}
+      failure_trigger: soviet_reinforcements_arrive
+
+  - template: extraction
+    values:
+      pickup_zone: {{ extraction_point }}
+      transport_type: chinook
+      signal_trigger: radar_destroyed
+</code></pre>
+<p><strong>How this works at runtime:</strong></p>
+<ol>
+<li>Mission template engine resolves scene references</li>
+<li>Each scene’s <code>schema.yaml</code> validates its parameters</li>
+<li>Each scene’s <code>scene.lua.tera</code> is rendered with its values</li>
+<li>All rendered Lua scripts are merged into a single mission trigger file with namespaced functions (e.g., <code>scene_1_ambush_on_trigger()</code>)</li>
+<li>Output is a standard mission — indistinguishable from hand-crafted</li>
+</ol>
+<p><strong>For the LLM, this is transformative.</strong> Instead of generating raw Lua trigger code (hallucination-prone, hard to validate), the LLM:</p>
+<ul>
+<li>Picks scene templates by name from a known catalog</li>
+<li>Fills in parameters that the schema validates</li>
+<li>Composes scenes in sequence — the wiring logic is already built into the templates</li>
+</ul>
+<p>A “convoy escort with two ambushes and a base-building finale” is 3 scene template references with ~15 parameters total, not 200 lines of handwritten Lua.</p>
+<h3 id="templates-as-workshop-resources"><a class="header" href="#templates-as-workshop-resources">Templates as Workshop Resources</a></h3>
+<p>Scene templates and mission templates are both first-class workshop resource types — shared, rated, versioned, and downloadable like any other content.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Type</th><th>Contents</th><th>Examples</th></tr>
+</thead>
+<tbody>
+<tr><td>Mods</td><td>YAML rules + Lua scripts + WASM modules</td><td>Total conversions, balance patches, new factions</td></tr>
+<tr><td>Maps</td><td><code>.oramap</code> or native map format</td><td>Skirmish maps, campaign maps</td></tr>
+<tr><td>Missions</td><td>YAML map + Lua triggers + briefing</td><td>Hand-crafted or LLM-generated scenarios</td></tr>
+<tr><td><strong>Scene Templates</strong></td><td><strong>Tera-templated Lua + schema</strong></td><td><strong>Reusable sub-mission building blocks</strong></td></tr>
+<tr><td><strong>Mission Templates</strong></td><td><strong>Tera templates + scene refs + schema</strong></td><td><strong>Full parameterized mission blueprints</strong></td></tr>
+<tr><td>Campaigns</td><td>Ordered mission sets + narrative</td><td>Multi-mission storylines</td></tr>
+<tr><td>Assets</td><td>Sprites, music, sounds, palettes</td><td>HD unit packs, custom soundtracks, voice packs</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="configurable-workshop-server"><a class="header" href="#configurable-workshop-server">Configurable Workshop Server</a></h3>
+<p>The client connects to one workshop server at a time, configurable in settings. Players can point to the official server, a community server, or a local directory.</p>
+<pre><code class="language-yaml"># settings.yaml
+workshop:
+  # Choose one active source:
+  url: "https://workshop.ironcurtain.gg"       # official (default)
+  # url: "https://mods.myclan.com/workshop"     # community-hosted
+  # path: "C:/my-local-workshop"                # local directory (offline/dev)
+</code></pre>
+<p><strong>Official server:</strong> We host one. Default for all players. Curated categories, search, ratings.</p>
+<p><strong>Community servers:</strong> Anyone can host their own (open-source server). Clans, modding communities, tournament organizers. Useful for private content, regional servers, or alternative curation policies.</p>
+<p><strong>Local directory:</strong> A folder on disk that follows the same structure. Works offline. Ideal for mod developers testing before publishing, or LAN-party content distribution.</p>
+<h3 id="open-question-single-vs-multi-source"><a class="header" href="#open-question-single-vs-multi-source">Open Question: Single vs Multi-Source</a></h3>
+<blockquote>
+<p><strong>Undecided:</strong> Should the client support multiple active workshop sources simultaneously (merge listings from several servers), or limit to one at a time?</p>
+<ul>
+<li><strong>Single source</strong> — simpler UI, no conflict resolution, no duplicate detection. Switch between sources explicitly.</li>
+<li><strong>Multi-source</strong> — more flexible, but needs deduplication, priority ordering, and conflict handling when two sources provide the same resource.</li>
+</ul>
+<p>Leaning toward single source for simplicity. Revisit if community demand emerges.</p>
+</blockquote>
+<h3 id="llm-integration"><a class="header" href="#llm-integration">LLM Integration</a></h3>
+<p>The <code>ra-llm</code> crate can access workshop content as context for generation:</p>
+<ul>
+<li>Browse existing maps for terrain style inspiration</li>
+<li>Reference community unit definitions when generating missions</li>
+<li>Pull asset packs to use in generated content</li>
+<li>Publish generated missions directly to the workshop for sharing</li>
+</ul>
+<h3 id="workshop-api"><a class="header" href="#workshop-api">Workshop API</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub trait WorkshopClient: Send + Sync {
+    fn browse(&amp;self, filter: &amp;ResourceFilter) -&gt; Result&lt;Vec&lt;ResourceListing&gt;&gt;;
+    fn download(&amp;self, id: &amp;ResourceId) -&gt; Result&lt;ResourcePackage&gt;;
+    fn publish(&amp;self, package: &amp;ResourcePackage) -&gt; Result&lt;ResourceId&gt;;
+    fn rate(&amp;self, id: &amp;ResourceId, rating: Rating) -&gt; Result&lt;()&gt;;
+    fn search(&amp;self, query: &amp;str, category: ResourceCategory) -&gt; Result&lt;Vec&lt;ResourceListing&gt;&gt;;
+}
+
+pub struct ResourcePackage {
+    pub meta: ResourceMeta,           // name, author, version, description, tags
+    pub category: ResourceCategory,   // Mod, Map, Mission, MissionTemplate, Campaign, Asset
+    pub files: Vec&lt;PackageFile&gt;,      // the actual content (YAML, Lua, sprites, etc.)
+    pub dependencies: Vec&lt;ResourceId&gt;,// other workshop items this requires
+    pub compatibility: VersionInfo,   // engine version + mod version this targets
+}
+<span class="boring">}</span></code></pre>
 
                     </main>
 

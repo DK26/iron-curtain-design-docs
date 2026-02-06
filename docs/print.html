@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-f7729c0f.js";
+            window.path_to_searchindex_js = "searchindex-53643061.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-d8a85e3a.js"></script>
@@ -726,6 +726,146 @@ pub struct OpenRACodec {
 Playback = feed TickOrders through Simulation via ReplayPlayback NetworkModel
 </code></pre>
 <p>Replays are signed by the relay server for tamper-proofing (see <code>06-SECURITY.md</code>).</p>
+<h2 id="connection-establishment"><a class="header" href="#connection-establishment">Connection Establishment</a></h2>
+<p>Connection method is a concern <em>below</em> <code>NetworkModel</code>. By the time a <code>NetworkModel</code> is constructed, transport is already established. The discovery/connection flow:</p>
+<pre><code>Discovery (tracking server / join code / direct IP / QR)
+  → Connection establishment (hole-punch / direct TCP+UDP)
+    → NetworkModel constructed (LockstepNetwork or RelayLockstepNetwork)
+      → Game loop runs — sim doesn't know or care how connection happened
+</code></pre>
+<h3 id="direct-ip"><a class="header" href="#direct-ip">Direct IP</a></h3>
+<p>Classic approach. Host shares <code>IP:port</code>, other player connects.</p>
+<ul>
+<li>Simplest to implement (TCP connect, done)</li>
+<li>Requires host to have a reachable IP (port forwarding or same LAN)</li>
+<li>Good for LAN parties, dedicated server setups, and power users</li>
+</ul>
+<h3 id="join-code-recommended-for-casual"><a class="header" href="#join-code-recommended-for-casual">Join Code (Recommended for Casual)</a></h3>
+<p>Host contacts a lightweight rendezvous server. Server assigns a short code (e.g., <code>IRON-7K3M</code>). Joiner sends code to same server. Server brokers a UDP hole-punch between both players.</p>
+<pre><code>┌────────┐     1. register     ┌──────────────┐     2. resolve    ┌────────┐
+│  Host  │ ──────────────────▶ │  Rendezvous  │ ◀──────────────── │ Joiner │
+│        │ ◀── code: IRON-7K3M│    Server     │  code: IRON-7K3M──▶       │
+│        │     3. hole-punch   │  (stateless)  │  3. hole-punch   │        │
+│        │ ◀═══════════════════╪══════════════════════════════════▶│        │
+└────────┘    direct P2P conn  └──────────────┘                   └────────┘
+</code></pre>
+<ul>
+<li>No port forwarding needed (UDP hole-punch works through most NATs)</li>
+<li>Rendezvous server is stateless and trivial — it only brokers introductions, never sees game data</li>
+<li>Codes are short-lived (expire after use or timeout)</li>
+<li>Industry standard: Among Us, Deep Rock Galactic, It Takes Two</li>
+</ul>
+<h3 id="qr-code"><a class="header" href="#qr-code">QR Code</a></h3>
+<p>Same as join code, encoded as QR. Player scans from phone → opens game client with code pre-filled. Ideal for couch play, LAN events, and streaming (viewers scan to join).</p>
+<h3 id="via-relay-server"><a class="header" href="#via-relay-server">Via Relay Server</a></h3>
+<p>When direct P2P fails (symmetric NAT, corporate firewalls), fall back to relay. The relay server is already designed for this (Model 2). Connection through relay also provides lag-switch protection and sub-tick ordering as a bonus.</p>
+<h3 id="via-tracking-server"><a class="header" href="#via-tracking-server">Via Tracking Server</a></h3>
+<p>Player browses public game listings, picks one, client connects directly to the host (or relay). See Tracking Servers section below.</p>
+<h2 id="tracking-servers-game-browser"><a class="header" href="#tracking-servers-game-browser">Tracking Servers (Game Browser)</a></h2>
+<p>A tracking server (also called master server) lets players discover and publish games. It is NOT a relay — no game data flows through it. It’s a directory.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Tracking server API — implemented by ra-net, consumed by ra-ui
+pub trait TrackingServer: Send + Sync {
+    /// Host publishes their game to the directory
+    fn publish(&amp;self, listing: &amp;GameListing) -&gt; Result&lt;ListingId&gt;;
+    /// Host updates their listing (player count, status)
+    fn update(&amp;self, id: ListingId, listing: &amp;GameListing) -&gt; Result&lt;()&gt;;
+    /// Host removes their listing (game started or cancelled)
+    fn unpublish(&amp;self, id: ListingId) -&gt; Result&lt;()&gt;;
+    /// Browser fetches current listings with optional filters
+    fn browse(&amp;self, filter: &amp;BrowseFilter) -&gt; Result&lt;Vec&lt;GameListing&gt;&gt;;
+}
+
+pub struct GameListing {
+    pub host: ConnectionInfo,     // IP:port, relay ID, or join code
+    pub map: MapMeta,             // name, hash, player count
+    pub rules: RulesMeta,         // mod, version, custom rules
+    pub players: Vec&lt;PlayerInfo&gt;, // current players in lobby
+    pub status: LobbyStatus,     // waiting, in_progress, full
+    pub engine: EngineId,         // "iron-curtain" or "openra" (for cross-browser)
+}
+<span class="boring">}</span></code></pre>
+<h3 id="official-tracking-server"><a class="header" href="#official-tracking-server">Official Tracking Server</a></h3>
+<p>We run one. Games appear here by default. Free, community-operated, no account required to browse (account required to host, to prevent spam).</p>
+<h3 id="custom-tracking-servers"><a class="header" href="#custom-tracking-servers">Custom Tracking Servers</a></h3>
+<p>Communities, clans, and tournament organizers run their own. The client supports a list of tracking server URLs in settings. This is the Quake/Source master server model — decentralized, resilient.</p>
+<pre><code class="language-yaml"># settings.yaml
+tracking_servers:
+  - url: "https://track.ironcurtain.gg"    # official
+  - url: "https://rts.myclan.com/track"     # clan server
+  - url: "https://openra.net/master"        # OpenRA shared browser (Level 0 compat)
+</code></pre>
+<h3 id="openra-shared-browser"><a class="header" href="#openra-shared-browser">OpenRA Shared Browser</a></h3>
+<p>Implementing the OpenRA master server protocol means Iron Curtain games can appear in OpenRA’s game browser (and vice versa), tagged by engine. Players see the full community. This is the Level 0 cross-engine compatibility from <code>07-CROSS-ENGINE.md</code>.</p>
+<h3 id="tracking-server-implementation"><a class="header" href="#tracking-server-implementation">Tracking Server Implementation</a></h3>
+<p>The server itself is trivial — a REST or WebSocket API backed by an in-memory store with TTL expiry. No database needed. Listings expire if the host stops sending heartbeats. A single cheap VPS handles thousands of concurrent listings.</p>
+<h2 id="multi-player-scaling-beyond-2-players"><a class="header" href="#multi-player-scaling-beyond-2-players">Multi-Player Scaling (Beyond 2 Players)</a></h2>
+<p>The architecture supports N players with no structural changes. Every design element — deterministic lockstep, sub-tick ordering, relay server, desync detection — works for 2, 4, 8, or more players.</p>
+<h3 id="how-each-component-scales"><a class="header" href="#how-each-component-scales">How Each Component Scales</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Component</th><th>2 players</th><th>N players</th><th>Bottleneck</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Lockstep sim</strong></td><td>Both run identical sim</td><td>All N run identical sim</td><td>No change — sim processes <code>TickOrders</code> regardless of source count</td></tr>
+<tr><td><strong>Sub-tick ordering</strong></td><td>Sort 2 players’ orders</td><td>Sort N players’ orders</td><td>Negligible — orders per tick is small (players issue ~0-5 orders/tick)</td></tr>
+<tr><td><strong>Relay server</strong></td><td>Collects from 2, broadcasts to 2</td><td>Collects from N, broadcasts to N</td><td>Linear in N. Bandwidth is tiny (orders are small)</td></tr>
+<tr><td><strong>Desync detection</strong></td><td>Compare 2 hashes</td><td>Compare N hashes</td><td>Trivial — one hash per player per tick</td></tr>
+<tr><td><strong>Input delay</strong></td><td>Tuned to worst of 2 connections</td><td>Tuned to worst of N connections</td><td><strong>Real bottleneck</strong> — one laggy player affects everyone</td></tr>
+<tr><td><strong>Direct P2P</strong></td><td>1 connection</td><td>N×(N-1)/2 mesh connections</td><td>Mesh doesn’t scale. Use star topology or relay for &gt;4 players</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="p2p-topology-for-multi-player"><a class="header" href="#p2p-topology-for-multi-player">P2P Topology for Multi-Player</a></h3>
+<p>Direct P2P lockstep with 2-3 players uses a full mesh (everyone connects to everyone). Beyond that, use a star topology where one player acts as host:</p>
+<pre><code>2-3 players: full mesh (every client sends to every other)
+  A ↔ B ↔ C ↔ A
+
+4+ players: star via host (one player collects and rebroadcasts)
+  B → A ← C        A = host, collects orders, broadcasts canonical tick
+      ↑
+      D
+
+4+ players: relay server (recommended)
+  B → R ← C        R = relay, all benefits of Model 2
+      ↑
+      D
+</code></pre>
+<p>For 4+ players, the relay server is strongly recommended. It solves:</p>
+<ul>
+<li>NAT traversal for all players (not just host)</li>
+<li>Lag-switch protection for all players (not just host-enforced)</li>
+<li>No single player has hosting advantage (relay is neutral authority)</li>
+<li>Sub-tick ordering is globally fair</li>
+</ul>
+<h3 id="the-real-scaling-limit-sim-cost-not-network"><a class="header" href="#the-real-scaling-limit-sim-cost-not-network">The Real Scaling Limit: Sim Cost, Not Network</a></h3>
+<p>With N players, the sim has more units, more orders, and more state to process. This is a <strong>sim performance</strong> concern, not a network concern:</p>
+<ul>
+<li>2-player game: ~200-500 units typically</li>
+<li>4-player FFA or 2v2: ~400-1000 units</li>
+<li>8-player: ~800-2000 units</li>
+</ul>
+<p>The performance targets in <code>10-PERFORMANCE.md</code> already account for this. The efficiency pyramid (flowfields, spatial hash, sim LOD, amortized work) is designed for 2000+ units on mid-range hardware. An 8-player game is within budget.</p>
+<h3 id="team-games-2v2-3v3-4v4"><a class="header" href="#team-games-2v2-3v3-4v4">Team Games (2v2, 3v3, 4v4)</a></h3>
+<p>Team games work identically to FFA. Each player submits orders for their own units. The sim processes all orders from all players in sub-tick chronological order. Alliances, shared vision, and team chat are sim-layer and UI-layer concerns — the network model doesn’t distinguish between ally and enemy.</p>
+<h3 id="observers--spectators"><a class="header" href="#observers--spectators">Observers / Spectators</a></h3>
+<p>Observers receive <code>TickOrders</code> but never submit any. They run the sim locally (full state, all players’ perspective). In a relay server setup, the relay can optionally delay the observer feed by N ticks to prevent live coaching.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct ObserverConnection {
+    pub delay_ticks: u64,        // e.g., 30 ticks (~2 seconds) for anti-coaching
+    pub receive_only: bool,      // true — observer never submits orders
+}
+<span class="boring">}</span></code></pre>
+<h3 id="player-limits"><a class="header" href="#player-limits">Player Limits</a></h3>
+<p>No hard architectural limit. Practical limits:</p>
+<ul>
+<li><strong>Lockstep input delay</strong> — scales with the worst connection among N players. Beyond ~8 players, the slowest player’s latency dominates everyone’s experience.</li>
+<li><strong>Order volume</strong> — N players generating orders simultaneously. Still tiny bandwidth (orders are small structs, not state).</li>
+<li><strong>Sim cost</strong> — more players = more units = more computation. The efficiency pyramid handles this up to the hardware’s limit.</li>
+</ul>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="04--modding-system"><a class="header" href="#04--modding-system">04 — Modding System</a></h1>
 <h2 id="three-tier-architecture"><a class="header" href="#three-tier-architecture">Three-Tier Architecture</a></h2>
@@ -917,8 +1057,21 @@ pub enum NetworkAccess {
     // NEVER unrestricted
 }
 <span class="boring">}</span></code></pre>
-<h2 id="tera-templating-phase-6-nice-to-have"><a class="header" href="#tera-templating-phase-6-nice-to-have">Tera Templating (Phase 6, Nice-to-Have)</a></h2>
-<p>Optional preprocessing for YAML/Lua generation. Eliminates copy-paste for faction variants.</p>
+<h2 id="tera-templating--mission-templates-phase-6"><a class="header" href="#tera-templating--mission-templates-phase-6">Tera Templating &amp; Mission Templates (Phase 6)</a></h2>
+<h3 id="tera-as-the-template-engine"><a class="header" href="#tera-as-the-template-engine">Tera as the Template Engine</a></h3>
+<p>Tera is a Rust-native Jinja2-compatible template engine. It handles two roles in the modding system:</p>
+<ol>
+<li><strong>YAML/Lua generation</strong> — eliminates copy-paste for faction variants, bulk unit definitions</li>
+<li><strong>Mission templates</strong> — parameterized, reusable mission blueprints (like Helm charts for K8s)</li>
+</ol>
+<p>Load-time only (zero runtime cost). Tera is the right fit because:</p>
+<ul>
+<li>Rust-native (<code>tera</code> crate), no external dependencies</li>
+<li>Jinja2 syntax — widely known, documented, tooling exists</li>
+<li>Supports loops, conditionals, includes, macros, filters, inheritance</li>
+<li>Deterministic output (no randomness unless explicitly seeded via context)</li>
+</ul>
+<h3 id="unitrule-templating-original-use-case"><a class="header" href="#unitrule-templating-original-use-case">Unit/Rule Templating (Original Use Case)</a></h3>
 <pre><code class="language-jinja">{% for faction in ["allies", "soviet"] %}
 {% for tier in [1, 2, 3] %}
 {{ faction }}_tank_t{{ tier }}:
@@ -930,7 +1083,272 @@ pub enum NetworkAccess {
 {% endfor %}
 {% endfor %}
 </code></pre>
-<p>Load-time only (zero runtime cost). ~50 lines to integrate. Not a foundation piece.</p>
+<h3 id="mission-templates-helm-style-parameterized-missions"><a class="header" href="#mission-templates-helm-style-parameterized-missions">Mission Templates (Helm-Style Parameterized Missions)</a></h3>
+<p>A mission template is a reusable mission blueprint with parameterized values. The template defines the structure (map layout, objectives, triggers, enemy composition); the user (or LLM) supplies values to produce a concrete, playable mission.</p>
+<p><strong>Template structure:</strong></p>
+<pre><code>templates/
+  bridge_defense/
+    template.yaml        # Tera template for map + rules
+    triggers.lua.tera    # Tera template for Lua trigger scripts
+    values.yaml          # Default parameter values
+    schema.yaml          # Parameter schema (names, types, constraints, descriptions)
+    preview.png          # Thumbnail for workshop browser
+    README.md            # Description, author, usage notes
+</code></pre>
+<p><strong>Schema (what parameters the template accepts):</strong></p>
+<pre><code class="language-yaml"># schema.yaml — defines the knobs for this template
+parameters:
+  map_size:
+    type: enum
+    options: [small, medium, large]
+    default: medium
+    description: "Overall map dimensions"
+  
+  player_faction:
+    type: enum
+    options: [allies, soviet]
+    default: allies
+    description: "Player's faction"
+  
+  enemy_waves:
+    type: integer
+    min: 3
+    max: 20
+    default: 8
+    description: "Number of enemy attack waves"
+  
+  difficulty:
+    type: enum
+    options: [easy, normal, hard, brutal]
+    default: normal
+    description: "Controls enemy unit count and AI aggression"
+  
+  reinforcement_type:
+    type: enum
+    options: [infantry, armor, air, mixed]
+    default: mixed
+    description: "What reinforcements the player receives"
+  
+  enable_naval:
+    type: boolean
+    default: false
+    description: "Include river crossings and naval units"
+</code></pre>
+<p><strong>Template (references parameters):</strong></p>
+<pre><code class="language-jinja">{# template.yaml — bridge defense mission #}
+mission:
+  name: "Bridge Defense — {{ difficulty | title }}"
+  briefing: &gt;
+    Commander, hold the {{ map_size }} bridge crossing against
+    {{ enemy_waves }} waves of {{ "Soviet" if player_faction == "allies" else "Allied" }} forces.
+    {% if enable_naval %}Enemy naval units will approach from the river.{% endif %}
+
+map:
+  size: {{ {"small": [64, 64], "medium": [96, 96], "large": [128, 128]}[map_size] }}
+
+actors:
+  player_base:
+    faction: {{ player_faction }}
+    units:
+      {% for i in range(end={"easy": 8, "normal": 5, "hard": 3, "brutal": 2}[difficulty]) %}
+      - type: {{ reinforcement_type }}_defender_{{ i }}
+      {% endfor %}
+
+waves:
+  count: {{ enemy_waves }}
+  escalation: {{ {"easy": 1.1, "normal": 1.3, "hard": 1.5, "brutal": 2.0}[difficulty] }}
+</code></pre>
+<p><strong>Rendering a template into a playable mission:</strong></p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use tera::{Tera, Context};
+
+pub fn render_mission_template(
+    template_dir: &amp;Path,
+    values: &amp;HashMap&lt;String, Value&gt;,
+) -&gt; Result&lt;RenderedMission&gt; {
+    let schema = load_schema(template_dir.join("schema.yaml"))?;
+    let merged = merge_with_defaults(values, &amp;schema)?;  // fill in defaults
+    validate_values(&amp;merged, &amp;schema)?;                   // check types, ranges, enums
+
+    let mut tera = Tera::new(template_dir.join("*.tera").to_str().unwrap())?;
+    let mut ctx = Context::new();
+    for (k, v) in &amp;merged {
+        ctx.insert(k, v);
+    }
+
+    Ok(RenderedMission {
+        map_yaml: tera.render("template.yaml", &amp;ctx)?,
+        triggers_lua: tera.render("triggers.lua.tera", &amp;ctx)?,
+        // Standard mission format — indistinguishable from hand-crafted
+    })
+}
+<span class="boring">}</span></code></pre>
+<h3 id="llm--templates"><a class="header" href="#llm--templates">LLM + Templates</a></h3>
+<p>The LLM doesn’t need to generate everything from scratch. It can:</p>
+<ol>
+<li><strong>Select a template</strong> from the workshop based on the user’s description</li>
+<li><strong>Fill in values</strong> — the LLM generates a <code>values.yaml</code>, not an entire mission</li>
+<li><strong>Validate</strong> — schema constraints catch hallucinated values before rendering</li>
+<li><strong>Compose</strong> — chain multiple scene and mission templates for campaigns (e.g., “3 missions: base building → bridge defense → final assault”)</li>
+</ol>
+<p>This is dramatically more reliable than raw generation. The template constrains the LLM’s output to valid parameter space, and the schema validates it. The LLM becomes a smart form-filler, not an unconstrained code generator.</p>
+<h3 id="scene-templates-composable-building-blocks"><a class="header" href="#scene-templates-composable-building-blocks">Scene Templates (Composable Building Blocks)</a></h3>
+<p>Inspired by Operation Flashpoint / ArmA’s mission editor: scene templates are <strong>sub-mission components</strong> — reusable, pre-scripted building blocks that snap together inside a mission. Each scene template has its own trigger logic, AI behavior, and Lua scripts already written and tested. The user or LLM only fills in parameters.</p>
+<p><strong>Template hierarchy:</strong></p>
+<pre><code>Scene Template    — a single scripted encounter or event
+  ↓ composed into
+Mission Template  — a full mission assembled from scenes + overall structure
+  ↓ sequenced into
+Campaign          — ordered mission sequence with narrative
+</code></pre>
+<p><strong>Built-in scene template library (examples):</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Scene Template</th><th>Parameters</th><th>Pre-built Logic</th></tr>
+</thead>
+<tbody>
+<tr><td><code>ambush</code></td><td>location, attacker_units, trigger_zone, delay</td><td>Units hide until player enters zone, then attack from cover</td></tr>
+<tr><td><code>patrol</code></td><td>waypoints, unit_composition, alert_radius</td><td>Units cycle waypoints, engage if player detected within radius</td></tr>
+<tr><td><code>convoy_escort</code></td><td>route, convoy_units, ambush_points[], escort_units</td><td>Convoy follows route, ambushes trigger at defined points</td></tr>
+<tr><td><code>defend_position</code></td><td>position, waves[], interval, reinforcement_schedule</td><td>Enemies attack in waves with escalating strength</td></tr>
+<tr><td><code>base_building</code></td><td>start_resources, available_structures, tech_tree_limit</td><td>Player builds base, unlocked structures based on tech level</td></tr>
+<tr><td><code>timed_objective</code></td><td>target, time_limit, failure_trigger</td><td>Player must complete objective before timer expires</td></tr>
+<tr><td><code>reinforcements</code></td><td>trigger, units, entry_point, delay</td><td>Units arrive from map edge when trigger fires</td></tr>
+<tr><td><code>scripted_scene</code></td><td>actors[], dialogue[], camera_positions[]</td><td>Non-interactive cutscene or briefing with camera movement</td></tr>
+<tr><td><code>extraction</code></td><td>pickup_zone, transport_type, signal_trigger</td><td>Player moves units to extraction zone, transport arrives</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Scene template structure:</strong></p>
+<pre><code>scenes/
+  ambush/
+    scene.lua.tera       # Tera-templated Lua trigger logic
+    schema.yaml          # Parameters: location, units, trigger_zone, etc.
+    values.yaml          # Defaults
+    README.md            # Usage, preview, notes
+</code></pre>
+<p><strong>Composing scenes into a mission template:</strong></p>
+<pre><code class="language-yaml"># mission_templates/commando_raid/template.yaml
+mission:
+  name: "Behind Enemy Lines — {{ difficulty | title }}"
+  briefing: &gt;
+    Infiltrate the Soviet base. Destroy the radar, 
+    then extract before reinforcements arrive.
+
+scenes:
+  - template: scripted_scene
+    values:
+      actors: [tanya]
+      dialogue: ["Let's do this quietly..."]
+      camera_positions: [{{ insertion_point }}]
+
+  - template: patrol
+    values:
+      waypoints: {{ outer_patrol_route }}
+      unit_composition: [guard, guard, dog]
+      alert_radius: 5
+
+  - template: ambush
+    values:
+      location: {{ radar_approach }}
+      attacker_units: [guard, guard, grenadier]
+      trigger_zone: { center: {{ radar_position }}, radius: 4 }
+
+  - template: timed_objective
+    values:
+      target: radar_building
+      time_limit: {{ {"easy": 300, "normal": 180, "hard": 120}[difficulty] }}
+      failure_trigger: soviet_reinforcements_arrive
+
+  - template: extraction
+    values:
+      pickup_zone: {{ extraction_point }}
+      transport_type: chinook
+      signal_trigger: radar_destroyed
+</code></pre>
+<p><strong>How this works at runtime:</strong></p>
+<ol>
+<li>Mission template engine resolves scene references</li>
+<li>Each scene’s <code>schema.yaml</code> validates its parameters</li>
+<li>Each scene’s <code>scene.lua.tera</code> is rendered with its values</li>
+<li>All rendered Lua scripts are merged into a single mission trigger file with namespaced functions (e.g., <code>scene_1_ambush_on_trigger()</code>)</li>
+<li>Output is a standard mission — indistinguishable from hand-crafted</li>
+</ol>
+<p><strong>For the LLM, this is transformative.</strong> Instead of generating raw Lua trigger code (hallucination-prone, hard to validate), the LLM:</p>
+<ul>
+<li>Picks scene templates by name from a known catalog</li>
+<li>Fills in parameters that the schema validates</li>
+<li>Composes scenes in sequence — the wiring logic is already built into the templates</li>
+</ul>
+<p>A “convoy escort with two ambushes and a base-building finale” is 3 scene template references with ~15 parameters total, not 200 lines of handwritten Lua.</p>
+<h3 id="templates-as-workshop-resources"><a class="header" href="#templates-as-workshop-resources">Templates as Workshop Resources</a></h3>
+<p>Scene templates and mission templates are both first-class workshop resource types — shared, rated, versioned, and downloadable like any other content.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Type</th><th>Contents</th><th>Examples</th></tr>
+</thead>
+<tbody>
+<tr><td>Mods</td><td>YAML rules + Lua scripts + WASM modules</td><td>Total conversions, balance patches, new factions</td></tr>
+<tr><td>Maps</td><td><code>.oramap</code> or native map format</td><td>Skirmish maps, campaign maps</td></tr>
+<tr><td>Missions</td><td>YAML map + Lua triggers + briefing</td><td>Hand-crafted or LLM-generated scenarios</td></tr>
+<tr><td><strong>Scene Templates</strong></td><td><strong>Tera-templated Lua + schema</strong></td><td><strong>Reusable sub-mission building blocks</strong></td></tr>
+<tr><td><strong>Mission Templates</strong></td><td><strong>Tera templates + scene refs + schema</strong></td><td><strong>Full parameterized mission blueprints</strong></td></tr>
+<tr><td>Campaigns</td><td>Ordered mission sets + narrative</td><td>Multi-mission storylines</td></tr>
+<tr><td>Assets</td><td>Sprites, music, sounds, palettes</td><td>HD unit packs, custom soundtracks, voice packs</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="configurable-workshop-server"><a class="header" href="#configurable-workshop-server">Configurable Workshop Server</a></h3>
+<p>The client connects to one workshop server at a time, configurable in settings. Players can point to the official server, a community server, or a local directory.</p>
+<pre><code class="language-yaml"># settings.yaml
+workshop:
+  # Choose one active source:
+  url: "https://workshop.ironcurtain.gg"       # official (default)
+  # url: "https://mods.myclan.com/workshop"     # community-hosted
+  # path: "C:/my-local-workshop"                # local directory (offline/dev)
+</code></pre>
+<p><strong>Official server:</strong> We host one. Default for all players. Curated categories, search, ratings.</p>
+<p><strong>Community servers:</strong> Anyone can host their own (open-source server). Clans, modding communities, tournament organizers. Useful for private content, regional servers, or alternative curation policies.</p>
+<p><strong>Local directory:</strong> A folder on disk that follows the same structure. Works offline. Ideal for mod developers testing before publishing, or LAN-party content distribution.</p>
+<h3 id="open-question-single-vs-multi-source"><a class="header" href="#open-question-single-vs-multi-source">Open Question: Single vs Multi-Source</a></h3>
+<blockquote>
+<p><strong>Undecided:</strong> Should the client support multiple active workshop sources simultaneously (merge listings from several servers), or limit to one at a time?</p>
+<ul>
+<li><strong>Single source</strong> — simpler UI, no conflict resolution, no duplicate detection. Switch between sources explicitly.</li>
+<li><strong>Multi-source</strong> — more flexible, but needs deduplication, priority ordering, and conflict handling when two sources provide the same resource.</li>
+</ul>
+<p>Leaning toward single source for simplicity. Revisit if community demand emerges.</p>
+</blockquote>
+<h3 id="llm-integration"><a class="header" href="#llm-integration">LLM Integration</a></h3>
+<p>The <code>ra-llm</code> crate can access workshop content as context for generation:</p>
+<ul>
+<li>Browse existing maps for terrain style inspiration</li>
+<li>Reference community unit definitions when generating missions</li>
+<li>Pull asset packs to use in generated content</li>
+<li>Publish generated missions directly to the workshop for sharing</li>
+</ul>
+<h3 id="workshop-api"><a class="header" href="#workshop-api">Workshop API</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub trait WorkshopClient: Send + Sync {
+    fn browse(&amp;self, filter: &amp;ResourceFilter) -&gt; Result&lt;Vec&lt;ResourceListing&gt;&gt;;
+    fn download(&amp;self, id: &amp;ResourceId) -&gt; Result&lt;ResourcePackage&gt;;
+    fn publish(&amp;self, package: &amp;ResourcePackage) -&gt; Result&lt;ResourceId&gt;;
+    fn rate(&amp;self, id: &amp;ResourceId, rating: Rating) -&gt; Result&lt;()&gt;;
+    fn search(&amp;self, query: &amp;str, category: ResourceCategory) -&gt; Result&lt;Vec&lt;ResourceListing&gt;&gt;;
+}
+
+pub struct ResourcePackage {
+    pub meta: ResourceMeta,           // name, author, version, description, tags
+    pub category: ResourceCategory,   // Mod, Map, Mission, MissionTemplate, Campaign, Asset
+    pub files: Vec&lt;PackageFile&gt;,      // the actual content (YAML, Lua, sprites, etc.)
+    pub dependencies: Vec&lt;ResourceId&gt;,// other workshop items this requires
+    pub compatibility: VersionInfo,   // engine version + mod version this targets
+}
+<span class="boring">}</span></code></pre>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="05--file-formats--original-source-insights"><a class="header" href="#05--file-formats--original-source-insights">05 — File Formats &amp; Original Source Insights</a></h1>
 <h2 id="formats-to-support-ra-formats-crate"><a class="header" href="#formats-to-support-ra-formats-crate">Formats to Support (ra-formats crate)</a></h2>
@@ -1059,6 +1477,9 @@ impl CoordTransform {
 <tr><td>Replay tampering</td><td><strong>OPEN</strong></td><td>Signed ✓</td><td>Signed ✓</td></tr>
 <tr><td>WASM mod cheating</td><td>Sandbox</td><td>Sandbox</td><td>Sandbox</td></tr>
 <tr><td>Reconciler abuse</td><td>N/A</td><td>N/A</td><td>Bounded + signed ✓</td></tr>
+<tr><td>Join code brute-force</td><td>Rate limit + expiry</td><td>Rate limit + expiry</td><td>Rate limit + expiry</td></tr>
+<tr><td>Tracking server abuse</td><td>Rate limit + validation</td><td>Rate limit + validation</td><td>Rate limit + validation</td></tr>
+<tr><td>Version mismatch</td><td>Handshake ✓</td><td>Handshake ✓</td><td>Handshake ✓</td></tr>
 </tbody>
 </table>
 </div>
@@ -1232,6 +1653,94 @@ impl SignedReplay {
 }
 <span class="boring">}</span></code></pre>
 <p>All corrections must be: signed by the authority, bounded to physically possible values, and rejectable if suspicious.</p>
+<h2 id="vulnerability-8-join-code-brute-forcing"><a class="header" href="#vulnerability-8-join-code-brute-forcing">Vulnerability 8: Join Code Brute-Forcing</a></h2>
+<h3 id="the-problem-7"><a class="header" href="#the-problem-7">The Problem</a></h3>
+<p>Join codes (e.g., <code>IRON-7K3M</code>) enable NAT-friendly P2P connections via a rendezvous server. If codes are short, an attacker can brute-force codes to join games uninvited — griefing lobbies or extracting connection info.</p>
+<p>A 4-character alphanumeric code has ~1.7 million combinations. At 1000 requests/second, exhausted in ~28 minutes. Shorter codes are worse.</p>
+<h3 id="mitigation-length--rate-limiting--expiry"><a class="header" href="#mitigation-length--rate-limiting--expiry">Mitigation: Length + Rate Limiting + Expiry</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct JoinCode {
+    pub code: String,          // 6-8 chars, alphanumeric, no ambiguous chars (0/O, 1/I/l)
+    pub created_at: Instant,
+    pub expires_at: Instant,   // TTL: 5 minutes (enough to share, too short to brute-force)
+    pub uses_remaining: u32,   // 1 for private, N for party invites
+}
+
+impl RendezvousServer {
+    fn resolve_code(&amp;mut self, code: &amp;str, requester_ip: IpAddr) -&gt; Result&lt;ConnectionInfo&gt; {
+        // Rate limit: max 5 resolve attempts per IP per minute
+        if self.rate_limiter.check(requester_ip).is_err() {
+            return Err(RateLimited);
+        }
+        // Lookup and consume
+        match self.codes.get(code) {
+            Some(entry) if entry.expires_at &gt; Instant::now() =&gt; Ok(entry.connection_info()),
+            _ =&gt; Err(InvalidCode),  // Don't distinguish "expired" from "nonexistent"
+        }
+    }
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Key choices:</strong></p>
+<ul>
+<li>6+ characters from a 32-char alphabet (no ambiguous chars) = ~1 billion combinations</li>
+<li>Rate limit resolves per IP (5/minute blocks brute-force, legitimate users never hit it)</li>
+<li>Codes expire after 5 minutes (limits attack window)</li>
+<li>Invalid vs expired returns the same error (no information leakage)</li>
+</ul>
+<h2 id="vulnerability-9-tracking-server-abuse"><a class="header" href="#vulnerability-9-tracking-server-abuse">Vulnerability 9: Tracking Server Abuse</a></h2>
+<h3 id="the-problem-8"><a class="header" href="#the-problem-8">The Problem</a></h3>
+<p>The tracking server is a public API. Abuse vectors:</p>
+<ul>
+<li><strong>Spam listings</strong> — flood with fake games, burying real ones</li>
+<li><strong>Phishing redirects</strong> — listing points to a malicious IP that mimics a game server but captures client info</li>
+<li><strong>DDoS</strong> — overwhelm the server to deny game discovery for everyone</li>
+</ul>
+<p>OpenRA’s master server has been DDoSed before. Any public game directory faces this.</p>
+<h3 id="mitigation-standard-api-hardening"><a class="header" href="#mitigation-standard-api-hardening">Mitigation: Standard API Hardening</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct TrackingServerConfig {
+    pub max_listings_per_ip: u32,        // 3 — one IP rarely needs more
+    pub heartbeat_interval: Duration,    // 30s — listing expires if missed
+    pub listing_ttl: Duration,           // 2 minutes without heartbeat → removed
+    pub browse_rate_limit: u32,          // 30 requests/minute per IP
+    pub publish_rate_limit: u32,         // 5 requests/minute per IP
+    pub require_valid_game_port: bool,   // Server verifies the listed port is reachable
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Spam prevention:</strong> Limit listings per IP. Require heartbeats (real games send them, spam bots must sustain effort). Optionally verify the listed port actually responds to a game protocol handshake.</p>
+<p><strong>Phishing prevention:</strong> Client validates the game protocol handshake before showing the lobby. A non-game server at the listed IP fails handshake and is silently dropped from the browser.</p>
+<p><strong>DDoS:</strong> Standard infrastructure — CDN/reverse proxy for the browse API, rate limiting, geographic distribution. The tracking server is stateless and trivially horizontally scalable (it’s just a filtered list in memory).</p>
+<h2 id="vulnerability-10-client-version-mismatch"><a class="header" href="#vulnerability-10-client-version-mismatch">Vulnerability 10: Client Version Mismatch</a></h2>
+<h3 id="the-problem-9"><a class="header" href="#the-problem-9">The Problem</a></h3>
+<p>Players with different client versions join the same game. Even minor differences in sim code (bug fix, balance patch) cause immediate desyncs. This looks like a bug to users, destroys trust, and wastes time. Age of Empires 2 DE had years of desync issues partly caused by version mismatches.</p>
+<h3 id="mitigation-version-handshake-at-connection"><a class="header" href="#mitigation-version-handshake-at-connection">Mitigation: Version Handshake at Connection</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct VersionInfo {
+    pub engine_version: SemVer,        // e.g., 0.3.1
+    pub sim_hash: u64,                 // hash of compiled sim logic (catches patched binaries)
+    pub mod_manifest_hash: u64,        // hash of loaded mod rules (catches different mod versions)
+    pub protocol_version: u32,         // wire protocol version
+}
+
+impl GameLobby {
+    fn accept_player(&amp;self, remote: &amp;VersionInfo) -&gt; Result&lt;()&gt; {
+        if remote.protocol_version != self.host.protocol_version {
+            return Err(IncompatibleProtocol);
+        }
+        if remote.sim_hash != self.host.sim_hash {
+            return Err(SimVersionMismatch);
+        }
+        if remote.mod_manifest_hash != self.host.mod_manifest_hash {
+            return Err(ModMismatch);
+        }
+        Ok(())
+    }
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Key:</strong> Check version during lobby join, not after game starts. The relay server and tracking server listings both include <code>VersionInfo</code> so incompatible games are filtered from the browser entirely.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="07--cross-engine-compatibility"><a class="header" href="#07--cross-engine-compatibility">07 — Cross-Engine Compatibility</a></h1>
 <h2 id="the-three-layers-of-compatibility"><a class="header" href="#the-three-layers-of-compatibility">The Three Layers of Compatibility</a></h2>
@@ -1828,6 +2337,7 @@ let game = GameLoop::new(sim, renderer, adapted);
 <tr><td>P004</td><td>Lobby/matchmaking protocol specifics</td><td>Phase 5 start</td></tr>
 <tr><td>P005</td><td>Map editor architecture (in-engine vs separate process)</td><td>Phase 6 start</td></tr>
 <tr><td>P006</td><td>License choice (GPL v3 to match EA source? MIT? Apache?)</td><td>Phase 0 start</td></tr>
+<tr><td>P007</td><td>Workshop: single source vs multi-source (see <code>04-MODDING.md</code>)</td><td>Phase 6 start</td></tr>
 </tbody>
 </table>
 </div>

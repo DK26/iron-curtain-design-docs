@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-f7729c0f.js";
+            window.path_to_searchindex_js = "searchindex-53643061.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-d8a85e3a.js"></script>
@@ -197,6 +197,9 @@
 <tr><td>Replay tampering</td><td><strong>OPEN</strong></td><td>Signed ✓</td><td>Signed ✓</td></tr>
 <tr><td>WASM mod cheating</td><td>Sandbox</td><td>Sandbox</td><td>Sandbox</td></tr>
 <tr><td>Reconciler abuse</td><td>N/A</td><td>N/A</td><td>Bounded + signed ✓</td></tr>
+<tr><td>Join code brute-force</td><td>Rate limit + expiry</td><td>Rate limit + expiry</td><td>Rate limit + expiry</td></tr>
+<tr><td>Tracking server abuse</td><td>Rate limit + validation</td><td>Rate limit + validation</td><td>Rate limit + validation</td></tr>
+<tr><td>Version mismatch</td><td>Handshake ✓</td><td>Handshake ✓</td><td>Handshake ✓</td></tr>
 </tbody>
 </table>
 </div>
@@ -370,6 +373,94 @@ impl SignedReplay {
 }
 <span class="boring">}</span></code></pre>
 <p>All corrections must be: signed by the authority, bounded to physically possible values, and rejectable if suspicious.</p>
+<h2 id="vulnerability-8-join-code-brute-forcing"><a class="header" href="#vulnerability-8-join-code-brute-forcing">Vulnerability 8: Join Code Brute-Forcing</a></h2>
+<h3 id="the-problem-7"><a class="header" href="#the-problem-7">The Problem</a></h3>
+<p>Join codes (e.g., <code>IRON-7K3M</code>) enable NAT-friendly P2P connections via a rendezvous server. If codes are short, an attacker can brute-force codes to join games uninvited — griefing lobbies or extracting connection info.</p>
+<p>A 4-character alphanumeric code has ~1.7 million combinations. At 1000 requests/second, exhausted in ~28 minutes. Shorter codes are worse.</p>
+<h3 id="mitigation-length--rate-limiting--expiry"><a class="header" href="#mitigation-length--rate-limiting--expiry">Mitigation: Length + Rate Limiting + Expiry</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct JoinCode {
+    pub code: String,          // 6-8 chars, alphanumeric, no ambiguous chars (0/O, 1/I/l)
+    pub created_at: Instant,
+    pub expires_at: Instant,   // TTL: 5 minutes (enough to share, too short to brute-force)
+    pub uses_remaining: u32,   // 1 for private, N for party invites
+}
+
+impl RendezvousServer {
+    fn resolve_code(&amp;mut self, code: &amp;str, requester_ip: IpAddr) -&gt; Result&lt;ConnectionInfo&gt; {
+        // Rate limit: max 5 resolve attempts per IP per minute
+        if self.rate_limiter.check(requester_ip).is_err() {
+            return Err(RateLimited);
+        }
+        // Lookup and consume
+        match self.codes.get(code) {
+            Some(entry) if entry.expires_at &gt; Instant::now() =&gt; Ok(entry.connection_info()),
+            _ =&gt; Err(InvalidCode),  // Don't distinguish "expired" from "nonexistent"
+        }
+    }
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Key choices:</strong></p>
+<ul>
+<li>6+ characters from a 32-char alphabet (no ambiguous chars) = ~1 billion combinations</li>
+<li>Rate limit resolves per IP (5/minute blocks brute-force, legitimate users never hit it)</li>
+<li>Codes expire after 5 minutes (limits attack window)</li>
+<li>Invalid vs expired returns the same error (no information leakage)</li>
+</ul>
+<h2 id="vulnerability-9-tracking-server-abuse"><a class="header" href="#vulnerability-9-tracking-server-abuse">Vulnerability 9: Tracking Server Abuse</a></h2>
+<h3 id="the-problem-8"><a class="header" href="#the-problem-8">The Problem</a></h3>
+<p>The tracking server is a public API. Abuse vectors:</p>
+<ul>
+<li><strong>Spam listings</strong> — flood with fake games, burying real ones</li>
+<li><strong>Phishing redirects</strong> — listing points to a malicious IP that mimics a game server but captures client info</li>
+<li><strong>DDoS</strong> — overwhelm the server to deny game discovery for everyone</li>
+</ul>
+<p>OpenRA’s master server has been DDoSed before. Any public game directory faces this.</p>
+<h3 id="mitigation-standard-api-hardening"><a class="header" href="#mitigation-standard-api-hardening">Mitigation: Standard API Hardening</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct TrackingServerConfig {
+    pub max_listings_per_ip: u32,        // 3 — one IP rarely needs more
+    pub heartbeat_interval: Duration,    // 30s — listing expires if missed
+    pub listing_ttl: Duration,           // 2 minutes without heartbeat → removed
+    pub browse_rate_limit: u32,          // 30 requests/minute per IP
+    pub publish_rate_limit: u32,         // 5 requests/minute per IP
+    pub require_valid_game_port: bool,   // Server verifies the listed port is reachable
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Spam prevention:</strong> Limit listings per IP. Require heartbeats (real games send them, spam bots must sustain effort). Optionally verify the listed port actually responds to a game protocol handshake.</p>
+<p><strong>Phishing prevention:</strong> Client validates the game protocol handshake before showing the lobby. A non-game server at the listed IP fails handshake and is silently dropped from the browser.</p>
+<p><strong>DDoS:</strong> Standard infrastructure — CDN/reverse proxy for the browse API, rate limiting, geographic distribution. The tracking server is stateless and trivially horizontally scalable (it’s just a filtered list in memory).</p>
+<h2 id="vulnerability-10-client-version-mismatch"><a class="header" href="#vulnerability-10-client-version-mismatch">Vulnerability 10: Client Version Mismatch</a></h2>
+<h3 id="the-problem-9"><a class="header" href="#the-problem-9">The Problem</a></h3>
+<p>Players with different client versions join the same game. Even minor differences in sim code (bug fix, balance patch) cause immediate desyncs. This looks like a bug to users, destroys trust, and wastes time. Age of Empires 2 DE had years of desync issues partly caused by version mismatches.</p>
+<h3 id="mitigation-version-handshake-at-connection"><a class="header" href="#mitigation-version-handshake-at-connection">Mitigation: Version Handshake at Connection</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct VersionInfo {
+    pub engine_version: SemVer,        // e.g., 0.3.1
+    pub sim_hash: u64,                 // hash of compiled sim logic (catches patched binaries)
+    pub mod_manifest_hash: u64,        // hash of loaded mod rules (catches different mod versions)
+    pub protocol_version: u32,         // wire protocol version
+}
+
+impl GameLobby {
+    fn accept_player(&amp;self, remote: &amp;VersionInfo) -&gt; Result&lt;()&gt; {
+        if remote.protocol_version != self.host.protocol_version {
+            return Err(IncompatibleProtocol);
+        }
+        if remote.sim_hash != self.host.sim_hash {
+            return Err(SimVersionMismatch);
+        }
+        if remote.mod_manifest_hash != self.host.mod_manifest_hash {
+            return Err(ModMismatch);
+        }
+        Ok(())
+    }
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Key:</strong> Check version during lobby join, not after game starts. The relay server and tracking server listings both include <code>VersionInfo</code> so incompatible games are filtered from the browser entirely.</p>
 
                     </main>
 
