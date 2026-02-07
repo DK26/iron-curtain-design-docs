@@ -14,3 +14,5 @@
 - [Development Roadmap](08-ROADMAP.md)
 - [Decision Log](09-DECISIONS.md)
 - [Performance Philosophy](10-PERFORMANCE.md)
+- [OpenRA Feature Reference & Gap Analysis](11-OPENRA-FEATURES.md)
+- [Mod Migration Case Studies](12-MOD-MIGRATION.md)

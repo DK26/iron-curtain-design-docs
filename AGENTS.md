@@ -209,18 +209,20 @@ Key insight from EA source: original uses `OutList`/`DoList` pattern for order q
 
 When you need deeper detail, read the specific design doc:
 
-| Topic                                                                      | Read                     |
-| -------------------------------------------------------------------------- | ------------------------ |
-| Goals, competitive landscape, why this exists                              | `src/01-VISION.md`       |
-| Crate structure, ECS, sim/render split, game loop code                     | `src/02-ARCHITECTURE.md` |
-| NetworkModel trait, relay server, CS2 sub-tick, lockstep                   | `src/03-NETCODE.md`      |
-| YAML rules, Lua scripting, WASM modules, sandboxing, LLM metadata, Mod SDK | `src/04-MODDING.md`      |
-| File formats, EA source code insights, coordinate systems                  | `src/05-FORMATS.md`      |
-| Threat model, maphack, order validation, replay signing                    | `src/06-SECURITY.md`     |
-| Cross-engine play, OrderCodec, SimReconciler, ProtocolAdapter              | `src/07-CROSS-ENGINE.md` |
-| 36-month phased roadmap with exit criteria                                 | `src/08-ROADMAP.md`      |
-| Full decision log with rationale and alternatives                          | `src/09-DECISIONS.md`    |
-| Efficiency pyramid, profiling, performance targets, benchmarks             | `src/10-PERFORMANCE.md`  |
+| Topic                                                                      | Read                        |
+| -------------------------------------------------------------------------- | --------------------------- |
+| Goals, competitive landscape, why this exists                              | `src/01-VISION.md`          |
+| Crate structure, ECS, sim/render split, game loop code                     | `src/02-ARCHITECTURE.md`    |
+| NetworkModel trait, relay server, CS2 sub-tick, lockstep                   | `src/03-NETCODE.md`         |
+| YAML rules, Lua scripting, WASM modules, sandboxing, LLM metadata, Mod SDK | `src/04-MODDING.md`         |
+| File formats, EA source code insights, coordinate systems                  | `src/05-FORMATS.md`         |
+| Threat model, maphack, order validation, replay signing                    | `src/06-SECURITY.md`        |
+| Cross-engine play, OrderCodec, SimReconciler, ProtocolAdapter              | `src/07-CROSS-ENGINE.md`    |
+| 36-month phased roadmap with exit criteria                                 | `src/08-ROADMAP.md`         |
+| Full decision log with rationale and alternatives                          | `src/09-DECISIONS.md`       |
+| Efficiency pyramid, profiling, performance targets, benchmarks             | `src/10-PERFORMANCE.md`     |
+| OpenRA feature catalog (~700 traits), gap analysis, migration mapping      | `src/11-OPENRA-FEATURES.md` |
+| Combined Arms mod migration, Remastered recreation feasibility             | `src/12-MOD-MIGRATION.md`   |
 
 ## Working With This Codebase
 
