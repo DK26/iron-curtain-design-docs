@@ -15,15 +15,15 @@ Build a Rust-native RTS engine that:
 
 | Capability         | Remastered Collection              | OpenRA                                  | Iron Curtain                                               |
 | ------------------ | ---------------------------------- | --------------------------------------- | ---------------------------------------------------------- |
-| Engine             | Original C++ with patches          | C# / .NET (2007)                        | Rust + Bevy (2026)                                         |
+| Engine             | Original C++ as DLL, proprietary C# client | C# / .NET (2007)                        | Rust + Bevy (2026)                                         |
 | Platforms          | Windows, Xbox                      | Windows, macOS, Linux                   | All + Browser + Mobile                                     |
-| Max units (smooth) | ~200 (original engine limits)      | ~300-500 (community reports lag beyond) | 2000+ target                                               |
+| Max units (smooth) | Unknown (not benchmarked)          | Community reports lag at 300-500 units  | 2000+ target                                               |
 | Modding            | Steam Workshop maps, limited API   | MiniYAML + C# (recompile for deep mods) | YAML + Lua + WASM (no recompile ever)                      |
 | AI content         | Fixed campaigns                    | Fixed campaigns + community missions    | Branching campaigns + LLM-generated missions               |
-| Multiplayer        | Rebuilt but server issues reported | Lockstep with frequent desyncs          | Relay server, desync diagnosis, signed replays             |
-| Competitive        | No ranked, no anti-cheat           | Informal community ladders only         | Ranked matchmaking, Glicko-2, relay-certified results      |
-| Graphics pipeline  | Fixed 4K sprite upscale            | SDL/OpenGL basic rendering              | Bevy + wgpu: shaders, post-FX, dynamic lighting, particles |
-| Source             | Closed                             | Open (GPL)                              | Open (GPL)                                                 |
+| Multiplayer        | Proprietary networking (not open-sourced) | TCP lockstep, 135+ desync issues tracked | Relay server, desync diagnosis, signed replays             |
+| Competitive        | No ranked, no anti-cheat           | Community ladders via CnCNet            | Ranked matchmaking, Glicko-2, relay-certified results      |
+| Graphics pipeline  | HD sprites, proprietary renderer   | Custom renderer with post-processing (since March 2025) | Bevy + wgpu: shaders, post-FX, dynamic lighting, particles |
+| Source             | C++ engine GPL; networking/rendering proprietary | Open (GPL)                              | Open (GPL)                                                 |
 | Community assets   | Separate ecosystem                 | 18 years of maps/mods                   | Loads all OpenRA assets + migration tools                  |
 
 ### New Capabilities Not Found Elsewhere
@@ -38,7 +38,7 @@ This transforms Red Alert from a game with finite content to a game with infinit
 
 **Bevy Rendering Pipeline**
 
-Building on Bevy's modern rendering stack unlocks visual capabilities impossible on OpenRA's SDL/OpenGL or the Remastered Collection's fixed pipeline:
+Building on Bevy's modern rendering stack unlocks visual capabilities beyond what OpenRA or the Remastered Collection currently offer:
 
 - Post-processing: bloom, color grading, screen-space reflections on water
 - Dynamic lighting: explosions illuminate surroundings, day/night cycles
@@ -59,14 +59,14 @@ OpenRA's map editor is a standalone tool. Our editor runs inside the game with l
 | Area         | OpenRA Today                              | Our Engine                                           |
 | ------------ | ----------------------------------------- | ---------------------------------------------------- |
 | Runtime      | C# / .NET — GC pauses, heavy runtime      | Rust — no GC, predictable perf                       |
-| Threading    | Single-threaded game loop                 | Parallel systems via ECS                             |
+| Threading    | Single-threaded game loop (verified)      | Parallel systems via ECS                             |
 | Modding      | Powerful but requires C# for deep mods    | YAML + Lua + WASM (no compile step)                  |
 | Map editor   | Separate tool, recently improved          | In-engine editor (Phase 6)                           |
-| Multiplayer  | Desyncs common, hard to debug             | Snapshottable sim enables desync pinpointing         |
-| Competitive  | No ranked play, no anti-cheat             | Ranked matchmaking, anti-cheat, tournament mode      |
+| Multiplayer  | 135+ desync issues tracked                | Snapshottable sim enables desync pinpointing         |
+| Competitive  | Community ladders via CnCNet              | Ranked matchmaking, anti-cheat, tournament mode      |
 | Portability  | Desktop only (Mono/.NET)                  | Native + WASM (browser) + mobile                     |
-| Engine age   | Started 2007, showing architectural debt  | Clean-sheet modern design                            |
-| Campaigns    | Incomplete — many are broken or cut short | Branching campaigns with persistent state (D021)     |
+| Engine age   | Started 2007, actively maintained         | Clean-sheet modern design                            |
+| Campaigns    | Some incomplete (TD, Dune 2000)           | Branching campaigns with persistent state (D021)     |
 | Mission flow | Manual mission selection between levels   | Continuous flow: briefing → mission → debrief → next |  | Asset quality | Cannot fix original palette/sprite flaws | Bevy post-FX: palette correction, color grading, optional upscaling |
 ### What Makes People Actually Switch
 
@@ -82,7 +82,7 @@ Item 7 is the linchpin. If existing mods just work, migration cost drops to near
 
 ## Competitive Play
 
-Red Alert has a dedicated competitive community (primarily through OpenRA and CnCNet). They play with no ranked system, no automated anti-cheat, no official tournaments, and frequent desyncs. This is a massive opportunity.
+Red Alert has a dedicated competitive community (primarily through OpenRA and CnCNet). CnCNet provides community ladders and tournament infrastructure, but there's no integrated ranked system, no automated anti-cheat, and desyncs remain a persistent issue (135+ tracked in OpenRA's issue tracker). This is a significant opportunity.
 
 ### Ranked Matchmaking
 
@@ -238,7 +238,7 @@ These are the projects we actively study. Each serves a different purpose — do
 Iron Curtain's default gameplay targets the **original Red Alert experience**, not OpenRA's rebalanced version. This is a deliberate choice:
 
 - **Units should feel powerful and distinct.** Tanya kills soldiers from range, fast, and doesn't die easily — she's a special operative, not a fragile glass cannon. MiG attacks should be devastating. V2 rockets should be terrifying. Tesla coils should fry anything that comes close. **If a unit was iconic in the original game, it should feel iconic here.**
-- **OpenRA's competitive rebalancing** makes units more "fair" for tournament play but strips the personality from the game. Every unit feels interchangeable and underwhelming. That's a valid design choice for competitive players, but it's not *our* default.
+- **OpenRA's competitive rebalancing** makes units more "fair" for tournament play but can dilute the personality of iconic units. That's a valid design choice for competitive players, but it's not *our* default.
 - **OpenRA's UX/UI innovations are genuinely excellent** and we adopt them: attack-move, waypoint queuing, production queues, control group management, minimap interactions, build radius visualization. The Remastered Collection's UI density and layout is our gold standard for visual design.
 
 ### Switchable Balance Presets (D019)

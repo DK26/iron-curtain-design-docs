@@ -276,8 +276,8 @@ See `10-PERFORMANCE.md` for full details, targets, and implementation patterns.
 **Decision:** Leverage Bevy's modern rendering pipeline (wgpu, shaders, post-processing) to deliver visual quality beyond both OpenRA and the Remastered Collection while maintaining the classic isometric aesthetic.
 
 **Rationale:**
-- OpenRA uses SDL/OpenGL with basic sprite rendering — no post-processing, no dynamic lighting
-- Remastered Collection has 4K sprites but a fixed rendering pipeline — no shader effects
+- OpenRA's renderer has evolved (post-processing added in March 2025) but remains limited by its C#/.NET architecture
+- Remastered Collection has HD sprites but the renderer is proprietary and not extensible by modders
 - Bevy + wgpu enables: bloom, color grading, dynamic lighting, GPU particles, custom shaders
 - Classic aesthetic preserved — these are enhancements, not a style change
 - Shader effects bring special abilities to life: chrono-shift shimmer, tesla arcs, nuclear flash
@@ -330,7 +330,7 @@ However, **3D rendering mods for isometric-family games are explicitly supported
 
 **Rationale:**
 - Original Red Alert's balance makes units feel **powerful and iconic** — Tanya, MiGs, Tesla Coils, V2 rockets are devastating. This is what made the game memorable.
-- OpenRA rebalances toward competitive fairness, which makes units feel interchangeable and underwhelming to many players. Valid for tournaments, wrong as a default.
+- OpenRA rebalances toward competitive fairness, which can dilute the personality of iconic units. Valid for tournaments, wrong as a default.
 - The community is split on this. Rather than picking a side, expose it as a choice.
 - Presets are just alternate YAML files loaded at game start — zero engine complexity. The modding system already supports this via inheritance and overrides.
 - The Remastered Collection made its own subtle balance tweaks — worth capturing as a third preset.

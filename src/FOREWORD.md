@@ -42,9 +42,9 @@ There's a compounding effect here: as the framework and architecture become more
 
 ## What Bugged Me About the Alternatives
 
-OpenRA is great for what it is. But I've felt the lag — not just in big battles, it's random. Something feels off sometimes. The Remastered Collection has the same problem, which made me wonder if they went the C# route too. For me it comes down to raw performance: the original Red Alert was written in C, and it ran close to the hardware. C# doesn't.
+OpenRA is great for what it is. But I've felt the lag — not just in big battles, it's random. Something feels off sometimes. The Remastered Collection has the same problem, which made me wonder if they went the C# route too — and it turns out they did. The original C++ engine runs as a DLL, but the networking and rendering layers are handled by a proprietary C# client. For me it comes down to raw performance: the original Red Alert was written in C, and it ran close to the hardware. C# doesn't.
 
-The Remastered Collection looks beautiful but barely changed the engine. The servers are rough. Modding is limited. Windows and Xbox only.
+The Remastered Collection has the same performance issues. Modding is limited. Windows and Xbox only.
 
 I kept thinking about what Rust brings to the table:
 

@@ -79,7 +79,7 @@ Break the map into ~32x32 cell chunks. Path between chunks first (few nodes, fas
 ### ECS Archetype Storage (Bevy provides this)
 
 ```
-OOP (cache-hostile, how OpenRA works):
+OOP (cache-hostile, typical C# pattern):
   Unit objects on heap: [pos, health, vel, name, sprite, audio, ...]
   Iterating 1000 positions touches 1000 scattered memory locations
   Cache miss rate: high — each unit object spans multiple cache lines
@@ -211,7 +211,7 @@ impl TickScratch {
 
 **Per-tick allocation target: zero bytes.** All temporary data goes into pre-allocated scratch buffers. `clear()` resets without deallocating. The hot loop touches only warm memory.
 
-This alone is why Rust beats C# for games. OpenRA allocates thousands of small objects per tick (iterators, LINQ results, temporary collections, event args). Each one is a potential GC trigger. Our engine allocates nothing.
+This is a fundamental advantage of Rust over C# for games. Idiomatic C# allocates many small objects per tick (iterators, LINQ results, temporary collections, event args), each of which contributes to GC pressure. Our engine targets zero per-tick allocations.
 
 ## Layer 6: Work-Stealing Parallelism (Bonus Scaling)
 
@@ -284,34 +284,38 @@ fn movement_system(mut query: Query<(&mut Position, &Velocity)>) {
 | Startup to menu           | < 3 seconds                | < 1 second                 | < 1 second                     | < 5 seconds           | < 8 seconds (incl. download) |
 | Per-tick heap allocation  | 0 bytes                    | 0 bytes                    | 0 bytes                        | 0 bytes               | 0 bytes                      |
 
-## Performance vs. OpenRA (Projected)
+## Performance vs. C# RTS Engines (Projected)
 
-| What                 | OpenRA (C#)                                   | Our Engine                                   | Why                                     |
+*These are projected comparisons based on architectural analysis, not benchmarks. C# numbers are estimates for a typical C#/.NET single-threaded game loop with GC.*
+
+| What                 | Typical C# RTS (e.g., OpenRA)                 | Our Engine                                   | Why                                     |
 | -------------------- | --------------------------------------------- | -------------------------------------------- | --------------------------------------- |
-| 500 unit tick        | ~30-60ms (single thread, GC spikes to 100ms+) | ~8ms (algorithmic + cache)                   | Flowfields, spatial hash, ECS layout    |
-| Memory per unit      | ~2-4KB (C# objects + GC metadata)             | ~200-400 bytes (ECS packed)                  | No GC metadata, no vtable, no boxing    |
-| GC pause             | 5-50ms unpredictable spikes                   | 0ms (doesn't exist)                          | Rust ownership + zero-alloc hot paths   |
+| 500 unit tick        | Estimated 30-60ms (single thread + GC spikes) | ~8ms (algorithmic + cache)                   | Flowfields, spatial hash, ECS layout    |
+| Memory per unit      | Estimated ~2-4KB (C# objects + GC metadata)   | ~200-400 bytes (ECS packed)                  | No GC metadata, no vtable, no boxing    |
+| GC pause             | 5-50ms unpredictable spikes (C# characteristic) | 0ms (doesn't exist)                          | Rust ownership + zero-alloc hot paths   |
 | Pathfinding 50 units | 50 × A* = ~2ms                                | 1 flowfield + 50 lookups = ~0.1ms            | Algorithm change, not hardware change   |
 | Memory fragmentation | Increases over game duration                  | Stable (pre-allocated pools)                 | Scratch buffers, no per-tick allocation |
-| 2-core scaling       | 1x (single-threaded)                          | ~1.5x (work-stealing helps where applicable) | rayon adaptive                          |
-| 8-core scaling       | 1x (single-threaded)                          | ~3-5x (diminishing returns on game logic)    | rayon work-stealing                     |
+| 2-core scaling       | 1x (single-threaded, verified for OpenRA)     | ~1.5x (work-stealing helps where applicable) | rayon adaptive                          |
+| 8-core scaling       | 1x (single-threaded, verified for OpenRA)     | ~3-5x (diminishing returns on game logic)    | rayon work-stealing                     |
 
 ## Input Responsiveness vs. OpenRA
 
-Beyond raw sim performance, input responsiveness is where players *feel* the difference. OpenRA's lockstep model freezes all players to wait for the slowest connection. Our relay model never stalls — late orders are dropped, not waited for.
+Beyond raw sim performance, input responsiveness is where players *feel* the difference. OpenRA's TCP lockstep model (verified: single-threaded game loop, static `OrderLatency`, all clients wait for slowest) freezes all players to wait for the slowest connection. Our relay model never stalls — late orders are dropped, not waited for.
 
-| Factor                      | OpenRA                         | Iron Curtain                 | Why Faster                                |
+*OpenRA numbers below are estimates based on architectural analysis of their source code, not benchmarks.*
+
+| Factor                      | OpenRA (estimated)             | Iron Curtain                 | Why Faster                                |
 | --------------------------- | ------------------------------ | ---------------------------- | ----------------------------------------- |
 | Waiting for slowest client  | Yes — everyone freezes         | No — relay drops late orders | Relay owns the clock                      |
-| Order batching interval     | Every N frames                 | Every tick                   | Higher tick rate makes N=1 viable         |
-| Tick processing time        | 30-60ms                        | ~8ms                         | Algorithmic efficiency                    |
+| Order batching interval     | Every N frames (configurable)  | Every tick                   | Higher tick rate makes N=1 viable         |
+| Tick processing time        | Estimated 30-60ms              | ~8ms                         | Algorithmic efficiency                    |
 | Achievable tick rate        | ~15 tps                        | 30+ tps                      | 4x shorter lockstep window                |
-| GC pauses during tick       | 5-50ms random                  | 0ms                          | Rust, zero-allocation                     |
+| GC pauses during tick       | 5-50ms (C# characteristic)     | 0ms                          | Rust, zero-allocation                     |
 | Visual feedback on click    | Waits for confirmation         | Immediate (cosmetic)         | Render-side prediction, no sim dependency |
 | Single-player order delay   | ~66ms (1 projected frame)      | ~33ms (next tick at 30 tps)  | `LocalNetwork` = zero scheduling delay    |
-| Worst-case MP click-to-move | 200-400ms (slow peer stalling) | 80-120ms (relay deadline)    | Fixed deadline, no hostage-taking         |
+| Worst-case MP click-to-move | Estimated 200-400ms            | 80-120ms (relay deadline)    | Fixed deadline, no hostage-taking         |
 
-**Combined effect:** A single-player click-to-move that takes ~200ms in OpenRA (order latency + tick time + GC jank) takes ~33ms in Iron Curtain — imperceptible to human reaction time. Multiplayer improves from "at the mercy of the worst connection" to a fixed, predictable deadline.
+**Combined effect:** A single-player click-to-move that takes ~200ms in OpenRA (order latency + tick time + potential GC jank) should take ~33ms in Iron Curtain — imperceptible to human reaction time. Multiplayer improves from "at the mercy of the worst connection" to a fixed, predictable deadline.
 
 See `03-NETCODE.md` § "Input Responsiveness" for the full architectural analysis, including visual prediction and single-player zero-delay.
 

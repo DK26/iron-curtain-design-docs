@@ -160,7 +160,7 @@ Every lockstep RTS has inherent input delay — the game must wait for all playe
 
 ### OpenRA's Stalling Model
 
-OpenRA uses classic lockstep where the **entire game freezes** until the slowest client submits orders:
+OpenRA uses TCP-based lockstep where the game advances only when ALL clients have submitted orders for the current net frame (`OrderManager.TryTick()` checks `pendingOrders.All(...)`):
 
 ```
 Tick 50: waiting for Player A's orders... ✓ (10ms)
@@ -169,14 +169,14 @@ Tick 50: waiting for Player A's orders... ✓ (10ms)
          → ALL players frozen for 280ms. Everyone suffers.
 ```
 
-Additionally:
+Additionally (verified from source):
 - Orders are batched every `NetFrameInterval` frames (not every tick), adding batching delay
-- The server adds `OrderLatency` frames to every order (typically 3 ticks into the future)
-- `TickScale` dynamically slows the game to match the worst connection
+- The server adds `OrderLatency` frames to every order (default 1 for local, higher for MP game speeds)
+- `OrderBuffer` dynamically adjusts per-player `TickScale` (up to 10% speedup) based on delivery timing
 - Even in **single player**, `EchoConnection` projects orders 1 frame forward
-- C# GC pauses (5-50ms) add unpredictable jank on top of the architectural delay
+- C# GC pauses add unpredictable jank on top of the architectural delay
 
-The perceived input lag when clicking units in OpenRA is ~100-200ms — a combination of intentional lockstep delay, order batching, and runtime overhead.
+The perceived input lag when clicking units in OpenRA is estimated at ~100-200ms — a combination of intentional lockstep delay, order batching, and runtime overhead.
 
 ### Our Relay Model: No Stalling
 
@@ -216,18 +216,20 @@ fn on_move_order_issued(click_pos: WorldPos, selected_units: &[Entity]) {
 }
 ```
 
-This is purely cosmetic — the sim doesn't advance until the confirmed order arrives. But it eliminates the **perceived** lag that makes OpenRA feel sluggish. The selection ring snaps, the unit rotates, the acknowledgment voice plays — all before the network round-trip completes.
+This is purely cosmetic — the sim doesn't advance until the confirmed order arrives. But it eliminates the **perceived** lag. The selection ring snaps, the unit rotates, the acknowledgment voice plays — all before the network round-trip completes.
 
 ### Input Latency Comparison
+
+*OpenRA values are from source code analysis, not runtime benchmarks. Tick processing times are estimates.*
 
 | Factor                      | OpenRA                              | Iron Curtain (Relay)                  | Improvement                            |
 | --------------------------- | ----------------------------------- | ------------------------------------- | -------------------------------------- |
 | Waiting for slowest client  | Yes — everyone freezes              | No — relay drops late orders          | Eliminates worst-case stalls entirely  |
 | Order batching interval     | Every N frames (`NetFrameInterval`) | Every tick                            | No batching delay                      |
-| Order scheduling delay      | +3 ticks (`OrderLatency`)           | +1 tick (next relay broadcast)        | ~2 ticks faster                        |
-| Tick processing time        | 30-60ms (limits tick rate)          | ~8ms (allows higher tick rate)        | 4-8x faster per tick                   |
+| Order scheduling delay      | +`OrderLatency` ticks               | +1 tick (next relay broadcast)        | Fewer ticks of delay                   |
+| Tick processing time        | Estimated 30-60ms (limits tick rate) | ~8ms (allows higher tick rate)        | 4-8x faster per tick                   |
 | Achievable tick rate        | ~15 tps                             | 30+ tps                               | 2x shorter lockstep window             |
-| GC pauses during processing | 5-50ms random jank                  | 0ms                                   | Eliminates unpredictable hitches       |
+| GC pauses during processing | C# GC characteristic                | 0ms                                   | Eliminates unpredictable hitches       |
 | Visual feedback on click    | Waits for order confirmation        | Immediate (cosmetic prediction)       | Perceived lag drops to near-zero       |
 | Single-player order delay   | 1 projected frame (~66ms at 15 tps) | 0 frames (`LocalNetwork` = next tick) | Zero delay                             |
 | Worst connection impact     | Freezes all players                 | Only affects the lagging player       | Architectural fairness                 |
@@ -265,7 +267,7 @@ Every `NetworkModel` must accept `report_sync_hash()`. The system works:
 3. On mismatch → desync detected at specific tick
 4. Because sim is snapshottable, dump full state and diff to pinpoint exact divergence
 
-This is a **killer feature OpenRA lacks**. OpenRA desyncs are common and nearly impossible to debug. Our architecture makes them diagnosable.
+This is a **killer feature**. OpenRA has 135+ desync issues in their tracker — desyncs are a persistent, hard-to-debug problem. They hash game state per frame (via `[VerifySync]` attribute) and detect desyncs, but their sync report buffer is only 7 frames deep, which often isn't enough to capture the divergence point. Our architecture makes desyncs both detectable AND diagnosable.
 
 ## OrderCodec: Wire Format Abstraction
 

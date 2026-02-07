@@ -27,9 +27,9 @@ My most formative gaming experience outside Red Alert was Operation Flashpoint �
 
 Red Alert defined the RTS genre in 1996. Three decades later, there are two ways to play it:
 
-**The Remastered Collection** looks beautiful but changes almost nothing under the hood. The servers are struggling. The modding is limited. It only runs on Windows and Xbox. The engine is closed source.
+**The Remastered Collection** looks beautiful but has the same performance issues. The modding is limited. It only runs on Windows and Xbox. The original C++ engine source was released under GPL, but the remaster's networking and rendering layers are proprietary C#.
 
-**OpenRA** is a remarkable community achievement — cross-platform, open source, actively developed for 18 years. But it's built on C#/.NET, and it shows: performance can feel off at random moments, desyncs are common and nearly impossible to debug, and deep modding requires writing C# against an aging codebase.
+**OpenRA** is a remarkable community achievement — cross-platform, open source, actively developed for 18 years. But it's built on C#/.NET, and it shows: performance can feel off at random moments, desyncs are a persistent problem (135+ issues in their tracker), and deep modding requires writing C# against a large codebase.
 
 Iron Curtain asks: *what if we kept everything OpenRA got right — the community, the mods, the maps, the cross-platform spirit — and rebuilt the engine with today's best tools?*
 
@@ -89,11 +89,11 @@ No C# required. No recompilation. WASM mods will run at near-native speed in a s
 | ------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------- |
 | Graphics            | 4K remastered sprites                                  | OpenRA sprites + Bevy rendering pipeline (shaders, post-processing, HD asset support) |
 | Platforms           | Windows, Xbox                                          | Windows, macOS, Linux, Browser, Steam Deck, Mobile                                    |
-| Multiplayer servers | Community reports instability                          | Self-hostable relay servers, no single point of failure                               |
+| Multiplayer servers | Proprietary networking layer (not open-sourced)        | Self-hostable relay servers, no single point of failure                               |
 | Modding             | Steam Workshop maps, limited mod API                   | YAML + Lua + WASM, total conversion capable                                           |
-| Source              | Closed (original source released separately under GPL) | Open source (license TBD)                                                             |
+| Source              | Original C++ engine GPL; remaster networking/rendering proprietary | Open source (license TBD)                                                             |
 | AI missions         | Fixed campaign only                                    | LLM-generated missions (Phase 7)                                                      |
-| Engine              | Original C++ engine with compatibility patches         | Modern Rust + Bevy                                                                    |
+| Engine              | Original C++ engine as DLL, called by proprietary C# client | Modern Rust + Bevy                                                                    |
 | Price               | $19.99                                                 | Free                                                                                  |
 
 ### vs. OpenRA
@@ -102,10 +102,10 @@ No C# required. No recompilation. WASM mods will run at near-native speed in a s
 | ----------------- | ---------------------------------------------------- | -------------------------------------------------------------------------- |
 | Language          | C# / .NET                                            | Rust (no GC, minimal runtime)                                              |
 | Large battles     | Stutters at 300-500 units (community-reported)       | Targets 2000+ units via algorithmic efficiency                             |
-| Desyncs           | Common, difficult to debug                           | Per-tick state hashing designed to pinpoint exact divergence               |
+| Desyncs           | Persistent problem (135+ tracked issues)             | Per-tick state hashing designed to pinpoint exact divergence               |
 | Modding           | MiniYAML + C# (requires recompilation for deep mods) | Standard YAML + Lua + WASM (no recompilation ever)                         |
 | Browser play      | Not possible                                         | WASM build planned (Phase 7)                                               |
-| Networking        | Lockstep                                             | Relay server with time authority, lag-switch protection, sub-tick fairness |
+| Networking        | TCP lockstep with server relay, static order latency | Relay server with time authority, lag-switch protection, sub-tick fairness |
 | Map editor        | Standalone tool                                      | In-engine editor with live preview (architecture TBD)                      |
 | AI content        | Hand-crafted campaigns                               | Hand-crafted + LLM-generated missions                                      |
 | Replays           | Full game recording and playback                     | Signed, tamper-proof, with desync diagnosis                                |
@@ -164,7 +164,7 @@ Generated missions are standard YAML + Lua — you can edit them, share them, le
 
 ## Bevy Rendering Capabilities
 
-Building on Bevy will open up visual possibilities that neither OpenRA (SDL/OpenGL) nor the Remastered Collection's fixed pipeline can match:
+Building on Bevy will open up visual possibilities beyond what OpenRA or the Remastered Collection currently offer:
 
 - **Post-processing effects** — bloom, color grading, screen-space reflections on water
 - **Dynamic lighting** — explosions illuminate nearby terrain and units, day/night cycles
