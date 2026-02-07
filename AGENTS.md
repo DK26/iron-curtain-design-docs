@@ -93,6 +93,7 @@ These are settled. Don't re-litigate unless the user explicitly wants to revisit
 | D030 | Workshop resource registry & dependency system    | Artifactory-style universal artifact repository; any asset type publishable individually; semver deps, lockfile, SHA-256 integrity, license required, promotion channels, LLM discovery; federated multi-source with local/remote/virtual repos; CI/CD-friendly publishing with scoped API tokens (resolves P007) |
 | D031 | Observability & telemetry (OTEL)                  | All servers + engine emit OTEL metrics/traces/logs; zero-cost when disabled; gameplay event stream for AI training; distributed tracing for desync debugging; pre-built Grafana dashboards for self-hosters                                                     |
 | D032 | Switchable UI themes (main menu, chrome, lobby)   | YAML-driven theme system with built-in presets (Classic/Remastered/Modern); original art inspired by each era's aesthetic; shellmap live backgrounds; per-game-module defaults; community themes via workshop (D030); pairs with D019 balance presets             |
+| D033 | Toggleable QoL & gameplay behavior presets         | Every QoL feature from OpenRA/Remastered individually toggleable; built-in presets (Vanilla/OpenRA/Remastered/Iron Curtain); sim-affecting toggles synced in lobby, client-only toggles per-player; experience profiles combine D019+D032+D033                  |
 
 ## Pending Decisions
 

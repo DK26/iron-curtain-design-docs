@@ -13,18 +13,18 @@ Build a Rust-native RTS engine that:
 
 ### Capabilities Beyond OpenRA and the Remastered Collection
 
-| Capability         | Remastered Collection              | OpenRA                                  | Iron Curtain                                               |
-| ------------------ | ---------------------------------- | --------------------------------------- | ---------------------------------------------------------- |
-| Engine             | Original C++ as DLL, proprietary C# client | C# / .NET (2007)                        | Rust + Bevy (2026)                                         |
-| Platforms          | Windows, Xbox                      | Windows, macOS, Linux                   | All + Browser + Mobile                                     |
-| Max units (smooth) | Unknown (not benchmarked)          | Community reports lag at 300-500 units  | 2000+ target                                               |
-| Modding            | Steam Workshop maps, limited API   | MiniYAML + C# (recompile for deep mods) | YAML + Lua + WASM (no recompile ever)                      |
-| AI content         | Fixed campaigns                    | Fixed campaigns + community missions    | Branching campaigns + LLM-generated missions               |
-| Multiplayer        | Proprietary networking (not open-sourced) | TCP lockstep, 135+ desync issues tracked | Relay server, desync diagnosis, signed replays             |
-| Competitive        | No ranked, no anti-cheat           | Community ladders via CnCNet            | Ranked matchmaking, Glicko-2, relay-certified results      |
-| Graphics pipeline  | HD sprites, proprietary renderer   | Custom renderer with post-processing (since March 2025) | Bevy + wgpu: shaders, post-FX, dynamic lighting, particles |
-| Source             | C++ engine GPL; networking/rendering proprietary | Open (GPL)                              | Open (GPL)                                                 |
-| Community assets   | Separate ecosystem                 | 18 years of maps/mods                   | Loads all OpenRA assets + migration tools                  |
+| Capability         | Remastered Collection                            | OpenRA                                                  | Iron Curtain                                               |
+| ------------------ | ------------------------------------------------ | ------------------------------------------------------- | ---------------------------------------------------------- |
+| Engine             | Original C++ as DLL, proprietary C# client       | C# / .NET (2007)                                        | Rust + Bevy (2026)                                         |
+| Platforms          | Windows, Xbox                                    | Windows, macOS, Linux                                   | All + Browser + Mobile                                     |
+| Max units (smooth) | Unknown (not benchmarked)                        | Community reports lag at 300-500 units                  | 2000+ target                                               |
+| Modding            | Steam Workshop maps, limited API                 | MiniYAML + C# (recompile for deep mods)                 | YAML + Lua + WASM (no recompile ever)                      |
+| AI content         | Fixed campaigns                                  | Fixed campaigns + community missions                    | Branching campaigns + LLM-generated missions               |
+| Multiplayer        | Proprietary networking (not open-sourced)        | TCP lockstep, 135+ desync issues tracked                | Relay server, desync diagnosis, signed replays             |
+| Competitive        | No ranked, no anti-cheat                         | Community ladders via CnCNet                            | Ranked matchmaking, Glicko-2, relay-certified results      |
+| Graphics pipeline  | HD sprites, proprietary renderer                 | Custom renderer with post-processing (since March 2025) | Bevy + wgpu: shaders, post-FX, dynamic lighting, particles |
+| Source             | C++ engine GPL; networking/rendering proprietary | Open (GPL)                                              | Open (GPL)                                                 |
+| Community assets   | Separate ecosystem                               | 18 years of maps/mods                                   | Loads all OpenRA assets + migration tools                  |
 
 ### New Capabilities Not Found Elsewhere
 
@@ -56,18 +56,18 @@ OpenRA's map editor is a standalone tool. Our editor runs inside the game with l
 
 ### OpenRA's Limitations (what we improve on)
 
-| Area         | OpenRA Today                              | Our Engine                                           |
-| ------------ | ----------------------------------------- | ---------------------------------------------------- |
-| Runtime      | C# / .NET — GC pauses, heavy runtime      | Rust — no GC, predictable perf                       |
-| Threading    | Single-threaded game loop (verified)      | Parallel systems via ECS                             |
-| Modding      | Powerful but requires C# for deep mods    | YAML + Lua + WASM (no compile step)                  |
-| Map editor   | Separate tool, recently improved          | In-engine editor (Phase 6)                           |
-| Multiplayer  | 135+ desync issues tracked                | Snapshottable sim enables desync pinpointing         |
-| Competitive  | Community ladders via CnCNet              | Ranked matchmaking, anti-cheat, tournament mode      |
-| Portability  | Desktop only (Mono/.NET)                  | Native + WASM (browser) + mobile                     |
-| Engine age   | Started 2007, actively maintained         | Clean-sheet modern design                            |
-| Campaigns    | Some incomplete (TD, Dune 2000)           | Branching campaigns with persistent state (D021)     |
-| Mission flow | Manual mission selection between levels   | Continuous flow: briefing → mission → debrief → next |  | Asset quality | Cannot fix original palette/sprite flaws | Bevy post-FX: palette correction, color grading, optional upscaling |
+| Area         | OpenRA Today                            | Our Engine                                           |
+| ------------ | --------------------------------------- | ---------------------------------------------------- |
+| Runtime      | C# / .NET — GC pauses, heavy runtime    | Rust — no GC, predictable perf                       |
+| Threading    | Single-threaded game loop (verified)    | Parallel systems via ECS                             |
+| Modding      | Powerful but requires C# for deep mods  | YAML + Lua + WASM (no compile step)                  |
+| Map editor   | Separate tool, recently improved        | In-engine editor (Phase 6)                           |
+| Multiplayer  | 135+ desync issues tracked              | Snapshottable sim enables desync pinpointing         |
+| Competitive  | Community ladders via CnCNet            | Ranked matchmaking, anti-cheat, tournament mode      |
+| Portability  | Desktop only (Mono/.NET)                | Native + WASM (browser) + mobile                     |
+| Engine age   | Started 2007, actively maintained       | Clean-sheet modern design                            |
+| Campaigns    | Some incomplete (TD, Dune 2000)         | Branching campaigns with persistent state (D021)     |
+| Mission flow | Manual mission selection between levels | Continuous flow: briefing → mission → debrief → next |  | Asset quality | Cannot fix original palette/sprite flaws | Bevy post-FX: palette correction, color grading, optional upscaling |
 ### What Makes People Actually Switch
 
 1. **Better performance** — visible: bigger maps, more units, no stutters
@@ -256,7 +256,20 @@ Presets are just YAML files in `rules/presets/`. Switching preset = loading a di
 
 This is not a modding feature — it's a first-class game option. "Classic" vs "OpenRA" balance is a settings toggle, not a total conversion.
 
-See `src/04-MODDING.md` § "Balance Presets" and D019 in `src/09-DECISIONS.md`.
+### Toggleable QoL Features (D033)
+
+Beyond balance, every quality-of-life improvement added by OpenRA or the Remastered Collection is **individually toggleable**: attack-move, waypoint queuing, multi-queue production, health bar visibility, range circles, guard command, and dozens more. Built-in presets group these into coherent experience profiles:
+
+| Experience Profile         | Balance (D019) | Theme (D032) | QoL Behavior (D033) | Feel                                     |
+| -------------------------- | -------------- | ------------ | ------------------- | ---------------------------------------- |
+| **Vanilla RA**             | `classic`      | `classic`    | `vanilla`           | Authentic 1996 — warts and all           |
+| **OpenRA**                 | `openra`       | `modern`     | `openra`            | Full OpenRA experience                   |
+| **Remastered**             | `remastered`   | `remastered` | `remastered`        | Remastered Collection feel               |
+| **Iron Curtain** (default) | `classic`      | `modern`     | `iron_curtain`      | Classic balance + best QoL from all eras |
+
+Select a profile, then override any individual setting. Want classic balance with OpenRA's attack-move but without build radius circles? Done. Good defaults, full customization.
+
+See D019, D032, and D033 in `src/09-DECISIONS.md`.
 
 ## Timing Assessment
 

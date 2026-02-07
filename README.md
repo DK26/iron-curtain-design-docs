@@ -85,16 +85,16 @@ No C# required. No recompilation. WASM mods will run at near-native speed in a s
 
 ### vs. C&C Remastered Collection
 
-|                     | Remastered Collection                                  | Iron Curtain (planned)                                                                |
-| ------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------- |
-| Graphics            | 4K remastered sprites                                  | OpenRA sprites + Bevy rendering pipeline (shaders, post-processing, HD asset support) |
-| Platforms           | Windows, Xbox                                          | Windows, macOS, Linux, Browser, Steam Deck, Mobile                                    |
-| Multiplayer servers | Proprietary networking layer (not open-sourced)        | Self-hostable relay servers, no single point of failure                               |
-| Modding             | Steam Workshop maps, limited mod API                   | YAML + Lua + WASM, total conversion capable                                           |
+|                     | Remastered Collection                                              | Iron Curtain (planned)                                                                |
+| ------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------- |
+| Graphics            | 4K remastered sprites                                              | OpenRA sprites + Bevy rendering pipeline (shaders, post-processing, HD asset support) |
+| Platforms           | Windows, Xbox                                                      | Windows, macOS, Linux, Browser, Steam Deck, Mobile                                    |
+| Multiplayer servers | Proprietary networking layer (not open-sourced)                    | Self-hostable relay servers, no single point of failure                               |
+| Modding             | Steam Workshop maps, limited mod API                               | YAML + Lua + WASM, total conversion capable                                           |
 | Source              | Original C++ engine GPL; remaster networking/rendering proprietary | Open source (license TBD)                                                             |
-| AI missions         | Fixed campaign only                                    | LLM-generated missions (Phase 7)                                                      |
-| Engine              | Original C++ engine as DLL, called by proprietary C# client | Modern Rust + Bevy                                                                    |
-| Price               | $19.99                                                 | Free                                                                                  |
+| AI missions         | Fixed campaign only                                                | LLM-generated missions (Phase 7)                                                      |
+| Engine              | Original C++ engine as DLL, called by proprietary C# client        | Modern Rust + Bevy                                                                    |
+| Price               | $19.99                                                             | Free                                                                                  |
 
 ### vs. OpenRA
 
@@ -240,8 +240,8 @@ If you've spent years building an OpenRA mod, Iron Curtain is designed to be you
 
 See the [design documents](https://dk26.github.io/iron-curtain-design-docs/) for the technical foundation:
 
-| Document                                        | Contents                                              |
-| ----------------------------------------------- | ----------------------------------------------------- |
+| Document                                                                                      | Contents                                              |
+| --------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
 | [Foreword](https://dk26.github.io/iron-curtain-design-docs/FOREWORD.html)                     | Why this project exists — the personal story          |
 | [00-INDEX](https://dk26.github.io/iron-curtain-design-docs/00-INDEX.html)                     | Navigation and architectural invariants               |
 | [01-VISION](https://dk26.github.io/iron-curtain-design-docs/01-VISION.html)                   | Project goals and competitive landscape               |
@@ -252,7 +252,7 @@ See the [design documents](https://dk26.github.io/iron-curtain-design-docs/) for
 | [06-SECURITY](https://dk26.github.io/iron-curtain-design-docs/06-SECURITY.html)               | Threat model and mitigations                          |
 | [07-CROSS-ENGINE](https://dk26.github.io/iron-curtain-design-docs/07-CROSS-ENGINE.html)       | OpenRA interop strategy                               |
 | [08-ROADMAP](https://dk26.github.io/iron-curtain-design-docs/08-ROADMAP.html)                 | 36-month development plan                             |
-| [09-DECISIONS](https://dk26.github.io/iron-curtain-design-docs/09-DECISIONS.html)             | Decision log with rationale (32 decisions)            |
+| [09-DECISIONS](https://dk26.github.io/iron-curtain-design-docs/09-DECISIONS.html)             | Decision log with rationale (33 decisions)            |
 | [10-PERFORMANCE](https://dk26.github.io/iron-curtain-design-docs/10-PERFORMANCE.html)         | Efficiency-first performance philosophy               |
 | [11-OPENRA-FEATURES](https://dk26.github.io/iron-curtain-design-docs/11-OPENRA-FEATURES.html) | OpenRA feature catalog and gap analysis               |
 | [12-MOD-MIGRATION](https://dk26.github.io/iron-curtain-design-docs/12-MOD-MIGRATION.html)     | Mod migration case studies                            |

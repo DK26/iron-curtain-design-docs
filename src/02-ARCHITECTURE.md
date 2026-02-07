@@ -322,6 +322,25 @@ Each `GameModule` provides a `default_theme()` — RA1 defaults to Classic, futu
 
 See `09-DECISIONS.md` § D032 for full rationale, YAML schema, and legal notes on asset sourcing.
 
+## QoL & Gameplay Behavior Toggles (D033)
+
+Every quality-of-life improvement from OpenRA and the Remastered Collection is **individually toggleable** — attack-move, multi-queue production, health bars, range circles, guard command, waypoint queuing, and dozens more. Built-in presets group toggles into coherent profiles:
+
+| Preset                   | Feel                                      |
+| ------------------------ | ----------------------------------------- |
+| `vanilla`                | Authentic 1996 — no modern QoL            |
+| `openra`                 | All OpenRA improvements enabled           |
+| `remastered`             | Remastered Collection's specific QoL set  |
+| `iron_curtain` (default) | Best features cherry-picked from all eras |
+
+Toggles are categorized as **sim-affecting** (production rules, unit commands — synced in lobby) or **client-only** (health bars, range circles — per-player preference). This split preserves determinism (invariant #1) while giving each player visual/UX freedom.
+
+### Experience Profiles
+
+D019 (balance), D032 (theme), and D033 (behavior) are three independent axes that compose into **experience profiles**. Selecting "Vanilla RA" sets all three to classic in one click. Selecting "Iron Curtain" sets classic balance + modern theme + best QoL. After selecting a profile, any individual setting can still be overridden.
+
+See `09-DECISIONS.md` § D033 for the full toggle catalog, YAML schema, and sim/client split details.
+
 ## Crate Dependency Graph
 
 ```
