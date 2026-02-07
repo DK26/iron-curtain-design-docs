@@ -32,9 +32,9 @@ Over five years, Rust became my main language. I built backend systems, contribu
 
 Then, separately, I got into LLMs and AI agents. I was between jobs and decided to learn the tooling by building real projects with it. Honestly, I hated it at first. The LLM would generate a bunch of code, and I'd spend all my time reviewing and correcting it. It got credit for the fun part.
 
-But the tools got better, and so did I. To be clear — they didn't teach me to code (I'd been doing that for over twenty years) and they didn't teach me Rust (five years by that point). What changed is that they made it realistic to take on big, complex solo projects with proper architecture. Break everything down, make each piece testable, follow best practices throughout. The tooling caught up with what I already knew how to do.
+But the tools got better, and so did I. What changed is that they made it realistic to take on big, complex solo projects with proper architecture. Break everything down, make each piece testable, follow best practices throughout. The tooling caught up with what I already knew how to do.
 
-I should be honest about what this project started as: I wasn't trying to replace OpenRA. I just wanted to test new technology — see if Rust, Bevy, and LLM-assisted development could come together into something real. A proof of concept. A learning exercise. But the more I thought about the design, the more I realized it could actually serve the community. That's when I decided to take it seriously.
+This project didn't start as an attempt to replace OpenRA. I just wanted to test new technology — see if Rust, Bevy, and LLM-assisted development could come together into something real. A proof of concept. A learning exercise. But the more I thought about the design, the more I realized it could actually serve the community. That's when I decided to take it seriously.
 
 This project is also a research opportunity for me. I want to learn how to do LLM-assisted coding *correctly* — not just throw prompts at a model and ship whatever comes back. I'm a developer who needs to understand what code does. When code is generated, I do my best to read through it, understand every part, and verify it. I use the best models available to cross-check, document, and maintain a consistent code style so the codebase stays reviewable by humans.
 
