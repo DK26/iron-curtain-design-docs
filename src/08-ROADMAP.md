@@ -148,7 +148,7 @@ Units moving, shooting, dying — headless sim + rendered. Record replay file. P
 
 ## Phase 5: Multiplayer (Months 20–26)
 
-**Goal:** Deterministic lockstep multiplayer, but better than OpenRA.
+**Goal:** Deterministic lockstep multiplayer with competitive infrastructure. Not just "multiplayer works" — multiplayer that's worth switching from OpenRA for.
 
 ### Deliverables
 - `LockstepNetwork` implementation (input delay model)
@@ -157,17 +157,29 @@ Units moving, shooting, dying — headless sim + rendered. Record replay file. P
 - Lobby system, game browser, NAT traversal via relay
 - Replay system (already enabled by Phase 2 architecture)
 - `CommunityBridge` for shared server browser with OpenRA
+- **Ranked matchmaking:** Glicko-2 rating system, placement matches, league tiers, 3-month seasons
+- **Leaderboards:** global, per-faction, per-map — with public profiles and replay links
+- **Observer/spectator mode:** connect to relay with configurable fog (full/player/none) and broadcast delay
+- **Tournament mode:** bracket API, relay-certified `CertifiedMatchResult`, server-side replay archive
+- **Competitive map pool:** curated per-season, community-nominated
+- **Anti-cheat:** relay-side behavioral analysis (APM, reaction time, pattern entropy), suspicion scoring, community reports
 
 ### Key Architecture Work
 - Sub-tick timestamped orders (CS2 insight)
 - Relay server anti-lag-switch mechanism
 - Signed replay chain
 - Order validation in sim (anti-cheat)
+- Matchmaking service (lightweight Rust binary, same infra as tracking/relay servers)
+- `CertifiedMatchResult` with Ed25519 relay signatures
+- Spectator feed: relay forwards tick orders to observers with configurable delay
+- Behavioral analysis pipeline on relay server
 
 ### Exit Criteria
 - Two players can play a full game over the internet
 - Desync, if it occurs, is automatically diagnosed to specific tick and entity
 - Games appear in shared server browser alongside OpenRA games
+- Ranked 1v1 queue functional with ratings, placement, and leaderboard
+- Spectator can watch a live game with broadcast delay
 
 ## Phase 6: Modding & Ecosystem (Months 26–32)
 

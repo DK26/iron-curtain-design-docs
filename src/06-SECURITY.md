@@ -319,3 +319,150 @@ impl GameLobby {
 ```
 
 **Key:** Check version during lobby join, not after game starts. The relay server and tracking server listings both include `VersionInfo` so incompatible games are filtered from the browser entirely.
+
+## Vulnerability 11: Speed Hack / Clock Manipulation
+
+### The Problem
+A cheating client runs the local simulation faster than real time—either by manipulating the system clock or by feeding artificial timing into the game loop. In a pure P2P lockstep model, every client agrees on a tick cadence, so a faster client could potentially submit orders slightly sooner, giving a micro-advantage in reaction time.
+
+### Mitigation: Relay Server Owns the Clock
+
+In `RelayLockstepNetwork`, the relay server is the sole time authority. It advances the game by broadcasting canonical tick boundaries. The client's local clock is irrelevant—a client that "runs faster" just finishes processing sooner and waits for the next server tick. Orders submitted before the tick window opens are discarded.
+
+```rust
+impl RelayServer {
+    fn tick_loop(&mut self) {
+        loop {
+            let tick_start = Instant::now();
+            let tick_end = tick_start + self.tick_interval;
+
+            // Collect orders only within the valid window
+            let orders = self.collect_orders_until(tick_end);
+
+            // Orders with timestamps outside the current tick window are rejected
+            for order in &orders {
+                if order.timestamp < self.current_tick_start
+                    || order.timestamp > tick_end
+                {
+                    self.flag_suspicious(order.player, "out-of-window order");
+                    continue;
+                }
+            }
+
+            self.broadcast_tick_orders(self.current_tick, &orders);
+            self.current_tick += 1;
+            self.current_tick_start = tick_end;
+        }
+    }
+}
+```
+
+**For pure P2P (no relay):** Speed hacks are harder to exploit because all clients must synchronize at each tick barrier — a client that runs faster simply idles. However, a desynced clock can cause subtle timing issues. This is another reason relay server is the recommended default for competitive play.
+
+## Vulnerability 12: Automation / Scripting (Botting)
+
+### The Problem
+External tools (macros, overlays, input injectors) automate micro-management with superhuman precision: perfect unit splitting, instant reaction to enemy attacks, pixel-perfect targeting at 10,000+ APM. This is indistinguishable from a skilled player at a protocol level — the client sends valid orders at valid times.
+
+### Mitigation: Behavioral Analysis (Relay-Side)
+
+The relay server observes order patterns without needing access to game state:
+
+```rust
+pub struct PlayerBehaviorProfile {
+    pub orders_per_tick: RingBuffer<u32>,          // rolling APM
+    pub reaction_times: RingBuffer<Duration>,       // time from event to order
+    pub order_precision: f64,                       // how tightly clustered targeting is
+    pub sustained_apm_peak: Duration,               // how long max APM sustained
+    pub pattern_entropy: f64,                        // randomness of input timing
+}
+
+impl RelayServer {
+    fn analyze_behavior(&self, player: PlayerId) -> SuspicionScore {
+        let profile = &self.profiles[player];
+        let mut score = 0.0;
+
+        // Sustained inhuman APM (>600 for extended periods)
+        if profile.sustained_apm_above(600, Duration::from_secs(30)) {
+            score += 0.4;
+        }
+
+        // Perfectly periodic input (bots often have metronomic timing)
+        if profile.pattern_entropy < HUMAN_ENTROPY_FLOOR {
+            score += 0.3;
+        }
+
+        // Reaction times consistently under human minimum (~150ms)
+        if profile.avg_reaction_time() < Duration::from_millis(100) {
+            score += 0.3;
+        }
+
+        SuspicionScore(score)
+    }
+}
+```
+
+**Key design choices:**
+- **Detection, not prevention.** We can't conclusively prove automation from order patterns alone. The system flags suspicion for review, not automatic bans.
+- **Relay-side only.** Analysis happens on the server — cheating clients can't detect or adapt to the analysis.
+- **Replay-based post-hoc analysis.** Tournament replays can be analyzed after the fact with more sophisticated models (timing distribution analysis, reaction-to-fog-reveal correlation).
+- **Community reporting.** Player reports feed into suspicion scoring — a player flagged by both the system and opponents warrants review.
+
+**What we deliberately DON'T do:**
+- No kernel-level anti-cheat (Vanguard, EAC-style). We're an open-source game — intrusive anti-cheat contradicts our values and doesn't work on Linux/WASM anyway.
+- No input rate limiting. Capping APM punishes legitimate high-skill players. Detection, not restriction.
+
+## Vulnerability 13: Match Result Fraud
+
+### The Problem
+In competitive/ranked play, match results determine ratings. A dishonest client could claim a false result, or colluding players could submit fake results to manipulate rankings.
+
+### Mitigation: Relay-Certified Match Results
+
+```rust
+pub struct CertifiedMatchResult {
+    pub match_id: MatchId,
+    pub players: Vec<PlayerId>,
+    pub result: MatchOutcome,          // winner(s), losers, draw, disconnect
+    pub final_tick: u64,
+    pub duration: Duration,
+    pub final_state_hash: u64,         // hash of sim state at game end
+    pub replay_hash: [u8; 32],         // SHA-256 of the full replay data
+    pub server_signature: Ed25519Signature, // relay server signs the result
+}
+
+impl RankingService {
+    fn submit_result(&mut self, result: &CertifiedMatchResult) -> Result<()> {
+        // Only accept results signed by a trusted relay server
+        if !self.verify_relay_signature(result) {
+            return Err(UntrustedSource);
+        }
+        // Cross-check: if any player also submitted a replay, verify hashes match
+        self.update_ratings(result);
+        Ok(())
+    }
+}
+```
+
+**Key:** Only relay-server-signed results update rankings. Direct P2P games can be played for fun but don't affect ranked standings.
+
+## Competitive Integrity Summary
+
+Iron Curtain's anti-cheat is **architectural, not bolted on.** Every defense emerges from design decisions made for other reasons:
+
+| Threat           | Defense                                 | Source                      |
+| ---------------- | --------------------------------------- | --------------------------- |
+| Maphack          | Fog-authoritative server                | Network model architecture  |
+| Order injection  | Deterministic validation in sim         | Sim purity (invariant #1)   |
+| Lag switch       | Relay server owns the clock             | Relay architecture (D007)   |
+| Speed hack       | Relay tick authority                    | Same as above               |
+| Replay tampering | Ed25519 signed hash chain               | Replay system design        |
+| Automation       | Behavioral analysis + community reports | Relay-side observability    |
+| Result fraud     | Relay-certified match results           | Relay architecture          |
+| Version mismatch | Protocol handshake                      | Lobby system                |
+| WASM mod abuse   | Capability-based sandbox                | Modding architecture (D005) |
+| Desync exploit   | Server-side only analysis               | Security by design          |
+
+**No kernel-level anti-cheat.** Open-source, cross-platform, no ring-0 drivers. We accept that lockstep RTS will always have a maphack risk in P2P/relay modes — the fog-authoritative server is the real answer for high-stakes play.
+
+**Performance as anti-cheat.** Our tick-time targets (< 10ms on 8-core desktop) mean the relay server can run games at full speed with headroom for behavioral analysis. Stuttery servers with 40ms ticks can't afford real-time order analysis — we can.

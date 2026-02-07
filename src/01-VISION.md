@@ -21,6 +21,7 @@ Build a Rust-native RTS engine that:
 | Modding            | Steam Workshop maps, limited API   | MiniYAML + C# (recompile for deep mods) | YAML + Lua + WASM (no recompile ever)                      |
 | AI content         | Fixed campaigns                    | Fixed campaigns + community missions    | Branching campaigns + LLM-generated missions               |
 | Multiplayer        | Rebuilt but server issues reported | Lockstep with frequent desyncs          | Relay server, desync diagnosis, signed replays             |
+| Competitive        | No ranked, no anti-cheat           | Informal community ladders only         | Ranked matchmaking, Glicko-2, relay-certified results      |
 | Graphics pipeline  | Fixed 4K sprite upscale            | SDL/OpenGL basic rendering              | Bevy + wgpu: shaders, post-FX, dynamic lighting, particles |
 | Source             | Closed                             | Open (GPL)                              | Open (GPL)                                                 |
 | Community assets   | Separate ecosystem                 | 18 years of maps/mods                   | Loads all OpenRA assets + migration tools                  |
@@ -61,6 +62,7 @@ OpenRA's map editor is a standalone tool. Our editor runs inside the game with l
 | Modding      | Powerful but requires C# for deep mods    | YAML + Lua + WASM (no compile step)                  |
 | Map editor   | Separate tool, recently improved          | In-engine editor (Phase 6)                           |
 | Multiplayer  | Desyncs common, hard to debug             | Snapshottable sim enables desync pinpointing         |
+| Competitive  | No ranked play, no anti-cheat             | Ranked matchmaking, anti-cheat, tournament mode      |
 | Portability  | Desktop only (Mono/.NET)                  | Native + WASM (browser) + mobile                     |
 | Engine age   | Started 2007, showing architectural debt  | Clean-sheet modern design                            |
 | Campaigns    | Incomplete — many are broken or cut short | Branching campaigns with persistent state (D021)     |
@@ -70,11 +72,71 @@ OpenRA's map editor is a standalone tool. Our editor runs inside the game with l
 1. **Better performance** — visible: bigger maps, more units, no stutters
 2. **Better modding** — WASM scripting, in-engine editor, hot reload
 3. **Campaigns that flow** — branching paths, persistent units, no menu between missions, failure continues the story
-4. **Runs everywhere** — browser via WASM, mobile, Steam Deck natively
-4. **Better multiplayer** — desync debugging, smoother netcode, relay server
-5. **OpenRA mod compatibility** — existing community migrates without losing work
+4. **Competitive infrastructure** — ranked matchmaking, anti-cheat, tournaments, signed replays — OpenRA has none of this
+5. **Runs everywhere** — browser via WASM, mobile, Steam Deck natively
+6. **Better multiplayer** — desync debugging, smoother netcode, relay server
+7. **OpenRA mod compatibility** — existing community migrates without losing work
 
-Item 5 is the linchpin. If existing mods just work, migration cost drops to near zero.
+Item 7 is the linchpin. If existing mods just work, migration cost drops to near zero.
+
+## Competitive Play
+
+Red Alert has a dedicated competitive community (primarily through OpenRA and CnCNet). They play with no ranked system, no automated anti-cheat, no official tournaments, and frequent desyncs. This is a massive opportunity.
+
+### Ranked Matchmaking
+
+- **Rating system:** Glicko-2 (improvement over Elo — accounts for rating volatility and inactivity, used by Lichess, FIDE, many modern games)
+- **Seasons:** 3-month ranked seasons with placement matches (10 games), league tiers (Bronze → Silver → Gold → Platinum → Diamond → Master), end-of-season rewards
+- **Queues:** 1v1 (primary), 2v2 (team), FFA (experimental). Separate ratings per queue
+- **Map pool:** Curated competitive map pool per season, community-nominated and committee-voted. Ranked games use pool maps only
+- **Balance preset locked:** Ranked play uses a fixed balance preset per season (prevents mid-season rule changes from invalidating results)
+- **Matchmaking server:** Lightweight Rust service, same infra pattern as tracking/relay servers (containerized, self-hostable for community leagues)
+
+### Leaderboards
+
+- Global, per-faction, per-map, per-game-module (RA1, TD, etc.)
+- Public player profiles: rating history, win rate, faction preference, match history
+- Replay links on every match entry — any ranked game is reviewable
+
+### Tournament Support
+
+- **Observer mode:** Spectators connect to relay server and receive tick orders with configurable delay
+  - **No fog** — for casters (sees everything)
+  - **Player fog** — fair spectating (sees what one player sees)
+  - **Broadcast delay** — 1-5 minute configurable delay to prevent stream sniping
+- **Bracket integration:** Tournament organizers can set up brackets via API; match results auto-report
+- **Relay-certified results:** Every ranked and tournament match produces a `CertifiedMatchResult` signed by the relay server (see `06-SECURITY.md`). No result disputes.
+- **Replay archive:** All ranked/tournament replays stored server-side for post-match analysis and community review
+
+### Anti-Cheat (Architectural, Not Intrusive)
+
+Our anti-cheat emerges from the architecture — not from kernel drivers or invasive monitoring:
+
+| Threat               | Defense                               | Details                                                                |
+| -------------------- | ------------------------------------- | ---------------------------------------------------------------------- |
+| **Maphack**          | Fog-authoritative server (tournament) | Server sends only visible entities — `06-SECURITY.md` V1               |
+| **Order injection**  | Deterministic validation in sim       | Every order validated before execution — `06-SECURITY.md` V2           |
+| **Lag switch**       | Relay server time authority           | Miss the window → orders dropped — `06-SECURITY.md` V3                 |
+| **Speed hack**       | Relay owns tick cadence               | Client clock is irrelevant — `06-SECURITY.md` V11                      |
+| **Automation**       | Behavioral analysis                   | APM patterns, reaction times, input entropy — `06-SECURITY.md` V12     |
+| **Result fraud**     | Relay-signed match results            | Only relay-certified results update rankings — `06-SECURITY.md` V13    |
+| **Replay tampering** | Ed25519 hash chain                    | Tampered replay fails signature verification — `06-SECURITY.md` V6     |
+| **WASM mod abuse**   | Capability sandbox                    | `get_visible_units()` only, no `get_all_units()` — `06-SECURITY.md` V5 |
+
+**Philosophy:** No kernel-level anti-cheat (no Vanguard/EAC). We're open-source and cross-platform — intrusive anti-cheat contradicts our values and doesn't work on Linux/WASM. We accept that lockstep has inherent maphack risk in P2P modes. The fog-authoritative server is the real answer for high-stakes play.
+
+### Performance as Competitive Advantage
+
+Competitive play demands rock-solid performance — stutters during a crucial micro moment lose games:
+
+| Metric                | Competitive Requirement | Our Target                       |
+| --------------------- | ----------------------- | -------------------------------- |
+| Tick time (500 units) | < 16ms (60 FPS smooth)  | < 10ms (8-core desktop)          |
+| Render FPS            | 60+ sustained           | 144 target                       |
+| Input latency         | < 1 frame               | Sub-tick ordering (D008)         |
+| RAM (1000 units)      | < 200MB                 | < 200MB                          |
+| Per-tick allocation   | 0 (no GC stutter)       | 0 bytes (invariant)              |
+| Desync recovery       | Automatic               | Diagnosed to exact tick + entity |
 
 ## Competitive Landscape
 

@@ -173,8 +173,19 @@ These are the **RA1 game module's** default components. Other game modules (RA2,
 - **Maphack:** Architectural limit in lockstep (all clients have full state). Partial mitigation via memory obfuscation. Real fix: fog-authoritative server.
 - **Order injection:** Deterministic validation in sim rejects impossible orders. Relay server also validates.
 - **Lag switch:** Relay server owns the clock. Miss the window → orders dropped. Strikes system.
+- **Speed hack:** Relay owns tick cadence — client clock irrelevant.
+- **Automation/botting:** Relay-side behavioral analysis (APM patterns, reaction times, input entropy). Detection, not prevention. No kernel-level anti-cheat.
+- **Match result fraud:** `CertifiedMatchResult` signed by relay server. Only signed results update rankings.
 - **Replay tampering:** Ed25519-signed hash chain.
 - **WASM mods:** Capability-based API. No `get_all_units()` — only `get_visible_units()`. No filesystem/network access by default.
+
+## Competitive Infrastructure
+
+- **Ranked matchmaking:** Glicko-2 ratings, seasonal leagues, placement matches, per-queue ratings (1v1, 2v2, FFA)
+- **Leaderboards:** global, per-faction, per-map, per-game-module
+- **Tournament mode:** observer with broadcast delay, bracket API, relay-certified results, server-side replay archive
+- **Competitive map pool:** curated per season, community-nominated
+- **No kernel-level anti-cheat.** Open-source, cross-platform. Architectural defenses only.
 
 ## Cross-Engine Compatibility Strategy
 
