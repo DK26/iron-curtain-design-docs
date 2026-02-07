@@ -35,10 +35,11 @@ These are non-negotiable across the entire project:
 3. **Modding is tiered.** YAML (data) → Lua (scripting) → WASM (power). Each tier is optional and sandboxed.
 4. **Bevy as framework.** ECS scheduling, rendering, asset pipeline, audio — Bevy handles infrastructure so we focus on game logic. Custom render passes and SIMD only where profiling justifies it.
 5. **Efficiency-first performance.** Better algorithms, cache-friendly ECS, zero-allocation hot paths, simulation LOD, amortized work — THEN multi-core as a bonus layer. A 2-core laptop must run 500 units smoothly.
-5. **Efficiency-first performance.** Better algorithms, cache-friendly ECS, zero-allocation hot paths, simulation LOD, amortized work — THEN multi-core as a bonus layer. A 2-core laptop must run 500 units smoothly.
 6. **Real YAML, not MiniYAML.** Standard `serde_yaml` with inheritance resolved at load time.
 7. **OpenRA compatibility is at the data/community layer, not the simulation layer.** Same mods, same maps, shared server browser — but not bit-identical simulation.
 8. **Full resource compatibility with Red Alert and OpenRA.** Every .mix, .shp, .pal, .aud, .oramap, and YAML rule file from the original game and OpenRA must load correctly. This is non-negotiable — the community's existing work is sacred.
+9. **Engine core is game-agnostic.** No game-specific enums, resource types, or unit categories in engine core. Positions are 3D (`WorldPos { x, y, z }`). System pipeline is registered per game module, not hardcoded.
+10. **Platform-agnostic by design.** Input is abstracted behind `InputSource` trait. UI layout is responsive (adapts to screen size via `ScreenClass`). No raw `std::fs` — all assets go through Bevy's asset system. Render quality is runtime-configurable.
 
 ## Crate Structure Overview
 

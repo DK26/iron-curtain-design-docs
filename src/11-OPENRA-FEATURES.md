@@ -1530,7 +1530,7 @@ ECS implementation: a `Conditions` component holding a `HashMap<ConditionId, u32
 - `StatModifiers` component: per-entity stack of `(source, stat, modifier_value, condition)` tuples
 - Every numeric stat (speed, damage, range, reload, build time, cost, sight range) resolves through the modifier stack
 - Modifiers from: veterancy, terrain, crates, conditions, player handicaps
-- Fixed-point multiplication (no floats) — respects invariant #3
+- Fixed-point multiplication (no floats) — respects invariant #1
 - YAML-configurable: modders add multipliers without code
 - Integrates with condition system: multipliers can be conditional (`requires: elite`)
 

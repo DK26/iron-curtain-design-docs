@@ -449,7 +449,7 @@ ic mod update-engine       # bump engine version
 
 5. **Story flags:** Arbitrary key-value state writable from Lua, readable in subsequent missions. Enables conditional content: "If the radar was captured in mission 2, it provides intel in mission 4."
 
-6. **Campaign state is serializable:** Fits invariant #10 (snapshottable). Save games capture full campaign progress including roster, flags, and path taken. Replays can replay entire campaign runs.
+6. **Campaign state is serializable:** Fits D010 (snapshottable sim state). Save games capture full campaign progress including roster, flags, and path taken. Replays can replay entire campaign runs.
 
 7. **Continuous flow:** Briefing → mission → debrief → next mission. No exit to menu between levels unless the player explicitly quits.
 
@@ -496,7 +496,7 @@ ic mod update-engine       # bump engine version
 - Sim/render split respected: surface state is sim (deterministic), visual blending is render (cosmetic)
 - Palette tinting tier ensures even low-end devices and WASM can show weather effects
 - Gameplay effects are optional per-map — purely cosmetic weather is valid
-- Surface state fits the snapshot system (invariant #10) for save games and replays
+- Surface state fits the snapshot system (D010) for save games and replays
 - Weather schedules are LLM-generable — "generate a mission where weather gets progressively worse"
 
 **Performance:**
@@ -732,7 +732,7 @@ ic mod update-engine       # bump engine version
 | **Shield System**        | CA, RA2 force shields, Scrin                | Absorb-before-health, recharge timer, depletion               |
 | **Upgrade System**       | CA, C&C3 game module                        | Per-unit tech research via building, condition grants         |
 | **Delayed Weapons**      | CA (radiation, poison), RA2 (terror drones) | Timer-attached effects on targets                             |
-| **Dual Asset Rendering** | Remastered recreation, HD mod packs         | Runtime-switchable asset quality per entity (in `ra-render`)  |
+| **Dual Asset Rendering** | Remastered recreation, HD mod packs         | Runtime-switchable asset quality per entity (in `ra-render`). Generalized by the Resource Pack system — see `04-MODDING.md` § "Resource Packs" |
 
 **Rationale:**
 - These aren't CA-specific — they're needed for RA2 (the likely second game module). Building them in Phase 2 means they're available when RA2 development starts.
@@ -797,6 +797,7 @@ Resources aren't limited to mod-sized packages. Granularity is flexible:
 | Cutscenes / Video | Briefing video, in-game cinematic, tutorial clip     |
 | UI Themes         | Sidebar layout, font pack, cursor set                |
 | Balance Presets   | Tuned unit/weapon stats as a selectable preset       |
+| Resource Packs    | Switchable asset layer for any category — see `04-MODDING.md` § "Resource Packs" |
 | Full Mods         | Traditional mod (may depend on individual resources) |
 
 A published resource is just a `ResourcePackage` with the appropriate `ResourceCategory`. The existing `asset-pack` template and `ic mod publish` flow handle this natively — no separate command needed.

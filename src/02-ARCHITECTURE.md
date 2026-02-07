@@ -294,11 +294,11 @@ pub struct UiTheme {
 
 ### Built-in Themes
 
-| Theme | Aesthetic | Inspired By |
-| --- | --- | --- |
-| Classic | Military minimalism — bare buttons, static title screen, Soviet palette | Original RA1 (1996) |
-| Remastered | Clean modern military — HD panels, sleek chrome, reverent refinement | Remastered Collection (2020) |
-| Modern | Full Bevy UI — dynamic panels, animated transitions, modern game launcher feel | IC's own design |
+| Theme      | Aesthetic                                                                      | Inspired By                  |
+| ---------- | ------------------------------------------------------------------------------ | ---------------------------- |
+| Classic    | Military minimalism — bare buttons, static title screen, Soviet palette        | Original RA1 (1996)          |
+| Remastered | Clean modern military — HD panels, sleek chrome, reverent refinement           | Remastered Collection (2020) |
+| Modern     | Full Bevy UI — dynamic panels, animated transitions, modern game launcher feel | IC's own design              |
 
 All art assets are **original creations** — no assets copied from EA or OpenRA. These themes capture aesthetic philosophy, not specific artwork.
 
@@ -335,7 +335,8 @@ ra-protocol  (shared types: PlayerOrder, TimestampedOrder)
     ├── ra-audio    (depends on: ra-formats)
     ├── ra-script   (depends on: ra-sim, ra-protocol)
     ├── ra-ai       (depends on: ra-sim, ra-protocol)
-    └── ra-engine   (depends on: everything above)
+    ├── ra-llm      (depends on: ra-sim, ra-script, ra-protocol)
+    └── ra-game     (depends on: everything above)
 ```
 
 **Critical boundary:** `ra-sim` never imports from `ra-net`. `ra-net` never imports from `ra-sim`. They only share `ra-protocol`.

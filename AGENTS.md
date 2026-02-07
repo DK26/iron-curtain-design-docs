@@ -74,6 +74,7 @@ These are settled. Don't re-litigate unless the user explicitly wants to revisit
 | D011 | Cross-engine = community layer, not sim layer     | Bit-identical sim is impractical; shared server browser/maps/mods is valuable and achievable                                                                                                                                                                    |
 | D012 | Order validation inside sim                       | Deterministic validation = all clients agree on rejections; validation IS anti-cheat                                                                                                                                                                            |
 | D013 | Hierarchical A* or flowfields                     | OpenRA's basic A* struggles with large groups; flowfields give 10x reduction for mass movement                                                                                                                                                                  |
+| D014 | Tera templating (Phase 6, nice-to-have)           | Eliminates copy-paste for faction variants and bulk generation; load-time only (zero runtime cost); ~50 lines to integrate; optional                                                                                                                            |
 | D015 | Efficiency-first, not thread-first                | Algorithmic efficiency → cache layout → sim LOD → amortize → zero-alloc → THEN parallelism                                                                                                                                                                      |
 | D016 | LLM-generated missions (Phase 7)                  | Infinite content; output is standard YAML+Lua; `ra-llm` crate is optional                                                                                                                                                                                       |
 | D017 | Bevy rendering pipeline                           | Post-processing, dynamic lighting, GPU particles, shader effects; classic aesthetic, modern polish                                                                                                                                                              |
@@ -112,7 +113,7 @@ Phase 2 (Months 6-12)  → Simulation: ECS sim, movement/combat/harvesting, repl
 Phase 3 (Months 12-16) → Game Chrome: sidebar, build queues, audio, first "playable" skirmish
 Phase 4 (Months 16-20) → AI & Single Player: Lua scripting, WASM runtime, campaign missions
 Phase 5 (Months 20-26) → Multiplayer: lockstep, relay server, desync diagnosis, shared browser
-Phase 6 (Months 26-32) → Modding & Ecosystem: full mod compat, in-engine map editor, workshop resource registry (D030) resource registry (D030)
+Phase 6 (Months 26-32) → Modding & Ecosystem: full mod compat, in-engine map editor, workshop resource registry (D030)
 Phase 7 (Months 32-36) → LLM Missions + Polish: mission generator, visual effects, browser build
 ```
 
@@ -225,7 +226,7 @@ When you need deeper detail, read the specific design doc:
 | Goals, competitive landscape, why this exists                              | `src/01-VISION.md`          |
 | Crate structure, ECS, sim/render split, game loop, UI themes               | `src/02-ARCHITECTURE.md`    |
 | NetworkModel trait, relay server, CS2 sub-tick, lockstep                   | `src/03-NETCODE.md`         |
-| YAML rules, Lua scripting, WASM modules, sandboxing, LLM metadata, Mod SDK | `src/04-MODDING.md`         |
+| YAML rules, Lua scripting, WASM modules, sandboxing, LLM metadata, Mod SDK, resource packs | `src/04-MODDING.md`         |
 | File formats, EA source code insights, coordinate systems                  | `src/05-FORMATS.md`         |
 | Threat model, maphack, order validation, replay signing                    | `src/06-SECURITY.md`        |
 | Cross-engine play, OrderCodec, SimReconciler, ProtocolAdapter              | `src/07-CROSS-ENGINE.md`    |
