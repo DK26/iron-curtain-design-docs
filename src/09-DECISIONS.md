@@ -426,6 +426,52 @@ ic mod update-engine       # bump engine version
 
 ---
 
+### D021 — Branching Campaign System with Persistent State
+
+**Decision:** Campaigns are directed graphs of missions with named outcomes, branching paths, persistent unit rosters, and continuous flow — not linear sequences with binary win/lose. Failure doesn't end the campaign; it branches to a different path. Unit state, equipment, and story flags persist across missions.
+
+**Context:** OpenRA's campaigns are disconnected — each mission is standalone, you exit to menu after completion, there's no sense of flow or consequence. The original Red Alert had linear progression with FMV briefings but no branching or state persistence. Games like Operation Flashpoint: Cold War Crisis showed that branching outcomes create dramatically more engaging campaigns, and OFP: Resistance proved that persistent unit rosters (surviving soldiers, captured equipment, accumulated experience) create deep emotional investment.
+
+**Key design points:**
+
+1. **Campaign graph:** Missions are nodes in a directed graph. Each mission has named outcomes (not just win/lose). Each outcome maps to a next-mission node, forming branches and convergences. The graph is defined in YAML and validated at load time.
+
+2. **Named outcomes:** Lua scripts signal completion with a named key: `Campaign.complete("victory_bridge_intact")`. The campaign YAML maps each outcome to the next mission. This enables rich branching: "Won cleanly" → easy path, "Won with heavy losses" → harder path, "Failed" → fallback mission.
+
+3. **Failure continues the game:** A `defeat` outcome is just another edge in the graph. The campaign designer decides what happens: retry with fewer resources, branch to a retreating mission, skip ahead with consequences, or even "no game over" campaigns where the story always continues.
+
+4. **Persistent unit roster (OFP: Resistance model):**
+   - Surviving units carry forward between missions (configurable per transition)
+   - Units accumulate veterancy across missions — a veteran tank from mission 1 stays veteran in mission 5
+   - Dead units are gone permanently — losing veterans hurts
+   - Captured enemy equipment joins a persistent equipment pool
+   - Five carryover modes: `none`, `surviving`, `extracted` (only units in evac zone), `selected` (Lua picks), `custom` (full Lua control)
+
+5. **Story flags:** Arbitrary key-value state writable from Lua, readable in subsequent missions. Enables conditional content: "If the radar was captured in mission 2, it provides intel in mission 4."
+
+6. **Campaign state is serializable:** Fits invariant #10 (snapshottable). Save games capture full campaign progress including roster, flags, and path taken. Replays can replay entire campaign runs.
+
+7. **Continuous flow:** Briefing → mission → debrief → next mission. No exit to menu between levels unless the player explicitly quits.
+
+**Rationale:**
+- OpenRA's disconnected missions are its single biggest single-player UX failure — universally cited in community feedback
+- OFP proved persistent rosters create investment: players restart missions to save a veteran soldier
+- Branching eliminates the frustration of replaying the same mission on failure — the campaign adapts
+- YAML graph definition is accessible to modders (Tier 1) and LLM-generable
+- Lua campaign API enables complex state logic while staying sandboxed
+- The same system works for hand-crafted campaigns, modded campaigns, and LLM-generated campaigns
+
+**Alternatives considered:**
+- Linear mission sequence like RA1 (rejected — primitive, no replayability, failure is frustrating)
+- Disconnected missions like OpenRA (rejected — the specific problem we're solving)
+- Full open-world (rejected — scope too large, not appropriate for RTS)
+- Only branching on win/lose (rejected — named outcomes are trivially more expressive with no added complexity)
+- No unit persistence (rejected — OFP: Resistance proves this is the feature that creates campaign investment)
+
+**Phase:** Phase 4 (AI & Single Player). Campaign graph engine and Lua Campaign API are core Phase 4 deliverables.
+
+---
+
 ## PENDING DECISIONS
 
 | ID   | Topic                                                         | Needs Resolution By |

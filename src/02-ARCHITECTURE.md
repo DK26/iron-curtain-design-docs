@@ -43,7 +43,7 @@ The simulation and renderer are completely decoupled from day one.
 - **Deterministic:** Same inputs → identical outputs on every platform
 - **Pure:** No I/O, no floats in game logic, no network awareness
 - **Fixed-point math:** `i32`/`i64` with known scale (never `f32`/`f64` in sim)
-- **Snapshottable:** Full state serializable for replays, save games, desync debugging, rollback
+- **Snapshottable:** Full state serializable for replays, save games, desync debugging, rollback, campaign state persistence (D021)
 - **Headless-capable:** Can run without renderer (dedicated servers, AI training, automated testing)
 
 ### Simulation Core Types

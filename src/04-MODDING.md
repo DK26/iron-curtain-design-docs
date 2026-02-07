@@ -501,7 +501,7 @@ Scene Template    — a single scripted encounter or event
   ↓ composed into
 Mission Template  — a full mission assembled from scenes + overall structure
   ↓ sequenced into
-Campaign          — ordered mission sequence with narrative
+Campaign Graph    — branching mission graph with persistent state (not a linear sequence)
 ```
 
 **Built-in scene template library (examples):**
@@ -634,6 +634,311 @@ Scene templates and mission templates are both first-class workshop resource typ
 | Campaigns             | Ordered mission sets + narrative          | Multi-mission storylines                          |
 | Assets                | Sprites, music, sounds, palettes          | HD unit packs, custom soundtracks, voice packs    |
 | **Media**             | **Video files (`.vqa`, `.mp4`, `.webm`)** | **Custom briefings, cutscenes, narrative videos** |
+
+## Campaign System (Branching, Persistent, Continuous)
+
+*Inspired by Operation Flashpoint: Cold War Crisis / Resistance. See D021.*
+
+OpenRA's campaigns are disconnected: each mission is standalone, you exit to menu between them, there's no flow. Our campaigns are **continuous, branching, and stateful** — a directed graph of missions with persistent state, multiple outcomes per mission, and no mandatory game-over screen.
+
+### Core Principles
+
+1. **Campaign is a graph, not a list.** Missions connect via named outcomes, forming branches, convergence points, and optional paths — not a linear sequence.
+2. **Missions have multiple outcomes, not just win/lose.** "Won with bridge intact" and "Won but bridge destroyed" are different outcomes that lead to different next missions.
+3. **Failure doesn't end the campaign.** A "defeat" outcome is just another edge in the graph. The designer chooses: branch to a fallback mission, retry with fewer resources, or skip ahead with consequences. "No game over" campaigns are possible.
+4. **State persists across missions.** Surviving units, veterancy, captured equipment, story flags, resources — all carry forward based on designer-configured carryover rules.
+5. **Continuous flow.** Briefing → mission → debrief → next mission. No exit to menu between levels (unless the player explicitly quits).
+
+### Campaign Definition (YAML)
+
+```yaml
+# campaigns/allied/campaign.yaml
+campaign:
+  id: allied_campaign
+  title: "Allied Campaign"
+  description: "Drive back the Soviet invasion across Europe"
+  start_mission: allied_01
+
+  # What persists between missions (campaign-wide defaults)
+  persistent_state:
+    unit_roster: true          # surviving units carry forward
+    veterancy: true            # unit experience persists
+    resources: false           # credits reset per mission
+    equipment: true            # captured vehicles/crates persist
+    custom_flags: {}           # arbitrary Lua-writable key-value state
+
+  missions:
+    allied_01:
+      map: missions/allied-01
+      briefing: briefings/allied-01.yaml
+      video: videos/allied-01-briefing.vqa
+      carryover:
+        from_previous: none    # first mission — nothing carries
+      outcomes:
+        victory_bridge_intact:
+          description: "Bridge secured intact"
+          next: allied_02a
+          debrief: briefings/allied-01-debrief-bridge.yaml
+          state_effects:
+            set_flag: { bridge_status: intact }
+        victory_bridge_destroyed:
+          description: "Won but bridge was destroyed"
+          next: allied_02b
+          state_effects:
+            set_flag: { bridge_status: destroyed }
+        defeat:
+          description: "Base overrun"
+          next: allied_01_fallback
+          state_effects:
+            set_flag: { retreat_count: +1 }
+
+    allied_02a:
+      map: missions/allied-02a    # different map — bridge crossing
+      briefing: briefings/allied-02a.yaml
+      carryover:
+        units: surviving          # units from mission 01 appear
+        veterancy: keep           # their experience carries
+        equipment: keep           # captured Soviet tanks too
+      conditions:                 # optional entry conditions
+        require_flag: { bridge_status: intact }
+      outcomes:
+        victory:
+          next: allied_03
+        defeat:
+          next: allied_02_fallback
+
+    allied_02b:
+      map: missions/allied-02b    # different map — river crossing without bridge
+      briefing: briefings/allied-02b.yaml
+      carryover:
+        units: surviving
+        veterancy: keep
+      outcomes:
+        victory:
+          next: allied_03         # branches converge at mission 03
+        defeat:
+          next: allied_02_fallback
+
+    allied_01_fallback:
+      map: missions/allied-01-retreat
+      briefing: briefings/allied-01-retreat.yaml
+      carryover:
+        units: surviving          # fewer units since you lost
+        veterancy: keep
+      outcomes:
+        victory:
+          next: allied_02b        # after retreating, you take the harder path
+          state_effects:
+            set_flag: { morale: low }
+
+    allied_03:
+      map: missions/allied-03
+      # ...branches converge here regardless of path taken
+```
+
+### Campaign Graph Visualization
+
+```
+                    ┌─────────────┐
+                    │  allied_01  │
+                    └──┬───┬───┬──┘
+          bridge ok ╱   │       ╲ defeat
+                  ╱     │         ╲
+    ┌────────────┐  bridge   ┌─────────────────┐
+    │ allied_02a │  destroyed│ allied_01_       │
+    └─────┬──────┘      │   │ fallback         │
+          │       ┌─────┴───┐└────────┬────────┘
+          │       │allied_02b│        │
+          │       └────┬─────┘        │
+          │            │         joins 02b
+          └─────┬──────┘
+                │ converge
+          ┌─────┴──────┐
+          │  allied_03  │
+          └─────────────┘
+```
+
+This is a **directed acyclic graph** (with optional cycles for retry loops). The engine validates campaign graphs at load time: no orphan nodes, all outcome targets exist, start mission is defined.
+
+### Unit Roster & Persistence
+
+Inspired by Operation Flashpoint: Resistance — surviving units are precious resources that carry forward, creating emotional investment and strategic consequences.
+
+**Unit Roster:**
+```rust
+/// Persistent unit state that carries between campaign missions.
+#[derive(Serialize, Deserialize, Clone)]
+pub struct RosterUnit {
+    pub unit_type: UnitTypeId,        // e.g., "medium_tank", "tanya"
+    pub name: Option<String>,         // optional custom name
+    pub veterancy: VeterancyLevel,    // rookie → veteran → elite → heroic
+    pub kills: u32,                   // lifetime kill count
+    pub missions_survived: u32,       // how many missions this unit has lived through
+    pub equipment: Vec<EquipmentId>,  // OFP:R-style captured/found equipment
+    pub custom_state: HashMap<String, Value>, // mod-extensible per-unit state
+}
+```
+
+**Carryover modes** (per campaign transition):
+
+| Mode        | Behavior                                                                                |
+| ----------- | --------------------------------------------------------------------------------------- |
+| `none`      | Clean slate — the next mission provides its own units                                   |
+| `surviving` | All player units alive at mission end join the roster                                   |
+| `extracted` | Only units inside a designated extraction zone carry over (OFP-style "get to the evac") |
+| `selected`  | Lua script explicitly picks which units carry over                                      |
+| `custom`    | Full Lua control — script reads unit list, decides what persists                        |
+
+**Veterancy across missions:**
+- Units gain experience from kills and surviving missions
+- A veteran tank from mission 1 is still veteran in mission 5
+- Losing a veteran unit hurts — they're irreplaceable until you earn new ones
+- Veterancy grants stat bonuses (configurable in YAML rules, per balance preset)
+
+**Equipment persistence (OFP: Resistance model):**
+- Captured enemy vehicles at mission end go into the equipment pool
+- Found supply crates add to available equipment
+- Next mission's starting loadout can draw from the equipment pool
+- Modders can define custom persistent items
+
+### Campaign State
+
+```rust
+/// Full campaign progress — serializable for save games.
+#[derive(Serialize, Deserialize, Clone)]
+pub struct CampaignState {
+    pub campaign_id: CampaignId,
+    pub current_mission: MissionId,
+    pub completed_missions: Vec<CompletedMission>,
+    pub unit_roster: Vec<RosterUnit>,
+    pub equipment_pool: Vec<EquipmentId>,
+    pub resources: i64,               // persistent credits (if enabled)
+    pub flags: HashMap<String, Value>, // story flags set by Lua
+    pub stats: CampaignStats,         // cumulative performance
+    pub path_taken: Vec<MissionId>,   // breadcrumb trail for replay/debrief
+}
+
+pub struct CompletedMission {
+    pub mission_id: MissionId,
+    pub outcome: String,              // the named outcome key
+    pub time_taken: Duration,
+    pub units_lost: u32,
+    pub units_gained: u32,
+    pub score: i64,
+}
+```
+
+Campaign state is fully serializable (invariant #10 — snapshottable). Save games capture the entire campaign progress. Replays can replay an entire campaign run, not just individual missions.
+
+### Lua Campaign API
+
+Mission scripts interact with campaign state through a sandboxed API:
+
+```lua
+-- === Reading campaign state ===
+
+-- Get the unit roster (surviving units from previous missions)
+local roster = Campaign.get_roster()
+for _, unit in ipairs(roster) do
+    -- Spawn each surviving unit at a designated entry point
+    local spawned = SpawnUnit(unit.type, entry_point)
+    spawned:set_veterancy(unit.veterancy)
+    spawned:set_name(unit.name)
+end
+
+-- Read story flags set by previous missions
+if Campaign.get_flag("bridge_status") == "intact" then
+    -- Bridge exists on this map — open the crossing
+    bridge_actor:set_state("intact")
+else
+    -- Bridge was destroyed — it's rubble
+    bridge_actor:set_state("destroyed")
+end
+
+-- Check cumulative stats
+if Campaign.get_stat("total_units_lost") > 50 then
+    -- Player has been losing lots of units — offer reinforcements
+    trigger_reinforcements()
+end
+
+-- === Writing campaign state ===
+
+-- Signal mission completion with a named outcome
+function OnObjectiveComplete()
+    if bridge:is_alive() then
+        Campaign.complete("victory_bridge_intact")
+    else
+        Campaign.complete("victory_bridge_destroyed")
+    end
+end
+
+-- Set custom flags for future missions to read
+Campaign.set_flag("captured_radar", true)
+Campaign.set_flag("enemy_morale", "broken")
+
+-- Update roster: mark which units survived
+-- (automatic if carryover mode is "surviving" — manual if "selected")
+function OnMissionEnd()
+    local survivors = GetPlayerUnits():alive()
+    for _, unit in ipairs(survivors) do
+        Campaign.roster_add(unit)
+    end
+end
+
+-- Add captured equipment to persistent pool
+function OnEnemyVehicleCaptured(vehicle)
+    Campaign.equipment_add(vehicle.type)
+end
+
+-- Failure doesn't mean game over — it's just another outcome
+function OnPlayerBaseDestroyed()
+    Campaign.complete("defeat")  -- campaign graph decides what happens next
+end
+```
+
+### Adaptive Difficulty via Campaign State
+
+Campaign state enables dynamic difficulty without an explicit slider:
+
+```yaml
+# In a mission's carryover config:
+adaptive:
+  # If player lost the previous mission, give them extra resources
+  on_previous_defeat:
+    bonus_resources: 2000
+    bonus_units: [medium_tank, medium_tank, rifle_infantry, rifle_infantry]
+  # If player blitzed the previous mission, make this one harder
+  on_previous_fast_victory:    # completed in < 50% of par time
+    extra_enemy_waves: 1
+    enemy_veterancy_boost: 1
+  # Scale to cumulative performance
+  scaling:
+    low_roster:                # < 5 surviving units
+      reinforcement_schedule: accelerated
+    high_roster:               # > 20 surviving units
+      enemy_count_multiplier: 1.3
+```
+
+This is not AI-adaptive difficulty (that's D016/`ra-llm`). This is **designer-authored conditional logic** expressed in YAML — the campaign reacts to the player's cumulative performance without any LLM involvement.
+
+### LLM Campaign Generation
+
+The LLM (`ra-llm`) can generate entire campaign graphs, not just individual missions:
+
+```
+User: "Create a 5-mission Soviet campaign where you invade Alaska.
+       The player should be able to lose a mission and keep going
+       with consequences. Units should carry over between missions."
+
+LLM generates:
+  → campaign.yaml (graph with 5+ nodes, branching on outcomes)
+  → 5-7 mission files (main path + fallback branches)
+  → Lua scripts with Campaign API calls
+  → briefing text for each mission
+  → carryover rules per transition
+```
+
+The template/scene system makes this tractable — the LLM composes from known building blocks rather than generating raw code. Campaign graphs are validated at load time (no orphan nodes, all outcomes have targets).
 
 ### Configurable Workshop Server
 

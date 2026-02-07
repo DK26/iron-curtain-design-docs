@@ -80,6 +80,7 @@ These are settled. Don't re-litigate unless the user explicitly wants to revisit
 | D018 | Multi-game extensibility (game modules)       | Engine is game-agnostic; RA1 is first module; RA2/TD/custom are future modules; `GameModule` trait               |
 | D019 | Switchable balance presets                    | Classic RA (default) vs OpenRA vs Remastered; YAML rule sets selectable in lobby; not a mod, a game option       |
 | D020 | Mod SDK with `ic` CLI tool                    | `cargo-generate` templates + `ic` CLI; inspired by OpenRA Mod SDK but no C#/.NET; workshop integration           |
+| D021 | Branching campaigns with persistent state     | Campaign graph (not linear), named outcomes, unit roster/veterancy/equipment carry over; OFP-inspired            |
 
 ## Pending Decisions
 

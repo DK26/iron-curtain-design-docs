@@ -19,7 +19,7 @@ Build a Rust-native RTS engine that:
 | Platforms          | Windows, Xbox                      | Windows, macOS, Linux                   | All + Browser + Mobile                                     |
 | Max units (smooth) | ~200 (original engine limits)      | ~300-500 (community reports lag beyond) | 2000+ target                                               |
 | Modding            | Steam Workshop maps, limited API   | MiniYAML + C# (recompile for deep mods) | YAML + Lua + WASM (no recompile ever)                      |
-| AI content         | Fixed campaigns                    | Fixed campaigns + community missions    | LLM-generated missions and campaigns                       |
+| AI content         | Fixed campaigns                    | Fixed campaigns + community missions    | Branching campaigns + LLM-generated missions               |
 | Multiplayer        | Rebuilt but server issues reported | Lockstep with frequent desyncs          | Relay server, desync diagnosis, signed replays             |
 | Graphics pipeline  | Fixed 4K sprite upscale            | SDL/OpenGL basic rendering              | Bevy + wgpu: shaders, post-FX, dynamic lighting, particles |
 | Source             | Closed                             | Open (GPL)                              | Open (GPL)                                                 |
@@ -54,22 +54,23 @@ OpenRA's map editor is a standalone tool. Our editor runs inside the game with l
 
 ### OpenRA's Limitations (what we improve on)
 
-| Area         | OpenRA Today                              | Our Engine                                   |
-| ------------ | ----------------------------------------- | -------------------------------------------- |
-| Runtime      | C# / .NET — GC pauses, heavy runtime      | Rust — no GC, predictable perf               |
-| Threading    | Single-threaded game loop                 | Parallel systems via ECS                     |
-| Modding      | Powerful but requires C# for deep mods    | YAML + Lua + WASM (no compile step)          |
-| Map editor   | Separate tool, recently improved          | In-engine editor (Phase 6)                   |
-| Multiplayer  | Desyncs common, hard to debug             | Snapshottable sim enables desync pinpointing |
-| Portability  | Desktop only (Mono/.NET)                  | Native + WASM (browser) + mobile             |
-| Engine age   | Started 2007, showing architectural debt  | Clean-sheet modern design                    |
-| Campaigns    | Incomplete — many are broken or cut short | Full campaign support as first-class feature |
-| Mission flow | Manual mission selection between levels   | Automatic progression with briefing screens  |  | Asset quality | Cannot fix original palette/sprite flaws | Bevy post-FX: palette correction, color grading, optional upscaling |
+| Area         | OpenRA Today                              | Our Engine                                           |
+| ------------ | ----------------------------------------- | ---------------------------------------------------- |
+| Runtime      | C# / .NET — GC pauses, heavy runtime      | Rust — no GC, predictable perf                       |
+| Threading    | Single-threaded game loop                 | Parallel systems via ECS                             |
+| Modding      | Powerful but requires C# for deep mods    | YAML + Lua + WASM (no compile step)                  |
+| Map editor   | Separate tool, recently improved          | In-engine editor (Phase 6)                           |
+| Multiplayer  | Desyncs common, hard to debug             | Snapshottable sim enables desync pinpointing         |
+| Portability  | Desktop only (Mono/.NET)                  | Native + WASM (browser) + mobile                     |
+| Engine age   | Started 2007, showing architectural debt  | Clean-sheet modern design                            |
+| Campaigns    | Incomplete — many are broken or cut short | Branching campaigns with persistent state (D021)     |
+| Mission flow | Manual mission selection between levels   | Continuous flow: briefing → mission → debrief → next |  | Asset quality | Cannot fix original palette/sprite flaws | Bevy post-FX: palette correction, color grading, optional upscaling |
 ### What Makes People Actually Switch
 
 1. **Better performance** — visible: bigger maps, more units, no stutters
 2. **Better modding** — WASM scripting, in-engine editor, hot reload
-3. **Runs everywhere** — browser via WASM, mobile, Steam Deck natively
+3. **Campaigns that flow** — branching paths, persistent units, no menu between missions, failure continues the story
+4. **Runs everywhere** — browser via WASM, mobile, Steam Deck natively
 4. **Better multiplayer** — desync debugging, smoother netcode, relay server
 5. **OpenRA mod compatibility** — existing community migrates without losing work
 
@@ -135,7 +136,7 @@ These are the projects we actively study. Each serves a different purpose — do
 **What NOT to copy:**
 - **Unit balance.** OpenRA deliberately rebalances units away from the original game toward competitive multiplayer fairness. This makes iconic units feel underwhelming (see Gameplay Philosophy below). We default to classic RA balance. This pattern repeats across every game they support — Dune 2000 units are also rebalanced away from originals.
 - **Simulation internals bug-for-bug.** We're not bit-identical — we're better-algorithms-identical.
-- **Campaign neglect.** OpenRA's multiplayer-first culture has left single-player campaigns systematically incomplete across all supported games. Dune 2000 has only 1 of 3 campaigns playable; TD campaigns are also incomplete; there's no automatic mission progression (players exit to menu between missions). **Campaign completeness is a first-class goal for us** — every shipped game module must have all original campaigns fully playable with automatic progression, briefing screens, and mission select.
+- **Campaign neglect.** OpenRA's multiplayer-first culture has left single-player campaigns systematically incomplete across all supported games. Dune 2000 has only 1 of 3 campaigns playable; TD campaigns are also incomplete; there's no automatic mission progression (players exit to menu between missions). **Campaign completeness is a first-class goal for us** — every shipped game module must have all original campaigns fully playable with continuous flow (D021). Beyond completeness, our campaign graph system enables what OpenRA can't: branching outcomes (different mission endings lead to different next missions), persistent unit rosters (surviving units carry forward with veterancy), and failure that continues the story instead of forcing a restart — inspired by Operation Flashpoint.
 
 ### EA Red Alert Source — https://github.com/electronicarts/CnC_Red_Alert
 

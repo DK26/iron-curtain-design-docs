@@ -120,20 +120,30 @@ Units moving, shooting, dying — headless sim + rendered. Record replay file. P
 - WASM mod runtime (basic)
 - Basic skirmish AI: harvest, build, attack patterns
 - Campaign mission loading (OpenRA mission format)
-- **Campaign framework:** automatic mission progression, briefing screens between missions, mission select screen, campaign state persistence (completed missions, score, difficulty)
+- **Branching campaign graph engine (D021):** campaigns as directed graphs of missions with named outcomes, multiple paths, and convergence points
+- **Persistent campaign state:** unit roster carryover, veterancy across missions, equipment persistence, story flags — serializable for save games
+- **Lua Campaign API:** `Campaign.complete()`, `Campaign.get_roster()`, `Campaign.get_flag()`, `Campaign.set_flag()`, etc.
+- **Continuous campaign flow:** briefing → mission → debrief → next mission (no exit-to-menu between levels)
+- **Campaign select and mission map UI:** visualize campaign graph, show current position, replay completed missions
+- **Adaptive difficulty via campaign state:** designer-authored conditional bonuses/penalties based on cumulative performance
 - **FMV cutscene playback** between missions (original `.vqa` briefings and victory/defeat sequences)
 - **Full Allied and Soviet campaigns** for Red Alert, playable start to finish
 
 ### Key Architecture Work
 - Lua sandbox with engine bindings
 - WASM host API with capability system (see `06-SECURITY.md`)
-- Campaign state machine: briefing → mission → debrief → next mission (no exit-to-menu between levels)
-- Mission select UI with map overview and difficulty indicators
+- Campaign graph loader + validator: parse YAML campaign definitions, validate graph connectivity (no orphan nodes, all outcome targets exist)
+- `CampaignState` serialization: roster, flags, equipment, path taken — full snapshot support
+- Unit carryover system: 5 modes (`none`, `surviving`, `extracted`, `selected`, `custom`)
+- Veterancy persistence across missions
+- Mission select UI with campaign graph visualization and difficulty indicators
 - **`ic` CLI prototype:** `ic mod init`, `ic mod check`, `ic mod run` — early tooling for Lua script development (full SDK in Phase 6)
 
 ### Exit Criteria
 - Can play through **all** Allied and Soviet campaign missions start to finish
-- Automatic progression between missions with briefing screens
+- Campaign branches work: different mission outcomes lead to different next missions
+- Unit roster persists across missions (surviving units, veterancy, equipment)
+- Save/load works mid-campaign with full state preservation
 - Skirmish AI provides a basic challenge
 
 ## Phase 5: Multiplayer (Months 20–26)
