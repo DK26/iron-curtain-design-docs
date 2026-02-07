@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-ddb12168.js";
+            window.path_to_searchindex_js = "searchindex-cd13978d.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-d8a85e3a.js"></script>
@@ -626,7 +626,7 @@ pub fn render_mission_template(
   ↓ composed into
 Mission Template  — a full mission assembled from scenes + overall structure
   ↓ sequenced into
-Campaign          — ordered mission sequence with narrative
+Campaign Graph    — branching mission graph with persistent state (not a linear sequence)
 </code></pre>
 <p><strong>Built-in scene template library (examples):</strong></p>
 <div class="table-wrapper">
@@ -769,6 +769,290 @@ scenes:
 </tbody>
 </table>
 </div>
+<h2 id="campaign-system-branching-persistent-continuous"><a class="header" href="#campaign-system-branching-persistent-continuous">Campaign System (Branching, Persistent, Continuous)</a></h2>
+<p><em>Inspired by Operation Flashpoint: Cold War Crisis / Resistance. See D021.</em></p>
+<p>OpenRA’s campaigns are disconnected: each mission is standalone, you exit to menu between them, there’s no flow. Our campaigns are <strong>continuous, branching, and stateful</strong> — a directed graph of missions with persistent state, multiple outcomes per mission, and no mandatory game-over screen.</p>
+<h3 id="core-principles"><a class="header" href="#core-principles">Core Principles</a></h3>
+<ol>
+<li><strong>Campaign is a graph, not a list.</strong> Missions connect via named outcomes, forming branches, convergence points, and optional paths — not a linear sequence.</li>
+<li><strong>Missions have multiple outcomes, not just win/lose.</strong> “Won with bridge intact” and “Won but bridge destroyed” are different outcomes that lead to different next missions.</li>
+<li><strong>Failure doesn’t end the campaign.</strong> A “defeat” outcome is just another edge in the graph. The designer chooses: branch to a fallback mission, retry with fewer resources, or skip ahead with consequences. “No game over” campaigns are possible.</li>
+<li><strong>State persists across missions.</strong> Surviving units, veterancy, captured equipment, story flags, resources — all carry forward based on designer-configured carryover rules.</li>
+<li><strong>Continuous flow.</strong> Briefing → mission → debrief → next mission. No exit to menu between levels (unless the player explicitly quits).</li>
+</ol>
+<h3 id="campaign-definition-yaml"><a class="header" href="#campaign-definition-yaml">Campaign Definition (YAML)</a></h3>
+<pre><code class="language-yaml"># campaigns/allied/campaign.yaml
+campaign:
+  id: allied_campaign
+  title: "Allied Campaign"
+  description: "Drive back the Soviet invasion across Europe"
+  start_mission: allied_01
+
+  # What persists between missions (campaign-wide defaults)
+  persistent_state:
+    unit_roster: true          # surviving units carry forward
+    veterancy: true            # unit experience persists
+    resources: false           # credits reset per mission
+    equipment: true            # captured vehicles/crates persist
+    custom_flags: {}           # arbitrary Lua-writable key-value state
+
+  missions:
+    allied_01:
+      map: missions/allied-01
+      briefing: briefings/allied-01.yaml
+      video: videos/allied-01-briefing.vqa
+      carryover:
+        from_previous: none    # first mission — nothing carries
+      outcomes:
+        victory_bridge_intact:
+          description: "Bridge secured intact"
+          next: allied_02a
+          debrief: briefings/allied-01-debrief-bridge.yaml
+          state_effects:
+            set_flag: { bridge_status: intact }
+        victory_bridge_destroyed:
+          description: "Won but bridge was destroyed"
+          next: allied_02b
+          state_effects:
+            set_flag: { bridge_status: destroyed }
+        defeat:
+          description: "Base overrun"
+          next: allied_01_fallback
+          state_effects:
+            set_flag: { retreat_count: +1 }
+
+    allied_02a:
+      map: missions/allied-02a    # different map — bridge crossing
+      briefing: briefings/allied-02a.yaml
+      carryover:
+        units: surviving          # units from mission 01 appear
+        veterancy: keep           # their experience carries
+        equipment: keep           # captured Soviet tanks too
+      conditions:                 # optional entry conditions
+        require_flag: { bridge_status: intact }
+      outcomes:
+        victory:
+          next: allied_03
+        defeat:
+          next: allied_02_fallback
+
+    allied_02b:
+      map: missions/allied-02b    # different map — river crossing without bridge
+      briefing: briefings/allied-02b.yaml
+      carryover:
+        units: surviving
+        veterancy: keep
+      outcomes:
+        victory:
+          next: allied_03         # branches converge at mission 03
+        defeat:
+          next: allied_02_fallback
+
+    allied_01_fallback:
+      map: missions/allied-01-retreat
+      briefing: briefings/allied-01-retreat.yaml
+      carryover:
+        units: surviving          # fewer units since you lost
+        veterancy: keep
+      outcomes:
+        victory:
+          next: allied_02b        # after retreating, you take the harder path
+          state_effects:
+            set_flag: { morale: low }
+
+    allied_03:
+      map: missions/allied-03
+      # ...branches converge here regardless of path taken
+</code></pre>
+<h3 id="campaign-graph-visualization"><a class="header" href="#campaign-graph-visualization">Campaign Graph Visualization</a></h3>
+<pre><code>                    ┌─────────────┐
+                    │  allied_01  │
+                    └──┬───┬───┬──┘
+          bridge ok ╱   │       ╲ defeat
+                  ╱     │         ╲
+    ┌────────────┐  bridge   ┌─────────────────┐
+    │ allied_02a │  destroyed│ allied_01_       │
+    └─────┬──────┘      │   │ fallback         │
+          │       ┌─────┴───┐└────────┬────────┘
+          │       │allied_02b│        │
+          │       └────┬─────┘        │
+          │            │         joins 02b
+          └─────┬──────┘
+                │ converge
+          ┌─────┴──────┐
+          │  allied_03  │
+          └─────────────┘
+</code></pre>
+<p>This is a <strong>directed acyclic graph</strong> (with optional cycles for retry loops). The engine validates campaign graphs at load time: no orphan nodes, all outcome targets exist, start mission is defined.</p>
+<h3 id="unit-roster--persistence"><a class="header" href="#unit-roster--persistence">Unit Roster &amp; Persistence</a></h3>
+<p>Inspired by Operation Flashpoint: Resistance — surviving units are precious resources that carry forward, creating emotional investment and strategic consequences.</p>
+<p><strong>Unit Roster:</strong></p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Persistent unit state that carries between campaign missions.
+#[derive(Serialize, Deserialize, Clone)]
+pub struct RosterUnit {
+    pub unit_type: UnitTypeId,        // e.g., "medium_tank", "tanya"
+    pub name: Option&lt;String&gt;,         // optional custom name
+    pub veterancy: VeterancyLevel,    // rookie → veteran → elite → heroic
+    pub kills: u32,                   // lifetime kill count
+    pub missions_survived: u32,       // how many missions this unit has lived through
+    pub equipment: Vec&lt;EquipmentId&gt;,  // OFP:R-style captured/found equipment
+    pub custom_state: HashMap&lt;String, Value&gt;, // mod-extensible per-unit state
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Carryover modes</strong> (per campaign transition):</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Mode</th><th>Behavior</th></tr>
+</thead>
+<tbody>
+<tr><td><code>none</code></td><td>Clean slate — the next mission provides its own units</td></tr>
+<tr><td><code>surviving</code></td><td>All player units alive at mission end join the roster</td></tr>
+<tr><td><code>extracted</code></td><td>Only units inside a designated extraction zone carry over (OFP-style “get to the evac”)</td></tr>
+<tr><td><code>selected</code></td><td>Lua script explicitly picks which units carry over</td></tr>
+<tr><td><code>custom</code></td><td>Full Lua control — script reads unit list, decides what persists</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Veterancy across missions:</strong></p>
+<ul>
+<li>Units gain experience from kills and surviving missions</li>
+<li>A veteran tank from mission 1 is still veteran in mission 5</li>
+<li>Losing a veteran unit hurts — they’re irreplaceable until you earn new ones</li>
+<li>Veterancy grants stat bonuses (configurable in YAML rules, per balance preset)</li>
+</ul>
+<p><strong>Equipment persistence (OFP: Resistance model):</strong></p>
+<ul>
+<li>Captured enemy vehicles at mission end go into the equipment pool</li>
+<li>Found supply crates add to available equipment</li>
+<li>Next mission’s starting loadout can draw from the equipment pool</li>
+<li>Modders can define custom persistent items</li>
+</ul>
+<h3 id="campaign-state"><a class="header" href="#campaign-state">Campaign State</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Full campaign progress — serializable for save games.
+#[derive(Serialize, Deserialize, Clone)]
+pub struct CampaignState {
+    pub campaign_id: CampaignId,
+    pub current_mission: MissionId,
+    pub completed_missions: Vec&lt;CompletedMission&gt;,
+    pub unit_roster: Vec&lt;RosterUnit&gt;,
+    pub equipment_pool: Vec&lt;EquipmentId&gt;,
+    pub resources: i64,               // persistent credits (if enabled)
+    pub flags: HashMap&lt;String, Value&gt;, // story flags set by Lua
+    pub stats: CampaignStats,         // cumulative performance
+    pub path_taken: Vec&lt;MissionId&gt;,   // breadcrumb trail for replay/debrief
+}
+
+pub struct CompletedMission {
+    pub mission_id: MissionId,
+    pub outcome: String,              // the named outcome key
+    pub time_taken: Duration,
+    pub units_lost: u32,
+    pub units_gained: u32,
+    pub score: i64,
+}
+<span class="boring">}</span></code></pre>
+<p>Campaign state is fully serializable (invariant #10 — snapshottable). Save games capture the entire campaign progress. Replays can replay an entire campaign run, not just individual missions.</p>
+<h3 id="lua-campaign-api"><a class="header" href="#lua-campaign-api">Lua Campaign API</a></h3>
+<p>Mission scripts interact with campaign state through a sandboxed API:</p>
+<pre><code class="language-lua">-- === Reading campaign state ===
+
+-- Get the unit roster (surviving units from previous missions)
+local roster = Campaign.get_roster()
+for _, unit in ipairs(roster) do
+    -- Spawn each surviving unit at a designated entry point
+    local spawned = SpawnUnit(unit.type, entry_point)
+    spawned:set_veterancy(unit.veterancy)
+    spawned:set_name(unit.name)
+end
+
+-- Read story flags set by previous missions
+if Campaign.get_flag("bridge_status") == "intact" then
+    -- Bridge exists on this map — open the crossing
+    bridge_actor:set_state("intact")
+else
+    -- Bridge was destroyed — it's rubble
+    bridge_actor:set_state("destroyed")
+end
+
+-- Check cumulative stats
+if Campaign.get_stat("total_units_lost") &gt; 50 then
+    -- Player has been losing lots of units — offer reinforcements
+    trigger_reinforcements()
+end
+
+-- === Writing campaign state ===
+
+-- Signal mission completion with a named outcome
+function OnObjectiveComplete()
+    if bridge:is_alive() then
+        Campaign.complete("victory_bridge_intact")
+    else
+        Campaign.complete("victory_bridge_destroyed")
+    end
+end
+
+-- Set custom flags for future missions to read
+Campaign.set_flag("captured_radar", true)
+Campaign.set_flag("enemy_morale", "broken")
+
+-- Update roster: mark which units survived
+-- (automatic if carryover mode is "surviving" — manual if "selected")
+function OnMissionEnd()
+    local survivors = GetPlayerUnits():alive()
+    for _, unit in ipairs(survivors) do
+        Campaign.roster_add(unit)
+    end
+end
+
+-- Add captured equipment to persistent pool
+function OnEnemyVehicleCaptured(vehicle)
+    Campaign.equipment_add(vehicle.type)
+end
+
+-- Failure doesn't mean game over — it's just another outcome
+function OnPlayerBaseDestroyed()
+    Campaign.complete("defeat")  -- campaign graph decides what happens next
+end
+</code></pre>
+<h3 id="adaptive-difficulty-via-campaign-state"><a class="header" href="#adaptive-difficulty-via-campaign-state">Adaptive Difficulty via Campaign State</a></h3>
+<p>Campaign state enables dynamic difficulty without an explicit slider:</p>
+<pre><code class="language-yaml"># In a mission's carryover config:
+adaptive:
+  # If player lost the previous mission, give them extra resources
+  on_previous_defeat:
+    bonus_resources: 2000
+    bonus_units: [medium_tank, medium_tank, rifle_infantry, rifle_infantry]
+  # If player blitzed the previous mission, make this one harder
+  on_previous_fast_victory:    # completed in &lt; 50% of par time
+    extra_enemy_waves: 1
+    enemy_veterancy_boost: 1
+  # Scale to cumulative performance
+  scaling:
+    low_roster:                # &lt; 5 surviving units
+      reinforcement_schedule: accelerated
+    high_roster:               # &gt; 20 surviving units
+      enemy_count_multiplier: 1.3
+</code></pre>
+<p>This is not AI-adaptive difficulty (that’s D016/<code>ra-llm</code>). This is <strong>designer-authored conditional logic</strong> expressed in YAML — the campaign reacts to the player’s cumulative performance without any LLM involvement.</p>
+<h3 id="llm-campaign-generation"><a class="header" href="#llm-campaign-generation">LLM Campaign Generation</a></h3>
+<p>The LLM (<code>ra-llm</code>) can generate entire campaign graphs, not just individual missions:</p>
+<pre><code>User: "Create a 5-mission Soviet campaign where you invade Alaska.
+       The player should be able to lose a mission and keep going
+       with consequences. Units should carry over between missions."
+
+LLM generates:
+  → campaign.yaml (graph with 5+ nodes, branching on outcomes)
+  → 5-7 mission files (main path + fallback branches)
+  → Lua scripts with Campaign API calls
+  → briefing text for each mission
+  → carryover rules per transition
+</code></pre>
+<p>The template/scene system makes this tractable — the LLM composes from known building blocks rather than generating raw code. Campaign graphs are validated at load time (no orphan nodes, all outcomes have targets).</p>
 <h3 id="configurable-workshop-server"><a class="header" href="#configurable-workshop-server">Configurable Workshop Server</a></h3>
 <p>The client connects to one workshop server at a time, configurable in settings. Players can point to the official server, a community server, or a local directory.</p>
 <pre><code class="language-yaml"># settings.yaml
@@ -830,6 +1114,146 @@ pub struct AiResourceMeta {
     pub composition_hints: Option&lt;String&gt;, // how this combines with other resources
 }
 <span class="boring">}</span></code></pre>
+<h2 id="mod-sdk--developer-experience"><a class="header" href="#mod-sdk--developer-experience">Mod SDK &amp; Developer Experience</a></h2>
+<p><em>Inspired by studying the <a href="https://github.com/OpenRA/OpenRAModSDK">OpenRA Mod SDK</a> — see D020.</em></p>
+<h3 id="lessons-from-the-openra-mod-sdk"><a class="header" href="#lessons-from-the-openra-mod-sdk">Lessons from the OpenRA Mod SDK</a></h3>
+<p>The OpenRA Mod SDK is a template repository that modders fork. It includes:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>OpenRA SDK Feature</th><th>What’s Good</th><th>Our Improvement</th></tr>
+</thead>
+<tbody>
+<tr><td>Fork-the-repo template</td><td>Zero-config starting point</td><td><code>cargo-generate</code> template — same UX, better tooling</td></tr>
+<tr><td><code>mod.config</code> (engine version pin)</td><td>Reproducible builds</td><td><code>mod.yaml</code> manifest with typed schema + semver</td></tr>
+<tr><td><code>fetch-engine.sh</code> (auto-download engine)</td><td>Modders never touch engine source</td><td>Engine ships as a binary crate, not compiled from source</td></tr>
+<tr><td><code>Makefile</code> / <code>make.cmd</code></td><td>Cross-platform build</td><td><code>ic</code> CLI tool — Rust binary, works everywhere</td></tr>
+<tr><td><code>packaging/</code> (Win/Mac/Linux installers)</td><td>Full distribution pipeline</td><td>Workshop publish + <code>cargo-dist</code> for standalone</td></tr>
+<tr><td><code>utility.sh --check-yaml</code></td><td>Catches YAML errors</td><td><code>ic mod check</code> — validates YAML, Lua syntax, WASM integrity</td></tr>
+<tr><td><code>launch-dedicated.sh</code></td><td>Dedicated server for mods</td><td><code>ic mod server</code> — first-class CLI command</td></tr>
+<tr><td><code>mod.yaml</code> manifest</td><td>Single entry point for mod composition</td><td>Real YAML manifest with typed <code>serde</code> deserialization</td></tr>
+<tr><td>Standardized directory layout</td><td>Convention-based — chrome/, rules/, maps/</td><td>Adapted for our three-tier model</td></tr>
+<tr><td><code>.vscode/</code> included</td><td>IDE support out of the box</td><td>Full VS Code extension with YAML schema + Lua LSP</td></tr>
+<tr><td>C# DLL for custom traits</td><td><strong>Pain point:</strong> requires .NET toolchain, IDE, compilation</td><td>Our YAML/Lua/WASM tiers eliminate this entirely</td></tr>
+<tr><td>GPL license on mod code</td><td><strong>Pain point:</strong> all mod code must be GPL-compatible</td><td>WASM sandbox + permissive engine license = modder’s choice</td></tr>
+<tr><td>MiniYAML format</td><td><strong>Pain point:</strong> no tooling, no validation</td><td>Real YAML with JSON Schema, serde, linting</td></tr>
+<tr><td>No workshop/distribution</td><td><strong>Pain point:</strong> manual file sharing, forum posts</td><td>Built-in workshop with <code>ic mod publish</code></td></tr>
+<tr><td>No hot-reload</td><td><strong>Pain point:</strong> recompile engine+mod for every change</td><td>Lua + YAML hot-reload during development</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="the-ic-cli-tool"><a class="header" href="#the-ic-cli-tool">The <code>ic</code> CLI Tool</a></h3>
+<p>A single Rust binary that replaces OpenRA’s grab-bag of shell scripts:</p>
+<pre><code>ic mod init [template]     # scaffold a new mod from a template
+ic mod check               # validate YAML rules, Lua syntax, WASM module integrity
+ic mod test                # run mod in headless test harness (smoke test)
+ic mod run                 # launch game with this mod loaded
+ic mod server              # launch dedicated server for this mod
+ic mod package             # build distributable packages (workshop or standalone)
+ic mod publish             # publish to workshop
+ic mod update-engine       # update engine version in mod.yaml
+ic mod lint                # style/convention checks + ai: metadata completeness
+ic mod watch               # hot-reload mode: watches files, reloads YAML/Lua on change
+</code></pre>
+<p><strong>Why a CLI, not just scripts:</strong></p>
+<ul>
+<li>Single binary — no Python, .NET, or shell dependencies</li>
+<li>Cross-platform (Windows, macOS, Linux) from one codebase</li>
+<li>Rich error messages with fix suggestions</li>
+<li>Integrates with the workshop API</li>
+<li>Can be embedded in CI/CD pipelines</li>
+</ul>
+<h3 id="mod-manifest-modyaml"><a class="header" href="#mod-manifest-modyaml">Mod Manifest (<code>mod.yaml</code>)</a></h3>
+<p>Every mod has a <code>mod.yaml</code> at its root — the single source of truth for mod identity and composition. Inspired by OpenRA’s <code>mod.yaml</code> but using real YAML with typed deserialization:</p>
+<pre><code class="language-yaml"># mod.yaml
+mod:
+  id: my-total-conversion
+  title: "Red Apocalypse"
+  version: "1.2.0"
+  authors: ["ModderName"]
+  description: "A total conversion set in an alternate timeline"
+  website: "https://example.com/red-apocalypse"
+  license: "CC-BY-SA-4.0"            # modder's choice — no GPL requirement
+
+engine:
+  version: "^0.3.0"                  # semver — compatible with 0.3.x
+  game_module: "ra1"                 # which GameModule this mod targets
+
+assets:
+  rules: ["rules/**/*.yaml"]
+  maps: ["maps/"]
+  missions: ["missions/"]
+  scripts: ["scripts/**/*.lua"]
+  wasm_modules: ["wasm/*.wasm"]
+  media: ["media/"]
+  chrome: ["chrome/**/*.yaml"]
+  sequences: ["sequences/**/*.yaml"]
+
+dependencies:                        # other mods/workshop items required
+  - id: "community-hd-sprites"
+    version: "^2.0"
+    source: workshop
+
+balance_preset: classic              # default balance preset for this mod
+
+ai:
+  summary: "Alternate-timeline total conversion with new factions and units"
+  gameplay_tags: [total_conversion, alternate_history, new_factions]
+</code></pre>
+<h3 id="standardized-mod-directory-layout"><a class="header" href="#standardized-mod-directory-layout">Standardized Mod Directory Layout</a></h3>
+<pre><code>my-mod/
+├── mod.yaml                  # manifest (required)
+├── rules/                    # Tier 1: YAML data
+│   ├── units/
+│   │   ├── infantry.yaml
+│   │   └── vehicles.yaml
+│   ├── structures/
+│   ├── weapons/
+│   ├── terrain/
+│   └── presets/              # balance preset overrides
+├── maps/                     # map files (.oramap or native)
+├── missions/                 # campaign missions
+│   ├── allied-01.yaml
+│   └── allied-01.lua
+├── scripts/                  # Tier 2: Lua scripts
+│   ├── abilities/
+│   └── triggers/
+├── wasm/                     # Tier 3: WASM modules
+│   └── custom_mechanics.wasm
+├── media/                    # videos, cutscenes
+├── chrome/                   # UI layout definitions
+├── sequences/                # sprite sequence definitions
+├── cursors/                  # custom cursor definitions
+├── audio/                    # music, SFX, voice lines
+├── templates/                # Tera mission/scene templates
+└── README.md                 # human-readable mod description
+</code></pre>
+<h3 id="mod-templates-via-cargo-generate"><a class="header" href="#mod-templates-via-cargo-generate">Mod Templates (via <code>cargo-generate</code>)</a></h3>
+<p><code>ic mod init</code> uses <code>cargo-generate</code>-style templates. Built-in templates:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Template</th><th>Creates</th><th>For</th></tr>
+</thead>
+<tbody>
+<tr><td><code>data-mod</code></td><td>mod.yaml + rules/ + empty maps/</td><td>Simple balance/cosmetic mods (Tier 1 only)</td></tr>
+<tr><td><code>scripted-mod</code></td><td>Above + scripts/ + missions/</td><td>Mission packs, custom game modes (Tier 1+2)</td></tr>
+<tr><td><code>total-conversion</code></td><td>Full directory layout including wasm/</td><td>Total conversions (all tiers)</td></tr>
+<tr><td><code>map-pack</code></td><td>mod.yaml + maps/</td><td>Map collections</td></tr>
+<tr><td><code>asset-pack</code></td><td>mod.yaml + media/ + sequences/</td><td>Sprite/sound/video packs</td></tr>
+</tbody>
+</table>
+</div>
+<p>Community can publish custom templates to the workshop.</p>
+<h3 id="development-workflow"><a class="header" href="#development-workflow">Development Workflow</a></h3>
+<pre><code>1. ic mod init scripted-mod          # scaffold
+2. Edit YAML rules, write Lua scripts
+3. ic mod watch                      # hot-reload mode
+4. ic mod check                      # validate everything
+5. ic mod test                       # headless smoke test
+6. ic mod publish                    # push to workshop
+</code></pre>
+<p>Compare to OpenRA’s workflow: install .NET SDK → fork SDK repo → edit MiniYAML → write C# DLL → <code>make</code> → <code>launch-game.sh</code> → manually package → upload to forum.</p>
 <h2 id="ai-readable-resource-metadata"><a class="header" href="#ai-readable-resource-metadata">AI-Readable Resource Metadata</a></h2>
 <p>Every game resource — units, weapons, structures, maps, mods, templates — carries structured metadata designed for consumption by LLMs and AI systems. This is not documentation for humans (that’s <code>display.name</code> and README files). This is <strong>machine-readable semantic context</strong> that enables AI to reason about game content.</p>
 <h3 id="why-this-matters"><a class="header" href="#why-this-matters">Why This Matters</a></h3>

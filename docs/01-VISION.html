@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-ddb12168.js";
+            window.path_to_searchindex_js = "searchindex-cd13978d.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-d8a85e3a.js"></script>
@@ -202,8 +202,9 @@
 <tr><td>Platforms</td><td>Windows, Xbox</td><td>Windows, macOS, Linux</td><td>All + Browser + Mobile</td></tr>
 <tr><td>Max units (smooth)</td><td>~200 (original engine limits)</td><td>~300-500 (community reports lag beyond)</td><td>2000+ target</td></tr>
 <tr><td>Modding</td><td>Steam Workshop maps, limited API</td><td>MiniYAML + C# (recompile for deep mods)</td><td>YAML + Lua + WASM (no recompile ever)</td></tr>
-<tr><td>AI content</td><td>Fixed campaigns</td><td>Fixed campaigns + community missions</td><td>LLM-generated missions and campaigns</td></tr>
+<tr><td>AI content</td><td>Fixed campaigns</td><td>Fixed campaigns + community missions</td><td>Branching campaigns + LLM-generated missions</td></tr>
 <tr><td>Multiplayer</td><td>Rebuilt but server issues reported</td><td>Lockstep with frequent desyncs</td><td>Relay server, desync diagnosis, signed replays</td></tr>
+<tr><td>Competitive</td><td>No ranked, no anti-cheat</td><td>Informal community ladders only</td><td>Ranked matchmaking, Glicko-2, relay-certified results</td></tr>
 <tr><td>Graphics pipeline</td><td>Fixed 4K sprite upscale</td><td>SDL/OpenGL basic rendering</td><td>Bevy + wgpu: shaders, post-FX, dynamic lighting, particles</td></tr>
 <tr><td>Source</td><td>Closed</td><td>Open (GPL)</td><td>Open (GPL)</td></tr>
 <tr><td>Community assets</td><td>Separate ecosystem</td><td>18 years of maps/mods</td><td>Loads all OpenRA assets + migration tools</td></tr>
@@ -240,10 +241,11 @@
 <tr><td>Modding</td><td>Powerful but requires C# for deep mods</td><td>YAML + Lua + WASM (no compile step)</td></tr>
 <tr><td>Map editor</td><td>Separate tool, recently improved</td><td>In-engine editor (Phase 6)</td></tr>
 <tr><td>Multiplayer</td><td>Desyncs common, hard to debug</td><td>Snapshottable sim enables desync pinpointing</td></tr>
+<tr><td>Competitive</td><td>No ranked play, no anti-cheat</td><td>Ranked matchmaking, anti-cheat, tournament mode</td></tr>
 <tr><td>Portability</td><td>Desktop only (Mono/.NET)</td><td>Native + WASM (browser) + mobile</td></tr>
 <tr><td>Engine age</td><td>Started 2007, showing architectural debt</td><td>Clean-sheet modern design</td></tr>
-<tr><td>Campaigns</td><td>Incomplete — many are broken or cut short</td><td>Full campaign support as first-class feature</td></tr>
-<tr><td>Mission flow</td><td>Manual mission selection between levels</td><td>Automatic progression with briefing screens</td></tr>
+<tr><td>Campaigns</td><td>Incomplete — many are broken or cut short</td><td>Branching campaigns with persistent state (D021)</td></tr>
+<tr><td>Mission flow</td><td>Manual mission selection between levels</td><td>Continuous flow: briefing → mission → debrief → next</td></tr>
 </tbody>
 </table>
 </div>
@@ -251,11 +253,80 @@
 <ol>
 <li><strong>Better performance</strong> — visible: bigger maps, more units, no stutters</li>
 <li><strong>Better modding</strong> — WASM scripting, in-engine editor, hot reload</li>
+<li><strong>Campaigns that flow</strong> — branching paths, persistent units, no menu between missions, failure continues the story</li>
+<li><strong>Competitive infrastructure</strong> — ranked matchmaking, anti-cheat, tournaments, signed replays — OpenRA has none of this</li>
 <li><strong>Runs everywhere</strong> — browser via WASM, mobile, Steam Deck natively</li>
 <li><strong>Better multiplayer</strong> — desync debugging, smoother netcode, relay server</li>
 <li><strong>OpenRA mod compatibility</strong> — existing community migrates without losing work</li>
 </ol>
-<p>Item 5 is the linchpin. If existing mods just work, migration cost drops to near zero.</p>
+<p>Item 7 is the linchpin. If existing mods just work, migration cost drops to near zero.</p>
+<h2 id="competitive-play"><a class="header" href="#competitive-play">Competitive Play</a></h2>
+<p>Red Alert has a dedicated competitive community (primarily through OpenRA and CnCNet). They play with no ranked system, no automated anti-cheat, no official tournaments, and frequent desyncs. This is a massive opportunity.</p>
+<h3 id="ranked-matchmaking"><a class="header" href="#ranked-matchmaking">Ranked Matchmaking</a></h3>
+<ul>
+<li><strong>Rating system:</strong> Glicko-2 (improvement over Elo — accounts for rating volatility and inactivity, used by Lichess, FIDE, many modern games)</li>
+<li><strong>Seasons:</strong> 3-month ranked seasons with placement matches (10 games), league tiers (Bronze → Silver → Gold → Platinum → Diamond → Master), end-of-season rewards</li>
+<li><strong>Queues:</strong> 1v1 (primary), 2v2 (team), FFA (experimental). Separate ratings per queue</li>
+<li><strong>Map pool:</strong> Curated competitive map pool per season, community-nominated and committee-voted. Ranked games use pool maps only</li>
+<li><strong>Balance preset locked:</strong> Ranked play uses a fixed balance preset per season (prevents mid-season rule changes from invalidating results)</li>
+<li><strong>Matchmaking server:</strong> Lightweight Rust service, same infra pattern as tracking/relay servers (containerized, self-hostable for community leagues)</li>
+</ul>
+<h3 id="leaderboards"><a class="header" href="#leaderboards">Leaderboards</a></h3>
+<ul>
+<li>Global, per-faction, per-map, per-game-module (RA1, TD, etc.)</li>
+<li>Public player profiles: rating history, win rate, faction preference, match history</li>
+<li>Replay links on every match entry — any ranked game is reviewable</li>
+</ul>
+<h3 id="tournament-support"><a class="header" href="#tournament-support">Tournament Support</a></h3>
+<ul>
+<li><strong>Observer mode:</strong> Spectators connect to relay server and receive tick orders with configurable delay
+<ul>
+<li><strong>No fog</strong> — for casters (sees everything)</li>
+<li><strong>Player fog</strong> — fair spectating (sees what one player sees)</li>
+<li><strong>Broadcast delay</strong> — 1-5 minute configurable delay to prevent stream sniping</li>
+</ul>
+</li>
+<li><strong>Bracket integration:</strong> Tournament organizers can set up brackets via API; match results auto-report</li>
+<li><strong>Relay-certified results:</strong> Every ranked and tournament match produces a <code>CertifiedMatchResult</code> signed by the relay server (see <code>06-SECURITY.md</code>). No result disputes.</li>
+<li><strong>Replay archive:</strong> All ranked/tournament replays stored server-side for post-match analysis and community review</li>
+</ul>
+<h3 id="anti-cheat-architectural-not-intrusive"><a class="header" href="#anti-cheat-architectural-not-intrusive">Anti-Cheat (Architectural, Not Intrusive)</a></h3>
+<p>Our anti-cheat emerges from the architecture — not from kernel drivers or invasive monitoring:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Threat</th><th>Defense</th><th>Details</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Maphack</strong></td><td>Fog-authoritative server (tournament)</td><td>Server sends only visible entities — <code>06-SECURITY.md</code> V1</td></tr>
+<tr><td><strong>Order injection</strong></td><td>Deterministic validation in sim</td><td>Every order validated before execution — <code>06-SECURITY.md</code> V2</td></tr>
+<tr><td><strong>Lag switch</strong></td><td>Relay server time authority</td><td>Miss the window → orders dropped — <code>06-SECURITY.md</code> V3</td></tr>
+<tr><td><strong>Speed hack</strong></td><td>Relay owns tick cadence</td><td>Client clock is irrelevant — <code>06-SECURITY.md</code> V11</td></tr>
+<tr><td><strong>Automation</strong></td><td>Behavioral analysis</td><td>APM patterns, reaction times, input entropy — <code>06-SECURITY.md</code> V12</td></tr>
+<tr><td><strong>Result fraud</strong></td><td>Relay-signed match results</td><td>Only relay-certified results update rankings — <code>06-SECURITY.md</code> V13</td></tr>
+<tr><td><strong>Replay tampering</strong></td><td>Ed25519 hash chain</td><td>Tampered replay fails signature verification — <code>06-SECURITY.md</code> V6</td></tr>
+<tr><td><strong>WASM mod abuse</strong></td><td>Capability sandbox</td><td><code>get_visible_units()</code> only, no <code>get_all_units()</code> — <code>06-SECURITY.md</code> V5</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Philosophy:</strong> No kernel-level anti-cheat (no Vanguard/EAC). We’re open-source and cross-platform — intrusive anti-cheat contradicts our values and doesn’t work on Linux/WASM. We accept that lockstep has inherent maphack risk in P2P modes. The fog-authoritative server is the real answer for high-stakes play.</p>
+<h3 id="performance-as-competitive-advantage"><a class="header" href="#performance-as-competitive-advantage">Performance as Competitive Advantage</a></h3>
+<p>Competitive play demands rock-solid performance — stutters during a crucial micro moment lose games:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Metric</th><th>Competitive Requirement</th><th>Our Target</th></tr>
+</thead>
+<tbody>
+<tr><td>Tick time (500 units)</td><td>&lt; 16ms (60 FPS smooth)</td><td>&lt; 10ms (8-core desktop)</td></tr>
+<tr><td>Render FPS</td><td>60+ sustained</td><td>144 target</td></tr>
+<tr><td>Input latency</td><td>&lt; 1 frame</td><td>Sub-tick ordering (D008)</td></tr>
+<tr><td>RAM (1000 units)</td><td>&lt; 200MB</td><td>&lt; 200MB</td></tr>
+<tr><td>Per-tick allocation</td><td>0 (no GC stutter)</td><td>0 bytes (invariant)</td></tr>
+<tr><td>Desync recovery</td><td>Automatic</td><td>Diagnosed to exact tick + entity</td></tr>
+</tbody>
+</table>
+</div>
 <h2 id="competitive-landscape"><a class="header" href="#competitive-landscape">Competitive Landscape</a></h2>
 <h3 id="active-projects"><a class="header" href="#active-projects">Active Projects</a></h3>
 <p><strong>OpenRA</strong> (C#) — The project to beat</p>
@@ -314,7 +385,7 @@
 <ul>
 <li><strong>Unit balance.</strong> OpenRA deliberately rebalances units away from the original game toward competitive multiplayer fairness. This makes iconic units feel underwhelming (see Gameplay Philosophy below). We default to classic RA balance. This pattern repeats across every game they support — Dune 2000 units are also rebalanced away from originals.</li>
 <li><strong>Simulation internals bug-for-bug.</strong> We’re not bit-identical — we’re better-algorithms-identical.</li>
-<li><strong>Campaign neglect.</strong> OpenRA’s multiplayer-first culture has left single-player campaigns systematically incomplete across all supported games. Dune 2000 has only 1 of 3 campaigns playable; TD campaigns are also incomplete; there’s no automatic mission progression (players exit to menu between missions). <strong>Campaign completeness is a first-class goal for us</strong> — every shipped game module must have all original campaigns fully playable with automatic progression, briefing screens, and mission select.</li>
+<li><strong>Campaign neglect.</strong> OpenRA’s multiplayer-first culture has left single-player campaigns systematically incomplete across all supported games. Dune 2000 has only 1 of 3 campaigns playable; TD campaigns are also incomplete; there’s no automatic mission progression (players exit to menu between missions). <strong>Campaign completeness is a first-class goal for us</strong> — every shipped game module must have all original campaigns fully playable with continuous flow (D021). Beyond completeness, our campaign graph system enables what OpenRA can’t: branching outcomes (different mission endings lead to different next missions), persistent unit rosters (surviving units carry forward with veterancy), and failure that continues the story instead of forcing a restart — inspired by Operation Flashpoint.</li>
 </ul>
 <h3 id="ea-red-alert-source--httpsgithubcomelectronicartscnc_red_alert"><a class="header" href="#ea-red-alert-source--httpsgithubcomelectronicartscnc_red_alert">EA Red Alert Source — https://github.com/electronicarts/CnC_Red_Alert</a></h3>
 <p><strong>What to study:</strong></p>

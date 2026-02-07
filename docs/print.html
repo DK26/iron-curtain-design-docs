@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-ddb12168.js";
+            window.path_to_searchindex_js = "searchindex-cd13978d.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-d8a85e3a.js"></script>
@@ -255,8 +255,9 @@
 <tr><td>Platforms</td><td>Windows, Xbox</td><td>Windows, macOS, Linux</td><td>All + Browser + Mobile</td></tr>
 <tr><td>Max units (smooth)</td><td>~200 (original engine limits)</td><td>~300-500 (community reports lag beyond)</td><td>2000+ target</td></tr>
 <tr><td>Modding</td><td>Steam Workshop maps, limited API</td><td>MiniYAML + C# (recompile for deep mods)</td><td>YAML + Lua + WASM (no recompile ever)</td></tr>
-<tr><td>AI content</td><td>Fixed campaigns</td><td>Fixed campaigns + community missions</td><td>LLM-generated missions and campaigns</td></tr>
+<tr><td>AI content</td><td>Fixed campaigns</td><td>Fixed campaigns + community missions</td><td>Branching campaigns + LLM-generated missions</td></tr>
 <tr><td>Multiplayer</td><td>Rebuilt but server issues reported</td><td>Lockstep with frequent desyncs</td><td>Relay server, desync diagnosis, signed replays</td></tr>
+<tr><td>Competitive</td><td>No ranked, no anti-cheat</td><td>Informal community ladders only</td><td>Ranked matchmaking, Glicko-2, relay-certified results</td></tr>
 <tr><td>Graphics pipeline</td><td>Fixed 4K sprite upscale</td><td>SDL/OpenGL basic rendering</td><td>Bevy + wgpu: shaders, post-FX, dynamic lighting, particles</td></tr>
 <tr><td>Source</td><td>Closed</td><td>Open (GPL)</td><td>Open (GPL)</td></tr>
 <tr><td>Community assets</td><td>Separate ecosystem</td><td>18 years of maps/mods</td><td>Loads all OpenRA assets + migration tools</td></tr>
@@ -293,10 +294,11 @@
 <tr><td>Modding</td><td>Powerful but requires C# for deep mods</td><td>YAML + Lua + WASM (no compile step)</td></tr>
 <tr><td>Map editor</td><td>Separate tool, recently improved</td><td>In-engine editor (Phase 6)</td></tr>
 <tr><td>Multiplayer</td><td>Desyncs common, hard to debug</td><td>Snapshottable sim enables desync pinpointing</td></tr>
+<tr><td>Competitive</td><td>No ranked play, no anti-cheat</td><td>Ranked matchmaking, anti-cheat, tournament mode</td></tr>
 <tr><td>Portability</td><td>Desktop only (Mono/.NET)</td><td>Native + WASM (browser) + mobile</td></tr>
 <tr><td>Engine age</td><td>Started 2007, showing architectural debt</td><td>Clean-sheet modern design</td></tr>
-<tr><td>Campaigns</td><td>Incomplete — many are broken or cut short</td><td>Full campaign support as first-class feature</td></tr>
-<tr><td>Mission flow</td><td>Manual mission selection between levels</td><td>Automatic progression with briefing screens</td></tr>
+<tr><td>Campaigns</td><td>Incomplete — many are broken or cut short</td><td>Branching campaigns with persistent state (D021)</td></tr>
+<tr><td>Mission flow</td><td>Manual mission selection between levels</td><td>Continuous flow: briefing → mission → debrief → next</td></tr>
 </tbody>
 </table>
 </div>
@@ -304,11 +306,80 @@
 <ol>
 <li><strong>Better performance</strong> — visible: bigger maps, more units, no stutters</li>
 <li><strong>Better modding</strong> — WASM scripting, in-engine editor, hot reload</li>
+<li><strong>Campaigns that flow</strong> — branching paths, persistent units, no menu between missions, failure continues the story</li>
+<li><strong>Competitive infrastructure</strong> — ranked matchmaking, anti-cheat, tournaments, signed replays — OpenRA has none of this</li>
 <li><strong>Runs everywhere</strong> — browser via WASM, mobile, Steam Deck natively</li>
 <li><strong>Better multiplayer</strong> — desync debugging, smoother netcode, relay server</li>
 <li><strong>OpenRA mod compatibility</strong> — existing community migrates without losing work</li>
 </ol>
-<p>Item 5 is the linchpin. If existing mods just work, migration cost drops to near zero.</p>
+<p>Item 7 is the linchpin. If existing mods just work, migration cost drops to near zero.</p>
+<h2 id="competitive-play"><a class="header" href="#competitive-play">Competitive Play</a></h2>
+<p>Red Alert has a dedicated competitive community (primarily through OpenRA and CnCNet). They play with no ranked system, no automated anti-cheat, no official tournaments, and frequent desyncs. This is a massive opportunity.</p>
+<h3 id="ranked-matchmaking"><a class="header" href="#ranked-matchmaking">Ranked Matchmaking</a></h3>
+<ul>
+<li><strong>Rating system:</strong> Glicko-2 (improvement over Elo — accounts for rating volatility and inactivity, used by Lichess, FIDE, many modern games)</li>
+<li><strong>Seasons:</strong> 3-month ranked seasons with placement matches (10 games), league tiers (Bronze → Silver → Gold → Platinum → Diamond → Master), end-of-season rewards</li>
+<li><strong>Queues:</strong> 1v1 (primary), 2v2 (team), FFA (experimental). Separate ratings per queue</li>
+<li><strong>Map pool:</strong> Curated competitive map pool per season, community-nominated and committee-voted. Ranked games use pool maps only</li>
+<li><strong>Balance preset locked:</strong> Ranked play uses a fixed balance preset per season (prevents mid-season rule changes from invalidating results)</li>
+<li><strong>Matchmaking server:</strong> Lightweight Rust service, same infra pattern as tracking/relay servers (containerized, self-hostable for community leagues)</li>
+</ul>
+<h3 id="leaderboards"><a class="header" href="#leaderboards">Leaderboards</a></h3>
+<ul>
+<li>Global, per-faction, per-map, per-game-module (RA1, TD, etc.)</li>
+<li>Public player profiles: rating history, win rate, faction preference, match history</li>
+<li>Replay links on every match entry — any ranked game is reviewable</li>
+</ul>
+<h3 id="tournament-support"><a class="header" href="#tournament-support">Tournament Support</a></h3>
+<ul>
+<li><strong>Observer mode:</strong> Spectators connect to relay server and receive tick orders with configurable delay
+<ul>
+<li><strong>No fog</strong> — for casters (sees everything)</li>
+<li><strong>Player fog</strong> — fair spectating (sees what one player sees)</li>
+<li><strong>Broadcast delay</strong> — 1-5 minute configurable delay to prevent stream sniping</li>
+</ul>
+</li>
+<li><strong>Bracket integration:</strong> Tournament organizers can set up brackets via API; match results auto-report</li>
+<li><strong>Relay-certified results:</strong> Every ranked and tournament match produces a <code>CertifiedMatchResult</code> signed by the relay server (see <code>06-SECURITY.md</code>). No result disputes.</li>
+<li><strong>Replay archive:</strong> All ranked/tournament replays stored server-side for post-match analysis and community review</li>
+</ul>
+<h3 id="anti-cheat-architectural-not-intrusive"><a class="header" href="#anti-cheat-architectural-not-intrusive">Anti-Cheat (Architectural, Not Intrusive)</a></h3>
+<p>Our anti-cheat emerges from the architecture — not from kernel drivers or invasive monitoring:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Threat</th><th>Defense</th><th>Details</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Maphack</strong></td><td>Fog-authoritative server (tournament)</td><td>Server sends only visible entities — <code>06-SECURITY.md</code> V1</td></tr>
+<tr><td><strong>Order injection</strong></td><td>Deterministic validation in sim</td><td>Every order validated before execution — <code>06-SECURITY.md</code> V2</td></tr>
+<tr><td><strong>Lag switch</strong></td><td>Relay server time authority</td><td>Miss the window → orders dropped — <code>06-SECURITY.md</code> V3</td></tr>
+<tr><td><strong>Speed hack</strong></td><td>Relay owns tick cadence</td><td>Client clock is irrelevant — <code>06-SECURITY.md</code> V11</td></tr>
+<tr><td><strong>Automation</strong></td><td>Behavioral analysis</td><td>APM patterns, reaction times, input entropy — <code>06-SECURITY.md</code> V12</td></tr>
+<tr><td><strong>Result fraud</strong></td><td>Relay-signed match results</td><td>Only relay-certified results update rankings — <code>06-SECURITY.md</code> V13</td></tr>
+<tr><td><strong>Replay tampering</strong></td><td>Ed25519 hash chain</td><td>Tampered replay fails signature verification — <code>06-SECURITY.md</code> V6</td></tr>
+<tr><td><strong>WASM mod abuse</strong></td><td>Capability sandbox</td><td><code>get_visible_units()</code> only, no <code>get_all_units()</code> — <code>06-SECURITY.md</code> V5</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Philosophy:</strong> No kernel-level anti-cheat (no Vanguard/EAC). We’re open-source and cross-platform — intrusive anti-cheat contradicts our values and doesn’t work on Linux/WASM. We accept that lockstep has inherent maphack risk in P2P modes. The fog-authoritative server is the real answer for high-stakes play.</p>
+<h3 id="performance-as-competitive-advantage"><a class="header" href="#performance-as-competitive-advantage">Performance as Competitive Advantage</a></h3>
+<p>Competitive play demands rock-solid performance — stutters during a crucial micro moment lose games:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Metric</th><th>Competitive Requirement</th><th>Our Target</th></tr>
+</thead>
+<tbody>
+<tr><td>Tick time (500 units)</td><td>&lt; 16ms (60 FPS smooth)</td><td>&lt; 10ms (8-core desktop)</td></tr>
+<tr><td>Render FPS</td><td>60+ sustained</td><td>144 target</td></tr>
+<tr><td>Input latency</td><td>&lt; 1 frame</td><td>Sub-tick ordering (D008)</td></tr>
+<tr><td>RAM (1000 units)</td><td>&lt; 200MB</td><td>&lt; 200MB</td></tr>
+<tr><td>Per-tick allocation</td><td>0 (no GC stutter)</td><td>0 bytes (invariant)</td></tr>
+<tr><td>Desync recovery</td><td>Automatic</td><td>Diagnosed to exact tick + entity</td></tr>
+</tbody>
+</table>
+</div>
 <h2 id="competitive-landscape"><a class="header" href="#competitive-landscape">Competitive Landscape</a></h2>
 <h3 id="active-projects"><a class="header" href="#active-projects">Active Projects</a></h3>
 <p><strong>OpenRA</strong> (C#) — The project to beat</p>
@@ -367,7 +438,7 @@
 <ul>
 <li><strong>Unit balance.</strong> OpenRA deliberately rebalances units away from the original game toward competitive multiplayer fairness. This makes iconic units feel underwhelming (see Gameplay Philosophy below). We default to classic RA balance. This pattern repeats across every game they support — Dune 2000 units are also rebalanced away from originals.</li>
 <li><strong>Simulation internals bug-for-bug.</strong> We’re not bit-identical — we’re better-algorithms-identical.</li>
-<li><strong>Campaign neglect.</strong> OpenRA’s multiplayer-first culture has left single-player campaigns systematically incomplete across all supported games. Dune 2000 has only 1 of 3 campaigns playable; TD campaigns are also incomplete; there’s no automatic mission progression (players exit to menu between missions). <strong>Campaign completeness is a first-class goal for us</strong> — every shipped game module must have all original campaigns fully playable with automatic progression, briefing screens, and mission select.</li>
+<li><strong>Campaign neglect.</strong> OpenRA’s multiplayer-first culture has left single-player campaigns systematically incomplete across all supported games. Dune 2000 has only 1 of 3 campaigns playable; TD campaigns are also incomplete; there’s no automatic mission progression (players exit to menu between missions). <strong>Campaign completeness is a first-class goal for us</strong> — every shipped game module must have all original campaigns fully playable with continuous flow (D021). Beyond completeness, our campaign graph system enables what OpenRA can’t: branching outcomes (different mission endings lead to different next missions), persistent unit rosters (surviving units carry forward with veterancy), and failure that continues the story instead of forcing a restart — inspired by Operation Flashpoint.</li>
 </ul>
 <h3 id="ea-red-alert-source--httpsgithubcomelectronicartscnc_red_alert"><a class="header" href="#ea-red-alert-source--httpsgithubcomelectronicartscnc_red_alert">EA Red Alert Source — https://github.com/electronicarts/CnC_Red_Alert</a></h3>
 <p><strong>What to study:</strong></p>
@@ -481,7 +552,7 @@
 <li><strong>Deterministic:</strong> Same inputs → identical outputs on every platform</li>
 <li><strong>Pure:</strong> No I/O, no floats in game logic, no network awareness</li>
 <li><strong>Fixed-point math:</strong> <code>i32</code>/<code>i64</code> with known scale (never <code>f32</code>/<code>f64</code> in sim)</li>
-<li><strong>Snapshottable:</strong> Full state serializable for replays, save games, desync debugging, rollback</li>
+<li><strong>Snapshottable:</strong> Full state serializable for replays, save games, desync debugging, rollback, campaign state persistence (D021)</li>
 <li><strong>Headless-capable:</strong> Can run without renderer (dedicated servers, AI training, automated testing)</li>
 </ul>
 <h3 id="simulation-core-types"><a class="header" href="#simulation-core-types">Simulation Core Types</a></h3>
@@ -1746,7 +1817,7 @@ pub fn render_mission_template(
   ↓ composed into
 Mission Template  — a full mission assembled from scenes + overall structure
   ↓ sequenced into
-Campaign          — ordered mission sequence with narrative
+Campaign Graph    — branching mission graph with persistent state (not a linear sequence)
 </code></pre>
 <p><strong>Built-in scene template library (examples):</strong></p>
 <div class="table-wrapper">
@@ -1889,6 +1960,290 @@ scenes:
 </tbody>
 </table>
 </div>
+<h2 id="campaign-system-branching-persistent-continuous"><a class="header" href="#campaign-system-branching-persistent-continuous">Campaign System (Branching, Persistent, Continuous)</a></h2>
+<p><em>Inspired by Operation Flashpoint: Cold War Crisis / Resistance. See D021.</em></p>
+<p>OpenRA’s campaigns are disconnected: each mission is standalone, you exit to menu between them, there’s no flow. Our campaigns are <strong>continuous, branching, and stateful</strong> — a directed graph of missions with persistent state, multiple outcomes per mission, and no mandatory game-over screen.</p>
+<h3 id="core-principles"><a class="header" href="#core-principles">Core Principles</a></h3>
+<ol>
+<li><strong>Campaign is a graph, not a list.</strong> Missions connect via named outcomes, forming branches, convergence points, and optional paths — not a linear sequence.</li>
+<li><strong>Missions have multiple outcomes, not just win/lose.</strong> “Won with bridge intact” and “Won but bridge destroyed” are different outcomes that lead to different next missions.</li>
+<li><strong>Failure doesn’t end the campaign.</strong> A “defeat” outcome is just another edge in the graph. The designer chooses: branch to a fallback mission, retry with fewer resources, or skip ahead with consequences. “No game over” campaigns are possible.</li>
+<li><strong>State persists across missions.</strong> Surviving units, veterancy, captured equipment, story flags, resources — all carry forward based on designer-configured carryover rules.</li>
+<li><strong>Continuous flow.</strong> Briefing → mission → debrief → next mission. No exit to menu between levels (unless the player explicitly quits).</li>
+</ol>
+<h3 id="campaign-definition-yaml"><a class="header" href="#campaign-definition-yaml">Campaign Definition (YAML)</a></h3>
+<pre><code class="language-yaml"># campaigns/allied/campaign.yaml
+campaign:
+  id: allied_campaign
+  title: "Allied Campaign"
+  description: "Drive back the Soviet invasion across Europe"
+  start_mission: allied_01
+
+  # What persists between missions (campaign-wide defaults)
+  persistent_state:
+    unit_roster: true          # surviving units carry forward
+    veterancy: true            # unit experience persists
+    resources: false           # credits reset per mission
+    equipment: true            # captured vehicles/crates persist
+    custom_flags: {}           # arbitrary Lua-writable key-value state
+
+  missions:
+    allied_01:
+      map: missions/allied-01
+      briefing: briefings/allied-01.yaml
+      video: videos/allied-01-briefing.vqa
+      carryover:
+        from_previous: none    # first mission — nothing carries
+      outcomes:
+        victory_bridge_intact:
+          description: "Bridge secured intact"
+          next: allied_02a
+          debrief: briefings/allied-01-debrief-bridge.yaml
+          state_effects:
+            set_flag: { bridge_status: intact }
+        victory_bridge_destroyed:
+          description: "Won but bridge was destroyed"
+          next: allied_02b
+          state_effects:
+            set_flag: { bridge_status: destroyed }
+        defeat:
+          description: "Base overrun"
+          next: allied_01_fallback
+          state_effects:
+            set_flag: { retreat_count: +1 }
+
+    allied_02a:
+      map: missions/allied-02a    # different map — bridge crossing
+      briefing: briefings/allied-02a.yaml
+      carryover:
+        units: surviving          # units from mission 01 appear
+        veterancy: keep           # their experience carries
+        equipment: keep           # captured Soviet tanks too
+      conditions:                 # optional entry conditions
+        require_flag: { bridge_status: intact }
+      outcomes:
+        victory:
+          next: allied_03
+        defeat:
+          next: allied_02_fallback
+
+    allied_02b:
+      map: missions/allied-02b    # different map — river crossing without bridge
+      briefing: briefings/allied-02b.yaml
+      carryover:
+        units: surviving
+        veterancy: keep
+      outcomes:
+        victory:
+          next: allied_03         # branches converge at mission 03
+        defeat:
+          next: allied_02_fallback
+
+    allied_01_fallback:
+      map: missions/allied-01-retreat
+      briefing: briefings/allied-01-retreat.yaml
+      carryover:
+        units: surviving          # fewer units since you lost
+        veterancy: keep
+      outcomes:
+        victory:
+          next: allied_02b        # after retreating, you take the harder path
+          state_effects:
+            set_flag: { morale: low }
+
+    allied_03:
+      map: missions/allied-03
+      # ...branches converge here regardless of path taken
+</code></pre>
+<h3 id="campaign-graph-visualization"><a class="header" href="#campaign-graph-visualization">Campaign Graph Visualization</a></h3>
+<pre><code>                    ┌─────────────┐
+                    │  allied_01  │
+                    └──┬───┬───┬──┘
+          bridge ok ╱   │       ╲ defeat
+                  ╱     │         ╲
+    ┌────────────┐  bridge   ┌─────────────────┐
+    │ allied_02a │  destroyed│ allied_01_       │
+    └─────┬──────┘      │   │ fallback         │
+          │       ┌─────┴───┐└────────┬────────┘
+          │       │allied_02b│        │
+          │       └────┬─────┘        │
+          │            │         joins 02b
+          └─────┬──────┘
+                │ converge
+          ┌─────┴──────┐
+          │  allied_03  │
+          └─────────────┘
+</code></pre>
+<p>This is a <strong>directed acyclic graph</strong> (with optional cycles for retry loops). The engine validates campaign graphs at load time: no orphan nodes, all outcome targets exist, start mission is defined.</p>
+<h3 id="unit-roster--persistence"><a class="header" href="#unit-roster--persistence">Unit Roster &amp; Persistence</a></h3>
+<p>Inspired by Operation Flashpoint: Resistance — surviving units are precious resources that carry forward, creating emotional investment and strategic consequences.</p>
+<p><strong>Unit Roster:</strong></p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Persistent unit state that carries between campaign missions.
+#[derive(Serialize, Deserialize, Clone)]
+pub struct RosterUnit {
+    pub unit_type: UnitTypeId,        // e.g., "medium_tank", "tanya"
+    pub name: Option&lt;String&gt;,         // optional custom name
+    pub veterancy: VeterancyLevel,    // rookie → veteran → elite → heroic
+    pub kills: u32,                   // lifetime kill count
+    pub missions_survived: u32,       // how many missions this unit has lived through
+    pub equipment: Vec&lt;EquipmentId&gt;,  // OFP:R-style captured/found equipment
+    pub custom_state: HashMap&lt;String, Value&gt;, // mod-extensible per-unit state
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Carryover modes</strong> (per campaign transition):</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Mode</th><th>Behavior</th></tr>
+</thead>
+<tbody>
+<tr><td><code>none</code></td><td>Clean slate — the next mission provides its own units</td></tr>
+<tr><td><code>surviving</code></td><td>All player units alive at mission end join the roster</td></tr>
+<tr><td><code>extracted</code></td><td>Only units inside a designated extraction zone carry over (OFP-style “get to the evac”)</td></tr>
+<tr><td><code>selected</code></td><td>Lua script explicitly picks which units carry over</td></tr>
+<tr><td><code>custom</code></td><td>Full Lua control — script reads unit list, decides what persists</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Veterancy across missions:</strong></p>
+<ul>
+<li>Units gain experience from kills and surviving missions</li>
+<li>A veteran tank from mission 1 is still veteran in mission 5</li>
+<li>Losing a veteran unit hurts — they’re irreplaceable until you earn new ones</li>
+<li>Veterancy grants stat bonuses (configurable in YAML rules, per balance preset)</li>
+</ul>
+<p><strong>Equipment persistence (OFP: Resistance model):</strong></p>
+<ul>
+<li>Captured enemy vehicles at mission end go into the equipment pool</li>
+<li>Found supply crates add to available equipment</li>
+<li>Next mission’s starting loadout can draw from the equipment pool</li>
+<li>Modders can define custom persistent items</li>
+</ul>
+<h3 id="campaign-state"><a class="header" href="#campaign-state">Campaign State</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Full campaign progress — serializable for save games.
+#[derive(Serialize, Deserialize, Clone)]
+pub struct CampaignState {
+    pub campaign_id: CampaignId,
+    pub current_mission: MissionId,
+    pub completed_missions: Vec&lt;CompletedMission&gt;,
+    pub unit_roster: Vec&lt;RosterUnit&gt;,
+    pub equipment_pool: Vec&lt;EquipmentId&gt;,
+    pub resources: i64,               // persistent credits (if enabled)
+    pub flags: HashMap&lt;String, Value&gt;, // story flags set by Lua
+    pub stats: CampaignStats,         // cumulative performance
+    pub path_taken: Vec&lt;MissionId&gt;,   // breadcrumb trail for replay/debrief
+}
+
+pub struct CompletedMission {
+    pub mission_id: MissionId,
+    pub outcome: String,              // the named outcome key
+    pub time_taken: Duration,
+    pub units_lost: u32,
+    pub units_gained: u32,
+    pub score: i64,
+}
+<span class="boring">}</span></code></pre>
+<p>Campaign state is fully serializable (invariant #10 — snapshottable). Save games capture the entire campaign progress. Replays can replay an entire campaign run, not just individual missions.</p>
+<h3 id="lua-campaign-api"><a class="header" href="#lua-campaign-api">Lua Campaign API</a></h3>
+<p>Mission scripts interact with campaign state through a sandboxed API:</p>
+<pre><code class="language-lua">-- === Reading campaign state ===
+
+-- Get the unit roster (surviving units from previous missions)
+local roster = Campaign.get_roster()
+for _, unit in ipairs(roster) do
+    -- Spawn each surviving unit at a designated entry point
+    local spawned = SpawnUnit(unit.type, entry_point)
+    spawned:set_veterancy(unit.veterancy)
+    spawned:set_name(unit.name)
+end
+
+-- Read story flags set by previous missions
+if Campaign.get_flag("bridge_status") == "intact" then
+    -- Bridge exists on this map — open the crossing
+    bridge_actor:set_state("intact")
+else
+    -- Bridge was destroyed — it's rubble
+    bridge_actor:set_state("destroyed")
+end
+
+-- Check cumulative stats
+if Campaign.get_stat("total_units_lost") &gt; 50 then
+    -- Player has been losing lots of units — offer reinforcements
+    trigger_reinforcements()
+end
+
+-- === Writing campaign state ===
+
+-- Signal mission completion with a named outcome
+function OnObjectiveComplete()
+    if bridge:is_alive() then
+        Campaign.complete("victory_bridge_intact")
+    else
+        Campaign.complete("victory_bridge_destroyed")
+    end
+end
+
+-- Set custom flags for future missions to read
+Campaign.set_flag("captured_radar", true)
+Campaign.set_flag("enemy_morale", "broken")
+
+-- Update roster: mark which units survived
+-- (automatic if carryover mode is "surviving" — manual if "selected")
+function OnMissionEnd()
+    local survivors = GetPlayerUnits():alive()
+    for _, unit in ipairs(survivors) do
+        Campaign.roster_add(unit)
+    end
+end
+
+-- Add captured equipment to persistent pool
+function OnEnemyVehicleCaptured(vehicle)
+    Campaign.equipment_add(vehicle.type)
+end
+
+-- Failure doesn't mean game over — it's just another outcome
+function OnPlayerBaseDestroyed()
+    Campaign.complete("defeat")  -- campaign graph decides what happens next
+end
+</code></pre>
+<h3 id="adaptive-difficulty-via-campaign-state"><a class="header" href="#adaptive-difficulty-via-campaign-state">Adaptive Difficulty via Campaign State</a></h3>
+<p>Campaign state enables dynamic difficulty without an explicit slider:</p>
+<pre><code class="language-yaml"># In a mission's carryover config:
+adaptive:
+  # If player lost the previous mission, give them extra resources
+  on_previous_defeat:
+    bonus_resources: 2000
+    bonus_units: [medium_tank, medium_tank, rifle_infantry, rifle_infantry]
+  # If player blitzed the previous mission, make this one harder
+  on_previous_fast_victory:    # completed in &lt; 50% of par time
+    extra_enemy_waves: 1
+    enemy_veterancy_boost: 1
+  # Scale to cumulative performance
+  scaling:
+    low_roster:                # &lt; 5 surviving units
+      reinforcement_schedule: accelerated
+    high_roster:               # &gt; 20 surviving units
+      enemy_count_multiplier: 1.3
+</code></pre>
+<p>This is not AI-adaptive difficulty (that’s D016/<code>ra-llm</code>). This is <strong>designer-authored conditional logic</strong> expressed in YAML — the campaign reacts to the player’s cumulative performance without any LLM involvement.</p>
+<h3 id="llm-campaign-generation"><a class="header" href="#llm-campaign-generation">LLM Campaign Generation</a></h3>
+<p>The LLM (<code>ra-llm</code>) can generate entire campaign graphs, not just individual missions:</p>
+<pre><code>User: "Create a 5-mission Soviet campaign where you invade Alaska.
+       The player should be able to lose a mission and keep going
+       with consequences. Units should carry over between missions."
+
+LLM generates:
+  → campaign.yaml (graph with 5+ nodes, branching on outcomes)
+  → 5-7 mission files (main path + fallback branches)
+  → Lua scripts with Campaign API calls
+  → briefing text for each mission
+  → carryover rules per transition
+</code></pre>
+<p>The template/scene system makes this tractable — the LLM composes from known building blocks rather than generating raw code. Campaign graphs are validated at load time (no orphan nodes, all outcomes have targets).</p>
 <h3 id="configurable-workshop-server"><a class="header" href="#configurable-workshop-server">Configurable Workshop Server</a></h3>
 <p>The client connects to one workshop server at a time, configurable in settings. Players can point to the official server, a community server, or a local directory.</p>
 <pre><code class="language-yaml"># settings.yaml
@@ -1950,6 +2305,146 @@ pub struct AiResourceMeta {
     pub composition_hints: Option&lt;String&gt;, // how this combines with other resources
 }
 <span class="boring">}</span></code></pre>
+<h2 id="mod-sdk--developer-experience"><a class="header" href="#mod-sdk--developer-experience">Mod SDK &amp; Developer Experience</a></h2>
+<p><em>Inspired by studying the <a href="https://github.com/OpenRA/OpenRAModSDK">OpenRA Mod SDK</a> — see D020.</em></p>
+<h3 id="lessons-from-the-openra-mod-sdk"><a class="header" href="#lessons-from-the-openra-mod-sdk">Lessons from the OpenRA Mod SDK</a></h3>
+<p>The OpenRA Mod SDK is a template repository that modders fork. It includes:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>OpenRA SDK Feature</th><th>What’s Good</th><th>Our Improvement</th></tr>
+</thead>
+<tbody>
+<tr><td>Fork-the-repo template</td><td>Zero-config starting point</td><td><code>cargo-generate</code> template — same UX, better tooling</td></tr>
+<tr><td><code>mod.config</code> (engine version pin)</td><td>Reproducible builds</td><td><code>mod.yaml</code> manifest with typed schema + semver</td></tr>
+<tr><td><code>fetch-engine.sh</code> (auto-download engine)</td><td>Modders never touch engine source</td><td>Engine ships as a binary crate, not compiled from source</td></tr>
+<tr><td><code>Makefile</code> / <code>make.cmd</code></td><td>Cross-platform build</td><td><code>ic</code> CLI tool — Rust binary, works everywhere</td></tr>
+<tr><td><code>packaging/</code> (Win/Mac/Linux installers)</td><td>Full distribution pipeline</td><td>Workshop publish + <code>cargo-dist</code> for standalone</td></tr>
+<tr><td><code>utility.sh --check-yaml</code></td><td>Catches YAML errors</td><td><code>ic mod check</code> — validates YAML, Lua syntax, WASM integrity</td></tr>
+<tr><td><code>launch-dedicated.sh</code></td><td>Dedicated server for mods</td><td><code>ic mod server</code> — first-class CLI command</td></tr>
+<tr><td><code>mod.yaml</code> manifest</td><td>Single entry point for mod composition</td><td>Real YAML manifest with typed <code>serde</code> deserialization</td></tr>
+<tr><td>Standardized directory layout</td><td>Convention-based — chrome/, rules/, maps/</td><td>Adapted for our three-tier model</td></tr>
+<tr><td><code>.vscode/</code> included</td><td>IDE support out of the box</td><td>Full VS Code extension with YAML schema + Lua LSP</td></tr>
+<tr><td>C# DLL for custom traits</td><td><strong>Pain point:</strong> requires .NET toolchain, IDE, compilation</td><td>Our YAML/Lua/WASM tiers eliminate this entirely</td></tr>
+<tr><td>GPL license on mod code</td><td><strong>Pain point:</strong> all mod code must be GPL-compatible</td><td>WASM sandbox + permissive engine license = modder’s choice</td></tr>
+<tr><td>MiniYAML format</td><td><strong>Pain point:</strong> no tooling, no validation</td><td>Real YAML with JSON Schema, serde, linting</td></tr>
+<tr><td>No workshop/distribution</td><td><strong>Pain point:</strong> manual file sharing, forum posts</td><td>Built-in workshop with <code>ic mod publish</code></td></tr>
+<tr><td>No hot-reload</td><td><strong>Pain point:</strong> recompile engine+mod for every change</td><td>Lua + YAML hot-reload during development</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="the-ic-cli-tool"><a class="header" href="#the-ic-cli-tool">The <code>ic</code> CLI Tool</a></h3>
+<p>A single Rust binary that replaces OpenRA’s grab-bag of shell scripts:</p>
+<pre><code>ic mod init [template]     # scaffold a new mod from a template
+ic mod check               # validate YAML rules, Lua syntax, WASM module integrity
+ic mod test                # run mod in headless test harness (smoke test)
+ic mod run                 # launch game with this mod loaded
+ic mod server              # launch dedicated server for this mod
+ic mod package             # build distributable packages (workshop or standalone)
+ic mod publish             # publish to workshop
+ic mod update-engine       # update engine version in mod.yaml
+ic mod lint                # style/convention checks + ai: metadata completeness
+ic mod watch               # hot-reload mode: watches files, reloads YAML/Lua on change
+</code></pre>
+<p><strong>Why a CLI, not just scripts:</strong></p>
+<ul>
+<li>Single binary — no Python, .NET, or shell dependencies</li>
+<li>Cross-platform (Windows, macOS, Linux) from one codebase</li>
+<li>Rich error messages with fix suggestions</li>
+<li>Integrates with the workshop API</li>
+<li>Can be embedded in CI/CD pipelines</li>
+</ul>
+<h3 id="mod-manifest-modyaml"><a class="header" href="#mod-manifest-modyaml">Mod Manifest (<code>mod.yaml</code>)</a></h3>
+<p>Every mod has a <code>mod.yaml</code> at its root — the single source of truth for mod identity and composition. Inspired by OpenRA’s <code>mod.yaml</code> but using real YAML with typed deserialization:</p>
+<pre><code class="language-yaml"># mod.yaml
+mod:
+  id: my-total-conversion
+  title: "Red Apocalypse"
+  version: "1.2.0"
+  authors: ["ModderName"]
+  description: "A total conversion set in an alternate timeline"
+  website: "https://example.com/red-apocalypse"
+  license: "CC-BY-SA-4.0"            # modder's choice — no GPL requirement
+
+engine:
+  version: "^0.3.0"                  # semver — compatible with 0.3.x
+  game_module: "ra1"                 # which GameModule this mod targets
+
+assets:
+  rules: ["rules/**/*.yaml"]
+  maps: ["maps/"]
+  missions: ["missions/"]
+  scripts: ["scripts/**/*.lua"]
+  wasm_modules: ["wasm/*.wasm"]
+  media: ["media/"]
+  chrome: ["chrome/**/*.yaml"]
+  sequences: ["sequences/**/*.yaml"]
+
+dependencies:                        # other mods/workshop items required
+  - id: "community-hd-sprites"
+    version: "^2.0"
+    source: workshop
+
+balance_preset: classic              # default balance preset for this mod
+
+ai:
+  summary: "Alternate-timeline total conversion with new factions and units"
+  gameplay_tags: [total_conversion, alternate_history, new_factions]
+</code></pre>
+<h3 id="standardized-mod-directory-layout"><a class="header" href="#standardized-mod-directory-layout">Standardized Mod Directory Layout</a></h3>
+<pre><code>my-mod/
+├── mod.yaml                  # manifest (required)
+├── rules/                    # Tier 1: YAML data
+│   ├── units/
+│   │   ├── infantry.yaml
+│   │   └── vehicles.yaml
+│   ├── structures/
+│   ├── weapons/
+│   ├── terrain/
+│   └── presets/              # balance preset overrides
+├── maps/                     # map files (.oramap or native)
+├── missions/                 # campaign missions
+│   ├── allied-01.yaml
+│   └── allied-01.lua
+├── scripts/                  # Tier 2: Lua scripts
+│   ├── abilities/
+│   └── triggers/
+├── wasm/                     # Tier 3: WASM modules
+│   └── custom_mechanics.wasm
+├── media/                    # videos, cutscenes
+├── chrome/                   # UI layout definitions
+├── sequences/                # sprite sequence definitions
+├── cursors/                  # custom cursor definitions
+├── audio/                    # music, SFX, voice lines
+├── templates/                # Tera mission/scene templates
+└── README.md                 # human-readable mod description
+</code></pre>
+<h3 id="mod-templates-via-cargo-generate"><a class="header" href="#mod-templates-via-cargo-generate">Mod Templates (via <code>cargo-generate</code>)</a></h3>
+<p><code>ic mod init</code> uses <code>cargo-generate</code>-style templates. Built-in templates:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Template</th><th>Creates</th><th>For</th></tr>
+</thead>
+<tbody>
+<tr><td><code>data-mod</code></td><td>mod.yaml + rules/ + empty maps/</td><td>Simple balance/cosmetic mods (Tier 1 only)</td></tr>
+<tr><td><code>scripted-mod</code></td><td>Above + scripts/ + missions/</td><td>Mission packs, custom game modes (Tier 1+2)</td></tr>
+<tr><td><code>total-conversion</code></td><td>Full directory layout including wasm/</td><td>Total conversions (all tiers)</td></tr>
+<tr><td><code>map-pack</code></td><td>mod.yaml + maps/</td><td>Map collections</td></tr>
+<tr><td><code>asset-pack</code></td><td>mod.yaml + media/ + sequences/</td><td>Sprite/sound/video packs</td></tr>
+</tbody>
+</table>
+</div>
+<p>Community can publish custom templates to the workshop.</p>
+<h3 id="development-workflow"><a class="header" href="#development-workflow">Development Workflow</a></h3>
+<pre><code>1. ic mod init scripted-mod          # scaffold
+2. Edit YAML rules, write Lua scripts
+3. ic mod watch                      # hot-reload mode
+4. ic mod check                      # validate everything
+5. ic mod test                       # headless smoke test
+6. ic mod publish                    # push to workshop
+</code></pre>
+<p>Compare to OpenRA’s workflow: install .NET SDK → fork SDK repo → edit MiniYAML → write C# DLL → <code>make</code> → <code>launch-game.sh</code> → manually package → upload to forum.</p>
 <h2 id="ai-readable-resource-metadata"><a class="header" href="#ai-readable-resource-metadata">AI-Readable Resource Metadata</a></h2>
 <p>Every game resource — units, weapons, structures, maps, mods, templates — carries structured metadata designed for consumption by LLMs and AI systems. This is not documentation for humans (that’s <code>display.name</code> and README files). This is <strong>machine-readable semantic context</strong> that enables AI to reason about game content.</p>
 <h3 id="why-this-matters"><a class="header" href="#why-this-matters">Why This Matters</a></h3>
@@ -2406,6 +2901,144 @@ impl GameLobby {
 }
 <span class="boring">}</span></code></pre>
 <p><strong>Key:</strong> Check version during lobby join, not after game starts. The relay server and tracking server listings both include <code>VersionInfo</code> so incompatible games are filtered from the browser entirely.</p>
+<h2 id="vulnerability-11-speed-hack--clock-manipulation"><a class="header" href="#vulnerability-11-speed-hack--clock-manipulation">Vulnerability 11: Speed Hack / Clock Manipulation</a></h2>
+<h3 id="the-problem-10"><a class="header" href="#the-problem-10">The Problem</a></h3>
+<p>A cheating client runs the local simulation faster than real time—either by manipulating the system clock or by feeding artificial timing into the game loop. In a pure P2P lockstep model, every client agrees on a tick cadence, so a faster client could potentially submit orders slightly sooner, giving a micro-advantage in reaction time.</p>
+<h3 id="mitigation-relay-server-owns-the-clock"><a class="header" href="#mitigation-relay-server-owns-the-clock">Mitigation: Relay Server Owns the Clock</a></h3>
+<p>In <code>RelayLockstepNetwork</code>, the relay server is the sole time authority. It advances the game by broadcasting canonical tick boundaries. The client’s local clock is irrelevant—a client that “runs faster” just finishes processing sooner and waits for the next server tick. Orders submitted before the tick window opens are discarded.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>impl RelayServer {
+    fn tick_loop(&amp;mut self) {
+        loop {
+            let tick_start = Instant::now();
+            let tick_end = tick_start + self.tick_interval;
+
+            // Collect orders only within the valid window
+            let orders = self.collect_orders_until(tick_end);
+
+            // Orders with timestamps outside the current tick window are rejected
+            for order in &amp;orders {
+                if order.timestamp &lt; self.current_tick_start
+                    || order.timestamp &gt; tick_end
+                {
+                    self.flag_suspicious(order.player, "out-of-window order");
+                    continue;
+                }
+            }
+
+            self.broadcast_tick_orders(self.current_tick, &amp;orders);
+            self.current_tick += 1;
+            self.current_tick_start = tick_end;
+        }
+    }
+}
+<span class="boring">}</span></code></pre>
+<p><strong>For pure P2P (no relay):</strong> Speed hacks are harder to exploit because all clients must synchronize at each tick barrier — a client that runs faster simply idles. However, a desynced clock can cause subtle timing issues. This is another reason relay server is the recommended default for competitive play.</p>
+<h2 id="vulnerability-12-automation--scripting-botting"><a class="header" href="#vulnerability-12-automation--scripting-botting">Vulnerability 12: Automation / Scripting (Botting)</a></h2>
+<h3 id="the-problem-11"><a class="header" href="#the-problem-11">The Problem</a></h3>
+<p>External tools (macros, overlays, input injectors) automate micro-management with superhuman precision: perfect unit splitting, instant reaction to enemy attacks, pixel-perfect targeting at 10,000+ APM. This is indistinguishable from a skilled player at a protocol level — the client sends valid orders at valid times.</p>
+<h3 id="mitigation-behavioral-analysis-relay-side"><a class="header" href="#mitigation-behavioral-analysis-relay-side">Mitigation: Behavioral Analysis (Relay-Side)</a></h3>
+<p>The relay server observes order patterns without needing access to game state:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct PlayerBehaviorProfile {
+    pub orders_per_tick: RingBuffer&lt;u32&gt;,          // rolling APM
+    pub reaction_times: RingBuffer&lt;Duration&gt;,       // time from event to order
+    pub order_precision: f64,                       // how tightly clustered targeting is
+    pub sustained_apm_peak: Duration,               // how long max APM sustained
+    pub pattern_entropy: f64,                        // randomness of input timing
+}
+
+impl RelayServer {
+    fn analyze_behavior(&amp;self, player: PlayerId) -&gt; SuspicionScore {
+        let profile = &amp;self.profiles[player];
+        let mut score = 0.0;
+
+        // Sustained inhuman APM (&gt;600 for extended periods)
+        if profile.sustained_apm_above(600, Duration::from_secs(30)) {
+            score += 0.4;
+        }
+
+        // Perfectly periodic input (bots often have metronomic timing)
+        if profile.pattern_entropy &lt; HUMAN_ENTROPY_FLOOR {
+            score += 0.3;
+        }
+
+        // Reaction times consistently under human minimum (~150ms)
+        if profile.avg_reaction_time() &lt; Duration::from_millis(100) {
+            score += 0.3;
+        }
+
+        SuspicionScore(score)
+    }
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Key design choices:</strong></p>
+<ul>
+<li><strong>Detection, not prevention.</strong> We can’t conclusively prove automation from order patterns alone. The system flags suspicion for review, not automatic bans.</li>
+<li><strong>Relay-side only.</strong> Analysis happens on the server — cheating clients can’t detect or adapt to the analysis.</li>
+<li><strong>Replay-based post-hoc analysis.</strong> Tournament replays can be analyzed after the fact with more sophisticated models (timing distribution analysis, reaction-to-fog-reveal correlation).</li>
+<li><strong>Community reporting.</strong> Player reports feed into suspicion scoring — a player flagged by both the system and opponents warrants review.</li>
+</ul>
+<p><strong>What we deliberately DON’T do:</strong></p>
+<ul>
+<li>No kernel-level anti-cheat (Vanguard, EAC-style). We’re an open-source game — intrusive anti-cheat contradicts our values and doesn’t work on Linux/WASM anyway.</li>
+<li>No input rate limiting. Capping APM punishes legitimate high-skill players. Detection, not restriction.</li>
+</ul>
+<h2 id="vulnerability-13-match-result-fraud"><a class="header" href="#vulnerability-13-match-result-fraud">Vulnerability 13: Match Result Fraud</a></h2>
+<h3 id="the-problem-12"><a class="header" href="#the-problem-12">The Problem</a></h3>
+<p>In competitive/ranked play, match results determine ratings. A dishonest client could claim a false result, or colluding players could submit fake results to manipulate rankings.</p>
+<h3 id="mitigation-relay-certified-match-results"><a class="header" href="#mitigation-relay-certified-match-results">Mitigation: Relay-Certified Match Results</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct CertifiedMatchResult {
+    pub match_id: MatchId,
+    pub players: Vec&lt;PlayerId&gt;,
+    pub result: MatchOutcome,          // winner(s), losers, draw, disconnect
+    pub final_tick: u64,
+    pub duration: Duration,
+    pub final_state_hash: u64,         // hash of sim state at game end
+    pub replay_hash: [u8; 32],         // SHA-256 of the full replay data
+    pub server_signature: Ed25519Signature, // relay server signs the result
+}
+
+impl RankingService {
+    fn submit_result(&amp;mut self, result: &amp;CertifiedMatchResult) -&gt; Result&lt;()&gt; {
+        // Only accept results signed by a trusted relay server
+        if !self.verify_relay_signature(result) {
+            return Err(UntrustedSource);
+        }
+        // Cross-check: if any player also submitted a replay, verify hashes match
+        self.update_ratings(result);
+        Ok(())
+    }
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Key:</strong> Only relay-server-signed results update rankings. Direct P2P games can be played for fun but don’t affect ranked standings.</p>
+<h2 id="competitive-integrity-summary"><a class="header" href="#competitive-integrity-summary">Competitive Integrity Summary</a></h2>
+<p>Iron Curtain’s anti-cheat is <strong>architectural, not bolted on.</strong> Every defense emerges from design decisions made for other reasons:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Threat</th><th>Defense</th><th>Source</th></tr>
+</thead>
+<tbody>
+<tr><td>Maphack</td><td>Fog-authoritative server</td><td>Network model architecture</td></tr>
+<tr><td>Order injection</td><td>Deterministic validation in sim</td><td>Sim purity (invariant #1)</td></tr>
+<tr><td>Lag switch</td><td>Relay server owns the clock</td><td>Relay architecture (D007)</td></tr>
+<tr><td>Speed hack</td><td>Relay tick authority</td><td>Same as above</td></tr>
+<tr><td>Replay tampering</td><td>Ed25519 signed hash chain</td><td>Replay system design</td></tr>
+<tr><td>Automation</td><td>Behavioral analysis + community reports</td><td>Relay-side observability</td></tr>
+<tr><td>Result fraud</td><td>Relay-certified match results</td><td>Relay architecture</td></tr>
+<tr><td>Version mismatch</td><td>Protocol handshake</td><td>Lobby system</td></tr>
+<tr><td>WASM mod abuse</td><td>Capability-based sandbox</td><td>Modding architecture (D005)</td></tr>
+<tr><td>Desync exploit</td><td>Server-side only analysis</td><td>Security by design</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>No kernel-level anti-cheat.</strong> Open-source, cross-platform, no ring-0 drivers. We accept that lockstep RTS will always have a maphack risk in P2P/relay modes — the fog-authoritative server is the real answer for high-stakes play.</p>
+<p><strong>Performance as anti-cheat.</strong> Our tick-time targets (&lt; 10ms on 8-core desktop) mean the relay server can run games at full speed with headroom for behavioral analysis. Stuttery servers with 40ms ticks can’t afford real-time order analysis — we can.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="07--cross-engine-compatibility"><a class="header" href="#07--cross-engine-compatibility">07 — Cross-Engine Compatibility</a></h1>
 <h2 id="the-three-layers-of-compatibility"><a class="header" href="#the-three-layers-of-compatibility">The Three Layers of Compatibility</a></h2>
@@ -2658,7 +3291,12 @@ let game = GameLoop::new(sim, renderer, adapted);
 <li>WASM mod runtime (basic)</li>
 <li>Basic skirmish AI: harvest, build, attack patterns</li>
 <li>Campaign mission loading (OpenRA mission format)</li>
-<li><strong>Campaign framework:</strong> automatic mission progression, briefing screens between missions, mission select screen, campaign state persistence (completed missions, score, difficulty)</li>
+<li><strong>Branching campaign graph engine (D021):</strong> campaigns as directed graphs of missions with named outcomes, multiple paths, and convergence points</li>
+<li><strong>Persistent campaign state:</strong> unit roster carryover, veterancy across missions, equipment persistence, story flags — serializable for save games</li>
+<li><strong>Lua Campaign API:</strong> <code>Campaign.complete()</code>, <code>Campaign.get_roster()</code>, <code>Campaign.get_flag()</code>, <code>Campaign.set_flag()</code>, etc.</li>
+<li><strong>Continuous campaign flow:</strong> briefing → mission → debrief → next mission (no exit-to-menu between levels)</li>
+<li><strong>Campaign select and mission map UI:</strong> visualize campaign graph, show current position, replay completed missions</li>
+<li><strong>Adaptive difficulty via campaign state:</strong> designer-authored conditional bonuses/penalties based on cumulative performance</li>
 <li><strong>FMV cutscene playback</strong> between missions (original <code>.vqa</code> briefings and victory/defeat sequences)</li>
 <li><strong>Full Allied and Soviet campaigns</strong> for Red Alert, playable start to finish</li>
 </ul>
@@ -2666,17 +3304,23 @@ let game = GameLoop::new(sim, renderer, adapted);
 <ul>
 <li>Lua sandbox with engine bindings</li>
 <li>WASM host API with capability system (see <code>06-SECURITY.md</code>)</li>
-<li>Campaign state machine: briefing → mission → debrief → next mission (no exit-to-menu between levels)</li>
-<li>Mission select UI with map overview and difficulty indicators</li>
+<li>Campaign graph loader + validator: parse YAML campaign definitions, validate graph connectivity (no orphan nodes, all outcome targets exist)</li>
+<li><code>CampaignState</code> serialization: roster, flags, equipment, path taken — full snapshot support</li>
+<li>Unit carryover system: 5 modes (<code>none</code>, <code>surviving</code>, <code>extracted</code>, <code>selected</code>, <code>custom</code>)</li>
+<li>Veterancy persistence across missions</li>
+<li>Mission select UI with campaign graph visualization and difficulty indicators</li>
+<li><strong><code>ic</code> CLI prototype:</strong> <code>ic mod init</code>, <code>ic mod check</code>, <code>ic mod run</code> — early tooling for Lua script development (full SDK in Phase 6)</li>
 </ul>
 <h3 id="exit-criteria-4"><a class="header" href="#exit-criteria-4">Exit Criteria</a></h3>
 <ul>
 <li>Can play through <strong>all</strong> Allied and Soviet campaign missions start to finish</li>
-<li>Automatic progression between missions with briefing screens</li>
+<li>Campaign branches work: different mission outcomes lead to different next missions</li>
+<li>Unit roster persists across missions (surviving units, veterancy, equipment)</li>
+<li>Save/load works mid-campaign with full state preservation</li>
 <li>Skirmish AI provides a basic challenge</li>
 </ul>
 <h2 id="phase-5-multiplayer-months-2026"><a class="header" href="#phase-5-multiplayer-months-2026">Phase 5: Multiplayer (Months 20–26)</a></h2>
-<p><strong>Goal:</strong> Deterministic lockstep multiplayer, but better than OpenRA.</p>
+<p><strong>Goal:</strong> Deterministic lockstep multiplayer with competitive infrastructure. Not just “multiplayer works” — multiplayer that’s worth switching from OpenRA for.</p>
 <h3 id="deliverables-5"><a class="header" href="#deliverables-5">Deliverables</a></h3>
 <ul>
 <li><code>LockstepNetwork</code> implementation (input delay model)</li>
@@ -2685,6 +3329,12 @@ let game = GameLoop::new(sim, renderer, adapted);
 <li>Lobby system, game browser, NAT traversal via relay</li>
 <li>Replay system (already enabled by Phase 2 architecture)</li>
 <li><code>CommunityBridge</code> for shared server browser with OpenRA</li>
+<li><strong>Ranked matchmaking:</strong> Glicko-2 rating system, placement matches, league tiers, 3-month seasons</li>
+<li><strong>Leaderboards:</strong> global, per-faction, per-map — with public profiles and replay links</li>
+<li><strong>Observer/spectator mode:</strong> connect to relay with configurable fog (full/player/none) and broadcast delay</li>
+<li><strong>Tournament mode:</strong> bracket API, relay-certified <code>CertifiedMatchResult</code>, server-side replay archive</li>
+<li><strong>Competitive map pool:</strong> curated per-season, community-nominated</li>
+<li><strong>Anti-cheat:</strong> relay-side behavioral analysis (APM, reaction time, pattern entropy), suspicion scoring, community reports</li>
 </ul>
 <h3 id="key-architecture-work-4"><a class="header" href="#key-architecture-work-4">Key Architecture Work</a></h3>
 <ul>
@@ -2692,12 +3342,18 @@ let game = GameLoop::new(sim, renderer, adapted);
 <li>Relay server anti-lag-switch mechanism</li>
 <li>Signed replay chain</li>
 <li>Order validation in sim (anti-cheat)</li>
+<li>Matchmaking service (lightweight Rust binary, same infra as tracking/relay servers)</li>
+<li><code>CertifiedMatchResult</code> with Ed25519 relay signatures</li>
+<li>Spectator feed: relay forwards tick orders to observers with configurable delay</li>
+<li>Behavioral analysis pipeline on relay server</li>
 </ul>
 <h3 id="exit-criteria-5"><a class="header" href="#exit-criteria-5">Exit Criteria</a></h3>
 <ul>
 <li>Two players can play a full game over the internet</li>
 <li>Desync, if it occurs, is automatically diagnosed to specific tick and entity</li>
 <li>Games appear in shared server browser alongside OpenRA games</li>
+<li>Ranked 1v1 queue functional with ratings, placement, and leaderboard</li>
+<li>Spectator can watch a live game with broadcast delay</li>
 </ul>
 <h2 id="phase-6-modding--ecosystem-months-2632"><a class="header" href="#phase-6-modding--ecosystem-months-2632">Phase 6: Modding &amp; Ecosystem (Months 26–32)</a></h2>
 <p><strong>Goal:</strong> This is where you win long-term.</p>
@@ -2709,6 +3365,10 @@ let game = GameLoop::new(sim, renderer, adapted);
 <li>Asset hot-reloading for mod development</li>
 <li>Mod manager + workshop-style distribution</li>
 <li>Tera templating for YAML generation (nice-to-have)</li>
+<li><strong><code>ic</code> CLI tool (full release):</strong> <code>ic mod init/check/test/run/server/package/publish/watch/lint</code> — complete mod development workflow (D020)</li>
+<li><strong>Mod templates:</strong> <code>data-mod</code>, <code>scripted-mod</code>, <code>total-conversion</code>, <code>map-pack</code>, <code>asset-pack</code> via <code>ic mod init</code></li>
+<li><strong><code>mod.yaml</code> manifest</strong> with typed schema, semver engine version pinning, dependency declarations</li>
+<li><strong>VS Code extension</strong> for mod development: YAML schema validation, Lua LSP, <code>ic</code> integration</li>
 </ul>
 <h3 id="exit-criteria-6"><a class="header" href="#exit-criteria-6">Exit Criteria</a></h3>
 <ul>
@@ -3070,6 +3730,128 @@ Game module extensibility targets: Red Alert, RA2, Tiberian Sun, Tiberian Dawn, 
 <li>Let mods handle it (rejected — too important to bury in the modding system; should be one click in settings)</li>
 </ul>
 <p><strong>Phase:</strong> Phase 2 (balance values extracted during simulation implementation).</p>
+<hr>
+<h3 id="d020--mod-sdk-with-ic-cli-tool"><a class="header" href="#d020--mod-sdk-with-ic-cli-tool">D020 — Mod SDK with <code>ic</code> CLI Tool</a></h3>
+<p><strong>Decision:</strong> Ship a Mod SDK as a <code>cargo-generate</code> template + an <code>ic</code> CLI tool, inspired by (and improving on) the <a href="https://github.com/OpenRA/OpenRAModSDK">OpenRA Mod SDK</a>.</p>
+<p><strong>Context:</strong> The OpenRA Mod SDK is a template repository modders fork. It bundles shell scripts (<code>fetch-engine.sh</code>, <code>launch-game.sh</code>, <code>utility.sh</code>), a <code>Makefile</code>/<code>make.cmd</code> build system, and a <code>packaging/</code> directory with per-platform installer scripts. The approach works — it’s the standard way to create OpenRA mods. But it has significant friction: requires .NET SDK, custom C# DLLs for anything beyond data changes, MiniYAML with no validation tooling, GPL contamination on mod code, and no distribution system beyond manual file sharing.</p>
+<p><strong>What we adapt:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Concept</th><th>OpenRA SDK</th><th>Iron Curtain</th></tr>
+</thead>
+<tbody>
+<tr><td>Starting point</td><td>Fork a template repo</td><td><code>ic mod init [template]</code> via <code>cargo-generate</code></td></tr>
+<tr><td>Engine version pin</td><td><code>ENGINE_VERSION</code> in <code>mod.config</code></td><td><code>engine.version</code> in <code>mod.yaml</code> with semver</td></tr>
+<tr><td>Engine management</td><td><code>fetch-engine.sh</code> downloads + compiles from source</td><td>Engine ships as binary crate, auto-resolved</td></tr>
+<tr><td>Build/run</td><td><code>Makefile</code> + shell scripts (requires Python, .NET)</td><td><code>ic</code> CLI — single Rust binary, zero dependencies</td></tr>
+<tr><td>Mod manifest</td><td><code>mod.yaml</code> in MiniYAML</td><td><code>mod.yaml</code> in real YAML with typed serde schema</td></tr>
+<tr><td>Validation</td><td><code>utility.sh --check-yaml</code></td><td><code>ic mod check</code> — YAML + Lua + WASM validation</td></tr>
+<tr><td>Packaging</td><td><code>packaging/</code> shell scripts → .exe/.app/.AppImage</td><td><code>ic mod package</code> + workshop publish</td></tr>
+<tr><td>Dedicated server</td><td><code>launch-dedicated.sh</code></td><td><code>ic mod server</code></td></tr>
+<tr><td>Directory layout</td><td>Convention-based (chrome/, rules/, maps/, etc.)</td><td>Adapted for three-tier model</td></tr>
+<tr><td>IDE support</td><td><code>.vscode/</code> in repo</td><td>VS Code extension with YAML schema + Lua LSP</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>What we don’t adapt (pain points we solve differently):</strong></p>
+<ul>
+<li>C# DLLs for custom traits → our Lua + WASM tiers are strictly better (no compilation, sandboxed, polyglot)</li>
+<li>GPL license contamination → WASM sandbox means mod code is isolated; engine license doesn’t infect mods</li>
+<li>MiniYAML → real YAML with <code>serde_yaml</code>, JSON Schema, standard linters</li>
+<li>No hot-reload → Lua and YAML hot-reload during <code>ic mod watch</code></li>
+<li>No workshop → built-in workshop with <code>ic mod publish</code></li>
+</ul>
+<p><strong>The <code>ic</code> CLI tool:</strong>
+A single Rust binary replacing OpenRA’s shell scripts + Makefile + Python dependencies:</p>
+<pre><code>ic mod init [template]     # scaffold from template
+ic mod check               # validate all mod content
+ic mod test                # headless smoke test
+ic mod run                 # launch game with mod
+ic mod server              # dedicated server
+ic mod package             # build distributables
+ic mod publish             # workshop upload
+ic mod watch               # hot-reload dev mode
+ic mod lint                # convention + ai: metadata checks
+ic mod update-engine       # bump engine version
+</code></pre>
+<p><strong>Mod templates (built-in):</strong></p>
+<ul>
+<li><code>data-mod</code> — YAML-only balance/cosmetic mods</li>
+<li><code>scripted-mod</code> — missions and custom game modes (YAML + Lua)</li>
+<li><code>total-conversion</code> — full layout with WASM scaffolding</li>
+<li><code>map-pack</code> — map collections</li>
+<li><code>asset-pack</code> — sprites, sounds, video packs</li>
+</ul>
+<p><strong>Rationale:</strong></p>
+<ul>
+<li>OpenRA’s SDK validates the template-project approach — modders want a turnkey starting point</li>
+<li>Engine version pinning is essential — mods break when engine updates; semver solves this cleanly</li>
+<li>A CLI tool is more portable, discoverable, and maintainable than shell scripts + Makefiles</li>
+<li>Workshop integration from the CLI closes the “last mile” — OpenRA modders must manually distribute their work</li>
+<li>The three-tier modding system means most modders never compile anything — <code>ic mod init data-mod</code> gives you a working mod instantly</li>
+</ul>
+<p><strong>Alternatives considered:</strong></p>
+<ul>
+<li>Shell scripts like OpenRA (rejected — cross-platform pain, Python/shell dependencies, fragile)</li>
+<li>Cargo workspace (rejected — mods aren’t Rust crates; YAML/Lua mods have nothing to compile)</li>
+<li>In-engine mod editor only (rejected — power users want filesystem access and version control)</li>
+<li>No SDK, just documentation (rejected — OpenRA proves that a template project dramatically lowers the barrier)</li>
+</ul>
+<p><strong>Phase:</strong> Phase 6 (Modding &amp; Ecosystem). CLI prototype in Phase 4 (for Lua scripting development).</p>
+<hr>
+<h3 id="d021--branching-campaign-system-with-persistent-state"><a class="header" href="#d021--branching-campaign-system-with-persistent-state">D021 — Branching Campaign System with Persistent State</a></h3>
+<p><strong>Decision:</strong> Campaigns are directed graphs of missions with named outcomes, branching paths, persistent unit rosters, and continuous flow — not linear sequences with binary win/lose. Failure doesn’t end the campaign; it branches to a different path. Unit state, equipment, and story flags persist across missions.</p>
+<p><strong>Context:</strong> OpenRA’s campaigns are disconnected — each mission is standalone, you exit to menu after completion, there’s no sense of flow or consequence. The original Red Alert had linear progression with FMV briefings but no branching or state persistence. Games like Operation Flashpoint: Cold War Crisis showed that branching outcomes create dramatically more engaging campaigns, and OFP: Resistance proved that persistent unit rosters (surviving soldiers, captured equipment, accumulated experience) create deep emotional investment.</p>
+<p><strong>Key design points:</strong></p>
+<ol>
+<li>
+<p><strong>Campaign graph:</strong> Missions are nodes in a directed graph. Each mission has named outcomes (not just win/lose). Each outcome maps to a next-mission node, forming branches and convergences. The graph is defined in YAML and validated at load time.</p>
+</li>
+<li>
+<p><strong>Named outcomes:</strong> Lua scripts signal completion with a named key: <code>Campaign.complete("victory_bridge_intact")</code>. The campaign YAML maps each outcome to the next mission. This enables rich branching: “Won cleanly” → easy path, “Won with heavy losses” → harder path, “Failed” → fallback mission.</p>
+</li>
+<li>
+<p><strong>Failure continues the game:</strong> A <code>defeat</code> outcome is just another edge in the graph. The campaign designer decides what happens: retry with fewer resources, branch to a retreating mission, skip ahead with consequences, or even “no game over” campaigns where the story always continues.</p>
+</li>
+<li>
+<p><strong>Persistent unit roster (OFP: Resistance model):</strong></p>
+<ul>
+<li>Surviving units carry forward between missions (configurable per transition)</li>
+<li>Units accumulate veterancy across missions — a veteran tank from mission 1 stays veteran in mission 5</li>
+<li>Dead units are gone permanently — losing veterans hurts</li>
+<li>Captured enemy equipment joins a persistent equipment pool</li>
+<li>Five carryover modes: <code>none</code>, <code>surviving</code>, <code>extracted</code> (only units in evac zone), <code>selected</code> (Lua picks), <code>custom</code> (full Lua control)</li>
+</ul>
+</li>
+<li>
+<p><strong>Story flags:</strong> Arbitrary key-value state writable from Lua, readable in subsequent missions. Enables conditional content: “If the radar was captured in mission 2, it provides intel in mission 4.”</p>
+</li>
+<li>
+<p><strong>Campaign state is serializable:</strong> Fits invariant #10 (snapshottable). Save games capture full campaign progress including roster, flags, and path taken. Replays can replay entire campaign runs.</p>
+</li>
+<li>
+<p><strong>Continuous flow:</strong> Briefing → mission → debrief → next mission. No exit to menu between levels unless the player explicitly quits.</p>
+</li>
+</ol>
+<p><strong>Rationale:</strong></p>
+<ul>
+<li>OpenRA’s disconnected missions are its single biggest single-player UX failure — universally cited in community feedback</li>
+<li>OFP proved persistent rosters create investment: players restart missions to save a veteran soldier</li>
+<li>Branching eliminates the frustration of replaying the same mission on failure — the campaign adapts</li>
+<li>YAML graph definition is accessible to modders (Tier 1) and LLM-generable</li>
+<li>Lua campaign API enables complex state logic while staying sandboxed</li>
+<li>The same system works for hand-crafted campaigns, modded campaigns, and LLM-generated campaigns</li>
+</ul>
+<p><strong>Alternatives considered:</strong></p>
+<ul>
+<li>Linear mission sequence like RA1 (rejected — primitive, no replayability, failure is frustrating)</li>
+<li>Disconnected missions like OpenRA (rejected — the specific problem we’re solving)</li>
+<li>Full open-world (rejected — scope too large, not appropriate for RTS)</li>
+<li>Only branching on win/lose (rejected — named outcomes are trivially more expressive with no added complexity)</li>
+<li>No unit persistence (rejected — OFP: Resistance proves this is the feature that creates campaign investment)</li>
+</ul>
+<p><strong>Phase:</strong> Phase 4 (AI &amp; Single Player). Campaign graph engine and Lua Campaign API are core Phase 4 deliverables.</p>
 <hr>
 <h2 id="pending-decisions"><a class="header" href="#pending-decisions">PENDING DECISIONS</a></h2>
 <div class="table-wrapper">

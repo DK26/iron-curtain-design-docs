@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-ddb12168.js";
+            window.path_to_searchindex_js = "searchindex-cd13978d.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-d8a85e3a.js"></script>
@@ -498,6 +498,128 @@ Game module extensibility targets: Red Alert, RA2, Tiberian Sun, Tiberian Dawn, 
 <li>Let mods handle it (rejected — too important to bury in the modding system; should be one click in settings)</li>
 </ul>
 <p><strong>Phase:</strong> Phase 2 (balance values extracted during simulation implementation).</p>
+<hr>
+<h3 id="d020--mod-sdk-with-ic-cli-tool"><a class="header" href="#d020--mod-sdk-with-ic-cli-tool">D020 — Mod SDK with <code>ic</code> CLI Tool</a></h3>
+<p><strong>Decision:</strong> Ship a Mod SDK as a <code>cargo-generate</code> template + an <code>ic</code> CLI tool, inspired by (and improving on) the <a href="https://github.com/OpenRA/OpenRAModSDK">OpenRA Mod SDK</a>.</p>
+<p><strong>Context:</strong> The OpenRA Mod SDK is a template repository modders fork. It bundles shell scripts (<code>fetch-engine.sh</code>, <code>launch-game.sh</code>, <code>utility.sh</code>), a <code>Makefile</code>/<code>make.cmd</code> build system, and a <code>packaging/</code> directory with per-platform installer scripts. The approach works — it’s the standard way to create OpenRA mods. But it has significant friction: requires .NET SDK, custom C# DLLs for anything beyond data changes, MiniYAML with no validation tooling, GPL contamination on mod code, and no distribution system beyond manual file sharing.</p>
+<p><strong>What we adapt:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Concept</th><th>OpenRA SDK</th><th>Iron Curtain</th></tr>
+</thead>
+<tbody>
+<tr><td>Starting point</td><td>Fork a template repo</td><td><code>ic mod init [template]</code> via <code>cargo-generate</code></td></tr>
+<tr><td>Engine version pin</td><td><code>ENGINE_VERSION</code> in <code>mod.config</code></td><td><code>engine.version</code> in <code>mod.yaml</code> with semver</td></tr>
+<tr><td>Engine management</td><td><code>fetch-engine.sh</code> downloads + compiles from source</td><td>Engine ships as binary crate, auto-resolved</td></tr>
+<tr><td>Build/run</td><td><code>Makefile</code> + shell scripts (requires Python, .NET)</td><td><code>ic</code> CLI — single Rust binary, zero dependencies</td></tr>
+<tr><td>Mod manifest</td><td><code>mod.yaml</code> in MiniYAML</td><td><code>mod.yaml</code> in real YAML with typed serde schema</td></tr>
+<tr><td>Validation</td><td><code>utility.sh --check-yaml</code></td><td><code>ic mod check</code> — YAML + Lua + WASM validation</td></tr>
+<tr><td>Packaging</td><td><code>packaging/</code> shell scripts → .exe/.app/.AppImage</td><td><code>ic mod package</code> + workshop publish</td></tr>
+<tr><td>Dedicated server</td><td><code>launch-dedicated.sh</code></td><td><code>ic mod server</code></td></tr>
+<tr><td>Directory layout</td><td>Convention-based (chrome/, rules/, maps/, etc.)</td><td>Adapted for three-tier model</td></tr>
+<tr><td>IDE support</td><td><code>.vscode/</code> in repo</td><td>VS Code extension with YAML schema + Lua LSP</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>What we don’t adapt (pain points we solve differently):</strong></p>
+<ul>
+<li>C# DLLs for custom traits → our Lua + WASM tiers are strictly better (no compilation, sandboxed, polyglot)</li>
+<li>GPL license contamination → WASM sandbox means mod code is isolated; engine license doesn’t infect mods</li>
+<li>MiniYAML → real YAML with <code>serde_yaml</code>, JSON Schema, standard linters</li>
+<li>No hot-reload → Lua and YAML hot-reload during <code>ic mod watch</code></li>
+<li>No workshop → built-in workshop with <code>ic mod publish</code></li>
+</ul>
+<p><strong>The <code>ic</code> CLI tool:</strong>
+A single Rust binary replacing OpenRA’s shell scripts + Makefile + Python dependencies:</p>
+<pre><code>ic mod init [template]     # scaffold from template
+ic mod check               # validate all mod content
+ic mod test                # headless smoke test
+ic mod run                 # launch game with mod
+ic mod server              # dedicated server
+ic mod package             # build distributables
+ic mod publish             # workshop upload
+ic mod watch               # hot-reload dev mode
+ic mod lint                # convention + ai: metadata checks
+ic mod update-engine       # bump engine version
+</code></pre>
+<p><strong>Mod templates (built-in):</strong></p>
+<ul>
+<li><code>data-mod</code> — YAML-only balance/cosmetic mods</li>
+<li><code>scripted-mod</code> — missions and custom game modes (YAML + Lua)</li>
+<li><code>total-conversion</code> — full layout with WASM scaffolding</li>
+<li><code>map-pack</code> — map collections</li>
+<li><code>asset-pack</code> — sprites, sounds, video packs</li>
+</ul>
+<p><strong>Rationale:</strong></p>
+<ul>
+<li>OpenRA’s SDK validates the template-project approach — modders want a turnkey starting point</li>
+<li>Engine version pinning is essential — mods break when engine updates; semver solves this cleanly</li>
+<li>A CLI tool is more portable, discoverable, and maintainable than shell scripts + Makefiles</li>
+<li>Workshop integration from the CLI closes the “last mile” — OpenRA modders must manually distribute their work</li>
+<li>The three-tier modding system means most modders never compile anything — <code>ic mod init data-mod</code> gives you a working mod instantly</li>
+</ul>
+<p><strong>Alternatives considered:</strong></p>
+<ul>
+<li>Shell scripts like OpenRA (rejected — cross-platform pain, Python/shell dependencies, fragile)</li>
+<li>Cargo workspace (rejected — mods aren’t Rust crates; YAML/Lua mods have nothing to compile)</li>
+<li>In-engine mod editor only (rejected — power users want filesystem access and version control)</li>
+<li>No SDK, just documentation (rejected — OpenRA proves that a template project dramatically lowers the barrier)</li>
+</ul>
+<p><strong>Phase:</strong> Phase 6 (Modding &amp; Ecosystem). CLI prototype in Phase 4 (for Lua scripting development).</p>
+<hr>
+<h3 id="d021--branching-campaign-system-with-persistent-state"><a class="header" href="#d021--branching-campaign-system-with-persistent-state">D021 — Branching Campaign System with Persistent State</a></h3>
+<p><strong>Decision:</strong> Campaigns are directed graphs of missions with named outcomes, branching paths, persistent unit rosters, and continuous flow — not linear sequences with binary win/lose. Failure doesn’t end the campaign; it branches to a different path. Unit state, equipment, and story flags persist across missions.</p>
+<p><strong>Context:</strong> OpenRA’s campaigns are disconnected — each mission is standalone, you exit to menu after completion, there’s no sense of flow or consequence. The original Red Alert had linear progression with FMV briefings but no branching or state persistence. Games like Operation Flashpoint: Cold War Crisis showed that branching outcomes create dramatically more engaging campaigns, and OFP: Resistance proved that persistent unit rosters (surviving soldiers, captured equipment, accumulated experience) create deep emotional investment.</p>
+<p><strong>Key design points:</strong></p>
+<ol>
+<li>
+<p><strong>Campaign graph:</strong> Missions are nodes in a directed graph. Each mission has named outcomes (not just win/lose). Each outcome maps to a next-mission node, forming branches and convergences. The graph is defined in YAML and validated at load time.</p>
+</li>
+<li>
+<p><strong>Named outcomes:</strong> Lua scripts signal completion with a named key: <code>Campaign.complete("victory_bridge_intact")</code>. The campaign YAML maps each outcome to the next mission. This enables rich branching: “Won cleanly” → easy path, “Won with heavy losses” → harder path, “Failed” → fallback mission.</p>
+</li>
+<li>
+<p><strong>Failure continues the game:</strong> A <code>defeat</code> outcome is just another edge in the graph. The campaign designer decides what happens: retry with fewer resources, branch to a retreating mission, skip ahead with consequences, or even “no game over” campaigns where the story always continues.</p>
+</li>
+<li>
+<p><strong>Persistent unit roster (OFP: Resistance model):</strong></p>
+<ul>
+<li>Surviving units carry forward between missions (configurable per transition)</li>
+<li>Units accumulate veterancy across missions — a veteran tank from mission 1 stays veteran in mission 5</li>
+<li>Dead units are gone permanently — losing veterans hurts</li>
+<li>Captured enemy equipment joins a persistent equipment pool</li>
+<li>Five carryover modes: <code>none</code>, <code>surviving</code>, <code>extracted</code> (only units in evac zone), <code>selected</code> (Lua picks), <code>custom</code> (full Lua control)</li>
+</ul>
+</li>
+<li>
+<p><strong>Story flags:</strong> Arbitrary key-value state writable from Lua, readable in subsequent missions. Enables conditional content: “If the radar was captured in mission 2, it provides intel in mission 4.”</p>
+</li>
+<li>
+<p><strong>Campaign state is serializable:</strong> Fits invariant #10 (snapshottable). Save games capture full campaign progress including roster, flags, and path taken. Replays can replay entire campaign runs.</p>
+</li>
+<li>
+<p><strong>Continuous flow:</strong> Briefing → mission → debrief → next mission. No exit to menu between levels unless the player explicitly quits.</p>
+</li>
+</ol>
+<p><strong>Rationale:</strong></p>
+<ul>
+<li>OpenRA’s disconnected missions are its single biggest single-player UX failure — universally cited in community feedback</li>
+<li>OFP proved persistent rosters create investment: players restart missions to save a veteran soldier</li>
+<li>Branching eliminates the frustration of replaying the same mission on failure — the campaign adapts</li>
+<li>YAML graph definition is accessible to modders (Tier 1) and LLM-generable</li>
+<li>Lua campaign API enables complex state logic while staying sandboxed</li>
+<li>The same system works for hand-crafted campaigns, modded campaigns, and LLM-generated campaigns</li>
+</ul>
+<p><strong>Alternatives considered:</strong></p>
+<ul>
+<li>Linear mission sequence like RA1 (rejected — primitive, no replayability, failure is frustrating)</li>
+<li>Disconnected missions like OpenRA (rejected — the specific problem we’re solving)</li>
+<li>Full open-world (rejected — scope too large, not appropriate for RTS)</li>
+<li>Only branching on win/lose (rejected — named outcomes are trivially more expressive with no added complexity)</li>
+<li>No unit persistence (rejected — OFP: Resistance proves this is the feature that creates campaign investment)</li>
+</ul>
+<p><strong>Phase:</strong> Phase 4 (AI &amp; Single Player). Campaign graph engine and Lua Campaign API are core Phase 4 deliverables.</p>
 <hr>
 <h2 id="pending-decisions"><a class="header" href="#pending-decisions">PENDING DECISIONS</a></h2>
 <div class="table-wrapper">
