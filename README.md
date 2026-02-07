@@ -11,6 +11,16 @@ Iron Curtain is an open-source RTS engine that brings Command & Conquer: Red Ale
 
 > ⚠️ Design in progress...
 
+## The Story Behind This
+
+I've been a Red Alert fan since childhood — two kids on ancient computers playing over a LAN cable. That game didn't just hook me; it made me want to understand how computers work and how to build things like this myself.
+
+I started learning to code at 12 (Pascal), worked my way through network engineering, backend development, and cyber defense, and eventually found Rust — a language that lets you build close to the hardware without the fear of C's footguns. Over the next five years I went deep: building backend systems in Rust, contributing to its open-source ecosystem, and making it my primary language. When I discovered OpenRA, I was thrilled the community had kept Red Alert alive — and the idea of rewriting its engine in Rust started taking root. Years later, LLM agents matured into genuinely useful development tools, and that gave me the final push to attempt what I'd been imagining for over a decade: a modern engine for Red Alert, built right.
+
+My most formative gaming experience outside Red Alert was Operation Flashpoint — a game that gave you tools to create your own scenarios. That philosophy — games as platforms, not just products — is at the heart of this project. Iron Curtain is a love letter to the game that made me want to build things, informed by thirty years of playing and twenty years of engineering.
+
+📖 **[Read the full story →](src/FOREWORD.md)**
+
 ## Why This Exists
 
 Red Alert defined the RTS genre in 1996. Three decades later, there are two ways to play it:
@@ -248,6 +258,8 @@ This project is in its earliest stages. If you're interested in:
 - **The OpenRA team** — 18 years of brilliant community engineering that we build upon and respect
 - **The Bevy community** — for building the Rust game engine we needed
 - **Frank Klepacki** — Hell March forever
+
+**Created by David Krasnitsky**
 
 ---
 

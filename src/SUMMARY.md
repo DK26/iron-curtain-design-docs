@@ -1,6 +1,7 @@
 # Summary
 
 [Introduction](00-INDEX.md)
+[Foreword — Why I'm Building This](FOREWORD.md)
 
 ---
 
