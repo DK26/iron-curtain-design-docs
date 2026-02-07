@@ -67,7 +67,9 @@ OpenRA's map editor is a standalone tool. Our editor runs inside the game with l
 | Portability  | Desktop only (Mono/.NET)                | Native + WASM (browser) + mobile                     |
 | Engine age   | Started 2007, actively maintained       | Clean-sheet modern design                            |
 | Campaigns    | Some incomplete (TD, Dune 2000)         | Branching campaigns with persistent state (D021)     |
-| Mission flow | Manual mission selection between levels | Continuous flow: briefing → mission → debrief → next |  | Asset quality | Cannot fix original palette/sprite flaws | Bevy post-FX: palette correction, color grading, optional upscaling |
+| Mission flow | Manual mission selection between levels | Continuous flow: briefing → mission → debrief → next |
+| Asset quality | Cannot fix original palette/sprite flaws | Bevy post-FX: palette correction, color grading, optional upscaling |
+
 ### What Makes People Actually Switch
 
 1. **Better performance** — visible: bigger maps, more units, no stutters

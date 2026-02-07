@@ -102,14 +102,20 @@ Open source `ra-formats` early. Useful standalone, builds credibility and commun
 Units moving, shooting, dying — headless sim + rendered. Record replay file. Play it back.
 
 ### Exit Criteria
+
+**Hard exit criteria (must ship):**
 - Can run 1000-unit battle headless at > 60 ticks/second
 - Replay file records and plays back correctly (bit-identical)
 - State hash matches between two independent runs with same inputs
 - Condition system operational: YAML `requires:`/`disabled_by:` fields affect component behavior at runtime
 - Multiplier system operational: veterancy/terrain/crate modifiers stack and resolve correctly via fixed-point math
 - Full damage pipeline: projectile entities travel, warheads apply composable effects, Versus table resolves armor-weapon interactions
-- All 7 cross-game components functional: mind control, carriers, teleport networks, shields, upgrades, delayed weapons, dual asset rendering
 - OpenRA canonical enum names used for locomotors, armor types, target types, stances (D027)
+
+**Stretch goals (target Phase 2, can slip to early Phase 3 without blocking):**
+- All 7 cross-game components functional: mind control, carriers, teleport networks, shields, upgrades, delayed weapons, dual asset rendering (D029)
+
+> **Note:** The D028 systems (conditions, multipliers, damage pipeline) are non-negotiable — they're the foundation everything else builds on. The D029 cross-game components are high priority but independently scoped; any that slip are early Phase 3 work, not blockers.
 
 ## Phase 3: Game Chrome (Months 12–16)
 

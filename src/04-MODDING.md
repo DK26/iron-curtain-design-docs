@@ -323,7 +323,7 @@ end)
 - Execution time limits per tick
 - Memory limits per mod
 
-**Determinism note:** Lua's internal number type is `f64`, but this does not affect sim determinism. Lua has **read-only access** to game state and **write access exclusively through orders**. The sim processes orders deterministically — Lua cannot directly modify sim components. Lua evaluation produces identical results across all clients because it runs at the same point in the system pipeline (the `triggers` step), with the same game state as input, on every tick.
+**Determinism note:** Lua's internal number type is `f64`, but this does not affect sim determinism. Lua has **read-only access** to game state and **write access exclusively through orders** (and campaign state writes like `Campaign.set_flag()`, which are themselves deterministic because they execute at the same pipeline step on every client). The sim processes orders deterministically — Lua cannot directly modify sim components. Lua evaluation produces identical results across all clients because it runs at the same point in the system pipeline (the `triggers` step, see system execution order in `02-ARCHITECTURE.md`), with the same game state as input, on every tick. Any Lua-driven campaign state mutations are applied deterministically within this step, ensuring save/load and replay consistency.
 
 ## Tier 3: WASM Modules
 
@@ -678,9 +678,17 @@ Weather transitions are modeled as a state machine running inside `ra-sim`. The 
      ┌──────────┐      ┌───────────┐      ┌──────────┐
      │  Clear   │─────▶│  Cloudy   │─────▶│   Snow   │
      └──────────┘      └───────────┘      └──────────┘
-          ▲                                     │
-          └─────────────────────────────────────┘
-                    (melt / thaw)
+          ▲                  │                  │
+          │                  ▼                  ▼
+          │            ┌───────────┐      ┌──────────┐
+          │            │    Fog    │      │ Blizzard │
+          │            └───────────┘      └──────────┘
+          │                  │                  │
+          └──────────────────┴──────────────────┘
+                    (melt / thaw / clear)
+
+     Desert variant (temperature.base > threshold):
+     Rain → Sandstorm, Snow → (not reachable)
 ```
 
 Each weather type has an **intensity** (fixed-point `0..1024`) that ramps up during transitions and down during clearing. The sim tracks this as a `WeatherState` resource:
@@ -805,7 +813,7 @@ pub struct TerrainSurfaceGrid {
 }
 ```
 
-The `weather_surface_system` runs every tick (after weather state update, before movement):
+The `weather_surface_system` runs every tick for visible cells and amortizes non-visible cells over 4 ticks (after weather state update, before movement — see D022 in `09-DECISIONS.md` § "Performance"):
 
 | Condition               | Effect on Surface                                    |
 | ----------------------- | ---------------------------------------------------- |

@@ -25,6 +25,8 @@ A Rust-native RTS engine that supports OpenRA resource formats (`.mix`, `.shp`, 
 | 08  | `08-ROADMAP.md`      | 36-month development plan with phased milestones                     | You need to plan work or understand phase dependencies                 |
 | 09  | `09-DECISIONS.md`    | Decision log with rationale for every major choice                   | You want to understand WHY a decision was made, or revisit one         |
 | 10  | `10-PERFORMANCE.md`  | Efficiency-first performance philosophy, targets, profiling          | You're optimizing a system, choosing algorithms, or adding parallelism |
+| 11  | `11-OPENRA-FEATURES.md` | OpenRA feature catalog (~700 traits), gap analysis, migration mapping | You're assessing feature parity or planning which systems to build next |
+| 12  | `12-MOD-MIGRATION.md`   | Combined Arms mod migration, Remastered recreation feasibility       | You're validating modding architecture against real-world mods          |
 
 ## Key Architectural Invariants
 

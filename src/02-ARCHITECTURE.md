@@ -140,7 +140,7 @@ OpenRA's "traits" are effectively components. Map them directly. The table below
 | `Mobile` | `Mobile { speed: i32, locomotor: LocomotorType }` | Can move |
 | `Attackable` | `Attackable { armor: ArmorType }` | Can be damaged |
 | `Armament` | `Armament { weapon: WeaponId, cooldown: u32 }` | Can attack |
-| `Building` | `Building { footprint: Vec<CellPos> }` | Occupies cells |
+| `Building` | `Building { footprint: FootprintId }` | Occupies cells (footprint shapes stored in a shared `FootprintTable` resource, indexed by ID — zero per-entity heap allocation) |
 | `Buildable` | `Buildable { cost: i32, time: u32, prereqs: Vec<StructId> }` | Can be built |
 | `Selectable` | `Selectable { bounds: Rect, priority: u8 }` | Player can select |
 | `Harvester` | `Harvester { capacity: i32, resource: ResourceType }` | Gathers ore |
@@ -175,12 +175,14 @@ pub struct GameLoop<N: NetworkModel, I: InputSource> {
     network: N,
     input: I,
     local_player: PlayerId,
+    order_buf: Vec<TimestampedOrder>,  // reused across frames — zero allocation on hot path
 }
 
 impl<N: NetworkModel, I: InputSource> GameLoop<N, I> {
     fn frame(&mut self) {
         // 1. Gather local input with sub-tick timestamps
-        for order in self.input.drain_orders() {
+        self.input.drain_orders(&mut self.order_buf);
+        for order in self.order_buf.drain(..) {
             self.network.submit_order(order);
         }
 
@@ -245,7 +247,8 @@ The engine must not create obstacles for any platform. Desktop is the primary de
 /// Platform-agnostic input source. Each platform implements this.
 pub trait InputSource {
     /// Drain pending player orders from whatever input device is active.
-    fn drain_orders(&mut self) -> Vec<TimestampedOrder>;
+    fn drain_orders(&mut self, buf: &mut Vec<TimestampedOrder>);
+    // Caller provides the buffer (reused across ticks — zero allocation on hot path)
 
     /// Optional: hint about input capabilities for UI adaptation.
     fn capabilities(&self) -> InputCapabilities;

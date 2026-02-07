@@ -111,14 +111,16 @@ pub struct CoordTransform {
 }
 
 impl CoordTransform {
-    pub fn to_wpos(&self, pos: &CellPos) -> (i32, i32) {
+    pub fn to_wpos(&self, pos: &CellPos) -> (i32, i32, i32) {
         ((pos.x * self.openra_scale) / self.our_scale,
-         (pos.y * self.openra_scale) / self.our_scale)
+         (pos.y * self.openra_scale) / self.our_scale,
+         (pos.z * self.openra_scale) / self.our_scale)
     }
-    pub fn from_wpos(&self, x: i32, y: i32) -> CellPos {
+    pub fn from_wpos(&self, x: i32, y: i32, z: i32) -> CellPos {
         CellPos {
             x: (x * self.our_scale) / self.openra_scale,
             y: (y * self.our_scale) / self.openra_scale,
+            z: (z * self.our_scale) / self.openra_scale,
         }
     }
 }

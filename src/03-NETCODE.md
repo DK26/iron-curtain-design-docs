@@ -51,6 +51,7 @@ pub enum PlayerOrder {
     Build { structure: StructureType, position: CellPos },
     SetRallyPoint { building: BuildingId, position: CellPos },
     Sell { building: BuildingId },
+    Idle,  // Explicit no-op — keeps player in the tick's order list for timing/presence
     // ... every possible player action
 }
 
@@ -59,13 +60,12 @@ pub enum PlayerOrder {
 pub struct TimestampedOrder {
     pub player: PlayerId,
     pub order: PlayerOrder,
-    pub sub_tick_time: f64,  // fractional time within the tick window
+    pub sub_tick_time: u32,  // microseconds within the tick window (0 = tick start)
 }
-// NOTE: sub_tick_time is f64 in ra-protocol, not ra-sim. This does not violate
-// invariant #1 (no floats in sim). The value is used exclusively for pre-sim
-// order sorting — the sim receives orders already sorted and never inspects
-// this field. sub_tick_time is excluded from state_hash() and does not
-// participate in deterministic simulation calculations.
+// NOTE: sub_tick_time is an integer (microseconds offset from tick start).
+// At 15 ticks/sec the tick window is ~66,667µs — u32 is more than sufficient.
+// Integer ordering avoids any platform-dependent float comparison behavior
+// and keeps ra-protocol free of floating-point types entirely.
 
 pub struct TickOrders {
     pub tick: u64,
@@ -76,7 +76,7 @@ impl TickOrders {
     /// CS2-style: process in chronological order within the tick
     pub fn chronological(&self) -> impl Iterator<Item = &TimestampedOrder> {
         let mut sorted = self.orders.clone();
-        sorted.sort_by(|a, b| a.sub_tick_time.partial_cmp(&b.sub_tick_time).unwrap());
+        sorted.sort_by_key(|o| o.sub_tick_time);
         sorted.into_iter()
     }
 }
