@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-16651cf2.js";
+            window.path_to_searchindex_js = "searchindex-4750be1b.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-ef8cba4b.js"></script>
@@ -475,6 +475,7 @@ end)
 <li>Execution time limits per tick</li>
 <li>Memory limits per mod</li>
 </ul>
+<p><strong>Determinism note:</strong> Lua’s internal number type is <code>f64</code>, but this does not affect sim determinism. Lua has <strong>read-only access</strong> to game state and <strong>write access exclusively through orders</strong> (and campaign state writes like <code>Campaign.set_flag()</code>, which are themselves deterministic because they execute at the same pipeline step on every client). The sim processes orders deterministically — Lua cannot directly modify sim components. Lua evaluation produces identical results across all clients because it runs at the same point in the system pipeline (the <code>triggers</code> step, see system execution order in <code>02-ARCHITECTURE.md</code>), with the same game state as input, on every tick. Any Lua-driven campaign state mutations are applied deterministically within this step, ensuring save/load and replay consistency.</p>
 <h2 id="tier-3-wasm-modules"><a class="header" href="#tier-3-wasm-modules">Tier 3: WASM Modules</a></h2>
 <h3 id="rationale"><a class="header" href="#rationale">Rationale</a></h3>
 <ul>
@@ -797,9 +798,17 @@ Campaign Graph    — branching mission graph with persistent state (not a linea
      ┌──────────┐      ┌───────────┐      ┌──────────┐
      │  Clear   │─────▶│  Cloudy   │─────▶│   Snow   │
      └──────────┘      └───────────┘      └──────────┘
-          ▲                                     │
-          └─────────────────────────────────────┘
-                    (melt / thaw)
+          ▲                  │                  │
+          │                  ▼                  ▼
+          │            ┌───────────┐      ┌──────────┐
+          │            │    Fog    │      │ Blizzard │
+          │            └───────────┘      └──────────┘
+          │                  │                  │
+          └──────────────────┴──────────────────┘
+                    (melt / thaw / clear)
+
+     Desert variant (temperature.base &gt; threshold):
+     Rain → Sandstorm, Snow → (not reachable)
 </code></pre>
 <p>Each weather type has an <strong>intensity</strong> (fixed-point <code>0..1024</code>) that ramps up during transitions and down during clearing. The sim tracks this as a <code>WeatherState</code> resource:</p>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
@@ -914,7 +923,7 @@ pub struct TerrainSurfaceGrid {
     pub height: u32,
 }
 <span class="boring">}</span></code></pre>
-<p>The <code>weather_surface_system</code> runs every tick (after weather state update, before movement):</p>
+<p>The <code>weather_surface_system</code> runs every tick for visible cells and amortizes non-visible cells over 4 ticks (after weather state update, before movement — see D022 in <code>09-DECISIONS.md</code> § “Performance”):</p>
 <div class="table-wrapper">
 <table>
 <thead>
@@ -1093,6 +1102,8 @@ scenes:
 <tr><td>Cutscenes / Video</td><td><code>.vqa</code>, <code>.mp4</code>, <code>.webm</code></td><td>Custom briefings, cinematics, narrative videos</td></tr>
 <tr><td>UI Themes</td><td>Chrome layouts, fonts, cursors</td><td>Alternative sidebars, HD cursor packs</td></tr>
 <tr><td>Balance Presets</td><td>YAML rule overrides</td><td>Competitive tuning, historical accuracy presets</td></tr>
+<tr><td>QoL Presets</td><td>Gameplay behavior toggle sets (D033)</td><td>Custom QoL configurations, community favorites</td></tr>
+<tr><td>Experience Profiles</td><td>Combined balance + theme + QoL (D019+D032+D033)</td><td>One-click full experience configurations</td></tr>
 </tbody>
 </table>
 </div>

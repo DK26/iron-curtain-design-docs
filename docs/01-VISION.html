@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-16651cf2.js";
+            window.path_to_searchindex_js = "searchindex-4750be1b.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-ef8cba4b.js"></script>
@@ -247,6 +247,7 @@
 <tr><td>Engine age</td><td>Started 2007, actively maintained</td><td>Clean-sheet modern design</td></tr>
 <tr><td>Campaigns</td><td>Some incomplete (TD, Dune 2000)</td><td>Branching campaigns with persistent state (D021)</td></tr>
 <tr><td>Mission flow</td><td>Manual mission selection between levels</td><td>Continuous flow: briefing → mission → debrief → next</td></tr>
+<tr><td>Asset quality</td><td>Cannot fix original palette/sprite flaws</td><td>Bevy post-FX: palette correction, color grading, optional upscaling</td></tr>
 </tbody>
 </table>
 </div>
@@ -442,7 +443,23 @@
 </div>
 <p>Presets are just YAML files in <code>rules/presets/</code>. Switching preset = loading a different set of unit/weapon/structure YAML. No code changes, no mod required. The lobby UI exposes preset selection.</p>
 <p>This is not a modding feature — it’s a first-class game option. “Classic” vs “OpenRA” balance is a settings toggle, not a total conversion.</p>
-<p>See <code>src/04-MODDING.md</code> § “Balance Presets” and D019 in <code>src/09-DECISIONS.md</code>.</p>
+<h3 id="toggleable-qol-features-d033"><a class="header" href="#toggleable-qol-features-d033">Toggleable QoL Features (D033)</a></h3>
+<p>Beyond balance, every quality-of-life improvement added by OpenRA or the Remastered Collection is <strong>individually toggleable</strong>: attack-move, waypoint queuing, multi-queue production, health bar visibility, range circles, guard command, and dozens more. Built-in presets group these into coherent experience profiles:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Experience Profile</th><th>Balance (D019)</th><th>Theme (D032)</th><th>QoL Behavior (D033)</th><th>Feel</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Vanilla RA</strong></td><td><code>classic</code></td><td><code>classic</code></td><td><code>vanilla</code></td><td>Authentic 1996 — warts and all</td></tr>
+<tr><td><strong>OpenRA</strong></td><td><code>openra</code></td><td><code>modern</code></td><td><code>openra</code></td><td>Full OpenRA experience</td></tr>
+<tr><td><strong>Remastered</strong></td><td><code>remastered</code></td><td><code>remastered</code></td><td><code>remastered</code></td><td>Remastered Collection feel</td></tr>
+<tr><td><strong>Iron Curtain</strong> (default)</td><td><code>classic</code></td><td><code>modern</code></td><td><code>iron_curtain</code></td><td>Classic balance + best QoL from all eras</td></tr>
+</tbody>
+</table>
+</div>
+<p>Select a profile, then override any individual setting. Want classic balance with OpenRA’s attack-move but without build radius circles? Done. Good defaults, full customization.</p>
+<p>See D019, D032, and D033 in <code>src/09-DECISIONS.md</code>.</p>
 <h2 id="timing-assessment"><a class="header" href="#timing-assessment">Timing Assessment</a></h2>
 <ul>
 <li>EA source just released (fresh community interest)</li>

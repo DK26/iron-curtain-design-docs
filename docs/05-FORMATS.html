@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-16651cf2.js";
+            window.path_to_searchindex_js = "searchindex-4750be1b.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-ef8cba4b.js"></script>
@@ -277,14 +277,16 @@ LZOPipe pipe(LZOPipe::COMPRESS, SAVE_BLOCK_SIZE);
 }
 
 impl CoordTransform {
-    pub fn to_wpos(&amp;self, pos: &amp;CellPos) -&gt; (i32, i32) {
+    pub fn to_wpos(&amp;self, pos: &amp;CellPos) -&gt; (i32, i32, i32) {
         ((pos.x * self.openra_scale) / self.our_scale,
-         (pos.y * self.openra_scale) / self.our_scale)
+         (pos.y * self.openra_scale) / self.our_scale,
+         (pos.z * self.openra_scale) / self.our_scale)
     }
-    pub fn from_wpos(&amp;self, x: i32, y: i32) -&gt; CellPos {
+    pub fn from_wpos(&amp;self, x: i32, y: i32, z: i32) -&gt; CellPos {
         CellPos {
             x: (x * self.our_scale) / self.openra_scale,
             y: (y * self.our_scale) / self.openra_scale,
+            z: (z * self.our_scale) / self.openra_scale,
         }
     }
 }

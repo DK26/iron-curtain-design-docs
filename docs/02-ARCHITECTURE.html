@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-16651cf2.js";
+            window.path_to_searchindex_js = "searchindex-4750be1b.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-ef8cba4b.js"></script>
@@ -315,7 +315,7 @@ impl Simulation {
 | <code>Mobile</code> | <code>Mobile { speed: i32, locomotor: LocomotorType }</code> | Can move |
 | <code>Attackable</code> | <code>Attackable { armor: ArmorType }</code> | Can be damaged |
 | <code>Armament</code> | <code>Armament { weapon: WeaponId, cooldown: u32 }</code> | Can attack |
-| <code>Building</code> | <code>Building { footprint: Vec&lt;CellPos&gt; }</code> | Occupies cells |
+| <code>Building</code> | <code>Building { footprint: FootprintId }</code> | Occupies cells (footprint shapes stored in a shared <code>FootprintTable</code> resource, indexed by ID — zero per-entity heap allocation) |
 | <code>Buildable</code> | <code>Buildable { cost: i32, time: u32, prereqs: Vec&lt;StructId&gt; }</code> | Can be built |
 | <code>Selectable</code> | <code>Selectable { bounds: Rect, priority: u8 }</code> | Player can select |
 | <code>Harvester</code> | <code>Harvester { capacity: i32, resource: ResourceType }</code> | Gathers ore |
@@ -343,12 +343,14 @@ impl Simulation {
     network: N,
     input: I,
     local_player: PlayerId,
+    order_buf: Vec&lt;TimestampedOrder&gt;,  // reused across frames — zero allocation on hot path
 }
 
 impl&lt;N: NetworkModel, I: InputSource&gt; GameLoop&lt;N, I&gt; {
     fn frame(&amp;mut self) {
         // 1. Gather local input with sub-tick timestamps
-        for order in self.input.drain_orders() {
+        self.input.drain_orders(&amp;mut self.order_buf);
+        for order in self.order_buf.drain(..) {
             self.network.submit_order(order);
         }
 
@@ -419,7 +421,8 @@ impl&lt;N: NetworkModel, I: InputSource&gt; GameLoop&lt;N, I&gt; {
 </span>/// Platform-agnostic input source. Each platform implements this.
 pub trait InputSource {
     /// Drain pending player orders from whatever input device is active.
-    fn drain_orders(&amp;mut self) -&gt; Vec&lt;TimestampedOrder&gt;;
+    fn drain_orders(&amp;mut self, buf: &amp;mut Vec&lt;TimestampedOrder&gt;);
+    // Caller provides the buffer (reused across ticks — zero allocation on hot path)
 
     /// Optional: hint about input capabilities for UI adaptation.
     fn capabilities(&amp;self) -&gt; InputCapabilities;
@@ -492,6 +495,25 @@ pub enum ScreenClass {
 <li>An “OpenRA-inspired” community theme is a natural contribution</li>
 </ul>
 <p>See <code>09-DECISIONS.md</code> § D032 for full rationale, YAML schema, and legal notes on asset sourcing.</p>
+<h2 id="qol--gameplay-behavior-toggles-d033"><a class="header" href="#qol--gameplay-behavior-toggles-d033">QoL &amp; Gameplay Behavior Toggles (D033)</a></h2>
+<p>Every quality-of-life improvement from OpenRA and the Remastered Collection is <strong>individually toggleable</strong> — attack-move, multi-queue production, health bars, range circles, guard command, waypoint queuing, and dozens more. Built-in presets group toggles into coherent profiles:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Preset</th><th>Feel</th></tr>
+</thead>
+<tbody>
+<tr><td><code>vanilla</code></td><td>Authentic 1996 — no modern QoL</td></tr>
+<tr><td><code>openra</code></td><td>All OpenRA improvements enabled</td></tr>
+<tr><td><code>remastered</code></td><td>Remastered Collection’s specific QoL set</td></tr>
+<tr><td><code>iron_curtain</code> (default)</td><td>Best features cherry-picked from all eras</td></tr>
+</tbody>
+</table>
+</div>
+<p>Toggles are categorized as <strong>sim-affecting</strong> (production rules, unit commands — synced in lobby) or <strong>client-only</strong> (health bars, range circles — per-player preference). This split preserves determinism (invariant #1) while giving each player visual/UX freedom.</p>
+<h3 id="experience-profiles"><a class="header" href="#experience-profiles">Experience Profiles</a></h3>
+<p>D019 (balance), D032 (theme), and D033 (behavior) are three independent axes that compose into <strong>experience profiles</strong>. Selecting “Vanilla RA” sets all three to classic in one click. Selecting “Iron Curtain” sets classic balance + modern theme + best QoL. After selecting a profile, any individual setting can still be overridden.</p>
+<p>See <code>09-DECISIONS.md</code> § D033 for the full toggle catalog, YAML schema, and sim/client split details.</p>
 <h2 id="crate-dependency-graph"><a class="header" href="#crate-dependency-graph">Crate Dependency Graph</a></h2>
 <pre><code>ra-protocol  (shared types: PlayerOrder, TimestampedOrder)
     ↑

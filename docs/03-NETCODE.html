@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-16651cf2.js";
+            window.path_to_searchindex_js = "searchindex-4750be1b.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-ef8cba4b.js"></script>
@@ -234,6 +234,7 @@ pub enum PlayerOrder {
     Build { structure: StructureType, position: CellPos },
     SetRallyPoint { building: BuildingId, position: CellPos },
     Sell { building: BuildingId },
+    Idle,  // Explicit no-op — keeps player in the tick's order list for timing/presence
     // ... every possible player action
 }
 
@@ -242,8 +243,12 @@ pub enum PlayerOrder {
 pub struct TimestampedOrder {
     pub player: PlayerId,
     pub order: PlayerOrder,
-    pub sub_tick_time: f64,  // fractional time within the tick window
+    pub sub_tick_time: u32,  // microseconds within the tick window (0 = tick start)
 }
+// NOTE: sub_tick_time is an integer (microseconds offset from tick start).
+// At 15 ticks/sec the tick window is ~66,667µs — u32 is more than sufficient.
+// Integer ordering avoids any platform-dependent float comparison behavior
+// and keeps ra-protocol free of floating-point types entirely.
 
 pub struct TickOrders {
     pub tick: u64,
@@ -254,7 +259,7 @@ impl TickOrders {
     /// CS2-style: process in chronological order within the tick
     pub fn chronological(&amp;self) -&gt; impl Iterator&lt;Item = &amp;TimestampedOrder&gt; {
         let mut sorted = self.orders.clone();
-        sorted.sort_by(|a, b| a.sub_tick_time.partial_cmp(&amp;b.sub_tick_time).unwrap());
+        sorted.sort_by_key(|o| o.sub_tick_time);
         sorted.into_iter()
     }
 }

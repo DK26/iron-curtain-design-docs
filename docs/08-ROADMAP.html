@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-16651cf2.js";
+            window.path_to_searchindex_js = "searchindex-4750be1b.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-ef8cba4b.js"></script>
@@ -279,6 +279,7 @@
 <h3 id="release-2"><a class="header" href="#release-2">Release</a></h3>
 <p>Units moving, shooting, dying — headless sim + rendered. Record replay file. Play it back.</p>
 <h3 id="exit-criteria-2"><a class="header" href="#exit-criteria-2">Exit Criteria</a></h3>
+<p><strong>Hard exit criteria (must ship):</strong></p>
 <ul>
 <li>Can run 1000-unit battle headless at &gt; 60 ticks/second</li>
 <li>Replay file records and plays back correctly (bit-identical)</li>
@@ -286,9 +287,15 @@
 <li>Condition system operational: YAML <code>requires:</code>/<code>disabled_by:</code> fields affect component behavior at runtime</li>
 <li>Multiplier system operational: veterancy/terrain/crate modifiers stack and resolve correctly via fixed-point math</li>
 <li>Full damage pipeline: projectile entities travel, warheads apply composable effects, Versus table resolves armor-weapon interactions</li>
-<li>All 7 cross-game components functional: mind control, carriers, teleport networks, shields, upgrades, delayed weapons, dual asset rendering</li>
 <li>OpenRA canonical enum names used for locomotors, armor types, target types, stances (D027)</li>
 </ul>
+<p><strong>Stretch goals (target Phase 2, can slip to early Phase 3 without blocking):</strong></p>
+<ul>
+<li>All 7 cross-game components functional: mind control, carriers, teleport networks, shields, upgrades, delayed weapons, dual asset rendering (D029)</li>
+</ul>
+<blockquote>
+<p><strong>Note:</strong> The D028 systems (conditions, multipliers, damage pipeline) are non-negotiable — they’re the foundation everything else builds on. The D029 cross-game components are high priority but independently scoped; any that slip are early Phase 3 work, not blockers.</p>
+</blockquote>
 <h2 id="phase-3-game-chrome-months-1216"><a class="header" href="#phase-3-game-chrome-months-1216">Phase 3: Game Chrome (Months 12–16)</a></h2>
 <p><strong>Goal:</strong> It feels like Red Alert.</p>
 <h3 id="deliverables-3"><a class="header" href="#deliverables-3">Deliverables</a></h3>

@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-16651cf2.js";
+            window.path_to_searchindex_js = "searchindex-4750be1b.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-ef8cba4b.js"></script>
@@ -877,8 +877,8 @@ ic mod update-engine       # bump engine version
 </ul>
 <p><strong>Phase:</strong> Phase 2 (hard exit criteria — no Phase 3 starts without these).</p>
 <hr>
-<h3 id="d029--cross-game-component-library-as-phase-2-deliverables"><a class="header" href="#d029--cross-game-component-library-as-phase-2-deliverables">D029 — Cross-Game Component Library as Phase 2 Deliverables</a></h3>
-<p><strong>Decision:</strong> The seven first-party component systems identified in <code>12-MOD-MIGRATION.md</code> (from Combined Arms and Remastered case studies) are Phase 2 deliverables, not aspirational future work.</p>
+<h3 id="d029--cross-game-component-library-phase-2-targets"><a class="header" href="#d029--cross-game-component-library-phase-2-targets">D029 — Cross-Game Component Library (Phase 2 Targets)</a></h3>
+<p><strong>Decision:</strong> The seven first-party component systems identified in <code>12-MOD-MIGRATION.md</code> (from Combined Arms and Remastered case studies) are Phase 2 targets. They are high priority and independently scoped — any that don’t land by Phase 2 exit are early Phase 3 work, not deferred indefinitely. (The D028 systems — conditions, multipliers, damage pipeline — are the hard Phase 2 gate; see <code>08-ROADMAP.md</code> § Phase 2 exit criteria.)</p>
 <p><strong>The seven systems:</strong></p>
 <div class="table-wrapper">
 <table>
@@ -892,7 +892,7 @@ ic mod update-engine       # bump engine version
 <tr><td><strong>Shield System</strong></td><td>CA, RA2 force shields, Scrin</td><td>Absorb-before-health, recharge timer, depletion</td></tr>
 <tr><td><strong>Upgrade System</strong></td><td>CA, C&amp;C3 game module</td><td>Per-unit tech research via building, condition grants</td></tr>
 <tr><td><strong>Delayed Weapons</strong></td><td>CA (radiation, poison), RA2 (terror drones)</td><td>Timer-attached effects on targets</td></tr>
-<tr><td><strong>Dual Asset Rendering</strong></td><td>Remastered recreation, HD mod packs</td><td>Runtime-switchable asset quality per entity (in <code>ra-render</code>). Generalized by the Resource Pack system — see <code>04-MODDING.md</code> § “Resource Packs”</td></tr>
+<tr><td><strong>Dual Asset Rendering</strong></td><td>Remastered recreation, HD mod packs</td><td>Superseded by the Resource Pack system (<code>04-MODDING.md</code> § “Resource Packs”) which generalizes this to N asset tiers, not just two. Phase 2 scope: <code>ra-render</code> supports runtime-switchable asset source per entity; Resource Pack manifests resolve at load time.</td></tr>
 </tbody>
 </table>
 </div>
@@ -918,7 +918,7 @@ ic mod update-engine       # bump engine version
 </tbody>
 </table>
 </div>
-<p><strong>Phase:</strong> Phase 2 (sim-side components) + Phase 1 (dual asset rendering in <code>ra-render</code>).</p>
+<p><strong>Phase:</strong> Phase 2 (sim-side components and dual asset rendering in <code>ra-render</code>).</p>
 <hr>
 <h2 id="d030-workshop-resource-registry--dependency-system"><a class="header" href="#d030-workshop-resource-registry--dependency-system">D030: Workshop Resource Registry &amp; Dependency System</a></h2>
 <p><strong>Decision:</strong> The Workshop operates as a crates.io-style resource registry where any game asset — music, sprites, textures, cutscenes, maps, sound effects, palettes, voice lines, UI themes, templates — is publishable as an independent, versioned, licensable resource that others (including LLM agents) can discover, depend on, and pull automatically.</p>
@@ -963,6 +963,8 @@ ic mod update-engine       # bump engine version
 <tr><td>Cutscenes / Video</td><td>Briefing video, in-game cinematic, tutorial clip</td></tr>
 <tr><td>UI Themes</td><td>Sidebar layout, font pack, cursor set</td></tr>
 <tr><td>Balance Presets</td><td>Tuned unit/weapon stats as a selectable preset</td></tr>
+<tr><td>QoL Presets</td><td>Gameplay behavior toggle set (D033) — sim-affecting + client-only toggles</td></tr>
+<tr><td>Experience Profile</td><td>Combined balance + theme + QoL preset (D019+D032+D033) — one-click experience</td></tr>
 <tr><td>Resource Packs</td><td>Switchable asset layer for any category — see <code>04-MODDING.md</code> § “Resource Packs”</td></tr>
 <tr><td>Full Mods</td><td>Traditional mod (may depend on individual resources)</td></tr>
 </tbody>
@@ -1460,6 +1462,243 @@ theme:
 <li>Theme as a full WASM mod — overkill; theming is data, not behavior; Tier 1 YAML is sufficient</li>
 </ul>
 <p><strong>Phase:</strong> Phase 3 (Game Chrome). Theme system is part of the <code>ra-ui</code> crate. Built-in themes ship with the engine. Community themes available in Phase 6 (workshop).</p>
+<hr>
+<h2 id="d033-toggleable-qol--gameplay-behavior-presets"><a class="header" href="#d033-toggleable-qol--gameplay-behavior-presets">D033: Toggleable QoL &amp; Gameplay Behavior Presets</a></h2>
+<p><strong>Decision:</strong> Every UX and gameplay behavior improvement added by OpenRA or the Remastered Collection over vanilla Red Alert is individually toggleable. Built-in presets group these toggles into coherent experience profiles. Players can pick a preset and then customize any individual toggle. In multiplayer lobbies, sim-affecting toggles are shared settings; client-only toggles are per-player.</p>
+<p><strong>The problem this solves:</strong></p>
+<p>OpenRA and the Remastered Collection each introduced dozens of quality-of-life improvements over the original 1996 Red Alert. Many are genuinely excellent (attack-move, waypoint queuing, multi-queue production). But some players want the authentic vanilla experience. Others want the full OpenRA feature set. Others want the Remastered Collection’s specific subset. And some want to cherry-pick: “Give me OpenRA’s attack-move but not its build radius circles.”</p>
+<p>Currently, no Red Alert implementation lets you do this. OpenRA’s QoL features are hardcoded. The Remastered Collection’s are hardcoded. Vanilla’s limitations are hardcoded. Every version forces you into one developer’s opinion of what the game “should” feel like.</p>
+<p><strong>Our approach:</strong> Every QoL feature is a YAML-configurable toggle. Presets set all toggles at once. Individual toggles override the preset. The player owns their experience.</p>
+<h3 id="qol-feature-catalog"><a class="header" href="#qol-feature-catalog">QoL Feature Catalog</a></h3>
+<p>Every toggle is categorized as <strong>sim-affecting</strong> (changes game logic — must be identical for all players in multiplayer) or <strong>client-only</strong> (visual/UX — each player can set independently).</p>
+<h4 id="production--economy-sim-affecting"><a class="header" href="#production--economy-sim-affecting">Production &amp; Economy (Sim-Affecting)</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Toggle</th><th>Vanilla</th><th>OpenRA</th><th>Remastered</th><th>IC Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>multi_queue</code></td><td>❌</td><td>✅</td><td>✅</td><td>✅</td><td>Queue multiple units of the same type</td></tr>
+<tr><td><code>parallel_factories</code></td><td>❌</td><td>✅</td><td>✅</td><td>✅</td><td>Multiple factories of same type produce simultaneously</td></tr>
+<tr><td><code>build_radius_rule</code></td><td>None</td><td>ConYard+buildings</td><td>ConYard only</td><td>ConYard+buildings</td><td>Where you can place new buildings</td></tr>
+<tr><td><code>sell_buildings</code></td><td>Partial</td><td>✅ Full</td><td>✅ Full</td><td>✅ Full</td><td>Sell any own building for partial refund</td></tr>
+<tr><td><code>repair_buildings</code></td><td>✅</td><td>✅</td><td>✅</td><td>✅</td><td>Repair buildings for credits</td></tr>
+</tbody>
+</table>
+</div>
+<h4 id="unit-commands-sim-affecting"><a class="header" href="#unit-commands-sim-affecting">Unit Commands (Sim-Affecting)</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Toggle</th><th>Vanilla</th><th>OpenRA</th><th>Remastered</th><th>IC Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>attack_move</code></td><td>❌</td><td>✅</td><td>✅</td><td>✅</td><td>Move to location, engaging enemies en route</td></tr>
+<tr><td><code>waypoint_queue</code></td><td>❌</td><td>✅</td><td>✅</td><td>✅</td><td>Shift-click to queue movement waypoints</td></tr>
+<tr><td><code>guard_command</code></td><td>❌</td><td>✅</td><td>❌</td><td>✅</td><td>Guard a unit or position, engage nearby threats</td></tr>
+<tr><td><code>scatter_command</code></td><td>❌</td><td>✅</td><td>❌</td><td>✅</td><td>Units scatter from current position</td></tr>
+<tr><td><code>force_fire_ground</code></td><td>❌</td><td>✅</td><td>✅</td><td>✅</td><td>Force-fire on empty ground (area denial)</td></tr>
+<tr><td><code>force_move</code></td><td>❌</td><td>✅</td><td>✅</td><td>✅</td><td>Force move through crushable targets</td></tr>
+<tr><td><code>rally_points</code></td><td>❌</td><td>✅</td><td>✅</td><td>✅</td><td>Set rally point for production buildings</td></tr>
+<tr><td><code>stance_system</code></td><td>None</td><td>Full</td><td>Basic</td><td>Full</td><td>Unit stance: aggressive / defensive / hold / return fire</td></tr>
+</tbody>
+</table>
+</div>
+<h4 id="ui--visual-feedback-client-only"><a class="header" href="#ui--visual-feedback-client-only">UI &amp; Visual Feedback (Client-Only)</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Toggle</th><th>Vanilla</th><th>OpenRA</th><th>Remastered</th><th>IC Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>health_bars</code></td><td><code>never</code></td><td><code>always</code></td><td><code>on_selection</code></td><td><code>on_selection</code></td><td>Unit health bar visibility: <code>never</code> / <code>on_selection</code> / <code>always</code> / <code>damaged_or_selected</code></td></tr>
+<tr><td><code>range_circles</code></td><td>❌</td><td>✅</td><td>❌</td><td>✅</td><td>Show weapon range circle when selecting defense buildings</td></tr>
+<tr><td><code>build_radius_display</code></td><td>❌</td><td>✅</td><td>❌</td><td>✅</td><td>Show buildable area around construction yard / buildings</td></tr>
+<tr><td><code>power_indicators</code></td><td>❌</td><td>✅</td><td>✅</td><td>✅</td><td>Visual indicator on buildings affected by low power</td></tr>
+<tr><td><code>support_power_timer</code></td><td>❌</td><td>✅</td><td>✅</td><td>✅</td><td>Countdown timer bar for superweapons</td></tr>
+<tr><td><code>production_progress</code></td><td>❌</td><td>✅</td><td>✅</td><td>✅</td><td>Progress bar on sidebar build icons</td></tr>
+<tr><td><code>target_lines</code></td><td>❌</td><td>✅</td><td>❌</td><td>✅</td><td>Lines showing order targets (move, attack)</td></tr>
+<tr><td><code>rally_point_display</code></td><td>❌</td><td>✅</td><td>✅</td><td>✅</td><td>Visual line from factory to rally point</td></tr>
+</tbody>
+</table>
+</div>
+<h4 id="selection--input-client-only"><a class="header" href="#selection--input-client-only">Selection &amp; Input (Client-Only)</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Toggle</th><th>Vanilla</th><th>OpenRA</th><th>Remastered</th><th>IC Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>double_click_select_type</code></td><td>❌</td><td>✅</td><td>✅</td><td>✅</td><td>Double-click a unit to select all of that type on screen</td></tr>
+<tr><td><code>ctrl_click_select_type</code></td><td>❌</td><td>✅</td><td>✅</td><td>✅</td><td>Ctrl+click to add all of type to selection</td></tr>
+<tr><td><code>tab_cycle_types</code></td><td>❌</td><td>✅</td><td>❌</td><td>✅</td><td>Tab through unit types in multi-type selection</td></tr>
+<tr><td><code>control_group_limit</code></td><td>10</td><td>Unlimited</td><td>Unlimited</td><td>Unlimited</td><td>Max units per control group (0 = unlimited)</td></tr>
+<tr><td><code>smart_select_priority</code></td><td>❌</td><td>✅</td><td>❌</td><td>✅</td><td>Prefer combat units over harvesters in box select</td></tr>
+</tbody>
+</table>
+</div>
+<h4 id="gameplay-rules-sim-affecting-lobby-setting"><a class="header" href="#gameplay-rules-sim-affecting-lobby-setting">Gameplay Rules (Sim-Affecting, Lobby Setting)</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Toggle</th><th>Vanilla</th><th>OpenRA</th><th>Remastered</th><th>IC Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>fog_of_war</code></td><td>❌</td><td>Optional</td><td>❌</td><td>Optional</td><td>Fog of war (explored but not visible = greyed out)</td></tr>
+<tr><td><code>shroud_regrow</code></td><td>❌</td><td>Optional</td><td>❌</td><td>❌</td><td>Explored shroud grows back after units leave</td></tr>
+<tr><td><code>short_game</code></td><td>❌</td><td>Optional</td><td>❌</td><td>Optional</td><td>Destroying all production buildings = defeat</td></tr>
+<tr><td><code>crate_system</code></td><td>Basic</td><td>Enhanced</td><td>Basic</td><td>Enhanced</td><td>Bonus crates type and behavior</td></tr>
+<tr><td><code>ore_regrowth</code></td><td>✅</td><td>✅ Configurable</td><td>✅</td><td>✅ Configurable</td><td>Ore regeneration rate</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="experience-presets"><a class="header" href="#experience-presets">Experience Presets</a></h3>
+<p>Presets set all toggles at once. The player selects a preset, then overrides individual toggles if they want.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Preset</th><th>Balance (D019)</th><th>Theme (D032)</th><th>QoL (D033)</th><th>Feel</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Vanilla RA</strong></td><td><code>classic</code></td><td><code>classic</code></td><td><code>vanilla</code></td><td>Authentic 1996 experience — warts and all</td></tr>
+<tr><td><strong>OpenRA</strong></td><td><code>openra</code></td><td><code>modern</code></td><td><code>openra</code></td><td>Full OpenRA experience</td></tr>
+<tr><td><strong>Remastered</strong></td><td><code>remastered</code></td><td><code>remastered</code></td><td><code>remastered</code></td><td>Remastered Collection feel</td></tr>
+<tr><td><strong>Iron Curtain</strong> (default)</td><td><code>classic</code></td><td><code>modern</code></td><td><code>iron_curtain</code></td><td>Classic balance + best QoL from all eras</td></tr>
+<tr><td><strong>Custom</strong></td><td>any</td><td>any</td><td>any</td><td>Player picks everything</td></tr>
+</tbody>
+</table>
+</div>
+<p>The “Iron Curtain” default cherry-picks: classic balance (units feel iconic), modern theme (polished UI), and the best QoL features from both OpenRA and Remastered (attack-move, multi-queue, health bars, range circles — everything that makes the game more playable without changing game feel).</p>
+<h3 id="yaml-structure"><a class="header" href="#yaml-structure">YAML Structure</a></h3>
+<pre><code class="language-yaml"># presets/qol/iron_curtain.yaml
+qol:
+  name: "Iron Curtain"
+  description: "Best quality-of-life features from all eras"
+  
+  production:
+    multi_queue: true
+    parallel_factories: true
+    build_radius_rule: conyard_and_buildings
+    sell_buildings: full
+    repair_buildings: true
+  
+  commands:
+    attack_move: true
+    waypoint_queue: true
+    guard_command: true
+    scatter_command: true
+    force_fire_ground: true
+    force_move: true
+    rally_points: true
+    stance_system: full    # none | basic | full
+  
+  ui_feedback:
+    health_bars: on_selection  # never | on_selection | always | damaged_or_selected
+    range_circles: true
+    build_radius_display: true
+    power_indicators: true
+    support_power_timer: true
+    production_progress: true
+    target_lines: true
+    rally_point_display: true
+  
+  selection:
+    double_click_select_type: true
+    ctrl_click_select_type: true
+    tab_cycle_types: true
+    control_group_limit: 0    # 0 = unlimited
+    smart_select_priority: true
+  
+  gameplay:
+    fog_of_war: optional      # on | off | optional (lobby choice)
+    shroud_regrow: false
+    short_game: optional
+    crate_system: enhanced    # none | basic | enhanced
+    ore_regrowth: true
+</code></pre>
+<pre><code class="language-yaml"># presets/qol/vanilla.yaml
+qol:
+  name: "Vanilla Red Alert"
+  description: "Authentic 1996 experience"
+  
+  production:
+    multi_queue: false
+    parallel_factories: false
+    build_radius_rule: none
+    sell_buildings: partial
+    repair_buildings: true
+  
+  commands:
+    attack_move: false
+    waypoint_queue: false
+    guard_command: false
+    scatter_command: false
+    force_fire_ground: false
+    force_move: false
+    rally_points: false
+    stance_system: none
+  
+  ui_feedback:
+    health_bars: never
+    range_circles: false
+    build_radius_display: false
+    power_indicators: false
+    support_power_timer: false
+    production_progress: false
+    target_lines: false
+    rally_point_display: false
+  
+  selection:
+    double_click_select_type: false
+    ctrl_click_select_type: false
+    tab_cycle_types: false
+    control_group_limit: 10
+    smart_select_priority: false
+  
+  gameplay:
+    fog_of_war: off
+    shroud_regrow: false
+    short_game: off
+    crate_system: basic
+    ore_regrowth: true
+</code></pre>
+<h3 id="sim-vs-client-split"><a class="header" href="#sim-vs-client-split">Sim vs Client Split</a></h3>
+<p>Critical for multiplayer: some toggles change game rules, others are purely cosmetic.</p>
+<p><strong>Sim-affecting toggles</strong> (lobby settings — all players must agree):</p>
+<ul>
+<li>Everything in <code>production</code>, <code>commands</code>, and <code>gameplay</code> sections</li>
+<li>These are validated deterministically by the sim (invariant #1)</li>
+<li>Multiplayer lobby: host sets the QoL preset; displayed to all players before match start</li>
+<li>Mismatch = connection refused (enforced by sim hash, same as balance presets)</li>
+</ul>
+<p><strong>Client-only toggles</strong> (per-player preferences — each player sets their own):</p>
+<ul>
+<li>Everything in <code>ui_feedback</code> and <code>selection</code> sections</li>
+<li>One player can play with always-visible health bars while their opponent plays with none</li>
+<li>Stored in player settings, not in the lobby configuration</li>
+<li>No sim impact — purely visual/UX</li>
+</ul>
+<h3 id="interaction-with-other-systems"><a class="header" href="#interaction-with-other-systems">Interaction with Other Systems</a></h3>
+<p><strong>D019 (Balance Presets):</strong> QoL presets and balance presets are independent axes. You can play with <code>classic</code> balance + <code>openra</code> QoL, or <code>openra</code> balance + <code>vanilla</code> QoL. The lobby UI shows both selections.</p>
+<p><strong>D032 (UI Themes):</strong> QoL and themes are also independent. The “Classic” theme changes chrome appearance; the “Vanilla” QoL preset changes gameplay behavior. They’re separate settings that happen to compose well.</p>
+<p><strong>Experience Profiles:</strong> The meta-layer above all three. Selecting “Vanilla RA” experience profile sets D019=classic, D032=classic, D033=vanilla in one click. Selecting “Iron Curtain” sets D019=classic, D032=modern, D033=iron_curtain. After selecting a profile, any individual setting can still be overridden.</p>
+<p><strong>Modding (Tier 1):</strong> QoL presets are just YAML files in <code>presets/qol/</code>. Modders can create custom QoL presets — a total conversion mod ships its own preset tuned for its gameplay. The <code>mod.yaml</code> manifest can specify a default QoL preset.</p>
+<h3 id="rationale"><a class="header" href="#rationale">Rationale</a></h3>
+<ul>
+<li><strong>Respect for all eras.</strong> Each version of Red Alert — original, OpenRA, Remastered — has a community that loves it. Forcing one set of behaviors on everyone loses part of the audience.</li>
+<li><strong>Player agency.</strong> “Good defaults with full customization” is the guiding principle. The IC default enables the best QoL features; purists can turn them off; power users can cherry-pick.</li>
+<li><strong>Zero engine complexity.</strong> QoL toggles are just config flags read by systems that already exist. Attack-move is either registered as a command or not. Health bars are either rendered or not. No complex runtime switching — the config is read once at game start.</li>
+<li><strong>Multiplayer safety.</strong> The sim/client split ensures determinism. Sim-affecting toggles are lobby settings (like game speed or starting cash). Client-only toggles are personal preferences (like enabling subtitles in any other game).</li>
+<li><strong>Natural extension of D019 + D032.</strong> Balance, theme, and behavior are three independent axes of experience customization. Together they let a player fully configure what “Red Alert” feels like to them.</li>
+</ul>
+<p><strong>Alternatives considered:</strong></p>
+<ul>
+<li>Hardcode one set of behaviors (rejected — this is what every other implementation does; we can do better)</li>
+<li>Make QoL features mod-only (rejected — too important to bury behind modding; should be one click in settings, same as D019)</li>
+<li>Only offer presets without individual toggles (rejected — power users need granular control; presets are starting points, not cages)</li>
+<li>Bundle QoL into balance presets (rejected — “I want OpenRA’s attack-move but classic unit values” is a legitimate preference; conflating balance with UX is a design mistake)</li>
+</ul>
+<p><strong>Phase:</strong> Phase 3 (alongside D032 UI themes and sidebar work). QoL toggles are implemented as system-level config flags — each system checks its toggle on initialization. Preset YAML files are authored during Phase 2 (simulation) as features are built.</p>
 <hr>
 <h2 id="pending-decisions"><a class="header" href="#pending-decisions">PENDING DECISIONS</a></h2>
 <div class="table-wrapper">
