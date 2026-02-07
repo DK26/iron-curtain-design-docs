@@ -398,7 +398,7 @@ ic mod server              # dedicated server
 ic mod package             # build distributables
 ic mod publish             # workshop upload
 ic mod watch               # hot-reload dev mode
-ic mod lint                # convention + ai: metadata checks
+ic mod lint                # convention + llm: metadata checks
 ic mod update-engine       # bump engine version
 ```
 

@@ -44,7 +44,7 @@ units:
       name: "Rifle Infantry"
       icon: e1icon
       sequences: e1
-    ai:
+    llm:
       summary: "Cheap expendable anti-infantry scout"
       role: [anti_infantry, scout, garrison]
       strengths: [cheap, fast_to_build, effective_vs_infantry]
@@ -141,23 +141,23 @@ See D019 in `src/09-DECISIONS.md` for full rationale.
 struct UnitDef {
     inherits: Option<String>,
     display: DisplayInfo,
-    ai: Option<AiMeta>,
+    llm: Option<LlmMeta>,
     buildable: Option<BuildableInfo>,
     health: HealthInfo,
     mobile: Option<MobileInfo>,
     combat: Option<CombatInfo>,
 }
 
-/// LLM/AI-readable metadata for any game resource.
+/// LLM-readable metadata for any game resource.
 /// Consumed by ra-llm (mission generation), ra-ai (skirmish AI),
 /// and workshop search (semantic matching).
 #[derive(Deserialize, Serialize)]
-struct AiMeta {
+struct LlmMeta {
     summary: String,                    // one-line natural language description
     role: Vec<String>,                  // semantic tags: anti_infantry, scout, siege, etc.
     strengths: Vec<String>,             // what this unit is good at
     weaknesses: Vec<String>,            // what this unit is bad at
-    tactical_notes: Option<String>,     // free-text tactical guidance for AI/LLM
+    tactical_notes: Option<String>,     // free-text tactical guidance for LLM
     counters: Vec<String>,              // unit types this is effective against
     countered_by: Vec<String>,          // unit types that counter this
 }
@@ -977,7 +977,7 @@ The `ra-llm` crate can access workshop content as context for generation:
 - **Reference workshop media** (videos, cutscenes) in generated scenarios — e.g., an LLM-generated mission can include `video_playback` scene triggers that pull community-created briefing videos from the workshop
 - Publish generated missions directly to the workshop for sharing
 
-The LLM sees workshop resources through their `ai_meta` fields. A video tagged `summary: "Soviet commander briefing, urgent tone, 30 seconds"` lets the LLM intelligently select it for a mission's opening briefing trigger.
+The LLM sees workshop resources through their `llm_meta` fields. A video tagged `summary: "Soviet commander briefing, urgent tone, 30 seconds"` lets the LLM intelligently select it for a mission's opening briefing trigger.
 
 ### Workshop API
 
@@ -992,16 +992,16 @@ pub trait WorkshopClient: Send + Sync {
 
 pub struct ResourcePackage {
     pub meta: ResourceMeta,           // name, author, version, description, tags
-    pub ai_meta: Option<AiResourceMeta>, // LLM-readable description (see below)
+    pub llm_meta: Option<LlmResourceMeta>, // LLM-readable description (see below)
     pub category: ResourceCategory,   // Mod, Map, Mission, MissionTemplate, Campaign, Asset
     pub files: Vec<PackageFile>,      // the actual content (YAML, Lua, sprites, etc.)
     pub dependencies: Vec<ResourceId>,// other workshop items this requires
     pub compatibility: VersionInfo,   // engine version + mod version this targets
 }
 
-/// LLM/AI-readable metadata for workshop resources.
+/// LLM-readable metadata for workshop resources.
 /// Enables intelligent browsing, selection, and composition by ra-llm.
-pub struct AiResourceMeta {
+pub struct LlmResourceMeta {
     pub summary: String,              // one-line: "A 4-player desert skirmish map with limited ore"
     pub purpose: String,              // when/why to use this: "Best for competitive 2v2 with scarce resources"
     pub gameplay_tags: Vec<String>,   // semantic: ["desert", "2v2", "competitive", "scarce_resources"]
@@ -1049,7 +1049,7 @@ ic mod server              # launch dedicated server for this mod
 ic mod package             # build distributable packages (workshop or standalone)
 ic mod publish             # publish to workshop
 ic mod update-engine       # update engine version in mod.yaml
-ic mod lint                # style/convention checks + ai: metadata completeness
+ic mod lint                # style/convention checks + llm: metadata completeness
 ic mod watch               # hot-reload mode: watches files, reloads YAML/Lua on change
 ```
 
@@ -1096,7 +1096,7 @@ dependencies:                        # other mods/workshop items required
 
 balance_preset: classic              # default balance preset for this mod
 
-ai:
+llm:
   summary: "Alternate-timeline total conversion with new factions and units"
   gameplay_tags: [total_conversion, alternate_history, new_factions]
 ```
@@ -1159,7 +1159,7 @@ Community can publish custom templates to the workshop.
 
 Compare to OpenRA's workflow: install .NET SDK → fork SDK repo → edit MiniYAML → write C# DLL → `make` → `launch-game.sh` → manually package → upload to forum.
 
-## AI-Readable Resource Metadata
+## LLM-Readable Resource Metadata
 
 Every game resource — units, weapons, structures, maps, mods, templates — carries structured metadata designed for consumption by LLMs and AI systems. This is not documentation for humans (that's `display.name` and README files). This is **machine-readable semantic context** that enables AI to reason about game content.
 
@@ -1167,11 +1167,11 @@ Every game resource — units, weapons, structures, maps, mods, templates — ca
 
 Traditional game data is structured for the engine: cost, health, speed, damage. An LLM reading `cost: 100, health: 50, speed: 56, weapon: m1_carbine` can parse the numbers but cannot infer *purpose*. It doesn't know that rifle infantry is a cheap scout, that it's useless against tanks, or that it should be built in groups of 5+.
 
-The `ai:` metadata block bridges this gap. It gives LLMs and AI systems the strategic and tactical context that experienced players carry in their heads.
+The `llm:` metadata block bridges this gap. It gives LLMs the strategic and tactical context that experienced players carry in their heads.
 
 ### What Consumes It
 
-| Consumer                          | How It Uses `ai:` Metadata                                                                                                                                                       |
+| Consumer                          | How It Uses `llm:` Metadata                                                                                                                                                      |
 | --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **`ra-llm` (mission generation)** | Selects appropriate units for scenarios. "A hard mission" → picks units with `role: siege` and high counters. "A stealth mission" → picks units with `role: scout, infiltrator`. |
 | **`ra-ai` (skirmish AI)**         | Reads `counters`/`countered_by` for build decisions. Knows to build anti-air when enemy has `role: air`. Reads `tactical_notes` for positioning hints.                           |
@@ -1181,27 +1181,27 @@ The `ai:` metadata block bridges this gap. It gives LLMs and AI systems the stra
 
 ### Metadata Format (on game resources)
 
-The `ai:` block is optional on every resource type. It follows a consistent schema:
+The `llm:` block is optional on every resource type. It follows a consistent schema:
 
 ```yaml
 # On units / weapons / structures:
-ai:
+llm:
   summary: "One-line natural language description"
   role: [semantic, tags, for, classification]
   strengths: [what, this, excels, at]
   weaknesses: [what, this, is, bad, at]
-  tactical_notes: "Free-text tactical guidance for AI reasoning"
+  tactical_notes: "Free-text tactical guidance for LLM reasoning"
   counters: [unit_types, this, beats]
   countered_by: [unit_types, that, beat, this]
 
 # On maps:
-ai:
+llm:
   summary: "4-player island map with contested center bridge"
   gameplay_tags: [islands, naval, chokepoint, 4player]
   tactical_notes: "Control the center bridge for resource access. Naval early game is critical."
 
 # On weapons:
-ai:
+llm:
   summary: "Long-range anti-structure artillery"
   role: [siege, anti_structure]
   strengths: [long_range, high_structure_damage, area_of_effect]
@@ -1210,11 +1210,11 @@ ai:
 
 ### Metadata Format (on workshop resources)
 
-Workshop resources carry `AiResourceMeta` in their package manifest:
+Workshop resources carry `LlmResourceMeta` in their package manifest:
 
 ```yaml
 # workshop manifest for a mission template
-ai_meta:
+llm_meta:
   summary: "Defend a bridge against 5 waves of Soviet armor"
   purpose: "Good for practicing defensive tactics with limited resources"
   gameplay_tags: [defense, bridge, waves, armor, intermediate]
@@ -1226,8 +1226,8 @@ This metadata is indexed by the workshop server for semantic search. When an LLM
 
 ### Design Rules
 
-1. **`ai:` is always optional.** Resources work without it. Legacy content and OpenRA imports won't have it initially — it can be added incrementally, by humans or by LLMs.
-2. **Human-written is preferred, LLM-generated is acceptable.** When a modder publishes to the workshop without `ai_meta`, the system can offer to auto-generate it from the resource's data (unit stats, map layout, etc.). The modder reviews and approves.
+1. **`llm:` is always optional.** Resources work without it. Legacy content and OpenRA imports won't have it initially — it can be added incrementally, by humans or by LLMs.
+2. **Human-written is preferred, LLM-generated is acceptable.** When a modder publishes to the workshop without `llm_meta`, the system can offer to auto-generate it from the resource's data (unit stats, map layout, etc.). The modder reviews and approves.
 3. **Tags use a controlled vocabulary.** `role`, `strengths`, `weaknesses`, `counters`, and `gameplay_tags` draw from a published tag dictionary (extensible by mods). This prevents tag drift where the same concept has five spellings.
 4. **`tactical_notes` is free-text.** This is the field where nuance lives. "Build 5+ to be cost-effective" or "Position behind walls for maximum effectiveness" — advice that can't be captured in tags.
 5. **Metadata is part of the YAML spec, not a sidecar.** It lives in the same file as the resource definition. No separate metadata files to lose or desync.
