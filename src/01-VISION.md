@@ -41,7 +41,7 @@ Building on Bevy's modern rendering stack unlocks visual capabilities impossible
 
 - Post-processing: bloom, color grading, screen-space reflections on water
 - Dynamic lighting: explosions illuminate surroundings, day/night cycles
-- GPU particle systems: smoke, fire, debris, weather
+- GPU particle systems: smoke, fire, debris, weather (rain, snow, sandstorm, fog, blizzard)
 - Shader effects: chrono-shift shimmer, iron curtain glow, tesla arcs, nuclear flash
 - Smooth camera: sub-pixel rendering, cinematic replay camera, smooth zoom
 - HD asset pipeline alongside classic sprites

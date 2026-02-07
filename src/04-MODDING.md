@@ -517,6 +517,7 @@ Campaign          — ordered mission sequence with narrative
 | `reinforcements`  | trigger, units, entry_point, delay                     | Units arrive from map edge when trigger fires                  |
 | `scripted_scene`  | actors[], dialogue[], camera_positions[]               | Non-interactive cutscene or briefing with camera movement      |
 | `video_playback`  | video_ref, trigger, display_mode, skippable            | Play a video on trigger — see display modes below              |
+| `weather`         | type, intensity, trigger, duration, sim_effects        | Weather system — see weather effects below                     |
 | `extraction`      | pickup_zone, transport_type, signal_trigger            | Player moves units to extraction zone, transport arrives       |
 
 **`video_playback` display modes:**
@@ -532,6 +533,25 @@ The `display_mode` parameter controls *where* the video renders:
 `radar_comm` is how RA2 handles in-mission conversations — the radar panel temporarily switches to a video feed of a character addressing the player, then returns to the minimap when the clip ends. The sidebar stays functional (build queues, power bar still visible). This creates narrative immersion without interrupting gameplay.
 
 The LLM can use this in generated missions: a briefing video at mission start (`fullscreen`), a commander calling in mid-mission when a trigger fires (`radar_comm`), and a small notification video when reinforcements arrive (`picture_in_picture`).
+
+**`weather` scene template:**
+
+Weather effects are GPU particle systems rendered by `ra-render`, with optional gameplay modifiers applied by `ra-sim`.
+
+| Type        | Visual Effect                                                    | Optional Sim Effect (if `sim_effects: true`)                   |
+| ----------- | ---------------------------------------------------------------- | -------------------------------------------------------------- |
+| `rain`      | GPU particle rain, puddle reflections, darkened ambient lighting | Reduced visibility range (−20%), slower wheeled vehicles       |
+| `snow`      | GPU particle snowfall, accumulation on terrain, white fog        | Reduced movement speed (−15%), reduced visibility (−30%)       |
+| `sandstorm` | Dense particle wall, orange tint, reduced draw distance          | Heavy visibility reduction (−50%), damage to exposed infantry  |
+| `blizzard`  | Heavy snow + wind particles, near-zero visibility                | Severe speed/visibility penalty, periodic cold damage          |
+| `fog`       | Volumetric fog shader, reduced contrast at distance              | Reduced visibility range (−40%), no other penalties            |
+| `storm`     | Rain + lightning flashes + screen shake + thunder audio          | Same as rain + random lightning strikes (cosmetic or damaging) |
+
+**Key design principle:** Weather is split into two layers:
+- **Render layer** (`ra-render`): Always active. GPU particles, shaders, post-FX, ambient audio changes. Pure cosmetic, zero sim impact. Particle density scales with `RenderSettings` for lower-end devices.
+- **Sim layer** (`ra-sim`): Optional, controlled by `sim_effects` parameter. When enabled, weather modifies visibility ranges, movement speeds, and damage — deterministically, so multiplayer stays in sync. When disabled, weather is purely cosmetic eye candy.
+
+Weather can be set per-map (in map YAML), triggered mid-mission by Lua scripts, or composed via the `weather` scene template. An LLM generating a "blizzard defense" mission sets `type: blizzard, sim_effects: true` and gets both the visual atmosphere and the gameplay tension.
 
 **Scene template structure:**
 

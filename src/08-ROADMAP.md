@@ -190,7 +190,8 @@ Units moving, shooting, dying — headless sim + rendered. Record replay file. P
 ### Deliverables — Visual Polish (Bevy Rendering)
 - Full post-processing pipeline: bloom, color grading, ambient occlusion
 - Dynamic lighting: explosions, muzzle flash, day/night cycle (optional game mode)
-- GPU particle systems: smoke trails, fire propagation, weather (rain, snow)
+- GPU particle systems: smoke trails, fire propagation, weather effects (rain, snow, sandstorm, fog, blizzard, storm — see `04-MODDING.md` § "weather scene template")
+- Weather system: per-map or trigger-based, render-only or with optional sim effects (visibility, speed modifiers)
 - Polished shader effects: chrono-shift, iron curtain, gap generator, nuke flash
 - Cinematic replay camera with smooth interpolation
 
