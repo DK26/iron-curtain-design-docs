@@ -259,6 +259,27 @@ When you need deeper detail, read the specific design doc:
 - `src/00-INDEX.md` lists invariant #5 twice (duplicate line)
 - Performance details appear in both `src/09-DECISIONS.md` (D015) and `src/10-PERFORMANCE.md` — the latter is canonical
 
+### Mistakes to Never Repeat
+These are specific errors made by agents on this project. Read them before editing any public-facing file.
+
+1. **Agent wrote "design documents are complete" and "implementation beginning" in README.** Neither was true — design is in progress, no code exists. Never declare project status. Only the maintainer decides that.
+
+2. **Agent added author name to FOREWORD.md and README.md but forgot `book.toml` and `00-INDEX.md`.** User had to point out each missing file. When a change touches multiple files, scan all of them first: `AGENTS.md`, `README.md`, `book.toml`, `src/00-INDEX.md`, `src/SUMMARY.md`, `src/FOREWORD.md`, and any design doc that references the topic. Update everything in one pass.
+
+3. **README used present tense for features that don't exist:** "loads your existing OpenRA mods," "your OpenRA mods just work," "eliminates lag switching," "runs headless for AI training." Nothing is implemented. Use future tense: "will load," "designed to," "targets."
+
+4. **README Resource Compatibility table used ✅ checkmarks for planned features.** ✅ means "done." Nothing is done. Use phase numbers or "planned" labels instead.
+
+5. **FOREWORD used jargon a non-technical reader would need to Google:** "borrow checker," "ECS," "dangling pointers," "segfaults," "use-after-free," "buffer overflows," "data races," "GC pauses," "memory layout," "runtime overhead." Public-facing docs should explain what Rust *does for the user* (fast, safe, reliable), not compiler internals. Technical terms belong in `src/01-VISION.md` through `src/12-MOD-MIGRATION.md`.
+
+6. **Don't romanticize the project or dramatize the author's voice.** The author's tone is direct and honest. Avoid motivational-speaker copy — no "love letters," no dramatic origin stories, no rallying cries. State things plainly.
+
+7. **Don't infer relationships between facts the author shares.** If two things are mentioned separately, don't imply they happened simultaneously, are causally linked, or share a timeline unless the author explicitly says so.
+
+8. **Be honest about what competing projects can do.** Don't downplay or dismiss features of OpenRA or other projects to make Iron Curtain look better. If a competitor does something well, say so accurately.
+
+9. **README architecture diagram showed 8 crates when AGENTS.md lists 11.** Missing: `ra-protocol` (the most critical shared boundary), `ra-audio`, `ra-game`. Diagrams and tables derived from AGENTS.md must match it exactly — if AGENTS.md lists 11 crates, the README diagram shows 11 crates. If P006 lists 3 license options, the README license section mentions all 3.
+
 ### Reference Material
 
 These are the projects we actively study. Each serves a different purpose:
