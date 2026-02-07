@@ -269,6 +269,59 @@ pub enum ScreenClass {
 
 `ra-ui` reads `InputCapabilities` to choose the appropriate layout profile. The sim never sees any of this.
 
+## UI Theme System (D032)
+
+The UI is split into two orthogonal concerns:
+
+- **Layout profiles** — *where* things go. Driven by `ScreenClass` (Phone, Tablet, Desktop, TV). Handles sidebar vs bottom bar, touch target sizes, minimap placement. One per screen class.
+- **Themes** — *how* things look. Driven by player preference. Handles colors, chrome sprites, fonts, animations, menu backgrounds. Switchable at any time.
+
+### Theme Architecture
+
+Themes are **YAML + sprite sheets** — Tier 1 mods, no code required.
+
+```rust
+pub struct UiTheme {
+    pub name: String,
+    pub chrome: ChromeAssets,    // 9-slice panels, button states, scrollbar sprites
+    pub colors: ThemeColors,     // primary, secondary, text, highlights
+    pub fonts: ThemeFonts,       // menu, body, HUD
+    pub main_menu: MainMenuConfig,  // background image or shellmap, music, button layout
+    pub ingame: IngameConfig,    // sidebar style, minimap border, build queue chrome
+    pub lobby: LobbyConfig,     // panel styling, slot layout
+}
+```
+
+### Built-in Themes
+
+| Theme | Aesthetic | Inspired By |
+| --- | --- | --- |
+| Classic | Military minimalism — bare buttons, static title screen, Soviet palette | Original RA1 (1996) |
+| Remastered | Clean modern military — HD panels, sleek chrome, reverent refinement | Remastered Collection (2020) |
+| Modern | Full Bevy UI — dynamic panels, animated transitions, modern game launcher feel | IC's own design |
+
+All art assets are **original creations** — no assets copied from EA or OpenRA. These themes capture aesthetic philosophy, not specific artwork.
+
+### Shellmap System
+
+Main menu backgrounds can be **live battles** — a real game map with scripted AI running behind the menu UI:
+- Per-theme configuration: Classic uses a static image (faithful to 1996), Remastered/Modern use shellmaps
+- Maps tagged `visibility: shellmap` are eligible — random selection on each launch
+- Shellmaps define camera paths (pan, orbit, or fixed)
+- Mods automatically get their own shellmaps
+
+### Per-Game-Module Defaults
+
+Each `GameModule` provides a `default_theme()` — RA1 defaults to Classic, future modules default to whatever fits their aesthetic. Players override in settings. This pairs naturally with D019 (switchable balance presets): Classic balance + Classic theme = feels like 1996.
+
+### Community Themes
+
+- Publishable to workshop (D030) as standalone resources
+- Stack with gameplay mods — a WWII total conversion ships its own olive-drab theme
+- An "OpenRA-inspired" community theme is a natural contribution
+
+See `09-DECISIONS.md` § D032 for full rationale, YAML schema, and legal notes on asset sourcing.
+
 ## Crate Dependency Graph
 
 ```

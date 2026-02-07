@@ -91,6 +91,7 @@ These are settled. Don't re-litigate unless the user explicitly wants to revisit
 | D029 | Cross-game component library (Phase 2)            | 7 first-party systems (mind control, carriers, teleport, shields, upgrades, delayed weapons, dual assets) are Phase 2 deliverables                                                                                                                              |
 | D030 | Workshop resource registry & dependency system    | Artifactory-style universal artifact repository; any asset type publishable individually; semver deps, lockfile, SHA-256 integrity, license required, promotion channels, LLM discovery; federated multi-source with local/remote/virtual repos (resolves P007) |
 | D031 | Observability & telemetry (OTEL)                  | All servers + engine emit OTEL metrics/traces/logs; zero-cost when disabled; gameplay event stream for AI training; distributed tracing for desync debugging; pre-built Grafana dashboards for self-hosters                                                     |
+| D032 | Switchable UI themes (main menu, chrome, lobby)   | YAML-driven theme system with built-in presets (Classic/Remastered/Modern); original art inspired by each era's aesthetic; shellmap live backgrounds; per-game-module defaults; community themes via workshop (D030); pairs with D019 balance presets             |
 
 ## Pending Decisions
 
@@ -222,7 +223,7 @@ When you need deeper detail, read the specific design doc:
 | Topic                                                                      | Read                        |
 | -------------------------------------------------------------------------- | --------------------------- |
 | Goals, competitive landscape, why this exists                              | `src/01-VISION.md`          |
-| Crate structure, ECS, sim/render split, game loop code                     | `src/02-ARCHITECTURE.md`    |
+| Crate structure, ECS, sim/render split, game loop, UI themes               | `src/02-ARCHITECTURE.md`    |
 | NetworkModel trait, relay server, CS2 sub-tick, lockstep                   | `src/03-NETCODE.md`         |
 | YAML rules, Lua scripting, WASM modules, sandboxing, LLM metadata, Mod SDK | `src/04-MODDING.md`         |
 | File formats, EA source code insights, coordinate systems                  | `src/05-FORMATS.md`         |

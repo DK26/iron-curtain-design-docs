@@ -123,6 +123,8 @@ Units moving, shooting, dying — headless sim + rendered. Record replay file. P
 - Audio: EVA voice lines, unit responses, ambient, music (`.aud` playback)
 - Custom UI layer on `wgpu` for game HUD
 - `egui` for dev tools/debug overlays
+- **UI theme system (D032):** YAML-driven switchable themes (Classic, Remastered, Modern); chrome sprite sheets, color palettes, font configuration; shellmap live menu backgrounds; first-launch theme picker
+- **Per-game-module default theme:** RA1 module defaults to Classic theme
 
 ### Exit Criteria
 - Single-player skirmish against scripted dummy AI (first "playable" milestone)
