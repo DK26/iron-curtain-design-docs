@@ -553,6 +553,243 @@ Weather effects are GPU particle systems rendered by `ra-render`, with optional 
 
 Weather can be set per-map (in map YAML), triggered mid-mission by Lua scripts, or composed via the `weather` scene template. An LLM generating a "blizzard defense" mission sets `type: blizzard, sim_effects: true` and gets both the visual atmosphere and the gameplay tension.
 
+### Dynamic Weather System (D022)
+
+The base weather system above covers static, per-mission weather. The **dynamic weather system** extends it with real-time weather transitions and terrain texture effects during gameplay — snow accumulates on the ground, rain darkens and wets surfaces, sunshine dries everything out.
+
+#### Weather State Machine
+
+Weather transitions are modeled as a state machine running inside `ra-sim`. The machine is deterministic — same schedule + same tick = identical weather on every client.
+
+```
+     ┌──────────┐      ┌───────────┐      ┌──────────┐
+     │  Sunny   │─────▶│ Overcast  │─────▶│   Rain   │
+     └──────────┘      └───────────┘      └──────────┘
+          ▲                                     │
+          │            ┌───────────┐            │
+          └────────────│ Clearing  │◀───────────┘
+                       └───────────┘            │
+                            ▲           ┌──────────┐
+                            └───────────│  Storm   │
+                                        └──────────┘
+
+     ┌──────────┐      ┌───────────┐      ┌──────────┐
+     │  Clear   │─────▶│  Cloudy   │─────▶│   Snow   │
+     └──────────┘      └───────────┘      └──────────┘
+          ▲                                     │
+          └─────────────────────────────────────┘
+                    (melt / thaw)
+```
+
+Each weather type has an **intensity** (fixed-point `0..1024`) that ramps up during transitions and down during clearing. The sim tracks this as a `WeatherState` resource:
+
+```rust
+/// ra-sim: deterministic weather state
+pub struct WeatherState {
+    pub current: WeatherType,
+    pub intensity: FixedPoint,       // 0 = clear, 1024 = full
+    pub transitioning_to: Option<WeatherType>,
+    pub transition_progress: FixedPoint,  // 0..1024
+    pub ticks_in_current: u32,
+}
+```
+
+#### Weather Schedule (YAML)
+
+Maps define a weather schedule — the rules for how weather evolves. Three modes:
+
+```yaml
+# maps/winter_assault/map.yaml
+weather:
+  schedule:
+    mode: cycle           # cycle | random | scripted
+    default: sunny
+    seed_from_match: true # random mode uses match seed (deterministic)
+
+    states:
+      sunny:
+        min_duration: 300   # minimum ticks before transition
+        max_duration: 600
+        transitions:
+          - to: overcast
+            weight: 60      # relative probability
+          - to: cloudy
+            weight: 40
+
+      overcast:
+        min_duration: 120
+        max_duration: 240
+        transitions:
+          - to: rain
+            weight: 70
+          - to: sunny
+            weight: 30
+        transition_time: 30  # ticks to blend between states
+
+      rain:
+        min_duration: 200
+        max_duration: 500
+        transitions:
+          - to: storm
+            weight: 20
+          - to: clearing
+            weight: 80
+        sim_effects: true    # enables gameplay modifiers
+
+      snow:
+        min_duration: 300
+        max_duration: 800
+        transitions:
+          - to: clearing
+            weight: 100
+        sim_effects: true
+
+      clearing:
+        min_duration: 60
+        max_duration: 120
+        transitions:
+          - to: sunny
+            weight: 100
+        transition_time: 60
+
+    surface:
+      snow:
+        accumulation_rate: 2    # fixed-point units per tick while snowing
+        max_depth: 1024
+        melt_rate: 1            # per tick when not snowing
+      rain:
+        wet_rate: 4             # per tick while raining
+        dry_rate: 2             # per tick when not raining
+      temperature:
+        base: 512              # 0 = freezing, 1024 = hot
+        sunny_warming: 1       # per tick
+        snow_cooling: 2        # per tick
+```
+
+- **`cycle`** — deterministic round-robin through states per the transition weights and durations.
+- **`random`** — weighted random using the match seed. Same seed = same weather progression on all clients.
+- **`scripted`** — no automatic transitions; weather changes only when Lua calls `Weather.transition_to()`.
+
+Lua can override the schedule at any time:
+
+```lua
+-- Force a blizzard for dramatic effect at mission climax
+Weather.transition_to("blizzard", 45)  -- 45-tick transition
+Weather.set_intensity(900)             -- near-maximum
+
+-- Query current state
+local w = Weather.get_state()
+print(w.current)     -- "blizzard"
+print(w.intensity)   -- 900
+print(w.surface.snow_depth)  -- per-map average
+```
+
+#### Terrain Surface State (Sim Layer)
+
+When `sim_effects` is enabled, the sim maintains a per-cell `TerrainSurfaceGrid` — a compact grid tracking how weather has physically altered the terrain. This is **deterministic** and affects gameplay.
+
+```rust
+/// ra-sim: per-cell surface condition
+pub struct SurfaceCondition {
+    pub snow_depth: FixedPoint,   // 0 = bare ground, 1024 = deep snow
+    pub wetness: FixedPoint,      // 0 = dry, 1024 = waterlogged
+}
+
+/// Grid resource, one entry per map cell
+pub struct TerrainSurfaceGrid {
+    pub cells: Vec<SurfaceCondition>,
+    pub width: u32,
+    pub height: u32,
+}
+```
+
+The `weather_surface_system` runs every tick (after weather state update, before movement):
+
+| Condition               | Effect on Surface                                    |
+| ----------------------- | ---------------------------------------------------- |
+| Snowing                 | `snow_depth += accumulation_rate × intensity / 1024` |
+| Not snowing, sunny      | `snow_depth -= melt_rate` (clamped at 0)             |
+| Raining                 | `wetness += wet_rate × intensity / 1024`             |
+| Not raining             | `wetness -= dry_rate` (clamped at 0)                 |
+| Snow melting            | `wetness += melt_rate` (meltwater)                   |
+| Temperature < threshold | Puddles freeze → wet cells become icy                |
+
+**Sim effects from surface state (when `sim_effects: true`):**
+
+| Surface State        | Gameplay Effect                                                      |
+| -------------------- | -------------------------------------------------------------------- |
+| Deep snow (> 512)    | Infantry −20% speed, wheeled −30%, tracked −10%                      |
+| Ice (frozen wetness) | Water tiles become passable; all ground units slide (−15% turn rate) |
+| Wet ground (> 256)   | Wheeled −15% speed; no effect on tracked/infantry                    |
+| Muddy (wet + warm)   | Wheeled −25% speed, tracked −10%; infantry unaffected                |
+| Dry / sunny          | No penalties; baseline movement                                      |
+
+These modifiers stack with the weather-type modifiers from the base weather table. A blizzard over deep snow is brutal.
+
+**Snapshot compatibility:** `TerrainSurfaceGrid` derives `Serialize, Deserialize` — surface state is captured in save games and snapshots per invariant #10.
+
+#### Terrain Texture Effects (Render Layer)
+
+`ra-render` reads the sim's `TerrainSurfaceGrid` and blends terrain visuals accordingly. This is **purely cosmetic** — it has no effect on the sim and runs at whatever quality the device supports.
+
+Three rendering strategies, selectable via `RenderSettings`:
+
+| Strategy            | Quality | Cost      | Description                                                                                                                                                   |
+| ------------------- | ------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Palette tinting** | Low     | Near-zero | Shift terrain palette toward white (snow) or darker (wet). Authentic to original RA palette tech. No extra assets needed.                                     |
+| **Overlay sprites** | Medium  | One pass  | Draw semi-transparent snow/puddle/ice overlays on top of base terrain tiles. Requires overlay sprite sheets (shipped with engine or mod-provided).            |
+| **Shader blending** | High    | GPU blend | Fragment shader blends between base texture and weather-variant texture per tile. Smoothest transitions, gradual accumulation. Requires variant texture sets. |
+
+Default: **palette tinting** (works everywhere, zero asset requirements). Mods that ship weather-variant sprites get overlay or shader blending automatically.
+
+**Accumulation visuals** (shader blending mode):
+- Snow doesn't appear uniformly — it starts on tile edges, elevated features, and rooftops, then fills inward as `snow_depth` increases
+- Rain creates puddle sprites in low-lying cells first, then spreads to flat ground
+- Drying happens as a gradual desaturation back to base palette
+- Blend factor = `surface_condition_value / 1024` — smooth interpolation
+
+**Performance considerations:**
+- Palette tinting: no extra draw calls, no extra textures, negligible GPU cost
+- Overlay sprites: one additional sprite draw per affected cell — batched via Bevy's sprite batching
+- Shader blending: texture array per terrain type (base + snow + wet variants), single draw call per terrain chunk with per-vertex blend weights
+- Particle density for weather effects already scales with `RenderSettings` (existing design)
+- Surface texture updates are amortized: only cells near weather transitions or visible cells update their blend factors each frame
+
+#### Day/Night and Seasonal Integration
+
+Dynamic weather composes naturally with other environmental systems:
+
+- **Day/night cycle:** Ambient lighting shifts interact with weather — overcast days are darker, rain at night is nearly black with lightning flashes, sunny midday is brightest
+- **Seasonal maps:** A map can set `temperature.base` low (winter map) so any rain becomes snow, or high (desert) where `sandstorm` replaces `rain` in the state machine
+- **Map-specific overrides:** Arctic maps default to snow schedule; desert maps disable snow transitions; tropical maps always rain
+
+#### Modding Weather
+
+Weather is fully moddable at every tier:
+
+- **Tier 1 (YAML):** Define custom weather schedules, tune surface rates, adjust sim effect values, choose blend strategy, create seasonal presets
+- **Tier 2 (Lua):** Trigger weather transitions at story moments, query surface state for mission objectives ("defend until the blizzard clears"), create weather-dependent triggers
+- **Tier 3 (WASM):** Implement custom weather types (acid rain, ion storms, radiation clouds) with new particles, new sim effects, and custom surface state logic
+
+```yaml
+# Example: Tiberian Sun ion storm (custom weather type via mod)
+weather_types:
+  ion_storm:
+    particles: ion_storm_particles.shp
+    palette_tint: [0.2, 0.8, 0.3]  # green tint
+    sim_effects:
+      aircraft_grounded: true
+      radar_disabled: true
+      lightning_damage: 50
+      lightning_interval: 120  # ticks between strikes
+    surface:
+      contamination_rate: 1
+      max_contamination: 512
+    render:
+      strategy: shader_blend
+      variant_suffix: "_ion"
+```
+
 **Scene template structure:**
 
 ```

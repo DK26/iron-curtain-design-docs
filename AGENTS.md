@@ -81,6 +81,7 @@ These are settled. Don't re-litigate unless the user explicitly wants to revisit
 | D019 | Switchable balance presets                    | Classic RA (default) vs OpenRA vs Remastered; YAML rule sets selectable in lobby; not a mod, a game option       |
 | D020 | Mod SDK with `ic` CLI tool                    | `cargo-generate` templates + `ic` CLI; inspired by OpenRA Mod SDK but no C#/.NET; workshop integration           |
 | D021 | Branching campaigns with persistent state     | Campaign graph (not linear), named outcomes, unit roster/veterancy/equipment carry over; OFP-inspired            |
+| D022 | Dynamic weather with terrain surface effects  | Weather state machine + per-cell terrain surface state; snow/rain/sun change terrain textures; deterministic sim |
 
 ## Pending Decisions
 

@@ -43,6 +43,7 @@ Building on Bevy's modern rendering stack unlocks visual capabilities impossible
 - Post-processing: bloom, color grading, screen-space reflections on water
 - Dynamic lighting: explosions illuminate surroundings, day/night cycles
 - GPU particle systems: smoke, fire, debris, weather (rain, snow, sandstorm, fog, blizzard)
+- Dynamic weather: real-time transitions (sunny → overcast → rain → storm), snow accumulation on terrain, puddle formation, seasonal effects — terrain textures respond to weather via palette tinting, overlay sprites, or shader blending (D022)
 - Shader effects: chrono-shift shimmer, iron curtain glow, tesla arcs, nuclear flash
 - Smooth camera: sub-pixel rendering, cinematic replay camera, smooth zoom
 - HD asset pipeline alongside classic sprites
