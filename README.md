@@ -29,7 +29,7 @@ Red Alert defined the RTS genre in 1996. Three decades later, there are two ways
 
 **The Remastered Collection** looks beautiful but changes almost nothing under the hood. The servers are struggling. The modding is limited. It only runs on Windows and Xbox. The engine is closed source.
 
-**OpenRA** is a remarkable community achievement — cross-platform, open source, actively developed for 18 years. But it's built on C#/.NET, and it shows: large battles stutter, desyncs are common and nearly impossible to debug, and deep modding requires writing C# against an aging codebase.
+**OpenRA** is a remarkable community achievement — cross-platform, open source, actively developed for 18 years. But it's built on C#/.NET, and it shows: performance can feel off at random moments, desyncs are common and nearly impossible to debug, and deep modding requires writing C# against an aging codebase.
 
 Iron Curtain asks: *what if we kept everything OpenRA got right — the community, the mods, the maps, the cross-platform spirit — and rebuilt the engine with today's best tools?*
 
