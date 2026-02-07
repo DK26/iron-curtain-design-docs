@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-4f94752b.js";
+            window.path_to_searchindex_js = "searchindex-951f560d.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-d8a85e3a.js"></script>
@@ -454,6 +454,40 @@
 Game module extensibility targets: Red Alert, RA2, Tiberian Sun, Tiberian Dawn, Dune 2000. These share the isometric camera, grid-based terrain, sprite/voxel rendering, and <code>.mix</code> format lineage. <strong>3D titles (Generals, C&amp;C3, RA3) are out of scope as game modules</strong> — they require free-rotating cameras, mesh rendering, navmesh pathfinding, and unrelated formats. ~60% of the engine wouldn’t carry over. If desired later, extract the game-agnostic sim core into a shared RTS framework crate and build a 3D frontend independently.</p>
 <p>However, <strong>3D rendering mods for isometric-family games are explicitly supported.</strong> A “3D Red Alert” Tier 3 mod can replace sprites with GLTF meshes and the isometric camera with a free 3D camera — without changing the sim, networking, or pathfinding. Bevy’s built-in 3D pipeline makes this feasible. Cross-view multiplayer (2D vs 3D players in the same game) works because the sim is view-agnostic. See <code>02-ARCHITECTURE.md</code> § “3D Rendering as a Mod”.</p>
 <p><strong>Phase:</strong> Baked into architecture from Phase 0. RA2 module is a potential Phase 8+ project.</p>
+<hr>
+<h2 id="d019-switchable-balance-presets-classic-ra-vs-openra"><a class="header" href="#d019-switchable-balance-presets-classic-ra-vs-openra">D019: Switchable Balance Presets (Classic RA vs OpenRA)</a></h2>
+<p><strong>Decision:</strong> Ship multiple balance presets as first-class YAML rule sets. Default to classic Red Alert values from the EA source code. OpenRA balance available as an alternative preset. Selectable per-game in lobby.</p>
+<p><strong>Rationale:</strong></p>
+<ul>
+<li>Original Red Alert’s balance makes units feel <strong>powerful and iconic</strong> — Tanya, MiGs, Tesla Coils, V2 rockets are devastating. This is what made the game memorable.</li>
+<li>OpenRA rebalances toward competitive fairness, which makes units feel interchangeable and underwhelming to many players. Valid for tournaments, wrong as a default.</li>
+<li>The community is split on this. Rather than picking a side, expose it as a choice.</li>
+<li>Presets are just alternate YAML files loaded at game start — zero engine complexity. The modding system already supports this via inheritance and overrides.</li>
+<li>The Remastered Collection made its own subtle balance tweaks — worth capturing as a third preset.</li>
+</ul>
+<p><strong>Implementation:</strong></p>
+<ul>
+<li><code>rules/presets/classic/</code> — unit/weapon/structure values from EA source code (default)</li>
+<li><code>rules/presets/openra/</code> — values matching OpenRA’s current balance</li>
+<li><code>rules/presets/remastered/</code> — values matching the Remastered Collection</li>
+<li>Preset selection exposed in lobby UI and stored in game settings</li>
+<li>Presets use YAML inheritance: only override fields that differ from <code>classic</code></li>
+<li>Multiplayer: all players must use the same preset (enforced by lobby, validated by sim)</li>
+<li>Custom presets: modders can create new presets as additional YAML directories</li>
+</ul>
+<p><strong>What this is NOT:</strong></p>
+<ul>
+<li>Not a “difficulty setting” — both presets play at normal difficulty</li>
+<li>Not a mod — it’s a first-class game option, no workshop download required</li>
+<li>Not just multiplayer — applies to skirmish and campaign too</li>
+</ul>
+<p><strong>Alternatives considered:</strong></p>
+<ul>
+<li>Only ship classic values (rejected — alienates OpenRA competitive community)</li>
+<li>Only ship OpenRA values (rejected — loses the original game’s personality)</li>
+<li>Let mods handle it (rejected — too important to bury in the modding system; should be one click in settings)</li>
+</ul>
+<p><strong>Phase:</strong> Phase 2 (balance values extracted during simulation implementation).</p>
 <hr>
 <h2 id="pending-decisions"><a class="header" href="#pending-decisions">PENDING DECISIONS</a></h2>
 <div class="table-wrapper">

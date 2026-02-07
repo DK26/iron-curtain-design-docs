@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-4f94752b.js";
+            window.path_to_searchindex_js = "searchindex-951f560d.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-d8a85e3a.js"></script>
@@ -349,6 +349,76 @@
 <li>Combined with OpenRA’s 17 years of refinements: “how it originally worked” + “how it should work”</li>
 </ul>
 <p>Repository: https://github.com/electronicarts/CnC_Red_Alert</p>
+<h2 id="reference-projects"><a class="header" href="#reference-projects">Reference Projects</a></h2>
+<p>These are the projects we actively study. Each serves a different purpose — do not treat them as interchangeable.</p>
+<h3 id="openra--httpsgithubcomopenraopenra"><a class="header" href="#openra--httpsgithubcomopenraopenra">OpenRA — https://github.com/OpenRA/OpenRA</a></h3>
+<p><strong>What to study:</strong></p>
+<ul>
+<li><strong>Source code:</strong> Trait/component architecture, how they solved the same problems we’ll face (fog of war, build queues, harvester AI, naval combat). Our ECS component model maps directly from their traits.</li>
+<li><strong>Issue tracker:</strong> Community pain points surface here. Recurring complaints = design opportunities for us. Pay attention to issues tagged with performance, pathfinding, modding, and multiplayer.</li>
+<li><strong>UX/UI patterns:</strong> OpenRA has 17 years of UI iteration. Their command interface (attack-move, force-fire, waypoints, control groups, rally points) is excellent. <strong>Adopt their UX patterns for player interaction.</strong></li>
+<li><strong>Mod ecosystem:</strong> Understand what modders actually build so our modding tiers serve real needs.</li>
+</ul>
+<p><strong>What NOT to copy:</strong></p>
+<ul>
+<li><strong>Unit balance.</strong> OpenRA deliberately rebalances units away from the original game toward competitive multiplayer fairness. This makes iconic units feel underwhelming (see Gameplay Philosophy below). We default to classic RA balance.</li>
+<li><strong>Simulation internals bug-for-bug.</strong> We’re not bit-identical — we’re better-algorithms-identical.</li>
+</ul>
+<h3 id="ea-red-alert-source--httpsgithubcomelectronicartscnc_red_alert"><a class="header" href="#ea-red-alert-source--httpsgithubcomelectronicartscnc_red_alert">EA Red Alert Source — https://github.com/electronicarts/CnC_Red_Alert</a></h3>
+<p><strong>What to study:</strong></p>
+<ul>
+<li><strong>Exact gameplay values.</strong> Damage tables, weapon ranges, unit speeds, fire rates, armor multipliers. This is the canonical source for “how Red Alert actually plays.” When OpenRA and EA source disagree on a value, <strong>EA source wins for our classic preset.</strong></li>
+<li><strong>Order processing.</strong> The <code>OutList</code>/<code>DoList</code> pattern maps directly to our <code>PlayerOrder → TickOrders → apply_tick()</code> architecture.</li>
+<li><strong>Integer math patterns.</strong> Original RA uses integer math throughout for determinism — validates our fixed-point approach.</li>
+<li><strong>AI behavior.</strong> How the original skirmish AI makes decisions, builds bases, attacks. Reference for <code>ra-ai</code>.</li>
+</ul>
+<p><strong>Caution:</strong> The codebase is 1990s C++ — tangled, global state everywhere, no tests. Extract knowledge, don’t port patterns.</p>
+<h3 id="ea-remastered-collection--httpsgithubcomelectronicartscnc_remastered_collection"><a class="header" href="#ea-remastered-collection--httpsgithubcomelectronicartscnc_remastered_collection">EA Remastered Collection — https://github.com/electronicarts/CnC_Remastered_Collection</a></h3>
+<p><strong>What to study:</strong></p>
+<ul>
+<li><strong>UI/UX design.</strong> The Remastered Collection has the best UI/UX of any C&amp;C game. Clean, uncluttered, scales well to modern resolutions. <strong>This is our gold standard for UI layout and information density.</strong> Where OpenRA sometimes overwhelms with GUI elements, Remastered gets the density right.</li>
+<li><strong>HD asset pipeline.</strong> How they upscaled and re-rendered classic assets while preserving the feel. Relevant for our rendering pipeline.</li>
+<li><strong>Sidebar design.</strong> Classic sidebar with modern polish — study how they balanced information vs screen real estate.</li>
+</ul>
+<h3 id="ea-tiberian-dawn-source--httpsgithubcomelectronicartscnc_tiberian_dawn"><a class="header" href="#ea-tiberian-dawn-source--httpsgithubcomelectronicartscnc_tiberian_dawn">EA Tiberian Dawn Source — https://github.com/electronicarts/CnC_Tiberian_Dawn</a></h3>
+<p><strong>What to study:</strong></p>
+<ul>
+<li><strong>Shared C&amp;C engine lineage.</strong> TD and RA share engine code. Cross-referencing both clarifies ambiguous behavior in either.</li>
+<li><strong>Game module reference.</strong> When we build the Tiberian Dawn game module (D018), this is the authoritative source for TD-specific logic.</li>
+<li><strong>Format compatibility.</strong> TD <code>.mix</code> files, terrain, and sprites share formats with RA — validation data for <code>ra-formats</code>.</li>
+</ul>
+<h3 id="chrono-divide--typescript-browser-based-ra2"><a class="header" href="#chrono-divide--typescript-browser-based-ra2">Chrono Divide — (TypeScript, browser-based RA2)</a></h3>
+<p><strong>What to study:</strong></p>
+<ul>
+<li>Architecture reference for our WASM/browser target</li>
+<li>Proof that browser-based RTS with real multiplayer is viable</li>
+</ul>
+<h2 id="gameplay-philosophy"><a class="header" href="#gameplay-philosophy">Gameplay Philosophy</a></h2>
+<h3 id="classic-feel-modern-ux"><a class="header" href="#classic-feel-modern-ux">Classic Feel, Modern UX</a></h3>
+<p>Iron Curtain’s default gameplay targets the <strong>original Red Alert experience</strong>, not OpenRA’s rebalanced version. This is a deliberate choice:</p>
+<ul>
+<li><strong>Units should feel powerful and distinct.</strong> Tanya kills soldiers from range, fast, and doesn’t die easily — she’s a special operative, not a fragile glass cannon. MiG attacks should be devastating. V2 rockets should be terrifying. Tesla coils should fry anything that comes close. <strong>If a unit was iconic in the original game, it should feel iconic here.</strong></li>
+<li><strong>OpenRA’s competitive rebalancing</strong> makes units more “fair” for tournament play but strips the personality from the game. Every unit feels interchangeable and underwhelming. That’s a valid design choice for competitive players, but it’s not <em>our</em> default.</li>
+<li><strong>OpenRA’s UX/UI innovations are genuinely excellent</strong> and we adopt them: attack-move, waypoint queuing, production queues, control group management, minimap interactions, build radius visualization. The Remastered Collection’s UI density and layout is our gold standard for visual design.</li>
+</ul>
+<h3 id="switchable-balance-presets-d019"><a class="header" href="#switchable-balance-presets-d019">Switchable Balance Presets (D019)</a></h3>
+<p>Because reasonable people disagree on balance, the engine supports <strong>balance presets</strong> — switchable sets of unit values loaded from YAML at game start:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Preset</th><th>Source</th><th>Feel</th></tr>
+</thead>
+<tbody>
+<tr><td><code>classic</code> (default)</td><td>EA source code values</td><td>Powerful iconic units, asymmetric fun</td></tr>
+<tr><td><code>openra</code></td><td>OpenRA’s current balance</td><td>Competitive fairness, tournament-ready</td></tr>
+<tr><td><code>remastered</code></td><td>Remastered Collection values</td><td>Slight tweaks to classic for QoL</td></tr>
+<tr><td><code>custom</code></td><td>User-defined YAML overrides</td><td>Full modder control</td></tr>
+</tbody>
+</table>
+</div>
+<p>Presets are just YAML files in <code>rules/presets/</code>. Switching preset = loading a different set of unit/weapon/structure YAML. No code changes, no mod required. The lobby UI exposes preset selection.</p>
+<p>This is not a modding feature — it’s a first-class game option. “Classic” vs “OpenRA” balance is a settings toggle, not a total conversion.</p>
+<p>See <code>src/04-MODDING.md</code> § “Balance Presets” and D019 in <code>src/09-DECISIONS.md</code>.</p>
 <h2 id="timing-assessment"><a class="header" href="#timing-assessment">Timing Assessment</a></h2>
 <ul>
 <li>EA source just released (fresh community interest)</li>
@@ -356,42 +426,45 @@
 <li>No competition in Rust RTS space</li>
 <li>OpenRA showing architectural age despite active development</li>
 <li>WASM/browser gaming increasingly viable</li>
+<li>Multiple EA source releases provide unprecedented reference material</li>
 </ul>
 <p><strong>Verdict:</strong> Window of opportunity is open now.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="02--core-architecture"><a class="header" href="#02--core-architecture">02 — Core Architecture</a></h1>
-<h2 id="decision-no-bevy"><a class="header" href="#decision-no-bevy">Decision: No Bevy</a></h2>
-<p><strong>Rationale:</strong></p>
+<h2 id="decision-bevy"><a class="header" href="#decision-bevy">Decision: Bevy</a></h2>
+<p><strong>Rationale (revised — see D002 in <code>src/09-DECISIONS.md</code>):</strong></p>
 <ul>
-<li>Bevy is pre-1.0 with frequent breaking changes — building on shifting ground</li>
-<li>2D isometric RTS is not its sweet spot</li>
-<li>Would require building tile rendering, sprite layering, RTS UI, networking from scratch on top of Bevy anyway</li>
-<li>Would fight two architectures simultaneously (Bevy’s paradigms + OpenRA’s game concepts)</li>
-<li>Bevy’s UI (<code>bevy_ui</code>) is nowhere near what an RTS HUD needs</li>
+<li>ECS <em>is</em> our architecture — Bevy gives it to us with scheduling, queries, and parallel system execution out of the box</li>
+<li>Saves 2–4 months of engine plumbing (windowing, asset pipeline, audio, rendering scaffolding)</li>
+<li>Plugin system maps naturally to pluggable networking (<code>NetworkModel</code> as a Bevy plugin)</li>
+<li>Bevy’s 2D + 3D rendering pipeline covers both classic isometric sprites and future 3D mods</li>
+<li><code>wgpu</code> is Bevy’s backend — we still get low-level control via custom render passes where profiling justifies it</li>
+<li>Breaking API changes are manageable: pin Bevy version per development phase, upgrade between phases</li>
 </ul>
-<p><strong>Instead: Library-based stack</strong></p>
+<p><strong>Bevy provides:</strong></p>
 <div class="table-wrapper">
 <table>
 <thead>
-<tr><th>Concern</th><th>Library</th><th>Rationale</th></tr>
+<tr><th>Concern</th><th>Bevy Subsystem</th><th>Notes</th></tr>
 </thead>
 <tbody>
-<tr><td>Windowing</td><td><code>winit</code></td><td>Standard, stable, cross-platform</td></tr>
-<tr><td>Rendering</td><td><code>wgpu</code></td><td>Low-level control for isometric sprite engine, WebGPU for browser</td></tr>
-<tr><td>ECS</td><td><code>hecs</code> or <code>shipyard</code></td><td>Lightweight, or custom trait system mirroring OpenRA semantics</td></tr>
-<tr><td>Dev tools</td><td><code>egui</code></td><td>Immediate-mode debug overlays</td></tr>
-<tr><td>Game UI</td><td>Custom on <code>wgpu</code></td><td>C&amp;C sidebar too specific for generic UI libs</td></tr>
-<tr><td>Scripting</td><td><code>mlua</code></td><td>Lua embedding</td></tr>
-<tr><td>Mod runtime</td><td><code>wasmtime</code> / <code>wasmer</code></td><td>WASM sandboxed execution</td></tr>
+<tr><td>Windowing</td><td><code>bevy_winit</code></td><td>Cross-platform, handles lifecycle events</td></tr>
+<tr><td>Rendering</td><td><code>bevy_render</code> + <code>wgpu</code></td><td>Custom isometric sprite passes + standard 3D pipeline</td></tr>
+<tr><td>ECS</td><td><code>bevy_ecs</code></td><td>Archetypes, system scheduling, change detection</td></tr>
+<tr><td>Asset I/O</td><td><code>bevy_asset</code></td><td>Hot-reloading, platform-agnostic (WASM/mobile-safe)</td></tr>
+<tr><td>Audio</td><td><code>bevy_audio</code></td><td>Platform-routed; <code>ra-audio</code> wraps for .aud/.ogg/EVA</td></tr>
+<tr><td>Dev tools</td><td><code>egui</code> via <code>bevy_egui</code></td><td>Immediate-mode debug overlays</td></tr>
+<tr><td>Scripting</td><td><code>mlua</code> (Bevy resource)</td><td>Lua embedding, integrated as non-send resource</td></tr>
+<tr><td>Mod runtime</td><td><code>wasmtime</code> / <code>wasmer</code></td><td>WASM sandboxed execution (Bevy system, not Bevy plugin)</td></tr>
 </tbody>
 </table>
 </div>
 <h2 id="simulation--render-split-critical-architecture"><a class="header" href="#simulation--render-split-critical-architecture">Simulation / Render Split (Critical Architecture)</a></h2>
 <p>The simulation and renderer are completely decoupled from day one.</p>
 <pre><code>┌─────────────────────────────────────────────┐
-│                  GameLoop&lt;N&gt;                 │
+│             GameLoop&lt;N, I&gt;                  │
 │                                             │
-│  Input → Network → Sim (fixed tick) → Render│
+│  Input(I) → Network(N) → Sim (tick) → Render│
 │                                             │
 │  Sim runs at fixed tick rate (e.g., 15/sec) │
 │  Renderer interpolates between sim states   │
@@ -1008,7 +1081,153 @@ tracking_servers:
 <h3 id="openra-shared-browser"><a class="header" href="#openra-shared-browser">OpenRA Shared Browser</a></h3>
 <p>Implementing the OpenRA master server protocol means Iron Curtain games can appear in OpenRA’s game browser (and vice versa), tagged by engine. Players see the full community. This is the Level 0 cross-engine compatibility from <code>07-CROSS-ENGINE.md</code>.</p>
 <h3 id="tracking-server-implementation"><a class="header" href="#tracking-server-implementation">Tracking Server Implementation</a></h3>
-<p>The server itself is trivial — a REST or WebSocket API backed by an in-memory store with TTL expiry. No database needed. Listings expire if the host stops sending heartbeats. A single cheap VPS handles thousands of concurrent listings.</p>
+<p>The server itself is straightforward — a REST or WebSocket API backed by an in-memory store with TTL expiry. No database needed. Listings expire if the host stops sending heartbeats.</p>
+<h2 id="backend-infrastructure-tracking--relay"><a class="header" href="#backend-infrastructure-tracking--relay">Backend Infrastructure (Tracking + Relay)</a></h2>
+<p>Both the tracking server and relay server are <strong>standalone Rust binaries</strong>. The simplest deployment is running the executable on any computer — a home PC, a friend’s always-on machine, a €5 VPS, or a Raspberry Pi. No containers, no cloud, no special infrastructure required.</p>
+<p>For larger-scale or production deployments, both services also ship as container images with docker-compose.yaml (one-command setup) and Helm charts (Kubernetes). But containers are an option, not a requirement.</p>
+<p>There must never be a single point of failure that takes down the entire multiplayer ecosystem.</p>
+<h3 id="architecture"><a class="header" href="#architecture">Architecture</a></h3>
+<pre><code>                          ┌───────────────────────────────────┐
+                          │         DNS / Load Balancer        │
+                          │   (track.ironcurtain.gg)          │
+                          └─────┬──────────┬──────────┬───────┘
+                                │          │          │
+                          ┌─────▼──┐ ┌─────▼──┐ ┌────▼───┐
+                          │Tracking│ │Tracking│ │Tracking│   ← stateless replicas
+                          │  Pod   │ │  Pod   │ │  Pod   │      (horizontal scale)
+                          └────────┘ └────────┘ └────────┘
+                                         │
+                          ┌──────────────▼──────────────┐
+                          │   Redis / in-memory store     │   ← game listings (ephemeral)
+                          │   (TTL-based expiry)          │      no persistent DB needed
+                          └───────────────────────────────┘
+
+                          ┌───────────────────────────────────┐
+                          │         DNS / Load Balancer        │
+                          │   (relay.ironcurtain.gg)          │
+                          └─────┬──────────┬──────────┬───────┘
+                                │          │          │
+                          ┌─────▼──┐ ┌─────▼──┐ ┌────▼───┐
+                          │ Relay  │ │ Relay  │ │ Relay  │   ← stateless per-game
+                          │  Pod   │ │  Pod   │ │  Pod   │      sessions (sticky)
+                          └────────┘ └────────┘ └────────┘
+</code></pre>
+<h3 id="design-principles"><a class="header" href="#design-principles">Design Principles</a></h3>
+<ol>
+<li>
+<p><strong>Just a binary.</strong> Each server is a single Rust executable with zero mandatory dependencies. Run it directly (<code>./tracking-server</code> or <code>./relay-server</code>), as a systemd service, in Docker, or in Kubernetes — whatever suits the operator. No database, no runtime, no JVM. Download, configure, run.</p>
+</li>
+<li>
+<p><strong>Stateless processes.</strong> Each tracking server instance holds no critical state — for a single-instance deployment, listings live in memory with TTL expiry. For multi-instance deployments, listings are shared via Redis (or equivalent KV store). Killing the process loses nothing permanent. Relay servers hold per-game session state but games are short-lived; if a relay dies, the game reconnects or falls back to P2P.</p>
+</li>
+<li>
+<p><strong>Community self-hosting is a first-class use case.</strong> A clan, tournament organizer, or hobbyist runs the same binary on their own machine. No cloud account needed. No Docker needed. The binary reads a config file or env vars and starts listening. For those who prefer containers, <code>docker-compose up</code> works too. For production scale, Helm charts are available.</p>
+</li>
+<li>
+<p><strong>Federation, not centralization.</strong> The client aggregates listings from multiple tracking servers simultaneously (already designed — see <code>tracking_servers</code> list in settings). If the official server goes down, community servers still work. If all tracking servers go down, direct IP / join codes / QR still work. The architecture degrades gracefully, never fails completely.</p>
+</li>
+<li>
+<p><strong>Relay servers are regional.</strong> Players connect to the nearest relay for lowest latency. The tracking server listing includes the relay region. Community relays in underserved regions improve the experience for everyone.</p>
+</li>
+</ol>
+<h3 id="deployment-options"><a class="header" href="#deployment-options">Deployment Options</a></h3>
+<p><strong>Option 1: Just run the binary (simplest)</strong></p>
+<pre><code class="language-bash"># Download and run — no Docker, no cloud, no dependencies
+./tracking-server --port 8080 --heartbeat-ttl 30s
+./relay-server --port 9090 --region home --max-games 50
+</code></pre>
+<p>Works on any machine: home PC, spare laptop, Raspberry Pi, VPS. The tracking server uses in-memory storage by default — no Redis needed for a single instance.</p>
+<p><strong>Option 2: Docker Compose (one-command setup)</strong></p>
+<pre><code class="language-yaml"># docker-compose.yaml (community self-hosting)
+services:
+  tracking:
+    image: ghcr.io/iron-curtain/tracking-server:latest
+    ports:
+      - "8080:8080"
+    environment:
+      - STORE=memory           # or STORE=redis://redis:6379 for multi-instance
+      - HEARTBEAT_TTL=30s
+      - MAX_LISTINGS=1000
+      - RATE_LIMIT=10/min      # per IP — anti-spam
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/healthz"]
+
+  relay:
+    image: ghcr.io/iron-curtain/relay-server:latest
+    ports:
+      - "9090:9090/udp"
+      - "9090:9090/tcp"
+    environment:
+      - MAX_GAMES=100
+      - MAX_PLAYERS_PER_GAME=16
+      - TICK_TIMEOUT=5s         # drop orders after 5s — anti-lag-switch
+      - REGION=eu-west          # reported to tracking server
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9091/healthz"]
+
+  redis:
+    image: redis:7-alpine       # only needed for multi-instance tracking
+    profiles: ["scaled"]
+</code></pre>
+<p><strong>Option 3: Kubernetes / Helm (production scale)</strong></p>
+<p>For the official deployment or large community servers that need horizontal scaling:</p>
+<pre><code class="language-yaml"># helm/values.yaml (abbreviated)
+tracking:
+  replicas: 3
+  resources:
+    requests: { cpu: 100m, memory: 64Mi }
+    limits: { cpu: 500m, memory: 128Mi }
+  store: redis
+  redis:
+    url: redis://redis-master:6379
+
+relay:
+  replicas: 5                   # one pod per ~100 concurrent games
+  resources:
+    requests: { cpu: 200m, memory: 128Mi }
+    limits: { cpu: 1000m, memory: 256Mi }
+  sessionAffinity: ClientIP     # sticky sessions for relay game state
+  regions:
+    - name: eu-west
+      replicas: 2
+    - name: us-east
+      replicas: 2
+    - name: ap-southeast
+      replicas: 1
+</code></pre>
+<h3 id="cost-profile"><a class="header" href="#cost-profile">Cost Profile</a></h3>
+<p>Both services are lightweight — they forward small order packets, not game state:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Deployment</th><th>Cost</th><th>Serves</th><th>Requires</th></tr>
+</thead>
+<tbody>
+<tr><td>Home PC / spare laptop</td><td>Free (electricity)</td><td>~50 concurrent games</td><td>Port forwarding</td></tr>
+<tr><td>Raspberry Pi</td><td>~€50 one-time</td><td>~50 concurrent games</td><td>Port forwarding</td></tr>
+<tr><td>Single VPS (community)</td><td>€5-10/month</td><td>~200 concurrent games</td><td>Nothing special</td></tr>
+<tr><td>Small k8s cluster (official)</td><td>€30-50/month</td><td>~2000 concurrent games</td><td>Kubernetes knowledge</td></tr>
+<tr><td>Scaled k8s (launch day spike)</td><td>€100-200/month</td><td>~10,000 concurrent games</td><td>Kubernetes + monitoring</td></tr>
+</tbody>
+</table>
+</div>
+<p>The relay server is the heavier service (per-game session state, UDP forwarding) but still tiny — each game session is a few KB of buffered orders. A single pod handles ~100 concurrent games easily.</p>
+<h3 id="backend-language"><a class="header" href="#backend-language">Backend Language</a></h3>
+<p>The tracking and relay servers are standalone Rust binaries (not Bevy — no ECS needed). They share <code>ra-protocol</code> for order serialization. The relay server implements the relay-side of <code>RelayLockstepNetwork</code>. Both are simple enough to be developed in Phase 5 alongside the multiplayer client code.</p>
+<h3 id="failure-modes"><a class="header" href="#failure-modes">Failure Modes</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Failure</th><th>Impact</th><th>Recovery</th></tr>
+</thead>
+<tbody>
+<tr><td>Tracking server dies</td><td>Browse requests fail; existing games unaffected</td><td>Restart process; multi-instance setups have other replicas</td></tr>
+<tr><td>All tracking servers down</td><td>No game browser; existing games unaffected</td><td>Direct IP, join codes, QR still work</td></tr>
+<tr><td>Relay server dies</td><td>Games on that instance disconnect</td><td>Clients reconnect to another instance or fall back to P2P</td></tr>
+<tr><td>Official infra fully offline</td><td>Community tracking/relay servers still operational</td><td>Federation means no single operator is critical</td></tr>
+</tbody>
+</table>
+</div>
 <h2 id="multi-player-scaling-beyond-2-players"><a class="header" href="#multi-player-scaling-beyond-2-players">Multi-Player Scaling (Beyond 2 Players)</a></h2>
 <p>The architecture supports N players with no structural changes. Every design element — deterministic lockstep, sub-tick ordering, relay server, desync detection — works for 2, 4, 8, or more players.</p>
 <h3 id="how-each-component-scales"><a class="header" href="#how-each-component-scales">How Each Component Scales</a></h3>
@@ -1112,6 +1331,17 @@ units:
       name: "Rifle Infantry"
       icon: e1icon
       sequences: e1
+    ai:
+      summary: "Cheap expendable anti-infantry scout"
+      role: [anti_infantry, scout, garrison]
+      strengths: [cheap, fast_to_build, effective_vs_infantry]
+      weaknesses: [fragile, useless_vs_armor, no_anti_air]
+      tactical_notes: &gt;
+        Best used in groups of 5+ for early harassment or
+        garrisoning buildings. Not cost-effective against
+        anything armored. Pair with anti-tank units.
+      counters: [tank, apc, attack_dog]
+      countered_by: [tank, flamethrower, grenadier]
     buildable:
       cost: 100
       time: 5.0
@@ -1141,6 +1371,43 @@ _base_soldier:
     voice: generic_infantry
 </code></pre>
 <p>Inheritance is resolved at load time in Rust. Fields from <code>_base_soldier</code> are merged, then overridden by the child definition.</p>
+<h3 id="balance-presets"><a class="header" href="#balance-presets">Balance Presets</a></h3>
+<p>The same inheritance system powers <strong>switchable balance presets</strong> (D019). Presets are alternate YAML directories that override unit/weapon/structure values:</p>
+<pre><code>rules/
+├── units/              # base definitions (always loaded)
+├── weapons/
+├── structures/
+└── presets/
+    ├── classic/        # EA source code values (DEFAULT)
+    │   ├── units/
+    │   │   └── tanya.yaml    # cost: 1200, health: 125, weapon_range: 5, ...
+    │   └── weapons/
+    ├── openra/         # OpenRA competitive balance
+    │   ├── units/
+    │   │   └── tanya.yaml    # cost: 1400, health: 80, weapon_range: 3, ...
+    │   └── weapons/
+    └── remastered/     # Remastered Collection tweaks
+        └── ...
+</code></pre>
+<p><strong>How it works:</strong></p>
+<ol>
+<li>Engine loads base definitions from <code>rules/</code></li>
+<li>Engine loads the selected preset directory, overriding matching fields via inheritance</li>
+<li>Preset YAML files only contain fields that differ — everything else falls through to base</li>
+</ol>
+<pre><code class="language-yaml"># rules/presets/openra/units/tanya.yaml
+# Only overrides what OpenRA changes — rest inherits from base definition
+tanya:
+  inherits: _base_tanya       # base definition with display, sequences, AI metadata, etc.
+  buildable:
+    cost: 1400                 # OpenRA nerfed from 1200
+  health:
+    max: 80                    # OpenRA nerfed from 125
+  combat:
+    weapon: tanya_pistol_nerfed  # references an OpenRA-balanced weapon definition
+</code></pre>
+<p><strong>Lobby integration:</strong> Preset is selected in the game lobby alongside map and faction. All players in a multiplayer game use the same preset (enforced by the sim). The preset name is embedded in replays.</p>
+<p>See D019 in <code>src/09-DECISIONS.md</code> for full rationale.</p>
 <h3 id="rust-deserialization"><a class="header" href="#rust-deserialization">Rust Deserialization</a></h3>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -1148,10 +1415,25 @@ _base_soldier:
 struct UnitDef {
     inherits: Option&lt;String&gt;,
     display: DisplayInfo,
+    ai: Option&lt;AiMeta&gt;,
     buildable: Option&lt;BuildableInfo&gt;,
     health: HealthInfo,
     mobile: Option&lt;MobileInfo&gt;,
     combat: Option&lt;CombatInfo&gt;,
+}
+
+/// LLM/AI-readable metadata for any game resource.
+/// Consumed by ra-llm (mission generation), ra-ai (skirmish AI),
+/// and workshop search (semantic matching).
+#[derive(Deserialize, Serialize)]
+struct AiMeta {
+    summary: String,                    // one-line natural language description
+    role: Vec&lt;String&gt;,                  // semantic tags: anti_infantry, scout, siege, etc.
+    strengths: Vec&lt;String&gt;,             // what this unit is good at
+    weaknesses: Vec&lt;String&gt;,            // what this unit is bad at
+    tactical_notes: Option&lt;String&gt;,     // free-text tactical guidance for AI/LLM
+    counters: Vec&lt;String&gt;,              // unit types this is effective against
+    countered_by: Vec&lt;String&gt;,          // unit types that counter this
 }
 <span class="boring">}</span></code></pre>
 <h3 id="miniyaml-migration"><a class="header" href="#miniyaml-migration">MiniYAML Migration</a></h3>
@@ -1602,12 +1884,87 @@ workshop:
 
 pub struct ResourcePackage {
     pub meta: ResourceMeta,           // name, author, version, description, tags
+    pub ai_meta: Option&lt;AiResourceMeta&gt;, // LLM-readable description (see below)
     pub category: ResourceCategory,   // Mod, Map, Mission, MissionTemplate, Campaign, Asset
     pub files: Vec&lt;PackageFile&gt;,      // the actual content (YAML, Lua, sprites, etc.)
     pub dependencies: Vec&lt;ResourceId&gt;,// other workshop items this requires
     pub compatibility: VersionInfo,   // engine version + mod version this targets
 }
+
+/// LLM/AI-readable metadata for workshop resources.
+/// Enables intelligent browsing, selection, and composition by ra-llm.
+pub struct AiResourceMeta {
+    pub summary: String,              // one-line: "A 4-player desert skirmish map with limited ore"
+    pub purpose: String,              // when/why to use this: "Best for competitive 2v2 with scarce resources"
+    pub gameplay_tags: Vec&lt;String&gt;,   // semantic: ["desert", "2v2", "competitive", "scarce_resources"]
+    pub difficulty: Option&lt;String&gt;,   // for missions/campaigns: "hard", "beginner-friendly"
+    pub composition_hints: Option&lt;String&gt;, // how this combines with other resources
+}
 <span class="boring">}</span></code></pre>
+<h2 id="ai-readable-resource-metadata"><a class="header" href="#ai-readable-resource-metadata">AI-Readable Resource Metadata</a></h2>
+<p>Every game resource — units, weapons, structures, maps, mods, templates — carries structured metadata designed for consumption by LLMs and AI systems. This is not documentation for humans (that’s <code>display.name</code> and README files). This is <strong>machine-readable semantic context</strong> that enables AI to reason about game content.</p>
+<h3 id="why-this-matters"><a class="header" href="#why-this-matters">Why This Matters</a></h3>
+<p>Traditional game data is structured for the engine: cost, health, speed, damage. An LLM reading <code>cost: 100, health: 50, speed: 56, weapon: m1_carbine</code> can parse the numbers but cannot infer <em>purpose</em>. It doesn’t know that rifle infantry is a cheap scout, that it’s useless against tanks, or that it should be built in groups of 5+.</p>
+<p>The <code>ai:</code> metadata block bridges this gap. It gives LLMs and AI systems the strategic and tactical context that experienced players carry in their heads.</p>
+<h3 id="what-consumes-it"><a class="header" href="#what-consumes-it">What Consumes It</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Consumer</th><th>How It Uses <code>ai:</code> Metadata</th></tr>
+</thead>
+<tbody>
+<tr><td><strong><code>ra-llm</code> (mission generation)</strong></td><td>Selects appropriate units for scenarios. “A hard mission” → picks units with <code>role: siege</code> and high counters. “A stealth mission” → picks units with <code>role: scout, infiltrator</code>.</td></tr>
+<tr><td><strong><code>ra-ai</code> (skirmish AI)</strong></td><td>Reads <code>counters</code>/<code>countered_by</code> for build decisions. Knows to build anti-air when enemy has <code>role: air</code>. Reads <code>tactical_notes</code> for positioning hints.</td></tr>
+<tr><td><strong>Workshop search</strong></td><td>Semantic search: “a map for beginners” matches <code>difficulty: beginner-friendly</code>. “Something for a tank rush” matches <code>gameplay_tags: ["open_terrain", "abundant_resources"]</code>.</td></tr>
+<tr><td><strong>Future in-game AI advisor</strong></td><td>“What should I build?” → reads enemy composition’s <code>countered_by</code>, suggests units with matching <code>role</code>.</td></tr>
+<tr><td><strong>Mod compatibility analysis</strong></td><td>Detects when a mod changes a unit’s <code>role</code> or <code>counters</code> in ways that affect balance.</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="metadata-format-on-game-resources"><a class="header" href="#metadata-format-on-game-resources">Metadata Format (on game resources)</a></h3>
+<p>The <code>ai:</code> block is optional on every resource type. It follows a consistent schema:</p>
+<pre><code class="language-yaml"># On units / weapons / structures:
+ai:
+  summary: "One-line natural language description"
+  role: [semantic, tags, for, classification]
+  strengths: [what, this, excels, at]
+  weaknesses: [what, this, is, bad, at]
+  tactical_notes: "Free-text tactical guidance for AI reasoning"
+  counters: [unit_types, this, beats]
+  countered_by: [unit_types, that, beat, this]
+
+# On maps:
+ai:
+  summary: "4-player island map with contested center bridge"
+  gameplay_tags: [islands, naval, chokepoint, 4player]
+  tactical_notes: "Control the center bridge for resource access. Naval early game is critical."
+
+# On weapons:
+ai:
+  summary: "Long-range anti-structure artillery"
+  role: [siege, anti_structure]
+  strengths: [long_range, high_structure_damage, area_of_effect]
+  weaknesses: [slow_fire_rate, inaccurate_vs_moving, minimum_range]
+</code></pre>
+<h3 id="metadata-format-on-workshop-resources"><a class="header" href="#metadata-format-on-workshop-resources">Metadata Format (on workshop resources)</a></h3>
+<p>Workshop resources carry <code>AiResourceMeta</code> in their package manifest:</p>
+<pre><code class="language-yaml"># workshop manifest for a mission template
+ai_meta:
+  summary: "Defend a bridge against 5 waves of Soviet armor"
+  purpose: "Good for practicing defensive tactics with limited resources"
+  gameplay_tags: [defense, bridge, waves, armor, intermediate]
+  difficulty: "intermediate"
+  composition_hints: "Pairs well with the 'reinforcements' scene template for a harder variant"
+</code></pre>
+<p>This metadata is indexed by the workshop server for semantic search. When an LLM needs to find “a scene template for an ambush in a forest,” it searches <code>gameplay_tags</code> and <code>summary</code>, not filenames.</p>
+<h3 id="design-rules"><a class="header" href="#design-rules">Design Rules</a></h3>
+<ol>
+<li><strong><code>ai:</code> is always optional.</strong> Resources work without it. Legacy content and OpenRA imports won’t have it initially — it can be added incrementally, by humans or by LLMs.</li>
+<li><strong>Human-written is preferred, LLM-generated is acceptable.</strong> When a modder publishes to the workshop without <code>ai_meta</code>, the system can offer to auto-generate it from the resource’s data (unit stats, map layout, etc.). The modder reviews and approves.</li>
+<li><strong>Tags use a controlled vocabulary.</strong> <code>role</code>, <code>strengths</code>, <code>weaknesses</code>, <code>counters</code>, and <code>gameplay_tags</code> draw from a published tag dictionary (extensible by mods). This prevents tag drift where the same concept has five spellings.</li>
+<li><strong><code>tactical_notes</code> is free-text.</strong> This is the field where nuance lives. “Build 5+ to be cost-effective” or “Position behind walls for maximum effectiveness” — advice that can’t be captured in tags.</li>
+<li><strong>Metadata is part of the YAML spec, not a sidecar.</strong> It lives in the same file as the resource definition. No separate metadata files to lose or desync.</li>
+</ol>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="05--file-formats--original-source-insights"><a class="header" href="#05--file-formats--original-source-insights">05 — File Formats &amp; Original Source Insights</a></h1>
 <h2 id="formats-to-support-ra-formats-crate"><a class="header" href="#formats-to-support-ra-formats-crate">Formats to Support (ra-formats crate)</a></h2>
@@ -2612,6 +2969,40 @@ let game = GameLoop::new(sim, renderer, adapted);
 Game module extensibility targets: Red Alert, RA2, Tiberian Sun, Tiberian Dawn, Dune 2000. These share the isometric camera, grid-based terrain, sprite/voxel rendering, and <code>.mix</code> format lineage. <strong>3D titles (Generals, C&amp;C3, RA3) are out of scope as game modules</strong> — they require free-rotating cameras, mesh rendering, navmesh pathfinding, and unrelated formats. ~60% of the engine wouldn’t carry over. If desired later, extract the game-agnostic sim core into a shared RTS framework crate and build a 3D frontend independently.</p>
 <p>However, <strong>3D rendering mods for isometric-family games are explicitly supported.</strong> A “3D Red Alert” Tier 3 mod can replace sprites with GLTF meshes and the isometric camera with a free 3D camera — without changing the sim, networking, or pathfinding. Bevy’s built-in 3D pipeline makes this feasible. Cross-view multiplayer (2D vs 3D players in the same game) works because the sim is view-agnostic. See <code>02-ARCHITECTURE.md</code> § “3D Rendering as a Mod”.</p>
 <p><strong>Phase:</strong> Baked into architecture from Phase 0. RA2 module is a potential Phase 8+ project.</p>
+<hr>
+<h2 id="d019-switchable-balance-presets-classic-ra-vs-openra"><a class="header" href="#d019-switchable-balance-presets-classic-ra-vs-openra">D019: Switchable Balance Presets (Classic RA vs OpenRA)</a></h2>
+<p><strong>Decision:</strong> Ship multiple balance presets as first-class YAML rule sets. Default to classic Red Alert values from the EA source code. OpenRA balance available as an alternative preset. Selectable per-game in lobby.</p>
+<p><strong>Rationale:</strong></p>
+<ul>
+<li>Original Red Alert’s balance makes units feel <strong>powerful and iconic</strong> — Tanya, MiGs, Tesla Coils, V2 rockets are devastating. This is what made the game memorable.</li>
+<li>OpenRA rebalances toward competitive fairness, which makes units feel interchangeable and underwhelming to many players. Valid for tournaments, wrong as a default.</li>
+<li>The community is split on this. Rather than picking a side, expose it as a choice.</li>
+<li>Presets are just alternate YAML files loaded at game start — zero engine complexity. The modding system already supports this via inheritance and overrides.</li>
+<li>The Remastered Collection made its own subtle balance tweaks — worth capturing as a third preset.</li>
+</ul>
+<p><strong>Implementation:</strong></p>
+<ul>
+<li><code>rules/presets/classic/</code> — unit/weapon/structure values from EA source code (default)</li>
+<li><code>rules/presets/openra/</code> — values matching OpenRA’s current balance</li>
+<li><code>rules/presets/remastered/</code> — values matching the Remastered Collection</li>
+<li>Preset selection exposed in lobby UI and stored in game settings</li>
+<li>Presets use YAML inheritance: only override fields that differ from <code>classic</code></li>
+<li>Multiplayer: all players must use the same preset (enforced by lobby, validated by sim)</li>
+<li>Custom presets: modders can create new presets as additional YAML directories</li>
+</ul>
+<p><strong>What this is NOT:</strong></p>
+<ul>
+<li>Not a “difficulty setting” — both presets play at normal difficulty</li>
+<li>Not a mod — it’s a first-class game option, no workshop download required</li>
+<li>Not just multiplayer — applies to skirmish and campaign too</li>
+</ul>
+<p><strong>Alternatives considered:</strong></p>
+<ul>
+<li>Only ship classic values (rejected — alienates OpenRA competitive community)</li>
+<li>Only ship OpenRA values (rejected — loses the original game’s personality)</li>
+<li>Let mods handle it (rejected — too important to bury in the modding system; should be one click in settings)</li>
+</ul>
+<p><strong>Phase:</strong> Phase 2 (balance values extracted during simulation implementation).</p>
 <hr>
 <h2 id="pending-decisions"><a class="header" href="#pending-decisions">PENDING DECISIONS</a></h2>
 <div class="table-wrapper">

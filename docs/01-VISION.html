@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-4f94752b.js";
+            window.path_to_searchindex_js = "searchindex-951f560d.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-d8a85e3a.js"></script>
@@ -296,6 +296,76 @@
 <li>Combined with OpenRA’s 17 years of refinements: “how it originally worked” + “how it should work”</li>
 </ul>
 <p>Repository: https://github.com/electronicarts/CnC_Red_Alert</p>
+<h2 id="reference-projects"><a class="header" href="#reference-projects">Reference Projects</a></h2>
+<p>These are the projects we actively study. Each serves a different purpose — do not treat them as interchangeable.</p>
+<h3 id="openra--httpsgithubcomopenraopenra"><a class="header" href="#openra--httpsgithubcomopenraopenra">OpenRA — https://github.com/OpenRA/OpenRA</a></h3>
+<p><strong>What to study:</strong></p>
+<ul>
+<li><strong>Source code:</strong> Trait/component architecture, how they solved the same problems we’ll face (fog of war, build queues, harvester AI, naval combat). Our ECS component model maps directly from their traits.</li>
+<li><strong>Issue tracker:</strong> Community pain points surface here. Recurring complaints = design opportunities for us. Pay attention to issues tagged with performance, pathfinding, modding, and multiplayer.</li>
+<li><strong>UX/UI patterns:</strong> OpenRA has 17 years of UI iteration. Their command interface (attack-move, force-fire, waypoints, control groups, rally points) is excellent. <strong>Adopt their UX patterns for player interaction.</strong></li>
+<li><strong>Mod ecosystem:</strong> Understand what modders actually build so our modding tiers serve real needs.</li>
+</ul>
+<p><strong>What NOT to copy:</strong></p>
+<ul>
+<li><strong>Unit balance.</strong> OpenRA deliberately rebalances units away from the original game toward competitive multiplayer fairness. This makes iconic units feel underwhelming (see Gameplay Philosophy below). We default to classic RA balance.</li>
+<li><strong>Simulation internals bug-for-bug.</strong> We’re not bit-identical — we’re better-algorithms-identical.</li>
+</ul>
+<h3 id="ea-red-alert-source--httpsgithubcomelectronicartscnc_red_alert"><a class="header" href="#ea-red-alert-source--httpsgithubcomelectronicartscnc_red_alert">EA Red Alert Source — https://github.com/electronicarts/CnC_Red_Alert</a></h3>
+<p><strong>What to study:</strong></p>
+<ul>
+<li><strong>Exact gameplay values.</strong> Damage tables, weapon ranges, unit speeds, fire rates, armor multipliers. This is the canonical source for “how Red Alert actually plays.” When OpenRA and EA source disagree on a value, <strong>EA source wins for our classic preset.</strong></li>
+<li><strong>Order processing.</strong> The <code>OutList</code>/<code>DoList</code> pattern maps directly to our <code>PlayerOrder → TickOrders → apply_tick()</code> architecture.</li>
+<li><strong>Integer math patterns.</strong> Original RA uses integer math throughout for determinism — validates our fixed-point approach.</li>
+<li><strong>AI behavior.</strong> How the original skirmish AI makes decisions, builds bases, attacks. Reference for <code>ra-ai</code>.</li>
+</ul>
+<p><strong>Caution:</strong> The codebase is 1990s C++ — tangled, global state everywhere, no tests. Extract knowledge, don’t port patterns.</p>
+<h3 id="ea-remastered-collection--httpsgithubcomelectronicartscnc_remastered_collection"><a class="header" href="#ea-remastered-collection--httpsgithubcomelectronicartscnc_remastered_collection">EA Remastered Collection — https://github.com/electronicarts/CnC_Remastered_Collection</a></h3>
+<p><strong>What to study:</strong></p>
+<ul>
+<li><strong>UI/UX design.</strong> The Remastered Collection has the best UI/UX of any C&amp;C game. Clean, uncluttered, scales well to modern resolutions. <strong>This is our gold standard for UI layout and information density.</strong> Where OpenRA sometimes overwhelms with GUI elements, Remastered gets the density right.</li>
+<li><strong>HD asset pipeline.</strong> How they upscaled and re-rendered classic assets while preserving the feel. Relevant for our rendering pipeline.</li>
+<li><strong>Sidebar design.</strong> Classic sidebar with modern polish — study how they balanced information vs screen real estate.</li>
+</ul>
+<h3 id="ea-tiberian-dawn-source--httpsgithubcomelectronicartscnc_tiberian_dawn"><a class="header" href="#ea-tiberian-dawn-source--httpsgithubcomelectronicartscnc_tiberian_dawn">EA Tiberian Dawn Source — https://github.com/electronicarts/CnC_Tiberian_Dawn</a></h3>
+<p><strong>What to study:</strong></p>
+<ul>
+<li><strong>Shared C&amp;C engine lineage.</strong> TD and RA share engine code. Cross-referencing both clarifies ambiguous behavior in either.</li>
+<li><strong>Game module reference.</strong> When we build the Tiberian Dawn game module (D018), this is the authoritative source for TD-specific logic.</li>
+<li><strong>Format compatibility.</strong> TD <code>.mix</code> files, terrain, and sprites share formats with RA — validation data for <code>ra-formats</code>.</li>
+</ul>
+<h3 id="chrono-divide--typescript-browser-based-ra2"><a class="header" href="#chrono-divide--typescript-browser-based-ra2">Chrono Divide — (TypeScript, browser-based RA2)</a></h3>
+<p><strong>What to study:</strong></p>
+<ul>
+<li>Architecture reference for our WASM/browser target</li>
+<li>Proof that browser-based RTS with real multiplayer is viable</li>
+</ul>
+<h2 id="gameplay-philosophy"><a class="header" href="#gameplay-philosophy">Gameplay Philosophy</a></h2>
+<h3 id="classic-feel-modern-ux"><a class="header" href="#classic-feel-modern-ux">Classic Feel, Modern UX</a></h3>
+<p>Iron Curtain’s default gameplay targets the <strong>original Red Alert experience</strong>, not OpenRA’s rebalanced version. This is a deliberate choice:</p>
+<ul>
+<li><strong>Units should feel powerful and distinct.</strong> Tanya kills soldiers from range, fast, and doesn’t die easily — she’s a special operative, not a fragile glass cannon. MiG attacks should be devastating. V2 rockets should be terrifying. Tesla coils should fry anything that comes close. <strong>If a unit was iconic in the original game, it should feel iconic here.</strong></li>
+<li><strong>OpenRA’s competitive rebalancing</strong> makes units more “fair” for tournament play but strips the personality from the game. Every unit feels interchangeable and underwhelming. That’s a valid design choice for competitive players, but it’s not <em>our</em> default.</li>
+<li><strong>OpenRA’s UX/UI innovations are genuinely excellent</strong> and we adopt them: attack-move, waypoint queuing, production queues, control group management, minimap interactions, build radius visualization. The Remastered Collection’s UI density and layout is our gold standard for visual design.</li>
+</ul>
+<h3 id="switchable-balance-presets-d019"><a class="header" href="#switchable-balance-presets-d019">Switchable Balance Presets (D019)</a></h3>
+<p>Because reasonable people disagree on balance, the engine supports <strong>balance presets</strong> — switchable sets of unit values loaded from YAML at game start:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Preset</th><th>Source</th><th>Feel</th></tr>
+</thead>
+<tbody>
+<tr><td><code>classic</code> (default)</td><td>EA source code values</td><td>Powerful iconic units, asymmetric fun</td></tr>
+<tr><td><code>openra</code></td><td>OpenRA’s current balance</td><td>Competitive fairness, tournament-ready</td></tr>
+<tr><td><code>remastered</code></td><td>Remastered Collection values</td><td>Slight tweaks to classic for QoL</td></tr>
+<tr><td><code>custom</code></td><td>User-defined YAML overrides</td><td>Full modder control</td></tr>
+</tbody>
+</table>
+</div>
+<p>Presets are just YAML files in <code>rules/presets/</code>. Switching preset = loading a different set of unit/weapon/structure YAML. No code changes, no mod required. The lobby UI exposes preset selection.</p>
+<p>This is not a modding feature — it’s a first-class game option. “Classic” vs “OpenRA” balance is a settings toggle, not a total conversion.</p>
+<p>See <code>src/04-MODDING.md</code> § “Balance Presets” and D019 in <code>src/09-DECISIONS.md</code>.</p>
 <h2 id="timing-assessment"><a class="header" href="#timing-assessment">Timing Assessment</a></h2>
 <ul>
 <li>EA source just released (fresh community interest)</li>
@@ -303,6 +373,7 @@
 <li>No competition in Rust RTS space</li>
 <li>OpenRA showing architectural age despite active development</li>
 <li>WASM/browser gaming increasingly viable</li>
+<li>Multiple EA source releases provide unprecedented reference material</li>
 </ul>
 <p><strong>Verdict:</strong> Window of opportunity is open now.</p>
 

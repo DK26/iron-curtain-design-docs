@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-4f94752b.js";
+            window.path_to_searchindex_js = "searchindex-951f560d.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-d8a85e3a.js"></script>
@@ -216,6 +216,17 @@ units:
       name: "Rifle Infantry"
       icon: e1icon
       sequences: e1
+    ai:
+      summary: "Cheap expendable anti-infantry scout"
+      role: [anti_infantry, scout, garrison]
+      strengths: [cheap, fast_to_build, effective_vs_infantry]
+      weaknesses: [fragile, useless_vs_armor, no_anti_air]
+      tactical_notes: &gt;
+        Best used in groups of 5+ for early harassment or
+        garrisoning buildings. Not cost-effective against
+        anything armored. Pair with anti-tank units.
+      counters: [tank, apc, attack_dog]
+      countered_by: [tank, flamethrower, grenadier]
     buildable:
       cost: 100
       time: 5.0
@@ -245,6 +256,43 @@ _base_soldier:
     voice: generic_infantry
 </code></pre>
 <p>Inheritance is resolved at load time in Rust. Fields from <code>_base_soldier</code> are merged, then overridden by the child definition.</p>
+<h3 id="balance-presets"><a class="header" href="#balance-presets">Balance Presets</a></h3>
+<p>The same inheritance system powers <strong>switchable balance presets</strong> (D019). Presets are alternate YAML directories that override unit/weapon/structure values:</p>
+<pre><code>rules/
+├── units/              # base definitions (always loaded)
+├── weapons/
+├── structures/
+└── presets/
+    ├── classic/        # EA source code values (DEFAULT)
+    │   ├── units/
+    │   │   └── tanya.yaml    # cost: 1200, health: 125, weapon_range: 5, ...
+    │   └── weapons/
+    ├── openra/         # OpenRA competitive balance
+    │   ├── units/
+    │   │   └── tanya.yaml    # cost: 1400, health: 80, weapon_range: 3, ...
+    │   └── weapons/
+    └── remastered/     # Remastered Collection tweaks
+        └── ...
+</code></pre>
+<p><strong>How it works:</strong></p>
+<ol>
+<li>Engine loads base definitions from <code>rules/</code></li>
+<li>Engine loads the selected preset directory, overriding matching fields via inheritance</li>
+<li>Preset YAML files only contain fields that differ — everything else falls through to base</li>
+</ol>
+<pre><code class="language-yaml"># rules/presets/openra/units/tanya.yaml
+# Only overrides what OpenRA changes — rest inherits from base definition
+tanya:
+  inherits: _base_tanya       # base definition with display, sequences, AI metadata, etc.
+  buildable:
+    cost: 1400                 # OpenRA nerfed from 1200
+  health:
+    max: 80                    # OpenRA nerfed from 125
+  combat:
+    weapon: tanya_pistol_nerfed  # references an OpenRA-balanced weapon definition
+</code></pre>
+<p><strong>Lobby integration:</strong> Preset is selected in the game lobby alongside map and faction. All players in a multiplayer game use the same preset (enforced by the sim). The preset name is embedded in replays.</p>
+<p>See D019 in <code>src/09-DECISIONS.md</code> for full rationale.</p>
 <h3 id="rust-deserialization"><a class="header" href="#rust-deserialization">Rust Deserialization</a></h3>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -252,10 +300,25 @@ _base_soldier:
 struct UnitDef {
     inherits: Option&lt;String&gt;,
     display: DisplayInfo,
+    ai: Option&lt;AiMeta&gt;,
     buildable: Option&lt;BuildableInfo&gt;,
     health: HealthInfo,
     mobile: Option&lt;MobileInfo&gt;,
     combat: Option&lt;CombatInfo&gt;,
+}
+
+/// LLM/AI-readable metadata for any game resource.
+/// Consumed by ra-llm (mission generation), ra-ai (skirmish AI),
+/// and workshop search (semantic matching).
+#[derive(Deserialize, Serialize)]
+struct AiMeta {
+    summary: String,                    // one-line natural language description
+    role: Vec&lt;String&gt;,                  // semantic tags: anti_infantry, scout, siege, etc.
+    strengths: Vec&lt;String&gt;,             // what this unit is good at
+    weaknesses: Vec&lt;String&gt;,            // what this unit is bad at
+    tactical_notes: Option&lt;String&gt;,     // free-text tactical guidance for AI/LLM
+    counters: Vec&lt;String&gt;,              // unit types this is effective against
+    countered_by: Vec&lt;String&gt;,          // unit types that counter this
 }
 <span class="boring">}</span></code></pre>
 <h3 id="miniyaml-migration"><a class="header" href="#miniyaml-migration">MiniYAML Migration</a></h3>
@@ -706,12 +769,87 @@ workshop:
 
 pub struct ResourcePackage {
     pub meta: ResourceMeta,           // name, author, version, description, tags
+    pub ai_meta: Option&lt;AiResourceMeta&gt;, // LLM-readable description (see below)
     pub category: ResourceCategory,   // Mod, Map, Mission, MissionTemplate, Campaign, Asset
     pub files: Vec&lt;PackageFile&gt;,      // the actual content (YAML, Lua, sprites, etc.)
     pub dependencies: Vec&lt;ResourceId&gt;,// other workshop items this requires
     pub compatibility: VersionInfo,   // engine version + mod version this targets
 }
+
+/// LLM/AI-readable metadata for workshop resources.
+/// Enables intelligent browsing, selection, and composition by ra-llm.
+pub struct AiResourceMeta {
+    pub summary: String,              // one-line: "A 4-player desert skirmish map with limited ore"
+    pub purpose: String,              // when/why to use this: "Best for competitive 2v2 with scarce resources"
+    pub gameplay_tags: Vec&lt;String&gt;,   // semantic: ["desert", "2v2", "competitive", "scarce_resources"]
+    pub difficulty: Option&lt;String&gt;,   // for missions/campaigns: "hard", "beginner-friendly"
+    pub composition_hints: Option&lt;String&gt;, // how this combines with other resources
+}
 <span class="boring">}</span></code></pre>
+<h2 id="ai-readable-resource-metadata"><a class="header" href="#ai-readable-resource-metadata">AI-Readable Resource Metadata</a></h2>
+<p>Every game resource — units, weapons, structures, maps, mods, templates — carries structured metadata designed for consumption by LLMs and AI systems. This is not documentation for humans (that’s <code>display.name</code> and README files). This is <strong>machine-readable semantic context</strong> that enables AI to reason about game content.</p>
+<h3 id="why-this-matters"><a class="header" href="#why-this-matters">Why This Matters</a></h3>
+<p>Traditional game data is structured for the engine: cost, health, speed, damage. An LLM reading <code>cost: 100, health: 50, speed: 56, weapon: m1_carbine</code> can parse the numbers but cannot infer <em>purpose</em>. It doesn’t know that rifle infantry is a cheap scout, that it’s useless against tanks, or that it should be built in groups of 5+.</p>
+<p>The <code>ai:</code> metadata block bridges this gap. It gives LLMs and AI systems the strategic and tactical context that experienced players carry in their heads.</p>
+<h3 id="what-consumes-it"><a class="header" href="#what-consumes-it">What Consumes It</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Consumer</th><th>How It Uses <code>ai:</code> Metadata</th></tr>
+</thead>
+<tbody>
+<tr><td><strong><code>ra-llm</code> (mission generation)</strong></td><td>Selects appropriate units for scenarios. “A hard mission” → picks units with <code>role: siege</code> and high counters. “A stealth mission” → picks units with <code>role: scout, infiltrator</code>.</td></tr>
+<tr><td><strong><code>ra-ai</code> (skirmish AI)</strong></td><td>Reads <code>counters</code>/<code>countered_by</code> for build decisions. Knows to build anti-air when enemy has <code>role: air</code>. Reads <code>tactical_notes</code> for positioning hints.</td></tr>
+<tr><td><strong>Workshop search</strong></td><td>Semantic search: “a map for beginners” matches <code>difficulty: beginner-friendly</code>. “Something for a tank rush” matches <code>gameplay_tags: ["open_terrain", "abundant_resources"]</code>.</td></tr>
+<tr><td><strong>Future in-game AI advisor</strong></td><td>“What should I build?” → reads enemy composition’s <code>countered_by</code>, suggests units with matching <code>role</code>.</td></tr>
+<tr><td><strong>Mod compatibility analysis</strong></td><td>Detects when a mod changes a unit’s <code>role</code> or <code>counters</code> in ways that affect balance.</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="metadata-format-on-game-resources"><a class="header" href="#metadata-format-on-game-resources">Metadata Format (on game resources)</a></h3>
+<p>The <code>ai:</code> block is optional on every resource type. It follows a consistent schema:</p>
+<pre><code class="language-yaml"># On units / weapons / structures:
+ai:
+  summary: "One-line natural language description"
+  role: [semantic, tags, for, classification]
+  strengths: [what, this, excels, at]
+  weaknesses: [what, this, is, bad, at]
+  tactical_notes: "Free-text tactical guidance for AI reasoning"
+  counters: [unit_types, this, beats]
+  countered_by: [unit_types, that, beat, this]
+
+# On maps:
+ai:
+  summary: "4-player island map with contested center bridge"
+  gameplay_tags: [islands, naval, chokepoint, 4player]
+  tactical_notes: "Control the center bridge for resource access. Naval early game is critical."
+
+# On weapons:
+ai:
+  summary: "Long-range anti-structure artillery"
+  role: [siege, anti_structure]
+  strengths: [long_range, high_structure_damage, area_of_effect]
+  weaknesses: [slow_fire_rate, inaccurate_vs_moving, minimum_range]
+</code></pre>
+<h3 id="metadata-format-on-workshop-resources"><a class="header" href="#metadata-format-on-workshop-resources">Metadata Format (on workshop resources)</a></h3>
+<p>Workshop resources carry <code>AiResourceMeta</code> in their package manifest:</p>
+<pre><code class="language-yaml"># workshop manifest for a mission template
+ai_meta:
+  summary: "Defend a bridge against 5 waves of Soviet armor"
+  purpose: "Good for practicing defensive tactics with limited resources"
+  gameplay_tags: [defense, bridge, waves, armor, intermediate]
+  difficulty: "intermediate"
+  composition_hints: "Pairs well with the 'reinforcements' scene template for a harder variant"
+</code></pre>
+<p>This metadata is indexed by the workshop server for semantic search. When an LLM needs to find “a scene template for an ambush in a forest,” it searches <code>gameplay_tags</code> and <code>summary</code>, not filenames.</p>
+<h3 id="design-rules"><a class="header" href="#design-rules">Design Rules</a></h3>
+<ol>
+<li><strong><code>ai:</code> is always optional.</strong> Resources work without it. Legacy content and OpenRA imports won’t have it initially — it can be added incrementally, by humans or by LLMs.</li>
+<li><strong>Human-written is preferred, LLM-generated is acceptable.</strong> When a modder publishes to the workshop without <code>ai_meta</code>, the system can offer to auto-generate it from the resource’s data (unit stats, map layout, etc.). The modder reviews and approves.</li>
+<li><strong>Tags use a controlled vocabulary.</strong> <code>role</code>, <code>strengths</code>, <code>weaknesses</code>, <code>counters</code>, and <code>gameplay_tags</code> draw from a published tag dictionary (extensible by mods). This prevents tag drift where the same concept has five spellings.</li>
+<li><strong><code>tactical_notes</code> is free-text.</strong> This is the field where nuance lives. “Build 5+ to be cost-effective” or “Position behind walls for maximum effectiveness” — advice that can’t be captured in tags.</li>
+<li><strong>Metadata is part of the YAML spec, not a sidecar.</strong> It lives in the same file as the resource definition. No separate metadata files to lose or desync.</li>
+</ol>
 
                     </main>
 
