@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-5b2ff5f5.js";
+            window.path_to_searchindex_js = "searchindex-16651cf2.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-ef8cba4b.js"></script>
@@ -930,6 +930,7 @@ ic mod update-engine       # bump engine version
 <li>License metadata protects community creators and enables automated compatibility checking</li>
 <li>LLM agents generating missions need a way to discover and pull community assets without human intervention</li>
 <li>The mod ecosystem grows faster when building blocks are reusable — this is why npm/crates.io/pip changed their respective ecosystems</li>
+<li>CI/CD-friendly publishing (headless CLI, scoped API tokens) lets serious mod teams automate their release pipeline — no manual uploads</li>
 </ul>
 <p><strong>Key Design Elements:</strong></p>
 <h3 id="resource-identity--versioning"><a class="header" href="#resource-identity--versioning">Resource Identity &amp; Versioning</a></h3>
@@ -1068,6 +1069,16 @@ ic mod lock            # regenerate ic.lock from current mod.yaml
 ic mod audit           # check dependency licenses for compatibility
 </code></pre>
 <p>These extend the existing <code>ic</code> CLI (D020), not replace it. <code>ic mod publish</code> already exists — it now also uploads dependency metadata and validates license presence.</p>
+<h3 id="continuous-deployment"><a class="header" href="#continuous-deployment">Continuous Deployment</a></h3>
+<p>The <code>ic</code> CLI is designed for CI/CD pipelines — every command works headless (no interactive prompts). Authors authenticate via scoped API tokens (<code>IC_WORKSHOP_TOKEN</code> environment variable or <code>--token</code> flag). Tokens are scoped to specific operations (<code>publish</code>, <code>promote</code>, <code>admin</code>) and expire after a configurable duration. This enables:</p>
+<ul>
+<li><strong>Tag-triggered publish:</strong> Push a <code>v1.2.0</code> git tag → CI validates, tests headless, publishes to Workshop automatically</li>
+<li><strong>Beta channel CI:</strong> Every merge to <code>main</code> publishes to <code>beta</code>; explicit tag promotes to <code>release</code></li>
+<li><strong>Multi-resource monorepos:</strong> Matrix builds publish multiple resource packs from a single repo</li>
+<li><strong>Automated quality gates:</strong> <code>ic mod check</code> + <code>ic mod test</code> + <code>ic mod audit</code> run before every publish</li>
+<li><strong>Scheduled compatibility checks:</strong> Cron-triggered CI re-publishes against latest engine version to catch regressions</li>
+</ul>
+<p>Works with GitHub Actions, GitLab CI, Gitea Actions, or any CI system — the CLI is a single static binary. See <code>04-MODDING.md</code> § “Continuous Deployment for Workshop Authors” for the full workflow including a GitHub Actions example.</p>
 <h3 id="license-system"><a class="header" href="#license-system">License System</a></h3>
 <p><strong>Every published Workshop resource MUST have a <code>license</code> field.</strong> Publishing without one is rejected.</p>
 <pre><code class="language-yaml"># In mod.yaml or resource manifest

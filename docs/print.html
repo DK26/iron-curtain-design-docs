@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-5b2ff5f5.js";
+            window.path_to_searchindex_js = "searchindex-16651cf2.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-ef8cba4b.js"></script>
@@ -3207,6 +3207,8 @@ llm:
     fn audit_licenses(&amp;self, graph: &amp;DependencyGraph) -&gt; Result&lt;LicenseReport&gt;; // D030: license check
     fn promote(&amp;self, id: &amp;ResourceId, to_channel: Channel) -&gt; Result&lt;()&gt;; // D030: channel promotion
     fn replicate(&amp;self, filter: &amp;ResourceFilter, target: &amp;str) -&gt; Result&lt;ReplicationReport&gt;; // D030: pull replication
+    fn create_token(&amp;self, name: &amp;str, scopes: &amp;[TokenScope], expires: Duration) -&gt; Result&lt;ApiToken&gt;; // CI/CD auth
+    fn revoke_token(&amp;self, token_id: &amp;str) -&gt; Result&lt;()&gt;; // CI/CD: revoke compromised tokens
 }
 
 /// Globally unique resource identifier: "namespace/name@version"
@@ -3296,6 +3298,8 @@ ic mod publish             # publish to workshop
 ic mod update-engine       # update engine version in mod.yaml
 ic mod lint                # style/convention checks + llm: metadata completeness
 ic mod watch               # hot-reload mode: watches files, reloads YAML/Lua on change
+ic auth token create       # create scoped API token for CI/CD (publish, promote, admin)
+ic auth token revoke       # revoke a leaked or expired token
 </code></pre>
 <p><strong>Why a CLI, not just scripts:</strong></p>
 <ul>
@@ -3303,8 +3307,67 @@ ic mod watch               # hot-reload mode: watches files, reloads YAML/Lua on
 <li>Cross-platform (Windows, macOS, Linux) from one codebase</li>
 <li>Rich error messages with fix suggestions</li>
 <li>Integrates with the workshop API</li>
-<li>Can be embedded in CI/CD pipelines</li>
+<li>Designed for CI/CD — all commands work headless (no interactive prompts)</li>
 </ul>
+<h3 id="continuous-deployment-for-workshop-authors"><a class="header" href="#continuous-deployment-for-workshop-authors">Continuous Deployment for Workshop Authors</a></h3>
+<p>The <code>ic</code> CLI is designed to run unattended in CI pipelines. Every command that touches the Workshop API accepts a <code>--token</code> flag (or reads <code>IC_WORKSHOP_TOKEN</code> from the environment) for headless authentication. No interactive login required.</p>
+<p><strong>API tokens:</strong></p>
+<pre><code>ic auth token create --name "github-actions" --scope publish,promote --expires 90d
+</code></pre>
+<p>Tokens are scoped — a token can be limited to <code>publish</code> (upload only), <code>promote</code> (change channels), or <code>admin</code> (full access). Tokens expire. Leaked tokens can be revoked instantly via <code>ic auth token revoke</code> or the Workshop web UI.</p>
+<p><strong>Example: GitHub Actions workflow</strong></p>
+<pre><code class="language-yaml"># .github/workflows/publish.yml
+name: Publish to Workshop
+on:
+  push:
+    tags: ["v*"]        # trigger on version tags
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install IC CLI
+        run: curl -sSf https://install.ironcurtain.gg | sh
+
+      - name: Validate mod
+        run: ic mod check
+
+      - name: Run smoke tests
+        run: ic mod test --headless
+
+      - name: Publish to beta channel
+        run: ic mod publish --channel beta
+        env:
+          IC_WORKSHOP_TOKEN: ${{ secrets.IC_WORKSHOP_TOKEN }}
+
+      # Optional: auto-promote to release after beta soak period
+      - name: Promote to release
+        if: github.ref_type == 'tag' &amp;&amp; !contains(github.ref_name, '-beta')
+        run: ic mod promote ${{ github.ref_name }} release
+        env:
+          IC_WORKSHOP_TOKEN: ${{ secrets.IC_WORKSHOP_TOKEN }}
+</code></pre>
+<p><strong>What this enables:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Workflow</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Tag-triggered publish</strong></td><td>Push a <code>v1.2.0</code> tag → CI validates, tests headless, publishes to Workshop automatically</td></tr>
+<tr><td><strong>Beta channel CI</strong></td><td>Every merge to <code>main</code> publishes to <code>beta</code> channel; explicit tag promotes to <code>release</code></td></tr>
+<tr><td><strong>Multi-resource monorepo</strong></td><td>A single repo with multiple resource packs, each published independently via matrix builds</td></tr>
+<tr><td><strong>Automated quality gates</strong></td><td><code>ic mod check</code> + <code>ic mod test</code> + <code>ic mod audit</code> run before every publish — catch broken YAML, missing licenses, incompatible deps</td></tr>
+<tr><td><strong>Scheduled rebuilds</strong></td><td>Cron-triggered CI re-publishes against latest engine version to catch compatibility regressions early</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>GitLab CI, Gitea Actions, and any other CI system</strong> work identically — the <code>ic</code> CLI is a single static binary with no runtime dependencies. Download it, set <code>IC_WORKSHOP_TOKEN</code>, run <code>ic mod publish</code>.</p>
+<p><strong>Self-hosted Workshop servers</strong> accept the same tokens and API — authors publishing to a community Workshop server use the same CI workflow, just pointed at a different <code>--server</code> URL:</p>
+<pre><code>ic mod publish --server https://mods.myclan.com/workshop --channel release
+</code></pre>
 <h3 id="mod-manifest-modyaml"><a class="header" href="#mod-manifest-modyaml">Mod Manifest (<code>mod.yaml</code>)</a></h3>
 <p>Every mod has a <code>mod.yaml</code> at its root — the single source of truth for mod identity and composition. Inspired by OpenRA’s <code>mod.yaml</code> but using real YAML with typed deserialization:</p>
 <pre><code class="language-yaml"># mod.yaml
@@ -5143,6 +5206,7 @@ ic mod update-engine       # bump engine version
 <li>License metadata protects community creators and enables automated compatibility checking</li>
 <li>LLM agents generating missions need a way to discover and pull community assets without human intervention</li>
 <li>The mod ecosystem grows faster when building blocks are reusable — this is why npm/crates.io/pip changed their respective ecosystems</li>
+<li>CI/CD-friendly publishing (headless CLI, scoped API tokens) lets serious mod teams automate their release pipeline — no manual uploads</li>
 </ul>
 <p><strong>Key Design Elements:</strong></p>
 <h3 id="resource-identity--versioning-1"><a class="header" href="#resource-identity--versioning-1">Resource Identity &amp; Versioning</a></h3>
@@ -5281,6 +5345,16 @@ ic mod lock            # regenerate ic.lock from current mod.yaml
 ic mod audit           # check dependency licenses for compatibility
 </code></pre>
 <p>These extend the existing <code>ic</code> CLI (D020), not replace it. <code>ic mod publish</code> already exists — it now also uploads dependency metadata and validates license presence.</p>
+<h3 id="continuous-deployment"><a class="header" href="#continuous-deployment">Continuous Deployment</a></h3>
+<p>The <code>ic</code> CLI is designed for CI/CD pipelines — every command works headless (no interactive prompts). Authors authenticate via scoped API tokens (<code>IC_WORKSHOP_TOKEN</code> environment variable or <code>--token</code> flag). Tokens are scoped to specific operations (<code>publish</code>, <code>promote</code>, <code>admin</code>) and expire after a configurable duration. This enables:</p>
+<ul>
+<li><strong>Tag-triggered publish:</strong> Push a <code>v1.2.0</code> git tag → CI validates, tests headless, publishes to Workshop automatically</li>
+<li><strong>Beta channel CI:</strong> Every merge to <code>main</code> publishes to <code>beta</code>; explicit tag promotes to <code>release</code></li>
+<li><strong>Multi-resource monorepos:</strong> Matrix builds publish multiple resource packs from a single repo</li>
+<li><strong>Automated quality gates:</strong> <code>ic mod check</code> + <code>ic mod test</code> + <code>ic mod audit</code> run before every publish</li>
+<li><strong>Scheduled compatibility checks:</strong> Cron-triggered CI re-publishes against latest engine version to catch regressions</li>
+</ul>
+<p>Works with GitHub Actions, GitLab CI, Gitea Actions, or any CI system — the CLI is a single static binary. See <code>04-MODDING.md</code> § “Continuous Deployment for Workshop Authors” for the full workflow including a GitHub Actions example.</p>
 <h3 id="license-system-1"><a class="header" href="#license-system-1">License System</a></h3>
 <p><strong>Every published Workshop resource MUST have a <code>license</code> field.</strong> Publishing without one is rejected.</p>
 <pre><code class="language-yaml"># In mod.yaml or resource manifest
