@@ -705,6 +705,155 @@ pub struct AiResourceMeta {
 }
 ```
 
+## Mod SDK & Developer Experience
+
+*Inspired by studying the [OpenRA Mod SDK](https://github.com/OpenRA/OpenRAModSDK) — see D020.*
+
+### Lessons from the OpenRA Mod SDK
+
+The OpenRA Mod SDK is a template repository that modders fork. It includes:
+
+| OpenRA SDK Feature                       | What's Good                                               | Our Improvement                                             |
+| ---------------------------------------- | --------------------------------------------------------- | ----------------------------------------------------------- |
+| Fork-the-repo template                   | Zero-config starting point                                | `cargo-generate` template — same UX, better tooling         |
+| `mod.config` (engine version pin)        | Reproducible builds                                       | `mod.yaml` manifest with typed schema + semver              |
+| `fetch-engine.sh` (auto-download engine) | Modders never touch engine source                         | Engine ships as a binary crate, not compiled from source    |
+| `Makefile` / `make.cmd`                  | Cross-platform build                                      | `ic` CLI tool — Rust binary, works everywhere               |
+| `packaging/` (Win/Mac/Linux installers)  | Full distribution pipeline                                | Workshop publish + `cargo-dist` for standalone              |
+| `utility.sh --check-yaml`                | Catches YAML errors                                       | `ic mod check` — validates YAML, Lua syntax, WASM integrity |
+| `launch-dedicated.sh`                    | Dedicated server for mods                                 | `ic mod server` — first-class CLI command                   |
+| `mod.yaml` manifest                      | Single entry point for mod composition                    | Real YAML manifest with typed `serde` deserialization       |
+| Standardized directory layout            | Convention-based — chrome/, rules/, maps/                 | Adapted for our three-tier model                            |
+| `.vscode/` included                      | IDE support out of the box                                | Full VS Code extension with YAML schema + Lua LSP           |
+| C# DLL for custom traits                 | **Pain point:** requires .NET toolchain, IDE, compilation | Our YAML/Lua/WASM tiers eliminate this entirely             |
+| GPL license on mod code                  | **Pain point:** all mod code must be GPL-compatible       | WASM sandbox + permissive engine license = modder's choice  |
+| MiniYAML format                          | **Pain point:** no tooling, no validation                 | Real YAML with JSON Schema, serde, linting                  |
+| No workshop/distribution                 | **Pain point:** manual file sharing, forum posts          | Built-in workshop with `ic mod publish`                     |
+| No hot-reload                            | **Pain point:** recompile engine+mod for every change     | Lua + YAML hot-reload during development                    |
+
+### The `ic` CLI Tool
+
+A single Rust binary that replaces OpenRA's grab-bag of shell scripts:
+
+```
+ic mod init [template]     # scaffold a new mod from a template
+ic mod check               # validate YAML rules, Lua syntax, WASM module integrity
+ic mod test                # run mod in headless test harness (smoke test)
+ic mod run                 # launch game with this mod loaded
+ic mod server              # launch dedicated server for this mod
+ic mod package             # build distributable packages (workshop or standalone)
+ic mod publish             # publish to workshop
+ic mod update-engine       # update engine version in mod.yaml
+ic mod lint                # style/convention checks + ai: metadata completeness
+ic mod watch               # hot-reload mode: watches files, reloads YAML/Lua on change
+```
+
+**Why a CLI, not just scripts:**
+- Single binary — no Python, .NET, or shell dependencies
+- Cross-platform (Windows, macOS, Linux) from one codebase
+- Rich error messages with fix suggestions
+- Integrates with the workshop API
+- Can be embedded in CI/CD pipelines
+
+### Mod Manifest (`mod.yaml`)
+
+Every mod has a `mod.yaml` at its root — the single source of truth for mod identity and composition. Inspired by OpenRA's `mod.yaml` but using real YAML with typed deserialization:
+
+```yaml
+# mod.yaml
+mod:
+  id: my-total-conversion
+  title: "Red Apocalypse"
+  version: "1.2.0"
+  authors: ["ModderName"]
+  description: "A total conversion set in an alternate timeline"
+  website: "https://example.com/red-apocalypse"
+  license: "CC-BY-SA-4.0"            # modder's choice — no GPL requirement
+
+engine:
+  version: "^0.3.0"                  # semver — compatible with 0.3.x
+  game_module: "ra1"                 # which GameModule this mod targets
+
+assets:
+  rules: ["rules/**/*.yaml"]
+  maps: ["maps/"]
+  missions: ["missions/"]
+  scripts: ["scripts/**/*.lua"]
+  wasm_modules: ["wasm/*.wasm"]
+  media: ["media/"]
+  chrome: ["chrome/**/*.yaml"]
+  sequences: ["sequences/**/*.yaml"]
+
+dependencies:                        # other mods/workshop items required
+  - id: "community-hd-sprites"
+    version: "^2.0"
+    source: workshop
+
+balance_preset: classic              # default balance preset for this mod
+
+ai:
+  summary: "Alternate-timeline total conversion with new factions and units"
+  gameplay_tags: [total_conversion, alternate_history, new_factions]
+```
+
+### Standardized Mod Directory Layout
+
+```
+my-mod/
+├── mod.yaml                  # manifest (required)
+├── rules/                    # Tier 1: YAML data
+│   ├── units/
+│   │   ├── infantry.yaml
+│   │   └── vehicles.yaml
+│   ├── structures/
+│   ├── weapons/
+│   ├── terrain/
+│   └── presets/              # balance preset overrides
+├── maps/                     # map files (.oramap or native)
+├── missions/                 # campaign missions
+│   ├── allied-01.yaml
+│   └── allied-01.lua
+├── scripts/                  # Tier 2: Lua scripts
+│   ├── abilities/
+│   └── triggers/
+├── wasm/                     # Tier 3: WASM modules
+│   └── custom_mechanics.wasm
+├── media/                    # videos, cutscenes
+├── chrome/                   # UI layout definitions
+├── sequences/                # sprite sequence definitions
+├── cursors/                  # custom cursor definitions
+├── audio/                    # music, SFX, voice lines
+├── templates/                # Tera mission/scene templates
+└── README.md                 # human-readable mod description
+```
+
+### Mod Templates (via `cargo-generate`)
+
+`ic mod init` uses `cargo-generate`-style templates. Built-in templates:
+
+| Template           | Creates                               | For                                         |
+| ------------------ | ------------------------------------- | ------------------------------------------- |
+| `data-mod`         | mod.yaml + rules/ + empty maps/       | Simple balance/cosmetic mods (Tier 1 only)  |
+| `scripted-mod`     | Above + scripts/ + missions/          | Mission packs, custom game modes (Tier 1+2) |
+| `total-conversion` | Full directory layout including wasm/ | Total conversions (all tiers)               |
+| `map-pack`         | mod.yaml + maps/                      | Map collections                             |
+| `asset-pack`       | mod.yaml + media/ + sequences/        | Sprite/sound/video packs                    |
+
+Community can publish custom templates to the workshop.
+
+### Development Workflow
+
+```
+1. ic mod init scripted-mod          # scaffold
+2. Edit YAML rules, write Lua scripts
+3. ic mod watch                      # hot-reload mode
+4. ic mod check                      # validate everything
+5. ic mod test                       # headless smoke test
+6. ic mod publish                    # push to workshop
+```
+
+Compare to OpenRA's workflow: install .NET SDK → fork SDK repo → edit MiniYAML → write C# DLL → `make` → `launch-game.sh` → manually package → upload to forum.
+
 ## AI-Readable Resource Metadata
 
 Every game resource — units, weapons, structures, maps, mods, templates — carries structured metadata designed for consumption by LLMs and AI systems. This is not documentation for humans (that's `display.name` and README files). This is **machine-readable semantic context** that enables AI to reason about game content.

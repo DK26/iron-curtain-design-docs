@@ -129,6 +129,7 @@ Units moving, shooting, dying — headless sim + rendered. Record replay file. P
 - WASM host API with capability system (see `06-SECURITY.md`)
 - Campaign state machine: briefing → mission → debrief → next mission (no exit-to-menu between levels)
 - Mission select UI with map overview and difficulty indicators
+- **`ic` CLI prototype:** `ic mod init`, `ic mod check`, `ic mod run` — early tooling for Lua script development (full SDK in Phase 6)
 
 ### Exit Criteria
 - Can play through **all** Allied and Soviet campaign missions start to finish
@@ -169,6 +170,10 @@ Units moving, shooting, dying — headless sim + rendered. Record replay file. P
 - Asset hot-reloading for mod development
 - Mod manager + workshop-style distribution
 - Tera templating for YAML generation (nice-to-have)
+- **`ic` CLI tool (full release):** `ic mod init/check/test/run/server/package/publish/watch/lint` — complete mod development workflow (D020)
+- **Mod templates:** `data-mod`, `scripted-mod`, `total-conversion`, `map-pack`, `asset-pack` via `ic mod init`
+- **`mod.yaml` manifest** with typed schema, semver engine version pinning, dependency declarations
+- **VS Code extension** for mod development: YAML schema validation, Lua LSP, `ic` integration
 
 ### Exit Criteria
 - Someone ports an existing OpenRA mod (Tiberian Dawn, Dune 2000) and it runs

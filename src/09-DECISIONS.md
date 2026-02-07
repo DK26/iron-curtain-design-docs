@@ -358,6 +358,74 @@ However, **3D rendering mods for isometric-family games are explicitly supported
 
 ---
 
+### D020 — Mod SDK with `ic` CLI Tool
+
+**Decision:** Ship a Mod SDK as a `cargo-generate` template + an `ic` CLI tool, inspired by (and improving on) the [OpenRA Mod SDK](https://github.com/OpenRA/OpenRAModSDK).
+
+**Context:** The OpenRA Mod SDK is a template repository modders fork. It bundles shell scripts (`fetch-engine.sh`, `launch-game.sh`, `utility.sh`), a `Makefile`/`make.cmd` build system, and a `packaging/` directory with per-platform installer scripts. The approach works — it's the standard way to create OpenRA mods. But it has significant friction: requires .NET SDK, custom C# DLLs for anything beyond data changes, MiniYAML with no validation tooling, GPL contamination on mod code, and no distribution system beyond manual file sharing.
+
+**What we adapt:**
+
+| Concept            | OpenRA SDK                                         | Iron Curtain                                     |
+| ------------------ | -------------------------------------------------- | ------------------------------------------------ |
+| Starting point     | Fork a template repo                               | `ic mod init [template]` via `cargo-generate`    |
+| Engine version pin | `ENGINE_VERSION` in `mod.config`                   | `engine.version` in `mod.yaml` with semver       |
+| Engine management  | `fetch-engine.sh` downloads + compiles from source | Engine ships as binary crate, auto-resolved      |
+| Build/run          | `Makefile` + shell scripts (requires Python, .NET) | `ic` CLI — single Rust binary, zero dependencies |
+| Mod manifest       | `mod.yaml` in MiniYAML                             | `mod.yaml` in real YAML with typed serde schema  |
+| Validation         | `utility.sh --check-yaml`                          | `ic mod check` — YAML + Lua + WASM validation    |
+| Packaging          | `packaging/` shell scripts → .exe/.app/.AppImage   | `ic mod package` + workshop publish              |
+| Dedicated server   | `launch-dedicated.sh`                              | `ic mod server`                                  |
+| Directory layout   | Convention-based (chrome/, rules/, maps/, etc.)    | Adapted for three-tier model                     |
+| IDE support        | `.vscode/` in repo                                 | VS Code extension with YAML schema + Lua LSP     |
+
+**What we don't adapt (pain points we solve differently):**
+- C# DLLs for custom traits → our Lua + WASM tiers are strictly better (no compilation, sandboxed, polyglot)
+- GPL license contamination → WASM sandbox means mod code is isolated; engine license doesn't infect mods
+- MiniYAML → real YAML with `serde_yaml`, JSON Schema, standard linters
+- No hot-reload → Lua and YAML hot-reload during `ic mod watch`
+- No workshop → built-in workshop with `ic mod publish`
+
+**The `ic` CLI tool:**
+A single Rust binary replacing OpenRA's shell scripts + Makefile + Python dependencies:
+
+```
+ic mod init [template]     # scaffold from template
+ic mod check               # validate all mod content
+ic mod test                # headless smoke test
+ic mod run                 # launch game with mod
+ic mod server              # dedicated server
+ic mod package             # build distributables
+ic mod publish             # workshop upload
+ic mod watch               # hot-reload dev mode
+ic mod lint                # convention + ai: metadata checks
+ic mod update-engine       # bump engine version
+```
+
+**Mod templates (built-in):**
+- `data-mod` — YAML-only balance/cosmetic mods
+- `scripted-mod` — missions and custom game modes (YAML + Lua)
+- `total-conversion` — full layout with WASM scaffolding
+- `map-pack` — map collections
+- `asset-pack` — sprites, sounds, video packs
+
+**Rationale:**
+- OpenRA's SDK validates the template-project approach — modders want a turnkey starting point
+- Engine version pinning is essential — mods break when engine updates; semver solves this cleanly
+- A CLI tool is more portable, discoverable, and maintainable than shell scripts + Makefiles
+- Workshop integration from the CLI closes the "last mile" — OpenRA modders must manually distribute their work
+- The three-tier modding system means most modders never compile anything — `ic mod init data-mod` gives you a working mod instantly
+
+**Alternatives considered:**
+- Shell scripts like OpenRA (rejected — cross-platform pain, Python/shell dependencies, fragile)
+- Cargo workspace (rejected — mods aren't Rust crates; YAML/Lua mods have nothing to compile)
+- In-engine mod editor only (rejected — power users want filesystem access and version control)
+- No SDK, just documentation (rejected — OpenRA proves that a template project dramatically lowers the barrier)
+
+**Phase:** Phase 6 (Modding & Ecosystem). CLI prototype in Phase 4 (for Lua scripting development).
+
+---
+
 ## PENDING DECISIONS
 
 | ID   | Topic                                                         | Needs Resolution By |

@@ -79,6 +79,7 @@ These are settled. Don't re-litigate unless the user explicitly wants to revisit
 | D017 | Bevy rendering pipeline                       | Post-processing, dynamic lighting, GPU particles, shader effects; classic aesthetic, modern polish               |
 | D018 | Multi-game extensibility (game modules)       | Engine is game-agnostic; RA1 is first module; RA2/TD/custom are future modules; `GameModule` trait               |
 | D019 | Switchable balance presets                    | Classic RA (default) vs OpenRA vs Remastered; YAML rule sets selectable in lobby; not a mod, a game option       |
+| D020 | Mod SDK with `ic` CLI tool                    | `cargo-generate` templates + `ic` CLI; inspired by OpenRA Mod SDK but no C#/.NET; workshop integration           |
 
 ## Pending Decisions
 
@@ -196,18 +197,18 @@ Key insight from EA source: original uses `OutList`/`DoList` pattern for order q
 
 When you need deeper detail, read the specific design doc:
 
-| Topic                                                            | Read                     |
-| ---------------------------------------------------------------- | ------------------------ |
-| Goals, competitive landscape, why this exists                    | `src/01-VISION.md`       |
-| Crate structure, ECS, sim/render split, game loop code           | `src/02-ARCHITECTURE.md` |
-| NetworkModel trait, relay server, CS2 sub-tick, lockstep         | `src/03-NETCODE.md`      |
-| YAML rules, Lua scripting, WASM modules, sandboxing, AI metadata | `src/04-MODDING.md`      |
-| File formats, EA source code insights, coordinate systems        | `src/05-FORMATS.md`      |
-| Threat model, maphack, order validation, replay signing          | `src/06-SECURITY.md`     |
-| Cross-engine play, OrderCodec, SimReconciler, ProtocolAdapter    | `src/07-CROSS-ENGINE.md` |
-| 36-month phased roadmap with exit criteria                       | `src/08-ROADMAP.md`      |
-| Full decision log with rationale and alternatives                | `src/09-DECISIONS.md`    |
-| Efficiency pyramid, profiling, performance targets, benchmarks   | `src/10-PERFORMANCE.md`  |
+| Topic                                                                     | Read                     |
+| ------------------------------------------------------------------------- | ------------------------ |
+| Goals, competitive landscape, why this exists                             | `src/01-VISION.md`       |
+| Crate structure, ECS, sim/render split, game loop code                    | `src/02-ARCHITECTURE.md` |
+| NetworkModel trait, relay server, CS2 sub-tick, lockstep                  | `src/03-NETCODE.md`      |
+| YAML rules, Lua scripting, WASM modules, sandboxing, AI metadata, Mod SDK | `src/04-MODDING.md`      |
+| File formats, EA source code insights, coordinate systems                 | `src/05-FORMATS.md`      |
+| Threat model, maphack, order validation, replay signing                   | `src/06-SECURITY.md`     |
+| Cross-engine play, OrderCodec, SimReconciler, ProtocolAdapter             | `src/07-CROSS-ENGINE.md` |
+| 36-month phased roadmap with exit criteria                                | `src/08-ROADMAP.md`      |
+| Full decision log with rationale and alternatives                         | `src/09-DECISIONS.md`    |
+| Efficiency pyramid, profiling, performance targets, benchmarks            | `src/10-PERFORMANCE.md`  |
 
 ## Working With This Codebase
 
@@ -242,4 +243,5 @@ These are the projects we actively study. Each serves a different purpose:
 - **EA Remastered Collection:** https://github.com/electronicarts/CnC_Remastered_Collection — **UI/UX gold standard.** Cleanest, least cluttered C&C interface. Study sidebar layout, information density, HD asset pipeline.
 - **EA Tiberian Dawn source:** https://github.com/electronicarts/CnC_Tiberian_Dawn — **Shared C&C engine lineage.** Cross-reference with RA source for ambiguous behavior. Future TD game module reference.
 - **OpenRA:** https://github.com/OpenRA/OpenRA — **Architecture and UX patterns** (trait system, command interface, mod ecosystem). Also: **issue tracker as community pain point radar** — recurring complaints = our design opportunities. Do NOT copy their unit balance (see D019).
+- **OpenRA Mod SDK:** https://github.com/OpenRA/OpenRAModSDK — **Mod developer experience reference.** Template repo approach, engine version pinning, packaging pipeline, directory conventions. Studied for D020 (`ic` CLI tool). Pain points we solve: C# requirement, MiniYAML, GPL contamination, no workshop, no hot-reload.
 - **Chrono Divide** (TypeScript browser RTS) — architecture reference for WASM target.
