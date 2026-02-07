@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-cd13978d.js";
+            window.path_to_searchindex_js = "searchindex-1ff3a283.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-d8a85e3a.js"></script>
+        <script src="toc-6f79e187.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -439,6 +439,153 @@ fn movement_system(mut query: Query&lt;(&amp;mut Position, &amp;Velocity)&gt;) {
 </tbody>
 </table>
 </div>
+<h2 id="input-responsiveness-vs-openra"><a class="header" href="#input-responsiveness-vs-openra">Input Responsiveness vs. OpenRA</a></h2>
+<p>Beyond raw sim performance, input responsiveness is where players <em>feel</em> the difference. OpenRA’s lockstep model freezes all players to wait for the slowest connection. Our relay model never stalls — late orders are dropped, not waited for.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Factor</th><th>OpenRA</th><th>Iron Curtain</th><th>Why Faster</th></tr>
+</thead>
+<tbody>
+<tr><td>Waiting for slowest client</td><td>Yes — everyone freezes</td><td>No — relay drops late orders</td><td>Relay owns the clock</td></tr>
+<tr><td>Order batching interval</td><td>Every N frames</td><td>Every tick</td><td>Higher tick rate makes N=1 viable</td></tr>
+<tr><td>Tick processing time</td><td>30-60ms</td><td>~8ms</td><td>Algorithmic efficiency</td></tr>
+<tr><td>Achievable tick rate</td><td>~15 tps</td><td>30+ tps</td><td>4x shorter lockstep window</td></tr>
+<tr><td>GC pauses during tick</td><td>5-50ms random</td><td>0ms</td><td>Rust, zero-allocation</td></tr>
+<tr><td>Visual feedback on click</td><td>Waits for confirmation</td><td>Immediate (cosmetic)</td><td>Render-side prediction, no sim dependency</td></tr>
+<tr><td>Single-player order delay</td><td>~66ms (1 projected frame)</td><td>~33ms (next tick at 30 tps)</td><td><code>LocalNetwork</code> = zero scheduling delay</td></tr>
+<tr><td>Worst-case MP click-to-move</td><td>200-400ms (slow peer stalling)</td><td>80-120ms (relay deadline)</td><td>Fixed deadline, no hostage-taking</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Combined effect:</strong> A single-player click-to-move that takes ~200ms in OpenRA (order latency + tick time + GC jank) takes ~33ms in Iron Curtain — imperceptible to human reaction time. Multiplayer improves from “at the mercy of the worst connection” to a fixed, predictable deadline.</p>
+<p>See <code>03-NETCODE.md</code> § “Input Responsiveness” for the full architectural analysis, including visual prediction and single-player zero-delay.</p>
+<h2 id="gpu--hardware-compatibility-bevywgpu-constraints"><a class="header" href="#gpu--hardware-compatibility-bevywgpu-constraints">GPU &amp; Hardware Compatibility (Bevy/wgpu Constraints)</a></h2>
+<p>Bevy renders via <code>wgpu</code>, which translates to native GPU APIs. This creates a <strong>hardware floor</strong> that interacts with our “2012 laptop” performance target.</p>
+<h3 id="wgpu-backend-matrix"><a class="header" href="#wgpu-backend-matrix">wgpu Backend Matrix</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Backend</th><th>Min API Version</th><th>Typical GPU Era</th><th>wgpu Support Level</th></tr>
+</thead>
+<tbody>
+<tr><td>Vulkan</td><td>1.0+</td><td>2016+ (discrete), 2014+ (integrated Haswell)</td><td>First-class</td></tr>
+<tr><td>DX12</td><td>Windows 10</td><td>2015+</td><td>First-class</td></tr>
+<tr><td>Metal</td><td>macOS 10.14</td><td>2018+ Macs</td><td>First-class</td></tr>
+<tr><td>OpenGL</td><td>GL 3.3+ / ES 3.0+</td><td>2010+</td><td><strong>Downlevel / best-effort</strong></td></tr>
+<tr><td>WebGPU</td><td>Modern browsers</td><td>2023+</td><td>First-class</td></tr>
+<tr><td>WebGL2</td><td>ES 3.0 equiv</td><td>Most browsers</td><td><strong>Downlevel, severe limits</strong></td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="the-2012-laptop-problem"><a class="header" href="#the-2012-laptop-problem">The 2012 Laptop Problem</a></h3>
+<p>A typical 2012 laptop has an <strong>Intel HD 4000</strong> (Ivy Bridge). This GPU supports OpenGL 4.0 but <strong>has no Vulkan driver</strong>. It falls back to wgpu’s GL 3.3 backend, which is downlevel — meaning reduced resource limits:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Resource</th><th>Vulkan/DX12 (WebGPU defaults)</th><th>GL 3.3 Downlevel</th><th>WebGL2</th></tr>
+</thead>
+<tbody>
+<tr><td>Max texture dimension</td><td>8192×8192</td><td><strong>2048×2048</strong></td><td><strong>2048×2048</strong></td></tr>
+<tr><td>Storage buffers per stage</td><td>8</td><td><strong>4</strong></td><td><strong>0</strong></td></tr>
+<tr><td>Uniform buffer size</td><td>64 KiB</td><td><strong>16 KiB</strong></td><td><strong>16 KiB</strong></td></tr>
+<tr><td>Compute shaders</td><td>Yes</td><td>GL 4.3+ only</td><td><strong>None</strong></td></tr>
+<tr><td>Color attachments</td><td>8</td><td><strong>4</strong></td><td><strong>4</strong></td></tr>
+<tr><td>Storage textures</td><td>4</td><td>4</td><td><strong>0</strong></td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="impact-on-our-feature-plans"><a class="header" href="#impact-on-our-feature-plans">Impact on Our Feature Plans</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Feature</th><th>Problem on Downlevel Hardware</th><th>Severity</th><th>Mitigation</th></tr>
+</thead>
+<tbody>
+<tr><td>GPU particle weather</td><td>Compute shaders needed; HD 4000 has GL 4.0, compute needs 4.3</td><td>High</td><td>CPU particle fallback (Tier 0)</td></tr>
+<tr><td>Shader terrain blending (D022)</td><td>Complex fragment shaders + texture arrays hit uniform/sampler limits</td><td>Medium</td><td>Palette tinting fallback (zero extra resources)</td></tr>
+<tr><td>Post-processing chain</td><td>Bloom, color grading, SSR need MRT + decent fill rate</td><td>Medium</td><td>Disable post-FX on Tier 0</td></tr>
+<tr><td>Dynamic lighting</td><td>Multiple render targets, shadow maps</td><td>Medium</td><td>Static baked lighting on Tier 0</td></tr>
+<tr><td>HD sprite sheets</td><td>2048px max texture on downlevel</td><td>Low</td><td>Split sprite sheets at asset build time</td></tr>
+<tr><td>WebGL2/WASM visuals</td><td>Zero compute, zero storage buffers, no GPU particles</td><td>High</td><td>Target WebGPU-only for browser (or accept limits)</td></tr>
+<tr><td>Simulation / ECS</td><td><strong>No impact</strong> — pure CPU, no GPU dependency</td><td>None</td><td>—</td></tr>
+<tr><td>Audio / Networking / Modding</td><td><strong>No impact</strong> — none touch the GPU</td><td>None</td><td>—</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Key insight:</strong> The “2012 laptop” target is achievable for the <strong>simulation</strong> (500 units, &lt; 40ms tick) because the sim is pure CPU. The <strong>rendering</strong> must degrade gracefully — reduced visual effects, not broken gameplay.</p>
+<h3 id="render-quality-tiers"><a class="header" href="#render-quality-tiers">Render Quality Tiers</a></h3>
+<p><code>ra-render</code> queries device capabilities at startup via wgpu’s adapter limits and selects a render tier stored in the <code>RenderSettings</code> resource. All tiers produce an identical, playable game — they differ only in visual richness.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Tier</th><th>Name</th><th>Target Hardware</th><th>GPU Particles</th><th>Post-FX</th><th>Weather Visuals</th><th>Dynamic Lighting</th><th>Texture Limits</th></tr>
+</thead>
+<tbody>
+<tr><td>0</td><td><strong>Baseline</strong></td><td>GL 3.3 (Intel HD 4000), WebGL2</td><td>CPU fallback</td><td>None</td><td>Palette tinting</td><td>None (baked)</td><td>2048×2048 max</td></tr>
+<tr><td>1</td><td><strong>Standard</strong></td><td>Vulkan/DX12 basic (Intel HD 5000+, GTX 600+)</td><td>GPU compute</td><td>Basic (bloom)</td><td>Overlay sprites</td><td>Point lights</td><td>8192×8192</td></tr>
+<tr><td>2</td><td><strong>Enhanced</strong></td><td>Vulkan/DX12 capable (GTX 900+, RX 400+)</td><td>GPU compute</td><td>Full chain</td><td>Shader blending</td><td>Full + shadows</td><td>8192×8192</td></tr>
+<tr><td>3</td><td><strong>Ultra</strong></td><td>High-end desktop</td><td>GPU compute</td><td>Full + SSR</td><td>Shader + accumulation</td><td>Dynamic + cascade shadows</td><td>16384×16384</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Tier selection is automatic but overridable.</strong> Detected at startup from <code>wgpu::Adapter::limits()</code> and <code>wgpu::Adapter::features()</code>. Players can force a lower tier in settings. Mods can ship tier-specific assets.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// ra-render: runtime render configuration
+pub struct RenderSettings {
+    pub tier: RenderTier,           // Auto-detected or user-forced
+    pub fps_cap: u32,               // 30, 60, 144, 240, uncapped
+    pub resolution_scale: f32,      // 0.5 - 2.0 (render resolution vs display)
+    pub particle_density: f32,      // 0.0 - 1.0 (scales particle count)
+    pub post_fx_enabled: bool,      // Master toggle for all post-processing
+    pub weather_visual_mode: WeatherVisualMode,  // PaletteTint, Overlay, ShaderBlend
+    pub sprite_sheet_max: u32,      // Derived from adapter texture limits
+}
+
+pub enum RenderTier {
+    Baseline,   // Tier 0: GL 3.3 / WebGL2 — functional but plain
+    Standard,   // Tier 1: Basic Vulkan/DX12 — GPU particles, basic post-FX
+    Enhanced,   // Tier 2: Capable GPU — full visual pipeline
+    Ultra,      // Tier 3: High-end — everything maxed
+}
+<span class="boring">}</span></code></pre>
+<h3 id="mitigation-strategies"><a class="header" href="#mitigation-strategies">Mitigation Strategies</a></h3>
+<ol>
+<li>
+<p><strong>CPU particle fallback:</strong> Bevy supports CPU-side particle emission. Lower particle count but functional. Weather rain/snow works on Tier 0 — just fewer particles.</p>
+</li>
+<li>
+<p><strong>Sprite sheet splitting:</strong> The asset pipeline (Phase 0, <code>ra-formats</code>) splits large sprite sheets into 2048×2048 chunks at build time when targeting downlevel. Zero runtime cost — the splitting is a bake step.</p>
+</li>
+<li>
+<p><strong>WebGPU-first browser strategy:</strong> WebGPU is supported in Chrome, Edge, and Firefox (2023+). Rather than maintaining a severely limited WebGL2 fallback, target WebGPU for the browser build (Phase 7) and document WebGL2 as best-effort.</p>
+</li>
+<li>
+<p><strong>Graceful detection, not crashes:</strong> If the GPU doesn’t meet even Tier 0 requirements, show a clear error message with hardware info and suggest driver updates. Never crash with a raw wgpu error.</p>
+</li>
+<li>
+<p><strong>Shader complexity budget:</strong> All shaders must compile on GL 3.3 (or have a GL 3.3 variant). Complex shaders (terrain blending, weather) provide simplified fallback paths via <code>#ifdef</code> or shader permutations.</p>
+</li>
+</ol>
+<h3 id="hardware-floor-summary"><a class="header" href="#hardware-floor-summary">Hardware Floor Summary</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Concern</th><th>Our Minimum</th><th>Notes</th></tr>
+</thead>
+<tbody>
+<tr><td>GPU API</td><td>OpenGL 3.3 (fallback) / Vulkan 1.0 (preferred)</td><td>wgpu auto-selects best available backend</td></tr>
+<tr><td>GPU memory</td><td>256 MB</td><td>Classic RA sprites are tiny; HD sprites need more</td></tr>
+<tr><td>OS</td><td>Windows 7 SP1+ / macOS 10.14+ / Linux (X11/Wayland)</td><td>DX12 requires Windows 10; GL 3.3 works on 7</td></tr>
+<tr><td>CPU</td><td>2 cores, SSE2</td><td>Sim runs fine; Bevy itself needs ~2 threads minimum</td></tr>
+<tr><td>RAM</td><td>4 GB</td><td>Engine targets &lt; 150 MB for 1000 units</td></tr>
+<tr><td>Disk</td><td>~500 MB</td><td>Engine + classic assets; HD assets add ~1-2 GB</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Bottom line:</strong> Bevy/wgpu will run on 2012 hardware, but <strong>visual features must tier down automatically.</strong> The sim is completely unaffected. The architecture already has <code>RenderSettings</code> — we formalize it into the tier system above.</p>
+<hr>
 <h2 id="profiling--regression-strategy"><a class="header" href="#profiling--regression-strategy">Profiling &amp; Regression Strategy</a></h2>
 <h3 id="automated-benchmarks-ci"><a class="header" href="#automated-benchmarks-ci">Automated Benchmarks (CI)</a></h3>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
@@ -474,6 +621,9 @@ fn movement_system(mut query: Query&lt;(&amp;mut Position, &amp;Velocity)&gt;) {
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                             </a>
 
+                            <a rel="next prefetch" href="11-OPENRA-FEATURES.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
 
                         <div style="clear: both"></div>
                     </nav>
@@ -485,6 +635,9 @@ fn movement_system(mut query: Query&lt;(&amp;mut Position, &amp;Velocity)&gt;) {
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                     </a>
 
+                    <a rel="next prefetch" href="11-OPENRA-FEATURES.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
             </nav>
 
         </div>

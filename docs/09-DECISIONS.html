@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-cd13978d.js";
+            window.path_to_searchindex_js = "searchindex-1ff3a283.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-d8a85e3a.js"></script>
+        <script src="toc-6f79e187.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -540,7 +540,7 @@ ic mod server              # dedicated server
 ic mod package             # build distributables
 ic mod publish             # workshop upload
 ic mod watch               # hot-reload dev mode
-ic mod lint                # convention + ai: metadata checks
+ic mod lint                # convention + llm: metadata checks
 ic mod update-engine       # bump engine version
 </code></pre>
 <p><strong>Mod templates (built-in):</strong></p>
@@ -620,6 +620,53 @@ ic mod update-engine       # bump engine version
 <li>No unit persistence (rejected — OFP: Resistance proves this is the feature that creates campaign investment)</li>
 </ul>
 <p><strong>Phase:</strong> Phase 4 (AI &amp; Single Player). Campaign graph engine and Lua Campaign API are core Phase 4 deliverables.</p>
+<hr>
+<h3 id="d022--dynamic-weather-with-terrain-surface-effects"><a class="header" href="#d022--dynamic-weather-with-terrain-surface-effects">D022 — Dynamic Weather with Terrain Surface Effects</a></h3>
+<p><strong>Decision:</strong> Weather transitions dynamically during gameplay via a deterministic state machine, and terrain textures visually respond to weather — snow accumulates on the ground, rain darkens/wets surfaces, sunshine dries them out. Terrain surface state optionally affects gameplay (movement penalties on snow/ice/mud).</p>
+<p><strong>Context:</strong> The base weather system (static per-mission, GPU particles + sim modifiers) provides atmosphere but doesn’t evolve. Real-world weather changes. A mission that starts sunny and ends in a blizzard is vastly more dramatic — and strategically different — than one where weather is set-and-forget.</p>
+<p><strong>Key design points:</strong></p>
+<ol>
+<li>
+<p><strong>Weather state machine (sim-side):</strong> <code>WeatherState</code> resource tracks current type, intensity (fixed-point <code>0..1024</code>), and transition progress. Three schedule modes: <code>cycle</code> (deterministic round-robin), <code>random</code> (seeded from match, deterministic), <code>scripted</code> (Lua-driven only). State machine graph and transition weights defined in map YAML.</p>
+</li>
+<li>
+<p><strong>Terrain surface state (sim-side):</strong> <code>TerrainSurfaceGrid</code> — a per-cell grid of <code>SurfaceCondition { snow_depth, wetness }</code>. Updated every tick by <code>weather_surface_system</code>. Fully deterministic, derives <code>Serialize, Deserialize</code> for snapshots. When <code>sim_effects: true</code>, surface state modifies movement: deep snow slows infantry/vehicles, ice makes water passable, mud bogs wheeled units.</p>
+</li>
+<li>
+<p><strong>Terrain texture effects (render-side):</strong> Three quality tiers — palette tinting (free, no assets needed), overlay sprites (moderate, one extra pass), shader blending (GPU blend between base + weather variant textures). Selectable via <code>RenderSettings</code>. Accumulation is gradual and spatially non-uniform (snow appears on edges/roofs first, puddles in low cells first).</p>
+</li>
+<li>
+<p><strong>Composes with day/night and seasons:</strong> Overcast days are darker, rain at night is near-black with lightning flashes. Map <code>temperature.base</code> controls whether precipitation is rain or snow. Arctic/desert/tropical maps set different defaults.</p>
+</li>
+<li>
+<p><strong>Fully moddable:</strong> YAML defines schedules and surface rates (Tier 1). Lua triggers transitions and queries surface state (Tier 2). WASM adds custom weather types like ion storms (Tier 3).</p>
+</li>
+</ol>
+<p><strong>Rationale:</strong></p>
+<ul>
+<li>No other C&amp;C engine has dynamic weather that affects terrain visuals — unique differentiator</li>
+<li>Deterministic state machine preserves lockstep (same seed = same weather progression on all clients)</li>
+<li>Sim/render split respected: surface state is sim (deterministic), visual blending is render (cosmetic)</li>
+<li>Palette tinting tier ensures even low-end devices and WASM can show weather effects</li>
+<li>Gameplay effects are optional per-map — purely cosmetic weather is valid</li>
+<li>Surface state fits the snapshot system (invariant #10) for save games and replays</li>
+<li>Weather schedules are LLM-generable — “generate a mission where weather gets progressively worse”</li>
+</ul>
+<p><strong>Performance:</strong></p>
+<ul>
+<li>Palette tinting: zero extra draw calls, negligible GPU cost</li>
+<li>Surface state grid: ~2 bytes per cell (compact fixed-point) — a 128×128 map is 32KB</li>
+<li><code>weather_surface_system</code> is O(cells) but amortizable (update every 4 ticks for non-visible cells)</li>
+<li>Follows efficiency pyramid: algorithmic (grid lookup) → cache-friendly (contiguous array) → amortized</li>
+</ul>
+<p><strong>Alternatives considered:</strong></p>
+<ul>
+<li>Static weather only (rejected — misses dramatic potential, no terrain response)</li>
+<li>Client-side random weather (rejected — breaks deterministic sim, desync risk)</li>
+<li>Full volumetric weather simulation (rejected — overkill, performance cost, not needed for isometric RTS)</li>
+<li>Always-on sim effects (rejected — weather-as-decoration is valid for casual/modded games)</li>
+</ul>
+<p><strong>Phase:</strong> Phase 3 (visual effects) for render-side; Phase 2 (sim implementation) for weather state machine and surface grid.</p>
 <hr>
 <h2 id="pending-decisions"><a class="header" href="#pending-decisions">PENDING DECISIONS</a></h2>
 <div class="table-wrapper">

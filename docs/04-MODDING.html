@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-cd13978d.js";
+            window.path_to_searchindex_js = "searchindex-1ff3a283.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-d8a85e3a.js"></script>
+        <script src="toc-6f79e187.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -216,7 +216,7 @@ units:
       name: "Rifle Infantry"
       icon: e1icon
       sequences: e1
-    ai:
+    llm:
       summary: "Cheap expendable anti-infantry scout"
       role: [anti_infantry, scout, garrison]
       strengths: [cheap, fast_to_build, effective_vs_infantry]
@@ -300,23 +300,23 @@ tanya:
 struct UnitDef {
     inherits: Option&lt;String&gt;,
     display: DisplayInfo,
-    ai: Option&lt;AiMeta&gt;,
+    llm: Option&lt;LlmMeta&gt;,
     buildable: Option&lt;BuildableInfo&gt;,
     health: HealthInfo,
     mobile: Option&lt;MobileInfo&gt;,
     combat: Option&lt;CombatInfo&gt;,
 }
 
-/// LLM/AI-readable metadata for any game resource.
+/// LLM-readable metadata for any game resource.
 /// Consumed by ra-llm (mission generation), ra-ai (skirmish AI),
 /// and workshop search (semantic matching).
 #[derive(Deserialize, Serialize)]
-struct AiMeta {
+struct LlmMeta {
     summary: String,                    // one-line natural language description
     role: Vec&lt;String&gt;,                  // semantic tags: anti_infantry, scout, siege, etc.
     strengths: Vec&lt;String&gt;,             // what this unit is good at
     weaknesses: Vec&lt;String&gt;,            // what this unit is bad at
-    tactical_notes: Option&lt;String&gt;,     // free-text tactical guidance for AI/LLM
+    tactical_notes: Option&lt;String&gt;,     // free-text tactical guidance for LLM
     counters: Vec&lt;String&gt;,              // unit types this is effective against
     countered_by: Vec&lt;String&gt;,          // unit types that counter this
 }
@@ -688,6 +688,236 @@ Campaign Graph    — branching mission graph with persistent state (not a linea
 <li><strong>Sim layer</strong> (<code>ra-sim</code>): Optional, controlled by <code>sim_effects</code> parameter. When enabled, weather modifies visibility ranges, movement speeds, and damage — deterministically, so multiplayer stays in sync. When disabled, weather is purely cosmetic eye candy.</li>
 </ul>
 <p>Weather can be set per-map (in map YAML), triggered mid-mission by Lua scripts, or composed via the <code>weather</code> scene template. An LLM generating a “blizzard defense” mission sets <code>type: blizzard, sim_effects: true</code> and gets both the visual atmosphere and the gameplay tension.</p>
+<h3 id="dynamic-weather-system-d022"><a class="header" href="#dynamic-weather-system-d022">Dynamic Weather System (D022)</a></h3>
+<p>The base weather system above covers static, per-mission weather. The <strong>dynamic weather system</strong> extends it with real-time weather transitions and terrain texture effects during gameplay — snow accumulates on the ground, rain darkens and wets surfaces, sunshine dries everything out.</p>
+<h4 id="weather-state-machine"><a class="header" href="#weather-state-machine">Weather State Machine</a></h4>
+<p>Weather transitions are modeled as a state machine running inside <code>ra-sim</code>. The machine is deterministic — same schedule + same tick = identical weather on every client.</p>
+<pre><code>     ┌──────────┐      ┌───────────┐      ┌──────────┐
+     │  Sunny   │─────▶│ Overcast  │─────▶│   Rain   │
+     └──────────┘      └───────────┘      └──────────┘
+          ▲                                     │
+          │            ┌───────────┐            │
+          └────────────│ Clearing  │◀───────────┘
+                       └───────────┘            │
+                            ▲           ┌──────────┐
+                            └───────────│  Storm   │
+                                        └──────────┘
+
+     ┌──────────┐      ┌───────────┐      ┌──────────┐
+     │  Clear   │─────▶│  Cloudy   │─────▶│   Snow   │
+     └──────────┘      └───────────┘      └──────────┘
+          ▲                                     │
+          └─────────────────────────────────────┘
+                    (melt / thaw)
+</code></pre>
+<p>Each weather type has an <strong>intensity</strong> (fixed-point <code>0..1024</code>) that ramps up during transitions and down during clearing. The sim tracks this as a <code>WeatherState</code> resource:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// ra-sim: deterministic weather state
+pub struct WeatherState {
+    pub current: WeatherType,
+    pub intensity: FixedPoint,       // 0 = clear, 1024 = full
+    pub transitioning_to: Option&lt;WeatherType&gt;,
+    pub transition_progress: FixedPoint,  // 0..1024
+    pub ticks_in_current: u32,
+}
+<span class="boring">}</span></code></pre>
+<h4 id="weather-schedule-yaml"><a class="header" href="#weather-schedule-yaml">Weather Schedule (YAML)</a></h4>
+<p>Maps define a weather schedule — the rules for how weather evolves. Three modes:</p>
+<pre><code class="language-yaml"># maps/winter_assault/map.yaml
+weather:
+  schedule:
+    mode: cycle           # cycle | random | scripted
+    default: sunny
+    seed_from_match: true # random mode uses match seed (deterministic)
+
+    states:
+      sunny:
+        min_duration: 300   # minimum ticks before transition
+        max_duration: 600
+        transitions:
+          - to: overcast
+            weight: 60      # relative probability
+          - to: cloudy
+            weight: 40
+
+      overcast:
+        min_duration: 120
+        max_duration: 240
+        transitions:
+          - to: rain
+            weight: 70
+          - to: sunny
+            weight: 30
+        transition_time: 30  # ticks to blend between states
+
+      rain:
+        min_duration: 200
+        max_duration: 500
+        transitions:
+          - to: storm
+            weight: 20
+          - to: clearing
+            weight: 80
+        sim_effects: true    # enables gameplay modifiers
+
+      snow:
+        min_duration: 300
+        max_duration: 800
+        transitions:
+          - to: clearing
+            weight: 100
+        sim_effects: true
+
+      clearing:
+        min_duration: 60
+        max_duration: 120
+        transitions:
+          - to: sunny
+            weight: 100
+        transition_time: 60
+
+    surface:
+      snow:
+        accumulation_rate: 2    # fixed-point units per tick while snowing
+        max_depth: 1024
+        melt_rate: 1            # per tick when not snowing
+      rain:
+        wet_rate: 4             # per tick while raining
+        dry_rate: 2             # per tick when not raining
+      temperature:
+        base: 512              # 0 = freezing, 1024 = hot
+        sunny_warming: 1       # per tick
+        snow_cooling: 2        # per tick
+</code></pre>
+<ul>
+<li><strong><code>cycle</code></strong> — deterministic round-robin through states per the transition weights and durations.</li>
+<li><strong><code>random</code></strong> — weighted random using the match seed. Same seed = same weather progression on all clients.</li>
+<li><strong><code>scripted</code></strong> — no automatic transitions; weather changes only when Lua calls <code>Weather.transition_to()</code>.</li>
+</ul>
+<p>Lua can override the schedule at any time:</p>
+<pre><code class="language-lua">-- Force a blizzard for dramatic effect at mission climax
+Weather.transition_to("blizzard", 45)  -- 45-tick transition
+Weather.set_intensity(900)             -- near-maximum
+
+-- Query current state
+local w = Weather.get_state()
+print(w.current)     -- "blizzard"
+print(w.intensity)   -- 900
+print(w.surface.snow_depth)  -- per-map average
+</code></pre>
+<h4 id="terrain-surface-state-sim-layer"><a class="header" href="#terrain-surface-state-sim-layer">Terrain Surface State (Sim Layer)</a></h4>
+<p>When <code>sim_effects</code> is enabled, the sim maintains a per-cell <code>TerrainSurfaceGrid</code> — a compact grid tracking how weather has physically altered the terrain. This is <strong>deterministic</strong> and affects gameplay.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// ra-sim: per-cell surface condition
+pub struct SurfaceCondition {
+    pub snow_depth: FixedPoint,   // 0 = bare ground, 1024 = deep snow
+    pub wetness: FixedPoint,      // 0 = dry, 1024 = waterlogged
+}
+
+/// Grid resource, one entry per map cell
+pub struct TerrainSurfaceGrid {
+    pub cells: Vec&lt;SurfaceCondition&gt;,
+    pub width: u32,
+    pub height: u32,
+}
+<span class="boring">}</span></code></pre>
+<p>The <code>weather_surface_system</code> runs every tick (after weather state update, before movement):</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Condition</th><th>Effect on Surface</th></tr>
+</thead>
+<tbody>
+<tr><td>Snowing</td><td><code>snow_depth += accumulation_rate × intensity / 1024</code></td></tr>
+<tr><td>Not snowing, sunny</td><td><code>snow_depth -= melt_rate</code> (clamped at 0)</td></tr>
+<tr><td>Raining</td><td><code>wetness += wet_rate × intensity / 1024</code></td></tr>
+<tr><td>Not raining</td><td><code>wetness -= dry_rate</code> (clamped at 0)</td></tr>
+<tr><td>Snow melting</td><td><code>wetness += melt_rate</code> (meltwater)</td></tr>
+<tr><td>Temperature &lt; threshold</td><td>Puddles freeze → wet cells become icy</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Sim effects from surface state (when <code>sim_effects: true</code>):</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Surface State</th><th>Gameplay Effect</th></tr>
+</thead>
+<tbody>
+<tr><td>Deep snow (&gt; 512)</td><td>Infantry −20% speed, wheeled −30%, tracked −10%</td></tr>
+<tr><td>Ice (frozen wetness)</td><td>Water tiles become passable; all ground units slide (−15% turn rate)</td></tr>
+<tr><td>Wet ground (&gt; 256)</td><td>Wheeled −15% speed; no effect on tracked/infantry</td></tr>
+<tr><td>Muddy (wet + warm)</td><td>Wheeled −25% speed, tracked −10%; infantry unaffected</td></tr>
+<tr><td>Dry / sunny</td><td>No penalties; baseline movement</td></tr>
+</tbody>
+</table>
+</div>
+<p>These modifiers stack with the weather-type modifiers from the base weather table. A blizzard over deep snow is brutal.</p>
+<p><strong>Snapshot compatibility:</strong> <code>TerrainSurfaceGrid</code> derives <code>Serialize, Deserialize</code> — surface state is captured in save games and snapshots per invariant #10.</p>
+<h4 id="terrain-texture-effects-render-layer"><a class="header" href="#terrain-texture-effects-render-layer">Terrain Texture Effects (Render Layer)</a></h4>
+<p><code>ra-render</code> reads the sim’s <code>TerrainSurfaceGrid</code> and blends terrain visuals accordingly. This is <strong>purely cosmetic</strong> — it has no effect on the sim and runs at whatever quality the device supports.</p>
+<p>Three rendering strategies, selectable via <code>RenderSettings</code>:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Strategy</th><th>Quality</th><th>Cost</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Palette tinting</strong></td><td>Low</td><td>Near-zero</td><td>Shift terrain palette toward white (snow) or darker (wet). Authentic to original RA palette tech. No extra assets needed.</td></tr>
+<tr><td><strong>Overlay sprites</strong></td><td>Medium</td><td>One pass</td><td>Draw semi-transparent snow/puddle/ice overlays on top of base terrain tiles. Requires overlay sprite sheets (shipped with engine or mod-provided).</td></tr>
+<tr><td><strong>Shader blending</strong></td><td>High</td><td>GPU blend</td><td>Fragment shader blends between base texture and weather-variant texture per tile. Smoothest transitions, gradual accumulation. Requires variant texture sets.</td></tr>
+</tbody>
+</table>
+</div>
+<p>Default: <strong>palette tinting</strong> (works everywhere, zero asset requirements). Mods that ship weather-variant sprites get overlay or shader blending automatically.</p>
+<p><strong>Accumulation visuals</strong> (shader blending mode):</p>
+<ul>
+<li>Snow doesn’t appear uniformly — it starts on tile edges, elevated features, and rooftops, then fills inward as <code>snow_depth</code> increases</li>
+<li>Rain creates puddle sprites in low-lying cells first, then spreads to flat ground</li>
+<li>Drying happens as a gradual desaturation back to base palette</li>
+<li>Blend factor = <code>surface_condition_value / 1024</code> — smooth interpolation</li>
+</ul>
+<p><strong>Performance considerations:</strong></p>
+<ul>
+<li>Palette tinting: no extra draw calls, no extra textures, negligible GPU cost</li>
+<li>Overlay sprites: one additional sprite draw per affected cell — batched via Bevy’s sprite batching</li>
+<li>Shader blending: texture array per terrain type (base + snow + wet variants), single draw call per terrain chunk with per-vertex blend weights</li>
+<li>Particle density for weather effects already scales with <code>RenderSettings</code> (existing design)</li>
+<li>Surface texture updates are amortized: only cells near weather transitions or visible cells update their blend factors each frame</li>
+</ul>
+<h4 id="daynight-and-seasonal-integration"><a class="header" href="#daynight-and-seasonal-integration">Day/Night and Seasonal Integration</a></h4>
+<p>Dynamic weather composes naturally with other environmental systems:</p>
+<ul>
+<li><strong>Day/night cycle:</strong> Ambient lighting shifts interact with weather — overcast days are darker, rain at night is nearly black with lightning flashes, sunny midday is brightest</li>
+<li><strong>Seasonal maps:</strong> A map can set <code>temperature.base</code> low (winter map) so any rain becomes snow, or high (desert) where <code>sandstorm</code> replaces <code>rain</code> in the state machine</li>
+<li><strong>Map-specific overrides:</strong> Arctic maps default to snow schedule; desert maps disable snow transitions; tropical maps always rain</li>
+</ul>
+<h4 id="modding-weather"><a class="header" href="#modding-weather">Modding Weather</a></h4>
+<p>Weather is fully moddable at every tier:</p>
+<ul>
+<li><strong>Tier 1 (YAML):</strong> Define custom weather schedules, tune surface rates, adjust sim effect values, choose blend strategy, create seasonal presets</li>
+<li><strong>Tier 2 (Lua):</strong> Trigger weather transitions at story moments, query surface state for mission objectives (“defend until the blizzard clears”), create weather-dependent triggers</li>
+<li><strong>Tier 3 (WASM):</strong> Implement custom weather types (acid rain, ion storms, radiation clouds) with new particles, new sim effects, and custom surface state logic</li>
+</ul>
+<pre><code class="language-yaml"># Example: Tiberian Sun ion storm (custom weather type via mod)
+weather_types:
+  ion_storm:
+    particles: ion_storm_particles.shp
+    palette_tint: [0.2, 0.8, 0.3]  # green tint
+    sim_effects:
+      aircraft_grounded: true
+      radar_disabled: true
+      lightning_damage: 50
+      lightning_interval: 120  # ticks between strikes
+    surface:
+      contamination_rate: 1
+      max_contamination: 512
+    render:
+      strategy: shader_blend
+      variant_suffix: "_ion"
+</code></pre>
 <p><strong>Scene template structure:</strong></p>
 <pre><code>scenes/
   ambush/
@@ -1083,7 +1313,7 @@ workshop:
 <li><strong>Reference workshop media</strong> (videos, cutscenes) in generated scenarios — e.g., an LLM-generated mission can include <code>video_playback</code> scene triggers that pull community-created briefing videos from the workshop</li>
 <li>Publish generated missions directly to the workshop for sharing</li>
 </ul>
-<p>The LLM sees workshop resources through their <code>ai_meta</code> fields. A video tagged <code>summary: "Soviet commander briefing, urgent tone, 30 seconds"</code> lets the LLM intelligently select it for a mission’s opening briefing trigger.</p>
+<p>The LLM sees workshop resources through their <code>llm_meta</code> fields. A video tagged <code>summary: "Soviet commander briefing, urgent tone, 30 seconds"</code> lets the LLM intelligently select it for a mission’s opening briefing trigger.</p>
 <h3 id="workshop-api"><a class="header" href="#workshop-api">Workshop API</a></h3>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -1097,16 +1327,16 @@ workshop:
 
 pub struct ResourcePackage {
     pub meta: ResourceMeta,           // name, author, version, description, tags
-    pub ai_meta: Option&lt;AiResourceMeta&gt;, // LLM-readable description (see below)
+    pub llm_meta: Option&lt;LlmResourceMeta&gt;, // LLM-readable description (see below)
     pub category: ResourceCategory,   // Mod, Map, Mission, MissionTemplate, Campaign, Asset
     pub files: Vec&lt;PackageFile&gt;,      // the actual content (YAML, Lua, sprites, etc.)
     pub dependencies: Vec&lt;ResourceId&gt;,// other workshop items this requires
     pub compatibility: VersionInfo,   // engine version + mod version this targets
 }
 
-/// LLM/AI-readable metadata for workshop resources.
+/// LLM-readable metadata for workshop resources.
 /// Enables intelligent browsing, selection, and composition by ra-llm.
-pub struct AiResourceMeta {
+pub struct LlmResourceMeta {
     pub summary: String,              // one-line: "A 4-player desert skirmish map with limited ore"
     pub purpose: String,              // when/why to use this: "Best for competitive 2v2 with scarce resources"
     pub gameplay_tags: Vec&lt;String&gt;,   // semantic: ["desert", "2v2", "competitive", "scarce_resources"]
@@ -1152,7 +1382,7 @@ ic mod server              # launch dedicated server for this mod
 ic mod package             # build distributable packages (workshop or standalone)
 ic mod publish             # publish to workshop
 ic mod update-engine       # update engine version in mod.yaml
-ic mod lint                # style/convention checks + ai: metadata completeness
+ic mod lint                # style/convention checks + llm: metadata completeness
 ic mod watch               # hot-reload mode: watches files, reloads YAML/Lua on change
 </code></pre>
 <p><strong>Why a CLI, not just scripts:</strong></p>
@@ -1196,7 +1426,7 @@ dependencies:                        # other mods/workshop items required
 
 balance_preset: classic              # default balance preset for this mod
 
-ai:
+llm:
   summary: "Alternate-timeline total conversion with new factions and units"
   gameplay_tags: [total_conversion, alternate_history, new_factions]
 </code></pre>
@@ -1254,16 +1484,16 @@ ai:
 6. ic mod publish                    # push to workshop
 </code></pre>
 <p>Compare to OpenRA’s workflow: install .NET SDK → fork SDK repo → edit MiniYAML → write C# DLL → <code>make</code> → <code>launch-game.sh</code> → manually package → upload to forum.</p>
-<h2 id="ai-readable-resource-metadata"><a class="header" href="#ai-readable-resource-metadata">AI-Readable Resource Metadata</a></h2>
+<h2 id="llm-readable-resource-metadata"><a class="header" href="#llm-readable-resource-metadata">LLM-Readable Resource Metadata</a></h2>
 <p>Every game resource — units, weapons, structures, maps, mods, templates — carries structured metadata designed for consumption by LLMs and AI systems. This is not documentation for humans (that’s <code>display.name</code> and README files). This is <strong>machine-readable semantic context</strong> that enables AI to reason about game content.</p>
 <h3 id="why-this-matters"><a class="header" href="#why-this-matters">Why This Matters</a></h3>
 <p>Traditional game data is structured for the engine: cost, health, speed, damage. An LLM reading <code>cost: 100, health: 50, speed: 56, weapon: m1_carbine</code> can parse the numbers but cannot infer <em>purpose</em>. It doesn’t know that rifle infantry is a cheap scout, that it’s useless against tanks, or that it should be built in groups of 5+.</p>
-<p>The <code>ai:</code> metadata block bridges this gap. It gives LLMs and AI systems the strategic and tactical context that experienced players carry in their heads.</p>
+<p>The <code>llm:</code> metadata block bridges this gap. It gives LLMs the strategic and tactical context that experienced players carry in their heads.</p>
 <h3 id="what-consumes-it"><a class="header" href="#what-consumes-it">What Consumes It</a></h3>
 <div class="table-wrapper">
 <table>
 <thead>
-<tr><th>Consumer</th><th>How It Uses <code>ai:</code> Metadata</th></tr>
+<tr><th>Consumer</th><th>How It Uses <code>llm:</code> Metadata</th></tr>
 </thead>
 <tbody>
 <tr><td><strong><code>ra-llm</code> (mission generation)</strong></td><td>Selects appropriate units for scenarios. “A hard mission” → picks units with <code>role: siege</code> and high counters. “A stealth mission” → picks units with <code>role: scout, infiltrator</code>.</td></tr>
@@ -1275,34 +1505,34 @@ ai:
 </table>
 </div>
 <h3 id="metadata-format-on-game-resources"><a class="header" href="#metadata-format-on-game-resources">Metadata Format (on game resources)</a></h3>
-<p>The <code>ai:</code> block is optional on every resource type. It follows a consistent schema:</p>
+<p>The <code>llm:</code> block is optional on every resource type. It follows a consistent schema:</p>
 <pre><code class="language-yaml"># On units / weapons / structures:
-ai:
+llm:
   summary: "One-line natural language description"
   role: [semantic, tags, for, classification]
   strengths: [what, this, excels, at]
   weaknesses: [what, this, is, bad, at]
-  tactical_notes: "Free-text tactical guidance for AI reasoning"
+  tactical_notes: "Free-text tactical guidance for LLM reasoning"
   counters: [unit_types, this, beats]
   countered_by: [unit_types, that, beat, this]
 
 # On maps:
-ai:
+llm:
   summary: "4-player island map with contested center bridge"
   gameplay_tags: [islands, naval, chokepoint, 4player]
   tactical_notes: "Control the center bridge for resource access. Naval early game is critical."
 
 # On weapons:
-ai:
+llm:
   summary: "Long-range anti-structure artillery"
   role: [siege, anti_structure]
   strengths: [long_range, high_structure_damage, area_of_effect]
   weaknesses: [slow_fire_rate, inaccurate_vs_moving, minimum_range]
 </code></pre>
 <h3 id="metadata-format-on-workshop-resources"><a class="header" href="#metadata-format-on-workshop-resources">Metadata Format (on workshop resources)</a></h3>
-<p>Workshop resources carry <code>AiResourceMeta</code> in their package manifest:</p>
+<p>Workshop resources carry <code>LlmResourceMeta</code> in their package manifest:</p>
 <pre><code class="language-yaml"># workshop manifest for a mission template
-ai_meta:
+llm_meta:
   summary: "Defend a bridge against 5 waves of Soviet armor"
   purpose: "Good for practicing defensive tactics with limited resources"
   gameplay_tags: [defense, bridge, waves, armor, intermediate]
@@ -1312,8 +1542,8 @@ ai_meta:
 <p>This metadata is indexed by the workshop server for semantic search. When an LLM needs to find “a scene template for an ambush in a forest,” it searches <code>gameplay_tags</code> and <code>summary</code>, not filenames.</p>
 <h3 id="design-rules"><a class="header" href="#design-rules">Design Rules</a></h3>
 <ol>
-<li><strong><code>ai:</code> is always optional.</strong> Resources work without it. Legacy content and OpenRA imports won’t have it initially — it can be added incrementally, by humans or by LLMs.</li>
-<li><strong>Human-written is preferred, LLM-generated is acceptable.</strong> When a modder publishes to the workshop without <code>ai_meta</code>, the system can offer to auto-generate it from the resource’s data (unit stats, map layout, etc.). The modder reviews and approves.</li>
+<li><strong><code>llm:</code> is always optional.</strong> Resources work without it. Legacy content and OpenRA imports won’t have it initially — it can be added incrementally, by humans or by LLMs.</li>
+<li><strong>Human-written is preferred, LLM-generated is acceptable.</strong> When a modder publishes to the workshop without <code>llm_meta</code>, the system can offer to auto-generate it from the resource’s data (unit stats, map layout, etc.). The modder reviews and approves.</li>
 <li><strong>Tags use a controlled vocabulary.</strong> <code>role</code>, <code>strengths</code>, <code>weaknesses</code>, <code>counters</code>, and <code>gameplay_tags</code> draw from a published tag dictionary (extensible by mods). This prevents tag drift where the same concept has five spellings.</li>
 <li><strong><code>tactical_notes</code> is free-text.</strong> This is the field where nuance lives. “Build 5+ to be cost-effective” or “Position behind walls for maximum effectiveness” — advice that can’t be captured in tags.</li>
 <li><strong>Metadata is part of the YAML spec, not a sidecar.</strong> It lives in the same file as the resource definition. No separate metadata files to lose or desync.</li>

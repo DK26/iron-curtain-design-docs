@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-cd13978d.js";
+            window.path_to_searchindex_js = "searchindex-1ff3a283.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-d8a85e3a.js"></script>
+        <script src="toc-6f79e187.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -318,6 +318,96 @@ Delay dynamically adjusted based on connection quality
 <p>Server runs full sim, sends each client only entities they should see. Breaks pure lockstep (clients run partial sims), requires server compute per game. See <code>06-SECURITY.md</code> for details.</p>
 <h3 id="model-4-rollback--ggpo-style-experimental-future"><a class="header" href="#model-4-rollback--ggpo-style-experimental-future">Model 4: Rollback / GGPO-style (experimental future)</a></h3>
 <p>Requires snapshottable sim (already designed). Client predicts with local input, rolls back on misprediction. Expensive for RTS (re-simulating hundreds of entities), but feasible with Rust’s performance. See GGPO documentation for reference implementation.</p>
+<h2 id="input-responsiveness-why-our-model-feels-faster"><a class="header" href="#input-responsiveness-why-our-model-feels-faster">Input Responsiveness: Why Our Model Feels Faster</a></h2>
+<p>Every lockstep RTS has inherent input delay — the game must wait for all players’ orders before advancing. This is <strong>architectural</strong>, not a bug. But how much delay, and who pays for it, varies dramatically.</p>
+<h3 id="openras-stalling-model"><a class="header" href="#openras-stalling-model">OpenRA’s Stalling Model</a></h3>
+<p>OpenRA uses classic lockstep where the <strong>entire game freezes</strong> until the slowest client submits orders:</p>
+<pre><code>Tick 50: waiting for Player A's orders... ✓ (10ms)
+         waiting for Player B's orders... ✓ (15ms)
+         waiting for Player C's orders... ⏳ (280ms — bad WiFi)
+         → ALL players frozen for 280ms. Everyone suffers.
+</code></pre>
+<p>Additionally:</p>
+<ul>
+<li>Orders are batched every <code>NetFrameInterval</code> frames (not every tick), adding batching delay</li>
+<li>The server adds <code>OrderLatency</code> frames to every order (typically 3 ticks into the future)</li>
+<li><code>TickScale</code> dynamically slows the game to match the worst connection</li>
+<li>Even in <strong>single player</strong>, <code>EchoConnection</code> projects orders 1 frame forward</li>
+<li>C# GC pauses (5-50ms) add unpredictable jank on top of the architectural delay</li>
+</ul>
+<p>The perceived input lag when clicking units in OpenRA is ~100-200ms — a combination of intentional lockstep delay, order batching, and runtime overhead.</p>
+<h3 id="our-relay-model-no-stalling"><a class="header" href="#our-relay-model-no-stalling">Our Relay Model: No Stalling</a></h3>
+<p>The relay server owns the clock. It broadcasts tick orders on a fixed deadline — missed orders are replaced with <code>PlayerOrder::Idle</code>:</p>
+<pre><code>Tick 50: relay deadline = 80ms
+         Player A orders arrive at 10ms  → ✓ included
+         Player B orders arrive at 15ms  → ✓ included  
+         Player C orders arrive at 280ms → ✗ missed deadline → Idle
+         → Relay broadcasts at 80ms. No stall. Player C's units idle.
+</code></pre>
+<p>Honest players on good connections always get responsive gameplay. A lagging player hurts only themselves.</p>
+<h3 id="visual-prediction-cosmetic-not-sim"><a class="header" href="#visual-prediction-cosmetic-not-sim">Visual Prediction (Cosmetic, Not Sim)</a></h3>
+<p>The render layer provides <strong>instant visual feedback</strong> on player input, before the order is confirmed by the network:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>// ra-render: immediate visual response to click
+fn on_move_order_issued(click_pos: WorldPos, selected_units: &amp;[Entity]) {
+    // Show move marker immediately
+    spawn_move_marker(click_pos);
+    
+    // Start unit turn animation toward target (cosmetic only)
+    for unit in selected_units {
+        start_turn_preview(unit, click_pos);
+    }
+    
+    // Selection acknowledgement sound plays instantly
+    play_unit_response_audio(selected_units);
+    
+    // The actual sim order is still in the network pipeline.
+    // Units will begin real movement when the order is confirmed next tick.
+    // The visual prediction bridges the gap so the game feels instant.
+}
+<span class="boring">}</span></code></pre>
+<p>This is purely cosmetic — the sim doesn’t advance until the confirmed order arrives. But it eliminates the <strong>perceived</strong> lag that makes OpenRA feel sluggish. The selection ring snaps, the unit rotates, the acknowledgment voice plays — all before the network round-trip completes.</p>
+<h3 id="input-latency-comparison"><a class="header" href="#input-latency-comparison">Input Latency Comparison</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Factor</th><th>OpenRA</th><th>Iron Curtain (Relay)</th><th>Improvement</th></tr>
+</thead>
+<tbody>
+<tr><td>Waiting for slowest client</td><td>Yes — everyone freezes</td><td>No — relay drops late orders</td><td>Eliminates worst-case stalls entirely</td></tr>
+<tr><td>Order batching interval</td><td>Every N frames (<code>NetFrameInterval</code>)</td><td>Every tick</td><td>No batching delay</td></tr>
+<tr><td>Order scheduling delay</td><td>+3 ticks (<code>OrderLatency</code>)</td><td>+1 tick (next relay broadcast)</td><td>~2 ticks faster</td></tr>
+<tr><td>Tick processing time</td><td>30-60ms (limits tick rate)</td><td>~8ms (allows higher tick rate)</td><td>4-8x faster per tick</td></tr>
+<tr><td>Achievable tick rate</td><td>~15 tps</td><td>30+ tps</td><td>2x shorter lockstep window</td></tr>
+<tr><td>GC pauses during processing</td><td>5-50ms random jank</td><td>0ms</td><td>Eliminates unpredictable hitches</td></tr>
+<tr><td>Visual feedback on click</td><td>Waits for order confirmation</td><td>Immediate (cosmetic prediction)</td><td>Perceived lag drops to near-zero</td></tr>
+<tr><td>Single-player order delay</td><td>1 projected frame (~66ms at 15 tps)</td><td>0 frames (<code>LocalNetwork</code> = next tick)</td><td>Zero delay</td></tr>
+<tr><td>Worst connection impact</td><td>Freezes all players</td><td>Only affects the lagging player</td><td>Architectural fairness</td></tr>
+<tr><td>Future: rollback prediction</td><td>Not possible (no snapshots)</td><td>Possible (D010 enables GGPO)</td><td>Could eliminate all perceived MP delay</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="single-player-zero-delay"><a class="header" href="#single-player-zero-delay">Single-Player: Zero Delay</a></h3>
+<p><code>LocalNetwork</code> processes orders on the very next tick with zero scheduling delay:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>impl NetworkModel for LocalNetwork {
+    fn submit_order(&amp;mut self, order: TimestampedOrder) {
+        // Order goes directly into the next tick — no delay, no projection
+        self.pending.push(order);
+    }
+    
+    fn poll_tick(&amp;mut self) -&gt; Option&lt;TickOrders&gt; {
+        // Always ready — no waiting for other clients
+        Some(TickOrders {
+            tick: self.tick,
+            orders: std::mem::take(&amp;mut self.pending),
+        })
+    }
+}
+<span class="boring">}</span></code></pre>
+<p>At 30 tps, a click-to-move in single player is confirmed within ~33ms — imperceptible to humans (reaction time is ~200ms). Combined with visual prediction, the game feels <strong>instant</strong>.</p>
 <h2 id="desync-detection--debugging"><a class="header" href="#desync-detection--debugging">Desync Detection &amp; Debugging</a></h2>
 <p>Every <code>NetworkModel</code> must accept <code>report_sync_hash()</code>. The system works:</p>
 <ol>

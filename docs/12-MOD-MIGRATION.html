@@ -1,0 +1,676 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Mod Migration Case Studies - Iron Curtain — Design Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Design docs for a Rust-native Red Alert RTS engine">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="favicon-8114d1fc.png">
+        <link rel="stylesheet" href="css/variables-8adf115d.css">
+        <link rel="stylesheet" href="css/general-2459343d.css">
+        <link rel="stylesheet" href="css/chrome-ae938929.css">
+        <link rel="stylesheet" href="css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "searchindex-1ff3a283.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc-6f79e187.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Iron Curtain — Design Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs/edit/main/src/12-MOD-MIGRATION.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="mod-migration-case-studies"><a class="header" href="#mod-migration-case-studies">Mod Migration Case Studies</a></h1>
+<blockquote>
+<p><strong>Purpose:</strong> Validate Iron Curtain’s modding architecture against real-world OpenRA mods and official C&amp;C products. These case studies answer: “Can the most ambitious community work actually run on our engine?”</p>
+</blockquote>
+<hr>
+<h2 id="case-study-1-combined-arms-openras-most-ambitious-mod"><a class="header" href="#case-study-1-combined-arms-openras-most-ambitious-mod">Case Study 1: Combined Arms (OpenRA’s Most Ambitious Mod)</a></h2>
+<h3 id="what-combined-arms-is"><a class="header" href="#what-combined-arms-is">What Combined Arms Is</a></h3>
+<p><a href="https://github.com/Inq8/CAmod">Combined Arms</a> (CA) is the largest and most ambitious OpenRA mod in existence. It is effectively a standalone game:</p>
+<ul>
+<li><strong>5 factions</strong> — Allies, Soviets, GDI, Nod, Scrin</li>
+<li><strong>20 sub-factions</strong> — 4 unique variants per faction, each with distinct units, powers, and upgrades</li>
+<li><strong>34 campaign missions</strong> — Lua-scripted narrative across 8+ chapters, with co-op support</li>
+<li><strong>450+ maps</strong> — including competitive maps from base RA</li>
+<li><strong>Competitive ladder</strong> — 1v1 ranked play with player statistics</li>
+<li><strong>86 releases</strong> — actively maintained, v1.08.1 released January 2026</li>
+<li><strong>9.3/10 ModDB rating</strong> — 45 reviews, 60K downloads, 482 watchers</li>
+</ul>
+<p>CA represents the upper bound of what the OpenRA modding ecosystem has produced. If IC can support CA, it can support anything.</p>
+<h3 id="cas-technical-composition"><a class="header" href="#cas-technical-composition">CA’s Technical Composition</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Language</th><th>Share</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td>C#</td><td>67.7%</td><td>Custom engine traits (compiled DLLs)</td></tr>
+<tr><td>Lua</td><td>29.4%</td><td>Campaign missions, scripted events</td></tr>
+<tr><td>YAML (MiniYAML)</td><td>~3%</td><td>Unit definitions, weapon stats, rules</td></tr>
+</tbody>
+</table>
+</div>
+<p>CA’s heavy C# usage is significant — it means CA has outgrown OpenRA’s data-driven modding and needed to extend the engine itself. This is exactly the scenario IC’s three-tier modding architecture is designed to handle.</p>
+<h3 id="cas-custom-code-inventory"><a class="header" href="#cas-custom-code-inventory">CA’s Custom Code Inventory</a></h3>
+<p>Surveyed from <code>OpenRA.Mods.CA/</code> — <strong>~150+ custom C# files</strong> organized into:</p>
+<h4 id="custom-traits-90-files-in-traits"><a class="header" href="#custom-traits-90-files-in-traits">Custom Traits (~90 files in <code>Traits/</code>)</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Category</th><th>Custom Traits</th><th>Examples</th><th>IC Equivalent</th></tr>
+</thead>
+<tbody>
+<tr><td>Mind Control</td><td>5</td><td><code>MindController</code>, <code>MindControllable</code>, <code>MindControllerCapacityModifier</code></td><td>Built-in ECS component or WASM</td></tr>
+<tr><td>Spawner/Carrier</td><td>8</td><td><code>CarrierMaster</code>/<code>Slave</code>, <code>AirstrikeMaster</code>/<code>Slave</code>, <code>SpawnerMasterBase</code></td><td>Built-in (needed for RA2/Scrin)</td></tr>
+<tr><td>Teleport Network</td><td>3</td><td><code>TeleportNetwork</code>, <code>TeleportNetworkPrimaryExit</code>, <code>TeleportNetworkTransportable</code></td><td>Built-in or WASM</td></tr>
+<tr><td>Upgrades</td><td>4</td><td><code>Upgradeable</code>, <code>ProvidesUpgrade</code>, <code>RearmsToUpgrade</code></td><td>YAML conditions system</td></tr>
+<tr><td>Unit Abilities</td><td>5</td><td><code>TargetedAttackAbility</code>, <code>TargetedLeapAbility</code>, <code>TargetedDiveAbility</code>, <code>SpawnActorAbility</code></td><td>Lua or WASM</td></tr>
+<tr><td>Shields/Defense</td><td>4</td><td><code>Shielded</code>, <code>PointDefense</code>, <code>ReflectsDamage</code>, <code>ConvertsDamageToHealth</code></td><td>Built-in or WASM</td></tr>
+<tr><td>Missiles</td><td>4</td><td><code>BallisticMissile</code>, <code>CruiseMissile</code>, <code>GuidedMissile</code>, <code>MissileBase</code></td><td>Built-in projectile system</td></tr>
+<tr><td>Transport/Cargo</td><td>6</td><td><code>CargoBlocked</code>, <code>CargoCloner</code>, <code>MassEntersCargo</code>, <code>PassengerBlocked</code></td><td>Built-in + YAML</td></tr>
+<tr><td>Deploy/Transform</td><td>6</td><td><code>DeployOnAttack</code>, <code>InstantTransforms</code>, <code>DetonateWeaponOnDeploy</code>, <code>AutoDeployer</code></td><td>Conditions + YAML</td></tr>
+<tr><td>Resources</td><td>6</td><td><code>ChronoResourceDelivery</code>, <code>HarvesterBalancer</code>, <code>ConvertsResources</code></td><td>YAML + Lua</td></tr>
+<tr><td>Death/Spawn</td><td>6</td><td><code>SpawnActorOnDeath</code>, <code>SpawnRandomActorOnDeath</code>, <code>SpawnHuskEffectOnDeath</code></td><td>Built-in + YAML</td></tr>
+<tr><td>Experience</td><td>5</td><td><code>GivesBountyCA</code>, <code>GivesExperienceCA</code>, <code>GivesExperienceToMaster</code></td><td>Built-in veterancy</td></tr>
+<tr><td>Infiltration</td><td>4+</td><td>Subdirectory with multiple infiltration traits</td><td>Built-in + YAML</td></tr>
+<tr><td>Berserk/Warp</td><td>2</td><td><code>Berserkable</code>, <code>Warpable</code></td><td>WASM</td></tr>
+<tr><td>Production</td><td>4</td><td><code>LinkedProducerSource</code>/<code>Target</code>, <code>PeriodicProducerCA</code>, <code>ProductionAirdropCA</code></td><td>Built-in + YAML</td></tr>
+<tr><td>Attachable</td><td>5</td><td><code>Attachable</code>, <code>AttachableTo</code>, <code>AttachOnCreation</code>, <code>AttachOnTransform</code></td><td>WASM</td></tr>
+<tr><td>Stealth</td><td>1</td><td><code>Mirage</code> (disguise as props)</td><td>Built-in cloak system</td></tr>
+<tr><td>Misc</td><td>20+</td><td><code>PopControlled</code>, <code>MadTankCA</code>, <code>KeepsDistance</code>, <code>LaysMinefield</code>, <code>Convertible</code>, <code>ChronoshiftableCA</code></td><td>Mixed</td></tr>
+</tbody>
+</table>
+</div>
+<p>Also includes subdirectories: <code>Air/</code>, <code>Attack/</code>, <code>BotModules/</code>, <code>Conditions/</code>, <code>Infiltration/</code>, <code>Modifiers/</code>, <code>Multipliers/</code>, <code>PaletteEffects/</code>, <code>Palettes/</code>, <code>Player/</code>, <code>Render/</code>, <code>Sound/</code>, <code>SupportPowers/</code>, <code>World/</code></p>
+<h4 id="custom-warheads-24-files-in-warheads"><a class="header" href="#custom-warheads-24-files-in-warheads">Custom Warheads (24 files in <code>Warheads/</code>)</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Warhead</th><th>Purpose</th><th>IC Equivalent</th></tr>
+</thead>
+<tbody>
+<tr><td><code>FireShrapnelWarhead</code></td><td>Secondary projectiles on impact</td><td>Built-in warhead pipeline</td></tr>
+<tr><td><code>FireFragmentWarhead</code></td><td>Fragment weapons on detonation</td><td>Built-in warhead pipeline</td></tr>
+<tr><td><code>WarpDamageWarhead</code></td><td>Temporal displacement damage</td><td>WASM warhead module</td></tr>
+<tr><td><code>SpawnActorWarhead</code></td><td>Spawn units on detonation</td><td>Built-in</td></tr>
+<tr><td><code>SpawnBuildingWarhead</code></td><td>Create buildings on impact</td><td>Built-in</td></tr>
+<tr><td><code>AttachActorWarhead</code></td><td>Attach parasites/bombs</td><td>WASM</td></tr>
+<tr><td><code>AttachDelayedWeaponWarhead</code></td><td>Time-delayed weapon effects</td><td>Built-in timer system</td></tr>
+<tr><td><code>InfiltrateWarhead</code></td><td>Spy-type infiltration on hit</td><td>Built-in infiltration</td></tr>
+<tr><td><code>CreateTintedCellsWarhead</code></td><td>Tiberium-style terrain damage</td><td>Built-in terrain system</td></tr>
+<tr><td><code>SendAirstrikeWarhead</code></td><td>Trigger airstrike on impact</td><td>Lua or WASM</td></tr>
+<tr><td><code>HealthPercentageSpreadDamageWarhead</code></td><td>%-based area damage</td><td>Built-in damage pipeline</td></tr>
+<tr><td>Others (13)</td><td>Flash effects, condition grants, etc.</td><td>Mixed</td></tr>
+</tbody>
+</table>
+</div>
+<h4 id="custom-projectiles-16-files-in-projectiles"><a class="header" href="#custom-projectiles-16-files-in-projectiles">Custom Projectiles (16 files in <code>Projectiles/</code>)</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Projectile</th><th>Size</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>LinearPulse</code></td><td>65KB</td><td>Complex line-based energy weapon</td></tr>
+<tr><td><code>MissileCA</code></td><td>40KB</td><td>Heavily customized missile behavior</td></tr>
+<tr><td><code>BulletCA</code></td><td>17KB</td><td>Extended bullet with tracking/effects</td></tr>
+<tr><td><code>PlasmaBeam</code></td><td>14KB</td><td>Scrin-style plasma weapon</td></tr>
+<tr><td><code>RailgunCA</code></td><td>11KB</td><td>Railgun visual effect</td></tr>
+<tr><td><code>ElectricBolt</code></td><td>9KB</td><td>Tesla-style electrical discharge</td></tr>
+<tr><td><code>AreaBeamCA</code></td><td>10KB</td><td>Area-effect beam weapon</td></tr>
+<tr><td><code>ArcLaserZap</code></td><td>5KB</td><td>Curved laser visual</td></tr>
+<tr><td>Others (8)</td><td>Varies</td><td>RadBeam, TeslaZapCA, KKNDLaser, etc.</td></tr>
+</tbody>
+</table>
+</div>
+<p>Custom projectiles are primarily <strong>render code</strong> — visual effects for weapon impacts. In IC, these map to shader effects and particle systems in <code>ra-render</code>, not simulation code.</p>
+<h4 id="custom-activities-24-files-in-activities"><a class="header" href="#custom-activities-24-files-in-activities">Custom Activities (24 files in <code>Activities/</code>)</a></h4>
+<p>Activities are unit behaviors — the “verbs” that units perform:</p>
+<ul>
+<li><code>Attach</code>, <code>Dive</code>, <code>DiveApproach</code>, <code>TargetedLeap</code> — special movement/attack patterns</li>
+<li><code>BallisticMissileFly</code>, <code>CruiseMissileFly</code>, <code>GuidedMissileFly</code> — missile flight paths</li>
+<li><code>EnterTeleportNetwork</code>, <code>TeleportCA</code> — teleportation mechanics</li>
+<li><code>InstantTransform</code>, <code>Upgrade</code> — unit transformation</li>
+<li><code>ChronoResourceTeleport</code> — chronoshift-style harvesting</li>
+<li><code>MassRideTransport</code>, <code>ParadropCargo</code> — transport mechanics</li>
+</ul>
+<p>In IC, activities map to ECS system behaviors, triggered by conditions or orders.</p>
+<h3 id="migration-assessment"><a class="header" href="#migration-assessment">Migration Assessment</a></h3>
+<h4 id="what-migrates-automatically-zero-effort"><a class="header" href="#what-migrates-automatically-zero-effort">What Migrates Automatically (Zero Effort)</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Asset Type</th><th>Volume</th><th>Method</th></tr>
+</thead>
+<tbody>
+<tr><td>Sprite assets (.shp)</td><td>Hundreds</td><td>IC loads natively (invariant #8)</td></tr>
+<tr><td>Palette files (.pal)</td><td>Dozens</td><td>IC loads natively</td></tr>
+<tr><td>Sound effects (.aud)</td><td>Hundreds</td><td>IC loads natively</td></tr>
+<tr><td>Map files (.oramap)</td><td>450+</td><td>IC loads natively</td></tr>
+<tr><td>MiniYAML rules</td><td>Thousands of entries</td><td><code>miniyaml2yaml</code> converter</td></tr>
+</tbody>
+</table>
+</div>
+<h4 id="what-migrates-with-effort"><a class="header" href="#what-migrates-with-effort">What Migrates with Effort</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Component</th><th>Effort</th><th>Details</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>YAML unit definitions</strong></td><td>Trivial</td><td>Automated converter, manual validation</td></tr>
+<tr><td><strong>Lua campaign missions</strong></td><td>Moderate</td><td>IC runs Lua natively; need API compatibility shim for OpenRA’s <code>Actor</code>, <code>Trigger</code>, <code>Media</code>, <code>Map</code> globals</td></tr>
+<tr><td><strong>Custom traits → Built-in</strong></td><td>None</td><td>IC builds mind control, carriers, shields, teleport networks as first-party ECS components (these are needed for RA2/C&amp;C3 game modules anyway)</td></tr>
+<tr><td><strong>Custom traits → YAML conditions</strong></td><td>Low</td><td>Deploy mechanics, upgrade toggles, transform states map to IC’s condition system</td></tr>
+<tr><td><strong>Custom traits → WASM</strong></td><td>Significant</td><td>~50 novel traits need WASM rewrite: Berserkable, Warpable, KeepsDistance, Attachable system, custom ability targeting, etc.</td></tr>
+<tr><td><strong>Custom warheads</strong></td><td>Moderate</td><td>Many become built-in warhead pipeline extensions; novel ones (WarpDamage, TintedCells) need WASM</td></tr>
+<tr><td><strong>Custom projectiles</strong></td><td>Moderate</td><td>These are primarily render code; rewrite as <code>ra-render</code> shader effects and particle systems</td></tr>
+<tr><td><strong>Custom UI widgets</strong></td><td>Moderate</td><td>CA has custom widgets; these need Bevy UI reimplementation</td></tr>
+<tr><td><strong>Bot modules</strong></td><td>Low-Moderate</td><td>Map to <code>ra-ai</code> crate’s bot system</td></tr>
+</tbody>
+</table>
+</div>
+<h4 id="migration-tier-breakdown"><a class="header" href="#migration-tier-breakdown">Migration Tier Breakdown</a></h4>
+<pre><code>┌─────────────────────────────────────────────────┐
+│     Combined Arms → Iron Curtain Migration      │
+├─────────────────────────────────────────────────┤
+│                                                 │
+│  Tier 1 (YAML)  ████████████████████  ~40%     │
+│  No code change needed. Unit stats, weapons,    │
+│  armor tables, build trees, faction setup.      │
+│                                                 │
+│  Built-in       ██████████████████    ~30%     │
+│  IC includes as first-party ECS components.     │
+│  Mind control, carriers, shields, teleport,     │
+│  veterancy, infiltration, damage pipeline.      │
+│                                                 │
+│  Tier 2 (Lua)   ████████            ~15%      │
+│  Campaign missions, scripted events.            │
+│  API shim needed for OpenRA Lua globals.        │
+│                                                 │
+│  Tier 3 (WASM)  ██████              ~15%      │
+│  Novel mechanics: Berserkable, Warpable,        │
+│  KeepsDistance, Attachable, custom abilities.    │
+│                                                 │
+└─────────────────────────────────────────────────┘
+</code></pre>
+<h3 id="what-ca-gains-by-migrating"><a class="header" href="#what-ca-gains-by-migrating">What CA Gains by Migrating</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Benefit</th><th>Details</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>No more engine version treadmill</strong></td><td>CA currently pins to OpenRA releases, rebasing C# against every engine update. IC’s mod API is versioned and stable.</td></tr>
+<tr><td><strong>Better performance</strong></td><td>CA with 5 factions pushes OpenRA hard. IC’s efficiency pyramid (flowfields, spatial hashing, sim LOD) handles large battles better.</td></tr>
+<tr><td><strong>Better multiplayer</strong></td><td>Relay server, sub-tick ordering, signed replays, ranked infrastructure built in — no custom ladder server needed.</td></tr>
+<tr><td><strong>Hot-reloadable mods</strong></td><td>Change YAML, see results immediately. No recompilation ever.</td></tr>
+<tr><td><strong>Workshop distribution</strong></td><td><code>ic</code> CLI tool packages and publishes mods. No manual download/install.</td></tr>
+<tr><td><strong>Branching campaigns (D021)</strong></td><td>IC’s narrative graph with persistent unit roster would elevate CA’s 34 missions significantly.</td></tr>
+<tr><td><strong>WASM sandboxing</strong></td><td>Custom code runs in a sandbox with capability-based API — no risk of mods crashing the engine or accessing filesystem.</td></tr>
+<tr><td><strong>Cross-platform for free</strong></td><td>CA currently packages per-platform. IC runs on Windows/Mac/Linux/Browser/Mobile from one codebase.</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="verdict"><a class="header" href="#verdict">Verdict</a></h3>
+<p><strong>Not plug-and-play, but a realistic and beneficial migration.</strong></p>
+<ul>
+<li><strong>~85% of content</strong> (YAML rules, assets, maps, Lua missions, built-in mechanics) migrates with minimal to zero effort.</li>
+<li><strong>~15% of content</strong> (~50 novel C# traits) requires WASM rewrites — significant but bounded work.</li>
+<li>The migration is a <strong>net positive</strong>: CA ends up with better performance, multiplayer, distribution, and maintainability.</li>
+<li>IC <strong>benefits too</strong>: CA’s requirements for mind control, teleport networks, carriers, shields, and upgrades validate and drive our component library design. If IC supports CA, it supports any OpenRA mod.</li>
+</ul>
+<h3 id="lessons-for-ic-design"><a class="header" href="#lessons-for-ic-design">Lessons for IC Design</a></h3>
+<p>CA’s codebase reveals which OpenRA gaps force modders into C#. These should become first-party IC features:</p>
+<ol>
+<li><strong>Mind Control</strong> — Full system: controller, controllable, capacity limits, progress bars, spawn-on-mind-controlled. Needed for Yuri/Scrin in future game modules.</li>
+<li><strong>Carrier/Spawner</strong> — Master/slave with drone AI, return-to-carrier, respawn timers. Needed for Kirov, Aircraft Carriers, Scrin Mothership.</li>
+<li><strong>Teleport Networks</strong> — Enter any, exit at primary. Needed for Nod tunnels in TD/TS.</li>
+<li><strong>Shield Systems</strong> — Absorb damage, recharge, deplete. Needed for Scrin and RA2 force shields.</li>
+<li><strong>Upgrade System</strong> — Per-unit tech upgrades purchased at buildings. Needed for C&amp;C3-style gameplay.</li>
+<li><strong>Delayed Weapons</strong> — Attach timers to targets. Common RTS mechanic (poison, radiation, time bombs).</li>
+<li><strong>Attachable Actors</strong> — Parasite/bomb attachment. Terror drones in RA2.</li>
+</ol>
+<p>These seven systems cover ~60% of CA’s custom C# code and are universally useful across C&amp;C game modules.</p>
+<hr>
+<h2 id="case-study-2-cc-remastered-collection"><a class="header" href="#case-study-2-cc-remastered-collection">Case Study 2: C&amp;C Remastered Collection</a></h2>
+<h3 id="what-remastered-delivers"><a class="header" href="#what-remastered-delivers">What Remastered Delivers</a></h3>
+<p>The C&amp;C Remastered Collection (Petroglyph/EA, 2020) modernized C&amp;C95 and Red Alert with:</p>
+<ul>
+<li><strong>HD/SD toggle</strong> — Press F1 to instantly swap between classic 320×200 sprites and remastered HD art (4096-color, hand-painted)</li>
+<li><strong>4K support</strong> — HD assets render at native resolution up to 3840×2160</li>
+<li><strong>Zoom</strong> — Camera zoom in/out (not in original)</li>
+<li><strong>Modern UI</strong> — Cleaner sidebar, rally points, attack-move, queued production</li>
+<li><strong>Remastered audio</strong> — Frank Klepacki re-recorded the entire soundtrack; jukebox mode</li>
+<li><strong>Classic gameplay</strong> — Deliberately preserved original balance and feel</li>
+<li><strong>Bonus gallery</strong> — Concept art, behind-the-scenes, FMV jukebox</li>
+</ul>
+<p>This is the gold standard for C&amp;C modernization. The question: could someone achieve this on IC?</p>
+<h3 id="how-ics-architecture-supports-each-feature"><a class="header" href="#how-ics-architecture-supports-each-feature">How IC’s Architecture Supports Each Feature</a></h3>
+<h4 id="hdsd-graphics-toggle"><a class="header" href="#hdsd-graphics-toggle">HD/SD Graphics Toggle</a></h4>
+<p>IC handles this through three converging architectural decisions:</p>
+<p><strong>Invariant #9</strong> (game-agnostic renderer): The engine uses a <code>Renderable</code> trait. The RA1 game module registers sprite rendering, but the engine doesn’t know what format the sprites are. A game module can register <em>two</em> asset sets and swap at runtime.</p>
+<p><strong>Invariant #10</strong> (platform-agnostic): “Render quality is runtime-configurable.” This is literally the HD/SD toggle stated as an architectural requirement.</p>
+<p><strong>Bevy’s asset system</strong>: Both classic <code>.shp</code> sprites and HD texture atlases load as Bevy asset handles. The toggle swaps which handle the <code>Renderable</code> component references. This is a frame-instant operation — no loading screen required.</p>
+<p><strong>Implementation sketch:</strong></p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Component that tracks which asset quality to render
+#[derive(Component)]
+struct RenderQuality {
+    classic: Handle&lt;SpriteSheet&gt;,
+    hd: Option&lt;Handle&lt;SpriteSheet&gt;&gt;,
+    active: Quality, // Classic | HD
+}
+
+/// System: swap sprite sheet on toggle
+fn toggle_render_quality(
+    input: Res&lt;Input&gt;,
+    mut query: Query&lt;&amp;mut RenderQuality&gt;,
+) {
+    if input.just_pressed(KeyCode::F1) {
+        for mut rq in &amp;mut query {
+            rq.active = match rq.active {
+                Quality::Classic =&gt; Quality::HD,
+                Quality::HD =&gt; Quality::Classic,
+            };
+        }
+    }
+}
+<span class="boring">}</span></code></pre>
+<p><strong>YAML-level support:</strong></p>
+<pre><code class="language-yaml"># Unit definition with dual asset sets
+e1:
+  render:
+    sprite:
+      classic: infantry/e1.shp
+      hd: infantry/e1_hd.png
+    palette:
+      classic: temperat.pal
+      hd: null  # HD uses embedded color
+    shadow:
+      classic: infantry/e1_shadow.shp
+      hd: infantry/e1_shadow_hd.png
+</code></pre>
+<h4 id="4k-native-rendering"><a class="header" href="#4k-native-rendering">4K Native Rendering</a></h4>
+<p>Bevy + wgpu handle arbitrary resolutions natively. The isometric renderer in <code>ra-render</code> would:</p>
+<ul>
+<li>Detect native display resolution via Bevy’s window system</li>
+<li>Classify into <code>ScreenClass</code> (our responsive UI system from invariant #10)</li>
+<li>Classic sprites: integer-scaled (2×, 3×, 4×, 6×) with nearest-neighbor filtering to preserve pixel art</li>
+<li>HD sprites: render at native resolution, no scaling artifacts</li>
+<li>UI elements: adapt layout per <code>ScreenClass</code> (phone → tablet → laptop → desktop → 4K)</li>
+</ul>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Display</th><th>Classic Mode</th><th>HD Mode</th></tr>
+</thead>
+<tbody>
+<tr><td>1080p</td><td>3× integer scale</td><td>Native HD</td></tr>
+<tr><td>1440p</td><td>4× integer scale</td><td>Native HD</td></tr>
+<tr><td>4K</td><td>6× integer scale</td><td>Native HD</td></tr>
+<tr><td>Ultrawide</td><td>Scale + letterbox options</td><td>Native HD, wider viewport</td></tr>
+</tbody>
+</table>
+</div>
+<h4 id="camera-zoom"><a class="header" href="#camera-zoom">Camera Zoom</a></h4>
+<p>Standard Bevy camera parameter. The isometric renderer already needs to handle different view distances for the minimap and observer mode. Zoom is a single <code>f32</code> on the camera entity — trivial to expose as scroll-wheel or keybind.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>fn camera_zoom(
+    input: Res&lt;Input&gt;,
+    mut camera: Query&lt;&amp;mut OrthographicProjection, With&lt;GameCamera&gt;&gt;,
+) {
+    let scroll = input.mouse_scroll_delta();
+    for mut proj in &amp;mut camera {
+        proj.scale = (proj.scale - scroll.y * 0.1).clamp(0.5, 3.0);
+    }
+}
+<span class="boring">}</span></code></pre>
+<h4 id="modern-ui--sidebar"><a class="header" href="#modern-ui--sidebar">Modern UI / Sidebar</a></h4>
+<ul>
+<li>IC’s <code>ra-ui</code> crate uses Bevy UI — not locked to OpenRA’s widget system</li>
+<li>The Remastered sidebar layout is our explicit UX reference (AGENTS.md: “EA Remastered Collection — UI/UX gold standard. Cleanest, least cluttered C&amp;C interface.”)</li>
+<li>Rally points, attack-move, queued production are standard Phase 3 deliverables</li>
+<li>A <code>remastered</code> UI theme could coexist with a <code>classic</code> theme — switchable in settings</li>
+</ul>
+<h4 id="remastered-audio"><a class="header" href="#remastered-audio">Remastered Audio</a></h4>
+<p>IC’s <code>ra-audio</code> crate supports:</p>
+<ul>
+<li>Classic <code>.aud</code> format (loaded natively per invariant #8)</li>
+<li>Modern audio formats (WAV, OGG, FLAC) via Bevy’s audio plugin</li>
+<li>Jukebox mode is a UI feature — trivial playlist management</li>
+<li>EVA voice system supports multiple voice packs</li>
+<li>Spatial audio for positional effects (explosions, gunfire)</li>
+</ul>
+<p>A “Remastered audio pack” would be a mod containing high-quality re-recordings alongside classic <code>.aud</code> files, with a toggle in audio settings.</p>
+<h4 id="balance-preservation"><a class="header" href="#balance-preservation">Balance Preservation</a></h4>
+<p><strong>D019 (Switchable Balance Presets)</strong> explicitly defines <code>remastered</code> as a preset:</p>
+<pre><code class="language-yaml"># rules/presets/remastered.yaml
+# Any balance changes from the EA Remastered Collection.
+# Selected in lobby alongside "classic" and "openra" presets.
+preset: remastered
+source: "C&amp;C Remastered Collection (2020)"
+inherit: classic
+overrides:
+  # Document specific deviations from original balance here
+</code></pre>
+<p>Players choose in lobby: Classic (EA source values), OpenRA (OpenRA balance), or Remastered.</p>
+<h3 id="what-it-would-take"><a class="header" href="#what-it-would-take">What It Would Take</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Component</th><th>Effort</th><th>Notes</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Classic assets</strong></td><td>Zero</td><td>IC loads .shp, .pal, .aud, .tmp natively (invariant #8)</td></tr>
+<tr><td><strong>HD art assets</strong></td><td><strong>Major art effort</strong></td><td>EA’s HD sprites are copyrighted; must be created independently</td></tr>
+<tr><td><strong>HD/SD toggle system</strong></td><td>Moderate</td><td>Dual asset handles per entity, runtime swap, ~2 weeks engineering</td></tr>
+<tr><td><strong>4K rendering</strong></td><td>Free</td><td>Bevy/wgpu handles natively</td></tr>
+<tr><td><strong>Integer scaling</strong></td><td>Low</td><td>Nearest-neighbor upscale for classic sprites, configurable scale factor</td></tr>
+<tr><td><strong>Camera zoom</strong></td><td>Trivial</td><td>Single camera parameter, hours of work</td></tr>
+<tr><td><strong>Remastered UI theme</strong></td><td>Moderate</td><td>Bevy UI layout, reference EA Remastered screenshots</td></tr>
+<tr><td><strong>Remastered balance preset</strong></td><td>Low</td><td>YAML data file comparing EA Remastered balance to original</td></tr>
+<tr><td><strong>Remastered audio pack</strong></td><td>Art effort</td><td>Community re-recordings or licensed audio</td></tr>
+<tr><td><strong>Bonus gallery</strong></td><td>Low</td><td>Image viewer + FMV player (IC already plans .vqa support)</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="the-art-bottleneck"><a class="header" href="#the-art-bottleneck">The Art Bottleneck</a></h3>
+<p>The engineering is straightforward. The bottleneck is <strong>art assets</strong>:</p>
+<p>EA’s HD sprites for the Remastered Collection are copyrighted and cannot be redistributed. A community-driven Remastered experience on IC would need:</p>
+<ol>
+<li><strong>Commission original HD art</strong> in the Remastered style — expensive but legally clear</li>
+<li><strong>AI upscaling</strong> of classic sprites — lower quality, fast, legally ambiguous</li>
+<li><strong>Community art packs</strong> distributed via workshop — distributed effort, curated quality</li>
+<li><strong>Open-source HD asset projects</strong> — several community efforts exist for C&amp;C sprite HD conversions</li>
+</ol>
+<p>IC’s architecture makes the <em>engine</em> part trivial. The <code>GameModule</code> trait (D018) means a <code>remastered</code> module can register HD asset loaders, the dual-render toggle, UI theme, and balance preset. The engine doesn’t care — it’s game-agnostic.</p>
+<h3 id="implementation-as-a-game-module"><a class="header" href="#implementation-as-a-game-module">Implementation as a Game Module</a></h3>
+<p>The full Remastered experience would be a game module (D018):</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct RemasteredModule;
+
+impl GameModule for RemasteredModule {
+    fn name(&amp;self) -&gt; &amp;str { "C&amp;C Remastered" }
+
+    fn register_systems(&amp;self, app: &amp;mut App) {
+        // Everything from RA1Module, plus:
+        app.add_systems(Update, toggle_render_quality);
+        app.add_systems(Update, camera_zoom);
+
+        // Register HD asset loaders alongside classic ones
+        app.add_plugins(HdSpritePlugin);
+        app.add_plugins(HdAudioPlugin);
+
+        // Remastered UI theme
+        app.insert_resource(UiTheme::Remastered);
+
+        // Balance preset
+        app.insert_resource(BalancePreset::Remastered);
+    }
+
+    fn register_assets(&amp;self, server: &amp;AssetServer) {
+        // Load both classic and HD asset sets
+        server.register_loader::&lt;ShpLoader&gt;();   // Classic
+        server.register_loader::&lt;HdPngLoader&gt;(); // HD
+    }
+}
+<span class="boring">}</span></code></pre>
+<h3 id="verdict-1"><a class="header" href="#verdict-1">Verdict</a></h3>
+<p><strong>Yes, someone could recreate the Remastered experience on IC.</strong> The architecture explicitly supports it:</p>
+<ul>
+<li>Game-agnostic engine with <code>GameModule</code> trait (D018) — Remastered becomes a module</li>
+<li>Runtime-configurable render quality (invariant #10) — the HD/SD toggle</li>
+<li>Switchable balance presets (D019) — <code>remastered</code> preset alongside <code>classic</code> and <code>openra</code></li>
+<li>Full original format compatibility (invariant #8) — classic assets load unchanged</li>
+<li>Bevy/wgpu for modern rendering — 4K, zoom, post-processing, all native</li>
+</ul>
+<p><strong>The bottleneck is art, not engineering.</strong> If someone produced HD sprite assets compatible with IC’s asset system, the engine work for the HD/SD toggle, 4K rendering, zoom, and modern UI is straightforward Bevy development — estimated at 4-6 weeks of focused engineering on top of the base RA1 game module.</p>
+<p>This case study validates IC’s multi-game architecture: the same engine that runs classic RA1 can deliver a Remastered-quality experience as a different game module, with zero changes to the engine core.</p>
+<hr>
+<h2 id="cross-cutting-insights"><a class="header" href="#cross-cutting-insights">Cross-Cutting Insights</a></h2>
+<p>Both case studies validate the same architectural decisions:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Decision</th><th>CA Validation</th><th>Remastered Validation</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>D018 (Game Modules)</strong></td><td>CA’s 5 factions = a game module that registers more components than base RA1</td><td>Remastered = a module that registers dual asset loaders</td></tr>
+<tr><td><strong>Tiered Modding</strong></td><td>40% YAML + 15% Lua + 15% WASM + 30% built-in</td><td>95% data/asset-driven, 5% module code</td></tr>
+<tr><td><strong>Invariant #8 (Format Compat)</strong></td><td>450+ maps, all sprites, all audio load natively</td><td>All classic assets load natively</td></tr>
+<tr><td><strong>Invariant #9 (Game-Agnostic)</strong></td><td>Scrin/GDI/Nod require engine-agnostic component design</td><td>HD renderer is game-agnostic</td></tr>
+<tr><td><strong>Invariant #10 (Platform-Agnostic)</strong></td><td>Must run on all platforms with same mod content</td><td>Runtime render quality = HD/SD toggle</td></tr>
+<tr><td><strong>D019 (Balance Presets)</strong></td><td>CA’s custom balance is just another preset</td><td><code>remastered</code> preset</td></tr>
+<tr><td><strong>D021 (Campaigns)</strong></td><td>CA’s 34 missions benefit from branching narrative graph</td><td>Remastered’s campaigns could use persistent roster</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="seven-built-in-systems-driven-by-these-case-studies"><a class="header" href="#seven-built-in-systems-driven-by-these-case-studies">Seven Built-In Systems Driven by These Case Studies</a></h3>
+<p>Based on CA’s custom C# requirements and Remastered’s features, IC should include these as first-party engine components (not mod-level WASM):</p>
+<ol>
+<li><strong>Mind Control</strong> — Controller/controllable with capacity limits, progress indication, spawn-on-override</li>
+<li><strong>Carrier/Spawner</strong> — Master/slave drone management with respawn, recall, autonomous attack</li>
+<li><strong>Teleport Network</strong> — Multi-node network with primary exit designation</li>
+<li><strong>Shield System</strong> — Absorb damage before health, recharge timer, visual effects</li>
+<li><strong>Upgrade System</strong> — Per-unit tech upgrades via building research, with conditions</li>
+<li><strong>Delayed Weapons</strong> — Time-delayed effects attached to targets (poison, radiation, bombs)</li>
+<li><strong>Dual Asset Rendering</strong> — Runtime-switchable asset quality (classic/HD) per entity</li>
+</ol>
+<p>These seven systems serve both case studies, all future C&amp;C game modules (RA2, TS, C&amp;C3), and the broader RTS modding community.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="11-OPENRA-FEATURES.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="11-OPENRA-FEATURES.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr-ef4e11c1.min.js"></script>
+        <script src="mark-09e88c2c.min.js"></script>
+        <script src="searcher-c2a407aa.js"></script>
+
+        <script src="clipboard-1626706a.min.js"></script>
+        <script src="highlight-abc7f01d.js"></script>
+        <script src="book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

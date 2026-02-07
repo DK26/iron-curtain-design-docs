@@ -1,0 +1,2860 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>OpenRA Feature Reference &amp; Gap Analysis - Iron Curtain — Design Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Design docs for a Rust-native Red Alert RTS engine">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="favicon-8114d1fc.png">
+        <link rel="stylesheet" href="css/variables-8adf115d.css">
+        <link rel="stylesheet" href="css/general-2459343d.css">
+        <link rel="stylesheet" href="css/chrome-ae938929.css">
+        <link rel="stylesheet" href="css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "searchindex-1ff3a283.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc-6f79e187.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Iron Curtain — Design Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs/edit/main/src/11-OPENRA-FEATURES.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="openra-engine--comprehensive-feature-reference"><a class="header" href="#openra-engine--comprehensive-feature-reference">OpenRA Engine — Comprehensive Feature Reference</a></h1>
+<blockquote>
+<p><strong>Purpose:</strong> Exhaustive catalog of every feature the OpenRA engine provides to modders and game developers.
+Sourced directly from the OpenRA/OpenRA GitHub repository (C#/.NET).
+Organized by category for Iron Curtain design reference.</p>
+</blockquote>
+<hr>
+<h2 id="1-trait-system-actor-component-architecture"><a class="header" href="#1-trait-system-actor-component-architecture">1. Trait System (Actor Component Architecture)</a></h2>
+<p>OpenRA’s core architecture uses a <strong>trait system</strong> — essentially a component-entity model. Every actor (unit, building, prop) is defined by composing traits in YAML. Each trait is a C# class implementing one or more interfaces. Traits attach to actors, players, or the world.</p>
+<h3 id="core-trait-infrastructure"><a class="header" href="#core-trait-infrastructure">Core Trait Infrastructure</a></h3>
+<ul>
+<li><strong>TraitsInterfaces</strong> — Master file defining all trait interfaces (<code>ITraitInfo</code>, <code>IOccupySpace</code>, <code>IPositionable</code>, <code>IMove</code>, <code>IFacing</code>, <code>IHealth</code>, <code>INotifyCreated</code>, <code>INotifyDamage</code>, <code>INotifyKilled</code>, <code>IWorldLoaded</code>, <code>ITick</code>, <code>IRender</code>, <code>IResolveOrder</code>, <code>IOrderVoice</code>, etc.)</li>
+<li><strong>ConditionalTrait</strong> — Base class enabling traits to be enabled/disabled by conditions</li>
+<li><strong>PausableConditionalTrait</strong> — Conditional trait that can also be paused</li>
+<li><strong>Target</strong> — Represents a target for orders/attacks (actor, terrain position, frozen actor)</li>
+<li><strong>ActivityUtils</strong> — Utilities for the activity (action queue) system</li>
+<li><strong>LintAttributes</strong> — Compile-time validation attributes for trait definitions</li>
+</ul>
+<h3 id="general-actor-traits-130-traits"><a class="header" href="#general-actor-traits-130-traits">General Actor Traits (~130+ traits)</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Trait</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>Health</code></td><td>Hit points (current, max), damage state tracking</td></tr>
+<tr><td><code>Armor</code></td><td>Armor type for damage calculation</td></tr>
+<tr><td><code>Mobile</code></td><td>Movement capability, speed, locomotor reference</td></tr>
+<tr><td><code>Immobile</code></td><td>Cannot move (buildings, props)</td></tr>
+<tr><td><code>Selectable</code></td><td>Can be selected by player</td></tr>
+<tr><td><code>IsometricSelectable</code></td><td>Selection for isometric maps</td></tr>
+<tr><td><code>Interactable</code></td><td>Can be interacted with</td></tr>
+<tr><td><code>Tooltip</code></td><td>Name shown on hover</td></tr>
+<tr><td><code>TooltipDescription</code></td><td>Extended description text</td></tr>
+<tr><td><code>Valued</code></td><td>Cost in credits</td></tr>
+<tr><td><code>Voiced</code></td><td>Has voice lines</td></tr>
+<tr><td><code>Buildable</code></td><td>Can be produced (cost, time, prerequisites)</td></tr>
+<tr><td><code>Encyclopedia</code></td><td>In-game encyclopedia entry</td></tr>
+<tr><td><code>MapEditorData</code></td><td>Data for map editor display</td></tr>
+<tr><td><code>ScriptTags</code></td><td>Tags for Lua scripting identification</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="combat-traits"><a class="header" href="#combat-traits">Combat Traits</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Trait</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>Armament</code></td><td>Weapon mount (weapon, cooldown, barrel)</td></tr>
+<tr><td><code>AttackBase</code></td><td>Base attack logic</td></tr>
+<tr><td><code>AttackFollow</code></td><td>Attack while following target</td></tr>
+<tr><td><code>AttackFrontal</code></td><td>Attack only from front arc</td></tr>
+<tr><td><code>AttackOmni</code></td><td>Attack in any direction</td></tr>
+<tr><td><code>AttackTurreted</code></td><td>Attack using turret</td></tr>
+<tr><td><code>AttackCharges</code></td><td>Attack with charge mechanic</td></tr>
+<tr><td><code>AttackGarrisoned</code></td><td>Attack from inside garrison</td></tr>
+<tr><td><code>AutoTarget</code></td><td>Automatic target acquisition</td></tr>
+<tr><td><code>AutoTargetPriority</code></td><td>Priority for auto-targeting</td></tr>
+<tr><td><code>Turreted</code></td><td>Has rotatable turret</td></tr>
+<tr><td><code>AmmoPool</code></td><td>Ammunition system</td></tr>
+<tr><td><code>ReloadAmmoPool</code></td><td>Ammo reload behavior</td></tr>
+<tr><td><code>Rearmable</code></td><td>Can rearm at specific buildings</td></tr>
+<tr><td><code>BlocksProjectiles</code></td><td>Blocks projectile passage</td></tr>
+<tr><td><code>JamsMissiles</code></td><td>Missile jamming capability</td></tr>
+<tr><td><code>HitShape</code></td><td>Collision shape for hit detection</td></tr>
+<tr><td><code>Targetable</code></td><td>Can be targeted by weapons</td></tr>
+<tr><td><code>RevealOnFire</code></td><td>Reveals when firing</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="movement--positioning"><a class="header" href="#movement--positioning">Movement &amp; Positioning</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Trait</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>Mobile</code></td><td>Ground movement (speed, locomotor)</td></tr>
+<tr><td><code>Aircraft</code></td><td>Air movement (altitude, VTOL, speed, turn)</td></tr>
+<tr><td><code>AttackAircraft</code></td><td>Air-to-ground attack patterns</td></tr>
+<tr><td><code>AttackBomber</code></td><td>Bombing run behavior</td></tr>
+<tr><td><code>FallsToEarth</code></td><td>Crash behavior when killed</td></tr>
+<tr><td><code>BodyOrientation</code></td><td>Physical orientation of actor</td></tr>
+<tr><td><code>QuantizeFacingsFromSequence</code></td><td>Snap facings to sprite frames</td></tr>
+<tr><td><code>Wanders</code></td><td>Random wandering movement</td></tr>
+<tr><td><code>AttackMove</code></td><td>Attack-move command support</td></tr>
+<tr><td><code>AttackWander</code></td><td>Attack while wandering</td></tr>
+<tr><td><code>TurnOnIdle</code></td><td>Turn to face direction when idle</td></tr>
+<tr><td><code>Husk</code></td><td>Wreck/corpse behavior</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="transport--cargo"><a class="header" href="#transport--cargo">Transport &amp; Cargo</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Trait</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>Cargo</code></td><td>Can carry passengers</td></tr>
+<tr><td><code>Passenger</code></td><td>Can be carried</td></tr>
+<tr><td><code>Carryall</code></td><td>Air transport (pick up &amp; carry)</td></tr>
+<tr><td><code>Carryable</code></td><td>Can be picked up by carryall</td></tr>
+<tr><td><code>AutoCarryall</code></td><td>Automatic carryall dispatch</td></tr>
+<tr><td><code>AutoCarryable</code></td><td>Can be auto-carried</td></tr>
+<tr><td><code>CarryableHarvester</code></td><td>Harvester carryall integration</td></tr>
+<tr><td><code>ParaDrop</code></td><td>Paradrop passengers</td></tr>
+<tr><td><code>Parachutable</code></td><td>Can use parachute</td></tr>
+<tr><td><code>EjectOnDeath</code></td><td>Eject pilot on destruction</td></tr>
+<tr><td><code>EntersTunnels</code></td><td>Can use tunnel network</td></tr>
+<tr><td><code>TunnelEntrance</code></td><td>Tunnel entry point</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="economy--harvesting"><a class="header" href="#economy--harvesting">Economy &amp; Harvesting</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Trait</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>Harvester</code></td><td>Resource gathering (capacity, resource type)</td></tr>
+<tr><td><code>StoresResources</code></td><td>Local resource storage</td></tr>
+<tr><td><code>StoresPlayerResources</code></td><td>Player-wide resource storage</td></tr>
+<tr><td><code>SeedsResource</code></td><td>Creates resources on map</td></tr>
+<tr><td><code>CashTrickler</code></td><td>Periodic cash generation</td></tr>
+<tr><td><code>AcceptsDeliveredCash</code></td><td>Receives cash deliveries</td></tr>
+<tr><td><code>DeliversCash</code></td><td>Delivers cash to target</td></tr>
+<tr><td><code>AcceptsDeliveredExperience</code></td><td>Receives experience deliveries</td></tr>
+<tr><td><code>DeliversExperience</code></td><td>Delivers experience to target</td></tr>
+<tr><td><code>GivesBounty</code></td><td>Awards cash on kill</td></tr>
+<tr><td><code>GivesCashOnCapture</code></td><td>Awards cash when captured</td></tr>
+<tr><td><code>CustomSellValue</code></td><td>Override sell price</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="stealth--detection"><a class="header" href="#stealth--detection">Stealth &amp; Detection</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Trait</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>Cloak</code></td><td>Invisibility system</td></tr>
+<tr><td><code>DetectCloaked</code></td><td>Reveals cloaked units</td></tr>
+<tr><td><code>IgnoresCloak</code></td><td>Can target cloaked units</td></tr>
+<tr><td><code>IgnoresDisguise</code></td><td>Sees through disguises</td></tr>
+<tr><td><code>AffectsShroud</code></td><td>Base for shroud/fog traits</td></tr>
+<tr><td><code>CreatesShroud</code></td><td>Creates shroud around actor</td></tr>
+<tr><td><code>RevealsShroud</code></td><td>Reveals shroud (sight range)</td></tr>
+<tr><td><code>RevealsMap</code></td><td>Reveals entire map</td></tr>
+<tr><td><code>RevealOnDeath</code></td><td>Reveals area on death</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="capture--ownership"><a class="header" href="#capture--ownership">Capture &amp; Ownership</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Trait</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>Capturable</code></td><td>Can be captured</td></tr>
+<tr><td><code>CapturableProgressBar</code></td><td>Shows capture progress</td></tr>
+<tr><td><code>CapturableProgressBlink</code></td><td>Blinks during capture</td></tr>
+<tr><td><code>CaptureManager</code></td><td>Manages capture state</td></tr>
+<tr><td><code>CaptureProgressBar</code></td><td>Progress bar for capturer</td></tr>
+<tr><td><code>Captures</code></td><td>Can capture targets</td></tr>
+<tr><td><code>ProximityCapturable</code></td><td>Captured by proximity</td></tr>
+<tr><td><code>ProximityCaptor</code></td><td>Captures by proximity</td></tr>
+<tr><td><code>RegionProximityCapturable</code></td><td>Region-based proximity capture</td></tr>
+<tr><td><code>TemporaryOwnerManager</code></td><td>Temporary ownership changes</td></tr>
+<tr><td><code>TransformOnCapture</code></td><td>Transform when captured</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="destruction--death"><a class="header" href="#destruction--death">Destruction &amp; Death</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Trait</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>KillsSelf</code></td><td>Self-destruct timer</td></tr>
+<tr><td><code>SpawnActorOnDeath</code></td><td>Spawn actor when killed</td></tr>
+<tr><td><code>SpawnActorsOnSell</code></td><td>Spawn actors when sold</td></tr>
+<tr><td><code>ShakeOnDeath</code></td><td>Screen shake on death</td></tr>
+<tr><td><code>ExplosionOnDamageTransition</code></td><td>Explode at damage thresholds</td></tr>
+<tr><td><code>FireWarheadsOnDeath</code></td><td>Apply warheads on death</td></tr>
+<tr><td><code>FireProjectilesOnDeath</code></td><td>Fire projectiles on death</td></tr>
+<tr><td><code>FireWarheads</code></td><td>General warhead application</td></tr>
+<tr><td><code>MustBeDestroyed</code></td><td>Must be destroyed for victory</td></tr>
+<tr><td><code>OwnerLostAction</code></td><td>Behavior when owner loses</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="miscellaneous-actor-traits"><a class="header" href="#miscellaneous-actor-traits">Miscellaneous Actor Traits</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Trait</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>AutoCrusher</code></td><td>Automatically crushes crushable actors</td></tr>
+<tr><td><code>Crushable</code></td><td>Can be crushed by vehicles</td></tr>
+<tr><td><code>TransformCrusherOnCrush</code></td><td>Transform crusher on crush</td></tr>
+<tr><td><code>DamagedByTerrain</code></td><td>Takes terrain damage</td></tr>
+<tr><td><code>ChangesHealth</code></td><td>Health change over time</td></tr>
+<tr><td><code>ChangesTerrain</code></td><td>Modifies terrain type</td></tr>
+<tr><td><code>Demolishable</code></td><td>Can be demolished</td></tr>
+<tr><td><code>Demolition</code></td><td>Can demolish buildings</td></tr>
+<tr><td><code>Guard</code></td><td>Guard command support</td></tr>
+<tr><td><code>Guardable</code></td><td>Can be guarded</td></tr>
+<tr><td><code>Huntable</code></td><td>Can be hunted by AI</td></tr>
+<tr><td><code>InstantlyRepairable</code></td><td>Can be instantly repaired</td></tr>
+<tr><td><code>InstantlyRepairs</code></td><td>Can instantly repair</td></tr>
+<tr><td><code>Mine</code></td><td>Land mine</td></tr>
+<tr><td><code>Minelayer</code></td><td>Can lay mines</td></tr>
+<tr><td><code>Plug</code></td><td>Plugs into pluggable (e.g., bio-reactor)</td></tr>
+<tr><td><code>Pluggable</code></td><td>Accepts plug actors</td></tr>
+<tr><td><code>Replaceable</code></td><td>Can be replaced by Replacement</td></tr>
+<tr><td><code>Replacement</code></td><td>Replaces a Replaceable actor</td></tr>
+<tr><td><code>RejectsOrders</code></td><td>Ignores player commands</td></tr>
+<tr><td><code>Sellable</code></td><td>Can be sold</td></tr>
+<tr><td><code>Transforms</code></td><td>Can transform into another actor</td></tr>
+<tr><td><code>ThrowsParticle</code></td><td>Emits particle effects</td></tr>
+<tr><td><code>CommandBarBlacklist</code></td><td>Excluded from command bar</td></tr>
+<tr><td><code>AppearsOnMapPreview</code></td><td>Visible in map preview</td></tr>
+<tr><td><code>Repairable</code></td><td>Can be sent for repair</td></tr>
+<tr><td><code>RepairableNear</code></td><td>Can be repaired when nearby</td></tr>
+<tr><td><code>RepairsUnits</code></td><td>Repairs nearby units</td></tr>
+<tr><td><code>RepairsBridges</code></td><td>Can repair bridges</td></tr>
+<tr><td><code>UpdatesDerrickCount</code></td><td>Tracks oil derrick count</td></tr>
+<tr><td><code>CombatDebugOverlay</code></td><td>Debug combat visualization</td></tr>
+<tr><td><code>ProducibleWithLevel</code></td><td>Produced with veterancy level</td></tr>
+<tr><td><code>RequiresSpecificOwners</code></td><td>Only specific owners can use</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="2-building-system"><a class="header" href="#2-building-system">2. Building System</a></h2>
+<h3 id="building-traits"><a class="header" href="#building-traits">Building Traits</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Trait</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>Building</code></td><td>Base building trait (footprint, dimensions)</td></tr>
+<tr><td><code>BuildingInfluence</code></td><td>Building cell occupation tracking</td></tr>
+<tr><td><code>BaseBuilding</code></td><td>Base expansion flag</td></tr>
+<tr><td><code>BaseProvider</code></td><td>Provides base build radius</td></tr>
+<tr><td><code>GivesBuildableArea</code></td><td>Enables building placement nearby</td></tr>
+<tr><td><code>RequiresBuildableArea</code></td><td>Requires buildable area for placement</td></tr>
+<tr><td><code>PrimaryBuilding</code></td><td>Can be set as primary</td></tr>
+<tr><td><code>RallyPoint</code></td><td>Production rally point</td></tr>
+<tr><td><code>Exit</code></td><td>Unit exit points</td></tr>
+<tr><td><code>Reservable</code></td><td>Landing pad reservation</td></tr>
+<tr><td><code>Refinery</code></td><td>Resource delivery point</td></tr>
+<tr><td><code>RepairableBuilding</code></td><td>Can be repaired by player</td></tr>
+<tr><td><code>Gate</code></td><td>Openable gate</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="building-placement"><a class="header" href="#building-placement">Building Placement</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Trait</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>ActorPreviewPlaceBuildingPreview</code></td><td>Actor preview during placement</td></tr>
+<tr><td><code>FootprintPlaceBuildingPreview</code></td><td>Footprint overlay during placement</td></tr>
+<tr><td><code>SequencePlaceBuildingPreview</code></td><td>Sequence-based placement preview</td></tr>
+<tr><td><code>PlaceBuildingVariants</code></td><td>Multiple placement variants</td></tr>
+<tr><td><code>LineBuild</code></td><td>Line-building (walls)</td></tr>
+<tr><td><code>LineBuildNode</code></td><td>Node for line-building</td></tr>
+<tr><td><code>MapBuildRadius</code></td><td>Controls build radius rules</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="bridge-system"><a class="header" href="#bridge-system">Bridge System</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Trait</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>Bridge</code></td><td>Bridge segment</td></tr>
+<tr><td><code>BridgeHut</code></td><td>Bridge repair hut</td></tr>
+<tr><td><code>BridgePlaceholder</code></td><td>Bridge placeholder</td></tr>
+<tr><td><code>BridgeLayer</code></td><td>World bridge management</td></tr>
+<tr><td><code>GroundLevelBridge</code></td><td>Ground-level bridge</td></tr>
+<tr><td><code>LegacyBridgeHut</code></td><td>Legacy bridge support</td></tr>
+<tr><td><code>LegacyBridgeLayer</code></td><td>Legacy bridge management</td></tr>
+<tr><td><code>ElevatedBridgeLayer</code></td><td>Elevated bridge system</td></tr>
+<tr><td><code>ElevatedBridgePlaceholder</code></td><td>Elevated bridge placeholder</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="building-transforms"><a class="header" href="#building-transforms">Building Transforms</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Trait</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>TransformsIntoAircraft</code></td><td>Building → aircraft</td></tr>
+<tr><td><code>TransformsIntoDockClientManager</code></td><td>Building → dock client</td></tr>
+<tr><td><code>TransformsIntoEntersTunnels</code></td><td>Building → tunnel user</td></tr>
+<tr><td><code>TransformsIntoMobile</code></td><td>Building → mobile unit</td></tr>
+<tr><td><code>TransformsIntoPassenger</code></td><td>Building → passenger</td></tr>
+<tr><td><code>TransformsIntoRepairable</code></td><td>Building → repairable</td></tr>
+<tr><td><code>TransformsIntoTransforms</code></td><td>Building → transformable</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="docking-system"><a class="header" href="#docking-system">Docking System</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Trait</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>DockClientBase</code></td><td>Base for dock clients (harvesters, etc.)</td></tr>
+<tr><td><code>DockClientManager</code></td><td>Manages dock client behavior</td></tr>
+<tr><td><code>DockHost</code></td><td>Building that accepts docks (refinery, repair pad)</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="3-production-system"><a class="header" href="#3-production-system">3. Production System</a></h2>
+<h3 id="production-traits"><a class="header" href="#production-traits">Production Traits</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Trait</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>Production</code></td><td>Base production capability</td></tr>
+<tr><td><code>ProductionQueue</code></td><td>Standard production queue (base class, 25KB)</td></tr>
+<tr><td><code>ClassicProductionQueue</code></td><td>C&amp;C-style single queue per type</td></tr>
+<tr><td><code>ClassicParallelProductionQueue</code></td><td>Parallel production (RA2 style)</td></tr>
+<tr><td><code>ParallelProductionQueue</code></td><td>Modern parallel production</td></tr>
+<tr><td><code>BulkProductionQueue</code></td><td>Bulk production variant</td></tr>
+<tr><td><code>ProductionQueueFromSelection</code></td><td>Queue from selected factory</td></tr>
+<tr><td><code>ProductionAirdrop</code></td><td>Air-delivered production</td></tr>
+<tr><td><code>ProductionBulkAirDrop</code></td><td>Bulk airdrop production</td></tr>
+<tr><td><code>ProductionFromMapEdge</code></td><td>Units arrive from map edge</td></tr>
+<tr><td><code>ProductionParadrop</code></td><td>Paradrop production</td></tr>
+<tr><td><code>FreeActor</code></td><td>Spawns free actors</td></tr>
+<tr><td><code>FreeActorWithDelivery</code></td><td>Spawns free actors with delivery animation</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="prerequisite-system"><a class="header" href="#prerequisite-system">Prerequisite System</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Trait</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>TechTree</code></td><td>Tech tree management</td></tr>
+<tr><td><code>ProvidesPrerequisite</code></td><td>Building provides prerequisite</td></tr>
+<tr><td><code>ProvidesTechPrerequisite</code></td><td>Provides named tech prerequisite</td></tr>
+<tr><td><code>GrantConditionOnPrerequisiteManager</code></td><td>Manager for prerequisite conditions</td></tr>
+<tr><td><code>LobbyPrerequisiteCheckbox</code></td><td>Lobby toggle for prerequisites</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="4-condition-system-34-traits"><a class="header" href="#4-condition-system-34-traits">4. Condition System (~34 traits)</a></h2>
+<p>The condition system is OpenRA’s primary mechanism for dynamic behavior modification. Conditions are boolean flags that enable/disable conditional traits.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Trait</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>ExternalCondition</code></td><td>Receives conditions from external sources</td></tr>
+<tr><td><code>GrantCondition</code></td><td>Always grants a condition</td></tr>
+<tr><td><code>GrantConditionOnAttack</code></td><td>Condition on attacking</td></tr>
+<tr><td><code>GrantConditionOnBotOwner</code></td><td>Condition when AI-owned</td></tr>
+<tr><td><code>GrantConditionOnClientDock</code></td><td>Condition when docked (client)</td></tr>
+<tr><td><code>GrantConditionOnCombatantOwner</code></td><td>Condition when combatant owns</td></tr>
+<tr><td><code>GrantConditionOnDamageState</code></td><td>Condition at damage thresholds</td></tr>
+<tr><td><code>GrantConditionOnDeploy</code></td><td>Condition when deployed</td></tr>
+<tr><td><code>GrantConditionOnFaction</code></td><td>Condition for specific factions</td></tr>
+<tr><td><code>GrantConditionOnHealth</code></td><td>Condition at health thresholds</td></tr>
+<tr><td><code>GrantConditionOnHostDock</code></td><td>Condition when docked (host)</td></tr>
+<tr><td><code>GrantConditionOnLayer</code></td><td>Condition on specific layer</td></tr>
+<tr><td><code>GrantConditionOnLineBuildDirection</code></td><td>Condition by wall direction</td></tr>
+<tr><td><code>GrantConditionOnMinelaying</code></td><td>Condition while laying mines</td></tr>
+<tr><td><code>GrantConditionOnMovement</code></td><td>Condition while moving</td></tr>
+<tr><td><code>GrantConditionOnPlayerResources</code></td><td>Condition based on resources</td></tr>
+<tr><td><code>GrantConditionOnPowerState</code></td><td>Condition based on power</td></tr>
+<tr><td><code>GrantConditionOnPrerequisite</code></td><td>Condition when prereq met</td></tr>
+<tr><td><code>GrantConditionOnProduction</code></td><td>Condition during production</td></tr>
+<tr><td><code>GrantConditionOnSubterraneanLayer</code></td><td>Condition when underground</td></tr>
+<tr><td><code>GrantConditionOnTerrain</code></td><td>Condition on terrain type</td></tr>
+<tr><td><code>GrantConditionOnTileSet</code></td><td>Condition on tile set</td></tr>
+<tr><td><code>GrantConditionOnTunnelLayer</code></td><td>Condition in tunnel</td></tr>
+<tr><td><code>GrantConditionWhileAiming</code></td><td>Condition while aiming</td></tr>
+<tr><td><code>GrantChargedConditionOnToggle</code></td><td>Charged toggle condition</td></tr>
+<tr><td><code>GrantExternalConditionToCrusher</code></td><td>Grant condition to crusher</td></tr>
+<tr><td><code>GrantExternalConditionToProduced</code></td><td>Grant condition to produced unit</td></tr>
+<tr><td><code>GrantRandomCondition</code></td><td>Random condition selection</td></tr>
+<tr><td><code>LineBuildSegmentExternalCondition</code></td><td>Line build segment condition</td></tr>
+<tr><td><code>ProximityExternalCondition</code></td><td>Proximity-based condition</td></tr>
+<tr><td><code>SpreadsCondition</code></td><td>Condition that spreads to neighbors</td></tr>
+<tr><td><code>ToggleConditionOnOrder</code></td><td>Toggle condition via order</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="5-multiplier-system-20-traits"><a class="header" href="#5-multiplier-system-20-traits">5. Multiplier System (~20 traits)</a></h2>
+<p>Multipliers modify numeric values on actors. All are conditional traits.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Multiplier</th><th>Affects</th></tr>
+</thead>
+<tbody>
+<tr><td><code>DamageMultiplier</code></td><td>Incoming damage</td></tr>
+<tr><td><code>FirepowerMultiplier</code></td><td>Outgoing damage</td></tr>
+<tr><td><code>SpeedMultiplier</code></td><td>Movement speed</td></tr>
+<tr><td><code>RangeMultiplier</code></td><td>Weapon range</td></tr>
+<tr><td><code>InaccuracyMultiplier</code></td><td>Weapon spread</td></tr>
+<tr><td><code>ReloadDelayMultiplier</code></td><td>Weapon reload time</td></tr>
+<tr><td><code>ReloadAmmoDelayMultiplier</code></td><td>Ammo reload time</td></tr>
+<tr><td><code>ProductionCostMultiplier</code></td><td>Build cost</td></tr>
+<tr><td><code>ProductionTimeMultiplier</code></td><td>Build time</td></tr>
+<tr><td><code>PowerMultiplier</code></td><td>Power consumption/production</td></tr>
+<tr><td><code>RevealsShroudMultiplier</code></td><td>Sight range</td></tr>
+<tr><td><code>CreatesShroudMultiplier</code></td><td>Shroud creation range</td></tr>
+<tr><td><code>DetectCloakedMultiplier</code></td><td>Cloak detection range</td></tr>
+<tr><td><code>CashTricklerMultiplier</code></td><td>Cash trickle rate</td></tr>
+<tr><td><code>ResourceValueMultiplier</code></td><td>Resource gather value</td></tr>
+<tr><td><code>GainsExperienceMultiplier</code></td><td>XP gain rate</td></tr>
+<tr><td><code>GivesExperienceMultiplier</code></td><td>XP given on death</td></tr>
+<tr><td><code>HandicapDamageMultiplier</code></td><td>Handicap damage received</td></tr>
+<tr><td><code>HandicapFirepowerMultiplier</code></td><td>Handicap firepower</td></tr>
+<tr><td><code>HandicapProductionTimeMultiplier</code></td><td>Handicap build time</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="6-projectile-system-8-types"><a class="header" href="#6-projectile-system-8-types">6. Projectile System (8 types)</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Projectile</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>Bullet</code></td><td>Standard ballistic projectile with gravity, speed, inaccuracy</td></tr>
+<tr><td><code>Missile</code></td><td>Guided missile with tracking, jinking, terrain following</td></tr>
+<tr><td><code>LaserZap</code></td><td>Instant laser beam</td></tr>
+<tr><td><code>Railgun</code></td><td>Railgun beam effect</td></tr>
+<tr><td><code>AreaBeam</code></td><td>Wide area beam weapon</td></tr>
+<tr><td><code>InstantHit</code></td><td>Instant-hit hitscan weapon</td></tr>
+<tr><td><code>GravityBomb</code></td><td>Dropped bomb with gravity</td></tr>
+<tr><td><code>NukeLaunch</code></td><td>Nuclear missile (special trajectory)</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="7-warhead-system-15-types"><a class="header" href="#7-warhead-system-15-types">7. Warhead System (15 types)</a></h2>
+<p>Warheads define what happens when a weapon hits. Multiple warheads per weapon.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Warhead</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>Warhead</code></td><td>Base warhead class</td></tr>
+<tr><td><code>DamageWarhead</code></td><td>Base class for damage-dealing warheads</td></tr>
+<tr><td><code>SpreadDamageWarhead</code></td><td>Damage with falloff over radius</td></tr>
+<tr><td><code>TargetDamageWarhead</code></td><td>Direct damage to target only</td></tr>
+<tr><td><code>HealthPercentageDamageWarhead</code></td><td>Percentage-based damage</td></tr>
+<tr><td><code>ChangeOwnerWarhead</code></td><td>Changes actor ownership</td></tr>
+<tr><td><code>CreateEffectWarhead</code></td><td>Creates visual/sound effects</td></tr>
+<tr><td><code>CreateResourceWarhead</code></td><td>Creates resources (like ore)</td></tr>
+<tr><td><code>DestroyResourceWarhead</code></td><td>Destroys resources on ground</td></tr>
+<tr><td><code>FireClusterWarhead</code></td><td>Fires cluster submunitions</td></tr>
+<tr><td><code>FlashEffectWarhead</code></td><td>Screen flash effect</td></tr>
+<tr><td><code>FlashTargetsInRadiusWarhead</code></td><td>Flashes affected targets</td></tr>
+<tr><td><code>GrantExternalConditionWarhead</code></td><td>Grants condition to targets</td></tr>
+<tr><td><code>LeaveSmudgeWarhead</code></td><td>Creates terrain smudges</td></tr>
+<tr><td><code>ShakeScreenWarhead</code></td><td>Screen shake on impact</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="8-render-system-80-traits"><a class="header" href="#8-render-system-80-traits">8. Render System (~80 traits)</a></h2>
+<h3 id="sprite-body-types"><a class="header" href="#sprite-body-types">Sprite Body Types</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Trait</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>RenderSprites</code></td><td>Base sprite renderer</td></tr>
+<tr><td><code>RenderSpritesEditorOnly</code></td><td>Sprites only in editor</td></tr>
+<tr><td><code>WithSpriteBody</code></td><td>Standard sprite body</td></tr>
+<tr><td><code>WithFacingSpriteBody</code></td><td>Sprite body with facing</td></tr>
+<tr><td><code>WithInfantryBody</code></td><td>Infantry-specific animations</td></tr>
+<tr><td><code>WithWallSpriteBody</code></td><td>Auto-connecting wall sprites</td></tr>
+<tr><td><code>WithBridgeSpriteBody</code></td><td>Bridge sprite</td></tr>
+<tr><td><code>WithDeadBridgeSpriteBody</code></td><td>Destroyed bridge sprite</td></tr>
+<tr><td><code>WithGateSpriteBody</code></td><td>Gate open/close animation</td></tr>
+<tr><td><code>WithCrateBody</code></td><td>Crate sprite</td></tr>
+<tr><td><code>WithChargeSpriteBody</code></td><td>Charge-based sprite change</td></tr>
+<tr><td><code>WithResourceLevelSpriteBody</code></td><td>Resource level visualization</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="animation-overlays"><a class="header" href="#animation-overlays">Animation Overlays</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Trait</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>WithMakeAnimation</code></td><td>Construction animation</td></tr>
+<tr><td><code>WithMakeOverlay</code></td><td>Construction overlay</td></tr>
+<tr><td><code>WithIdleAnimation</code></td><td>Idle animation</td></tr>
+<tr><td><code>WithIdleOverlay</code></td><td>Idle overlay</td></tr>
+<tr><td><code>WithAttackAnimation</code></td><td>Attack animation</td></tr>
+<tr><td><code>WithAttackOverlay</code></td><td>Attack overlay</td></tr>
+<tr><td><code>WithMoveAnimation</code></td><td>Movement animation</td></tr>
+<tr><td><code>WithHarvestAnimation</code></td><td>Harvesting animation</td></tr>
+<tr><td><code>WithHarvestOverlay</code></td><td>Harvesting overlay</td></tr>
+<tr><td><code>WithDeathAnimation</code></td><td>Death animation</td></tr>
+<tr><td><code>WithDamageOverlay</code></td><td>Damage state overlay</td></tr>
+<tr><td><code>WithAimAnimation</code></td><td>Aiming animation</td></tr>
+<tr><td><code>WithDockingAnimation</code></td><td>Docking animation</td></tr>
+<tr><td><code>WithDockingOverlay</code></td><td>Docking overlay</td></tr>
+<tr><td><code>WithDockedOverlay</code></td><td>Docked state overlay</td></tr>
+<tr><td><code>WithDeliveryAnimation</code></td><td>Delivery animation</td></tr>
+<tr><td><code>WithResupplyAnimation</code></td><td>Resupply animation</td></tr>
+<tr><td><code>WithBuildingPlacedAnimation</code></td><td>Placed animation</td></tr>
+<tr><td><code>WithBuildingPlacedOverlay</code></td><td>Placed overlay</td></tr>
+<tr><td><code>WithChargeOverlay</code></td><td>Charge state overlay</td></tr>
+<tr><td><code>WithProductionDoorOverlay</code></td><td>Factory door animation</td></tr>
+<tr><td><code>WithProductionOverlay</code></td><td>Production activity overlay</td></tr>
+<tr><td><code>WithRepairOverlay</code></td><td>Repair animation</td></tr>
+<tr><td><code>WithResourceLevelOverlay</code></td><td>Resource level overlay</td></tr>
+<tr><td><code>WithSwitchableOverlay</code></td><td>Toggleable overlay</td></tr>
+<tr><td><code>WithSupportPowerActivationAnimation</code></td><td>Superweapon activation</td></tr>
+<tr><td><code>WithSupportPowerActivationOverlay</code></td><td>Superweapon overlay</td></tr>
+<tr><td><code>WithTurretAimAnimation</code></td><td>Turret aim animation</td></tr>
+<tr><td><code>WithTurretAttackAnimation</code></td><td>Turret attack animation</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="weapons--effects-rendering"><a class="header" href="#weapons--effects-rendering">Weapons &amp; Effects Rendering</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Trait</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>WithMuzzleOverlay</code></td><td>Muzzle flash</td></tr>
+<tr><td><code>WithSpriteBarrel</code></td><td>Visible weapon barrel</td></tr>
+<tr><td><code>WithSpriteTurret</code></td><td>Visible turret sprite</td></tr>
+<tr><td><code>WithParachute</code></td><td>Parachute rendering</td></tr>
+<tr><td><code>WithShadow</code></td><td>Shadow rendering</td></tr>
+<tr><td><code>Contrail</code></td><td>Contrail effect</td></tr>
+<tr><td><code>FloatingSpriteEmitter</code></td><td>Floating sprite particles</td></tr>
+<tr><td><code>LeavesTrails</code></td><td>Trail effects</td></tr>
+<tr><td><code>Hovers</code></td><td>Hovering animation</td></tr>
+<tr><td><code>WithAircraftLandingEffect</code></td><td>Landing dust effect</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="decorations--ui-overlays"><a class="header" href="#decorations--ui-overlays">Decorations &amp; UI Overlays</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Trait</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>WithDecoration</code></td><td>Generic decoration</td></tr>
+<tr><td><code>WithDecorationBase</code></td><td>Base decoration class</td></tr>
+<tr><td><code>WithNameTagDecoration</code></td><td>Name tag above actor</td></tr>
+<tr><td><code>WithTextDecoration</code></td><td>Text above actor</td></tr>
+<tr><td><code>WithTextControlGroupDecoration</code></td><td>Control group number</td></tr>
+<tr><td><code>WithSpriteControlGroupDecoration</code></td><td>Control group sprite</td></tr>
+<tr><td><code>WithBuildingRepairDecoration</code></td><td>Repair icon</td></tr>
+<tr><td><code>WithRangeCircle</code></td><td>Range circle display</td></tr>
+<tr><td><code>WithProductionIconOverlay</code></td><td>Production icon modification</td></tr>
+<tr><td><code>ProductionIconOverlayManager</code></td><td>Manages production icon overlays</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="status-bars"><a class="header" href="#status-bars">Status Bars</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Trait</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>CashTricklerBar</code></td><td>Cash trickle progress bar</td></tr>
+<tr><td><code>ProductionBar</code></td><td>Production progress</td></tr>
+<tr><td><code>ReloadArmamentsBar</code></td><td>Weapon reload progress</td></tr>
+<tr><td><code>SupportPowerChargeBar</code></td><td>Superweapon charge progress</td></tr>
+<tr><td><code>TimedConditionBar</code></td><td>Timed condition remaining</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="pip-decorations"><a class="header" href="#pip-decorations">Pip Decorations</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Trait</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>WithAmmoPipsDecoration</code></td><td>Ammo pips</td></tr>
+<tr><td><code>WithCargoPipsDecoration</code></td><td>Passenger pips</td></tr>
+<tr><td><code>WithResourceStoragePipsDecoration</code></td><td>Resource storage pips</td></tr>
+<tr><td><code>WithStoresResourcesPipsDecoration</code></td><td>Stored resources pips</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="selection-rendering"><a class="header" href="#selection-rendering">Selection Rendering</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Trait</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>SelectionDecorations</code></td><td>Selection box rendering</td></tr>
+<tr><td><code>SelectionDecorationsBase</code></td><td>Base selection rendering</td></tr>
+<tr><td><code>IsometricSelectionDecorations</code></td><td>Isometric selection boxes</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="debug-rendering"><a class="header" href="#debug-rendering">Debug Rendering</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Trait</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>RenderDebugState</code></td><td>Debug state overlay</td></tr>
+<tr><td><code>RenderDetectionCircle</code></td><td>Detection radius</td></tr>
+<tr><td><code>RenderJammerCircle</code></td><td>Jammer radius</td></tr>
+<tr><td><code>RenderMouseBounds</code></td><td>Mouse bounds debug</td></tr>
+<tr><td><code>RenderRangeCircle</code></td><td>Weapon range debug</td></tr>
+<tr><td><code>RenderShroudCircle</code></td><td>Shroud range debug</td></tr>
+<tr><td><code>CustomTerrainDebugOverlay</code></td><td>Terrain debug overlay</td></tr>
+<tr><td><code>DrawLineToTarget</code></td><td>Line to target debug</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="world-rendering"><a class="header" href="#world-rendering">World Rendering</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Trait</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>TerrainRenderer</code></td><td>Renders terrain tiles</td></tr>
+<tr><td><code>ShroudRenderer</code></td><td>Renders fog of war/shroud</td></tr>
+<tr><td><code>ResourceRenderer</code></td><td>Renders resource sprites</td></tr>
+<tr><td><code>WeatherOverlay</code></td><td>Weather effects (rain, snow)</td></tr>
+<tr><td><code>TerrainLighting</code></td><td>Global terrain lighting</td></tr>
+<tr><td><code>TerrainGeometryOverlay</code></td><td>Terrain cell debug</td></tr>
+<tr><td><code>SmudgeLayer</code></td><td>Terrain smudge rendering</td></tr>
+<tr><td><code>RenderPostProcessPassBase</code></td><td>Post-processing base</td></tr>
+<tr><td><code>BuildableTerrainOverlay</code></td><td>Buildable area overlay</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="9-palette-system-22-traits"><a class="header" href="#9-palette-system-22-traits">9. Palette System (~22 traits)</a></h2>
+<h3 id="palette-sources"><a class="header" href="#palette-sources">Palette Sources</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Trait</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>PaletteFromFile</code></td><td>Load palette from .pal file</td></tr>
+<tr><td><code>PaletteFromPng</code></td><td>Palette from PNG image</td></tr>
+<tr><td><code>PaletteFromGimpOrJascFile</code></td><td>GIMP/JASC palette format</td></tr>
+<tr><td><code>PaletteFromRGBA</code></td><td>Programmatic RGBA palette</td></tr>
+<tr><td><code>PaletteFromGrayscale</code></td><td>Generated grayscale palette</td></tr>
+<tr><td><code>PaletteFromEmbeddedSpritePalette</code></td><td>Palette from sprite data</td></tr>
+<tr><td><code>PaletteFromPaletteWithAlpha</code></td><td>Palette with alpha modification</td></tr>
+<tr><td><code>PaletteFromPlayerPaletteWithAlpha</code></td><td>Player palette + alpha</td></tr>
+<tr><td><code>IndexedPalette</code></td><td>Index-based palette</td></tr>
+<tr><td><code>IndexedPlayerPalette</code></td><td>Player-colored indexed palette</td></tr>
+<tr><td><code>PlayerColorPalette</code></td><td>Player team color palette</td></tr>
+<tr><td><code>FixedColorPalette</code></td><td>Fixed color palette</td></tr>
+<tr><td><code>ColorPickerPalette</code></td><td>Color picker palette</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="palette-effects--shifts"><a class="header" href="#palette-effects--shifts">Palette Effects &amp; Shifts</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Trait</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>PlayerColorShift</code></td><td>Player color application</td></tr>
+<tr><td><code>FixedPlayerColorShift</code></td><td>Fixed player color shift</td></tr>
+<tr><td><code>FixedColorShift</code></td><td>Fixed color modification</td></tr>
+<tr><td><code>ColorPickerColorShift</code></td><td>Color picker integration</td></tr>
+<tr><td><code>RotationPaletteEffect</code></td><td>Palette rotation animation (e.g., water)</td></tr>
+<tr><td><code>CloakPaletteEffect</code></td><td>Cloak shimmer effect</td></tr>
+<tr><td><code>FlashPostProcessEffect</code></td><td>Screen flash post-process</td></tr>
+<tr><td><code>MenuPostProcessEffect</code></td><td>Menu screen effect</td></tr>
+<tr><td><code>TintPostProcessEffect</code></td><td>Color tint post-process</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="10-sound-system-9-traits"><a class="header" href="#10-sound-system-9-traits">10. Sound System (~9 traits)</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Trait</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>AmbientSound</code></td><td>Looping ambient sounds</td></tr>
+<tr><td><code>AttackSounds</code></td><td>Weapon fire sounds</td></tr>
+<tr><td><code>DeathSounds</code></td><td>Death sounds</td></tr>
+<tr><td><code>ActorLostNotification</code></td><td>“Unit lost” notification</td></tr>
+<tr><td><code>AnnounceOnKill</code></td><td>Kill announcement</td></tr>
+<tr><td><code>AnnounceOnSeen</code></td><td>Sighting announcement</td></tr>
+<tr><td><code>CaptureNotification</code></td><td>Capture notification</td></tr>
+<tr><td><code>SoundOnDamageTransition</code></td><td>Sound at damage thresholds</td></tr>
+<tr><td><code>VoiceAnnouncement</code></td><td>Voice line playback</td></tr>
+<tr><td><code>StartGameNotification</code></td><td>Game start sound</td></tr>
+<tr><td><code>MusicPlaylist</code></td><td>Music track management</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="11-support-powers-system-10-traits"><a class="header" href="#11-support-powers-system-10-traits">11. Support Powers System (~10 traits)</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Trait</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>SupportPowerManager</code></td><td>Player-level power management</td></tr>
+<tr><td><code>SupportPower</code></td><td>Base support power class</td></tr>
+<tr><td><code>AirstrikePower</code></td><td>Airstrike superweapon</td></tr>
+<tr><td><code>NukePower</code></td><td>Nuclear strike</td></tr>
+<tr><td><code>ParatroopersPower</code></td><td>Paradrop reinforcements</td></tr>
+<tr><td><code>SpawnActorPower</code></td><td>Spawn actor (e.g., spy plane)</td></tr>
+<tr><td><code>ProduceActorPower</code></td><td>Produce actor via power</td></tr>
+<tr><td><code>GrantExternalConditionPower</code></td><td>Condition-granting power</td></tr>
+<tr><td><code>DirectionalSupportPower</code></td><td>Directional targeting (e.g., airstrike corridor)</td></tr>
+<tr><td><code>SelectDirectionalTarget</code></td><td>UI for directional targeting</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="12-crate-system-13-traits"><a class="header" href="#12-crate-system-13-traits">12. Crate System (~13 traits)</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Trait</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>Crate</code></td><td>Base crate actor</td></tr>
+<tr><td><code>CrateAction</code></td><td>Base crate action class</td></tr>
+<tr><td><code>GiveCashCrateAction</code></td><td>Cash bonus</td></tr>
+<tr><td><code>GiveUnitCrateAction</code></td><td>Spawn unit</td></tr>
+<tr><td><code>GiveBaseBuilderCrateAction</code></td><td>MCV/base builder</td></tr>
+<tr><td><code>DuplicateUnitCrateAction</code></td><td>Duplicate collector</td></tr>
+<tr><td><code>ExplodeCrateAction</code></td><td>Explosive trap</td></tr>
+<tr><td><code>HealActorsCrateAction</code></td><td>Heal nearby units</td></tr>
+<tr><td><code>LevelUpCrateAction</code></td><td>Veterancy level up</td></tr>
+<tr><td><code>RevealMapCrateAction</code></td><td>Map reveal</td></tr>
+<tr><td><code>HideMapCrateAction</code></td><td>Re-hide map</td></tr>
+<tr><td><code>GrantExternalConditionCrateAction</code></td><td>Grant condition</td></tr>
+<tr><td><code>SupportPowerCrateAction</code></td><td>Grant support power</td></tr>
+<tr><td><code>CrateSpawner</code></td><td>World trait: spawns crates</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="13-veterancy--experience-system"><a class="header" href="#13-veterancy--experience-system">13. Veterancy / Experience System</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Trait</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>GainsExperience</code></td><td>Gains XP from kills</td></tr>
+<tr><td><code>GivesExperience</code></td><td>Awards XP to killer</td></tr>
+<tr><td><code>ExperienceTrickler</code></td><td>Passive XP gain over time</td></tr>
+<tr><td><code>ProducibleWithLevel</code></td><td>Produced at veterancy level</td></tr>
+<tr><td><code>PlayerExperience</code></td><td>Player-wide XP pool</td></tr>
+<tr><td><code>GainsExperienceMultiplier</code></td><td>XP gain modifier</td></tr>
+<tr><td><code>GivesExperienceMultiplier</code></td><td>XP award modifier</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="14-fog-of-war--shroud-system"><a class="header" href="#14-fog-of-war--shroud-system">14. Fog of War / Shroud System</a></h2>
+<h3 id="core-engine-openragame"><a class="header" href="#core-engine-openragame">Core Engine (OpenRA.Game)</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Trait</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>Shroud</code></td><td>Core shroud/fog state management</td></tr>
+<tr><td><code>FrozenActorLayer</code></td><td>Frozen actor ghost rendering</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="modscommon-traits"><a class="header" href="#modscommon-traits">Mods.Common Traits</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Trait</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>AffectsShroud</code></td><td>Base for shroud-affecting traits</td></tr>
+<tr><td><code>CreatesShroud</code></td><td>Creates shroud around actor</td></tr>
+<tr><td><code>RevealsShroud</code></td><td>Reveals shroud (sight)</td></tr>
+<tr><td><code>FrozenUnderFog</code></td><td>Hidden under fog of war</td></tr>
+<tr><td><code>HiddenUnderFog</code></td><td>Invisible under fog</td></tr>
+<tr><td><code>HiddenUnderShroud</code></td><td>Invisible under shroud</td></tr>
+<tr><td><code>ShroudRenderer</code></td><td>Renders shroud overlay</td></tr>
+<tr><td><code>PlayerRadarTerrain</code></td><td>Player-specific radar terrain</td></tr>
+<tr><td><code>WithColoredOverlay</code></td><td>Colored overlay (e.g., frozen tint)</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="15-power-system"><a class="header" href="#15-power-system">15. Power System</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Trait</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>Power</code></td><td>Provides/consumes power</td></tr>
+<tr><td><code>PowerManager</code></td><td>Player-level power tracking</td></tr>
+<tr><td><code>PowerMultiplier</code></td><td>Power amount modifier</td></tr>
+<tr><td><code>ScalePowerWithHealth</code></td><td>Power scales with damage</td></tr>
+<tr><td><code>AffectedByPowerOutage</code></td><td>Disabled during power outage</td></tr>
+<tr><td><code>GrantConditionOnPowerState</code></td><td>Condition based on power level</td></tr>
+<tr><td><code>PowerTooltip</code></td><td>Shows power info</td></tr>
+<tr><td><code>PowerDownBotManager</code></td><td>AI power management</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="16-radar--minimap-system"><a class="header" href="#16-radar--minimap-system">16. Radar / Minimap System</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Trait</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>AppearsOnRadar</code></td><td>Visible on minimap</td></tr>
+<tr><td><code>ProvidesRadar</code></td><td>Enables minimap</td></tr>
+<tr><td><code>RadarColorFromTerrain</code></td><td>Radar color from terrain type</td></tr>
+<tr><td><code>RadarPings</code></td><td>Radar ping markers</td></tr>
+<tr><td><code>RadarWidget</code></td><td>Minimap UI widget</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="17-locomotor-system"><a class="header" href="#17-locomotor-system">17. Locomotor System</a></h2>
+<p>Locomotors define how actors interact with terrain for movement.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Trait</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>Locomotor</code></td><td>Base locomotor (17KB) — terrain cost tables, movement class, crushes, speed modifiers per terrain type</td></tr>
+<tr><td><code>SubterraneanLocomotor</code></td><td>Underground movement</td></tr>
+<tr><td><code>SubterraneanActorLayer</code></td><td>Underground layer management</td></tr>
+<tr><td><code>Mobile</code></td><td>Actor-level movement using a locomotor</td></tr>
+<tr><td><code>Aircraft</code></td><td>Air locomotor variant</td></tr>
+</tbody>
+</table>
+</div>
+<p>Key Locomotor features:</p>
+<ul>
+<li><strong>Terrain cost tables</strong> — per-terrain-type movement cost</li>
+<li><strong>Movement classes</strong> — define pathfinding categories</li>
+<li><strong>Crush classes</strong> — what can be crushed</li>
+<li><strong>Share cells</strong> — whether units can share cells</li>
+<li><strong>Speed modifiers</strong> — per-terrain speed modification</li>
+</ul>
+<hr>
+<h2 id="18-pathfinding-system"><a class="header" href="#18-pathfinding-system">18. Pathfinding System</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Trait</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>PathFinder</code></td><td>Main pathfinding implementation (14KB)</td></tr>
+<tr><td><code>HierarchicalPathFinderOverlay</code></td><td>Hierarchical pathfinder debug visualization</td></tr>
+<tr><td><code>PathFinderOverlay</code></td><td>Standard pathfinder debug</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="19-ai--bot-system"><a class="header" href="#19-ai--bot-system">19. AI / Bot System</a></h2>
+<h3 id="bot-framework"><a class="header" href="#bot-framework">Bot Framework</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Trait</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>ModularBot</code></td><td>Modular bot framework (player trait)</td></tr>
+<tr><td><code>DummyBot</code></td><td>Placeholder bot</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="bot-modules-12-modules"><a class="header" href="#bot-modules-12-modules">Bot Modules (~12 modules)</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Module</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>BaseBuilderBotModule</code></td><td>Base construction AI</td></tr>
+<tr><td><code>BuildingRepairBotModule</code></td><td>Auto-repair buildings</td></tr>
+<tr><td><code>CaptureManagerBotModule</code></td><td>Capture neutral/enemy buildings</td></tr>
+<tr><td><code>HarvesterBotModule</code></td><td>Resource gathering AI</td></tr>
+<tr><td><code>McvManagerBotModule</code></td><td>MCV deployment AI</td></tr>
+<tr><td><code>McvExpansionManagerBotModule</code></td><td>Base expansion AI</td></tr>
+<tr><td><code>PowerDownBotManager</code></td><td>Power management AI</td></tr>
+<tr><td><code>ResourceMapBotModule</code></td><td>Resource mapping</td></tr>
+<tr><td><code>SquadManagerBotModule</code></td><td>Military squad management</td></tr>
+<tr><td><code>SupportPowerBotModule</code></td><td>Superweapon usage AI</td></tr>
+<tr><td><code>UnitBuilderBotModule</code></td><td>Unit production AI</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="20-infantry-system"><a class="header" href="#20-infantry-system">20. Infantry System</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Trait</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>WithInfantryBody</code></td><td>Infantry sprite rendering with multiple sub-positions</td></tr>
+<tr><td><code>ScaredyCat</code></td><td>Panic flee behavior</td></tr>
+<tr><td><code>TakeCover</code></td><td>Prone/cover behavior</td></tr>
+<tr><td><code>TerrainModifiesDamage</code></td><td>Terrain affects damage received</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="21-terrain-system"><a class="header" href="#21-terrain-system">21. Terrain System</a></h2>
+<h3 id="world-terrain-traits"><a class="header" href="#world-terrain-traits">World Terrain Traits</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Trait</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>TerrainRenderer</code></td><td>Renders terrain tiles</td></tr>
+<tr><td><code>ResourceLayer</code></td><td>Resource cell management</td></tr>
+<tr><td><code>ResourceRenderer</code></td><td>Resource sprite rendering</td></tr>
+<tr><td><code>ResourceClaimLayer</code></td><td>Resource claim tracking for harvesters</td></tr>
+<tr><td><code>EditorResourceLayer</code></td><td>Editor resource placement</td></tr>
+<tr><td><code>SmudgeLayer</code></td><td>Terrain smudges (craters, scorch marks)</td></tr>
+<tr><td><code>TerrainLighting</code></td><td>Per-cell terrain lighting</td></tr>
+<tr><td><code>TerrainGeometryOverlay</code></td><td>Debug geometry</td></tr>
+<tr><td><code>TerrainTunnel</code></td><td>Terrain tunnel definition</td></tr>
+<tr><td><code>TerrainTunnelLayer</code></td><td>Tunnel management</td></tr>
+<tr><td><code>CliffBackImpassabilityLayer</code></td><td>Cliff impassability</td></tr>
+<tr><td><code>DamagedByTerrain</code></td><td>Terrain damage (tiberium, etc.)</td></tr>
+<tr><td><code>ChangesTerrain</code></td><td>Actor modifies terrain</td></tr>
+<tr><td><code>SeedsResource</code></td><td>Creates new resources</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="tile-sets-ra-mod-example"><a class="header" href="#tile-sets-ra-mod-example">Tile Sets (RA mod example)</a></h3>
+<ul>
+<li><code>snow</code> — Snow terrain</li>
+<li><code>interior</code> — Interior/building tiles</li>
+<li><code>temperat</code> — Temperate terrain</li>
+<li><code>desert</code> — Desert terrain</li>
+</ul>
+<hr>
+<h2 id="22-map-system"><a class="header" href="#22-map-system">22. Map System</a></h2>
+<h3 id="map-traits"><a class="header" href="#map-traits">Map Traits</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Trait</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>MapOptions</code></td><td>Game speed, tech level, starting cash, fog/shroud toggles, short game</td></tr>
+<tr><td><code>MapStartingLocations</code></td><td>Spawn point placement</td></tr>
+<tr><td><code>MapStartingUnits</code></td><td>Starting unit set per faction</td></tr>
+<tr><td><code>MapBuildRadius</code></td><td>Initial build radius rules</td></tr>
+<tr><td><code>MapCreeps</code></td><td>Enable/disable ambient wildlife</td></tr>
+<tr><td><code>MissionData</code></td><td>Mission briefing, objectives</td></tr>
+<tr><td><code>CreateMapPlayers</code></td><td>Initial player creation</td></tr>
+<tr><td><code>SpawnMapActors</code></td><td>Spawn pre-placed map actors</td></tr>
+<tr><td><code>SpawnStartingUnits</code></td><td>Spawn starting units at locations</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="map-generation"><a class="header" href="#map-generation">Map Generation</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Trait</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>ClassicMapGenerator</code></td><td>Procedural map generation (38KB)</td></tr>
+<tr><td><code>ClearMapGenerator</code></td><td>Empty/clear map generation</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="actor-spawn"><a class="header" href="#actor-spawn">Actor Spawn</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Trait</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>ActorSpawnManager</code></td><td>Manages ambient actor spawning</td></tr>
+<tr><td><code>ActorSpawner</code></td><td>Spawn point for spawned actors</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="23-map-editor-system"><a class="header" href="#23-map-editor-system">23. Map Editor System</a></h2>
+<h3 id="editor-world-traits"><a class="header" href="#editor-world-traits">Editor World Traits</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Trait</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>EditorActionManager</code></td><td>Undo/redo action management</td></tr>
+<tr><td><code>EditorActorLayer</code></td><td>Manages placed actors in editor (15KB)</td></tr>
+<tr><td><code>EditorActorPreview</code></td><td>Actor preview rendering in editor</td></tr>
+<tr><td><code>EditorCursorLayer</code></td><td>Editor cursor management</td></tr>
+<tr><td><code>EditorResourceLayer</code></td><td>Resource painting</td></tr>
+<tr><td><code>MarkerLayerOverlay</code></td><td>Marker layer visualization</td></tr>
+<tr><td><code>TilingPathTool</code></td><td>Path/road tiling tool (14KB)</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="editor-widgets"><a class="header" href="#editor-widgets">Editor Widgets</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Widget</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>EditorViewportControllerWidget</code></td><td>Editor viewport input handling</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="editor-widget-logic-separate-directory"><a class="header" href="#editor-widget-logic-separate-directory">Editor Widget Logic (separate directory)</a></h3>
+<ul>
+<li><code>Editor/</code> subdirectory with editor-specific UI logic files</li>
+</ul>
+<hr>
+<h2 id="24-widget--ui-system-60-widgets"><a class="header" href="#24-widget--ui-system-60-widgets">24. Widget / UI System (~60+ widgets)</a></h2>
+<h3 id="layout-widgets"><a class="header" href="#layout-widgets">Layout Widgets</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Widget</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>BackgroundWidget</code></td><td>Background panel</td></tr>
+<tr><td><code>ScrollPanelWidget</code></td><td>Scrollable container</td></tr>
+<tr><td><code>ScrollItemWidget</code></td><td>Item in scroll panel</td></tr>
+<tr><td><code>GridLayout</code></td><td>Grid layout container</td></tr>
+<tr><td><code>ListLayout</code></td><td>List layout container</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="input-widgets"><a class="header" href="#input-widgets">Input Widgets</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Widget</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>ButtonWidget</code></td><td>Clickable button</td></tr>
+<tr><td><code>CheckboxWidget</code></td><td>Toggle checkbox</td></tr>
+<tr><td><code>DropDownButtonWidget</code></td><td>Dropdown selection</td></tr>
+<tr><td><code>TextFieldWidget</code></td><td>Text input field</td></tr>
+<tr><td><code>PasswordFieldWidget</code></td><td>Password input</td></tr>
+<tr><td><code>SliderWidget</code></td><td>Slider control</td></tr>
+<tr><td><code>ExponentialSliderWidget</code></td><td>Exponential slider</td></tr>
+<tr><td><code>HueSliderWidget</code></td><td>Hue selection slider</td></tr>
+<tr><td><code>HotkeyEntryWidget</code></td><td>Hotkey binding input</td></tr>
+<tr><td><code>MenuButtonWidget</code></td><td>Menu-style button</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="display-widgets"><a class="header" href="#display-widgets">Display Widgets</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Widget</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>LabelWidget</code></td><td>Text label</td></tr>
+<tr><td><code>LabelWithHighlightWidget</code></td><td>Label with highlights</td></tr>
+<tr><td><code>LabelWithTooltipWidget</code></td><td>Label with tooltip</td></tr>
+<tr><td><code>LabelForInputWidget</code></td><td>Label for form input</td></tr>
+<tr><td><code>ImageWidget</code></td><td>Image display</td></tr>
+<tr><td><code>SpriteWidget</code></td><td>Sprite display</td></tr>
+<tr><td><code>RGBASpriteWidget</code></td><td>RGBA sprite</td></tr>
+<tr><td><code>VideoPlayerWidget</code></td><td>Video playback</td></tr>
+<tr><td><code>ColorBlockWidget</code></td><td>Solid color block</td></tr>
+<tr><td><code>ColorMixerWidget</code></td><td>Color mixer</td></tr>
+<tr><td><code>GradientColorBlockWidget</code></td><td>Gradient color</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="game-specific-widgets"><a class="header" href="#game-specific-widgets">Game-Specific Widgets</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Widget</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>RadarWidget</code></td><td>Minimap</td></tr>
+<tr><td><code>ProductionPaletteWidget</code></td><td>Build palette</td></tr>
+<tr><td><code>ProductionTabsWidget</code></td><td>Build tabs</td></tr>
+<tr><td><code>ProductionTypeButtonWidget</code></td><td>Build category buttons</td></tr>
+<tr><td><code>SupportPowersWidget</code></td><td>Superweapon panel</td></tr>
+<tr><td><code>SupportPowerTimerWidget</code></td><td>Superweapon timers</td></tr>
+<tr><td><code>ResourceBarWidget</code></td><td>Resource/money display</td></tr>
+<tr><td><code>ControlGroupsWidget</code></td><td>Control group buttons</td></tr>
+<tr><td><code>WorldInteractionControllerWidget</code></td><td>World click handling</td></tr>
+<tr><td><code>ViewportControllerWidget</code></td><td>Camera control</td></tr>
+<tr><td><code>WorldButtonWidget</code></td><td>Click on world</td></tr>
+<tr><td><code>WorldLabelWithTooltipWidget</code></td><td>World-space label</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="observer-widgets"><a class="header" href="#observer-widgets">Observer Widgets</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Widget</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>ObserverArmyIconsWidget</code></td><td>Observer army composition</td></tr>
+<tr><td><code>ObserverProductionIconsWidget</code></td><td>Observer production tracking</td></tr>
+<tr><td><code>ObserverSupportPowerIconsWidget</code></td><td>Observer superweapon tracking</td></tr>
+<tr><td><code>StrategicProgressWidget</code></td><td>Strategic score display</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="preview-widgets"><a class="header" href="#preview-widgets">Preview Widgets</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Widget</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>MapPreviewWidget</code></td><td>Map thumbnail</td></tr>
+<tr><td><code>ActorPreviewWidget</code></td><td>Actor preview</td></tr>
+<tr><td><code>GeneratedMapPreviewWidget</code></td><td>Generated map preview</td></tr>
+<tr><td><code>TerrainTemplatePreviewWidget</code></td><td>Terrain template preview</td></tr>
+<tr><td><code>ResourcePreviewWidget</code></td><td>Resource type preview</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="utility-widgets"><a class="header" href="#utility-widgets">Utility Widgets</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Widget</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>TooltipContainerWidget</code></td><td>Tooltip container</td></tr>
+<tr><td><code>ClientTooltipRegionWidget</code></td><td>Client tooltip region</td></tr>
+<tr><td><code>MouseAttachmentWidget</code></td><td>Mouse-attached element</td></tr>
+<tr><td><code>LogicKeyListenerWidget</code></td><td>Key event listener</td></tr>
+<tr><td><code>LogicTickerWidget</code></td><td>Tick event listener</td></tr>
+<tr><td><code>ProgressBarWidget</code></td><td>Progress bar</td></tr>
+<tr><td><code>BadgeWidget</code></td><td>Badge display</td></tr>
+<tr><td><code>TextNotificationsDisplayWidget</code></td><td>Text notification area</td></tr>
+<tr><td><code>ConfirmationDialogs</code></td><td>Confirmation dialog helper</td></tr>
+<tr><td><code>SelectionUtils</code></td><td>Selection helper utils</td></tr>
+<tr><td><code>WidgetUtils</code></td><td>Widget utility functions</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="graphdebug-widgets"><a class="header" href="#graphdebug-widgets">Graph/Debug Widgets</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Widget</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>PerfGraphWidget</code></td><td>Performance graph</td></tr>
+<tr><td><code>LineGraphWidget</code></td><td>Line graph</td></tr>
+<tr><td><code>ScrollableLineGraphWidget</code></td><td>Scrollable line graph</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="25-widget-logic-system-40-logic-classes"><a class="header" href="#25-widget-logic-system-40-logic-classes">25. Widget Logic System (~40+ logic classes)</a></h2>
+<p>Logic classes bind widgets to game state and user actions.</p>
+<h3 id="menu-logic"><a class="header" href="#menu-logic">Menu Logic</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Logic</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>MainMenuLogic</code></td><td>Main menu flow</td></tr>
+<tr><td><code>CreditsLogic</code></td><td>Credits screen</td></tr>
+<tr><td><code>IntroductionPromptLogic</code></td><td>First-run intro</td></tr>
+<tr><td><code>SystemInfoPromptLogic</code></td><td>System info display</td></tr>
+<tr><td><code>VersionLabelLogic</code></td><td>Version display</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="game-browser-logic"><a class="header" href="#game-browser-logic">Game Browser Logic</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Logic</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>ServerListLogic</code></td><td>Server browser (29KB)</td></tr>
+<tr><td><code>ServerCreationLogic</code></td><td>Create game dialog</td></tr>
+<tr><td><code>MultiplayerLogic</code></td><td>Multiplayer menu</td></tr>
+<tr><td><code>DirectConnectLogic</code></td><td>Direct IP connect</td></tr>
+<tr><td><code>ConnectionLogic</code></td><td>Connection status</td></tr>
+<tr><td><code>DisconnectWatcherLogic</code></td><td>Disconnect detection</td></tr>
+<tr><td><code>MapChooserLogic</code></td><td>Map selection (20KB)</td></tr>
+<tr><td><code>MapGeneratorLogic</code></td><td>Map generator UI (15KB)</td></tr>
+<tr><td><code>MissionBrowserLogic</code></td><td>Single player missions (19KB)</td></tr>
+<tr><td><code>GameSaveBrowserLogic</code></td><td>Save game browser</td></tr>
+<tr><td><code>EncyclopediaLogic</code></td><td>In-game encyclopedia</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="replay-logic"><a class="header" href="#replay-logic">Replay Logic</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Logic</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>ReplayBrowserLogic</code></td><td>Replay browser (26KB)</td></tr>
+<tr><td><code>ReplayUtils</code></td><td>Replay utility functions</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="profile-logic"><a class="header" href="#profile-logic">Profile Logic</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Logic</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>LocalProfileLogic</code></td><td>Local player profile</td></tr>
+<tr><td><code>LoadLocalPlayerProfileLogic</code></td><td>Profile loading</td></tr>
+<tr><td><code>RegisteredProfileTooltipLogic</code></td><td>Registered player tooltip</td></tr>
+<tr><td><code>AnonymousProfileTooltipLogic</code></td><td>Anonymous player tooltip</td></tr>
+<tr><td><code>PlayerProfileBadgesLogic</code></td><td>Badge display</td></tr>
+<tr><td><code>BotTooltipLogic</code></td><td>AI bot tooltip</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="assetcontent-logic"><a class="header" href="#assetcontent-logic">Asset/Content Logic</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Logic</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>AssetBrowserLogic</code></td><td>Asset browser (23KB)</td></tr>
+<tr><td><code>ColorPickerLogic</code></td><td>Color picker dialog</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="hotkey-logic"><a class="header" href="#hotkey-logic">Hotkey Logic</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Logic</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>SingleHotkeyBaseLogic</code></td><td>Base hotkey handler</td></tr>
+<tr><td><code>MusicHotkeyLogic</code></td><td>Music hotkeys</td></tr>
+<tr><td><code>MuteHotkeyLogic</code></td><td>Mute toggle</td></tr>
+<tr><td><code>MuteIndicatorLogic</code></td><td>Mute indicator</td></tr>
+<tr><td><code>ScreenshotHotkeyLogic</code></td><td>Screenshot capture</td></tr>
+<tr><td><code>DepthPreviewHotkeysLogic</code></td><td>Depth preview</td></tr>
+<tr><td><code>MusicPlayerLogic</code></td><td>Music player UI</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="settings-logic"><a class="header" href="#settings-logic">Settings Logic</a></h3>
+<ul>
+<li><code>Settings/</code> subdirectory — audio, display, input, game settings panels</li>
+</ul>
+<h3 id="lobby-logic"><a class="header" href="#lobby-logic">Lobby Logic</a></h3>
+<ul>
+<li><code>Lobby/</code> subdirectory — lobby UI, player slots, options, chat</li>
+</ul>
+<h3 id="ingame-logic"><a class="header" href="#ingame-logic">Ingame Logic</a></h3>
+<ul>
+<li><code>Ingame/</code> subdirectory — in-game HUD, observer panels, chat</li>
+</ul>
+<h3 id="editor-logic"><a class="header" href="#editor-logic">Editor Logic</a></h3>
+<ul>
+<li><code>Editor/</code> subdirectory — map editor tools, actors, terrain</li>
+</ul>
+<h3 id="installation-logic"><a class="header" href="#installation-logic">Installation Logic</a></h3>
+<ul>
+<li><code>Installation/</code> subdirectory — content installation, mod download</li>
+</ul>
+<h3 id="debug-logic"><a class="header" href="#debug-logic">Debug Logic</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Logic</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>PerfDebugLogic</code></td><td>Performance debug panel</td></tr>
+<tr><td><code>TabCompletionLogic</code></td><td>Chat/console tab completion</td></tr>
+<tr><td><code>SimpleTooltipLogic</code></td><td>Basic tooltip</td></tr>
+<tr><td><code>ButtonTooltipLogic</code></td><td>Button tooltip</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="26-order-system"><a class="header" href="#26-order-system">26. Order System</a></h2>
+<h3 id="order-generators"><a class="header" href="#order-generators">Order Generators</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Generator</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>UnitOrderGenerator</code></td><td>Default unit command processing (8KB)</td></tr>
+<tr><td><code>OrderGenerator</code></td><td>Base order generator class</td></tr>
+<tr><td><code>PlaceBuildingOrderGenerator</code></td><td>Building placement orders (11KB)</td></tr>
+<tr><td><code>GuardOrderGenerator</code></td><td>Guard command orders</td></tr>
+<tr><td><code>BeaconOrderGenerator</code></td><td>Map beacon placement</td></tr>
+<tr><td><code>RepairOrderGenerator</code></td><td>Repair command orders</td></tr>
+<tr><td><code>GlobalButtonOrderGenerator</code></td><td>Global button commands</td></tr>
+<tr><td><code>ForceModifiersOrderGenerator</code></td><td>Force-attack/force-move modifiers</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="order-targeters"><a class="header" href="#order-targeters">Order Targeters</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Targeter</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>UnitOrderTargeter</code></td><td>Standard unit targeting</td></tr>
+<tr><td><code>DeployOrderTargeter</code></td><td>Deploy/unpack targeting</td></tr>
+<tr><td><code>EnterAlliedActorTargeter</code></td><td>Enter allied actor targeting</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="order-validation"><a class="header" href="#order-validation">Order Validation</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Trait</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>ValidateOrder</code></td><td>World-level order validation</td></tr>
+<tr><td><code>OrderEffects</code></td><td>Visual/audio feedback for orders</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="27-lua-scripting-api-mission-scripting"><a class="header" href="#27-lua-scripting-api-mission-scripting">27. Lua Scripting API (Mission Scripting)</a></h2>
+<h3 id="global-apis-16-modules"><a class="header" href="#global-apis-16-modules">Global APIs (16 modules)</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Global</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>Actor</code></td><td>Create actors, get actors by name/tag</td></tr>
+<tr><td><code>Angle</code></td><td>Angle type helpers</td></tr>
+<tr><td><code>Beacon</code></td><td>Map beacon placement</td></tr>
+<tr><td><code>Camera</code></td><td>Camera position &amp; movement</td></tr>
+<tr><td><code>Color</code></td><td>Color construction</td></tr>
+<tr><td><code>CoordinateGlobals</code></td><td>CPos, WPos, WVec, WDist, WAngle construction</td></tr>
+<tr><td><code>DateTime</code></td><td>Game time queries</td></tr>
+<tr><td><code>Lighting</code></td><td>Global lighting control</td></tr>
+<tr><td><code>Map</code></td><td>Map queries (terrain, actors in area, center, bounds)</td></tr>
+<tr><td><code>Media</code></td><td>Play speech, sound, music, display messages</td></tr>
+<tr><td><code>Player</code></td><td>Get player objects</td></tr>
+<tr><td><code>Radar</code></td><td>Radar ping creation</td></tr>
+<tr><td><code>Reinforcements</code></td><td>Spawn reinforcements (ground, air, paradrop)</td></tr>
+<tr><td><code>Trigger</code></td><td>Event triggers (on killed, on idle, on timer, etc.)</td></tr>
+<tr><td><code>UserInterface</code></td><td>UI manipulation</td></tr>
+<tr><td><code>Utils</code></td><td>Utility functions (random, do, skip)</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="actor-properties-34-property-groups"><a class="header" href="#actor-properties-34-property-groups">Actor Properties (34 property groups)</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Properties</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>AircraftProperties</code></td><td>Aircraft control (land, resupply, return)</td></tr>
+<tr><td><code>AirstrikeProperties</code></td><td>Airstrike targeting</td></tr>
+<tr><td><code>AmmoPoolProperties</code></td><td>Ammo management</td></tr>
+<tr><td><code>CaptureProperties</code></td><td>Capture commands</td></tr>
+<tr><td><code>CarryallProperties</code></td><td>Carryall commands</td></tr>
+<tr><td><code>CloakProperties</code></td><td>Cloak control</td></tr>
+<tr><td><code>CombatProperties</code></td><td>Attack, stop, guard commands</td></tr>
+<tr><td><code>ConditionProperties</code></td><td>Grant/revoke conditions</td></tr>
+<tr><td><code>DeliveryProperties</code></td><td>Delivery commands</td></tr>
+<tr><td><code>DemolitionProperties</code></td><td>Demolition commands</td></tr>
+<tr><td><code>DiplomacyProperties</code></td><td>Stance changes</td></tr>
+<tr><td><code>GainsExperienceProperties</code></td><td>XP management</td></tr>
+<tr><td><code>GeneralProperties</code></td><td>Common properties (owner, type, location, health, kill, destroy, etc.)</td></tr>
+<tr><td><code>GuardProperties</code></td><td>Guard commands</td></tr>
+<tr><td><code>HarvesterProperties</code></td><td>Harvest, find resources</td></tr>
+<tr><td><code>HealthProperties</code></td><td>Health queries and modification</td></tr>
+<tr><td><code>InstantlyRepairsProperties</code></td><td>Instant repair commands</td></tr>
+<tr><td><code>MissionObjectiveProperties</code></td><td>Add/complete objectives</td></tr>
+<tr><td><code>MobileProperties</code></td><td>Move, patrol, scatter, stop</td></tr>
+<tr><td><code>NukeProperties</code></td><td>Nuke launch</td></tr>
+<tr><td><code>ParadropProperties</code></td><td>Paradrop execution</td></tr>
+<tr><td><code>ParatroopersProperties</code></td><td>Paratroopers power activation</td></tr>
+<tr><td><code>PlayerConditionProperties</code></td><td>Player-level conditions</td></tr>
+<tr><td><code>PlayerExperienceProperties</code></td><td>Player XP</td></tr>
+<tr><td><code>PlayerProperties</code></td><td>Player queries (faction, cash, color, team, etc.)</td></tr>
+<tr><td><code>PlayerStatsProperties</code></td><td>Game statistics</td></tr>
+<tr><td><code>PowerProperties</code></td><td>Power queries</td></tr>
+<tr><td><code>ProductionProperties</code></td><td>Build/produce commands</td></tr>
+<tr><td><code>RepairableBuildingProperties</code></td><td>Building repair</td></tr>
+<tr><td><code>ResourceProperties</code></td><td>Resource queries</td></tr>
+<tr><td><code>ScaredCatProperties</code></td><td>Panic command</td></tr>
+<tr><td><code>SellableProperties</code></td><td>Sell command</td></tr>
+<tr><td><code>TransformProperties</code></td><td>Transform command</td></tr>
+<tr><td><code>TransportProperties</code></td><td>Load, unload, passenger queries</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="script-infrastructure"><a class="header" href="#script-infrastructure">Script Infrastructure</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Class</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>LuaScript</code></td><td>Script loading and execution</td></tr>
+<tr><td><code>ScriptTriggers</code></td><td>Trigger implementations</td></tr>
+<tr><td><code>CallLuaFunc</code></td><td>Lua function invocation</td></tr>
+<tr><td><code>Media</code></td><td>Media playback API</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="28-player-system"><a class="header" href="#28-player-system">28. Player System</a></h2>
+<h3 id="player-traits"><a class="header" href="#player-traits">Player Traits</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Trait</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>PlayerResources</code></td><td>Cash, resources, income tracking</td></tr>
+<tr><td><code>PlayerStatistics</code></td><td>Kill/death/build statistics</td></tr>
+<tr><td><code>PlayerExperience</code></td><td>Player-wide experience points</td></tr>
+<tr><td><code>PlayerRadarTerrain</code></td><td>Per-player radar terrain state</td></tr>
+<tr><td><code>PlaceBuilding</code></td><td>Building placement handler</td></tr>
+<tr><td><code>PlaceBeacon</code></td><td>Map beacon placement</td></tr>
+<tr><td><code>DamageNotifier</code></td><td>Under attack notifications</td></tr>
+<tr><td><code>HarvesterAttackNotifier</code></td><td>Harvester attack notifications</td></tr>
+<tr><td><code>EnemyWatcher</code></td><td>Enemy unit detection</td></tr>
+<tr><td><code>GameSaveViewportManager</code></td><td>Save game viewport state</td></tr>
+<tr><td><code>ResourceStorageWarning</code></td><td>Storage full warning</td></tr>
+<tr><td><code>AllyRepair</code></td><td>Allied repair permission</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="victory-conditions"><a class="header" href="#victory-conditions">Victory Conditions</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Trait</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>ConquestVictoryConditions</code></td><td>Destroy all to win</td></tr>
+<tr><td><code>StrategicVictoryConditions</code></td><td>Strategic point control</td></tr>
+<tr><td><code>MissionObjectives</code></td><td>Scripted mission objectives</td></tr>
+<tr><td><code>TimeLimitManager</code></td><td>Game time limit</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="developer-mode"><a class="header" href="#developer-mode">Developer Mode</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Trait</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>DeveloperMode</code></td><td>Cheat commands (instant build, unlimited power, etc.)</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="faction-system"><a class="header" href="#faction-system">Faction System</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Trait</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>Faction</code></td><td>Faction definition (name, internal name, side)</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="29-selection-system"><a class="header" href="#29-selection-system">29. Selection System</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Trait</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>Selection</code></td><td>World-level selection management (5.4KB)</td></tr>
+<tr><td><code>Selectable</code></td><td>Actor can be selected (bounds, priority, voice)</td></tr>
+<tr><td><code>IsometricSelectable</code></td><td>Isometric selection variant</td></tr>
+<tr><td><code>SelectionDecorations</code></td><td>Selection box rendering</td></tr>
+<tr><td><code>IsometricSelectionDecorations</code></td><td>Isometric selection boxes</td></tr>
+<tr><td><code>ControlGroups</code></td><td>Ctrl+number group management</td></tr>
+<tr><td><code>ControlGroupsWidget</code></td><td>Control group UI</td></tr>
+<tr><td><code>SelectionUtils</code></td><td>Selection utility helpers</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="30-hotkey-system"><a class="header" href="#30-hotkey-system">30. Hotkey System</a></h2>
+<h3 id="mod-level-hotkey-configuration-ra-mod"><a class="header" href="#mod-level-hotkey-configuration-ra-mod">Mod-level Hotkey Configuration (RA mod)</a></h3>
+<ul>
+<li><code>hotkeys/common.yaml</code> — Shared hotkeys</li>
+<li><code>hotkeys/mapcreation.yaml</code> — Map creation hotkeys</li>
+<li><code>hotkeys/observer-replay.yaml</code> — Observer &amp; replay hotkeys</li>
+<li><code>hotkeys/player.yaml</code> — Player hotkeys</li>
+<li><code>hotkeys/control-groups.yaml</code> — Control group bindings</li>
+<li><code>hotkeys/production.yaml</code> — Production hotkeys</li>
+<li><code>hotkeys/music.yaml</code> — Music control</li>
+<li><code>hotkeys/chat.yaml</code> — Chat hotkeys</li>
+</ul>
+<h3 id="hotkey-logic-classes"><a class="header" href="#hotkey-logic-classes">Hotkey Logic Classes</a></h3>
+<ul>
+<li><code>SingleHotkeyBaseLogic</code> — Base hotkey handler</li>
+<li><code>MusicHotkeyLogic</code>, <code>MuteHotkeyLogic</code>, <code>ScreenshotHotkeyLogic</code></li>
+</ul>
+<hr>
+<h2 id="31-cursor-system"><a class="header" href="#31-cursor-system">31. Cursor System</a></h2>
+<p>Configured via <code>Cursors:</code> section in mod.yaml, defining cursor sprites, hotspots, and frame counts. The mod references a cursors YAML file that maps cursor names to sprite definitions.</p>
+<hr>
+<h2 id="32-notification-system"><a class="header" href="#32-notification-system">32. Notification System</a></h2>
+<h3 id="sound-notifications"><a class="header" href="#sound-notifications">Sound Notifications</a></h3>
+<p>Configured via <code>Notifications:</code> section referencing YAML files that map event names to audio files.</p>
+<h3 id="text-notifications"><a class="header" href="#text-notifications">Text Notifications</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Widget</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>TextNotificationsDisplayWidget</code></td><td>On-screen text notification display</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="actor-notifications"><a class="header" href="#actor-notifications">Actor Notifications</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Trait</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>ActorLostNotification</code></td><td>“Unit lost”</td></tr>
+<tr><td><code>AnnounceOnKill</code></td><td>Kill notification</td></tr>
+<tr><td><code>AnnounceOnSeen</code></td><td>Enemy spotted</td></tr>
+<tr><td><code>CaptureNotification</code></td><td>Building captured</td></tr>
+<tr><td><code>DamageNotifier</code></td><td>Under attack (player-level)</td></tr>
+<tr><td><code>HarvesterAttackNotifier</code></td><td>Harvester under attack</td></tr>
+<tr><td><code>ResourceStorageWarning</code></td><td>Silos needed</td></tr>
+<tr><td><code>StartGameNotification</code></td><td>Battle control online</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="33-replay-system"><a class="header" href="#33-replay-system">33. Replay System</a></h2>
+<h3 id="replay-infrastructure"><a class="header" href="#replay-infrastructure">Replay Infrastructure</a></h3>
+<ul>
+<li><code>ReplayBrowserLogic</code> — Full replay browser with filtering, sorting</li>
+<li><code>ReplayUtils</code> — Replay file parsing utilities</li>
+<li><code>ReplayPlayback</code> (in core engine) — Replay playback as network model</li>
+</ul>
+<h3 id="replay-features"><a class="header" href="#replay-features">Replay Features</a></h3>
+<ul>
+<li>Order recording (all player orders per tick)</li>
+<li>Desync detection via state hashing</li>
+<li>Observer mode with full visibility</li>
+<li>Speed control during playback</li>
+<li>Metadata: players, map, mod version, duration, outcome</li>
+</ul>
+<hr>
+<h2 id="34-lobby-system"><a class="header" href="#34-lobby-system">34. Lobby System</a></h2>
+<h3 id="lobby-widget-logic"><a class="header" href="#lobby-widget-logic">Lobby Widget Logic</a></h3>
+<ul>
+<li><code>Lobby/</code> directory contains all lobby UI logic</li>
+<li>Player slot management, faction selection, team assignment</li>
+<li>Color picker integration</li>
+<li>Map selection integration</li>
+<li>Game options (tech level, starting cash, short game, etc.)</li>
+<li>Chat functionality</li>
+<li>Ready state management</li>
+</ul>
+<h3 id="lobby-configurable-options"><a class="header" href="#lobby-configurable-options">Lobby-Configurable Options</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Trait</th><th>Lobby Control</th></tr>
+</thead>
+<tbody>
+<tr><td><code>MapOptions</code></td><td>Game speed, tech, cash, fog, shroud</td></tr>
+<tr><td><code>LobbyPrerequisiteCheckbox</code></td><td>Toggle prerequisites</td></tr>
+<tr><td><code>ScriptLobbyDropdown</code></td><td>Script-defined dropdown options</td></tr>
+<tr><td><code>MapCreeps</code></td><td>Ambient creeps toggle</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="35-mod-manifest-system-modyaml"><a class="header" href="#35-mod-manifest-system-modyaml">35. Mod Manifest System (mod.yaml)</a></h2>
+<p>The mod manifest defines all mod content via YAML sections:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Section</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>Metadata</code></td><td>Mod title, version, website</td></tr>
+<tr><td><code>PackageFormats</code></td><td>Archive format handlers (Mix, etc.)</td></tr>
+<tr><td><code>Packages</code></td><td>File system mount points</td></tr>
+<tr><td><code>MapFolders</code></td><td>Map directory locations</td></tr>
+<tr><td><code>Rules</code></td><td>Actor rules YAML files (15 files for RA)</td></tr>
+<tr><td><code>Sequences</code></td><td>Sprite sequence definitions (7 files)</td></tr>
+<tr><td><code>TileSets</code></td><td>Terrain tile sets</td></tr>
+<tr><td><code>Cursors</code></td><td>Cursor definitions</td></tr>
+<tr><td><code>Chrome</code></td><td>UI chrome YAML</td></tr>
+<tr><td><code>Assemblies</code></td><td>.NET assembly references</td></tr>
+<tr><td><code>ChromeLayout</code></td><td>UI layout files (~50 files)</td></tr>
+<tr><td><code>FluentMessages</code></td><td>Localization strings</td></tr>
+<tr><td><code>Weapons</code></td><td>Weapon definition files (6 files: ballistics, explosions, missiles, smallcaliber, superweapons, other)</td></tr>
+<tr><td><code>Voices</code></td><td>Voice line definitions</td></tr>
+<tr><td><code>Notifications</code></td><td>Audio notification mapping</td></tr>
+<tr><td><code>Music</code></td><td>Music track definitions</td></tr>
+<tr><td><code>Hotkeys</code></td><td>Hotkey binding files (8 files)</td></tr>
+<tr><td><code>LoadScreen</code></td><td>Loading screen class</td></tr>
+<tr><td><code>ServerTraits</code></td><td>Server-side trait list</td></tr>
+<tr><td><code>Fonts</code></td><td>Font definitions (8 sizes)</td></tr>
+<tr><td><code>MapGrid</code></td><td>Map grid type (Rectangular/Isometric)</td></tr>
+<tr><td><code>DefaultOrderGenerator</code></td><td>Default order handler class</td></tr>
+<tr><td><code>SpriteFormats</code></td><td>Supported sprite formats</td></tr>
+<tr><td><code>SoundFormats</code></td><td>Supported audio formats</td></tr>
+<tr><td><code>VideoFormats</code></td><td>Supported video formats</td></tr>
+<tr><td><code>TerrainFormat</code></td><td>Terrain format handler</td></tr>
+<tr><td><code>SpriteSequenceFormat</code></td><td>Sprite sequence handler</td></tr>
+<tr><td><code>GameSpeeds</code></td><td>Speed presets (slowest→fastest, 80ms→20ms)</td></tr>
+<tr><td><code>AssetBrowser</code></td><td>Asset browser extensions</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="36-world-traits-global-game-state"><a class="header" href="#36-world-traits-global-game-state">36. World Traits (Global Game State)</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Trait</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>ActorMap</code></td><td>Spatial index of all actors (19KB)</td></tr>
+<tr><td><code>ActorMapOverlay</code></td><td>ActorMap debug visualization</td></tr>
+<tr><td><code>ScreenMap</code></td><td>Screen-space actor lookup</td></tr>
+<tr><td><code>ScreenShaker</code></td><td>Screen shake effects</td></tr>
+<tr><td><code>DebugVisualizations</code></td><td>Debug rendering toggles</td></tr>
+<tr><td><code>ColorPickerManager</code></td><td>Player color management</td></tr>
+<tr><td><code>ValidationOrder</code></td><td>Order validation pipeline</td></tr>
+<tr><td><code>OrderEffects</code></td><td>Order visual/audio feedback</td></tr>
+<tr><td><code>AutoSave</code></td><td>Automatic save game</td></tr>
+<tr><td><code>LoadWidgetAtGameStart</code></td><td>Initial widget loading</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="37-game-speed-configuration"><a class="header" href="#37-game-speed-configuration">37. Game Speed Configuration</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Speed</th><th>Tick Interval</th></tr>
+</thead>
+<tbody>
+<tr><td>Slowest</td><td>80ms</td></tr>
+<tr><td>Slower</td><td>50ms</td></tr>
+<tr><td>Default</td><td>40ms</td></tr>
+<tr><td>Fast</td><td>35ms</td></tr>
+<tr><td>Faster</td><td>30ms</td></tr>
+<tr><td>Fastest</td><td>20ms</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="38-damage-model"><a class="header" href="#38-damage-model">38. Damage Model</a></h2>
+<h3 id="damage-flow"><a class="header" href="#damage-flow">Damage Flow</a></h3>
+<ol>
+<li><strong>Armament</strong> fires <strong>Projectile</strong> at target</li>
+<li><strong>Projectile</strong> travels/hits using projectile-specific behavior</li>
+<li><strong>Warhead(s)</strong> applied at impact point</li>
+<li><strong>Warhead</strong> checks target validity (target types, stances)</li>
+<li><strong>DamageWarhead</strong> / <strong>SpreadDamageWarhead</strong> calculates raw damage</li>
+<li><strong>Armor</strong> type lookup against weapon’s <strong>Versus</strong> table</li>
+<li><strong>DamageMultiplier</strong> traits modify final damage</li>
+<li><strong>Health</strong> reduced</li>
+</ol>
+<h3 id="key-damage-types"><a class="header" href="#key-damage-types">Key Damage Types</a></h3>
+<ul>
+<li><strong>Spread damage</strong> — Falloff over radius</li>
+<li><strong>Target damage</strong> — Direct damage to specific target</li>
+<li><strong>Health percentage</strong> — Percentage-based damage</li>
+<li><strong>Terrain damage</strong> — <code>DamagedByTerrain</code> for standing in hazards</li>
+</ul>
+<h3 id="damage-modifiers"><a class="header" href="#damage-modifiers">Damage Modifiers</a></h3>
+<ul>
+<li><code>DamageMultiplier</code> — Generic incoming damage modifier</li>
+<li><code>HandicapDamageMultiplier</code> — Player handicap</li>
+<li><code>FirepowerMultiplier</code> — Outgoing damage modifier</li>
+<li><code>HandicapFirepowerMultiplier</code> — Player handicap firepower</li>
+<li><code>TerrainModifiesDamage</code> — Infantry terrain modifier (prone, etc.)</li>
+</ul>
+<hr>
+<h2 id="39-developer--debug-tools"><a class="header" href="#39-developer--debug-tools">39. Developer / Debug Tools</a></h2>
+<h3 id="in-game-debug"><a class="header" href="#in-game-debug">In-Game Debug</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Trait</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>DeveloperMode</code></td><td>Instant build, give cash, unlimited power, build anywhere, fast charge, etc.</td></tr>
+<tr><td><code>CombatDebugOverlay</code></td><td>Combat range and target debug</td></tr>
+<tr><td><code>ExitsDebugOverlay</code></td><td>Building exit debug</td></tr>
+<tr><td><code>ExitsDebugOverlayManager</code></td><td>Manages exit overlays</td></tr>
+<tr><td><code>WarheadDebugOverlay</code></td><td>Warhead impact debug</td></tr>
+<tr><td><code>DebugVisualizations</code></td><td>Master debug toggle</td></tr>
+<tr><td><code>RenderDebugState</code></td><td>Actor state text debug</td></tr>
+<tr><td><code>DebugPauseState</code></td><td>Pause state debugging</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="debug-overlays"><a class="header" href="#debug-overlays">Debug Overlays</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Overlay</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>ActorMapOverlay</code></td><td>Actor spatial grid</td></tr>
+<tr><td><code>TerrainGeometryOverlay</code></td><td>Terrain cell borders</td></tr>
+<tr><td><code>CustomTerrainDebugOverlay</code></td><td>Custom terrain types</td></tr>
+<tr><td><code>BuildableTerrainOverlay</code></td><td>Buildable cells</td></tr>
+<tr><td><code>CellTriggerOverlay</code></td><td>Script cell triggers</td></tr>
+<tr><td><code>HierarchicalPathFinderOverlay</code></td><td>Pathfinder hierarchy</td></tr>
+<tr><td><code>PathFinderOverlay</code></td><td>Path search debug</td></tr>
+<tr><td><code>MarkerLayerOverlay</code></td><td>Map markers</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="performance-debug"><a class="header" href="#performance-debug">Performance Debug</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Widget/Logic</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>PerfGraphWidget</code></td><td>Render/tick performance graph</td></tr>
+<tr><td><code>PerfDebugLogic</code></td><td>Performance statistics display</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="asset-browser"><a class="header" href="#asset-browser">Asset Browser</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Logic</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>AssetBrowserLogic</code></td><td>Browse all mod sprites, audio, video assets</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="summary-statistics"><a class="header" href="#summary-statistics">Summary Statistics</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Category</th><th>Count</th></tr>
+</thead>
+<tbody>
+<tr><td>Actor Traits (root)</td><td>~130</td></tr>
+<tr><td>Render Traits</td><td>~80</td></tr>
+<tr><td>Condition Traits</td><td>~34</td></tr>
+<tr><td>Multiplier Traits</td><td>~20</td></tr>
+<tr><td>Building Traits</td><td>~35</td></tr>
+<tr><td>Player Traits</td><td>~27</td></tr>
+<tr><td>World Traits</td><td>~55</td></tr>
+<tr><td>Attack Traits</td><td>7</td></tr>
+<tr><td>Air Traits</td><td>4</td></tr>
+<tr><td>Infantry Traits</td><td>3</td></tr>
+<tr><td>Sound Traits</td><td>9</td></tr>
+<tr><td>Palette Traits</td><td>17</td></tr>
+<tr><td>Palette Effects</td><td>5</td></tr>
+<tr><td>Power Traits</td><td>5</td></tr>
+<tr><td>Radar Traits</td><td>3</td></tr>
+<tr><td>Support Power Traits</td><td>10</td></tr>
+<tr><td>Crate Traits</td><td>13</td></tr>
+<tr><td>Bot Modules</td><td>12</td></tr>
+<tr><td>Projectile Types</td><td>8</td></tr>
+<tr><td>Warhead Types</td><td>15</td></tr>
+<tr><td>Widget Types</td><td>~60</td></tr>
+<tr><td>Widget Logic Classes</td><td>~40+</td></tr>
+<tr><td>Lua Global APIs</td><td>16</td></tr>
+<tr><td>Lua Actor Properties</td><td>34</td></tr>
+<tr><td>Order Generators/Targeters</td><td>11</td></tr>
+<tr><td><strong>Total Cataloged Features</strong></td><td><strong>~700+</strong></td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<hr>
+<h1 id="iron-curtain-gap-analysis"><a class="header" href="#iron-curtain-gap-analysis">Iron Curtain Gap Analysis</a></h1>
+<blockquote>
+<p><strong>Purpose:</strong> Cross-reference every OpenRA feature against Iron Curtain’s design docs.
+Identify what’s covered, what’s partially covered, and what’s completely missing.
+The goal: an OpenRA modder should feel <strong>at home</strong> — every concept they know has an equivalent.</p>
+</blockquote>
+<h2 id="coverage-legend"><a class="header" href="#coverage-legend">Coverage Legend</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Symbol</th><th>Meaning</th></tr>
+</thead>
+<tbody>
+<tr><td>✅</td><td><strong>Fully covered</strong> — designed at equivalent or better detail than OpenRA</td></tr>
+<tr><td>⚠️</td><td><strong>Partially covered</strong> — mentioned or implied, but not designed as a standalone system</td></tr>
+<tr><td>❌</td><td><strong>Missing</strong> — not addressed in any design doc; needs design work</td></tr>
+<tr><td>🔄</td><td><strong>Different by design</strong> — our architecture handles this differently (explained)</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="1-trait-system--ecs-components--structurally-different-equivalent-power"><a class="header" href="#1-trait-system--ecs-components--structurally-different-equivalent-power">1. Trait System → ECS Components ✅ (structurally different, equivalent power)</a></h2>
+<p><strong>OpenRA:</strong> ~130 C# trait classes attached to actors via MiniYAML. Modders compose actor behavior by listing traits.</p>
+<p><strong>Iron Curtain:</strong> Bevy ECS components attached to entities. Modders compose entity behavior by listing components in YAML. The <code>GameModule</code> trait registers components dynamically.</p>
+<p><strong>Modder experience:</strong> Nearly identical. Instead of:</p>
+<pre><code class="language-yaml"># OpenRA MiniYAML
+rifle_infantry:
+    Health:
+        HP: 50
+    Mobile:
+        Speed: 56
+    Armament:
+        Weapon: M1Carbine
+</code></pre>
+<p>They write:</p>
+<pre><code class="language-yaml"># Iron Curtain YAML
+rifle_infantry:
+    health:
+        current: 50
+        max: 50
+    mobile:
+        speed: 56
+        locomotor: foot
+    combat:
+        weapon: m1_carbine
+</code></pre>
+<p><strong>Gap:</strong> Our design docs only map ~9 components (Health, Mobile, Attackable, Armament, Building, Buildable, Selectable, Harvester, LlmMeta). OpenRA has ~130 traits. Many are render traits (covered by Bevy), but the following gameplay traits need explicit ECS component designs — see the per-system analysis below.</p>
+<hr>
+<h2 id="2-condition-system--critical-gap"><a class="header" href="#2-condition-system--critical-gap">2. Condition System ❌ CRITICAL GAP</a></h2>
+<p><strong>OpenRA:</strong> 34 <code>GrantCondition*</code> traits. This is <strong>the #1 modding tool</strong>. Modders create dynamic behavior by granting/revoking named boolean conditions that enable/disable <code>ConditionalTrait</code>-based components.</p>
+<p>Example: a unit becomes stealthed when stationary, gains a damage bonus when veterancy reaches level 2, deploys into a stationary turret — all done purely in YAML by composing condition traits.</p>
+<pre><code class="language-yaml"># OpenRA — no code needed for complex behaviors
+Cloak:
+    RequiresCondition: !moving
+GrantConditionOnMovement:
+    Condition: moving
+GrantConditionOnDamageState:
+    Condition: damaged
+    ValidDamageStates: Critical
+DamageMultiplier@CRITICAL:
+    RequiresCondition: damaged
+    Modifier: 150
+</code></pre>
+<p><strong>Iron Curtain status:</strong> Not addressed. Our ECS can support this (marker components, queries with <code>With&lt;T&gt;</code>/<code>Without&lt;T&gt;</code> filters, change detection), but we haven’t designed:</p>
+<ul>
+<li>How modders express conditional behavior in YAML</li>
+<li>The equivalent of <code>ConditionalTrait</code> / <code>PausableConditionalTrait</code></li>
+<li>A condition registry (named conditions per entity)</li>
+<li>Which systems respond to conditions</li>
+</ul>
+<p><strong>Recommendation:</strong> Design a <strong>condition system</strong> as a core modding primitive. This is how OpenRA modders build 80% of custom behaviors without writing code. Without it, modders will feel powerless compared to OpenRA.</p>
+<p><strong>Design sketch:</strong></p>
+<pre><code class="language-yaml"># Iron Curtain equivalent
+rifle_infantry:
+    conditions:
+        moving:
+            granted_by: [on_movement]
+        deployed:
+            granted_by: [on_deploy]
+        elite:
+            granted_by: [on_veterancy, { level: 3 }]
+    cloak:
+        disabled_by: moving      # conditional — disabled when "moving" condition is active
+    damage_multiplier:
+        requires: deployed
+        modifier: 1.5
+</code></pre>
+<p>ECS implementation: a <code>Conditions</code> component holding a <code>HashMap&lt;ConditionId, u32&gt;</code> (ref-counted). Systems check <code>conditions.is_active("deployed")</code>. YAML <code>disabled_by</code> / <code>requires</code> fields map to runtime condition checks.</p>
+<hr>
+<h2 id="3-multiplier-system--critical-gap"><a class="header" href="#3-multiplier-system--critical-gap">3. Multiplier System ❌ CRITICAL GAP</a></h2>
+<p><strong>OpenRA:</strong> ~20 multiplier traits that modify numeric values. All conditional. Modders stack multipliers from veterancy, terrain, crates, conditions, player handicaps.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Multiplier</th><th>Affects</th></tr>
+</thead>
+<tbody>
+<tr><td><code>DamageMultiplier</code></td><td>Incoming damage</td></tr>
+<tr><td><code>FirepowerMultiplier</code></td><td>Outgoing damage</td></tr>
+<tr><td><code>SpeedMultiplier</code></td><td>Movement speed</td></tr>
+<tr><td><code>RangeMultiplier</code></td><td>Weapon range</td></tr>
+<tr><td><code>ReloadDelayMultiplier</code></td><td>Weapon reload</td></tr>
+<tr><td><code>ProductionCostMultiplier</code></td><td>Build cost</td></tr>
+<tr><td><code>ProductionTimeMultiplier</code></td><td>Build time</td></tr>
+<tr><td><code>RevealsShroudMultiplier</code></td><td>Sight range</td></tr>
+<tr><td>…</td><td>(20 total)</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Iron Curtain status:</strong> Not designed. Our balance preset system (D019) replaces the <em>base values</em> but doesn’t cover <em>runtime multiplicative modifiers</em>.</p>
+<p><strong>Recommendation:</strong> Design a generic multiplier system. Each numeric stat has a base value and a stack of modifiers (from veterancy, conditions, crates, terrain, player handicaps). The system resolves them multiplicatively each tick.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Generic stat modifier stack
+pub struct StatModifiers {
+    modifiers: SmallVec&lt;[Modifier; 4]&gt;,  // source, value, condition
+}
+
+impl StatModifiers {
+    pub fn effective_value(&amp;self, base: i32) -&gt; i32 {
+        // Multiply all active modifiers (fixed-point)
+    }
+}
+<span class="boring">}</span></code></pre>
+<hr>
+<h2 id="4-projectile-system--partial"><a class="header" href="#4-projectile-system--partial">4. Projectile System ⚠️ PARTIAL</a></h2>
+<p><strong>OpenRA:</strong> 8 projectile types (Bullet, Missile, LaserZap, Railgun, AreaBeam, InstantHit, GravityBomb, NukeLaunch) — each with distinct physics, rendering, and behavior.</p>
+<p><strong>Iron Curtain status:</strong> Weapons are mentioned (weapon definitions in YAML with range, damage, fire rate, AoE). But the <strong>projectile</strong> as a simulation entity with travel time, tracking, gravity, jinking, etc. is not designed.</p>
+<p><strong>Gap:</strong> Need to design:</p>
+<ul>
+<li>Projectile entity lifecycle (spawn → travel → impact → warhead application)</li>
+<li>Projectile types and their physics (ballistic arc, guided tracking, instant hit, beam)</li>
+<li>Projectile rendering (sprite, beam, trail, contrail)</li>
+<li>Missile guidance (homing, jinking, terrain following)</li>
+</ul>
+<hr>
+<h2 id="5-warhead-system--significant-gap"><a class="header" href="#5-warhead-system--significant-gap">5. Warhead System ❌ SIGNIFICANT GAP</a></h2>
+<p><strong>OpenRA:</strong> 15 warhead types. Multiple warheads per weapon. Warheads define <em>what happens on impact</em> — damage, terrain modification, condition application, screen effects, resource creation/destruction.</p>
+<p><strong>Iron Curtain status:</strong> Not designed. Weapons have <code>damage</code> and <code>area_of_effect</code> in our YAML examples, but the warhead abstraction is missing.</p>
+<p><strong>Why it matters for modders:</strong> Warheads are how modders create:</p>
+<ul>
+<li>Weapons that damage AND create terrain effects</li>
+<li>Weapons that apply conditions (e.g., slow, disable)</li>
+<li>Multi-effect weapons (damage + screen shake + smudge)</li>
+<li>Percentage-based damage (anti-structure)</li>
+<li>Cluster munitions</li>
+</ul>
+<p><strong>Recommendation:</strong> Design a warhead system where each weapon references one or more warheads, and warheads are composable effects.</p>
+<hr>
+<h2 id="6-building-system--partial--multiple-gaps"><a class="header" href="#6-building-system--partial--multiple-gaps">6. Building System ⚠️ PARTIAL — MULTIPLE GAPS</a></h2>
+<p><strong>OpenRA has:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Feature</th><th>IC Status</th></tr>
+</thead>
+<tbody>
+<tr><td>Building footprint / cell occupation</td><td>✅ <code>Building { footprint }</code> component</td></tr>
+<tr><td>Build radius / base expansion</td><td>❌ Not designed</td></tr>
+<tr><td>Building placement preview</td><td>❌ Not designed</td></tr>
+<tr><td>Line building (walls)</td><td>❌ Not designed</td></tr>
+<tr><td>Primary building designation</td><td>❌ Not designed</td></tr>
+<tr><td>Rally points</td><td>⚠️ Mentioned in <code>PlayerOrder::SetRallyPoint</code>, not designed as component</td></tr>
+<tr><td>Building exits (unit spawn points)</td><td>❌ Not designed</td></tr>
+<tr><td>Sell mechanic</td><td>⚠️ Mentioned as <code>PlayerOrder::Sell</code>, not designed</td></tr>
+<tr><td>Building repair</td><td>❌ Not designed</td></tr>
+<tr><td>Landing pad reservation</td><td>❌ Not designed</td></tr>
+<tr><td>Gate (openable barriers)</td><td>❌ Not designed</td></tr>
+<tr><td>Building transforms</td><td>❌ Not designed (MCV deploy, etc.)</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Recommendation:</strong> Building mechanics are foundational to C&amp;C gameplay. Design:</p>
+<ul>
+<li><code>BaseProvider</code> / <code>GivesBuildableArea</code> equivalent (build radius)</li>
+<li><code>PlacementValidator</code> system (footprint checking, terrain validity, build radius)</li>
+<li><code>LineBuild</code> system for walls and fences</li>
+<li><code>PrimaryBuilding</code> marker component</li>
+<li><code>RallyPoint</code> component with waypoint storage</li>
+<li><code>Exit</code> component (spawn offset positions)</li>
+<li><code>Sellable</code> component and sell order processing</li>
+<li><code>RepairableBuilding</code> component and repair system</li>
+<li><code>Gate</code> component with open/close state</li>
+</ul>
+<hr>
+<h2 id="7-power-system--significant-gap"><a class="header" href="#7-power-system--significant-gap">7. Power System ❌ SIGNIFICANT GAP</a></h2>
+<p><strong>OpenRA:</strong> <code>Power</code> trait (provides/consumes), <code>PowerManager</code> (player-level tracking), <code>AffectedByPowerOutage</code> (buildings go offline), <code>ScalePowerWithHealth</code>, power bar in UI.</p>
+<p><strong>Iron Curtain status:</strong> “Power bar” mentioned in Phase 3 sidebar design. No system designed.</p>
+<p><strong>This is fundamental C&amp;C gameplay.</strong> Every building generates or consumes power. Power deficit disables defenses and production. Players optimize power balance. Modders need:</p>
+<ul>
+<li><code>Power { provides: i32, consumes: i32 }</code> component</li>
+<li><code>PowerManager</code> player resource (total capacity, total drain)</li>
+<li><code>AffectedByPowerOutage</code> conditional behavior</li>
+<li>Power bar UI</li>
+</ul>
+<hr>
+<h2 id="8-support-powers--superweapons--significant-gap"><a class="header" href="#8-support-powers--superweapons--significant-gap">8. Support Powers / Superweapons ❌ SIGNIFICANT GAP</a></h2>
+<p><strong>OpenRA:</strong> <code>SupportPowerManager</code>, <code>AirstrikePower</code>, <code>NukePower</code>, <code>ParatroopersPower</code>, <code>SpawnActorPower</code>, <code>GrantExternalConditionPower</code>, directional targeting.</p>
+<p><strong>Iron Curtain status:</strong> Chronoshift, Iron Curtain, and nukes are mentioned as visual/shader effects. The actual <strong>superweapon system</strong> (charge timer, targeting UI, activation logic) is not designed.</p>
+<p><strong>Modders need:</strong></p>
+<ul>
+<li><code>SupportPower</code> component (charge time, range, cooldown)</li>
+<li><code>SupportPowerManager</code> player-level system</li>
+<li>Charge bar UI</li>
+<li>Targeting mode (point, directional, area)</li>
+<li>Power activation pipeline (validate → deduct → apply warheads/effects)</li>
+<li>Extensibility for custom powers via Lua/WASM</li>
+</ul>
+<hr>
+<h2 id="9-transport--cargo-system--missing"><a class="header" href="#9-transport--cargo-system--missing">9. Transport / Cargo System ❌ MISSING</a></h2>
+<p><strong>OpenRA:</strong> <code>Cargo</code> (carries passengers), <code>Passenger</code> (can be carried), <code>Carryall</code> (air transport), <code>ParaDrop</code>, <code>EjectOnDeath</code>, <code>EntersTunnels</code>.</p>
+<p><strong>Iron Curtain status:</strong> Mentioned only in a campaign example (extraction). No transport mechanics designed.</p>
+<p><strong>Needed:</strong></p>
+<ul>
+<li><code>Cargo { capacity: u32, slots: Vec&lt;EntityId&gt; }</code> component</li>
+<li><code>Passenger { weight: u32 }</code> component</li>
+<li>Load/unload orders and animations</li>
+<li>Garrisoning buildings (shared mechanic)</li>
+<li>Air transport (carryall pick up &amp; drop)</li>
+<li>Paradrop mechanic</li>
+<li>Eject-on-death behavior</li>
+<li>Tunnel network traversal</li>
+</ul>
+<hr>
+<h2 id="10-capture--ownership-system--missing"><a class="header" href="#10-capture--ownership-system--missing">10. Capture / Ownership System ❌ MISSING</a></h2>
+<p><strong>OpenRA:</strong> <code>Capturable</code>, <code>Captures</code>, <code>ProximityCapturable</code>, <code>CaptureManager</code>, capture progress bar, <code>TransformOnCapture</code>, <code>TemporaryOwnerManager</code>.</p>
+<p><strong>Iron Curtain status:</strong> Engineers capturing buildings mentioned only as a netcode edge case example. No system design.</p>
+<p><strong>Needed:</strong></p>
+<ul>
+<li><code>Capturable { progress: i32, threshold: i32 }</code> component</li>
+<li><code>Captures { types: Vec&lt;TargetType&gt;, speed: i32 }</code> component</li>
+<li>Capture progress system</li>
+<li>Ownership transfer logic</li>
+<li>Visual feedback (progress bar, color change)</li>
+<li>Proximity capture variant (for neutral tech buildings)</li>
+</ul>
+<hr>
+<h2 id="11-stealth--detection-system--missing"><a class="header" href="#11-stealth--detection-system--missing">11. Stealth / Detection System ❌ MISSING</a></h2>
+<p><strong>OpenRA:</strong> <code>Cloak</code>, <code>DetectCloaked</code>, <code>IgnoresCloak</code>, <code>IgnoresDisguise</code>, <code>RevealOnFire</code>.</p>
+<p><strong>Iron Curtain status:</strong> Gap generators mentioned as a Phase 7 shader effect. No stealth system designed.</p>
+<p><strong>Fundamental to RA gameplay</strong> (submarines, spies, gap generators). Needed:</p>
+<ul>
+<li><code>Cloak { delay: u32, detection_types: Vec&lt;CloakType&gt; }</code> component</li>
+<li><code>DetectCloaked { range: i32, types: Vec&lt;CloakType&gt; }</code> component</li>
+<li>Cloak/uncloak triggers (on attack, on movement, timed)</li>
+<li>Integration with fog system (cloaked units hidden even in revealed area unless detector present)</li>
+<li>Disguise mechanic (spy)</li>
+</ul>
+<hr>
+<h2 id="12-crate-system--missing"><a class="header" href="#12-crate-system--missing">12. Crate System ❌ MISSING</a></h2>
+<p><strong>OpenRA:</strong> 13 crate action types — cash, units, veterancy, heal, map reveal, explosions, conditions.</p>
+<p><strong>Iron Curtain status:</strong> Crates mentioned only in a netcode edge case (two players racing for the same crate). No crate system designed.</p>
+<p><strong>Needed:</strong></p>
+<ul>
+<li><code>Crate</code> entity with randomized action on pickup</li>
+<li><code>CrateSpawner</code> world system (periodic spawning, max count)</li>
+<li>Crate action types (cash, unit, heal, reveal, levelup, explode, cloak, etc.)</li>
+<li>Configurable crate tables in YAML (modders customize what crates give)</li>
+</ul>
+<hr>
+<h2 id="13-veterancy--experience-system--partial"><a class="header" href="#13-veterancy--experience-system--partial">13. Veterancy / Experience System ⚠️ PARTIAL</a></h2>
+<p><strong>OpenRA:</strong> <code>GainsExperience</code>, <code>GivesExperience</code>, <code>ProducibleWithLevel</code>, <code>ExperienceTrickler</code>, XP multipliers. Veterancy grants conditions which enable multipliers — deeply integrated with the condition system.</p>
+<p><strong>Iron Curtain status:</strong> Veterancy levels mentioned (rookie → veteran → elite → heroic), kill counts tracked, veterancy carries over in campaigns (D021). But the actual <strong>XP system mechanics</strong> are not designed:</p>
+<ul>
+<li>How is XP earned? (kill value, damage dealt, etc.)</li>
+<li>What thresholds trigger level-ups?</li>
+<li>What bonuses does each level grant? (via condition system + multipliers)</li>
+<li>How does <code>ProducibleWithLevel</code> work? (barracks with veterancy upgrade)</li>
+<li>XP trickler (passive XP over time)</li>
+</ul>
+<p><strong>Recommendation:</strong> Design this after the condition and multiplier systems, since veterancy relies on both.</p>
+<hr>
+<h2 id="14-damage-model--partial"><a class="header" href="#14-damage-model--partial">14. Damage Model ⚠️ PARTIAL</a></h2>
+<p><strong>OpenRA damage flow:</strong></p>
+<pre><code>Armament → fires → Projectile → travels → hits → Warhead(s) applied
+    → target validity check (target types, stances)
+    → spread damage with falloff
+    → armor type lookup (Versus table)
+    → DamageMultiplier traits
+    → Health reduced
+</code></pre>
+<p><strong>Iron Curtain status:</strong> We have <code>Armament</code>, <code>Health</code>, <code>Attackable { armor }</code>, and a <code>combat_system()</code> in the pipeline. But the intermediate steps (projectile entity, warhead application, armor-versus-weapon table, damage falloff, multiple warheads) are not designed.</p>
+<p><strong>Recommendation:</strong> Design the full damage pipeline. This is core to balance modding. Modders spend most of their time tuning:</p>
+<ul>
+<li>Weapon → Projectile → Warhead chain</li>
+<li><code>Versus</code> table (armor type × weapon damage modifier)</li>
+<li>Spread/falloff curves</li>
+<li>Multiple warheads per weapon</li>
+</ul>
+<hr>
+<h2 id="15-death--destruction-mechanics--missing"><a class="header" href="#15-death--destruction-mechanics--missing">15. Death &amp; Destruction Mechanics ❌ MISSING</a></h2>
+<p><strong>OpenRA:</strong> <code>SpawnActorOnDeath</code> (husks, pilots), <code>ShakeOnDeath</code>, <code>ExplosionOnDamageTransition</code>, <code>FireWarheadsOnDeath</code>, <code>KillsSelf</code> (timed self-destruct), <code>EjectOnDeath</code>, <code>MustBeDestroyed</code> (victory condition).</p>
+<p><strong>Iron Curtain status:</strong> <code>death_system()</code> exists in the pipeline but only described as “remove destroyed entities.” The rich on-death behaviors are not designed.</p>
+<p><strong>Needed:</strong></p>
+<ul>
+<li><code>SpawnOnDeath { actor: ActorId }</code> — spawn husks, eject pilots</li>
+<li><code>ExplodeOnDeath { warhead: WarheadId }</code> — explosion on destruction</li>
+<li><code>SelfDestruct { timer: u32 }</code> — timed self-destruct (demo trucks, C4)</li>
+<li><code>MustBeDestroyed</code> — victory condition marker</li>
+<li><code>DamageState</code> thresholds (light → medium → heavy → critical) with visual/behavioral changes at each stage</li>
+</ul>
+<hr>
+<h2 id="16-docking-system--missing"><a class="header" href="#16-docking-system--missing">16. Docking System ❌ MISSING</a></h2>
+<p><strong>OpenRA:</strong> <code>DockHost</code> (refinery, repair pad, helipad), <code>DockClientBase</code>/<code>DockClientManager</code> (harvesters, aircraft).</p>
+<p><strong>Iron Curtain status:</strong> Harvesters mentioned but the docking/delivery mechanic isn’t designed — how does a harvester deliver ore to a refinery? How does an aircraft land on a helipad?</p>
+<p><strong>Needed:</strong></p>
+<ul>
+<li><code>DockHost { dock_type: DockType, queue: Vec&lt;EntityId&gt; }</code> — refinery, helipad, repair pad</li>
+<li><code>DockClient { dock_type: DockType }</code> — harvester, aircraft</li>
+<li>Docking queue system (one unit docks at a time, others wait)</li>
+<li>Dock assignment (nearest available dock)</li>
+</ul>
+<hr>
+<h2 id="17-palette-system--partial"><a class="header" href="#17-palette-system--partial">17. Palette System ⚠️ PARTIAL</a></h2>
+<p><strong>OpenRA:</strong> 13 palette source types + 9 palette effect types. Runtime palette manipulation for player colors, cloak shimmer, screen flash, palette rotation (water animation).</p>
+<p><strong>Iron Curtain status:</strong> <code>.pal</code> file loading designed in <code>ra-formats</code>. But runtime palette effects are not designed — these are critical for the classic RA visual style.</p>
+<p><strong>Key palette effects needed:</strong></p>
+<ul>
+<li>Player color remapping (faction colors on units)</li>
+<li>Palette rotation animation (water, ore sparkle)</li>
+<li>Cloak shimmer effect</li>
+<li>Screen flash (nuke, chronoshift)</li>
+<li>Damage tinting</li>
+</ul>
+<p><strong>Note:</strong> Some of these may be handled differently with modern shaders (Bevy’s material system), but the modder-facing configuration should be equivalent.</p>
+<hr>
+<h2 id="18-radar--minimap-system--partial"><a class="header" href="#18-radar--minimap-system--partial">18. Radar / Minimap System ⚠️ PARTIAL</a></h2>
+<p><strong>OpenRA:</strong> <code>AppearsOnRadar</code>, <code>ProvidesRadar</code>, <code>RadarColorFromTerrain</code>, <code>RadarPings</code>, <code>RadarWidget</code>.</p>
+<p><strong>Iron Curtain status:</strong> Minimap mentioned in Phase 3 sidebar. “Radar as multi-mode display” is an innovative addition. But the underlying systems aren’t designed:</p>
+<ul>
+<li>Which units appear on radar? (controlled by <code>AppearsOnRadar</code>)</li>
+<li><code>ProvidesRadar</code> — radar only works when a radar building exists</li>
+<li>Radar pings (alert markers)</li>
+<li>Radar rendering (terrain colors, unit dots, fog overlay)</li>
+</ul>
+<hr>
+<h2 id="19-infantry-mechanics--missing"><a class="header" href="#19-infantry-mechanics--missing">19. Infantry Mechanics ❌ MISSING</a></h2>
+<p><strong>OpenRA:</strong> <code>WithInfantryBody</code> (sub-cell positioning — 5 infantry share one cell), <code>ScaredyCat</code> (panic flee), <code>TakeCover</code> (prone behavior), <code>TerrainModifiesDamage</code> (infantry in cover).</p>
+<p><strong>Iron Curtain status:</strong> Not designed. Infantry sub-cell positioning is a fundamental C&amp;C visual and gameplay mechanic — up to 5 infantry occupy one cell in different sub-positions.</p>
+<p><strong>Needed:</strong></p>
+<ul>
+<li>Sub-cell positioning system (5 slots per cell for infantry)</li>
+<li>Prone/cover behavior (reduces damage, reduces speed)</li>
+<li>Scatter behavior (infantry scatter when attacked)</li>
+<li>Panic behavior (run away when overwhelmed)</li>
+</ul>
+<hr>
+<h2 id="20-mine-system--missing"><a class="header" href="#20-mine-system--missing">20. Mine System ❌ MISSING</a></h2>
+<p><strong>OpenRA:</strong> <code>Mine</code>, <code>Minelayer</code>, mine detonation on contact.</p>
+<p><strong>Iron Curtain status:</strong> Not mentioned.</p>
+<p><strong>Needed:</strong></p>
+<ul>
+<li><code>Mine { trigger_types: Vec&lt;TargetType&gt;, warhead: WarheadId }</code> — detonates on contact</li>
+<li><code>Minelayer { mine_type: ActorId }</code> — can lay mines</li>
+<li>Mine placement order</li>
+<li>Mine detection (engineer/mine-sweeper reveals mines)</li>
+</ul>
+<hr>
+<h2 id="21-guard-command--missing"><a class="header" href="#21-guard-command--missing">21. Guard Command ❌ MISSING</a></h2>
+<p><strong>OpenRA:</strong> <code>Guard</code>, <code>Guardable</code> — unit follows and protects a target, engaging threats within range.</p>
+<p><strong>Iron Curtain status:</strong> Not mentioned. Guard is a fundamental RTS command.</p>
+<p><strong>Needed:</strong></p>
+<ul>
+<li><code>Guard { target: EntityId, leash_range: i32 }</code> behavior</li>
+<li>Guard order processing</li>
+<li>Auto-engage threats near guarded target</li>
+</ul>
+<hr>
+<h2 id="22-crush-mechanics--missing"><a class="header" href="#22-crush-mechanics--missing">22. Crush Mechanics ❌ MISSING</a></h2>
+<p><strong>OpenRA:</strong> <code>Crushable</code>, <code>AutoCrusher</code> — vehicles crush infantry, walls.</p>
+<p><strong>Iron Curtain status:</strong> Not mentioned.</p>
+<p><strong>Needed:</strong></p>
+<ul>
+<li><code>Crushable { crush_class: CrushClass }</code> — can be crushed</li>
+<li>Crush behavior on movement collision</li>
+<li>Crush classes (infantry, walls, hedgehogs)</li>
+</ul>
+<hr>
+<h2 id="23-demolition-mechanics--missing"><a class="header" href="#23-demolition-mechanics--missing">23. Demolition Mechanics ❌ MISSING</a></h2>
+<p><strong>OpenRA:</strong> <code>Demolition</code>, <code>Demolishable</code> — C4 charges on buildings.</p>
+<p><strong>Iron Curtain status:</strong> Not mentioned.</p>
+<p><strong>Needed:</strong></p>
+<ul>
+<li><code>Demolition { delay: u32, warhead: WarheadId }</code> — places C4</li>
+<li>Demolition order for engineer-type units</li>
+</ul>
+<hr>
+<h2 id="24-plug-system--missing"><a class="header" href="#24-plug-system--missing">24. Plug System ❌ MISSING</a></h2>
+<p><strong>OpenRA:</strong> <code>Plug</code>, <code>Pluggable</code> — actors that plug into buildings (e.g., bio-reactor accepting infantry for power).</p>
+<p><strong>Iron Curtain status:</strong> Not mentioned. Primarily an RA2 mechanic but used by modders extensively.</p>
+<hr>
+<h2 id="25-transform-mechanics--missing"><a class="header" href="#25-transform-mechanics--missing">25. Transform Mechanics ❌ MISSING</a></h2>
+<p><strong>OpenRA:</strong> <code>Transforms</code> — actor transforms into another type (MCV ↔ Construction Yard, siege tank deploy/undeploy).</p>
+<p><strong>Iron Curtain status:</strong> Not designed as a system. MCV deployment is implied but not specified.</p>
+<p><strong>Needed:</strong></p>
+<ul>
+<li><code>Transforms { into: ActorId, delay: u32, condition: Option&lt;ConditionId&gt; }</code> component</li>
+<li>Deploy/undeploy orders</li>
+<li>Transform animation handling</li>
+</ul>
+<hr>
+<h2 id="26-notification-system--partial"><a class="header" href="#26-notification-system--partial">26. Notification System ⚠️ PARTIAL</a></h2>
+<p><strong>OpenRA:</strong> <code>ActorLostNotification</code> (“Unit lost”), <code>AnnounceOnSeen</code> (“Enemy unit spotted”), <code>DamageNotifier</code> (“Our base is under attack”), <code>HarvesterAttackNotifier</code>, <code>ResourceStorageWarning</code> (“Silos needed”), <code>StartGameNotification</code>, <code>CaptureNotification</code>.</p>
+<p><strong>Iron Curtain status:</strong> EVA voice lines and audio mentioned in Phase 3. But the notification <em>framework</em> (when to trigger which notification, cooldowns, priority) is not designed.</p>
+<p><strong>Needed:</strong></p>
+<ul>
+<li>Notification event system with types (unit_lost, base_under_attack, harvester_attacked, silos_needed, building_captured, enemy_spotted, low_power)</li>
+<li>Cooldown system (don’t spam “under attack” every frame)</li>
+<li>Audio notification mapping (event → audio file)</li>
+<li>Text notification display</li>
+</ul>
+<hr>
+<h2 id="27-cursor-system--missing"><a class="header" href="#27-cursor-system--missing">27. Cursor System ❌ MISSING</a></h2>
+<p><strong>OpenRA:</strong> Contextual cursors — different cursor sprites for move, attack, capture, enter, deploy, sell, repair, chronoshift, nuke, etc.</p>
+<p><strong>Iron Curtain status:</strong> Not mentioned anywhere.</p>
+<p><strong>Needed:</strong></p>
+<ul>
+<li>Cursor context system (hover over enemy = attack cursor, hover over allied building = enter/repair cursor)</li>
+<li>Cursor sprite definitions in YAML</li>
+<li>Cursor hotspot configuration</li>
+<li>Force-modifier cursors (force-fire, force-move)</li>
+</ul>
+<hr>
+<h2 id="28-hotkey-system--missing"><a class="header" href="#28-hotkey-system--missing">28. Hotkey System ❌ MISSING</a></h2>
+<p><strong>OpenRA:</strong> 8 hotkey config files. Fully rebindable. Categories: common, player, production, control-groups, observer, chat, music, map creation.</p>
+<p><strong>Iron Curtain status:</strong> Not mentioned.</p>
+<p><strong>Needed:</strong></p>
+<ul>
+<li>Rebindable hotkey system with categories</li>
+<li>Default hotkey profiles (classic RA, modern RTS)</li>
+<li>Hotkey configuration UI</li>
+<li>Hotkey categories: unit commands, production, control groups, camera, chat, debug</li>
+</ul>
+<hr>
+<h2 id="29-lua-scripting-api--partial--needs-detail"><a class="header" href="#29-lua-scripting-api--partial--needs-detail">29. Lua Scripting API ⚠️ PARTIAL — NEEDS DETAIL</a></h2>
+<p><strong>OpenRA:</strong> 16 global APIs + 34 actor property groups = comprehensive mission scripting.</p>
+<p><strong>Iron Curtain status:</strong> Lua scripting is Tier 2 in the modding system. 12 scene templates are designed. But the actual API surface is not specified.</p>
+<p><strong>Needed:</strong> Design the Lua API with at minimum:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>API Category</th><th>Essential Functions</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Actor</strong></td><td><code>Create</code>, <code>GetByTag</code>, <code>GetByType</code>, <code>Destroy</code>, <code>GetProperty</code></td></tr>
+<tr><td><strong>Camera</strong></td><td><code>Position</code>, <code>PanTo</code>, <code>Shake</code></td></tr>
+<tr><td><strong>Map</strong></td><td><code>GetTerrain</code>, <code>ActorsInCircle</code>, <code>ActorsInBox</code>, <code>Center</code>, <code>Bounds</code></td></tr>
+<tr><td><strong>Player</strong></td><td><code>GetPlayer</code>, <code>Cash</code>, <code>SetCash</code>, <code>Faction</code>, <code>Team</code>, <code>HasPrerequisite</code></td></tr>
+<tr><td><strong>Trigger</strong></td><td><code>OnKilled</code>, <code>OnIdle</code>, <code>OnEnteredArea</code>, <code>AfterDelay</code>, <code>OnTimerExpired</code>, <code>OnAllKilled</code>, <code>OnObjectiveCompleted</code></td></tr>
+<tr><td><strong>Reinforcements</strong></td><td><code>SpawnAtEdge</code>, <code>Paradrop</code>, <code>Deliver</code></td></tr>
+<tr><td><strong>Media</strong></td><td><code>PlaySpeech</code>, <code>PlaySound</code>, <code>PlayMusic</code>, <code>DisplayMessage</code>, <code>PlayVideo</code></td></tr>
+<tr><td><strong>DateTime</strong></td><td><code>GameTime</code>, <code>Minutes</code>, <code>Seconds</code></td></tr>
+<tr><td><strong>Objectives</strong></td><td><code>AddPrimary</code>, <code>AddSecondary</code>, <code>MarkCompleted</code>, <code>MarkFailed</code></td></tr>
+<tr><td><strong>UI</strong></td><td><code>SetMissionText</code>, <code>ShowNotification</code></td></tr>
+</tbody>
+</table>
+</div>
+<p>Each <em>actor</em> reference should expose properties matching its components (<code>.Health</code>, <code>.Location</code>, <code>.Owner</code>, <code>.Move()</code>, <code>.Attack()</code>, <code>.Stop()</code>, <code>.Guard()</code>, <code>.Deploy()</code>, etc.)</p>
+<hr>
+<h2 id="30-map-editor--deferred-p005"><a class="header" href="#30-map-editor--deferred-p005">30. Map Editor ⚠️ DEFERRED (P005)</a></h2>
+<p><strong>OpenRA:</strong> Full in-engine map editor with actor placement, terrain painting, resource placement, tile editing, undo/redo, script cell triggers, marker layers, road/path tiling tool.</p>
+<p><strong>Iron Curtain status:</strong> Acknowledged as pending decision P005 (Phase 6). Architecture decision: in-engine vs separate process.</p>
+<p><strong>Recommendation:</strong> The in-engine approach is better for modder UX (they already have the game running, instant preview). OpenRA’s integrated editor is one of its biggest strengths.</p>
+<hr>
+<h2 id="31-debug--developer-tools--partial"><a class="header" href="#31-debug--developer-tools--partial">31. Debug / Developer Tools ⚠️ PARTIAL</a></h2>
+<p><strong>OpenRA:</strong> <code>DeveloperMode</code> (instant build, give cash, unlimited power, build anywhere), combat debug overlay, pathfinder overlay, actor map overlay, performance graph, asset browser.</p>
+<p><strong>Iron Curtain status:</strong> <code>egui</code> via <code>bevy_egui</code> mentioned for debug overlays. No specific developer mode or debug tools designed.</p>
+<p><strong>Needed for modders:</strong></p>
+<ul>
+<li>Developer mode (toggle: instant build, free units, reveal map, unlimited power, invincibility)</li>
+<li>Combat debug overlay (weapon ranges, target lines, damage numbers)</li>
+<li>Pathfinding debug overlay (flowfield visualization, path cost)</li>
+<li>Performance profiler (tick time, system time breakdown, entity count)</li>
+<li>Asset browser (preview sprites, sounds, palettes)</li>
+</ul>
+<hr>
+<h2 id="32-selection-system--partial"><a class="header" href="#32-selection-system--partial">32. Selection System ⚠️ PARTIAL</a></h2>
+<p><strong>OpenRA:</strong> <code>Selection</code>, <code>Selectable</code> (bounds, priority, voice), <code>IsometricSelectable</code>, <code>ControlGroups</code>, selection decorations, double-click select-all-of-type, tab cycling.</p>
+<p><strong>Iron Curtain status:</strong> <code>Selectable { bounds, priority }</code> component exists. Control groups mentioned in Phase 3. But detailed selection mechanics aren’t designed:</p>
+<ul>
+<li>Selection priority (prefer combat units over harvesters)</li>
+<li>Double-click to select all of type on screen</li>
+<li>Tab cycling through selected unit types</li>
+<li>Box selection edge cases (what happens when box covers 200 units?)</li>
+<li><code>IsometricSelectable</code> for proper diamond-shaped selection boxes</li>
+</ul>
+<hr>
+<h2 id="33-observer--spectator-system--partial"><a class="header" href="#33-observer--spectator-system--partial">33. Observer / Spectator System ⚠️ PARTIAL</a></h2>
+<p><strong>OpenRA:</strong> Observer widgets for army composition, production tracking, superweapon timers, strategic progress score.</p>
+<p><strong>Iron Curtain status:</strong> Observer mode and broadcast delay mentioned in competitive design. But the observer <strong>UI</strong> (what information is shown, how) isn’t designed.</p>
+<p><strong>Needed:</strong></p>
+<ul>
+<li>Army composition overlay (unit counts per player)</li>
+<li>Production tracking overlay (what each player is building)</li>
+<li>Economy overlay (income rate, resource count per player)</li>
+<li>Support power timer overlay</li>
+<li>Strategic score tracker</li>
+</ul>
+<hr>
+<h2 id="34-game-speed-system--partial"><a class="header" href="#34-game-speed-system--partial">34. Game Speed System ⚠️ PARTIAL</a></h2>
+<p><strong>OpenRA:</strong> 6 game speed presets (Slowest 80ms → Fastest 20ms). Configurable in lobby.</p>
+<p><strong>Iron Curtain status:</strong> Sim tick rate is mentioned (15/sec = 67ms default). Game speed as a lobby option isn’t designed.</p>
+<p><strong>Needed:</strong></p>
+<ul>
+<li>Game speed presets in lobby</li>
+<li>Speed adjustment during single-player</li>
+<li>Speed affects tick interval, not system behavior</li>
+</ul>
+<hr>
+<h2 id="35-faction-system--partial"><a class="header" href="#35-faction-system--partial">35. Faction System ⚠️ PARTIAL</a></h2>
+<p><strong>OpenRA:</strong> <code>Faction</code> trait (name, internal name, side). Factions determine tech trees, unit availability, starting configurations.</p>
+<p><strong>Iron Curtain status:</strong> Factions mentioned (Allied, Soviet) but the faction system isn’t designed as a formal component:</p>
+<ul>
+<li>Faction → available tech tree mapping</li>
+<li>Faction → player color defaults</li>
+<li>Faction → starting unit configurations</li>
+<li>Faction selection in lobby</li>
+<li>Side grouping (Allies has multiple subfactions in RA2)</li>
+</ul>
+<hr>
+<h2 id="36-replay-browser--partial"><a class="header" href="#36-replay-browser--partial">36. Replay Browser ⚠️ PARTIAL</a></h2>
+<p><strong>OpenRA:</strong> Full replay browser with filtering (by map, players, date), sorting, metadata display, replay playback with speed control.</p>
+<p><strong>Iron Curtain status:</strong> <code>ReplayPlayback</code> NetworkModel designed. Signed replays with hash chains. But the <strong>replay browser UI</strong> and metadata storage aren’t designed.</p>
+<hr>
+<h2 id="37-encyclopedia--asset-browser--missing"><a class="header" href="#37-encyclopedia--asset-browser--missing">37. Encyclopedia / Asset Browser ❌ MISSING</a></h2>
+<p><strong>OpenRA:</strong> In-game encyclopedia with unit descriptions, stats, and previews. Asset browser for modders to preview sprites, sounds, videos.</p>
+<p><strong>Iron Curtain status:</strong> Not mentioned.</p>
+<p><strong>Recommended:</strong> An in-game encyclopedia improves discoverability. The asset browser is essential for mod development.</p>
+<hr>
+<h2 id="38-procedural-map-generation--partial"><a class="header" href="#38-procedural-map-generation--partial">38. Procedural Map Generation ⚠️ PARTIAL</a></h2>
+<p><strong>OpenRA:</strong> <code>ClassicMapGenerator</code> (38KB) — procedural map generation with terrain types, resource placement, spawn points.</p>
+<p><strong>Iron Curtain status:</strong> Not explicitly designed, though LLM-generated missions (Phase 7) may cover this. The map editor (P005) should include generation tools.</p>
+<hr>
+<h2 id="39-localization--i18n--missing"><a class="header" href="#39-localization--i18n--missing">39. Localization / i18n ❌ MISSING</a></h2>
+<p><strong>OpenRA:</strong> <code>FluentMessages</code> section in mod manifest — full localization support using Project Fluent.</p>
+<p><strong>Iron Curtain status:</strong> Not mentioned anywhere.</p>
+<p><strong>Needed:</strong></p>
+<ul>
+<li>Localization framework (string tables, parameterized messages)</li>
+<li>Multiple language support</li>
+<li>Font handling for non-Latin scripts</li>
+<li>Mod-provided translations</li>
+</ul>
+<hr>
+<h2 id="priority-assessment-for-modder-familiarity"><a class="header" href="#priority-assessment-for-modder-familiarity">Priority Assessment for Modder Familiarity</a></h2>
+<h3 id="p0--critical-modders-cannot-work-without-these"><a class="header" href="#p0--critical-modders-cannot-work-without-these">P0 — CRITICAL (Modders cannot work without these)</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>#</th><th>System</th><th>Impact</th><th>Effort</th></tr>
+</thead>
+<tbody>
+<tr><td>1</td><td><strong>Condition System</strong></td><td>Core modding primitive — 80% of OpenRA mods use it</td><td>High</td></tr>
+<tr><td>2</td><td><strong>Multiplier System</strong></td><td>All numeric modifiers (veterancy, terrain, crates) depend on it</td><td>Medium</td></tr>
+<tr><td>3</td><td><strong>Warhead System</strong></td><td>Weapons don’t work properly without composable warheads</td><td>Medium</td></tr>
+<tr><td>4</td><td><strong>Building mechanics</strong> (power, placement, sell, repair, build radius)</td><td>Fundamental C&amp;C gameplay</td><td>High</td></tr>
+<tr><td>5</td><td><strong>Support Powers</strong></td><td>Superweapons are iconic RA gameplay</td><td>Medium</td></tr>
+<tr><td>6</td><td><strong>Damage Model</strong> (full pipeline)</td><td>Core balance modding</td><td>Medium</td></tr>
+<tr><td>7</td><td><strong>Projectile System</strong> (travel, tracking, types)</td><td>Weapons need physical projectiles</td><td>Medium</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="p1--high-core-gameplay-gaps--noticeable-to-players-immediately"><a class="header" href="#p1--high-core-gameplay-gaps--noticeable-to-players-immediately">P1 — HIGH (Core gameplay gaps — noticeable to players immediately)</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>#</th><th>System</th><th>Impact</th><th>Effort</th></tr>
+</thead>
+<tbody>
+<tr><td>8</td><td><strong>Transport / Cargo</strong></td><td>APCs, helicopters, naval transports</td><td>Medium</td></tr>
+<tr><td>9</td><td><strong>Capture / Engineers</strong></td><td>Fundamental C&amp;C mechanic</td><td>Low</td></tr>
+<tr><td>10</td><td><strong>Stealth / Cloak</strong></td><td>Subs, spies, gap generators</td><td>Medium</td></tr>
+<tr><td>11</td><td><strong>Death mechanics</strong> (husks, spawn-on-death, explosions)</td><td>Visual polish + gameplay</td><td>Low</td></tr>
+<tr><td>12</td><td><strong>Infantry sub-cell positioning</strong></td><td>Visual authenticity + gameplay</td><td>Medium</td></tr>
+<tr><td>13</td><td><strong>Veterancy system</strong> (full)</td><td>Depth of gameplay</td><td>Medium</td></tr>
+<tr><td>14</td><td><strong>Docking system</strong></td><td>Harvester-refinery, helipad</td><td>Medium</td></tr>
+<tr><td>15</td><td><strong>Transform / Deploy</strong></td><td>MCV, siege units</td><td>Low</td></tr>
+<tr><td>16</td><td><strong>Power System</strong></td><td>Core economy mechanic</td><td>Low</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="p2--medium-important-for-full-experience"><a class="header" href="#p2--medium-important-for-full-experience">P2 — MEDIUM (Important for full experience)</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>#</th><th>System</th><th>Impact</th><th>Effort</th></tr>
+</thead>
+<tbody>
+<tr><td>17</td><td><strong>Crate System</strong></td><td>Standard skirmish feature</td><td>Low</td></tr>
+<tr><td>18</td><td><strong>Mine System</strong></td><td>Defensive gameplay</td><td>Low</td></tr>
+<tr><td>19</td><td><strong>Guard Command</strong></td><td>Fundamental order type</td><td>Low</td></tr>
+<tr><td>20</td><td><strong>Crush Mechanics</strong></td><td>Vehicle vs infantry interaction</td><td>Low</td></tr>
+<tr><td>21</td><td><strong>Notification System</strong> (framework)</td><td>Audio/visual feedback</td><td>Medium</td></tr>
+<tr><td>22</td><td><strong>Cursor System</strong></td><td>UX polish, essential for usability</td><td>Low</td></tr>
+<tr><td>23</td><td><strong>Hotkey System</strong></td><td>UX — rebindable keys</td><td>Low</td></tr>
+<tr><td>24</td><td><strong>Lua API</strong> (detailed)</td><td>Mission scripters need this</td><td>High</td></tr>
+<tr><td>25</td><td><strong>Selection system</strong> (detailed)</td><td>UX polish</td><td>Low</td></tr>
+<tr><td>26</td><td><strong>Palette effects</strong> (runtime)</td><td>Classic RA visual style</td><td>Medium</td></tr>
+<tr><td>27</td><td><strong>Game speed presets</strong></td><td>Lobby option</td><td>Low</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="p3--lower-nice-to-have-can-defer"><a class="header" href="#p3--lower-nice-to-have-can-defer">P3 — LOWER (Nice to have, can defer)</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>#</th><th>System</th><th>Impact</th><th>Effort</th></tr>
+</thead>
+<tbody>
+<tr><td>28</td><td><strong>Demolition / C4</strong></td><td>Engineer ability</td><td>Low</td></tr>
+<tr><td>29</td><td><strong>Plug System</strong></td><td>Primarily RA2</td><td>Low</td></tr>
+<tr><td>30</td><td><strong>Encyclopedia</strong></td><td>Discoverability</td><td>Low</td></tr>
+<tr><td>31</td><td><strong>Localization</strong></td><td>Multi-language support</td><td>Medium</td></tr>
+<tr><td>32</td><td><strong>Observer UI</strong> (detailed)</td><td>Spectator experience</td><td>Medium</td></tr>
+<tr><td>33</td><td><strong>Replay browser UI</strong></td><td>Replay management</td><td>Low</td></tr>
+<tr><td>34</td><td><strong>Debug tools</strong> (detailed)</td><td>Developer experience</td><td>Medium</td></tr>
+<tr><td>35</td><td><strong>Procedural map gen</strong></td><td>Map variety</td><td>High</td></tr>
+<tr><td>36</td><td><strong>Faction system</strong> (formal)</td><td>Multi-faction support</td><td>Low</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="what-iron-curtain-has-that-openra-doesnt"><a class="header" href="#what-iron-curtain-has-that-openra-doesnt">What Iron Curtain Has That OpenRA Doesn’t</a></h2>
+<p>The gap analysis is not one-directional. Iron Curtain’s design docs include features OpenRA lacks:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Feature</th><th>IC Design Doc</th><th>OpenRA Status</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>LLM-generated missions &amp; campaigns</strong></td><td><code>04-MODDING.md</code>, Phase 7</td><td>Not present</td></tr>
+<tr><td><strong>Branching campaigns with persistent state</strong></td><td>D021, <code>04-MODDING.md</code></td><td>Not present (linear campaigns only)</td></tr>
+<tr><td><strong>WASM mod runtime</strong></td><td><code>04-MODDING.md</code> Tier 3</td><td>Not present (C# DLLs only)</td></tr>
+<tr><td><strong>Switchable balance presets</strong></td><td>D019</td><td>Not present (one balance per mod)</td></tr>
+<tr><td><strong>Sub-tick timestamped orders</strong></td><td>D008, <code>03-NETCODE.md</code></td><td>Not present</td></tr>
+<tr><td><strong>Relay server architecture</strong></td><td>D007, <code>03-NETCODE.md</code></td><td>Not present (P2P only)</td></tr>
+<tr><td><strong>Cross-engine compatibility</strong></td><td><code>07-CROSS-ENGINE.md</code></td><td>Not present</td></tr>
+<tr><td><strong>Multi-game engine</strong> (RA1+RA2+TD on one engine)</td><td>D018, <code>02-ARCHITECTURE.md</code></td><td>Partial (3 games but tightly coupled)</td></tr>
+<tr><td><strong><code>llm:</code> metadata on all resources</strong></td><td><code>04-MODDING.md</code></td><td>Not present</td></tr>
+<tr><td><strong>Weather system</strong> (with sim effects)</td><td><code>04-MODDING.md</code></td><td>Visual only (WeatherOverlay trait)</td></tr>
+<tr><td><strong>Workshop with semantic search</strong></td><td><code>04-MODDING.md</code></td><td>Forum-based mod sharing</td></tr>
+<tr><td><strong>Mod SDK with CLI tool</strong></td><td>D020, <code>04-MODDING.md</code></td><td>Exists but requires .NET</td></tr>
+<tr><td><strong>Competitive infrastructure</strong> (rated, ranked, tournaments)</td><td><code>01-VISION.md</code></td><td>Basic (no ranked, no leagues)</td></tr>
+<tr><td><strong>Platform portability</strong> (WASM, mobile, console)</td><td><code>02-ARCHITECTURE.md</code></td><td>Desktop only</td></tr>
+<tr><td><strong>3D rendering mod support</strong></td><td><code>02-ARCHITECTURE.md</code></td><td>Not architecturally possible</td></tr>
+<tr><td><strong>Signed/certified match results</strong></td><td><code>06-SECURITY.md</code></td><td>Not present</td></tr>
+<tr><td><strong>Video as workshop resource</strong></td><td><code>04-MODDING.md</code></td><td>Not present</td></tr>
+<tr><td><strong>Scene templates</strong> (parameterized mission building blocks)</td><td><code>04-MODDING.md</code></td><td>Not present</td></tr>
+<tr><td><strong>Adaptive difficulty</strong> (via campaign state or LLM)</td><td><code>04-MODDING.md</code>, <code>01-VISION.md</code></td><td>Not present</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="mapping-table-openra-trait--iron-curtain-equivalent"><a class="header" href="#mapping-table-openra-trait--iron-curtain-equivalent">Mapping Table: OpenRA Trait → Iron Curtain Equivalent</a></h2>
+<p>For modders migrating from OpenRA, this table shows where each familiar trait maps. Items marked “NEEDS DESIGN” are the gaps identified above.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>OpenRA Trait</th><th>Iron Curtain Equivalent</th><th>Status</th></tr>
+</thead>
+<tbody>
+<tr><td><code>Health</code></td><td><code>Health { current, max }</code></td><td>✅</td></tr>
+<tr><td><code>Armor</code></td><td><code>Attackable { armor }</code></td><td>✅</td></tr>
+<tr><td><code>Mobile</code></td><td><code>Mobile { speed, locomotor }</code></td><td>✅</td></tr>
+<tr><td><code>Building</code></td><td><code>Building { footprint }</code></td><td>✅</td></tr>
+<tr><td><code>Buildable</code></td><td><code>Buildable { cost, time, prereqs }</code></td><td>✅</td></tr>
+<tr><td><code>Selectable</code></td><td><code>Selectable { bounds, priority }</code></td><td>✅</td></tr>
+<tr><td><code>Harvester</code></td><td><code>Harvester { capacity, resource }</code></td><td>✅</td></tr>
+<tr><td><code>Armament</code></td><td><code>Armament { weapon, cooldown }</code></td><td>✅</td></tr>
+<tr><td><code>Valued</code></td><td>Part of <code>Buildable.cost</code></td><td>✅</td></tr>
+<tr><td><code>Tooltip</code></td><td><code>display.name</code> in YAML</td><td>✅</td></tr>
+<tr><td><code>Voiced</code></td><td><code>display.voice</code> (implied)</td><td>⚠️</td></tr>
+<tr><td><code>ConditionalTrait</code></td><td>NEEDS DESIGN (condition system)</td><td>❌</td></tr>
+<tr><td><code>GrantConditionOn*</code></td><td>NEEDS DESIGN (condition system)</td><td>❌</td></tr>
+<tr><td><code>*Multiplier</code></td><td>NEEDS DESIGN (multiplier system)</td><td>❌</td></tr>
+<tr><td><code>AttackBase/Follow/Frontal/Omni/Turreted</code></td><td>Part of <code>combat</code> YAML section</td><td>⚠️</td></tr>
+<tr><td><code>AutoTarget</code></td><td>NEEDS DESIGN</td><td>❌</td></tr>
+<tr><td><code>Turreted</code></td><td>NEEDS DESIGN</td><td>❌</td></tr>
+<tr><td><code>AmmoPool</code></td><td>NEEDS DESIGN</td><td>❌</td></tr>
+<tr><td><code>Cargo</code> / <code>Passenger</code></td><td>NEEDS DESIGN</td><td>❌</td></tr>
+<tr><td><code>Capturable</code> / <code>Captures</code></td><td>NEEDS DESIGN</td><td>❌</td></tr>
+<tr><td><code>Cloak</code> / <code>DetectCloaked</code></td><td>NEEDS DESIGN</td><td>❌</td></tr>
+<tr><td><code>Power</code> / <code>PowerManager</code></td><td>NEEDS DESIGN</td><td>❌</td></tr>
+<tr><td><code>SupportPower*</code></td><td>NEEDS DESIGN</td><td>❌</td></tr>
+<tr><td><code>GainsExperience</code> / <code>GivesExperience</code></td><td>NEEDS DESIGN (partially mentioned)</td><td>⚠️</td></tr>
+<tr><td><code>Locomotor</code></td><td><code>locomotor</code> field in <code>Mobile</code></td><td>✅</td></tr>
+<tr><td><code>Aircraft</code></td><td>NEEDS DESIGN (air movement)</td><td>❌</td></tr>
+<tr><td><code>ProductionQueue</code></td><td>Mentioned, not fully designed</td><td>⚠️</td></tr>
+<tr><td><code>Crate</code> / <code>CrateAction*</code></td><td>NEEDS DESIGN</td><td>❌</td></tr>
+<tr><td><code>Mine</code> / <code>Minelayer</code></td><td>NEEDS DESIGN</td><td>❌</td></tr>
+<tr><td><code>Guard</code> / <code>Guardable</code></td><td>NEEDS DESIGN</td><td>❌</td></tr>
+<tr><td><code>Crushable</code> / <code>AutoCrusher</code></td><td>NEEDS DESIGN</td><td>❌</td></tr>
+<tr><td><code>Transforms</code></td><td>NEEDS DESIGN</td><td>❌</td></tr>
+<tr><td><code>Sellable</code></td><td>Mentioned as order, not as component</td><td>⚠️</td></tr>
+<tr><td><code>RepairableBuilding</code></td><td>NEEDS DESIGN</td><td>❌</td></tr>
+<tr><td><code>RallyPoint</code></td><td>Mentioned as order, not as component</td><td>⚠️</td></tr>
+<tr><td><code>PrimaryBuilding</code></td><td>NEEDS DESIGN</td><td>❌</td></tr>
+<tr><td><code>Gate</code></td><td>NEEDS DESIGN</td><td>❌</td></tr>
+<tr><td><code>LineBuild</code> (walls)</td><td>NEEDS DESIGN</td><td>❌</td></tr>
+<tr><td><code>BaseProvider</code> / <code>GivesBuildableArea</code></td><td>NEEDS DESIGN</td><td>❌</td></tr>
+<tr><td><code>Faction</code></td><td>Implied, not formalized</td><td>⚠️</td></tr>
+<tr><td><code>Encyclopedia</code></td><td>NEEDS DESIGN</td><td>❌</td></tr>
+<tr><td><code>DeveloperMode</code></td><td>NEEDS DESIGN</td><td>❌</td></tr>
+<tr><td><code>WithInfantryBody</code> (sub-cell)</td><td>NEEDS DESIGN</td><td>❌</td></tr>
+<tr><td><code>ScaredyCat</code> / <code>TakeCover</code></td><td>NEEDS DESIGN</td><td>❌</td></tr>
+<tr><td><code>KillsSelf</code></td><td>NEEDS DESIGN</td><td>❌</td></tr>
+<tr><td><code>SpawnActorOnDeath</code></td><td>NEEDS DESIGN</td><td>❌</td></tr>
+<tr><td><code>Husk</code></td><td>NEEDS DESIGN</td><td>❌</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="recommended-action-plan"><a class="header" href="#recommended-action-plan">Recommended Action Plan</a></h2>
+<h3 id="phase-2-additions-sim--months-612"><a class="header" href="#phase-2-additions-sim--months-612">Phase 2 Additions (Sim — Months 6–12)</a></h3>
+<p>These gaps need to be designed <em>before or during</em> Phase 2 since they’re core simulation mechanics:</p>
+<ol>
+<li><strong>Condition system</strong> — Core modding primitive, all other systems depend on it</li>
+<li><strong>Multiplier system</strong> — Depends on conditions</li>
+<li><strong>Full damage pipeline</strong> — Projectile → Warhead → Armor table → Modifiers → Health</li>
+<li><strong>Power system</strong> — Affects building behavior</li>
+<li><strong>Building mechanics</strong> — Placement, sell, repair, build radius, rally points</li>
+<li><strong>Transport/Cargo</strong> — Core unit type</li>
+<li><strong>Capture</strong> — Core unit type (engineers)</li>
+<li><strong>Stealth/Cloak</strong> — Core mechanic (subs, spies)</li>
+<li><strong>Infantry sub-cell</strong> — Core visual/gameplay mechanic</li>
+<li><strong>Death mechanics</strong> — Husks, spawn-on-death</li>
+<li><strong>Transform/Deploy</strong> — MCV, siege units</li>
+<li><strong>Veterancy</strong> (full system) — XP → conditions → multipliers</li>
+<li><strong>Guard command</strong> — Fundamental order type</li>
+<li><strong>Crush mechanics</strong> — Vehicle/infantry interaction</li>
+</ol>
+<h3 id="phase-3-additions-ui--months-1216"><a class="header" href="#phase-3-additions-ui--months-1216">Phase 3 Additions (UI — Months 12–16)</a></h3>
+<ol start="15">
+<li><strong>Support Powers</strong> — UI + sim system</li>
+<li><strong>Cursor system</strong> — Contextual cursors</li>
+<li><strong>Hotkey system</strong> — Rebindable keys</li>
+<li><strong>Notification framework</strong> — EVA event → audio mapping</li>
+<li><strong>Selection details</strong> — Priority, double-click, tab cycle</li>
+<li><strong>Game speed presets</strong> — Lobby option</li>
+<li><strong>Radar system</strong> (detailed) — ProvidesRadar, AppearsOnRadar</li>
+<li><strong>Power bar UI</strong> — Visualization</li>
+<li><strong>Observer UI</strong> — Army/production/economy overlays</li>
+</ol>
+<h3 id="phase-4-additions-scripting--months-1620"><a class="header" href="#phase-4-additions-scripting--months-1620">Phase 4 Additions (Scripting — Months 16–20)</a></h3>
+<ol start="24">
+<li><strong>Lua API specification</strong> — 16+ globals, 34+ actor property groups</li>
+<li><strong>Crate system</strong> — Skirmish feature</li>
+<li><strong>Mine system</strong> — Tactical gameplay</li>
+<li><strong>Demolition/C4</strong> — Engineer ability</li>
+</ol>
+<h3 id="phase-6-additions-modding--months-2632"><a class="header" href="#phase-6-additions-modding--months-2632">Phase 6 Additions (Modding — Months 26–32)</a></h3>
+<ol start="28">
+<li><strong>Debug/developer tools</strong> — Modder essential</li>
+<li><strong>Encyclopedia</strong> — Discoverability</li>
+<li><strong>Localization framework</strong> — i18n</li>
+<li><strong>Faction system</strong> (formal) — Multi-faction support</li>
+<li><strong>Palette effects</strong> (runtime) — Classic visual style</li>
+<li><strong>Asset browser</strong> — Mod development</li>
+</ol>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="10-PERFORMANCE.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="12-MOD-MIGRATION.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="10-PERFORMANCE.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="12-MOD-MIGRATION.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr-ef4e11c1.min.js"></script>
+        <script src="mark-09e88c2c.min.js"></script>
+        <script src="searcher-c2a407aa.js"></script>
+
+        <script src="clipboard-1626706a.min.js"></script>
+        <script src="highlight-abc7f01d.js"></script>
+        <script src="book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

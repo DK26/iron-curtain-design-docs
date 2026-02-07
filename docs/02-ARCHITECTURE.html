@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-cd13978d.js";
+            window.path_to_searchindex_js = "searchindex-1ff3a283.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-d8a85e3a.js"></script>
+        <script src="toc-6f79e187.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -382,7 +382,7 @@ impl&lt;N: NetworkModel, I: InputSource&gt; GameLoop&lt;N, I&gt; {
 <p><strong>Click-to-world is abstracted behind a trait.</strong> Isometric screen→cell (desktop), touch→cell (mobile), and raycast→cell (3D mod) all implement the same <code>ScreenToWorld</code> trait, producing a <code>CellPos</code>. No isometric math hardcoded in the game loop.</p>
 </li>
 <li>
-<p><strong>Render quality is configurable per device.</strong> FPS cap, particle density, post-FX toggles, resolution scaling, shadow quality — all runtime-configurable. Mobile caps at 30fps; desktop targets 60-240fps. The renderer reads a <code>RenderSettings</code> resource, not compile-time constants.</p>
+<p><strong>Render quality is configurable per device.</strong> FPS cap, particle density, post-FX toggles, resolution scaling, shadow quality — all runtime-configurable. Mobile caps at 30fps; desktop targets 60-240fps. The renderer reads a <code>RenderSettings</code> resource, not compile-time constants. Four render quality tiers (Baseline → Standard → Enhanced → Ultra) are auto-detected from <code>wgpu::Adapter</code> capabilities at startup. Tier 0 (Baseline) targets GL 3.3 / WebGL2 hardware — no compute shaders, no post-FX, CPU particle fallback, palette tinting for weather. See <code>10-PERFORMANCE.md</code> § “GPU &amp; Hardware Compatibility” for tier definitions and hardware floor analysis.</p>
 </li>
 <li>
 <p><strong>No raw filesystem I/O.</strong> All asset loading goes through Bevy’s asset system, never <code>std::fs</code> directly. Mobile and browser have sandboxed filesystems; WASM has no filesystem at all. Save games use platform-appropriate storage (e.g., <code>localStorage</code> on web, app sandbox on mobile).</p>
