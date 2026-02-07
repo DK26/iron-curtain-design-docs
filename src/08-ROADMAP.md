@@ -96,6 +96,7 @@ Open source `ra-formats` early. Useful standalone, builds credibility and commun
 - **`NetworkModel` trait defined and proven** with at least `LocalNetwork` implementation
 - **System execution order documented and fixed**
 - **State hashing for desync detection**
+- **Engine telemetry foundation (D031):** `tracing` span instrumentation on sim systems; per-system tick timing; gameplay event stream (`GameplayEvent` enum) behind `telemetry` feature flag; zero-cost when disabled
 
 ### Release
 Units moving, shooting, dying — headless sim + rendered. Record replay file. Play it back.
@@ -189,6 +190,7 @@ Units moving, shooting, dying — headless sim + rendered. Record replay file. P
 - `CertifiedMatchResult` with Ed25519 relay signatures
 - Spectator feed: relay forwards tick orders to observers with configurable delay
 - Behavioral analysis pipeline on relay server
+- **Backend OTEL telemetry (D031):** relay + tracking + workshop servers emit metrics/traces/logs via OpenTelemetry; `/healthz`, `/readyz`, `/metrics` endpoints; distributed trace IDs for desync debugging across clients and relay; pre-built Grafana dashboards; optional `docker-compose.observability.yaml` overlay for self-hosters
 
 ### Exit Criteria
 - Two players can play a full game over the internet
@@ -238,6 +240,7 @@ Units moving, shooting, dying — headless sim + rendered. Record replay file. P
 - Campaign generation: connected multi-mission storylines (experimental)
 - Adaptive difficulty: AI observes playstyle, generates targeted challenges (experimental)
 - **LLM-driven Workshop resource discovery (D030):** LLM searches Workshop by `llm_meta` tags, evaluates fitness, auto-pulls resources as dependencies for generated content; license-aware filtering
+- **AI training data pipeline (D031):** gameplay event stream → OTEL collector → Parquet/Arrow columnar format → ML training; build order learning, engagement patterns, balance analysis from aggregated match telemetry
 
 ### Deliverables — Visual Polish (Bevy Rendering)
 - Full post-processing pipeline: bloom, color grading, ambient occlusion

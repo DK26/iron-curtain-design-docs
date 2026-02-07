@@ -440,6 +440,17 @@ pub enum RenderTier {
 
 CI fails if any benchmark regresses > 10% from the rolling average. Performance is a ratchet — it only goes up.
 
+### Engine Telemetry (D031)
+
+Per-system tick timing from the benchmark suite can be exported as OTEL metrics for deeper analysis when the `telemetry` feature flag is enabled. This bridges offline benchmarks with live system inspection:
+
+- Per-system execution time histograms (`sim.system.<name>_us`)
+- Entity count gauges, pathfinding cache hit rates, memory usage
+- Gameplay event stream for AI training data collection
+- Debug overlay (via `bevy_egui`) reads live telemetry for real-time profiling during development
+
+Telemetry is zero-cost when disabled (compile-time feature gate). Release builds intended for players ship without it. Tournament servers, AI training, and development builds enable it. See `09-DECISIONS.md` § D031 for full design.
+
 ### Profile Before Parallelize
 
 Never add `par_iter()` without profiling first. Measure single-threaded. If a system takes > 1ms, consider parallelizing. If it takes < 0.1ms, sequential is faster (avoids coordination overhead).

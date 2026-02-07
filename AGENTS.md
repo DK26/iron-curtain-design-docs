@@ -90,6 +90,7 @@ These are settled. Don't re-litigate unless the user explicitly wants to revisit
 | D028 | Condition & multiplier systems (Phase 2 hard req) | Condition system + multiplier system + full damage pipeline are Phase 2 exit criteria, not deferred gaps                                                                                                                                                        |
 | D029 | Cross-game component library (Phase 2)            | 7 first-party systems (mind control, carriers, teleport, shields, upgrades, delayed weapons, dual assets) are Phase 2 deliverables                                                                                                                              |
 | D030 | Workshop resource registry & dependency system    | Artifactory-style universal artifact repository; any asset type publishable individually; semver deps, lockfile, SHA-256 integrity, license required, promotion channels, LLM discovery; federated multi-source with local/remote/virtual repos (resolves P007) |
+| D031 | Observability & telemetry (OTEL)                  | All servers + engine emit OTEL metrics/traces/logs; zero-cost when disabled; gameplay event stream for AI training; distributed tracing for desync debugging; pre-built Grafana dashboards for self-hosters                                                     |
 
 ## Pending Decisions
 
