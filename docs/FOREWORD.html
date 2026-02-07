@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-6ee056da.js";
+            window.path_to_searchindex_js = "searchindex-c3b4fb8b.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-ef8cba4b.js"></script>
@@ -186,7 +186,7 @@
 <h2 id="growing-up"><a class="header" href="#growing-up">Growing Up</a></h2>
 <p>I started programming at 12 — Pascal. Wrote little programs, thought it was amazing, and then looked at what it would actually take to make a game that looks and feels and plays real good. Yeah, that was going to take a while.</p>
 <p>I went through a lot of jobs and technologies over the years. Network engineering, backend development, automations, cyber defense. I wrote Java for a while, then Python for many years. Each job taught me things I didn’t know I’d need later. I wasn’t chasing a goal — I was just building a career and getting better at making software.</p>
-<p>Along the way I discovered Rust. It clicked. A language that gives you the same low-level control as C, but the compiler actually has your back — no dangling pointers, no segfaults, no mysterious crashes at 3am. You can write serious systems code and be productive doing it. The borrow checker is annoying until it saves you, and then you never want to go back.</p>
+<p>Along the way I discovered Rust. It clicked. Most programming languages make you choose: either you get full control over your computer’s resources (but risk hard-to-find bugs and crashes), or you get safety (but give up performance). Rust gives you both. The language is designed so that entire categories of bugs — the kind that cause crashes, security holes, and impossible-to-reproduce errors — simply can’t happen. The compiler catches them before the program ever runs. You can write high-performance code and actually sleep at night.</p>
 <p>I also found OpenRA around this time, and I was glad an open-source community had kept Red Alert alive for so long. I browsed through the C# codebase (I know C# well enough), enjoyed poking around the internals, but eventually real life pulled me away.</p>
 <p>I did buy a Rust game dev book though. Took some Udemy courses. Played with prototypes. The idea of writing a game in Rust never quite left.</p>
 <h2 id="the-other-games-that-mattered"><a class="header" href="#the-other-games-that-mattered">The Other Games That Mattered</a></h2>
@@ -202,18 +202,18 @@
 <p>This project is also a research opportunity for me. I want to learn how to do LLM-assisted coding <em>correctly</em> — not just throw prompts at a model and ship whatever comes back. I’m a developer who needs to understand what code does. When code is generated, I do my best to read through it, understand every part, and verify it. I use the best models available to cross-check, document, and maintain a consistent code style so the codebase stays reviewable by humans.</p>
 <p>There’s a compounding effect here: as the framework and architecture become more solid, the rules for how the LLM creates and modifies code become more focused and restricted. The design docs, the invariants, the crate boundaries — they all constrain what the LLM can do, which reduces the chance of serious errors. On top of that, I’m a firm believer in verifying code with tests and benchmarks. If it’s not tested, it doesn’t count.</p>
 <h2 id="what-bugged-me-about-the-alternatives"><a class="header" href="#what-bugged-me-about-the-alternatives">What Bugged Me About the Alternatives</a></h2>
-<p>OpenRA is great for what it is. But it’s written in C#, a high-level garbage-collected language. The original Red Alert was C, close to the hardware. C# means GC pauses, less control over memory layout, runtime overhead. For a volunteer project, that’s totally fine. But in practice, big battles stutter, desyncs happen a lot and are nearly impossible to debug, and if you want to mod anything deep, you’re writing C# against a large codebase.</p>
+<p>OpenRA is great for what it is. But it’s written in C#, a language that prioritizes developer convenience over raw performance. The original Red Alert was written in C, which runs much closer to the hardware. C# has a built-in system called a garbage collector that periodically pauses the game to clean up unused memory — in a fast-paced RTS, those pauses cause stutters. In practice, big battles lag, desyncs (where players’ games get out of sync) happen a lot and are nearly impossible to debug, and if you want to mod anything deep, you need to learn C# and work against a large, complex codebase.</p>
 <p>The Remastered Collection looks beautiful but barely changed the engine. The servers are rough. Modding is limited. Windows and Xbox only.</p>
 <p>I kept thinking about what Rust brings to the table:</p>
 <ul>
-<li>Low-level like C, but with a modern type system and toolchain</li>
-<li>Memory safety enforced at compile time — no use-after-free, no buffer overflows</li>
-<li>Thread safety that’s not optional — data races don’t compile</li>
-<li>A language that’s clearly here to stay — it’s in the Linux kernel, backed by every major tech company, growing fast</li>
+<li>Fast like C — runs close to the hardware, no garbage collector, predictable performance</li>
+<li>Safe — the compiler prevents the kinds of bugs that cause crashes and security vulnerabilities in other languages</li>
+<li>Built for multi-core — modern CPUs have many cores, and Rust makes it safe to use all of them without the concurrency bugs that plague other languages</li>
+<li>Here to stay — it’s in the Linux kernel, backed by every major tech company, and growing fast</li>
 </ul>
 <h2 id="what-i-wanted-to-build"><a class="header" href="#what-i-wanted-to-build">What I Wanted to Build</a></h2>
 <p>Once I committed, the ideas came fast.</p>
-<p><strong>Bevy</strong> was the obvious engine choice. It’s the most popular community-driven Rust game engine, it’s ECS-based (which is exactly what an RTS needs), and there’s a whole community of people working on it constantly. Building on top of Bevy means inheriting their progress instead of reinventing rendering, audio, and asset pipelines from scratch. And it means modders get access to a real modern rendering stack — imagine toggling between classic sprites and something with dynamic water, weather effects, proper lighting. Or just keeping it classic, but smooth.</p>
+<p><strong>Bevy</strong> was the obvious engine choice. It’s the most popular community-driven Rust game engine, it uses a modern architecture that’s a natural fit for RTS games (where you need to efficiently manage thousands of units at once), and there’s a whole community of people working on it constantly. Building on top of Bevy means inheriting their progress instead of reinventing rendering, audio, and asset pipelines from scratch. And it means modders get access to a real modern rendering stack — imagine toggling between classic sprites and something with dynamic water, weather effects, proper lighting. Or just keeping it classic, but smooth.</p>
 <p><strong>Cross-engine compatibility</strong> — I wanted OpenRA players and Iron Curtain players to coexist. My background includes a lot of work translating between different systems, and the same principles apply here.</p>
 <p><strong>Switchable netcode</strong> — inspired by how CS2 does sub-tick processing and relay servers. If we pick the wrong networking model, or something better comes along, we should be able to swap it without touching the simulation code.</p>
 <p><strong>Community independence</strong> — the game should never die because someone turns off a server. Self-hosted everything. Federated workshop. No single point of failure.</p>
