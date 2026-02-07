@@ -2,10 +2,10 @@
 
 ## Project: Rust-Native Red Alert RTS Engine
 
-**Status:** Pre-development (design phase)
-**Date:** 2026-02-06
-**Codename:** Iron Curtain
-**Author:** David Krasnitsky
+**Status:** Pre-development (design phase)  
+**Date:** 2026-02-06  
+**Codename:** Iron Curtain  
+**Author:** David Krasnitsky  
 
 ## What This Is
 
