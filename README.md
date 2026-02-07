@@ -21,7 +21,7 @@ I wasn't trying to replace OpenRA — I just wanted to test new technology and s
 
 My most formative gaming experience outside Red Alert was Operation Flashpoint — a game that gave you tools to create your own scenarios. That philosophy — games as platforms, not just products — is at the heart of this project.
 
-📖 **[Read the full story →](src/FOREWORD.md)**
+📖 **[Read the full story →](https://dk26.github.io/iron-curtain-design-docs/FOREWORD.html)**
 
 ## Why This Exists
 
@@ -238,24 +238,24 @@ If you've spent years building an OpenRA mod, Iron Curtain is designed to be you
 
 📐 **Design phase** — architecture documents in progress, implementation not yet started.
 
-See the [design documents](src/) for the technical foundation:
+See the [design documents](https://dk26.github.io/iron-curtain-design-docs/) for the technical foundation:
 
 | Document                                        | Contents                                              |
 | ----------------------------------------------- | ----------------------------------------------------- |
-| [Foreword](src/FOREWORD.md)                     | Why this project exists — the personal story          |
-| [00-INDEX](src/00-INDEX.md)                     | Navigation and architectural invariants               |
-| [01-VISION](src/01-VISION.md)                   | Project goals and competitive landscape               |
-| [02-ARCHITECTURE](src/02-ARCHITECTURE.md)       | Core architecture, ECS, sim/render split              |
-| [03-NETCODE](src/03-NETCODE.md)                 | Pluggable networking, relay server, sub-tick ordering |
-| [04-MODDING](src/04-MODDING.md)                 | YAML + Lua + WASM modding tiers, workshop registry    |
-| [05-FORMATS](src/05-FORMATS.md)                 | File format support, original source insights         |
-| [06-SECURITY](src/06-SECURITY.md)               | Threat model and mitigations                          |
-| [07-CROSS-ENGINE](src/07-CROSS-ENGINE.md)       | OpenRA interop strategy                               |
-| [08-ROADMAP](src/08-ROADMAP.md)                 | 36-month development plan                             |
-| [09-DECISIONS](src/09-DECISIONS.md)             | Decision log with rationale (31 decisions)            |
-| [10-PERFORMANCE](src/10-PERFORMANCE.md)         | Efficiency-first performance philosophy               |
-| [11-OPENRA-FEATURES](src/11-OPENRA-FEATURES.md) | OpenRA feature catalog and gap analysis               |
-| [12-MOD-MIGRATION](src/12-MOD-MIGRATION.md)     | Mod migration case studies                            |
+| [Foreword](https://dk26.github.io/iron-curtain-design-docs/FOREWORD.html)                     | Why this project exists — the personal story          |
+| [00-INDEX](https://dk26.github.io/iron-curtain-design-docs/00-INDEX.html)                     | Navigation and architectural invariants               |
+| [01-VISION](https://dk26.github.io/iron-curtain-design-docs/01-VISION.html)                   | Project goals and competitive landscape               |
+| [02-ARCHITECTURE](https://dk26.github.io/iron-curtain-design-docs/02-ARCHITECTURE.html)       | Core architecture, ECS, sim/render split              |
+| [03-NETCODE](https://dk26.github.io/iron-curtain-design-docs/03-NETCODE.html)                 | Pluggable networking, relay server, sub-tick ordering |
+| [04-MODDING](https://dk26.github.io/iron-curtain-design-docs/04-MODDING.html)                 | YAML + Lua + WASM modding tiers, workshop registry    |
+| [05-FORMATS](https://dk26.github.io/iron-curtain-design-docs/05-FORMATS.html)                 | File format support, original source insights         |
+| [06-SECURITY](https://dk26.github.io/iron-curtain-design-docs/06-SECURITY.html)               | Threat model and mitigations                          |
+| [07-CROSS-ENGINE](https://dk26.github.io/iron-curtain-design-docs/07-CROSS-ENGINE.html)       | OpenRA interop strategy                               |
+| [08-ROADMAP](https://dk26.github.io/iron-curtain-design-docs/08-ROADMAP.html)                 | 36-month development plan                             |
+| [09-DECISIONS](https://dk26.github.io/iron-curtain-design-docs/09-DECISIONS.html)             | Decision log with rationale (31 decisions)            |
+| [10-PERFORMANCE](https://dk26.github.io/iron-curtain-design-docs/10-PERFORMANCE.html)         | Efficiency-first performance philosophy               |
+| [11-OPENRA-FEATURES](https://dk26.github.io/iron-curtain-design-docs/11-OPENRA-FEATURES.html) | OpenRA feature catalog and gap analysis               |
+| [12-MOD-MIGRATION](https://dk26.github.io/iron-curtain-design-docs/12-MOD-MIGRATION.html)     | Mod migration case studies                            |
 
 ## Contributing
 

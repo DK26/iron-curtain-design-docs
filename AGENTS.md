@@ -238,6 +238,7 @@ When you need deeper detail, read the specific design doc:
 
 ### mdbook
 - **Never run `mdbook build`, `mdbook serve`, or any mdbook command.** The book is built manually by the maintainer when ready. Only edit the markdown source files in `src/`.
+- **When linking to design docs from public-facing files (README, etc.), use the hosted mdbook URL:** `https://dk26.github.io/iron-curtain-design-docs/`. Link to `.html` pages (e.g., `01-VISION.html`), not the raw `src/*.md` source files.
 
 ### Code Style
 - Idiomatic Rust. Use `clippy` and `rustfmt`.
