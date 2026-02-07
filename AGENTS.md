@@ -78,6 +78,7 @@ These are settled. Don't re-litigate unless the user explicitly wants to revisit
 | D016 | LLM-generated missions (Phase 7)              | Infinite content; output is standard YAML+Lua; `ra-llm` crate is optional                                        |
 | D017 | Bevy rendering pipeline                       | Post-processing, dynamic lighting, GPU particles, shader effects; classic aesthetic, modern polish               |
 | D018 | Multi-game extensibility (game modules)       | Engine is game-agnostic; RA1 is first module; RA2/TD/custom are future modules; `GameModule` trait               |
+| D019 | Switchable balance presets                    | Classic RA (default) vs OpenRA vs Remastered; YAML rule sets selectable in lobby; not a mod, a game option       |
 
 ## Pending Decisions
 
@@ -234,6 +235,11 @@ When you need deeper detail, read the specific design doc:
 - Performance details appear in both `src/09-DECISIONS.md` (D015) and `src/10-PERFORMANCE.md` — the latter is canonical
 
 ### Reference Material
-- EA Red Alert source: https://github.com/electronicarts/CnC_Red_Alert (GPL v3)
-- OpenRA: https://github.com/OpenRA/OpenRA
-- Chrono Divide (TypeScript browser RTS): architecture reference for WASM target
+
+These are the projects we actively study. Each serves a different purpose:
+
+- **EA Red Alert source:** https://github.com/electronicarts/CnC_Red_Alert (GPL v3) — **Canonical gameplay values.** Damage tables, weapon ranges, unit speeds, fire rates. When OpenRA and EA source disagree, EA source wins for our `classic` balance preset. Also: `OutList`/`DoList` order pattern, integer math validation.
+- **EA Remastered Collection:** https://github.com/electronicarts/CnC_Remastered_Collection — **UI/UX gold standard.** Cleanest, least cluttered C&C interface. Study sidebar layout, information density, HD asset pipeline.
+- **EA Tiberian Dawn source:** https://github.com/electronicarts/CnC_Tiberian_Dawn — **Shared C&C engine lineage.** Cross-reference with RA source for ambiguous behavior. Future TD game module reference.
+- **OpenRA:** https://github.com/OpenRA/OpenRA — **Architecture and UX patterns** (trait system, command interface, mod ecosystem). Also: **issue tracker as community pain point radar** — recurring complaints = our design opportunities. Do NOT copy their unit balance (see D019).
+- **Chrono Divide** (TypeScript browser RTS) — architecture reference for WASM target.

@@ -315,6 +315,40 @@ However, **3D rendering mods for isometric-family games are explicitly supported
 
 ---
 
+## D019: Switchable Balance Presets (Classic RA vs OpenRA)
+
+**Decision:** Ship multiple balance presets as first-class YAML rule sets. Default to classic Red Alert values from the EA source code. OpenRA balance available as an alternative preset. Selectable per-game in lobby.
+
+**Rationale:**
+- Original Red Alert's balance makes units feel **powerful and iconic** — Tanya, MiGs, Tesla Coils, V2 rockets are devastating. This is what made the game memorable.
+- OpenRA rebalances toward competitive fairness, which makes units feel interchangeable and underwhelming to many players. Valid for tournaments, wrong as a default.
+- The community is split on this. Rather than picking a side, expose it as a choice.
+- Presets are just alternate YAML files loaded at game start — zero engine complexity. The modding system already supports this via inheritance and overrides.
+- The Remastered Collection made its own subtle balance tweaks — worth capturing as a third preset.
+
+**Implementation:**
+- `rules/presets/classic/` — unit/weapon/structure values from EA source code (default)
+- `rules/presets/openra/` — values matching OpenRA's current balance
+- `rules/presets/remastered/` — values matching the Remastered Collection
+- Preset selection exposed in lobby UI and stored in game settings
+- Presets use YAML inheritance: only override fields that differ from `classic`
+- Multiplayer: all players must use the same preset (enforced by lobby, validated by sim)
+- Custom presets: modders can create new presets as additional YAML directories
+
+**What this is NOT:**
+- Not a "difficulty setting" — both presets play at normal difficulty
+- Not a mod — it's a first-class game option, no workshop download required
+- Not just multiplayer — applies to skirmish and campaign too
+
+**Alternatives considered:**
+- Only ship classic values (rejected — alienates OpenRA competitive community)
+- Only ship OpenRA values (rejected — loses the original game's personality)
+- Let mods handle it (rejected — too important to bury in the modding system; should be one click in settings)
+
+**Phase:** Phase 2 (balance values extracted during simulation implementation).
+
+---
+
 ## PENDING DECISIONS
 
 | ID   | Topic                                                         | Needs Resolution By |

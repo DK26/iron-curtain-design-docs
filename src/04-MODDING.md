@@ -90,6 +90,50 @@ _base_soldier:
 
 Inheritance is resolved at load time in Rust. Fields from `_base_soldier` are merged, then overridden by the child definition.
 
+### Balance Presets
+
+The same inheritance system powers **switchable balance presets** (D019). Presets are alternate YAML directories that override unit/weapon/structure values:
+
+```
+rules/
+├── units/              # base definitions (always loaded)
+├── weapons/
+├── structures/
+└── presets/
+    ├── classic/        # EA source code values (DEFAULT)
+    │   ├── units/
+    │   │   └── tanya.yaml    # cost: 1200, health: 125, weapon_range: 5, ...
+    │   └── weapons/
+    ├── openra/         # OpenRA competitive balance
+    │   ├── units/
+    │   │   └── tanya.yaml    # cost: 1400, health: 80, weapon_range: 3, ...
+    │   └── weapons/
+    └── remastered/     # Remastered Collection tweaks
+        └── ...
+```
+
+**How it works:**
+1. Engine loads base definitions from `rules/`
+2. Engine loads the selected preset directory, overriding matching fields via inheritance
+3. Preset YAML files only contain fields that differ — everything else falls through to base
+
+```yaml
+# rules/presets/openra/units/tanya.yaml
+# Only overrides what OpenRA changes — rest inherits from base definition
+tanya:
+  inherits: _base_tanya       # base definition with display, sequences, AI metadata, etc.
+  buildable:
+    cost: 1400                 # OpenRA nerfed from 1200
+  health:
+    max: 80                    # OpenRA nerfed from 125
+  combat:
+    weapon: tanya_pistol_nerfed  # references an OpenRA-balanced weapon definition
+```
+
+**Lobby integration:** Preset is selected in the game lobby alongside map and faction. All players in a multiplayer game use the same preset (enforced by the sim). The preset name is embedded in replays.
+
+See D019 in `src/09-DECISIONS.md` for full rationale.
+
 ### Rust Deserialization
 
 ```rust
