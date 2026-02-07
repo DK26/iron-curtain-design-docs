@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-0abdde86.js";
+            window.path_to_searchindex_js = "searchindex-5b2ff5f5.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-ef8cba4b.js"></script>
@@ -571,13 +571,17 @@ medium_tank:
 </code></pre>
 <p><strong>Cross-view multiplayer is a natural consequence.</strong> Since the mod only changes rendering, a player using the 3D mod can play against a player using classic isometric sprites. The sim produces identical state; each client just draws it differently. Replays are viewable in either mode.</p>
 <p>See <code>02-ARCHITECTURE.md</code> § “3D Rendering as a Mod” for the full architectural rationale.</p>
-<h2 id="tera-templating--mission-templates-phase-6"><a class="header" href="#tera-templating--mission-templates-phase-6">Tera Templating &amp; Mission Templates (Phase 6)</a></h2>
+<h2 id="tera-templating-phase-6"><a class="header" href="#tera-templating-phase-6">Tera Templating (Phase 6)</a></h2>
 <h3 id="tera-as-the-template-engine"><a class="header" href="#tera-as-the-template-engine">Tera as the Template Engine</a></h3>
-<p>Tera is a Rust-native Jinja2-compatible template engine. It handles two roles in the modding system:</p>
+<p>Tera is a Rust-native Jinja2-compatible template engine. <strong>All first-party IC content uses it</strong> — the default Red Alert campaign, built-in resource packs, and balance presets are all Tera-templated. This means the system is proven by the content that ships with the engine, not just an abstract capability.</p>
+<p>For <strong>third-party content creators, Tera is entirely optional.</strong> Plain YAML is always valid and is the recommended starting point. Most community mods, resource packs, and maps work fine without any templating at all. Tera is there when you need it — not forced on you.</p>
+<p>What Tera handles:</p>
 <ol>
-<li><strong>YAML/Lua generation</strong> — eliminates copy-paste for faction variants, bulk unit definitions</li>
-<li><strong>Mission templates</strong> — parameterized, reusable mission blueprints (like Helm charts for K8s)</li>
+<li><strong>YAML/Lua generation</strong> — eliminates copy-paste when defining dozens of faction variants or bulk unit definitions</li>
+<li><strong>Mission templates</strong> — parameterized, reusable mission blueprints</li>
+<li><strong>Resource packs</strong> — switchable asset layers with configurable parameters (quality, language, platform)</li>
 </ol>
+<p>Inspired by Helm’s approach to parameterized configuration, but adapted to game content: parameters are defined in a <code>schema.yaml</code>, defaults are inline in the template, and user preferences are set through the in-game settings UI — not a separate values file workflow. The pattern stays practical to our use case rather than importing Helm’s full complexity.</p>
 <p>Load-time only (zero runtime cost). Tera is the right fit because:</p>
 <ul>
 <li>Rust-native (<code>tera</code> crate), no external dependencies</li>
@@ -597,15 +601,14 @@ medium_tank:
 {% endfor %}
 {% endfor %}
 </code></pre>
-<h3 id="mission-templates-helm-style-parameterized-missions"><a class="header" href="#mission-templates-helm-style-parameterized-missions">Mission Templates (Helm-Style Parameterized Missions)</a></h3>
+<h3 id="mission-templates-parameterized-missions"><a class="header" href="#mission-templates-parameterized-missions">Mission Templates (Parameterized Missions)</a></h3>
 <p>A mission template is a reusable mission blueprint with parameterized values. The template defines the structure (map layout, objectives, triggers, enemy composition); the user (or LLM) supplies values to produce a concrete, playable mission.</p>
 <p><strong>Template structure:</strong></p>
 <pre><code>templates/
   bridge_defense/
     template.yaml        # Tera template for map + rules
     triggers.lua.tera    # Tera template for Lua trigger scripts
-    values.yaml          # Default parameter values
-    schema.yaml          # Parameter schema (names, types, constraints, descriptions)
+    schema.yaml          # Parameter definitions with inline defaults
     preview.png          # Thumbnail for workshop browser
     README.md            # Description, author, usage notes
 </code></pre>
@@ -702,7 +705,7 @@ pub fn render_mission_template(
 <p>The LLM doesn’t need to generate everything from scratch. It can:</p>
 <ol>
 <li><strong>Select a template</strong> from the workshop based on the user’s description</li>
-<li><strong>Fill in values</strong> — the LLM generates a <code>values.yaml</code>, not an entire mission</li>
+<li><strong>Fill in parameters</strong> — the LLM generates parameter values against the <code>schema.yaml</code>, not an entire mission</li>
 <li><strong>Validate</strong> — schema constraints catch hallucinated values before rendering</li>
 <li><strong>Compose</strong> — chain multiple scene and mission templates for campaigns (e.g., “3 missions: base building → bridge defense → final assault”)</li>
 </ol>
@@ -943,7 +946,7 @@ pub struct TerrainSurfaceGrid {
 </table>
 </div>
 <p>These modifiers stack with the weather-type modifiers from the base weather table. A blizzard over deep snow is brutal.</p>
-<p><strong>Snapshot compatibility:</strong> <code>TerrainSurfaceGrid</code> derives <code>Serialize, Deserialize</code> — surface state is captured in save games and snapshots per invariant #10.</p>
+<p><strong>Snapshot compatibility:</strong> <code>TerrainSurfaceGrid</code> derives <code>Serialize, Deserialize</code> — surface state is captured in save games and snapshots per D010 (snapshottable sim state).</p>
 <h4 id="terrain-texture-effects-render-layer"><a class="header" href="#terrain-texture-effects-render-layer">Terrain Texture Effects (Render Layer)</a></h4>
 <p><code>ra-render</code> reads the sim’s <code>TerrainSurfaceGrid</code> and blends terrain visuals accordingly. This is <strong>purely cosmetic</strong> — it has no effect on the sim and runs at whatever quality the device supports.</p>
 <p>Three rendering strategies, selectable via <code>RenderSettings</code>:</p>
@@ -1010,8 +1013,7 @@ weather_types:
 <pre><code>scenes/
   ambush/
     scene.lua.tera       # Tera-templated Lua trigger logic
-    schema.yaml          # Parameters: location, units, trigger_zone, etc.
-    values.yaml          # Defaults
+    schema.yaml          # Parameters + inline defaults: location, units, trigger_zone, etc.
     README.md            # Usage, preview, notes
 </code></pre>
 <p><strong>Composing scenes into a mission template:</strong></p>
@@ -1094,6 +1096,185 @@ scenes:
 </tbody>
 </table>
 </div>
+<h2 id="resource-packs-switchable-asset-layers"><a class="header" href="#resource-packs-switchable-asset-layers">Resource Packs (Switchable Asset Layers)</a></h2>
+<p>Resource packs are <strong>switchable asset override layers</strong> — the player selects which version of a resource category to use (cutscenes, sprites, music, voice lines, etc.), and the engine swaps to those assets without touching gameplay. Same concept as Minecraft’s resource packs or the Remastered Collection’s SD/HD toggle, but generalized to any asset type.</p>
+<p>This falls naturally out of the architecture. Every asset is referenced by <strong>logical ID</strong> in YAML (e.g., <code>video: videos/allied-01-briefing.vqa</code>). A resource pack overrides those references — mapping the same IDs to different files. No code, no mods, no gameplay changes. Pure presentation layer.</p>
+<h3 id="tera-templated-resource-packs-optional-for-complex-packs"><a class="header" href="#tera-templated-resource-packs-optional-for-complex-packs">Tera-Templated Resource Packs (Optional, for Complex Packs)</a></h3>
+<p>Most community resource packs are plain YAML (see “Most Packs Are Plain YAML” below). But <strong>all first-party IC packs use Tera</strong> — the built-in cutscene, sprite, and music packs are templated with configurable quality, language, and content selection. This dogfoods the system and provides working examples for pack authors who want to go beyond flat mappings.</p>
+<p>For packs that need <strong>configurable parameters</strong> — quality tiers, language selection, platform-aware defaults — Tera templates use a <code>schema.yaml</code> that defines the available knobs. Defaults are inline in the template; users configure through the in-game settings UI.</p>
+<p><strong>Pack structure:</strong></p>
+<pre><code>resource-packs/hd-cutscenes/
+  pack.yaml.tera      # Tera template — generates the override map
+  schema.yaml          # Parameter definitions with inline defaults
+  assets/              # The actual replacement files
+    videos/
+      allied-01-briefing-720p.mp4
+      allied-01-briefing-1080p.mp4
+      allied-01-briefing-4k.mp4
+      ...
+</code></pre>
+<p><strong>Schema (configurable knobs):</strong></p>
+<pre><code class="language-yaml"># schema.yaml
+parameters:
+  quality:
+    type: enum
+    options: [720p, 1080p, 4k]
+    default: 1080p
+    description: "Video resolution — higher needs more disk space"
+
+  language:
+    type: enum
+    options: [en, de, fr, ru, es, ja]
+    default: en
+    description: "Subtitle/dub language"
+
+  include_victory_sequences:
+    type: boolean
+    default: true
+    description: "Also replace victory/defeat cinematics"
+
+  style:
+    type: enum
+    options: [upscaled, redrawn, ai_generated]
+    default: upscaled
+    description: "Visual style of replacement cutscenes"
+</code></pre>
+<p><strong>Tera template (generates the override map from parameters):</strong></p>
+<pre><code class="language-jinja">{# pack.yaml.tera #}
+resource_pack:
+  name: "HD Cutscenes ({{ quality }}, {{ language }})"
+  description: "{{ style | title }} briefing videos in {{ quality }}"
+  category: cutscenes
+  version: "2.0.0"
+
+  assets:
+    {% for mission in ["allied-01", "allied-02", "allied-03", "soviet-01", "soviet-02", "soviet-03"] %}
+    videos/{{ mission }}-briefing.vqa: assets/videos/{{ mission }}-briefing-{{ quality }}.mp4
+    {% endfor %}
+
+    {% if include_victory_sequences %}
+    {% for seq in ["allied-victory", "allied-defeat", "soviet-victory", "soviet-defeat"] %}
+    videos/{{ seq }}.vqa: assets/videos/{{ seq }}-{{ quality }}.mp4
+    {% endfor %}
+    {% endif %}
+
+    {# Language-specific subtitle tracks #}
+    {% if language != "en" %}
+    {% for mission in ["allied-01", "allied-02", "allied-03", "soviet-01", "soviet-02", "soviet-03"] %}
+    subtitles/{{ mission }}.srt: assets/subtitles/{{ language }}/{{ mission }}.srt
+    {% endfor %}
+    {% endif %}
+</code></pre>
+<p><strong>User configuration (in-game settings, not CLI overrides):</strong></p>
+<p>Players configure pack parameters through the Settings → Resource Packs UI. When a pack has a <code>schema.yaml</code>, the UI renders the appropriate controls (dropdowns for enums, checkboxes for booleans). The engine re-renders the Tera template whenever settings change, producing an updated override map. This is load-time only — zero runtime cost.</p>
+<p>For CLI users, <code>ic resource-pack install hd-cutscenes</code> installs the pack with its defaults. Parameters are then adjusted in settings.</p>
+<h3 id="why-tera-not-just-flat-mappings"><a class="header" href="#why-tera-not-just-flat-mappings">Why Tera (Not Just Flat Mappings)</a></h3>
+<p>Flat override maps (<code>asset_a → asset_b</code>) work for simple cases, but fall apart when packs need to:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Need</th><th>Flat Mapping</th><th>Tera Template</th></tr>
+</thead>
+<tbody>
+<tr><td>Quality tiers (720p/1080p/4k)</td><td>3 separate packs with 90% duplicated YAML</td><td>One pack, <code>quality</code> parameter</td></tr>
+<tr><td>Language variants</td><td>One pack per language × quality = combinatorial explosion</td><td><code>{% if language != "en" %}</code> conditional</td></tr>
+<tr><td>Faction-specific overrides</td><td>Manual enumeration of every faction’s assets</td><td><code>{% for faction in factions %}</code> loop</td></tr>
+<tr><td>Optional components (victory sequences, tutorial videos)</td><td>Separate packs or monolithic everything-pack</td><td>Boolean parameters with <code>{% if %}</code></td></tr>
+<tr><td>Platform-aware (mobile gets 720p, desktop gets 1080p)</td><td>Separate mobile/desktop packs</td><td><code>quality</code> defaults per <code>ScreenClass</code></td></tr>
+<tr><td>Mod-aware (pack adapts to which game module is active)</td><td>One pack per game module</td><td><code>{% if game_module == "ra2" %}</code> conditional</td></tr>
+</tbody>
+</table>
+</div>
+<p>This is the same reason Helm uses Go templates instead of static YAML — real-world configuration has conditionals, loops, and user-specific values. Our approach is inspired by Helm’s parameterized templating, but the configuration surface is the in-game settings UI, not a CLI + values file workflow.</p>
+<h3 id="most-packs-are-plain-yaml-no-templating"><a class="header" href="#most-packs-are-plain-yaml-no-templating">Most Packs Are Plain YAML (No Templating)</a></h3>
+<p>The <strong>default and recommended</strong> way to create a resource pack is plain YAML — just list the files you’re replacing. No template syntax, no schema, no values file. This is what <code>ic mod init resource-pack</code> generates:</p>
+<pre><code class="language-yaml"># resource-packs/retro-sounds/pack.yaml — plain YAML, no Tera
+resource_pack:
+  name: "Retro 8-bit Sound Effects"
+  category: sound_effects
+  version: "1.0.0"
+  assets:
+    sounds/explosion_large.wav: assets/explosion_large_8bit.wav
+    sounds/rifle_fire.wav: assets/rifle_fire_8bit.wav
+    sounds/tank_move.wav: assets/tank_move_8bit.wav
+</code></pre>
+<p>This covers the majority of resource packs. Someone replacing cutscenes, swapping in HD sprites, or providing an alternative soundtrack just lists the overrides — done.</p>
+<p><strong>Tera templates are opt-in for complex packs</strong> that need parameters (quality tiers, language selection, conditional content). Rename <code>pack.yaml</code> to <code>pack.yaml.tera</code>, add a <code>schema.yaml</code>, and the engine renders the template at install time. But this is a power-user feature — most content creators never need it.</p>
+<p>The engine detects <code>.tera</code> extension → renders template; plain <code>.yaml</code> → loads directly.</p>
+<h3 id="resource-pack-categories"><a class="header" href="#resource-pack-categories">Resource Pack Categories</a></h3>
+<p>Players can mix and match one pack per category:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Category</th><th>What It Overrides</th><th>Example Packs</th></tr>
+</thead>
+<tbody>
+<tr><td>Cutscenes</td><td>Briefing videos, victory/defeat sequences, in-mission cinematics</td><td>Original <code>.vqa</code>, AI-upscaled HD, community remakes, humorous parodies</td></tr>
+<tr><td>Sprites</td><td>Unit art, building art, effects, projectiles</td><td>Classic <code>.shp</code>, HD sprite pack, hand-drawn style</td></tr>
+<tr><td>Music</td><td>Soundtrack, menu music, faction themes</td><td>Original, Frank Klepacki remastered, community compositions</td></tr>
+<tr><td>Voice Lines</td><td>EVA announcements, unit responses</td><td>Original, alternative EVA voices, localized voice packs</td></tr>
+<tr><td>Sound Effects</td><td>Weapon sounds, explosions, ambient</td><td>Original, enhanced audio, retro 8-bit</td></tr>
+<tr><td>Terrain</td><td>Theater tilesets, terrain textures</td><td>Classic, HD, seasonal (winter/desert variants)</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="settings-ui"><a class="header" href="#settings-ui">Settings UI</a></h3>
+<pre><code>Settings → Resource Packs
+┌───────────────────────────────────────────────┐
+│ Cutscenes:     [HD Upscaled ▾]     [⚙ Configure]
+│                 Quality: [1080p ▾]            │
+│                 Language: [English ▾]         │
+│                 Victory sequences: [✓]        │
+│                                               │
+│ Music:         [Remastered ▾]                 │
+│ Voice Lines:   [Original ▾]                   │
+│ Sprites:       [HD Pack ▾]          [⚙ Configure]
+│ Sound Effects: [Original ▾]                   │
+│ Terrain:       [HD Pack ▾]                    │
+└───────────────────────────────────────────────┘
+</code></pre>
+<p>The ⚙ Configure button appears when a pack has a <code>schema.yaml</code> with user-configurable parameters. Simple packs (no schema) just show the dropdown.</p>
+<h3 id="relationship-to-existing-decisions"><a class="header" href="#relationship-to-existing-decisions">Relationship to Existing Decisions</a></h3>
+<p>Resource packs generalize a pattern that already appears in several places:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Decision</th><th>What It Switches</th><th>Resource Pack Equivalent</th></tr>
+</thead>
+<tbody>
+<tr><td>D019</td><td>Balance rule sets (Classic/OpenRA/Remastered)</td><td>Balance presets already work this way</td></tr>
+<tr><td>D029</td><td>Classic/HD sprite rendering (dual asset)</td><td>Sprite resource packs supersede this; D029’s <code>classic:</code>/<code>hd:</code> YAML keys become the first two sprite packs</td></tr>
+<tr><td>D032</td><td>UI chrome, menus, lobby (themes)</td><td>UI themes are resource packs for the chrome category</td></tr>
+<tr><td>Tera templating</td><td>Mission/scene templates</td><td>Resource packs use the same <code>template.tera</code> + <code>schema.yaml</code> pattern — one templating system for everything</td></tr>
+</tbody>
+</table>
+</div>
+<p>The underlying mechanism is the same: <strong>YAML-level asset indirection with Tera rendering</strong>. The <code>template.tera</code> + <code>schema.yaml</code> pattern appears in three places:</p>
+<pre><code>Mission Templates  → template.yaml.tera + schema.yaml = playable mission
+Scene Templates    → triggers.lua.tera  + schema.yaml = scripted encounter
+Resource Packs     → pack.yaml.tera     + schema.yaml = asset override layer
+</code></pre>
+<p>One templating engine (Tera), one pattern, three use cases. Defaults live inline in the schema. User preferences come from settings UI (resource packs) or from the LLM/user filling in parameters (mission templates). No separate values file needed in the common case.</p>
+<h3 id="workshop-distribution-d030"><a class="header" href="#workshop-distribution-d030">Workshop Distribution (D030)</a></h3>
+<p>Resource packs are publishable to the workshop like any other resource:</p>
+<ul>
+<li><code>ic mod init resource-pack</code> → scaffolds a pack with asset manifest</li>
+<li><code>ic mod publish</code> → uploads to workshop</li>
+<li>Players subscribe in-game or via CLI</li>
+<li>Packs from multiple authors can coexist — one per category, player’s choice</li>
+<li>Dependencies work: a mission pack can require a specific cutscene pack (<code>depends: alice/hd-cutscenes@^1.0</code>)</li>
+</ul>
+<h3 id="cutscenes-specifically"><a class="header" href="#cutscenes-specifically">Cutscenes Specifically</a></h3>
+<p>Since cutscenes are what prompted this — the system is particularly powerful here:</p>
+<ol>
+<li><strong>Original <code>.vqa</code> files</strong> — ship with the game (from original RA install). Low-res but authentic.</li>
+<li><strong>AI-upscaled HD</strong> — community or first-party pack running the originals through video upscaling. Same content, better resolution.</li>
+<li><strong>Community remakes</strong> — fans re-creating briefings with modern tools, voice acting, or different artistic styles.</li>
+<li><strong>AI-generated replacements</strong> — using video generation AI to create entirely new briefing sequences. Same narrative beats (referenced from campaign YAML), different visuals.</li>
+<li><strong>Humorous/parody versions</strong> — because the community will absolutely do this, and we should make it easy.</li>
+<li><strong>Localized versions</strong> — same briefings with translated subtitles or dubbed audio.</li>
+</ol>
+<p>The campaign system (D021) references cutscenes by logical ID in the <code>video:</code> field. Changing which pack is active changes which video plays — no campaign YAML edits needed.</p>
 <h2 id="campaign-system-branching-persistent-continuous"><a class="header" href="#campaign-system-branching-persistent-continuous">Campaign System (Branching, Persistent, Continuous)</a></h2>
 <p><em>Inspired by Operation Flashpoint: Cold War Crisis / Resistance. See D021.</em></p>
 <p>OpenRA’s campaigns are disconnected: each mission is standalone, you exit to menu between them, there’s no flow. Our campaigns are <strong>continuous, branching, and stateful</strong> — a directed graph of missions with persistent state, multiple outcomes per mission, and no mandatory game-over screen.</p>
@@ -1281,7 +1462,7 @@ pub struct CompletedMission {
     pub score: i64,
 }
 <span class="boring">}</span></code></pre>
-<p>Campaign state is fully serializable (invariant #10 — snapshottable). Save games capture the entire campaign progress. Replays can replay an entire campaign run, not just individual missions.</p>
+<p>Campaign state is fully serializable (D010 — snapshottable sim state). Save games capture the entire campaign progress. Replays can replay an entire campaign run, not just individual missions.</p>
 <h3 id="lua-campaign-api"><a class="header" href="#lua-campaign-api">Lua Campaign API</a></h3>
 <p>Mission scripts interact with campaign state through a sandboxed API:</p>
 <pre><code class="language-lua">-- === Reading campaign state ===

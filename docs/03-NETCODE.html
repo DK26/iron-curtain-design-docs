@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-0abdde86.js";
+            window.path_to_searchindex_js = "searchindex-5b2ff5f5.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-ef8cba4b.js"></script>
@@ -321,21 +321,21 @@ Delay dynamically adjusted based on connection quality
 <h2 id="input-responsiveness-why-our-model-feels-faster"><a class="header" href="#input-responsiveness-why-our-model-feels-faster">Input Responsiveness: Why Our Model Feels Faster</a></h2>
 <p>Every lockstep RTS has inherent input delay — the game must wait for all players’ orders before advancing. This is <strong>architectural</strong>, not a bug. But how much delay, and who pays for it, varies dramatically.</p>
 <h3 id="openras-stalling-model"><a class="header" href="#openras-stalling-model">OpenRA’s Stalling Model</a></h3>
-<p>OpenRA uses classic lockstep where the <strong>entire game freezes</strong> until the slowest client submits orders:</p>
+<p>OpenRA uses TCP-based lockstep where the game advances only when ALL clients have submitted orders for the current net frame (<code>OrderManager.TryTick()</code> checks <code>pendingOrders.All(...)</code>):</p>
 <pre><code>Tick 50: waiting for Player A's orders... ✓ (10ms)
          waiting for Player B's orders... ✓ (15ms)
          waiting for Player C's orders... ⏳ (280ms — bad WiFi)
          → ALL players frozen for 280ms. Everyone suffers.
 </code></pre>
-<p>Additionally:</p>
+<p>Additionally (verified from source):</p>
 <ul>
 <li>Orders are batched every <code>NetFrameInterval</code> frames (not every tick), adding batching delay</li>
-<li>The server adds <code>OrderLatency</code> frames to every order (typically 3 ticks into the future)</li>
-<li><code>TickScale</code> dynamically slows the game to match the worst connection</li>
+<li>The server adds <code>OrderLatency</code> frames to every order (default 1 for local, higher for MP game speeds)</li>
+<li><code>OrderBuffer</code> dynamically adjusts per-player <code>TickScale</code> (up to 10% speedup) based on delivery timing</li>
 <li>Even in <strong>single player</strong>, <code>EchoConnection</code> projects orders 1 frame forward</li>
-<li>C# GC pauses (5-50ms) add unpredictable jank on top of the architectural delay</li>
+<li>C# GC pauses add unpredictable jank on top of the architectural delay</li>
 </ul>
-<p>The perceived input lag when clicking units in OpenRA is ~100-200ms — a combination of intentional lockstep delay, order batching, and runtime overhead.</p>
+<p>The perceived input lag when clicking units in OpenRA is estimated at ~100-200ms — a combination of intentional lockstep delay, order batching, and runtime overhead.</p>
 <h3 id="our-relay-model-no-stalling"><a class="header" href="#our-relay-model-no-stalling">Our Relay Model: No Stalling</a></h3>
 <p>The relay server owns the clock. It broadcasts tick orders on a fixed deadline — missed orders are replaced with <code>PlayerOrder::Idle</code>:</p>
 <pre><code>Tick 50: relay deadline = 80ms
@@ -367,8 +367,9 @@ fn on_move_order_issued(click_pos: WorldPos, selected_units: &amp;[Entity]) {
     // The visual prediction bridges the gap so the game feels instant.
 }
 <span class="boring">}</span></code></pre>
-<p>This is purely cosmetic — the sim doesn’t advance until the confirmed order arrives. But it eliminates the <strong>perceived</strong> lag that makes OpenRA feel sluggish. The selection ring snaps, the unit rotates, the acknowledgment voice plays — all before the network round-trip completes.</p>
+<p>This is purely cosmetic — the sim doesn’t advance until the confirmed order arrives. But it eliminates the <strong>perceived</strong> lag. The selection ring snaps, the unit rotates, the acknowledgment voice plays — all before the network round-trip completes.</p>
 <h3 id="input-latency-comparison"><a class="header" href="#input-latency-comparison">Input Latency Comparison</a></h3>
+<p><em>OpenRA values are from source code analysis, not runtime benchmarks. Tick processing times are estimates.</em></p>
 <div class="table-wrapper">
 <table>
 <thead>
@@ -377,10 +378,10 @@ fn on_move_order_issued(click_pos: WorldPos, selected_units: &amp;[Entity]) {
 <tbody>
 <tr><td>Waiting for slowest client</td><td>Yes — everyone freezes</td><td>No — relay drops late orders</td><td>Eliminates worst-case stalls entirely</td></tr>
 <tr><td>Order batching interval</td><td>Every N frames (<code>NetFrameInterval</code>)</td><td>Every tick</td><td>No batching delay</td></tr>
-<tr><td>Order scheduling delay</td><td>+3 ticks (<code>OrderLatency</code>)</td><td>+1 tick (next relay broadcast)</td><td>~2 ticks faster</td></tr>
-<tr><td>Tick processing time</td><td>30-60ms (limits tick rate)</td><td>~8ms (allows higher tick rate)</td><td>4-8x faster per tick</td></tr>
+<tr><td>Order scheduling delay</td><td>+<code>OrderLatency</code> ticks</td><td>+1 tick (next relay broadcast)</td><td>Fewer ticks of delay</td></tr>
+<tr><td>Tick processing time</td><td>Estimated 30-60ms (limits tick rate)</td><td>~8ms (allows higher tick rate)</td><td>4-8x faster per tick</td></tr>
 <tr><td>Achievable tick rate</td><td>~15 tps</td><td>30+ tps</td><td>2x shorter lockstep window</td></tr>
-<tr><td>GC pauses during processing</td><td>5-50ms random jank</td><td>0ms</td><td>Eliminates unpredictable hitches</td></tr>
+<tr><td>GC pauses during processing</td><td>C# GC characteristic</td><td>0ms</td><td>Eliminates unpredictable hitches</td></tr>
 <tr><td>Visual feedback on click</td><td>Waits for order confirmation</td><td>Immediate (cosmetic prediction)</td><td>Perceived lag drops to near-zero</td></tr>
 <tr><td>Single-player order delay</td><td>1 projected frame (~66ms at 15 tps)</td><td>0 frames (<code>LocalNetwork</code> = next tick)</td><td>Zero delay</td></tr>
 <tr><td>Worst connection impact</td><td>Freezes all players</td><td>Only affects the lagging player</td><td>Architectural fairness</td></tr>
@@ -416,7 +417,7 @@ fn on_move_order_issued(click_pos: WorldPos, selected_units: &amp;[Entity]) {
 <li>On mismatch → desync detected at specific tick</li>
 <li>Because sim is snapshottable, dump full state and diff to pinpoint exact divergence</li>
 </ol>
-<p>This is a <strong>killer feature OpenRA lacks</strong>. OpenRA desyncs are common and nearly impossible to debug. Our architecture makes them diagnosable.</p>
+<p>This is a <strong>killer feature</strong>. OpenRA has 135+ desync issues in their tracker — desyncs are a persistent, hard-to-debug problem. They hash game state per frame (via <code>[VerifySync]</code> attribute) and detect desyncs, but their sync report buffer is only 7 frames deep, which often isn’t enough to capture the divergence point. Our architecture makes desyncs both detectable AND diagnosable.</p>
 <h2 id="ordercodec-wire-format-abstraction"><a class="header" href="#ordercodec-wire-format-abstraction">OrderCodec: Wire Format Abstraction</a></h2>
 <p>For future cross-engine play and protocol versioning:</p>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]

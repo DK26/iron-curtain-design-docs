@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-0abdde86.js";
+            window.path_to_searchindex_js = "searchindex-5b2ff5f5.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-ef8cba4b.js"></script>
@@ -421,8 +421,8 @@
 <p><strong>Decision:</strong> Leverage Bevy’s modern rendering pipeline (wgpu, shaders, post-processing) to deliver visual quality beyond both OpenRA and the Remastered Collection while maintaining the classic isometric aesthetic.</p>
 <p><strong>Rationale:</strong></p>
 <ul>
-<li>OpenRA uses SDL/OpenGL with basic sprite rendering — no post-processing, no dynamic lighting</li>
-<li>Remastered Collection has 4K sprites but a fixed rendering pipeline — no shader effects</li>
+<li>OpenRA’s renderer has evolved (post-processing added in March 2025) but remains limited by its C#/.NET architecture</li>
+<li>Remastered Collection has HD sprites but the renderer is proprietary and not extensible by modders</li>
 <li>Bevy + wgpu enables: bloom, color grading, dynamic lighting, GPU particles, custom shaders</li>
 <li>Classic aesthetic preserved — these are enhancements, not a style change</li>
 <li>Shader effects bring special abilities to life: chrono-shift shimmer, tesla arcs, nuclear flash</li>
@@ -470,7 +470,7 @@ Game module extensibility targets: Red Alert, RA2, Tiberian Sun, Tiberian Dawn, 
 <p><strong>Rationale:</strong></p>
 <ul>
 <li>Original Red Alert’s balance makes units feel <strong>powerful and iconic</strong> — Tanya, MiGs, Tesla Coils, V2 rockets are devastating. This is what made the game memorable.</li>
-<li>OpenRA rebalances toward competitive fairness, which makes units feel interchangeable and underwhelming to many players. Valid for tournaments, wrong as a default.</li>
+<li>OpenRA rebalances toward competitive fairness, which can dilute the personality of iconic units. Valid for tournaments, wrong as a default.</li>
 <li>The community is split on this. Rather than picking a side, expose it as a choice.</li>
 <li>Presets are just alternate YAML files loaded at game start — zero engine complexity. The modding system already supports this via inheritance and overrides.</li>
 <li>The Remastered Collection made its own subtle balance tweaks — worth capturing as a third preset.</li>
@@ -596,7 +596,7 @@ ic mod update-engine       # bump engine version
 <p><strong>Story flags:</strong> Arbitrary key-value state writable from Lua, readable in subsequent missions. Enables conditional content: “If the radar was captured in mission 2, it provides intel in mission 4.”</p>
 </li>
 <li>
-<p><strong>Campaign state is serializable:</strong> Fits invariant #10 (snapshottable). Save games capture full campaign progress including roster, flags, and path taken. Replays can replay entire campaign runs.</p>
+<p><strong>Campaign state is serializable:</strong> Fits D010 (snapshottable sim state). Save games capture full campaign progress including roster, flags, and path taken. Replays can replay entire campaign runs.</p>
 </li>
 <li>
 <p><strong>Continuous flow:</strong> Briefing → mission → debrief → next mission. No exit to menu between levels unless the player explicitly quits.</p>
@@ -649,7 +649,7 @@ ic mod update-engine       # bump engine version
 <li>Sim/render split respected: surface state is sim (deterministic), visual blending is render (cosmetic)</li>
 <li>Palette tinting tier ensures even low-end devices and WASM can show weather effects</li>
 <li>Gameplay effects are optional per-map — purely cosmetic weather is valid</li>
-<li>Surface state fits the snapshot system (invariant #10) for save games and replays</li>
+<li>Surface state fits the snapshot system (D010) for save games and replays</li>
 <li>Weather schedules are LLM-generable — “generate a mission where weather gets progressively worse”</li>
 </ul>
 <p><strong>Performance:</strong></p>
@@ -892,7 +892,7 @@ ic mod update-engine       # bump engine version
 <tr><td><strong>Shield System</strong></td><td>CA, RA2 force shields, Scrin</td><td>Absorb-before-health, recharge timer, depletion</td></tr>
 <tr><td><strong>Upgrade System</strong></td><td>CA, C&amp;C3 game module</td><td>Per-unit tech research via building, condition grants</td></tr>
 <tr><td><strong>Delayed Weapons</strong></td><td>CA (radiation, poison), RA2 (terror drones)</td><td>Timer-attached effects on targets</td></tr>
-<tr><td><strong>Dual Asset Rendering</strong></td><td>Remastered recreation, HD mod packs</td><td>Runtime-switchable asset quality per entity (in <code>ra-render</code>)</td></tr>
+<tr><td><strong>Dual Asset Rendering</strong></td><td>Remastered recreation, HD mod packs</td><td>Runtime-switchable asset quality per entity (in <code>ra-render</code>). Generalized by the Resource Pack system — see <code>04-MODDING.md</code> § “Resource Packs”</td></tr>
 </tbody>
 </table>
 </div>
@@ -962,6 +962,7 @@ ic mod update-engine       # bump engine version
 <tr><td>Cutscenes / Video</td><td>Briefing video, in-game cinematic, tutorial clip</td></tr>
 <tr><td>UI Themes</td><td>Sidebar layout, font pack, cursor set</td></tr>
 <tr><td>Balance Presets</td><td>Tuned unit/weapon stats as a selectable preset</td></tr>
+<tr><td>Resource Packs</td><td>Switchable asset layer for any category — see <code>04-MODDING.md</code> § “Resource Packs”</td></tr>
 <tr><td>Full Mods</td><td>Traditional mod (may depend on individual resources)</td></tr>
 </tbody>
 </table>
@@ -1332,6 +1333,122 @@ services:
 <li>Always-on telemetry (violates performance invariant — must be zero-cost when disabled)</li>
 </ul>
 <p><strong>Phase:</strong> Backend server telemetry in Phase 5 (multiplayer). Engine telemetry in Phase 2 (sim) and Phase 3 (chrome/debug overlay). AI training pipeline in Phase 7 (LLM).</p>
+<hr>
+<h2 id="d032-switchable-ui-themes-main-menu-chrome-lobby"><a class="header" href="#d032-switchable-ui-themes-main-menu-chrome-lobby">D032: Switchable UI Themes (Main Menu, Chrome, Lobby)</a></h2>
+<p><strong>Decision:</strong> Ship a YAML-driven UI theme system with multiple built-in presets. Players pick their preferred visual style for the main menu, in-game chrome (sidebar, minimap, build queue), and lobby. Mods and community can create and publish custom themes.</p>
+<p><strong>Motivation:</strong></p>
+<p>The Remastered Collection nailed its main menu — it respects the original Red Alert’s military aesthetic while modernizing the presentation. OpenRA went a completely different direction: functional, data-driven, but with a generic feel that doesn’t evoke the same nostalgia. Both approaches have merit for different audiences. Rather than pick one style, let the player choose.</p>
+<p>This also mirrors D019 (switchable balance presets). Just as players choose between Classic, OpenRA, and Remastered balance rules in the lobby, they should be able to choose their visual experience the same way.</p>
+<p><strong>Built-in themes (original art, not copied assets):</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Theme</th><th>Inspired By</th><th>Aesthetic</th><th>Default For</th></tr>
+</thead>
+<tbody>
+<tr><td>Classic</td><td>Original RA1 (1996)</td><td>Military minimalism — bare buttons over a static title screen, Soviet-era propaganda palette, utilitarian layout, Hell March on startup</td><td>RA1 game module</td></tr>
+<tr><td>Remastered</td><td>Remastered Collection (2020)</td><td>Clean modern military — HD polish, sleek panels, reverent to the original but refined, jukebox integration</td><td>—</td></tr>
+<tr><td>Modern</td><td>Iron Curtain’s own design</td><td>Full Bevy UI capabilities — dynamic panels, animated transitions, modern game launcher feel</td><td>New game modules</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Important legal note:</strong> All theme art assets are <strong>original creations</strong> inspired by these design languages — no assets are copied from EA’s Remastered Collection (those are proprietary) or from OpenRA. The themes capture the <em>aesthetic philosophy</em> (palette, layout structure, design mood) but use entirely IC-created sprite sheets, fonts, and layouts. This is standard “inspired by” in game development — layout and color choices are not copyrightable, only specific artistic expression is.</p>
+<p><strong>Theme structure (YAML-defined):</strong></p>
+<pre><code class="language-yaml"># themes/classic.yaml
+theme:
+  name: Classic
+  description: "Inspired by the original Red Alert — military minimalism"
+
+  # Chrome sprite sheet — 9-slice panels, button states, scrollbars
+  chrome:
+    sprite_sheet: themes/classic/chrome.png
+    panel: { top_left: [0, 0, 8, 8], ... }  # 9-slice regions
+    button:
+      normal: [0, 32, 118, 9]
+      hover: [0, 41, 118, 9]
+      pressed: [0, 50, 118, 9]
+      disabled: [0, 59, 118, 9]
+
+  # Color palette
+  colors:
+    primary: "#c62828"       # Soviet red
+    secondary: "#1a1a2e"     # Dark navy
+    text: "#e0e0e0"
+    text_highlight: "#ffd600"
+    panel_bg: "#0d0d1a"
+    panel_border: "#4a4a5a"
+
+  # Typography
+  fonts:
+    menu: { family: "military-stencil", size: 14 }
+    body: { family: "default", size: 12 }
+    hud: { family: "monospace", size: 11 }
+
+  # Main menu layout
+  main_menu:
+    background: themes/classic/title.png     # static image
+    shellmap: null                            # no live battle (faithfully minimal)
+    music: THEME_INTRO                       # Hell March intro
+    button_layout: vertical_center           # stacked buttons, centered
+    show_version: true
+
+  # In-game chrome
+  ingame:
+    sidebar: right                           # classic RA sidebar position
+    minimap: top_right
+    build_queue: sidebar_tabs
+    resource_bar: top_center
+
+  # Lobby
+  lobby:
+    style: compact                           # minimal chrome, functional
+</code></pre>
+<p><strong>Shellmap system (live menu backgrounds):</strong></p>
+<p>Like OpenRA’s signature feature — a real game map with scripted AI battles running behind the main menu. But better:</p>
+<ul>
+<li><strong>Per-theme shellmaps.</strong> Each theme can specify its own shellmap, or none (Classic theme faithfully uses a static image).</li>
+<li><strong>Multiple shellmaps with random selection.</strong> The Remastered and Modern themes can ship with several shellmaps — a random one plays each launch.</li>
+<li><strong>Shellmaps are regular maps</strong> tagged with <code>visibility: shellmap</code> in YAML. The engine loads them with a scripted AI that stages dramatic battles. Mods automatically get their own shellmaps.</li>
+<li><strong>Orbiting/panning camera.</strong> Shellmaps can define camera paths — slow pan across a battlefield, orbiting around a base, or fixed view.</li>
+</ul>
+<p><strong>Per-game-module default themes:</strong></p>
+<p>Each game module registers its own default theme that matches its aesthetic:</p>
+<ul>
+<li><strong>RA1 module:</strong> Classic theme (red/black Soviet palette)</li>
+<li><strong>TD module:</strong> GDI theme (green/black Nod palette) — community or first-party</li>
+<li><strong>RA2 module:</strong> Remastered-style with RA2 color palette — community or first-party</li>
+</ul>
+<p>The game module provides a <code>default_theme()</code> in its <code>GameModule</code> trait implementation. Players override this in settings.</p>
+<p><strong>Integration with existing UI architecture:</strong></p>
+<p>The theme system layers on top of <code>ra-ui</code>’s existing responsive layout profiles (D002, <code>02-ARCHITECTURE.md</code>):</p>
+<ul>
+<li><strong>Layout profiles</strong> handle <em>where</em> UI elements go (sidebar vs bottom bar, phone vs desktop) — driven by <code>ScreenClass</code></li>
+<li><strong>Themes</strong> handle <em>how</em> UI elements look (colors, chrome sprites, fonts, animations) — driven by player preference</li>
+<li>Orthogonal concerns. A player on mobile gets the Phone layout profile + their chosen theme. A player on desktop gets the Desktop layout profile + their chosen theme.</li>
+</ul>
+<p><strong>Community themes:</strong></p>
+<ul>
+<li>Themes are Tier 1 mods (YAML + sprite sheets) — no code required</li>
+<li>Publishable to the workshop (D030) as a standalone resource</li>
+<li>Players subscribe to themes independently of gameplay mods — themes and gameplay mods stack</li>
+<li>An “OpenRA-inspired” theme would be a natural community contribution</li>
+<li>Total conversion mod developers create matching themes for their mods</li>
+</ul>
+<p><strong>What this enables:</strong></p>
+<ol>
+<li><strong>Day-one nostalgia choice.</strong> First launch asks: do you want Classic, Remastered, or Modern? Sets the mood immediately.</li>
+<li><strong>Mod-matched chrome.</strong> A WWII mod ships its own olive-drab theme. A sci-fi mod ships neon blue chrome. The theme changes with the mod.</li>
+<li><strong>Cross-view consistency with D019.</strong> Classic balance + Classic theme = feels like 1996. Remastered balance + Remastered theme = feels like 2020. Players configure the full experience.</li>
+<li><strong>Live backgrounds without code.</strong> Shellmaps are regular maps — anyone can create one with the map editor.</li>
+</ol>
+<p><strong>Alternatives considered:</strong></p>
+<ul>
+<li>Hardcoded single theme (OpenRA approach) — forces one aesthetic on everyone; misses the emotional connection different players have to different eras of C&amp;C</li>
+<li>Copy Remastered Collection assets — illegal; proprietary EA art</li>
+<li>CSS-style theming (web-engine approach) — overengineered for a game; YAML is simpler and Bevy-native</li>
+<li>Theme as a full WASM mod — overkill; theming is data, not behavior; Tier 1 YAML is sufficient</li>
+</ul>
+<p><strong>Phase:</strong> Phase 3 (Game Chrome). Theme system is part of the <code>ra-ui</code> crate. Built-in themes ship with the engine. Community themes available in Phase 6 (workshop).</p>
 <hr>
 <h2 id="pending-decisions"><a class="header" href="#pending-decisions">PENDING DECISIONS</a></h2>
 <div class="table-wrapper">

@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-0abdde86.js";
+            window.path_to_searchindex_js = "searchindex-5b2ff5f5.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-ef8cba4b.js"></script>
@@ -216,10 +216,11 @@
 <li><strong>Modding is tiered.</strong> YAML (data) → Lua (scripting) → WASM (power). Each tier is optional and sandboxed.</li>
 <li><strong>Bevy as framework.</strong> ECS scheduling, rendering, asset pipeline, audio — Bevy handles infrastructure so we focus on game logic. Custom render passes and SIMD only where profiling justifies it.</li>
 <li><strong>Efficiency-first performance.</strong> Better algorithms, cache-friendly ECS, zero-allocation hot paths, simulation LOD, amortized work — THEN multi-core as a bonus layer. A 2-core laptop must run 500 units smoothly.</li>
-<li><strong>Efficiency-first performance.</strong> Better algorithms, cache-friendly ECS, zero-allocation hot paths, simulation LOD, amortized work — THEN multi-core as a bonus layer. A 2-core laptop must run 500 units smoothly.</li>
 <li><strong>Real YAML, not MiniYAML.</strong> Standard <code>serde_yaml</code> with inheritance resolved at load time.</li>
 <li><strong>OpenRA compatibility is at the data/community layer, not the simulation layer.</strong> Same mods, same maps, shared server browser — but not bit-identical simulation.</li>
 <li><strong>Full resource compatibility with Red Alert and OpenRA.</strong> Every .mix, .shp, .pal, .aud, .oramap, and YAML rule file from the original game and OpenRA must load correctly. This is non-negotiable — the community’s existing work is sacred.</li>
+<li><strong>Engine core is game-agnostic.</strong> No game-specific enums, resource types, or unit categories in engine core. Positions are 3D (<code>WorldPos { x, y, z }</code>). System pipeline is registered per game module, not hardcoded.</li>
+<li><strong>Platform-agnostic by design.</strong> Input is abstracted behind <code>InputSource</code> trait. UI layout is responsive (adapts to screen size via <code>ScreenClass</code>). No raw <code>std::fs</code> — all assets go through Bevy’s asset system. Render quality is runtime-configurable.</li>
 </ol>
 <h2 id="crate-structure-overview"><a class="header" href="#crate-structure-overview">Crate Structure Overview</a></h2>
 <pre><code>iron-curtain/

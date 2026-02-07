@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-0abdde86.js";
+            window.path_to_searchindex_js = "searchindex-5b2ff5f5.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-ef8cba4b.js"></script>
@@ -441,6 +441,57 @@ pub enum ScreenClass {
 }
 <span class="boring">}</span></code></pre>
 <p><code>ra-ui</code> reads <code>InputCapabilities</code> to choose the appropriate layout profile. The sim never sees any of this.</p>
+<h2 id="ui-theme-system-d032"><a class="header" href="#ui-theme-system-d032">UI Theme System (D032)</a></h2>
+<p>The UI is split into two orthogonal concerns:</p>
+<ul>
+<li><strong>Layout profiles</strong> — <em>where</em> things go. Driven by <code>ScreenClass</code> (Phone, Tablet, Desktop, TV). Handles sidebar vs bottom bar, touch target sizes, minimap placement. One per screen class.</li>
+<li><strong>Themes</strong> — <em>how</em> things look. Driven by player preference. Handles colors, chrome sprites, fonts, animations, menu backgrounds. Switchable at any time.</li>
+</ul>
+<h3 id="theme-architecture"><a class="header" href="#theme-architecture">Theme Architecture</a></h3>
+<p>Themes are <strong>YAML + sprite sheets</strong> — Tier 1 mods, no code required.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct UiTheme {
+    pub name: String,
+    pub chrome: ChromeAssets,    // 9-slice panels, button states, scrollbar sprites
+    pub colors: ThemeColors,     // primary, secondary, text, highlights
+    pub fonts: ThemeFonts,       // menu, body, HUD
+    pub main_menu: MainMenuConfig,  // background image or shellmap, music, button layout
+    pub ingame: IngameConfig,    // sidebar style, minimap border, build queue chrome
+    pub lobby: LobbyConfig,     // panel styling, slot layout
+}
+<span class="boring">}</span></code></pre>
+<h3 id="built-in-themes"><a class="header" href="#built-in-themes">Built-in Themes</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Theme</th><th>Aesthetic</th><th>Inspired By</th></tr>
+</thead>
+<tbody>
+<tr><td>Classic</td><td>Military minimalism — bare buttons, static title screen, Soviet palette</td><td>Original RA1 (1996)</td></tr>
+<tr><td>Remastered</td><td>Clean modern military — HD panels, sleek chrome, reverent refinement</td><td>Remastered Collection (2020)</td></tr>
+<tr><td>Modern</td><td>Full Bevy UI — dynamic panels, animated transitions, modern game launcher feel</td><td>IC’s own design</td></tr>
+</tbody>
+</table>
+</div>
+<p>All art assets are <strong>original creations</strong> — no assets copied from EA or OpenRA. These themes capture aesthetic philosophy, not specific artwork.</p>
+<h3 id="shellmap-system"><a class="header" href="#shellmap-system">Shellmap System</a></h3>
+<p>Main menu backgrounds can be <strong>live battles</strong> — a real game map with scripted AI running behind the menu UI:</p>
+<ul>
+<li>Per-theme configuration: Classic uses a static image (faithful to 1996), Remastered/Modern use shellmaps</li>
+<li>Maps tagged <code>visibility: shellmap</code> are eligible — random selection on each launch</li>
+<li>Shellmaps define camera paths (pan, orbit, or fixed)</li>
+<li>Mods automatically get their own shellmaps</li>
+</ul>
+<h3 id="per-game-module-defaults"><a class="header" href="#per-game-module-defaults">Per-Game-Module Defaults</a></h3>
+<p>Each <code>GameModule</code> provides a <code>default_theme()</code> — RA1 defaults to Classic, future modules default to whatever fits their aesthetic. Players override in settings. This pairs naturally with D019 (switchable balance presets): Classic balance + Classic theme = feels like 1996.</p>
+<h3 id="community-themes"><a class="header" href="#community-themes">Community Themes</a></h3>
+<ul>
+<li>Publishable to workshop (D030) as standalone resources</li>
+<li>Stack with gameplay mods — a WWII total conversion ships its own olive-drab theme</li>
+<li>An “OpenRA-inspired” community theme is a natural contribution</li>
+</ul>
+<p>See <code>09-DECISIONS.md</code> § D032 for full rationale, YAML schema, and legal notes on asset sourcing.</p>
 <h2 id="crate-dependency-graph"><a class="header" href="#crate-dependency-graph">Crate Dependency Graph</a></h2>
 <pre><code>ra-protocol  (shared types: PlayerOrder, TimestampedOrder)
     ↑
@@ -452,7 +503,8 @@ pub enum ScreenClass {
     ├── ra-audio    (depends on: ra-formats)
     ├── ra-script   (depends on: ra-sim, ra-protocol)
     ├── ra-ai       (depends on: ra-sim, ra-protocol)
-    └── ra-engine   (depends on: everything above)
+    ├── ra-llm      (depends on: ra-sim, ra-script, ra-protocol)
+    └── ra-game     (depends on: everything above)
 </code></pre>
 <p><strong>Critical boundary:</strong> <code>ra-sim</code> never imports from <code>ra-net</code>. <code>ra-net</code> never imports from <code>ra-sim</code>. They only share <code>ra-protocol</code>.</p>
 <h2 id="multi-game-extensibility-game-modules"><a class="header" href="#multi-game-extensibility-game-modules">Multi-Game Extensibility (Game Modules)</a></h2>

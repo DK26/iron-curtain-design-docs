@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-0abdde86.js";
+            window.path_to_searchindex_js = "searchindex-5b2ff5f5.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-ef8cba4b.js"></script>
@@ -198,15 +198,15 @@
 <tr><th>Capability</th><th>Remastered Collection</th><th>OpenRA</th><th>Iron Curtain</th></tr>
 </thead>
 <tbody>
-<tr><td>Engine</td><td>Original C++ with patches</td><td>C# / .NET (2007)</td><td>Rust + Bevy (2026)</td></tr>
+<tr><td>Engine</td><td>Original C++ as DLL, proprietary C# client</td><td>C# / .NET (2007)</td><td>Rust + Bevy (2026)</td></tr>
 <tr><td>Platforms</td><td>Windows, Xbox</td><td>Windows, macOS, Linux</td><td>All + Browser + Mobile</td></tr>
-<tr><td>Max units (smooth)</td><td>~200 (original engine limits)</td><td>~300-500 (community reports lag beyond)</td><td>2000+ target</td></tr>
+<tr><td>Max units (smooth)</td><td>Unknown (not benchmarked)</td><td>Community reports lag at 300-500 units</td><td>2000+ target</td></tr>
 <tr><td>Modding</td><td>Steam Workshop maps, limited API</td><td>MiniYAML + C# (recompile for deep mods)</td><td>YAML + Lua + WASM (no recompile ever)</td></tr>
 <tr><td>AI content</td><td>Fixed campaigns</td><td>Fixed campaigns + community missions</td><td>Branching campaigns + LLM-generated missions</td></tr>
-<tr><td>Multiplayer</td><td>Rebuilt but server issues reported</td><td>Lockstep with frequent desyncs</td><td>Relay server, desync diagnosis, signed replays</td></tr>
-<tr><td>Competitive</td><td>No ranked, no anti-cheat</td><td>Informal community ladders only</td><td>Ranked matchmaking, Glicko-2, relay-certified results</td></tr>
-<tr><td>Graphics pipeline</td><td>Fixed 4K sprite upscale</td><td>SDL/OpenGL basic rendering</td><td>Bevy + wgpu: shaders, post-FX, dynamic lighting, particles</td></tr>
-<tr><td>Source</td><td>Closed</td><td>Open (GPL)</td><td>Open (GPL)</td></tr>
+<tr><td>Multiplayer</td><td>Proprietary networking (not open-sourced)</td><td>TCP lockstep, 135+ desync issues tracked</td><td>Relay server, desync diagnosis, signed replays</td></tr>
+<tr><td>Competitive</td><td>No ranked, no anti-cheat</td><td>Community ladders via CnCNet</td><td>Ranked matchmaking, Glicko-2, relay-certified results</td></tr>
+<tr><td>Graphics pipeline</td><td>HD sprites, proprietary renderer</td><td>Custom renderer with post-processing (since March 2025)</td><td>Bevy + wgpu: shaders, post-FX, dynamic lighting, particles</td></tr>
+<tr><td>Source</td><td>C++ engine GPL; networking/rendering proprietary</td><td>Open (GPL)</td><td>Open (GPL)</td></tr>
 <tr><td>Community assets</td><td>Separate ecosystem</td><td>18 years of maps/mods</td><td>Loads all OpenRA assets + migration tools</td></tr>
 </tbody>
 </table>
@@ -217,7 +217,7 @@
 <p>Future extensions: multi-mission campaign generation, adaptive difficulty that responds to player style, cooperative scenario generation for multiplayer.</p>
 <p>This transforms Red Alert from a game with finite content to a game with infinite content.</p>
 <p><strong>Bevy Rendering Pipeline</strong></p>
-<p>Building on Bevy’s modern rendering stack unlocks visual capabilities impossible on OpenRA’s SDL/OpenGL or the Remastered Collection’s fixed pipeline:</p>
+<p>Building on Bevy’s modern rendering stack unlocks visual capabilities beyond what OpenRA or the Remastered Collection currently offer:</p>
 <ul>
 <li>Post-processing: bloom, color grading, screen-space reflections on water</li>
 <li>Dynamic lighting: explosions illuminate surroundings, day/night cycles</li>
@@ -238,14 +238,14 @@
 </thead>
 <tbody>
 <tr><td>Runtime</td><td>C# / .NET — GC pauses, heavy runtime</td><td>Rust — no GC, predictable perf</td></tr>
-<tr><td>Threading</td><td>Single-threaded game loop</td><td>Parallel systems via ECS</td></tr>
+<tr><td>Threading</td><td>Single-threaded game loop (verified)</td><td>Parallel systems via ECS</td></tr>
 <tr><td>Modding</td><td>Powerful but requires C# for deep mods</td><td>YAML + Lua + WASM (no compile step)</td></tr>
 <tr><td>Map editor</td><td>Separate tool, recently improved</td><td>In-engine editor (Phase 6)</td></tr>
-<tr><td>Multiplayer</td><td>Desyncs common, hard to debug</td><td>Snapshottable sim enables desync pinpointing</td></tr>
-<tr><td>Competitive</td><td>No ranked play, no anti-cheat</td><td>Ranked matchmaking, anti-cheat, tournament mode</td></tr>
+<tr><td>Multiplayer</td><td>135+ desync issues tracked</td><td>Snapshottable sim enables desync pinpointing</td></tr>
+<tr><td>Competitive</td><td>Community ladders via CnCNet</td><td>Ranked matchmaking, anti-cheat, tournament mode</td></tr>
 <tr><td>Portability</td><td>Desktop only (Mono/.NET)</td><td>Native + WASM (browser) + mobile</td></tr>
-<tr><td>Engine age</td><td>Started 2007, showing architectural debt</td><td>Clean-sheet modern design</td></tr>
-<tr><td>Campaigns</td><td>Incomplete — many are broken or cut short</td><td>Branching campaigns with persistent state (D021)</td></tr>
+<tr><td>Engine age</td><td>Started 2007, actively maintained</td><td>Clean-sheet modern design</td></tr>
+<tr><td>Campaigns</td><td>Some incomplete (TD, Dune 2000)</td><td>Branching campaigns with persistent state (D021)</td></tr>
 <tr><td>Mission flow</td><td>Manual mission selection between levels</td><td>Continuous flow: briefing → mission → debrief → next</td></tr>
 </tbody>
 </table>
@@ -262,7 +262,7 @@
 </ol>
 <p>Item 7 is the linchpin. If existing mods just work, migration cost drops to near zero.</p>
 <h2 id="competitive-play"><a class="header" href="#competitive-play">Competitive Play</a></h2>
-<p>Red Alert has a dedicated competitive community (primarily through OpenRA and CnCNet). They play with no ranked system, no automated anti-cheat, no official tournaments, and frequent desyncs. This is a massive opportunity.</p>
+<p>Red Alert has a dedicated competitive community (primarily through OpenRA and CnCNet). CnCNet provides community ladders and tournament infrastructure, but there’s no integrated ranked system, no automated anti-cheat, and desyncs remain a persistent issue (135+ tracked in OpenRA’s issue tracker). This is a significant opportunity.</p>
 <h3 id="ranked-matchmaking"><a class="header" href="#ranked-matchmaking">Ranked Matchmaking</a></h3>
 <ul>
 <li><strong>Rating system:</strong> Glicko-2 (improvement over Elo — accounts for rating volatility and inactivity, used by Lichess, FIDE, many modern games)</li>
@@ -422,7 +422,7 @@
 <p>Iron Curtain’s default gameplay targets the <strong>original Red Alert experience</strong>, not OpenRA’s rebalanced version. This is a deliberate choice:</p>
 <ul>
 <li><strong>Units should feel powerful and distinct.</strong> Tanya kills soldiers from range, fast, and doesn’t die easily — she’s a special operative, not a fragile glass cannon. MiG attacks should be devastating. V2 rockets should be terrifying. Tesla coils should fry anything that comes close. <strong>If a unit was iconic in the original game, it should feel iconic here.</strong></li>
-<li><strong>OpenRA’s competitive rebalancing</strong> makes units more “fair” for tournament play but strips the personality from the game. Every unit feels interchangeable and underwhelming. That’s a valid design choice for competitive players, but it’s not <em>our</em> default.</li>
+<li><strong>OpenRA’s competitive rebalancing</strong> makes units more “fair” for tournament play but can dilute the personality of iconic units. That’s a valid design choice for competitive players, but it’s not <em>our</em> default.</li>
 <li><strong>OpenRA’s UX/UI innovations are genuinely excellent</strong> and we adopt them: attack-move, waypoint queuing, production queues, control group management, minimap interactions, build radius visualization. The Remastered Collection’s UI density and layout is our gold standard for visual design.</li>
 </ul>
 <h3 id="switchable-balance-presets-d019"><a class="header" href="#switchable-balance-presets-d019">Switchable Balance Presets (D019)</a></h3>
