@@ -100,6 +100,7 @@ Units moving, shooting, dying — headless sim + rendered. Record replay file. P
 
 ### Deliverables
 - Sidebar UI: build queues, power bar, credits display, radar minimap
+- Radar panel as multi-mode display: minimap (default), comm video feed (RA2-style), tactical overlay
 - Unit selection: box select, ctrl-groups, tab cycling
 - Build placement with validity checking
 - Audio: EVA voice lines, unit responses, ambient, music (`.aud` playback)

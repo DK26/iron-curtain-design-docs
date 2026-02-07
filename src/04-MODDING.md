@@ -516,7 +516,22 @@ Campaign          — ordered mission sequence with narrative
 | `timed_objective` | target, time_limit, failure_trigger                    | Player must complete objective before timer expires            |
 | `reinforcements`  | trigger, units, entry_point, delay                     | Units arrive from map edge when trigger fires                  |
 | `scripted_scene`  | actors[], dialogue[], camera_positions[]               | Non-interactive cutscene or briefing with camera movement      |
+| `video_playback`  | video_ref, trigger, display_mode, skippable            | Play a video on trigger — see display modes below              |
 | `extraction`      | pickup_zone, transport_type, signal_trigger            | Player moves units to extraction zone, transport arrives       |
+
+**`video_playback` display modes:**
+
+The `display_mode` parameter controls *where* the video renders:
+
+| Mode                 | Behavior                                                                                | Inspiration                     |
+| -------------------- | --------------------------------------------------------------------------------------- | ------------------------------- |
+| `fullscreen`         | Pauses gameplay, fills screen. Classic FMV briefing between missions.                   | RA1 mission briefings           |
+| `radar_comm`         | Video replaces the radar/minimap panel during gameplay. Game continues. RA2-style comm. | RA2 EVA / commander video calls |
+| `picture_in_picture` | Small floating video overlay in a corner. Game continues. Dismissible.                  | Modern RTS cinematics           |
+
+`radar_comm` is how RA2 handles in-mission conversations — the radar panel temporarily switches to a video feed of a character addressing the player, then returns to the minimap when the clip ends. The sidebar stays functional (build queues, power bar still visible). This creates narrative immersion without interrupting gameplay.
+
+The LLM can use this in generated missions: a briefing video at mission start (`fullscreen`), a commander calling in mid-mission when a trigger fires (`radar_comm`), and a small notification video when reinforcements arrive (`picture_in_picture`).
 
 **Scene template structure:**
 
@@ -589,15 +604,16 @@ A "convoy escort with two ambushes and a base-building finale" is 3 scene templa
 
 Scene templates and mission templates are both first-class workshop resource types — shared, rated, versioned, and downloadable like any other content.
 
-| Type                  | Contents                                 | Examples                                         |
-| --------------------- | ---------------------------------------- | ------------------------------------------------ |
-| Mods                  | YAML rules + Lua scripts + WASM modules  | Total conversions, balance patches, new factions |
-| Maps                  | `.oramap` or native map format           | Skirmish maps, campaign maps                     |
-| Missions              | YAML map + Lua triggers + briefing       | Hand-crafted or LLM-generated scenarios          |
-| **Scene Templates**   | **Tera-templated Lua + schema**          | **Reusable sub-mission building blocks**         |
-| **Mission Templates** | **Tera templates + scene refs + schema** | **Full parameterized mission blueprints**        |
-| Campaigns             | Ordered mission sets + narrative         | Multi-mission storylines                         |
-| Assets                | Sprites, music, sounds, palettes         | HD unit packs, custom soundtracks, voice packs   |
+| Type                  | Contents                                  | Examples                                          |
+| --------------------- | ----------------------------------------- | ------------------------------------------------- |
+| Mods                  | YAML rules + Lua scripts + WASM modules   | Total conversions, balance patches, new factions  |
+| Maps                  | `.oramap` or native map format            | Skirmish maps, campaign maps                      |
+| Missions              | YAML map + Lua triggers + briefing        | Hand-crafted or LLM-generated scenarios           |
+| **Scene Templates**   | **Tera-templated Lua + schema**           | **Reusable sub-mission building blocks**          |
+| **Mission Templates** | **Tera templates + scene refs + schema**  | **Full parameterized mission blueprints**         |
+| Campaigns             | Ordered mission sets + narrative          | Multi-mission storylines                          |
+| Assets                | Sprites, music, sounds, palettes          | HD unit packs, custom soundtracks, voice packs    |
+| **Media**             | **Video files (`.vqa`, `.mp4`, `.webm`)** | **Custom briefings, cutscenes, narrative videos** |
 
 ### Configurable Workshop Server
 
@@ -633,7 +649,10 @@ The `ra-llm` crate can access workshop content as context for generation:
 - Browse existing maps for terrain style inspiration
 - Reference community unit definitions when generating missions
 - Pull asset packs to use in generated content
+- **Reference workshop media** (videos, cutscenes) in generated scenarios — e.g., an LLM-generated mission can include `video_playback` scene triggers that pull community-created briefing videos from the workshop
 - Publish generated missions directly to the workshop for sharing
+
+The LLM sees workshop resources through their `ai_meta` fields. A video tagged `summary: "Soviet commander briefing, urgent tone, 30 seconds"` lets the LLM intelligently select it for a mission's opening briefing trigger.
 
 ### Workshop API
 

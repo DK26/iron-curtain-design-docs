@@ -260,6 +260,15 @@ See `10-PERFORMANCE.md` for full details, targets, and implementation patterns.
 - Validation pass ensures generated content is playable (valid unit types, reachable objectives)
 - Can use local models or API-based models (user choice)
 
+**Bring-Your-Own-LLM (BYOLLM) architecture:**
+- `ra-llm` defines a `LlmProvider` trait — any backend that accepts a prompt and returns structured text
+- Built-in providers: OpenAI-compatible API, local Ollama/llama.cpp, Anthropic API
+- Users configure their provider in settings (API key, endpoint, model name)
+- The engine never ships or requires a specific model — the user chooses
+- Provider is a runtime setting, not a compile-time dependency
+- All prompts and responses are logged (opt-in) for debugging and sharing
+- Offline mode: pre-generated content works without any LLM connection
+
 ---
 
 ## D017: Bevy Rendering Pipeline for Visual Enhancement
