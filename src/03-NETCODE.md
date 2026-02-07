@@ -61,6 +61,11 @@ pub struct TimestampedOrder {
     pub order: PlayerOrder,
     pub sub_tick_time: f64,  // fractional time within the tick window
 }
+// NOTE: sub_tick_time is f64 in ra-protocol, not ra-sim. This does not violate
+// invariant #1 (no floats in sim). The value is used exclusively for pre-sim
+// order sorting — the sim receives orders already sorted and never inspects
+// this field. sub_tick_time is excluded from state_hash() and does not
+// participate in deterministic simulation calculations.
 
 pub struct TickOrders {
     pub tick: u64,
@@ -222,18 +227,18 @@ This is purely cosmetic — the sim doesn't advance until the confirmed order ar
 
 *OpenRA values are from source code analysis, not runtime benchmarks. Tick processing times are estimates.*
 
-| Factor                      | OpenRA                              | Iron Curtain (Relay)                  | Improvement                            |
-| --------------------------- | ----------------------------------- | ------------------------------------- | -------------------------------------- |
-| Waiting for slowest client  | Yes — everyone freezes              | No — relay drops late orders          | Eliminates worst-case stalls entirely  |
-| Order batching interval     | Every N frames (`NetFrameInterval`) | Every tick                            | No batching delay                      |
-| Order scheduling delay      | +`OrderLatency` ticks               | +1 tick (next relay broadcast)        | Fewer ticks of delay                   |
+| Factor                      | OpenRA                               | Iron Curtain (Relay)                  | Improvement                            |
+| --------------------------- | ------------------------------------ | ------------------------------------- | -------------------------------------- |
+| Waiting for slowest client  | Yes — everyone freezes               | No — relay drops late orders          | Eliminates worst-case stalls entirely  |
+| Order batching interval     | Every N frames (`NetFrameInterval`)  | Every tick                            | No batching delay                      |
+| Order scheduling delay      | +`OrderLatency` ticks                | +1 tick (next relay broadcast)        | Fewer ticks of delay                   |
 | Tick processing time        | Estimated 30-60ms (limits tick rate) | ~8ms (allows higher tick rate)        | 4-8x faster per tick                   |
-| Achievable tick rate        | ~15 tps                             | 30+ tps                               | 2x shorter lockstep window             |
-| GC pauses during processing | C# GC characteristic                | 0ms                                   | Eliminates unpredictable hitches       |
-| Visual feedback on click    | Waits for order confirmation        | Immediate (cosmetic prediction)       | Perceived lag drops to near-zero       |
-| Single-player order delay   | 1 projected frame (~66ms at 15 tps) | 0 frames (`LocalNetwork` = next tick) | Zero delay                             |
-| Worst connection impact     | Freezes all players                 | Only affects the lagging player       | Architectural fairness                 |
-| Future: rollback prediction | Not possible (no snapshots)         | Possible (D010 enables GGPO)          | Could eliminate all perceived MP delay |
+| Achievable tick rate        | ~15 tps                              | 30+ tps                               | 2x shorter lockstep window             |
+| GC pauses during processing | C# GC characteristic                 | 0ms                                   | Eliminates unpredictable hitches       |
+| Visual feedback on click    | Waits for order confirmation         | Immediate (cosmetic prediction)       | Perceived lag drops to near-zero       |
+| Single-player order delay   | 1 projected frame (~66ms at 15 tps)  | 0 frames (`LocalNetwork` = next tick) | Zero delay                             |
+| Worst connection impact     | Freezes all players                  | Only affects the lagging player       | Architectural fairness                 |
+| Future: rollback prediction | Not possible (no snapshots)          | Possible (D010 enables GGPO)          | Could eliminate all perceived MP delay |
 
 ### Single-Player: Zero Delay
 

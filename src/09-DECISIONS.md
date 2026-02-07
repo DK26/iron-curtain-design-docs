@@ -750,7 +750,7 @@ ic mod update-engine       # bump engine version
 | Tier 2 (Lua)   | ~15%        | ~10%       |
 | Tier 3 (WASM)  | ~15%        | ~5%        |
 
-**Phase:** Phase 2 (sim-side components) + Phase 1 (dual asset rendering in `ra-render`).
+**Phase:** Phase 2 (sim-side components and dual asset rendering in `ra-render`).
 
 ---
 
@@ -782,24 +782,26 @@ Every Workshop resource gets a globally unique identifier: `namespace/name@versi
 
 Resources aren't limited to mod-sized packages. Granularity is flexible:
 
-| Category          | Granularity Examples                                                             |
-| ----------------- | -------------------------------------------------------------------------------- |
-| Music             | Single track, album, soundtrack                                                  |
-| Sound Effects     | Weapon sound pack, ambient loops, UI sounds                                      |
-| Voice Lines       | EVA pack, unit response set, faction voice pack                                  |
-| Sprites           | Single unit sheet, building sprites, effects pack                                |
-| Textures          | Terrain tileset, UI skin, palette-indexed sprites                                |
-| Palettes          | Theater palette, faction palette, seasonal palette                               |
-| Maps              | Single map, map pack, tournament map pool                                        |
-| Missions          | Single mission, mission chain                                                    |
-| Campaign Chapters | Story arc with persistent state                                                  |
-| Scene Templates   | Tera scene template for LLM composition                                          |
-| Mission Templates | Tera mission template for LLM composition                                        |
-| Cutscenes / Video | Briefing video, in-game cinematic, tutorial clip                                 |
-| UI Themes         | Sidebar layout, font pack, cursor set                                            |
-| Balance Presets   | Tuned unit/weapon stats as a selectable preset                                   |
-| Resource Packs    | Switchable asset layer for any category — see `04-MODDING.md` § "Resource Packs" |
-| Full Mods         | Traditional mod (may depend on individual resources)                             |
+| Category           | Granularity Examples                                                             |
+| ------------------ | -------------------------------------------------------------------------------- |
+| Music              | Single track, album, soundtrack                                                  |
+| Sound Effects      | Weapon sound pack, ambient loops, UI sounds                                      |
+| Voice Lines        | EVA pack, unit response set, faction voice pack                                  |
+| Sprites            | Single unit sheet, building sprites, effects pack                                |
+| Textures           | Terrain tileset, UI skin, palette-indexed sprites                                |
+| Palettes           | Theater palette, faction palette, seasonal palette                               |
+| Maps               | Single map, map pack, tournament map pool                                        |
+| Missions           | Single mission, mission chain                                                    |
+| Campaign Chapters  | Story arc with persistent state                                                  |
+| Scene Templates    | Tera scene template for LLM composition                                          |
+| Mission Templates  | Tera mission template for LLM composition                                        |
+| Cutscenes / Video  | Briefing video, in-game cinematic, tutorial clip                                 |
+| UI Themes          | Sidebar layout, font pack, cursor set                                            |
+| Balance Presets    | Tuned unit/weapon stats as a selectable preset                                   |
+| QoL Presets        | Gameplay behavior toggle set (D033) — sim-affecting + client-only toggles        |
+| Experience Profile | Combined balance + theme + QoL preset (D019+D032+D033) — one-click experience    |
+| Resource Packs     | Switchable asset layer for any category — see `04-MODDING.md` § "Resource Packs" |
+| Full Mods          | Traditional mod (may depend on individual resources)                             |
 
 A published resource is just a `ResourcePackage` with the appropriate `ResourceCategory`. The existing `asset-pack` template and `ic mod publish` flow handle this natively — no separate command needed.
 

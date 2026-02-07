@@ -323,6 +323,8 @@ end)
 - Execution time limits per tick
 - Memory limits per mod
 
+**Determinism note:** Lua's internal number type is `f64`, but this does not affect sim determinism. Lua has **read-only access** to game state and **write access exclusively through orders**. The sim processes orders deterministically — Lua cannot directly modify sim components. Lua evaluation produces identical results across all clients because it runs at the same point in the system pipeline (the `triggers` step), with the same game state as input, on every tick.
+
 ## Tier 3: WASM Modules
 
 ### Rationale
@@ -960,23 +962,25 @@ A "convoy escort with two ambushes and a base-building finale" is 3 scene templa
 
 Scene templates and mission templates are both first-class workshop resource types — shared, rated, versioned, and downloadable like any other content. See the full resource category taxonomy in the [Workshop Resource Registry](#workshop-resource-registry--dependency-system-d030) section below.
 
-| Type                  | Contents                                 | Examples                                         |
-| --------------------- | ---------------------------------------- | ------------------------------------------------ |
-| Mods                  | YAML rules + Lua scripts + WASM modules  | Total conversions, balance patches, new factions |
-| Maps                  | `.oramap` or native map format           | Skirmish maps, campaign maps, tournament pools   |
-| Missions              | YAML map + Lua triggers + briefing       | Hand-crafted or LLM-generated scenarios          |
-| **Scene Templates**   | **Tera-templated Lua + schema**          | **Reusable sub-mission building blocks**         |
-| **Mission Templates** | **Tera templates + scene refs + schema** | **Full parameterized mission blueprints**        |
-| Campaigns             | Ordered mission sets + narrative         | Multi-mission storylines                         |
-| Music                 | Audio tracks (`.ogg`, `.mp3`, `.flac`)   | Custom soundtracks, faction themes, menu music   |
-| Sound Effects         | Audio clips                              | Weapon sounds, ambient loops, UI feedback        |
-| Voice Lines           | Audio clips + trigger metadata           | EVA packs, unit responses, faction voice sets    |
-| Sprites               | `.shp`, `.png`, sprite sheets            | HD unit packs, building sprites, effects packs   |
-| Textures              | Terrain tiles, UI skins                  | Theater tilesets, seasonal terrain variants      |
-| Palettes              | `.pal` files                             | Theater palettes, faction colors, seasonal       |
-| Cutscenes / Video     | `.vqa`, `.mp4`, `.webm`                  | Custom briefings, cinematics, narrative videos   |
-| UI Themes             | Chrome layouts, fonts, cursors           | Alternative sidebars, HD cursor packs            |
-| Balance Presets       | YAML rule overrides                      | Competitive tuning, historical accuracy presets  |
+| Type                  | Contents                                        | Examples                                         |
+| --------------------- | ----------------------------------------------- | ------------------------------------------------ |
+| Mods                  | YAML rules + Lua scripts + WASM modules         | Total conversions, balance patches, new factions |
+| Maps                  | `.oramap` or native map format                  | Skirmish maps, campaign maps, tournament pools   |
+| Missions              | YAML map + Lua triggers + briefing              | Hand-crafted or LLM-generated scenarios          |
+| **Scene Templates**   | **Tera-templated Lua + schema**                 | **Reusable sub-mission building blocks**         |
+| **Mission Templates** | **Tera templates + scene refs + schema**        | **Full parameterized mission blueprints**        |
+| Campaigns             | Ordered mission sets + narrative                | Multi-mission storylines                         |
+| Music                 | Audio tracks (`.ogg`, `.mp3`, `.flac`)          | Custom soundtracks, faction themes, menu music   |
+| Sound Effects         | Audio clips                                     | Weapon sounds, ambient loops, UI feedback        |
+| Voice Lines           | Audio clips + trigger metadata                  | EVA packs, unit responses, faction voice sets    |
+| Sprites               | `.shp`, `.png`, sprite sheets                   | HD unit packs, building sprites, effects packs   |
+| Textures              | Terrain tiles, UI skins                         | Theater tilesets, seasonal terrain variants      |
+| Palettes              | `.pal` files                                    | Theater palettes, faction colors, seasonal       |
+| Cutscenes / Video     | `.vqa`, `.mp4`, `.webm`                         | Custom briefings, cinematics, narrative videos   |
+| UI Themes             | Chrome layouts, fonts, cursors                  | Alternative sidebars, HD cursor packs            |
+| Balance Presets       | YAML rule overrides                             | Competitive tuning, historical accuracy presets  |
+| QoL Presets           | Gameplay behavior toggle sets (D033)            | Custom QoL configurations, community favorites   |
+| Experience Profiles   | Combined balance + theme + QoL (D019+D032+D033) | One-click full experience configurations         |
 
 ## Resource Packs (Switchable Asset Layers)
 
@@ -1072,14 +1076,14 @@ For CLI users, `ic resource-pack install hd-cutscenes` installs the pack with it
 
 Flat override maps (`asset_a → asset_b`) work for simple cases, but fall apart when packs need to:
 
-| Need | Flat Mapping | Tera Template |
-| --- | --- | --- |
-| Quality tiers (720p/1080p/4k) | 3 separate packs with 90% duplicated YAML | One pack, `quality` parameter |
-| Language variants | One pack per language × quality = combinatorial explosion | `{% if language != "en" %}` conditional |
-| Faction-specific overrides | Manual enumeration of every faction's assets | `{% for faction in factions %}` loop |
-| Optional components (victory sequences, tutorial videos) | Separate packs or monolithic everything-pack | Boolean parameters with `{% if %}` |
-| Platform-aware (mobile gets 720p, desktop gets 1080p) | Separate mobile/desktop packs | `quality` defaults per `ScreenClass` |
-| Mod-aware (pack adapts to which game module is active) | One pack per game module | `{% if game_module == "ra2" %}` conditional |
+| Need                                                     | Flat Mapping                                              | Tera Template                               |
+| -------------------------------------------------------- | --------------------------------------------------------- | ------------------------------------------- |
+| Quality tiers (720p/1080p/4k)                            | 3 separate packs with 90% duplicated YAML                 | One pack, `quality` parameter               |
+| Language variants                                        | One pack per language × quality = combinatorial explosion | `{% if language != "en" %}` conditional     |
+| Faction-specific overrides                               | Manual enumeration of every faction's assets              | `{% for faction in factions %}` loop        |
+| Optional components (victory sequences, tutorial videos) | Separate packs or monolithic everything-pack              | Boolean parameters with `{% if %}`          |
+| Platform-aware (mobile gets 720p, desktop gets 1080p)    | Separate mobile/desktop packs                             | `quality` defaults per `ScreenClass`        |
+| Mod-aware (pack adapts to which game module is active)   | One pack per game module                                  | `{% if game_module == "ra2" %}` conditional |
 
 This is the same reason Helm uses Go templates instead of static YAML — real-world configuration has conditionals, loops, and user-specific values. Our approach is inspired by Helm's parameterized templating, but the configuration surface is the in-game settings UI, not a CLI + values file workflow.
 
@@ -1109,14 +1113,14 @@ The engine detects `.tera` extension → renders template; plain `.yaml` → loa
 
 Players can mix and match one pack per category:
 
-| Category | What It Overrides | Example Packs |
-| --- | --- | --- |
-| Cutscenes | Briefing videos, victory/defeat sequences, in-mission cinematics | Original `.vqa`, AI-upscaled HD, community remakes, humorous parodies |
-| Sprites | Unit art, building art, effects, projectiles | Classic `.shp`, HD sprite pack, hand-drawn style |
-| Music | Soundtrack, menu music, faction themes | Original, Frank Klepacki remastered, community compositions |
-| Voice Lines | EVA announcements, unit responses | Original, alternative EVA voices, localized voice packs |
-| Sound Effects | Weapon sounds, explosions, ambient | Original, enhanced audio, retro 8-bit |
-| Terrain | Theater tilesets, terrain textures | Classic, HD, seasonal (winter/desert variants) |
+| Category      | What It Overrides                                                | Example Packs                                                         |
+| ------------- | ---------------------------------------------------------------- | --------------------------------------------------------------------- |
+| Cutscenes     | Briefing videos, victory/defeat sequences, in-mission cinematics | Original `.vqa`, AI-upscaled HD, community remakes, humorous parodies |
+| Sprites       | Unit art, building art, effects, projectiles                     | Classic `.shp`, HD sprite pack, hand-drawn style                      |
+| Music         | Soundtrack, menu music, faction themes                           | Original, Frank Klepacki remastered, community compositions           |
+| Voice Lines   | EVA announcements, unit responses                                | Original, alternative EVA voices, localized voice packs               |
+| Sound Effects | Weapon sounds, explosions, ambient                               | Original, enhanced audio, retro 8-bit                                 |
+| Terrain       | Theater tilesets, terrain textures                               | Classic, HD, seasonal (winter/desert variants)                        |
 
 ### Settings UI
 
@@ -1142,12 +1146,12 @@ The ⚙ Configure button appears when a pack has a `schema.yaml` with user-confi
 
 Resource packs generalize a pattern that already appears in several places:
 
-| Decision | What It Switches | Resource Pack Equivalent |
-| --- | --- | --- |
-| D019 | Balance rule sets (Classic/OpenRA/Remastered) | Balance presets already work this way |
-| D029 | Classic/HD sprite rendering (dual asset) | Sprite resource packs supersede this; D029's `classic:`/`hd:` YAML keys become the first two sprite packs |
-| D032 | UI chrome, menus, lobby (themes) | UI themes are resource packs for the chrome category |
-| Tera templating | Mission/scene templates | Resource packs use the same `template.tera` + `schema.yaml` pattern — one templating system for everything |
+| Decision        | What It Switches                              | Resource Pack Equivalent                                                                                   |
+| --------------- | --------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| D019            | Balance rule sets (Classic/OpenRA/Remastered) | Balance presets already work this way                                                                      |
+| D029            | Classic/HD sprite rendering (dual asset)      | Sprite resource packs supersede this; D029's `classic:`/`hd:` YAML keys become the first two sprite packs  |
+| D032            | UI chrome, menus, lobby (themes)              | UI themes are resource packs for the chrome category                                                       |
+| Tera templating | Mission/scene templates                       | Resource packs use the same `template.tera` + `schema.yaml` pattern — one templating system for everything |
 
 The underlying mechanism is the same: **YAML-level asset indirection with Tera rendering**. The `template.tera` + `schema.yaml` pattern appears in three places:
 
@@ -1931,13 +1935,13 @@ jobs:
 
 **What this enables:**
 
-| Workflow | Description |
-| --- | --- |
-| **Tag-triggered publish** | Push a `v1.2.0` tag → CI validates, tests headless, publishes to Workshop automatically |
-| **Beta channel CI** | Every merge to `main` publishes to `beta` channel; explicit tag promotes to `release` |
-| **Multi-resource monorepo** | A single repo with multiple resource packs, each published independently via matrix builds |
+| Workflow                    | Description                                                                                                                       |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| **Tag-triggered publish**   | Push a `v1.2.0` tag → CI validates, tests headless, publishes to Workshop automatically                                           |
+| **Beta channel CI**         | Every merge to `main` publishes to `beta` channel; explicit tag promotes to `release`                                             |
+| **Multi-resource monorepo** | A single repo with multiple resource packs, each published independently via matrix builds                                        |
 | **Automated quality gates** | `ic mod check` + `ic mod test` + `ic mod audit` run before every publish — catch broken YAML, missing licenses, incompatible deps |
-| **Scheduled rebuilds** | Cron-triggered CI re-publishes against latest engine version to catch compatibility regressions early |
+| **Scheduled rebuilds**      | Cron-triggered CI re-publishes against latest engine version to catch compatibility regressions early                             |
 
 **GitLab CI, Gitea Actions, and any other CI system** work identically — the `ic` CLI is a single static binary with no runtime dependencies. Download it, set `IC_WORKSHOP_TOKEN`, run `ic mod publish`.
 
