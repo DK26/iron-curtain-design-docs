@@ -36,13 +36,13 @@ But the tools got better, and so did I. What changed is that they made it realis
 
 This project didn't start as an attempt to replace OpenRA. I just wanted to test new technology — see if Rust, Bevy, and LLM-assisted development could come together into something real. A proof of concept. A learning exercise. But the more I thought about the design, the more I realized it could actually serve the community. That's when I decided to take it seriously.
 
-This project is also a research opportunity for me. I want to learn how to do LLM-assisted coding *correctly* — not just throw prompts at a model and ship whatever comes back. I'm a developer who needs to understand what code does. When code is generated, I do my best to read through it, understand every part, and verify it. I use the best models available to cross-check, document, and maintain a consistent code style so the codebase stays reviewable by humans.
+This project is also a research opportunity. I want to take LLM-assisted coding to the next level — not just throw prompts at a model and ship whatever comes back. I'm a developer who needs to understand what code does. When code is generated, I do my best to read through it, understand every part, and verify it. I use the best models available to cross-check, document, and maintain a consistent code style so the codebase stays reviewable by humans.
 
 There's a compounding effect here: as the framework and architecture become more solid, the rules for how the LLM creates and modifies code become more focused and restricted. The design docs, the invariants, the crate boundaries — they all constrain what the LLM can do, which reduces the chance of serious errors. On top of that, I'm a firm believer in verifying code with tests and benchmarks. If it's not tested, it doesn't count.
 
 ## What Bugged Me About the Alternatives
 
-OpenRA is great for what it is. But it's written in C#, a language that prioritizes developer convenience over raw performance. The original Red Alert was written in C, which runs much closer to the hardware. C# has a built-in system called a garbage collector that periodically pauses the game to clean up unused memory — in a fast-paced RTS, those pauses cause stutters. In practice, big battles lag, desyncs (where players' games get out of sync) happen a lot and are nearly impossible to debug, and if you want to mod anything deep, you need to learn C# and work against a large, complex codebase.
+OpenRA is great for what it is. But I've felt the lag — not just in big battles, it's random. Something feels off sometimes. The Remastered Collection has the same problem, which made me wonder if they went the C# route too. For me it comes down to raw performance: the original Red Alert was written in C, and it ran close to the hardware. C# doesn't.
 
 The Remastered Collection looks beautiful but barely changed the engine. The servers are rough. Modding is limited. Windows and Xbox only.
 
