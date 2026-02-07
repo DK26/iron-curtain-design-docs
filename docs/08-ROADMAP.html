@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-2da77212.js";
+            window.path_to_searchindex_js = "searchindex-6ee056da.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-6f79e187.js"></script>
+        <script src="toc-ef8cba4b.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -274,6 +274,7 @@
 <li><strong><code>NetworkModel</code> trait defined and proven</strong> with at least <code>LocalNetwork</code> implementation</li>
 <li><strong>System execution order documented and fixed</strong></li>
 <li><strong>State hashing for desync detection</strong></li>
+<li><strong>Engine telemetry foundation (D031):</strong> <code>tracing</code> span instrumentation on sim systems; per-system tick timing; gameplay event stream (<code>GameplayEvent</code> enum) behind <code>telemetry</code> feature flag; zero-cost when disabled</li>
 </ul>
 <h3 id="release-2"><a class="header" href="#release-2">Release</a></h3>
 <p>Units moving, shooting, dying — headless sim + rendered. Record replay file. Play it back.</p>
@@ -368,6 +369,7 @@
 <li><code>CertifiedMatchResult</code> with Ed25519 relay signatures</li>
 <li>Spectator feed: relay forwards tick orders to observers with configurable delay</li>
 <li>Behavioral analysis pipeline on relay server</li>
+<li><strong>Backend OTEL telemetry (D031):</strong> relay + tracking + workshop servers emit metrics/traces/logs via OpenTelemetry; <code>/healthz</code>, <code>/readyz</code>, <code>/metrics</code> endpoints; distributed trace IDs for desync debugging across clients and relay; pre-built Grafana dashboards; optional <code>docker-compose.observability.yaml</code> overlay for self-hosters</li>
 </ul>
 <h3 id="exit-criteria-5"><a class="header" href="#exit-criteria-5">Exit Criteria</a></h3>
 <ul>
@@ -417,6 +419,7 @@
 <li>Campaign generation: connected multi-mission storylines (experimental)</li>
 <li>Adaptive difficulty: AI observes playstyle, generates targeted challenges (experimental)</li>
 <li><strong>LLM-driven Workshop resource discovery (D030):</strong> LLM searches Workshop by <code>llm_meta</code> tags, evaluates fitness, auto-pulls resources as dependencies for generated content; license-aware filtering</li>
+<li><strong>AI training data pipeline (D031):</strong> gameplay event stream → OTEL collector → Parquet/Arrow columnar format → ML training; build order learning, engagement patterns, balance analysis from aggregated match telemetry</li>
 </ul>
 <h3 id="deliverables--visual-polish-bevy-rendering"><a class="header" href="#deliverables--visual-polish-bevy-rendering">Deliverables — Visual Polish (Bevy Rendering)</a></h3>
 <ul>

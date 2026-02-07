@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-2da77212.js";
+            window.path_to_searchindex_js = "searchindex-6ee056da.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-6f79e187.js"></script>
+        <script src="toc-ef8cba4b.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -563,6 +563,9 @@ tracking_servers:
 </li>
 <li>
 <p><strong>Relay servers are regional.</strong> Players connect to the nearest relay for lowest latency. The tracking server listing includes the relay region. Community relays in underserved regions improve the experience for everyone.</p>
+</li>
+<li>
+<p><strong>Observable by default (D031).</strong> All servers emit structured telemetry via OpenTelemetry (OTEL): metrics (Prometheus-compatible), distributed traces (Jaeger/Zipkin), and structured logs (Loki/stdout). Every server exposes <code>/healthz</code>, <code>/readyz</code>, and <code>/metrics</code> endpoints. Self-hosters get pre-built Grafana dashboards for relay (active games, RTT, desync events), tracking (listings, heartbeats), and workshop (downloads, resolution times). Observability is optional but ships with the infrastructure — <code>docker-compose.observability.yaml</code> adds Grafana + Prometheus + Loki with one command.</p>
 </li>
 </ol>
 <h3 id="deployment-options"><a class="header" href="#deployment-options">Deployment Options</a></h3>

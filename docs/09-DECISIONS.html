@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-2da77212.js";
+            window.path_to_searchindex_js = "searchindex-6ee056da.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-6f79e187.js"></script>
+        <script src="toc-ef8cba4b.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -1114,6 +1114,224 @@ workshop:
 <li>Steam Workshop only (platform lock-in, no WASM/browser target, no self-hosting)</li>
 </ul>
 <p><strong>Phase:</strong> Phase 6 (Workshop infrastructure), with preparatory work in Phase 3 (manifest format finalized) and Phase 4 (LLM integration).</p>
+<hr>
+<h2 id="d031-observability--telemetry--otel-across-engine-servers-and-ai-pipeline"><a class="header" href="#d031-observability--telemetry--otel-across-engine-servers-and-ai-pipeline">D031: Observability &amp; Telemetry — OTEL Across Engine, Servers, and AI Pipeline</a></h2>
+<p><strong>Decision:</strong> All backend servers (relay, tracking, workshop) and the game engine itself emit structured telemetry via OpenTelemetry (OTEL), enabling operational monitoring, gameplay debugging, state inspection, and AI/LLM training data collection — all from a single, unified instrumentation layer.</p>
+<p><strong>Rationale:</strong></p>
+<ul>
+<li>Backend servers (relay, tracking, workshop) are production infrastructure — they need health metrics, latency histograms, error rates, and distributed traces, just like any microservice</li>
+<li>The game engine already has rich internal state (per-tick <code>state_hash()</code>, snapshots, system execution times) but no structured way to export it for analysis</li>
+<li>Replay files capture <em>what happened</em> but not <em>why</em> — telemetry captures the engine’s decision-making process (pathfinding time, order validation outcomes, combat resolution details) that replays miss</li>
+<li>Behavioral analysis (V12 anti-cheat) already collects APM, reaction times, and input entropy on the relay — OTEL is the natural export format for this data</li>
+<li>AI/LLM development needs training data: game telemetry (unit movements, build orders, engagement outcomes) is exactly the training corpus for <code>ra-ai</code> and <code>ra-llm</code></li>
+<li>Bevy already integrates with Rust’s <code>tracing</code> crate — OTEL export is a natural extension, not a foreign addition</li>
+<li>Desync debugging needs cross-client correlation — distributed tracing (trace IDs) lets you follow an order from input → network → sim → render across multiple clients and the relay server</li>
+<li>A single instrumentation approach (OTEL) avoids the mess of ad-hoc logging, custom metrics files, separate debug protocols, and incompatible formats</li>
+</ul>
+<p><strong>Key Design Elements:</strong></p>
+<h3 id="three-telemetry-signals-otel-standard"><a class="header" href="#three-telemetry-signals-otel-standard">Three Telemetry Signals (OTEL Standard)</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Signal</th><th>What It Captures</th><th>Export Format</th></tr>
+</thead>
+<tbody>
+<tr><td>Metrics</td><td>Counters, histograms, gauges — numeric time series</td><td>OTLP → Prometheus</td></tr>
+<tr><td>Traces</td><td>Distributed request flows — an order’s journey through the system</td><td>OTLP → Jaeger/Zipkin</td></tr>
+<tr><td>Logs</td><td>Structured events with severity, context, correlation IDs</td><td>OTLP → Loki/stdout</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="backend-server-telemetry-relay-tracking-workshop"><a class="header" href="#backend-server-telemetry-relay-tracking-workshop">Backend Server Telemetry (Relay, Tracking, Workshop)</a></h3>
+<p>Standard operational observability — same patterns used by any production Rust service:</p>
+<p><strong>Relay server metrics:</strong></p>
+<pre><code>relay.games.active                    # gauge: concurrent games
+relay.games.total                     # counter: total games hosted
+relay.orders.received                 # counter: orders received per tick
+relay.orders.forwarded                # counter: orders broadcast
+relay.orders.dropped                  # counter: orders missed (lag switch)
+relay.tick.latency_ms                 # histogram: tick processing time
+relay.player.rtt_ms                   # histogram: per-player round-trip time
+relay.player.suspicion_score          # gauge: behavioral analysis score (V12)
+relay.desync.detected                 # counter: desync events
+relay.match.completed                 # counter: matches finished
+relay.match.duration_s                # histogram: match duration
+</code></pre>
+<p><strong>Tracking server metrics:</strong></p>
+<pre><code>tracking.listings.active              # gauge: current game listings
+tracking.heartbeats.received          # counter: heartbeats processed
+tracking.heartbeats.expired           # counter: listings expired (TTL)
+tracking.queries.total                # counter: browse/search requests
+tracking.queries.latency_ms           # histogram: query latency
+</code></pre>
+<p><strong>Workshop server metrics:</strong></p>
+<pre><code>workshop.artifacts.total              # gauge: total published resources
+workshop.artifacts.downloads          # counter: download events
+workshop.artifacts.publishes          # counter: publish events
+workshop.resolve.latency_ms           # histogram: dependency resolution time
+workshop.resolve.conflicts            # counter: version conflicts detected
+workshop.search.latency_ms            # histogram: search query time
+</code></pre>
+<p><strong>Distributed traces:</strong> A multiplayer game session gets a trace ID. Every order, tick, and desync event references this trace ID. Debug a desync by searching for the game’s trace ID in Jaeger and seeing the exact sequence of events across all participants.</p>
+<p><strong>Health endpoints:</strong> Every server exposes <code>/healthz</code> (already designed) and <code>/readyz</code>. Prometheus scrape endpoint at <code>/metrics</code>. These are standard and compose with existing k8s deployment (Helm charts already designed in <code>03-NETCODE.md</code>).</p>
+<h3 id="game-engine-telemetry-client-side"><a class="header" href="#game-engine-telemetry-client-side">Game Engine Telemetry (Client-Side)</a></h3>
+<p>The engine emits structured telemetry for debugging, profiling, and AI training — but only when enabled. <strong>Hot paths remain zero-cost when telemetry is disabled</strong> (compile-time feature flag <code>telemetry</code>).</p>
+<h4 id="performance-instrumentation"><a class="header" href="#performance-instrumentation">Performance Instrumentation</a></h4>
+<p>Per-tick system timing, already needed for the benchmark suite (<code>10-PERFORMANCE.md</code>), exported as OTEL metrics when enabled:</p>
+<pre><code>sim.tick.duration_us                  # histogram: total tick time
+sim.system.apply_orders_us            # histogram: per-system time
+sim.system.production_us
+sim.system.harvesting_us
+sim.system.movement_us
+sim.system.combat_us
+sim.system.death_us
+sim.system.triggers_us
+sim.system.fog_us
+sim.entities.total                    # gauge: entity count
+sim.entities.by_type                  # gauge: per-component-type count
+sim.memory.scratch_bytes              # gauge: TickScratch buffer usage
+sim.pathfinding.requests              # counter: pathfinding queries per tick
+sim.pathfinding.cache_hits            # counter: flowfield cache reuse
+sim.pathfinding.duration_us           # histogram: pathfinding computation time
+</code></pre>
+<h4 id="gameplay-event-stream"><a class="header" href="#gameplay-event-stream">Gameplay Event Stream</a></h4>
+<p>Structured events emitted during simulation — the raw material for AI training and replay enrichment:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Gameplay events emitted by the sim when telemetry is enabled.
+/// These are structured, not printf-style — each field is queryable.
+pub enum GameplayEvent {
+    UnitCreated { tick: u64, entity: EntityId, unit_type: String, owner: PlayerId },
+    UnitDestroyed { tick: u64, entity: EntityId, killer: Option&lt;EntityId&gt;, cause: DeathCause },
+    CombatEngagement { tick: u64, attacker: EntityId, target: EntityId, weapon: String, damage: i32, remaining_hp: i32 },
+    BuildingPlaced { tick: u64, entity: EntityId, structure_type: String, owner: PlayerId, position: WorldPos },
+    HarvestDelivered { tick: u64, harvester: EntityId, resource_type: String, amount: i32, total_credits: i32 },
+    OrderIssued { tick: u64, player: PlayerId, order: PlayerOrder, validated: bool, rejection_reason: Option&lt;String&gt; },
+    PathfindingCompleted { tick: u64, entity: EntityId, from: WorldPos, to: WorldPos, path_length: u32, compute_time_us: u32 },
+    DesyncDetected { tick: u64, expected_hash: u64, actual_hash: u64, player: PlayerId },
+    StateSnapshot { tick: u64, state_hash: u64, entity_count: u32 },
+}
+<span class="boring">}</span></code></pre>
+<p>These events are:</p>
+<ul>
+<li><strong>Emitted as OTEL log records</strong> with structured attributes (not free-text — every field is filterable)</li>
+<li><strong>Collected locally</strong> into a gameplay event log alongside replays (enriched replays)</li>
+<li><strong>Optionally exported</strong> to a collector for batch analysis (tournament servers, AI training pipelines)</li>
+</ul>
+<h4 id="state-inspection-development--debugging"><a class="header" href="#state-inspection-development--debugging">State Inspection (Development &amp; Debugging)</a></h4>
+<p>A debug overlay (via <code>bevy_egui</code>, already in the architecture) that reads live telemetry:</p>
+<ul>
+<li>Per-system tick time breakdown (bar chart)</li>
+<li>Entity count by type</li>
+<li>Network: RTT, order latency, jitter</li>
+<li>Memory: scratch buffer usage, component storage</li>
+<li>Pathfinding: active flowfields, cache hit rate</li>
+<li>Fog: cells updated this tick, stagger bucket</li>
+<li>Sim state hash (for manual desync comparison)</li>
+</ul>
+<p>This is the “game engine equivalent of a Kubernetes dashboard” — operators of tournament servers or mod developers can inspect the engine’s internal state in real-time.</p>
+<h3 id="ai--llm-training-data-pipeline"><a class="header" href="#ai--llm-training-data-pipeline">AI / LLM Training Data Pipeline</a></h3>
+<p>The gameplay event stream is the foundation for AI development:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Consumer</th><th>Data Source</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>ra-ai</code> (skirmish AI)</td><td>Gameplay events from human games</td><td>Learn build orders, engagement timing, micro patterns</td></tr>
+<tr><td><code>ra-llm</code> (missions)</td><td>Gameplay events + enriched replays</td><td>Learn what makes missions fun (engagement density, pacing, flow)</td></tr>
+<tr><td>Behavioral analysis</td><td>Relay-side player profiles</td><td>APM, reaction time, input entropy → suspicion scoring (V12)</td></tr>
+<tr><td>Balance analysis</td><td>Aggregated match outcomes</td><td>Win rates by faction/map/preset → balance tuning</td></tr>
+<tr><td>Adaptive difficulty</td><td>Per-player gameplay patterns</td><td>Build speed, APM, unit composition → difficulty calibration</td></tr>
+<tr><td>Community analytics</td><td>Workshop + match metadata</td><td>Popular resources, play patterns, mod adoption → recommendations</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Privacy:</strong> Gameplay events are associated with anonymized player IDs (hashed). No PII in telemetry. Players opt in to telemetry export (default: local-only for debugging). Tournament/ranked play may require telemetry for anti-cheat and certified results. See <code>06-SECURITY.md</code>.</p>
+<p><strong>Data format:</strong> Gameplay events export as structured OTEL log records → can be collected into Parquet/Arrow columnar format for batch ML training. The LLM training pipeline reads events, not raw replay bytes.</p>
+<h3 id="architecture-where-telemetry-lives"><a class="header" href="#architecture-where-telemetry-lives">Architecture: Where Telemetry Lives</a></h3>
+<pre><code>                  ┌──────────────────────────────────────────┐
+                  │              OTEL Collector               │
+                  │  (receives all signals, routes to sinks)  │
+                  └──┬──────────┬──────────┬─────────────────┘
+                     │          │          │
+              ┌──────▼──┐ ┌────▼────┐ ┌───▼─────────────┐
+              │Prometheus│ │ Jaeger  │ │ Loki / Storage  │
+              │(metrics) │ │(traces) │ │(logs / events)  │
+              └──────────┘ └─────────┘ └───────┬─────────┘
+                                               │
+                                        ┌──────▼──────┐
+                                        │ AI Training  │
+                                        │ Pipeline     │
+                                        │ (Parquet→ML) │
+                                        └─────────────┘
+
+  Emitters:
+  ┌─────────┐  ┌─────────┐  ┌──────────┐  ┌──────────┐
+  │  Relay  │  │Tracking │  │ Workshop │  │  Game    │
+  │ Server  │  │ Server  │  │  Server  │  │ Engine   │
+  └─────────┘  └─────────┘  └──────────┘  └──────────┘
+</code></pre>
+<p>No emitter talks directly to Prometheus/Jaeger/Loki — everything goes through the OTEL Collector. This means:</p>
+<ul>
+<li>Emitters don’t know or care about the backend storage</li>
+<li>Self-hosters can route to whatever they want (Grafana Cloud, Datadog, or just stdout)</li>
+<li>The collector handles sampling, batching, and export — emitters stay lightweight</li>
+</ul>
+<h3 id="implementation-approach"><a class="header" href="#implementation-approach">Implementation Approach</a></h3>
+<p><strong>Rust ecosystem:</strong></p>
+<ul>
+<li><code>tracing</code> crate — Bevy already uses this; add structured fields and span instrumentation</li>
+<li><code>opentelemetry</code> + <code>opentelemetry-otlp</code> crates — OTEL SDK for Rust</li>
+<li><code>tracing-opentelemetry</code> — bridges <code>tracing</code> spans to OTEL traces</li>
+<li><code>metrics</code> crate — lightweight counters/histograms, exported via OTEL</li>
+</ul>
+<p><strong>Zero-cost when disabled:</strong> The <code>telemetry</code> feature flag gates all instrumentation behind <code>#[cfg(feature = "telemetry")]</code>. When disabled (default for release builds), all telemetry calls compile to no-ops. No runtime cost, no allocations, no branches. This respects invariant #5 (efficiency-first performance).</p>
+<p><strong>Build configurations:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Build</th><th>Telemetry</th><th>Use case</th></tr>
+</thead>
+<tbody>
+<tr><td><code>release</code></td><td>Off</td><td>Player-facing builds — zero overhead</td></tr>
+<tr><td><code>release-telemetry</code></td><td>On</td><td>Tournament servers, AI training, debugging</td></tr>
+<tr><td><code>debug</code></td><td>On</td><td>Development — full instrumentation</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="self-hosting-observability"><a class="header" href="#self-hosting-observability">Self-Hosting Observability</a></h3>
+<p>Community server operators get observability for free. The docker-compose.yaml (already designed in <code>03-NETCODE.md</code>) can optionally include a Grafana + Prometheus + Loki stack:</p>
+<pre><code class="language-yaml"># docker-compose.observability.yaml (optional overlay)
+services:
+  otel-collector:
+    image: otel/opentelemetry-collector:latest
+    ports:
+      - "4317:4317"    # OTLP gRPC
+  prometheus:
+    image: prom/prometheus:latest
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"    # dashboards
+  loki:
+    image: grafana/loki:latest
+</code></pre>
+<p>Pre-built Grafana dashboards ship with the project:</p>
+<ul>
+<li><strong>Relay Dashboard:</strong> active games, player RTT, orders/sec, desync events, suspicion scores</li>
+<li><strong>Tracking Dashboard:</strong> listings, heartbeats, query rates</li>
+<li><strong>Workshop Dashboard:</strong> downloads, publishes, dependency resolution times</li>
+<li><strong>Engine Dashboard:</strong> tick times, entity counts, system breakdown, pathfinding stats</li>
+</ul>
+<p><strong>Alternatives considered:</strong></p>
+<ul>
+<li>Custom metrics format (less work initially, but no ecosystem — no Grafana, no alerting, no community tooling)</li>
+<li>StatsD (simpler but metrics-only — no traces, no structured logs, no distributed correlation)</li>
+<li>No telemetry (leaves operators blind and AI training without data)</li>
+<li>Always-on telemetry (violates performance invariant — must be zero-cost when disabled)</li>
+</ul>
+<p><strong>Phase:</strong> Backend server telemetry in Phase 5 (multiplayer). Engine telemetry in Phase 2 (sim) and Phase 3 (chrome/debug overlay). AI training pipeline in Phase 7 (LLM).</p>
 <hr>
 <h2 id="pending-decisions"><a class="header" href="#pending-decisions">PENDING DECISIONS</a></h2>
 <div class="table-wrapper">

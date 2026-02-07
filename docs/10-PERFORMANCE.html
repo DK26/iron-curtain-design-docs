@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-2da77212.js";
+            window.path_to_searchindex_js = "searchindex-6ee056da.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-6f79e187.js"></script>
+        <script src="toc-ef8cba4b.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -604,6 +604,15 @@ pub enum RenderTier {
 <span class="boring">}</span></code></pre>
 <h3 id="regression-rule"><a class="header" href="#regression-rule">Regression Rule</a></h3>
 <p>CI fails if any benchmark regresses &gt; 10% from the rolling average. Performance is a ratchet — it only goes up.</p>
+<h3 id="engine-telemetry-d031"><a class="header" href="#engine-telemetry-d031">Engine Telemetry (D031)</a></h3>
+<p>Per-system tick timing from the benchmark suite can be exported as OTEL metrics for deeper analysis when the <code>telemetry</code> feature flag is enabled. This bridges offline benchmarks with live system inspection:</p>
+<ul>
+<li>Per-system execution time histograms (<code>sim.system.&lt;name&gt;_us</code>)</li>
+<li>Entity count gauges, pathfinding cache hit rates, memory usage</li>
+<li>Gameplay event stream for AI training data collection</li>
+<li>Debug overlay (via <code>bevy_egui</code>) reads live telemetry for real-time profiling during development</li>
+</ul>
+<p>Telemetry is zero-cost when disabled (compile-time feature gate). Release builds intended for players ship without it. Tournament servers, AI training, and development builds enable it. See <code>09-DECISIONS.md</code> § D031 for full design.</p>
 <h3 id="profile-before-parallelize"><a class="header" href="#profile-before-parallelize">Profile Before Parallelize</a></h3>
 <p>Never add <code>par_iter()</code> without profiling first. Measure single-threaded. If a system takes &gt; 1ms, consider parallelizing. If it takes &lt; 0.1ms, sequential is faster (avoids coordination overhead).</p>
 <h2 id="decision-record"><a class="header" href="#decision-record">Decision Record</a></h2>
