@@ -17,7 +17,7 @@ I've been a Red Alert fan since childhood — two kids on ancient computers play
 
 I started learning to code at 12 (Pascal), worked my way through network engineering, backend development, and cyber defense, and eventually found Rust — a language that lets you build close to the hardware without the fear of C's footguns. Over the next five years I went deep: building backend systems in Rust, contributing to its open-source ecosystem, and making it my primary language. When I discovered OpenRA, I was thrilled the community had kept Red Alert alive — and the idea of writing an engine in Rust started taking root.
 
-I wasn't trying to replace OpenRA — I just wanted to test new technology and see what was possible. But the more I built, the more I realized it could serve the community. Years later, LLM agents matured into useful development tools, and that gave me the confidence to take on the full scope of what this project has become.
+I wasn't trying to replace OpenRA — I just wanted to test new technology and see what was possible. But the more I thought about the design, the more I realized it could serve the community. Years later, LLM agents matured into useful development tools, and that gave me the confidence to take on the full scope of what this project has become.
 
 My most formative gaming experience outside Red Alert was Operation Flashpoint — a game that gave you tools to create your own scenarios. That philosophy — games as platforms, not just products — is at the heart of this project.
 
