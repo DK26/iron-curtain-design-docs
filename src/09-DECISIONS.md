@@ -833,15 +833,68 @@ dependencies:
     source: workshop
 ```
 
+### Repository Types (Artifactory Model)
+
+The Workshop uses three repository types, directly inspired by Artifactory's local/remote/virtual model:
+
+| Repository Type | Artifactory Analog | Description                                                                                                                                                                                                                                                 |
+| --------------- | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Local**       | Local repository   | A directory on disk following Workshop structure. Stores artifacts you create. Used for development, LAN parties, offline play, pre-publish testing.                                                                                                        |
+| **Remote**      | Remote repository  | A Workshop server (official or community-hosted). Artifacts are downloaded and cached locally on first access. Cache is used for subsequent requests — works offline after first pull.                                                                      |
+| **Virtual**     | Virtual repository | The aggregated view across all configured sources. The `ic` CLI and in-game browser query the virtual repository — it merges listings from all local + remote sources, deduplicates by resource ID, and resolves version conflicts using priority ordering. |
+
+The `settings.yaml` `sources:` list defines which local and remote repositories compose the virtual repository. This is the federation model — the client never queries raw servers directly, it queries its virtual repository.
+
+### Artifact Integrity
+
+Every published artifact includes cryptographic checksums for integrity verification:
+
+- **SHA-256 checksum** stored in the package manifest and on the Workshop server
+- `ic mod install` verifies checksums after download — mismatch → abort + warning
+- `ic.lock` records both version AND checksum for each dependency — guarantees byte-identical installs across machines
+- Protects against: corrupted downloads, CDN tampering, mirror drift
+- Workshop server computes checksums on upload; clients verify on download. Trust but verify.
+
+### Promotion & Maturity Channels
+
+Artifacts can be published to maturity channels, allowing staged releases:
+
+| Channel   | Purpose                         | Visibility                      |
+| --------- | ------------------------------- | ------------------------------- |
+| `dev`     | Work-in-progress, local testing | Author only (local repos only)  |
+| `beta`    | Pre-release, community testing  | Opt-in (users enable beta flag) |
+| `release` | Stable, production-ready        | Default (everyone sees these)   |
+
+```yaml
+# mod.yaml
+mod:
+  version: "1.3.0-beta.1"            # semver pre-release tag
+  channel: beta                       # publish to beta channel
+```
+
+- `ic mod publish --channel beta` → visible only to users who opt in to beta resources
+- `ic mod publish` (no flag) → release channel by default
+- `ic mod install` pulls from release channel unless `--include-beta` is specified
+- Promotion: `ic mod promote 1.3.0-beta.1 release` → moves artifact to release channel without re-upload
+
+### Replication & Mirroring
+
+Community Workshop servers can replicate from the official server (pull replication, Artifactory-style):
+
+- **Pull replication:** Community server periodically syncs popular artifacts from official. Reduces latency for regional players, provides redundancy.
+- **Selective sync:** Community servers choose which categories/namespaces to replicate (e.g., replicate all Maps but not Mods)
+- **Offline bundles:** `ic workshop export-bundle` creates a portable archive of selected resources for LAN parties or airgapped environments. `ic workshop import-bundle` loads them into a local repository.
+
 ### Dependency Resolution
 
 Cargo-inspired version solving:
 
 - **Semver ranges:** `^1.2` (>=1.2.0, <2.0.0), `~1.2` (>=1.2.0, <1.3.0), `>=1.0, <3.0`, exact `=1.2.3`
-- **Lockfile:** `ic.lock` records exact resolved versions for reproducible installs
+- **Lockfile:** `ic.lock` records exact resolved versions + SHA-256 checksums for reproducible installs
 - **Transitive resolution:** If mod A depends on resource B which depends on resource C, all three are resolved
 - **Conflict detection:** Two dependencies requiring incompatible versions of the same resource → error with resolution suggestions
 - **Deduplication:** Same resource pulled by multiple dependents is stored once in local cache
+- **Offline resolution:** Once cached, all dependencies resolve from local cache — no network required
 
 ### CLI Extensions
 
@@ -912,6 +965,7 @@ Rationale: Single-source is too limiting for a resource registry. Crates.io has 
 - Single source only (simpler but doesn't scale for a registry model — what happens when the official server is down?)
 - Full decentralization with no official server (too chaotic for discoverability)
 - Git-based distribution like Go modules (too complex for non-developer modders)
+- Steam Workshop only (platform lock-in, no WASM/browser target, no self-hosting)
 
 **Phase:** Phase 6 (Workshop infrastructure), with preparatory work in Phase 3 (manifest format finalized) and Phase 4 (LLM integration).
 
