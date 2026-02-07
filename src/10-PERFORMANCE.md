@@ -296,6 +296,25 @@ fn movement_system(mut query: Query<(&mut Position, &Velocity)>) {
 | 2-core scaling       | 1x (single-threaded)                          | ~1.5x (work-stealing helps where applicable) | rayon adaptive                          |
 | 8-core scaling       | 1x (single-threaded)                          | ~3-5x (diminishing returns on game logic)    | rayon work-stealing                     |
 
+## Input Responsiveness vs. OpenRA
+
+Beyond raw sim performance, input responsiveness is where players *feel* the difference. OpenRA's lockstep model freezes all players to wait for the slowest connection. Our relay model never stalls — late orders are dropped, not waited for.
+
+| Factor                      | OpenRA                         | Iron Curtain                 | Why Faster                                |
+| --------------------------- | ------------------------------ | ---------------------------- | ----------------------------------------- |
+| Waiting for slowest client  | Yes — everyone freezes         | No — relay drops late orders | Relay owns the clock                      |
+| Order batching interval     | Every N frames                 | Every tick                   | Higher tick rate makes N=1 viable         |
+| Tick processing time        | 30-60ms                        | ~8ms                         | Algorithmic efficiency                    |
+| Achievable tick rate        | ~15 tps                        | 30+ tps                      | 4x shorter lockstep window                |
+| GC pauses during tick       | 5-50ms random                  | 0ms                          | Rust, zero-allocation                     |
+| Visual feedback on click    | Waits for confirmation         | Immediate (cosmetic)         | Render-side prediction, no sim dependency |
+| Single-player order delay   | ~66ms (1 projected frame)      | ~33ms (next tick at 30 tps)  | `LocalNetwork` = zero scheduling delay    |
+| Worst-case MP click-to-move | 200-400ms (slow peer stalling) | 80-120ms (relay deadline)    | Fixed deadline, no hostage-taking         |
+
+**Combined effect:** A single-player click-to-move that takes ~200ms in OpenRA (order latency + tick time + GC jank) takes ~33ms in Iron Curtain — imperceptible to human reaction time. Multiplayer improves from "at the mercy of the worst connection" to a fixed, predictable deadline.
+
+See `03-NETCODE.md` § "Input Responsiveness" for the full architectural analysis, including visual prediction and single-player zero-delay.
+
 ## GPU & Hardware Compatibility (Bevy/wgpu Constraints)
 
 Bevy renders via `wgpu`, which translates to native GPU APIs. This creates a **hardware floor** that interacts with our "2012 laptop" performance target.
