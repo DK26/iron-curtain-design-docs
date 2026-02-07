@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-1ff3a283.js";
+            window.path_to_searchindex_js = "searchindex-5d435b9e.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-6f79e187.js"></script>
@@ -308,7 +308,10 @@
 <tr><td>Palette files (.pal)</td><td>Dozens</td><td>IC loads natively</td></tr>
 <tr><td>Sound effects (.aud)</td><td>Hundreds</td><td>IC loads natively</td></tr>
 <tr><td>Map files (.oramap)</td><td>450+</td><td>IC loads natively</td></tr>
-<tr><td>MiniYAML rules</td><td>Thousands of entries</td><td><code>miniyaml2yaml</code> converter</td></tr>
+<tr><td>MiniYAML rules</td><td>Thousands of entries</td><td><strong>Loads directly at runtime (D025)</strong> — no conversion step</td></tr>
+<tr><td>OpenRA YAML keys</td><td>All trait names</td><td><strong>Accepted as aliases (D023)</strong> — <code>Armament</code> and <code>combat</code> both work</td></tr>
+<tr><td>OpenRA mod manifest</td><td><code>mod.yaml</code></td><td><strong>Parsed directly (D026)</strong> — point IC at OpenRA mod dir</td></tr>
+<tr><td>Lua mission scripts</td><td>34 missions</td><td><strong>Run unmodified (D024)</strong> — IC Lua API is strict superset</td></tr>
 </tbody>
 </table>
 </div>
@@ -319,12 +322,12 @@
 <tr><th>Component</th><th>Effort</th><th>Details</th></tr>
 </thead>
 <tbody>
-<tr><td><strong>YAML unit definitions</strong></td><td>Trivial</td><td>Automated converter, manual validation</td></tr>
-<tr><td><strong>Lua campaign missions</strong></td><td>Moderate</td><td>IC runs Lua natively; need API compatibility shim for OpenRA’s <code>Actor</code>, <code>Trigger</code>, <code>Media</code>, <code>Map</code> globals</td></tr>
-<tr><td><strong>Custom traits → Built-in</strong></td><td>None</td><td>IC builds mind control, carriers, shields, teleport networks as first-party ECS components (these are needed for RA2/C&amp;C3 game modules anyway)</td></tr>
-<tr><td><strong>Custom traits → YAML conditions</strong></td><td>Low</td><td>Deploy mechanics, upgrade toggles, transform states map to IC’s condition system</td></tr>
-<tr><td><strong>Custom traits → WASM</strong></td><td>Significant</td><td>~50 novel traits need WASM rewrite: Berserkable, Warpable, KeepsDistance, Attachable system, custom ability targeting, etc.</td></tr>
-<tr><td><strong>Custom warheads</strong></td><td>Moderate</td><td>Many become built-in warhead pipeline extensions; novel ones (WarpDamage, TintedCells) need WASM</td></tr>
+<tr><td><strong>YAML unit definitions</strong></td><td><strong>Zero</strong></td><td>MiniYAML loads at runtime (D025), OpenRA trait names accepted as aliases (D023) — no conversion needed</td></tr>
+<tr><td><strong>Lua campaign missions</strong></td><td><strong>Zero</strong></td><td>IC Lua API is a strict superset of OpenRA’s (D024) — same 16 globals, same signatures, same return types; missions run unmodified</td></tr>
+<tr><td><strong>Custom traits → Built-in</strong></td><td>None</td><td>IC builds mind control, carriers, shields, teleport networks, upgrades, delayed weapons as Phase 2 first-party components (D029)</td></tr>
+<tr><td><strong>Custom traits → YAML conditions</strong></td><td>Low</td><td>Deploy mechanics, upgrade toggles, transform states map to IC’s condition system (D028)</td></tr>
+<tr><td><strong>Custom traits → WASM</strong></td><td>Significant</td><td>~20 truly novel traits need WASM rewrite: Berserkable, Warpable, KeepsDistance, Attachable system, custom ability targeting</td></tr>
+<tr><td><strong>Custom warheads</strong></td><td>Low</td><td>Many become built-in warhead pipeline extensions (D028); novel ones (WarpDamage, TintedCells) need WASM</td></tr>
 <tr><td><strong>Custom projectiles</strong></td><td>Moderate</td><td>These are primarily render code; rewrite as <code>ra-render</code> shader effects and particle systems</td></tr>
 <tr><td><strong>Custom UI widgets</strong></td><td>Moderate</td><td>CA has custom widgets; these need Bevy UI reimplementation</td></tr>
 <tr><td><strong>Bot modules</strong></td><td>Low-Moderate</td><td>Map to <code>ra-ai</code> crate’s bot system</td></tr>
@@ -334,24 +337,28 @@
 <h4 id="migration-tier-breakdown"><a class="header" href="#migration-tier-breakdown">Migration Tier Breakdown</a></h4>
 <pre><code>┌─────────────────────────────────────────────────┐
 │     Combined Arms → Iron Curtain Migration      │
+│           (after D023–D029)                      │
 ├─────────────────────────────────────────────────┤
 │                                                 │
-│  Tier 1 (YAML)  ████████████████████  ~40%     │
+│  Tier 1 (YAML)  ██████████████████████ ~45%    │
 │  No code change needed. Unit stats, weapons,    │
-│  armor tables, build trees, faction setup.      │
+│  armor tables, build trees, faction setup.       │
+│  MiniYAML loads directly (D025).                 │
+│  OpenRA trait names accepted as aliases (D023).  │
 │                                                 │
-│  Built-in       ██████████████████    ~30%     │
-│  IC includes as first-party ECS components.     │
-│  Mind control, carriers, shields, teleport,     │
-│  veterancy, infiltration, damage pipeline.      │
+│  Built-in       ████████████████████  ~40%    │
+│  IC includes as first-party ECS components       │
+│  (D029). Mind control, carriers, shields,        │
+│  teleport, upgrades, delayed weapons,            │
+│  veterancy, infiltration, damage pipeline.       │
 │                                                 │
-│  Tier 2 (Lua)   ████████            ~15%      │
-│  Campaign missions, scripted events.            │
-│  API shim needed for OpenRA Lua globals.        │
+│  Tier 2 (Lua)   ██████              ~10%      │
+│  Campaign missions run unmodified (D024).        │
+│  IC Lua API is strict superset of OpenRA's.      │
 │                                                 │
-│  Tier 3 (WASM)  ██████              ~15%      │
-│  Novel mechanics: Berserkable, Warpable,        │
-│  KeepsDistance, Attachable, custom abilities.    │
+│  Tier 3 (WASM)  ███                ~5%       │
+│  Truly novel mechanics only: Berserkable,        │
+│  Warpable, KeepsDistance, Attachable.             │
 │                                                 │
 └─────────────────────────────────────────────────┘
 </code></pre>
@@ -374,11 +381,12 @@
 </table>
 </div>
 <h3 id="verdict"><a class="header" href="#verdict">Verdict</a></h3>
-<p><strong>Not plug-and-play, but a realistic and beneficial migration.</strong></p>
+<p><strong>Not plug-and-play, but a realistic and beneficial migration — dramatically improved by D023–D029.</strong></p>
 <ul>
-<li><strong>~85% of content</strong> (YAML rules, assets, maps, Lua missions, built-in mechanics) migrates with minimal to zero effort.</li>
-<li><strong>~15% of content</strong> (~50 novel C# traits) requires WASM rewrites — significant but bounded work.</li>
+<li><strong>~95% of content</strong> (YAML rules via D025 runtime loading + D023 aliases, assets, maps, Lua missions via D024 superset API, built-in mechanics via D029) migrates with <strong>zero effort</strong> — no conversion tools, no code changes.</li>
+<li><strong>~5% of content</strong> (~20 truly novel C# traits) requires WASM rewrites — bounded and well-identified.</li>
 <li>The migration is a <strong>net positive</strong>: CA ends up with better performance, multiplayer, distribution, and maintainability.</li>
+<li><strong>Zero-friction evaluation:</strong> Point IC at an OpenRA mod directory (D026) and it loads. No commitment required to test.</li>
 <li>IC <strong>benefits too</strong>: CA’s requirements for mind control, teleport networks, carriers, shields, and upgrades validate and drive our component library design. If IC supports CA, it supports any OpenRA mod.</li>
 </ul>
 <h3 id="lessons-for-ic-design"><a class="header" href="#lessons-for-ic-design">Lessons for IC Design</a></h3>

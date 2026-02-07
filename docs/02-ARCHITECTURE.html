@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-1ff3a283.js";
+            window.path_to_searchindex_js = "searchindex-5d435b9e.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-6f79e187.js"></script>
@@ -308,6 +308,8 @@ impl Simulation {
 <p>ECS is a natural fit for RTS: hundreds of units with composable behaviors.</p>
 <h3 id="component-model-mirrors-openra-traits"><a class="header" href="#component-model-mirrors-openra-traits">Component Model (mirrors OpenRA Traits)</a></h3>
 <p>OpenRA’s “traits” are effectively components. Map them directly. The table below shows the <strong>RA1 game module’s</strong> default components. Other game modules (RA2, TD) register additional components — the ECS is open for extension without modifying the engine core.</p>
+<p><strong>OpenRA vocabulary compatibility (D023):</strong> OpenRA trait names are accepted as YAML aliases. <code>Armament</code> and <code>combat</code> both resolve to the same component. This means existing OpenRA YAML definitions load without renaming.</p>
+<p><strong>Canonical enum names (D027):</strong> Locomotor types (<code>Foot</code>, <code>Wheeled</code>, <code>Tracked</code>, <code>Float</code>, <code>Fly</code>), armor types (<code>None</code>, <code>Light</code>, <code>Medium</code>, <code>Heavy</code>, <code>Wood</code>, <code>Concrete</code>), target types, damage states, and stances match OpenRA’s names exactly. Versus tables and weapon definitions copy-paste without translation.</p>
 <p>| OpenRA Trait | ECS Component | Purpose |
 | <code>Health</code> | <code>Health { current: i32, max: i32 }</code> | Hit points |
 | <code>Mobile</code> | <code>Mobile { speed: i32, locomotor: LocomotorType }</code> | Can move |

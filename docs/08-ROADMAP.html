@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-1ff3a283.js";
+            window.path_to_searchindex_js = "searchindex-5d435b9e.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-6f79e187.js"></script>
@@ -199,6 +199,9 @@
 <li><code>ra-formats</code> crate: parse <code>.mix</code> archives, SHP/TMP sprites, <code>.aud</code> audio, <code>.pal</code> palettes, <code>.vqa</code> video</li>
 <li>Parse OpenRA YAML manifests, map format, rule definitions</li>
 <li><code>miniyaml2yaml</code> converter tool</li>
+<li><strong>Runtime MiniYAML loading (D025):</strong> MiniYAML files load directly at runtime — auto-converts in memory, no pre-conversion required</li>
+<li><strong>OpenRA vocabulary alias registry (D023):</strong> Accept OpenRA trait names (<code>Armament</code>, <code>Valued</code>, etc.) as YAML key aliases alongside IC-native names</li>
+<li><strong>OpenRA mod manifest parser (D026):</strong> Parse OpenRA <code>mod.yaml</code> manifests, map directory layout to IC equivalents</li>
 <li>CLI tool to dump/inspect/validate RA assets</li>
 <li>Extensive tests against known-good OpenRA data</li>
 </ul>
@@ -214,6 +217,9 @@
 <h3 id="exit-criteria"><a class="header" href="#exit-criteria">Exit Criteria</a></h3>
 <ul>
 <li>Can parse any OpenRA mod’s YAML rules into typed Rust structs</li>
+<li>Can parse any OpenRA mod’s MiniYAML rules into typed Rust structs (runtime conversion, D025)</li>
+<li>Can load an OpenRA mod directory via <code>mod.yaml</code> manifest (D026)</li>
+<li>OpenRA trait name aliases resolve correctly to IC components (D023)</li>
 <li>Can extract and display sprites from .mix archives</li>
 <li>Can convert MiniYAML to standard YAML losslessly</li>
 </ul>
@@ -250,6 +256,11 @@
 <ul>
 <li>ECS-based simulation layer (<code>ra-sim</code>)</li>
 <li>Components mirroring OpenRA traits: Mobile, Health, Attackable, Armament, Building, Buildable, Harvester</li>
+<li><strong>Canonical enum names matching OpenRA (D027):</strong> Locomotor (<code>Foot</code>, <code>Wheeled</code>, <code>Tracked</code>, <code>Float</code>, <code>Fly</code>), Armor (<code>None</code>, <code>Light</code>, <code>Medium</code>, <code>Heavy</code>, <code>Wood</code>, <code>Concrete</code>), Target types, Damage states, Stances</li>
+<li><strong>Condition system (D028):</strong> <code>Conditions</code> component, <code>GrantConditionOn*</code> YAML traits, <code>requires:</code>/<code>disabled_by:</code> on any component field</li>
+<li><strong>Multiplier system (D028):</strong> <code>StatModifiers</code> per-entity modifier stack, fixed-point multiplication, applicable to speed/damage/range/reload/cost/sight</li>
+<li><strong>Full damage pipeline (D028):</strong> Armament → Projectile entity → travel → Warhead(s) → Versus table → DamageMultiplier → Health</li>
+<li><strong>Cross-game component library (D029):</strong> Mind control, carrier/spawner, teleport networks, shield system, upgrade system, delayed weapons (7 first-party systems)</li>
 <li>Fixed-point coordinate system (no floats in sim)</li>
 <li>Deterministic RNG</li>
 <li>Pathfinding: Hierarchical A* or flowfields</li>
@@ -271,6 +282,11 @@
 <li>Can run 1000-unit battle headless at &gt; 60 ticks/second</li>
 <li>Replay file records and plays back correctly (bit-identical)</li>
 <li>State hash matches between two independent runs with same inputs</li>
+<li>Condition system operational: YAML <code>requires:</code>/<code>disabled_by:</code> fields affect component behavior at runtime</li>
+<li>Multiplier system operational: veterancy/terrain/crate modifiers stack and resolve correctly via fixed-point math</li>
+<li>Full damage pipeline: projectile entities travel, warheads apply composable effects, Versus table resolves armor-weapon interactions</li>
+<li>All 7 cross-game components functional: mind control, carriers, teleport networks, shields, upgrades, delayed weapons, dual asset rendering</li>
+<li>OpenRA canonical enum names used for locomotors, armor types, target types, stances (D027)</li>
 </ul>
 <h2 id="phase-3-game-chrome-months-1216"><a class="header" href="#phase-3-game-chrome-months-1216">Phase 3: Game Chrome (Months 12–16)</a></h2>
 <p><strong>Goal:</strong> It feels like Red Alert.</p>
@@ -375,11 +391,19 @@
 <li><strong>Mod templates:</strong> <code>data-mod</code>, <code>scripted-mod</code>, <code>total-conversion</code>, <code>map-pack</code>, <code>asset-pack</code> via <code>ic mod init</code></li>
 <li><strong><code>mod.yaml</code> manifest</strong> with typed schema, semver engine version pinning, dependency declarations</li>
 <li><strong>VS Code extension</strong> for mod development: YAML schema validation, Lua LSP, <code>ic</code> integration</li>
+<li><strong>Workshop resource registry (D030):</strong> Federated multi-source workshop server with crates.io-style dependency resolution</li>
+<li><strong>Dependency management CLI:</strong> <code>ic mod resolve/install/update/tree/lock/audit</code> — full dependency lifecycle</li>
+<li><strong>License enforcement:</strong> Every published resource requires SPDX license; <code>ic mod audit</code> checks dependency tree compatibility</li>
+<li><strong>Individual resource publishing:</strong> Music, sprites, textures, voice lines, cutscenes, palettes, UI themes — all publishable as independent versioned resources</li>
+<li><strong>Lockfile system:</strong> <code>ic.lock</code> for reproducible dependency resolution across machines</li>
 </ul>
 <h3 id="exit-criteria-6"><a class="header" href="#exit-criteria-6">Exit Criteria</a></h3>
 <ul>
 <li>Someone ports an existing OpenRA mod (Tiberian Dawn, Dune 2000) and it runs</li>
 <li>In-engine map editor is more capable than OpenRA’s standalone tool</li>
+<li>A mod can declare 3+ Workshop resource dependencies and <code>ic mod install</code> resolves, downloads, and caches them correctly</li>
+<li><code>ic mod audit</code> correctly identifies license incompatibilities in a dependency tree</li>
+<li>An individual resource (e.g., a music track) can be published to and pulled from the Workshop independently</li>
 </ul>
 <h2 id="phase-7-ai-content--polish-months-3236"><a class="header" href="#phase-7-ai-content--polish-months-3236">Phase 7: AI Content &amp; Polish (Months 32–36+)</a></h2>
 <p><strong>Goal:</strong> LLM-generated missions, visual polish, and feature parity.</p>
@@ -392,6 +416,7 @@
 <li>Mission sharing: rate, remix, publish generated missions</li>
 <li>Campaign generation: connected multi-mission storylines (experimental)</li>
 <li>Adaptive difficulty: AI observes playstyle, generates targeted challenges (experimental)</li>
+<li><strong>LLM-driven Workshop resource discovery (D030):</strong> LLM searches Workshop by <code>llm_meta</code> tags, evaluates fitness, auto-pulls resources as dependencies for generated content; license-aware filtering</li>
 </ul>
 <h3 id="deliverables--visual-polish-bevy-rendering"><a class="header" href="#deliverables--visual-polish-bevy-rendering">Deliverables — Visual Polish (Bevy Rendering)</a></h3>
 <ul>
