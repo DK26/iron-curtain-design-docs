@@ -754,14 +754,177 @@ ic mod update-engine       # bump engine version
 
 ---
 
+## D030: Workshop Resource Registry & Dependency System
+
+**Decision:** The Workshop operates as a crates.io-style resource registry where any game asset — music, sprites, textures, cutscenes, maps, sound effects, palettes, voice lines, UI themes, templates — is publishable as an independent, versioned, licensable resource that others (including LLM agents) can discover, depend on, and pull automatically.
+
+**Rationale:**
+- OpenRA has no resource sharing infrastructure — modders copy-paste files, share on forums, lose attribution
+- Individual resources (a single music track, one sprite sheet) should be as easy to publish and consume as full mods
+- A dependency system eliminates duplication: five mods that need the same HD sprite pack declare it as a dependency instead of each bundling 200MB of sprites
+- License metadata protects community creators and enables automated compatibility checking
+- LLM agents generating missions need a way to discover and pull community assets without human intervention
+- The mod ecosystem grows faster when building blocks are reusable — this is why npm/crates.io/pip changed their respective ecosystems
+
+**Key Design Elements:**
+
+### Resource Identity & Versioning
+
+Every Workshop resource gets a globally unique identifier: `namespace/name@version`.
+
+- **Namespace** = author username or organization (e.g., `alice`, `community-hd-project`)
+- **Name** = resource name, lowercase with hyphens (e.g., `soviet-march-music`, `allied-infantry-hd`)
+- **Version** = semver (e.g., `1.2.0`)
+- Full ID example: `alice/soviet-march-music@1.2.0`
+
+### Resource Categories (Expanded)
+
+Resources aren't limited to mod-sized packages. Granularity is flexible:
+
+| Category          | Granularity Examples                                 |
+| ----------------- | ---------------------------------------------------- |
+| Music             | Single track, album, soundtrack                      |
+| Sound Effects     | Weapon sound pack, ambient loops, UI sounds          |
+| Voice Lines       | EVA pack, unit response set, faction voice pack      |
+| Sprites           | Single unit sheet, building sprites, effects pack    |
+| Textures          | Terrain tileset, UI skin, palette-indexed sprites    |
+| Palettes          | Theater palette, faction palette, seasonal palette   |
+| Maps              | Single map, map pack, tournament map pool            |
+| Missions          | Single mission, mission chain                        |
+| Campaign Chapters | Story arc with persistent state                      |
+| Scene Templates   | Tera scene template for LLM composition              |
+| Mission Templates | Tera mission template for LLM composition            |
+| Cutscenes / Video | Briefing video, in-game cinematic, tutorial clip     |
+| UI Themes         | Sidebar layout, font pack, cursor set                |
+| Balance Presets   | Tuned unit/weapon stats as a selectable preset       |
+| Full Mods         | Traditional mod (may depend on individual resources) |
+
+A published resource is just a `ResourcePackage` with the appropriate `ResourceCategory`. The existing `asset-pack` template and `ic mod publish` flow handle this natively — no separate command needed.
+
+### Dependency Declaration
+
+`mod.yaml` already has a `dependencies:` section. D030 formalizes the resolution semantics:
+
+```yaml
+# mod.yaml
+dependencies:
+  - id: "community-project/hd-infantry-sprites"
+    version: "^2.0"                    # semver range (cargo-style)
+    source: workshop                   # workshop | local | url
+  - id: "alice/soviet-march-music"
+    version: ">=1.0, <3.0"
+    source: workshop
+    optional: true                     # soft dependency — mod works without it
+  - id: "bob/desert-terrain-textures"
+    version: "~1.4"                    # compatible with 1.4.x
+    source: workshop
+```
+
+Resource packages can also declare dependencies on other resources (transitive):
+
+```yaml
+# A mission pack depends on a sprite pack and a music track
+dependencies:
+  - id: "community-project/hd-sprites"
+    version: "^2.0"
+    source: workshop
+  - id: "alice/briefing-videos"
+    version: "^1.0"
+    source: workshop
+```
+
+### Dependency Resolution
+
+Cargo-inspired version solving:
+
+- **Semver ranges:** `^1.2` (>=1.2.0, <2.0.0), `~1.2` (>=1.2.0, <1.3.0), `>=1.0, <3.0`, exact `=1.2.3`
+- **Lockfile:** `ic.lock` records exact resolved versions for reproducible installs
+- **Transitive resolution:** If mod A depends on resource B which depends on resource C, all three are resolved
+- **Conflict detection:** Two dependencies requiring incompatible versions of the same resource → error with resolution suggestions
+- **Deduplication:** Same resource pulled by multiple dependents is stored once in local cache
+
+### CLI Extensions
+
+```
+ic mod resolve         # compute dependency graph, report conflicts
+ic mod install         # download all dependencies to local cache
+ic mod update          # update deps to latest compatible versions (respects semver)
+ic mod tree            # display dependency tree (like `cargo tree`)
+ic mod lock            # regenerate ic.lock from current mod.yaml
+ic mod audit           # check dependency licenses for compatibility
+```
+
+These extend the existing `ic` CLI (D020), not replace it. `ic mod publish` already exists — it now also uploads dependency metadata and validates license presence.
+
+### License System
+
+**Every published Workshop resource MUST have a `license` field.** Publishing without one is rejected.
+
+```yaml
+# In mod.yaml or resource manifest
+mod:
+  license: "CC-BY-SA-4.0"             # SPDX identifier (required for publishing)
+```
+
+- Uses [SPDX identifiers](https://spdx.org/licenses/) for machine-readable license classification
+- Workshop UI displays license prominently on every resource listing
+- `ic mod audit` checks the full dependency tree for license compatibility (e.g., CC-BY-NC dep in a CC-BY mod → warning)
+- Common licenses for game assets: `CC-BY-4.0`, `CC-BY-SA-4.0`, `CC-BY-NC-4.0`, `CC0-1.0`, `MIT`, `GPL-3.0-only`, `LicenseRef-Custom` (with link to full text)
+- Resources with incompatible licenses can coexist in the Workshop but `ic mod audit` warns when combining them
+
+### LLM-Driven Resource Discovery
+
+`ra-llm` can search the Workshop programmatically and incorporate discovered resources into generated content:
+
+```
+Pipeline:
+  1. LLM generates mission concept ("Soviet ambush in snowy forest")
+  2. Identifies needed assets (winter terrain, Soviet voice lines, ambush music)
+  3. Searches Workshop: query="winter terrain textures", tags=["snow", "forest"]
+  4. Evaluates candidates via llm_meta (summary, purpose, composition_hints)
+  5. Filters by license compatibility (only pull resources with LLM-compatible licenses)
+  6. Adds discovered resources as dependencies in generated mod.yaml
+  7. Generated mission references assets by resource ID — resolved at install time
+```
+
+This turns the Workshop into a composable asset library that both humans and AI agents can draw from.
+
+### Workshop Server Resolution (resolves P007)
+
+**Decision: Federated multi-source with merge.** The Workshop client can aggregate listings from multiple sources:
+
+```yaml
+# settings.yaml
+workshop:
+  sources:
+    - url: "https://workshop.ironcurtain.gg"     # official (always included)
+      priority: 1
+    - url: "https://mods.myclan.com/workshop"     # community server
+      priority: 2
+    - path: "C:/my-local-workshop"                # local directory
+      priority: 3
+  deduplicate: true               # same resource ID from multiple sources → highest priority wins
+```
+
+Rationale: Single-source is too limiting for a resource registry. Crates.io has mirrors; npm has registries. A dependency system inherently benefits from federation — tournament organizers publish to their server, LAN parties use local directories, the official server is the default. Deduplication by resource ID + priority ordering handles conflicts.
+
+**Alternatives considered:**
+- Single source only (simpler but doesn't scale for a registry model — what happens when the official server is down?)
+- Full decentralization with no official server (too chaotic for discoverability)
+- Git-based distribution like Go modules (too complex for non-developer modders)
+
+**Phase:** Phase 6 (Workshop infrastructure), with preparatory work in Phase 3 (manifest format finalized) and Phase 4 (LLM integration).
+
+---
+
 ## PENDING DECISIONS
 
-| ID   | Topic                                                         | Needs Resolution By |
-| ---- | ------------------------------------------------------------- | ------------------- |
-| P001 | ~~ECS crate choice~~ — RESOLVED: Bevy's built-in ECS          | Resolved            |
-| P002 | Fixed-point scale (256? 1024? match OpenRA's 1024?)           | Phase 2 start       |
-| P003 | Audio library choice                                          | Phase 3 start       |
-| P004 | Lobby/matchmaking protocol specifics                          | Phase 5 start       |
-| P005 | Map editor architecture (in-engine vs separate process)       | Phase 6 start       |
-| P006 | License choice (GPL v3 to match EA source? MIT? Apache?)      | Phase 0 start       |
-| P007 | Workshop: single source vs multi-source (see `04-MODDING.md`) | Phase 6 start       |
+| ID   | Topic                                                                                 | Needs Resolution By |
+| ---- | ------------------------------------------------------------------------------------- | ------------------- |
+| P001 | ~~ECS crate choice~~ — RESOLVED: Bevy's built-in ECS                                  | Resolved            |
+| P002 | Fixed-point scale (256? 1024? match OpenRA's 1024?)                                   | Phase 2 start       |
+| P003 | Audio library choice                                                                  | Phase 3 start       |
+| P004 | Lobby/matchmaking protocol specifics                                                  | Phase 5 start       |
+| P005 | Map editor architecture (in-engine vs separate process)                               | Phase 6 start       |
+| P006 | License choice (GPL v3 to match EA source? MIT? Apache?)                              | Phase 0 start       |
+| P007 | ~~Workshop: single source vs multi-source~~ — RESOLVED: Federated multi-source (D030) | Resolved            |

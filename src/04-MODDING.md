@@ -953,18 +953,25 @@ A "convoy escort with two ambushes and a base-building finale" is 3 scene templa
 
 ### Templates as Workshop Resources
 
-Scene templates and mission templates are both first-class workshop resource types — shared, rated, versioned, and downloadable like any other content.
+Scene templates and mission templates are both first-class workshop resource types — shared, rated, versioned, and downloadable like any other content. See the full resource category taxonomy in the [Workshop Resource Registry](#workshop-resource-registry--dependency-system-d030) section below.
 
-| Type                  | Contents                                  | Examples                                          |
-| --------------------- | ----------------------------------------- | ------------------------------------------------- |
-| Mods                  | YAML rules + Lua scripts + WASM modules   | Total conversions, balance patches, new factions  |
-| Maps                  | `.oramap` or native map format            | Skirmish maps, campaign maps                      |
-| Missions              | YAML map + Lua triggers + briefing        | Hand-crafted or LLM-generated scenarios           |
-| **Scene Templates**   | **Tera-templated Lua + schema**           | **Reusable sub-mission building blocks**          |
-| **Mission Templates** | **Tera templates + scene refs + schema**  | **Full parameterized mission blueprints**         |
-| Campaigns             | Ordered mission sets + narrative          | Multi-mission storylines                          |
-| Assets                | Sprites, music, sounds, palettes          | HD unit packs, custom soundtracks, voice packs    |
-| **Media**             | **Video files (`.vqa`, `.mp4`, `.webm`)** | **Custom briefings, cutscenes, narrative videos** |
+| Type                  | Contents                                 | Examples                                         |
+| --------------------- | ---------------------------------------- | ------------------------------------------------ |
+| Mods                  | YAML rules + Lua scripts + WASM modules  | Total conversions, balance patches, new factions |
+| Maps                  | `.oramap` or native map format           | Skirmish maps, campaign maps, tournament pools   |
+| Missions              | YAML map + Lua triggers + briefing       | Hand-crafted or LLM-generated scenarios          |
+| **Scene Templates**   | **Tera-templated Lua + schema**          | **Reusable sub-mission building blocks**         |
+| **Mission Templates** | **Tera templates + scene refs + schema** | **Full parameterized mission blueprints**        |
+| Campaigns             | Ordered mission sets + narrative         | Multi-mission storylines                         |
+| Music                 | Audio tracks (`.ogg`, `.mp3`, `.flac`)   | Custom soundtracks, faction themes, menu music   |
+| Sound Effects         | Audio clips                              | Weapon sounds, ambient loops, UI feedback        |
+| Voice Lines           | Audio clips + trigger metadata           | EVA packs, unit responses, faction voice sets    |
+| Sprites               | `.shp`, `.png`, sprite sheets            | HD unit packs, building sprites, effects packs   |
+| Textures              | Terrain tiles, UI skins                  | Theater tilesets, seasonal terrain variants      |
+| Palettes              | `.pal` files                             | Theater palettes, faction colors, seasonal       |
+| Cutscenes / Video     | `.vqa`, `.mp4`, `.webm`                  | Custom briefings, cinematics, narrative videos   |
+| UI Themes             | Chrome layouts, fonts, cursors           | Alternative sidebars, HD cursor packs            |
+| Balance Presets       | YAML rule overrides                      | Competitive tuning, historical accuracy presets  |
 
 ## Campaign System (Branching, Persistent, Continuous)
 
@@ -1273,61 +1280,265 @@ The template/scene system makes this tractable — the LLM composes from known b
 
 ### Configurable Workshop Server
 
-The client connects to one workshop server at a time, configurable in settings. Players can point to the official server, a community server, or a local directory.
+The Workshop is a **federated multi-source registry** (D030). The client aggregates listings from multiple sources simultaneously, with priority-based deduplication.
 
 ```yaml
 # settings.yaml
 workshop:
-  # Choose one active source:
-  url: "https://workshop.ironcurtain.gg"       # official (default)
-  # url: "https://mods.myclan.com/workshop"     # community-hosted
-  # path: "C:/my-local-workshop"                # local directory (offline/dev)
+  sources:
+    - url: "https://workshop.ironcurtain.gg"     # official (always included, default)
+      priority: 1                                 # highest priority
+    - url: "https://mods.myclan.com/workshop"     # community-hosted
+      priority: 2
+    - path: "C:/my-local-workshop"                # local directory (offline/dev)
+      priority: 3
+  deduplicate: true               # same resource ID from multiple sources → highest priority wins
 ```
 
-**Official server:** We host one. Default for all players. Curated categories, search, ratings.
+**Official server:** We host one. Default for all players. Curated categories, search, ratings, download counts.
 
-**Community servers:** Anyone can host their own (open-source server). Clans, modding communities, tournament organizers. Useful for private content, regional servers, or alternative curation policies.
+**Community servers:** Anyone can host their own (open-source server binary, same Rust stack as relay/tracking servers). Clans, modding communities, tournament organizers. Useful for private content, regional servers, or alternative curation policies.
 
-**Local directory:** A folder on disk that follows the same structure. Works offline. Ideal for mod developers testing before publishing, or LAN-party content distribution.
+**Local directory:** A folder on disk that follows the Workshop directory structure. Works offline. Ideal for mod developers testing before publishing, or LAN-party content distribution.
 
-### Open Question: Single vs Multi-Source
+**Why federated multi-source:** A dependency system inherently benefits from federation — tournament organizers publish to their server, LAN parties use local directories, the official server is the default. Deduplication by resource ID + priority ordering handles conflicts cleanly. If the official server is unreachable, community mirrors and local caches still resolve dependencies.
 
-> **Undecided:** Should the client support multiple active workshop sources simultaneously (merge listings from several servers), or limit to one at a time?
->
-> - **Single source** — simpler UI, no conflict resolution, no duplicate detection. Switch between sources explicitly.
-> - **Multi-source** — more flexible, but needs deduplication, priority ordering, and conflict handling when two sources provide the same resource.
->
-> Leaning toward single source for simplicity. Revisit if community demand emerges.
+### Workshop Resource Registry & Dependency System (D030)
 
-### LLM Integration
+The Workshop operates as a **crates.io-style resource registry**. Any game asset — music, sprites, textures, cutscenes, maps, sound effects, voice lines, templates, balance presets — is individually publishable as a versioned, licensed resource. Others (including LLM agents) can discover, depend on, and pull resources automatically.
 
-The `ra-llm` crate can access workshop content as context for generation:
-- Browse existing maps for terrain style inspiration
-- Reference community unit definitions when generating missions
-- Pull asset packs to use in generated content
-- **Reference workshop media** (videos, cutscenes) in generated scenarios — e.g., an LLM-generated mission can include `video_playback` scene triggers that pull community-created briefing videos from the workshop
-- Publish generated missions directly to the workshop for sharing
+#### Resource Identity & Versioning
 
-The LLM sees workshop resources through their `llm_meta` fields. A video tagged `summary: "Soviet commander briefing, urgent tone, 30 seconds"` lets the LLM intelligently select it for a mission's opening briefing trigger.
+Every Workshop resource gets a globally unique identifier:
+
+```
+Format:  namespace/name@version
+Example: alice/soviet-march-music@1.2.0
+         community-hd-project/allied-infantry-sprites@2.1.0
+         bob/desert-tileset@1.0.3
+```
+
+- **Namespace** = author username or organization
+- **Name** = resource name, lowercase with hyphens
+- **Version** = semantic versioning (semver)
+
+#### Dependency Declaration in `mod.yaml`
+
+Mods and resources declare dependencies on other Workshop resources:
+
+```yaml
+# mod.yaml
+dependencies:
+  - id: "community-project/hd-infantry-sprites"
+    version: "^2.0"                    # semver range (cargo-style)
+    source: workshop                   # workshop | local | url
+  - id: "alice/soviet-march-music"
+    version: ">=1.0, <3.0"
+    source: workshop
+    optional: true                     # soft dependency — mod works without it
+  - id: "bob/desert-terrain-textures"
+    version: "~1.4"                    # compatible with 1.4.x
+    source: workshop
+```
+
+Dependencies are **transitive** — if resource A depends on B, and B depends on C, installing A pulls all three.
+
+#### Dependency Resolution
+
+Cargo-inspired version solving with lockfile:
+
+| Concept               | Behavior                                                                          |
+| --------------------- | --------------------------------------------------------------------------------- |
+| Semver ranges         | `^1.2` (>=1.2.0, <2.0.0), `~1.2` (>=1.2.0, <1.3.0), `>=1.0, <3.0`, exact `=1.2.3` |
+| Lockfile (`ic.lock`)  | Records exact resolved versions for reproducible installs                         |
+| Transitive resolution | Pulled automatically; diamond dependencies resolved to compatible version         |
+| Conflict detection    | Two deps require incompatible versions → error with suggestions                   |
+| Deduplication         | Same resource from multiple dependents stored once in local cache                 |
+| Optional dependencies | `optional: true` — mod works without it; UI offers to install if available        |
+
+#### CLI Commands for Dependency Management
+
+These extend the `ic` CLI (D020):
+
+```
+ic mod resolve         # compute dependency graph, report conflicts
+ic mod install         # download all dependencies to local cache
+ic mod update          # update deps to latest compatible versions (respects semver)
+ic mod tree            # display dependency tree (like `cargo tree`)
+ic mod lock            # regenerate ic.lock from current mod.yaml
+ic mod audit           # check dependency licenses for compatibility
+```
+
+Example workflow:
+```
+$ ic mod install
+  Resolving dependencies...
+  Downloading community-project/hd-infantry-sprites@2.1.0 (12.4 MB)
+  Downloading alice/soviet-march-music@1.2.0 (4.8 MB)
+  Downloading bob/desert-terrain-textures@1.4.1 (8.2 MB)
+  3 resources installed, 25.4 MB total
+  Lock file written: ic.lock
+
+$ ic mod tree
+  my-total-conversion@1.0.0
+  ├── community-project/hd-infantry-sprites@2.1.0
+  │   └── community-project/base-palettes@1.0.0
+  ├── alice/soviet-march-music@1.2.0
+  └── bob/desert-terrain-textures@1.4.1
+
+$ ic mod audit
+  ✓ All 4 dependencies have compatible licenses
+  ✓ Your mod (CC-BY-SA-4.0) is compatible with:
+    - hd-infantry-sprites (CC-BY-4.0) ✓
+    - soviet-march-music (CC0-1.0) ✓
+    - desert-terrain-textures (CC-BY-SA-4.0) ✓
+    - base-palettes (CC0-1.0) ✓
+```
+
+#### License System
+
+**Every published Workshop resource MUST have a `license` field.** Publishing without one is rejected by the Workshop server and by `ic mod publish`.
+
+```yaml
+# In mod.yaml
+mod:
+  license: "CC-BY-SA-4.0"             # SPDX identifier (required for publishing)
+```
+
+- Uses [SPDX identifiers](https://spdx.org/licenses/) for machine-readable classification
+- Workshop UI displays license prominently on every resource listing
+- `ic mod audit` checks the full dependency tree for license compatibility
+- Common licenses for game assets:
+
+| License             | Allows commercial use | Requires attribution | Share-alike | Notes                       |
+| ------------------- | --------------------- | -------------------- | ----------- | --------------------------- |
+| `CC0-1.0`           | ✅                     | ❌                    | ❌           | Public domain equivalent    |
+| `CC-BY-4.0`         | ✅                     | ✅                    | ❌           | Most permissive with credit |
+| `CC-BY-SA-4.0`      | ✅                     | ✅                    | ✅           | Copyleft for creative works |
+| `CC-BY-NC-4.0`      | ❌                     | ✅                    | ❌           | Non-commercial only         |
+| `MIT`               | ✅                     | ✅                    | ❌           | For code assets             |
+| `GPL-3.0-only`      | ✅                     | ✅                    | ✅           | For code (EA source compat) |
+| `LicenseRef-Custom` | varies                | varies               | varies      | Link to full text required  |
+
+#### Publishing Workflow
+
+Publishing uses the existing `ic mod init` + `ic mod publish` flow — resources are packages with the appropriate `ResourceCategory`:
+
+```
+# Publish a single music track
+ic mod init asset-pack
+# Edit mod.yaml: set category to "Music", add license, add llm_meta
+# Add audio files
+ic mod check                   # validates license present, llm_meta recommended
+ic mod publish                 # uploads to Workshop with dependency metadata
+```
+
+```yaml
+# Example: publishing a music pack
+mod:
+  id: alice/soviet-march-music
+  title: "Soviet March — Original Composition"
+  version: "1.2.0"
+  authors: ["alice"]
+  description: "An original military march composition for Soviet faction missions"
+  license: "CC-BY-4.0"
+  category: Music
+
+assets:
+  media: ["audio/soviet-march.ogg"]
+
+llm:
+  summary: "Military march music, Soviet theme, 2:30 duration, orchestral"
+  purpose: "Background music for Soviet mission briefings or victory screens"
+  gameplay_tags: [soviet, military, march, orchestral, briefing]
+  composition_hints: "Pairs well with Soviet faction voice lines for immersive briefings"
+```
+
+### LLM-Driven Resource Discovery (D030)
+
+The `ra-llm` crate can search the Workshop programmatically and incorporate discovered resources into generated content:
+
+**Discovery pipeline:**
+
+```
+  ┌─────────────────────────────────────────────────────────────────┐
+  │ LLM generates mission concept                                  │
+  │ ("Soviet ambush in snowy forest with dramatic briefing")        │
+  └──────────────┬──────────────────────────────────────────────────┘
+                 │
+                 ▼
+  ┌─────────────────────────────────────────────────────────────────┐
+  │ Identify needed assets                                          │
+  │ → winter terrain textures                                       │
+  │ → Soviet voice lines                                            │
+  │ → ambush/tension music                                          │
+  │ → briefing video (optional)                                     │
+  └──────────────┬──────────────────────────────────────────────────┘
+                 │
+                 ▼
+  ┌─────────────────────────────────────────────────────────────────┐
+  │ Search Workshop via WorkshopClient                              │
+  │ → query="winter terrain", tags=["snow", "forest"]              │
+  │ → query="Soviet voice lines", tags=["soviet", "military"]     │
+  │ → query="tension music", tags=["ambush", "suspense"]          │
+  └──────────────┬──────────────────────────────────────────────────┘
+                 │
+                 ▼
+  ┌─────────────────────────────────────────────────────────────────┐
+  │ Evaluate candidates via llm_meta                                │
+  │ → Read summary, purpose, composition_hints                      │
+  │ → Filter by license compatibility                               │
+  │ → Rank by gameplay_tags match score                             │
+  └──────────────┬──────────────────────────────────────────────────┘
+                 │
+                 ▼
+  ┌─────────────────────────────────────────────────────────────────┐
+  │ Add discovered resources as dependencies in generated mod.yaml │
+  │ → Generated mission references assets by resource ID            │
+  │ → Dependencies resolved at install time via `ic mod install`   │
+  └─────────────────────────────────────────────────────────────────┘
+```
+
+The LLM sees workshop resources through their `llm_meta` fields. A music track tagged `summary: "Military march, Soviet theme, orchestral, 2:30"` and `composition_hints: "Pairs well with Soviet faction voice lines"` lets the LLM intelligently select and compose assets for a coherent mission experience.
+
+**License-aware generation:** The LLM filters by license compatibility — if generating content for a CC-BY mod, it only pulls CC-BY-compatible resources (`CC0-1.0`, `CC-BY-4.0`), excluding `CC-BY-NC-4.0` or `CC-BY-SA-4.0` unless the mod's own license is compatible.
 
 ### Workshop API
 
 ```rust
 pub trait WorkshopClient: Send + Sync {
     fn browse(&self, filter: &ResourceFilter) -> Result<Vec<ResourceListing>>;
-    fn download(&self, id: &ResourceId) -> Result<ResourcePackage>;
+    fn download(&self, id: &ResourceId, version: &VersionReq) -> Result<ResourcePackage>;
     fn publish(&self, package: &ResourcePackage) -> Result<ResourceId>;
     fn rate(&self, id: &ResourceId, rating: Rating) -> Result<()>;
     fn search(&self, query: &str, category: ResourceCategory) -> Result<Vec<ResourceListing>>;
+    fn resolve(&self, deps: &[Dependency]) -> Result<DependencyGraph>;   // D030: dep resolution
+    fn audit_licenses(&self, graph: &DependencyGraph) -> Result<LicenseReport>; // D030: license check
+}
+
+/// Globally unique resource identifier: "namespace/name@version"
+pub struct ResourceId {
+    pub namespace: String,
+    pub name: String,
+    pub version: Version,             // semver
+}
+
+pub struct Dependency {
+    pub id: String,                   // "namespace/name"
+    pub version: VersionReq,          // semver range
+    pub source: DependencySource,     // Workshop, Local, Url
+    pub optional: bool,
 }
 
 pub struct ResourcePackage {
-    pub meta: ResourceMeta,           // name, author, version, description, tags
-    pub llm_meta: Option<LlmResourceMeta>, // LLM-readable description (see below)
-    pub category: ResourceCategory,   // Mod, Map, Mission, MissionTemplate, Campaign, Asset
-    pub files: Vec<PackageFile>,      // the actual content (YAML, Lua, sprites, etc.)
-    pub dependencies: Vec<ResourceId>,// other workshop items this requires
-    pub compatibility: VersionInfo,   // engine version + mod version this targets
+    pub id: ResourceId,               // globally unique identifier
+    pub meta: ResourceMeta,           // title, author, description, tags
+    pub license: String,              // SPDX identifier (REQUIRED)
+    pub llm_meta: Option<LlmResourceMeta>, // LLM-readable description
+    pub category: ResourceCategory,   // Music, Sprites, Map, Mod, etc.
+    pub files: Vec<PackageFile>,      // the actual content
+    pub dependencies: Vec<Dependency>,// other workshop items this requires
+    pub compatibility: VersionInfo,   // engine version + game module this targets
 }
 
 /// LLM-readable metadata for workshop resources.
@@ -1338,6 +1549,16 @@ pub struct LlmResourceMeta {
     pub gameplay_tags: Vec<String>,   // semantic: ["desert", "2v2", "competitive", "scarce_resources"]
     pub difficulty: Option<String>,   // for missions/campaigns: "hard", "beginner-friendly"
     pub composition_hints: Option<String>, // how this combines with other resources
+}
+
+pub struct DependencyGraph {
+    pub resolved: Vec<ResolvedDependency>, // all deps with exact versions
+    pub conflicts: Vec<DependencyConflict>, // incompatible version requirements
+}
+
+pub struct LicenseReport {
+    pub compatible: bool,
+    pub issues: Vec<LicenseIssue>,    // e.g., "CC-BY-NC dep in CC-BY mod"
 }
 ```
 

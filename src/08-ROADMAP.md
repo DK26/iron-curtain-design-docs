@@ -212,10 +212,18 @@ Units moving, shooting, dying — headless sim + rendered. Record replay file. P
 - **Mod templates:** `data-mod`, `scripted-mod`, `total-conversion`, `map-pack`, `asset-pack` via `ic mod init`
 - **`mod.yaml` manifest** with typed schema, semver engine version pinning, dependency declarations
 - **VS Code extension** for mod development: YAML schema validation, Lua LSP, `ic` integration
+- **Workshop resource registry (D030):** Federated multi-source workshop server with crates.io-style dependency resolution
+- **Dependency management CLI:** `ic mod resolve/install/update/tree/lock/audit` — full dependency lifecycle
+- **License enforcement:** Every published resource requires SPDX license; `ic mod audit` checks dependency tree compatibility
+- **Individual resource publishing:** Music, sprites, textures, voice lines, cutscenes, palettes, UI themes — all publishable as independent versioned resources
+- **Lockfile system:** `ic.lock` for reproducible dependency resolution across machines
 
 ### Exit Criteria
 - Someone ports an existing OpenRA mod (Tiberian Dawn, Dune 2000) and it runs
 - In-engine map editor is more capable than OpenRA's standalone tool
+- A mod can declare 3+ Workshop resource dependencies and `ic mod install` resolves, downloads, and caches them correctly
+- `ic mod audit` correctly identifies license incompatibilities in a dependency tree
+- An individual resource (e.g., a music track) can be published to and pulled from the Workshop independently
 
 ## Phase 7: AI Content & Polish (Months 32–36+)
 
@@ -229,6 +237,7 @@ Units moving, shooting, dying — headless sim + rendered. Record replay file. P
 - Mission sharing: rate, remix, publish generated missions
 - Campaign generation: connected multi-mission storylines (experimental)
 - Adaptive difficulty: AI observes playstyle, generates targeted challenges (experimental)
+- **LLM-driven Workshop resource discovery (D030):** LLM searches Workshop by `llm_meta` tags, evaluates fitness, auto-pulls resources as dependencies for generated content; license-aware filtering
 
 ### Deliverables — Visual Polish (Bevy Rendering)
 - Full post-processing pipeline: bloom, color grading, ambient occlusion
