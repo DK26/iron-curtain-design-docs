@@ -1776,6 +1776,8 @@ pub trait WorkshopClient: Send + Sync {
     fn audit_licenses(&self, graph: &DependencyGraph) -> Result<LicenseReport>; // D030: license check
     fn promote(&self, id: &ResourceId, to_channel: Channel) -> Result<()>; // D030: channel promotion
     fn replicate(&self, filter: &ResourceFilter, target: &str) -> Result<ReplicationReport>; // D030: pull replication
+    fn create_token(&self, name: &str, scopes: &[TokenScope], expires: Duration) -> Result<ApiToken>; // CI/CD auth
+    fn revoke_token(&self, token_id: &str) -> Result<()>; // CI/CD: revoke compromised tokens
 }
 
 /// Globally unique resource identifier: "namespace/name@version"
@@ -1867,6 +1869,8 @@ ic mod publish             # publish to workshop
 ic mod update-engine       # update engine version in mod.yaml
 ic mod lint                # style/convention checks + llm: metadata completeness
 ic mod watch               # hot-reload mode: watches files, reloads YAML/Lua on change
+ic auth token create       # create scoped API token for CI/CD (publish, promote, admin)
+ic auth token revoke       # revoke a leaked or expired token
 ```
 
 **Why a CLI, not just scripts:**
@@ -1874,7 +1878,74 @@ ic mod watch               # hot-reload mode: watches files, reloads YAML/Lua on
 - Cross-platform (Windows, macOS, Linux) from one codebase
 - Rich error messages with fix suggestions
 - Integrates with the workshop API
-- Can be embedded in CI/CD pipelines
+- Designed for CI/CD — all commands work headless (no interactive prompts)
+
+### Continuous Deployment for Workshop Authors
+
+The `ic` CLI is designed to run unattended in CI pipelines. Every command that touches the Workshop API accepts a `--token` flag (or reads `IC_WORKSHOP_TOKEN` from the environment) for headless authentication. No interactive login required.
+
+**API tokens:**
+
+```
+ic auth token create --name "github-actions" --scope publish,promote --expires 90d
+```
+
+Tokens are scoped — a token can be limited to `publish` (upload only), `promote` (change channels), or `admin` (full access). Tokens expire. Leaked tokens can be revoked instantly via `ic auth token revoke` or the Workshop web UI.
+
+**Example: GitHub Actions workflow**
+
+```yaml
+# .github/workflows/publish.yml
+name: Publish to Workshop
+on:
+  push:
+    tags: ["v*"]        # trigger on version tags
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install IC CLI
+        run: curl -sSf https://install.ironcurtain.gg | sh
+
+      - name: Validate mod
+        run: ic mod check
+
+      - name: Run smoke tests
+        run: ic mod test --headless
+
+      - name: Publish to beta channel
+        run: ic mod publish --channel beta
+        env:
+          IC_WORKSHOP_TOKEN: ${{ secrets.IC_WORKSHOP_TOKEN }}
+
+      # Optional: auto-promote to release after beta soak period
+      - name: Promote to release
+        if: github.ref_type == 'tag' && !contains(github.ref_name, '-beta')
+        run: ic mod promote ${{ github.ref_name }} release
+        env:
+          IC_WORKSHOP_TOKEN: ${{ secrets.IC_WORKSHOP_TOKEN }}
+```
+
+**What this enables:**
+
+| Workflow | Description |
+| --- | --- |
+| **Tag-triggered publish** | Push a `v1.2.0` tag → CI validates, tests headless, publishes to Workshop automatically |
+| **Beta channel CI** | Every merge to `main` publishes to `beta` channel; explicit tag promotes to `release` |
+| **Multi-resource monorepo** | A single repo with multiple resource packs, each published independently via matrix builds |
+| **Automated quality gates** | `ic mod check` + `ic mod test` + `ic mod audit` run before every publish — catch broken YAML, missing licenses, incompatible deps |
+| **Scheduled rebuilds** | Cron-triggered CI re-publishes against latest engine version to catch compatibility regressions early |
+
+**GitLab CI, Gitea Actions, and any other CI system** work identically — the `ic` CLI is a single static binary with no runtime dependencies. Download it, set `IC_WORKSHOP_TOKEN`, run `ic mod publish`.
+
+**Self-hosted Workshop servers** accept the same tokens and API — authors publishing to a community Workshop server use the same CI workflow, just pointed at a different `--server` URL:
+
+```
+ic mod publish --server https://mods.myclan.com/workshop --channel release
+```
 
 ### Mod Manifest (`mod.yaml`)
 

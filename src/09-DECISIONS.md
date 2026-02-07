@@ -765,6 +765,7 @@ ic mod update-engine       # bump engine version
 - License metadata protects community creators and enables automated compatibility checking
 - LLM agents generating missions need a way to discover and pull community assets without human intervention
 - The mod ecosystem grows faster when building blocks are reusable — this is why npm/crates.io/pip changed their respective ecosystems
+- CI/CD-friendly publishing (headless CLI, scoped API tokens) lets serious mod teams automate their release pipeline — no manual uploads
 
 **Key Design Elements:**
 
@@ -909,6 +910,18 @@ ic mod audit           # check dependency licenses for compatibility
 ```
 
 These extend the existing `ic` CLI (D020), not replace it. `ic mod publish` already exists — it now also uploads dependency metadata and validates license presence.
+
+### Continuous Deployment
+
+The `ic` CLI is designed for CI/CD pipelines — every command works headless (no interactive prompts). Authors authenticate via scoped API tokens (`IC_WORKSHOP_TOKEN` environment variable or `--token` flag). Tokens are scoped to specific operations (`publish`, `promote`, `admin`) and expire after a configurable duration. This enables:
+
+- **Tag-triggered publish:** Push a `v1.2.0` git tag → CI validates, tests headless, publishes to Workshop automatically
+- **Beta channel CI:** Every merge to `main` publishes to `beta`; explicit tag promotes to `release`
+- **Multi-resource monorepos:** Matrix builds publish multiple resource packs from a single repo
+- **Automated quality gates:** `ic mod check` + `ic mod test` + `ic mod audit` run before every publish
+- **Scheduled compatibility checks:** Cron-triggered CI re-publishes against latest engine version to catch regressions
+
+Works with GitHub Actions, GitLab CI, Gitea Actions, or any CI system — the CLI is a single static binary. See `04-MODDING.md` § "Continuous Deployment for Workshop Authors" for the full workflow including a GitHub Actions example.
 
 ### License System
 
