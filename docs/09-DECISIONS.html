@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-951f560d.js";
+            window.path_to_searchindex_js = "searchindex-ddb12168.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-d8a85e3a.js"></script>
@@ -405,6 +405,16 @@
 <li>Same format as hand-crafted missions — no special runtime</li>
 <li>Validation pass ensures generated content is playable (valid unit types, reachable objectives)</li>
 <li>Can use local models or API-based models (user choice)</li>
+</ul>
+<p><strong>Bring-Your-Own-LLM (BYOLLM) architecture:</strong></p>
+<ul>
+<li><code>ra-llm</code> defines a <code>LlmProvider</code> trait — any backend that accepts a prompt and returns structured text</li>
+<li>Built-in providers: OpenAI-compatible API, local Ollama/llama.cpp, Anthropic API</li>
+<li>Users configure their provider in settings (API key, endpoint, model name)</li>
+<li>The engine never ships or requires a specific model — the user chooses</li>
+<li>Provider is a runtime setting, not a compile-time dependency</li>
+<li>All prompts and responses are logged (opt-in) for debugging and sharing</li>
+<li>Offline mode: pre-generated content works without any LLM connection</li>
 </ul>
 <hr>
 <h2 id="d017-bevy-rendering-pipeline-for-visual-enhancement"><a class="header" href="#d017-bevy-rendering-pipeline-for-visual-enhancement">D017: Bevy Rendering Pipeline for Visual Enhancement</a></h2>

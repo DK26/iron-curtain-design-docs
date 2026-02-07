@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-951f560d.js";
+            window.path_to_searchindex_js = "searchindex-ddb12168.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-d8a85e3a.js"></script>
@@ -643,10 +643,51 @@ Campaign          — ordered mission sequence with narrative
 <tr><td><code>timed_objective</code></td><td>target, time_limit, failure_trigger</td><td>Player must complete objective before timer expires</td></tr>
 <tr><td><code>reinforcements</code></td><td>trigger, units, entry_point, delay</td><td>Units arrive from map edge when trigger fires</td></tr>
 <tr><td><code>scripted_scene</code></td><td>actors[], dialogue[], camera_positions[]</td><td>Non-interactive cutscene or briefing with camera movement</td></tr>
+<tr><td><code>video_playback</code></td><td>video_ref, trigger, display_mode, skippable</td><td>Play a video on trigger — see display modes below</td></tr>
+<tr><td><code>weather</code></td><td>type, intensity, trigger, duration, sim_effects</td><td>Weather system — see weather effects below</td></tr>
 <tr><td><code>extraction</code></td><td>pickup_zone, transport_type, signal_trigger</td><td>Player moves units to extraction zone, transport arrives</td></tr>
 </tbody>
 </table>
 </div>
+<p><strong><code>video_playback</code> display modes:</strong></p>
+<p>The <code>display_mode</code> parameter controls <em>where</em> the video renders:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Mode</th><th>Behavior</th><th>Inspiration</th></tr>
+</thead>
+<tbody>
+<tr><td><code>fullscreen</code></td><td>Pauses gameplay, fills screen. Classic FMV briefing between missions.</td><td>RA1 mission briefings</td></tr>
+<tr><td><code>radar_comm</code></td><td>Video replaces the radar/minimap panel during gameplay. Game continues. RA2-style comm.</td><td>RA2 EVA / commander video calls</td></tr>
+<tr><td><code>picture_in_picture</code></td><td>Small floating video overlay in a corner. Game continues. Dismissible.</td><td>Modern RTS cinematics</td></tr>
+</tbody>
+</table>
+</div>
+<p><code>radar_comm</code> is how RA2 handles in-mission conversations — the radar panel temporarily switches to a video feed of a character addressing the player, then returns to the minimap when the clip ends. The sidebar stays functional (build queues, power bar still visible). This creates narrative immersion without interrupting gameplay.</p>
+<p>The LLM can use this in generated missions: a briefing video at mission start (<code>fullscreen</code>), a commander calling in mid-mission when a trigger fires (<code>radar_comm</code>), and a small notification video when reinforcements arrive (<code>picture_in_picture</code>).</p>
+<p><strong><code>weather</code> scene template:</strong></p>
+<p>Weather effects are GPU particle systems rendered by <code>ra-render</code>, with optional gameplay modifiers applied by <code>ra-sim</code>.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Type</th><th>Visual Effect</th><th>Optional Sim Effect (if <code>sim_effects: true</code>)</th></tr>
+</thead>
+<tbody>
+<tr><td><code>rain</code></td><td>GPU particle rain, puddle reflections, darkened ambient lighting</td><td>Reduced visibility range (−20%), slower wheeled vehicles</td></tr>
+<tr><td><code>snow</code></td><td>GPU particle snowfall, accumulation on terrain, white fog</td><td>Reduced movement speed (−15%), reduced visibility (−30%)</td></tr>
+<tr><td><code>sandstorm</code></td><td>Dense particle wall, orange tint, reduced draw distance</td><td>Heavy visibility reduction (−50%), damage to exposed infantry</td></tr>
+<tr><td><code>blizzard</code></td><td>Heavy snow + wind particles, near-zero visibility</td><td>Severe speed/visibility penalty, periodic cold damage</td></tr>
+<tr><td><code>fog</code></td><td>Volumetric fog shader, reduced contrast at distance</td><td>Reduced visibility range (−40%), no other penalties</td></tr>
+<tr><td><code>storm</code></td><td>Rain + lightning flashes + screen shake + thunder audio</td><td>Same as rain + random lightning strikes (cosmetic or damaging)</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Key design principle:</strong> Weather is split into two layers:</p>
+<ul>
+<li><strong>Render layer</strong> (<code>ra-render</code>): Always active. GPU particles, shaders, post-FX, ambient audio changes. Pure cosmetic, zero sim impact. Particle density scales with <code>RenderSettings</code> for lower-end devices.</li>
+<li><strong>Sim layer</strong> (<code>ra-sim</code>): Optional, controlled by <code>sim_effects</code> parameter. When enabled, weather modifies visibility ranges, movement speeds, and damage — deterministically, so multiplayer stays in sync. When disabled, weather is purely cosmetic eye candy.</li>
+</ul>
+<p>Weather can be set per-map (in map YAML), triggered mid-mission by Lua scripts, or composed via the <code>weather</code> scene template. An LLM generating a “blizzard defense” mission sets <code>type: blizzard, sim_effects: true</code> and gets both the visual atmosphere and the gameplay tension.</p>
 <p><strong>Scene template structure:</strong></p>
 <pre><code>scenes/
   ambush/
@@ -724,6 +765,7 @@ scenes:
 <tr><td><strong>Mission Templates</strong></td><td><strong>Tera templates + scene refs + schema</strong></td><td><strong>Full parameterized mission blueprints</strong></td></tr>
 <tr><td>Campaigns</td><td>Ordered mission sets + narrative</td><td>Multi-mission storylines</td></tr>
 <tr><td>Assets</td><td>Sprites, music, sounds, palettes</td><td>HD unit packs, custom soundtracks, voice packs</td></tr>
+<tr><td><strong>Media</strong></td><td><strong>Video files (<code>.vqa</code>, <code>.mp4</code>, <code>.webm</code>)</strong></td><td><strong>Custom briefings, cutscenes, narrative videos</strong></td></tr>
 </tbody>
 </table>
 </div>
@@ -754,8 +796,10 @@ workshop:
 <li>Browse existing maps for terrain style inspiration</li>
 <li>Reference community unit definitions when generating missions</li>
 <li>Pull asset packs to use in generated content</li>
+<li><strong>Reference workshop media</strong> (videos, cutscenes) in generated scenarios — e.g., an LLM-generated mission can include <code>video_playback</code> scene triggers that pull community-created briefing videos from the workshop</li>
 <li>Publish generated missions directly to the workshop for sharing</li>
 </ul>
+<p>The LLM sees workshop resources through their <code>ai_meta</code> fields. A video tagged <code>summary: "Soviet commander briefing, urgent tone, 30 seconds"</code> lets the LLM intelligently select it for a mission’s opening briefing trigger.</p>
 <h3 id="workshop-api"><a class="header" href="#workshop-api">Workshop API</a></h3>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {

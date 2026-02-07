@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-951f560d.js";
+            window.path_to_searchindex_js = "searchindex-ddb12168.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-d8a85e3a.js"></script>
@@ -220,7 +220,7 @@
 <ul>
 <li>Post-processing: bloom, color grading, screen-space reflections on water</li>
 <li>Dynamic lighting: explosions illuminate surroundings, day/night cycles</li>
-<li>GPU particle systems: smoke, fire, debris, weather</li>
+<li>GPU particle systems: smoke, fire, debris, weather (rain, snow, sandstorm, fog, blizzard)</li>
 <li>Shader effects: chrono-shift shimmer, iron curtain glow, tesla arcs, nuclear flash</li>
 <li>Smooth camera: sub-pixel rendering, cinematic replay camera, smooth zoom</li>
 <li>HD asset pipeline alongside classic sprites</li>
@@ -242,6 +242,8 @@
 <tr><td>Multiplayer</td><td>Desyncs common, hard to debug</td><td>Snapshottable sim enables desync pinpointing</td></tr>
 <tr><td>Portability</td><td>Desktop only (Mono/.NET)</td><td>Native + WASM (browser) + mobile</td></tr>
 <tr><td>Engine age</td><td>Started 2007, showing architectural debt</td><td>Clean-sheet modern design</td></tr>
+<tr><td>Campaigns</td><td>Incomplete — many are broken or cut short</td><td>Full campaign support as first-class feature</td></tr>
+<tr><td>Mission flow</td><td>Manual mission selection between levels</td><td>Automatic progression with briefing screens</td></tr>
 </tbody>
 </table>
 </div>
@@ -261,6 +263,8 @@
 <li>14.8k GitHub stars, actively maintained</li>
 <li>Latest release: 20250330 (March 2025) — new map editor, HD asset support, post-processing</li>
 <li>Mature community, mod ecosystem, server infrastructure</li>
+<li>Multiplayer-first focus — single-player campaigns often incomplete (Dune 2000: only 1 of 3 campaigns fully playable; TD campaign also incomplete)</li>
+<li>SDK supports non-Westwood games (KKND, Swarm Assault, Hard Vacuum, Dune II remake) — validates our multi-game extensibility approach (D018)</li>
 </ul>
 <p><strong>Vanilla Conquer</strong> (C++)</p>
 <ul>
@@ -308,8 +312,9 @@
 </ul>
 <p><strong>What NOT to copy:</strong></p>
 <ul>
-<li><strong>Unit balance.</strong> OpenRA deliberately rebalances units away from the original game toward competitive multiplayer fairness. This makes iconic units feel underwhelming (see Gameplay Philosophy below). We default to classic RA balance.</li>
+<li><strong>Unit balance.</strong> OpenRA deliberately rebalances units away from the original game toward competitive multiplayer fairness. This makes iconic units feel underwhelming (see Gameplay Philosophy below). We default to classic RA balance. This pattern repeats across every game they support — Dune 2000 units are also rebalanced away from originals.</li>
 <li><strong>Simulation internals bug-for-bug.</strong> We’re not bit-identical — we’re better-algorithms-identical.</li>
+<li><strong>Campaign neglect.</strong> OpenRA’s multiplayer-first culture has left single-player campaigns systematically incomplete across all supported games. Dune 2000 has only 1 of 3 campaigns playable; TD campaigns are also incomplete; there’s no automatic mission progression (players exit to menu between missions). <strong>Campaign completeness is a first-class goal for us</strong> — every shipped game module must have all original campaigns fully playable with automatic progression, briefing screens, and mission select.</li>
 </ul>
 <h3 id="ea-red-alert-source--httpsgithubcomelectronicartscnc_red_alert"><a class="header" href="#ea-red-alert-source--httpsgithubcomelectronicartscnc_red_alert">EA Red Alert Source — https://github.com/electronicarts/CnC_Red_Alert</a></h3>
 <p><strong>What to study:</strong></p>
