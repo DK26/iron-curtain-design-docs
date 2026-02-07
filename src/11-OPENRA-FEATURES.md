@@ -1461,7 +1461,7 @@ rifle_infantry:
 
 ---
 
-## 2. Condition System ❌ CRITICAL GAP
+## 2. Condition System ✅ DESIGNED (D028 — Phase 2 Hard Requirement)
 
 **OpenRA:** 34 `GrantCondition*` traits. This is **the #1 modding tool**. Modders create dynamic behavior by granting/revoking named boolean conditions that enable/disable `ConditionalTrait`-based components.
 
@@ -1481,13 +1481,12 @@ DamageMultiplier@CRITICAL:
     Modifier: 150
 ```
 
-**Iron Curtain status:** Not addressed. Our ECS can support this (marker components, queries with `With<T>`/`Without<T>` filters, change detection), but we haven't designed:
-- How modders express conditional behavior in YAML
-- The equivalent of `ConditionalTrait` / `PausableConditionalTrait`
-- A condition registry (named conditions per entity)
-- Which systems respond to conditions
-
-**Recommendation:** Design a **condition system** as a core modding primitive. This is how OpenRA modders build 80% of custom behaviors without writing code. Without it, modders will feel powerless compared to OpenRA.
+**Iron Curtain status:** **Designed and scheduled as Phase 2 exit criterion (D028).** The condition system is a core modding primitive:
+- `Conditions` component: `HashMap<ConditionId, u32>` (ref-counted named conditions per entity)
+- Condition sources: `GrantConditionOnMovement`, `GrantConditionOnDamageState`, `GrantConditionOnDeploy`, `GrantConditionOnAttack`, `GrantConditionOnTerrain`, `GrantConditionOnVeterancy` — all exposed in YAML
+- Condition consumers: any component field can declare `requires:` or `disabled_by:` conditions
+- Runtime: systems check `conditions.is_active("deployed")` via fast bitset or hash lookup
+- OpenRA trait names accepted as aliases (D023) — `GrantConditionOnMovement` works in IC YAML
 
 **Design sketch:**
 ```yaml
@@ -1511,7 +1510,7 @@ ECS implementation: a `Conditions` component holding a `HashMap<ConditionId, u32
 
 ---
 
-## 3. Multiplier System ❌ CRITICAL GAP
+## 3. Multiplier System ✅ DESIGNED (D028 — Phase 2 Hard Requirement)
 
 **OpenRA:** ~20 multiplier traits that modify numeric values. All conditional. Modders stack multipliers from veterancy, terrain, crates, conditions, player handicaps.
 
@@ -1527,22 +1526,13 @@ ECS implementation: a `Conditions` component holding a `HashMap<ConditionId, u32
 | `RevealsShroudMultiplier`  | Sight range     |
 | ...                        | (20 total)      |
 
-**Iron Curtain status:** Not designed. Our balance preset system (D019) replaces the *base values* but doesn't cover *runtime multiplicative modifiers*.
-
-**Recommendation:** Design a generic multiplier system. Each numeric stat has a base value and a stack of modifiers (from veterancy, conditions, crates, terrain, player handicaps). The system resolves them multiplicatively each tick.
-
-```rust
-/// Generic stat modifier stack
-pub struct StatModifiers {
-    modifiers: SmallVec<[Modifier; 4]>,  // source, value, condition
-}
-
-impl StatModifiers {
-    pub fn effective_value(&self, base: i32) -> i32 {
-        // Multiply all active modifiers (fixed-point)
-    }
-}
-```
+**Iron Curtain status:** **Designed and scheduled as Phase 2 exit criterion (D028).** The multiplier system:
+- `StatModifiers` component: per-entity stack of `(source, stat, modifier_value, condition)` tuples
+- Every numeric stat (speed, damage, range, reload, build time, cost, sight range) resolves through the modifier stack
+- Modifiers from: veterancy, terrain, crates, conditions, player handicaps
+- Fixed-point multiplication (no floats) — respects invariant #3
+- YAML-configurable: modders add multipliers without code
+- Integrates with condition system: multipliers can be conditional (`requires: elite`)
 
 ---
 
@@ -1560,20 +1550,17 @@ impl StatModifiers {
 
 ---
 
-## 5. Warhead System ❌ SIGNIFICANT GAP
+## 5. Warhead System ✅ DESIGNED (D028 — Phase 2 Hard Requirement)
 
 **OpenRA:** 15 warhead types. Multiple warheads per weapon. Warheads define *what happens on impact* — damage, terrain modification, condition application, screen effects, resource creation/destruction.
 
-**Iron Curtain status:** Not designed. Weapons have `damage` and `area_of_effect` in our YAML examples, but the warhead abstraction is missing.
+**Iron Curtain status:** **Designed as part of the full damage pipeline in D028 (Phase 2 exit criterion).** The warhead system:
+- Each weapon references one or more warheads — composable effects
+- Warheads define: damage (with Versus table lookup), condition application, terrain effects, screen effects, resource modification
+- Full pipeline: Armament → Projectile entity → travel → impact → Warhead(s) → Versus table → DamageMultiplier → Health
+- Extensible via WASM for novel warhead types (WarpDamage, TintedCells, etc.)
 
-**Why it matters for modders:** Warheads are how modders create:
-- Weapons that damage AND create terrain effects
-- Weapons that apply conditions (e.g., slow, disable)
-- Multi-effect weapons (damage + screen shake + smudge)
-- Percentage-based damage (anti-structure)
-- Cluster munitions
-
-**Recommendation:** Design a warhead system where each weapon references one or more warheads, and warheads are composable effects.
+Warheads are how modders create multi-effect weapons, percentage-based damage, condition-applying attacks, and terrain-modifying impacts.
 
 ---
 
@@ -1926,28 +1913,15 @@ Armament → fires → Projectile → travels → hits → Warhead(s) applied
 
 ---
 
-## 29. Lua Scripting API ⚠️ PARTIAL — NEEDS DETAIL
+## 29. Lua Scripting API ✅ DESIGNED (D024 — Strict Superset)
 
 **OpenRA:** 16 global APIs + 34 actor property groups = comprehensive mission scripting.
 
-**Iron Curtain status:** Lua scripting is Tier 2 in the modding system. 12 scene templates are designed. But the actual API surface is not specified.
+**Iron Curtain status:** **Lua API is a strict superset of OpenRA's (D024).** All 16 OpenRA globals (`Actor`, `Map`, `Trigger`, `Media`, `Player`, `Reinforcements`, `Camera`, `DateTime`, `Objectives`, `Lighting`, `UserInterface`, `Utils`, `Beacon`, `Radar`, `HSLColor`, `WDist`) are supported with identical function signatures and return types. OpenRA Lua missions run unmodified.
 
-**Needed:** Design the Lua API with at minimum:
+IC extends with additional globals: `Campaign` (D021 branching campaigns), `Weather` (D022 dynamic weather), `Workshop` (mod queries), `LLM` (Phase 7 integration).
 
-| API Category       | Essential Functions                                                                                          |
-| ------------------ | ------------------------------------------------------------------------------------------------------------ |
-| **Actor**          | `Create`, `GetByTag`, `GetByType`, `Destroy`, `GetProperty`                                                  |
-| **Camera**         | `Position`, `PanTo`, `Shake`                                                                                 |
-| **Map**            | `GetTerrain`, `ActorsInCircle`, `ActorsInBox`, `Center`, `Bounds`                                            |
-| **Player**         | `GetPlayer`, `Cash`, `SetCash`, `Faction`, `Team`, `HasPrerequisite`                                         |
-| **Trigger**        | `OnKilled`, `OnIdle`, `OnEnteredArea`, `AfterDelay`, `OnTimerExpired`, `OnAllKilled`, `OnObjectiveCompleted` |
-| **Reinforcements** | `SpawnAtEdge`, `Paradrop`, `Deliver`                                                                         |
-| **Media**          | `PlaySpeech`, `PlaySound`, `PlayMusic`, `DisplayMessage`, `PlayVideo`                                        |
-| **DateTime**       | `GameTime`, `Minutes`, `Seconds`                                                                             |
-| **Objectives**     | `AddPrimary`, `AddSecondary`, `MarkCompleted`, `MarkFailed`                                                  |
-| **UI**             | `SetMissionText`, `ShowNotification`                                                                         |
-
-Each *actor* reference should expose properties matching its components (`.Health`, `.Location`, `.Owner`, `.Move()`, `.Attack()`, `.Stop()`, `.Guard()`, `.Deploy()`, etc.)
+Each actor reference exposes properties matching its components (`.Health`, `.Location`, `.Owner`, `.Move()`, `.Attack()`, `.Stop()`, `.Guard()`, `.Deploy()`, etc.) — identical to OpenRA's actor property groups.
 
 ---
 
@@ -2074,11 +2048,14 @@ Each *actor* reference should expose properties matching its components (`.Healt
 
 ### P0 — CRITICAL (Modders cannot work without these)
 
-| #   | System                                                                | Impact                                                          | Effort |
-| --- | --------------------------------------------------------------------- | --------------------------------------------------------------- | ------ |
-| 1   | **Condition System**                                                  | Core modding primitive — 80% of OpenRA mods use it              | High   |
-| 2   | **Multiplier System**                                                 | All numeric modifiers (veterancy, terrain, crates) depend on it | Medium |
-| 3   | **Warhead System**                                                    | Weapons don't work properly without composable warheads         | Medium |
+| #   | System                | Impact                                                          | Effort |
+| --- | --------------------- | --------------------------------------------------------------- | ------ |
+| 1   | **Condition System**  | Core modding primitive — 80% of OpenRA mods use it              | High   |
+| 2   | **Multiplier System** | All numeric modifiers (veterancy, terrain, crates) depend on it | Medium |
+| 3   | **Warhead System**    | Weapons don't work properly without composable warheads         | Medium |
+
+> **✅ Items 1–3 are now Phase 2 hard exit criteria (D028).** Items 6–7 are Phase 2 deliverables (D029).
+
 | 4   | **Building mechanics** (power, placement, sell, repair, build radius) | Fundamental C&C gameplay                                        | High   |
 | 5   | **Support Powers**                                                    | Superweapons are iconic RA gameplay                             | Medium |
 | 6   | **Damage Model** (full pipeline)                                      | Core balance modding                                            | Medium |
@@ -2175,9 +2152,9 @@ For modders migrating from OpenRA, this table shows where each familiar trait ma
 | `Valued`                                  | Part of `Buildable.cost`             | ✅      |
 | `Tooltip`                                 | `display.name` in YAML               | ✅      |
 | `Voiced`                                  | `display.voice` (implied)            | ⚠️      |
-| `ConditionalTrait`                        | NEEDS DESIGN (condition system)      | ❌      |
-| `GrantConditionOn*`                       | NEEDS DESIGN (condition system)      | ❌      |
-| `*Multiplier`                             | NEEDS DESIGN (multiplier system)     | ❌      |
+| `ConditionalTrait`                        | `Conditions` component (D028)        | ✅      |
+| `GrantConditionOn*`                       | Condition sources in YAML (D028)     | ✅      |
+| `*Multiplier`                             | `StatModifiers` component (D028)     | ✅      |
 | `AttackBase/Follow/Frontal/Omni/Turreted` | Part of `combat` YAML section        | ⚠️      |
 | `AutoTarget`                              | NEEDS DESIGN                         | ❌      |
 | `Turreted`                                | NEEDS DESIGN                         | ❌      |
@@ -2218,11 +2195,13 @@ For modders migrating from OpenRA, this table shows where each familiar trait ma
 
 ### Phase 2 Additions (Sim — Months 6–12)
 
-These gaps need to be designed *before or during* Phase 2 since they're core simulation mechanics:
+These gaps need to be designed *before or during* Phase 2 since they're core simulation mechanics.
 
-1. **Condition system** — Core modding primitive, all other systems depend on it
-2. **Multiplier system** — Depends on conditions
-3. **Full damage pipeline** — Projectile → Warhead → Armor table → Modifiers → Health
+> **NOTE:** Items 1–3 are now **Phase 2 hard exit criteria** per D028. Items marked with (D029) are Phase 2 deliverables per D029. The Lua API (#24) is specified per D024.
+
+1. **Condition system** — ✅ DESIGNED (D028) — Phase 2 exit criterion
+2. **Multiplier system** — ✅ DESIGNED (D028) — Phase 2 exit criterion
+3. **Full damage pipeline** — ✅ DESIGNED (D028) — Phase 2 exit criterion (Projectile → Warhead → Armor table → Modifiers → Health)
 4. **Power system** — Affects building behavior
 5. **Building mechanics** — Placement, sell, repair, build radius, rally points
 6. **Transport/Cargo** — Core unit type
@@ -2249,7 +2228,7 @@ These gaps need to be designed *before or during* Phase 2 since they're core sim
 
 ### Phase 4 Additions (Scripting — Months 16–20)
 
-24. **Lua API specification** — 16+ globals, 34+ actor property groups
+24. **Lua API specification** — ✅ DESIGNED (D024) — strict superset of OpenRA's 16 globals, identical signatures
 25. **Crate system** — Skirmish feature
 26. **Mine system** — Tactical gameplay
 27. **Demolition/C4** — Engineer ability

@@ -108,51 +108,58 @@ In IC, activities map to ECS system behaviors, triggered by conditions or orders
 
 #### What Migrates Automatically (Zero Effort)
 
-| Asset Type           | Volume               | Method                           |
-| -------------------- | -------------------- | -------------------------------- |
-| Sprite assets (.shp) | Hundreds             | IC loads natively (invariant #8) |
-| Palette files (.pal) | Dozens               | IC loads natively                |
-| Sound effects (.aud) | Hundreds             | IC loads natively                |
-| Map files (.oramap)  | 450+                 | IC loads natively                |
-| MiniYAML rules       | Thousands of entries | `miniyaml2yaml` converter        |
+| Asset Type           | Volume               | Method                                                             |
+| -------------------- | -------------------- | ------------------------------------------------------------------ |
+| Sprite assets (.shp) | Hundreds             | IC loads natively (invariant #8)                                   |
+| Palette files (.pal) | Dozens               | IC loads natively                                                  |
+| Sound effects (.aud) | Hundreds             | IC loads natively                                                  |
+| Map files (.oramap)  | 450+                 | IC loads natively                                                  |
+| MiniYAML rules       | Thousands of entries | **Loads directly at runtime (D025)** — no conversion step          |
+| OpenRA YAML keys     | All trait names      | **Accepted as aliases (D023)** — `Armament` and `combat` both work |
+| OpenRA mod manifest  | `mod.yaml`           | **Parsed directly (D026)** — point IC at OpenRA mod dir            |
+| Lua mission scripts  | 34 missions          | **Run unmodified (D024)** — IC Lua API is strict superset          |
 
 #### What Migrates with Effort
 
-| Component                           | Effort       | Details                                                                                                                                        |
-| ----------------------------------- | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| **YAML unit definitions**           | Trivial      | Automated converter, manual validation                                                                                                         |
-| **Lua campaign missions**           | Moderate     | IC runs Lua natively; need API compatibility shim for OpenRA's `Actor`, `Trigger`, `Media`, `Map` globals                                      |
-| **Custom traits → Built-in**        | None         | IC builds mind control, carriers, shields, teleport networks as first-party ECS components (these are needed for RA2/C&C3 game modules anyway) |
-| **Custom traits → YAML conditions** | Low          | Deploy mechanics, upgrade toggles, transform states map to IC's condition system                                                               |
-| **Custom traits → WASM**            | Significant  | ~50 novel traits need WASM rewrite: Berserkable, Warpable, KeepsDistance, Attachable system, custom ability targeting, etc.                    |
-| **Custom warheads**                 | Moderate     | Many become built-in warhead pipeline extensions; novel ones (WarpDamage, TintedCells) need WASM                                               |
-| **Custom projectiles**              | Moderate     | These are primarily render code; rewrite as `ra-render` shader effects and particle systems                                                    |
-| **Custom UI widgets**               | Moderate     | CA has custom widgets; these need Bevy UI reimplementation                                                                                     |
-| **Bot modules**                     | Low-Moderate | Map to `ra-ai` crate's bot system                                                                                                              |
+| Component                           | Effort       | Details                                                                                                                           |
+| ----------------------------------- | ------------ | --------------------------------------------------------------------------------------------------------------------------------- |
+| **YAML unit definitions**           | **Zero**     | MiniYAML loads at runtime (D025), OpenRA trait names accepted as aliases (D023) — no conversion needed                            |
+| **Lua campaign missions**           | **Zero**     | IC Lua API is a strict superset of OpenRA's (D024) — same 16 globals, same signatures, same return types; missions run unmodified |
+| **Custom traits → Built-in**        | None         | IC builds mind control, carriers, shields, teleport networks, upgrades, delayed weapons as Phase 2 first-party components (D029)  |
+| **Custom traits → YAML conditions** | Low          | Deploy mechanics, upgrade toggles, transform states map to IC's condition system (D028)                                           |
+| **Custom traits → WASM**            | Significant  | ~20 truly novel traits need WASM rewrite: Berserkable, Warpable, KeepsDistance, Attachable system, custom ability targeting       |
+| **Custom warheads**                 | Low          | Many become built-in warhead pipeline extensions (D028); novel ones (WarpDamage, TintedCells) need WASM                           |
+| **Custom projectiles**              | Moderate     | These are primarily render code; rewrite as `ra-render` shader effects and particle systems                                       |
+| **Custom UI widgets**               | Moderate     | CA has custom widgets; these need Bevy UI reimplementation                                                                        |
+| **Bot modules**                     | Low-Moderate | Map to `ra-ai` crate's bot system                                                                                                 |
 
 #### Migration Tier Breakdown
 
 ```
 ┌─────────────────────────────────────────────────┐
 │     Combined Arms → Iron Curtain Migration      │
+│           (after D023–D029)                      │
 ├─────────────────────────────────────────────────┤
 │                                                 │
-│  Tier 1 (YAML)  ████████████████████  ~40%     │
+│  Tier 1 (YAML)  ██████████████████████ ~45%    │
 │  No code change needed. Unit stats, weapons,    │
-│  armor tables, build trees, faction setup.      │
+│  armor tables, build trees, faction setup.       │
+│  MiniYAML loads directly (D025).                 │
+│  OpenRA trait names accepted as aliases (D023).  │
 │                                                 │
-│  Built-in       ██████████████████    ~30%     │
-│  IC includes as first-party ECS components.     │
-│  Mind control, carriers, shields, teleport,     │
-│  veterancy, infiltration, damage pipeline.      │
+│  Built-in       ████████████████████  ~40%    │
+│  IC includes as first-party ECS components       │
+│  (D029). Mind control, carriers, shields,        │
+│  teleport, upgrades, delayed weapons,            │
+│  veterancy, infiltration, damage pipeline.       │
 │                                                 │
-│  Tier 2 (Lua)   ████████            ~15%      │
-│  Campaign missions, scripted events.            │
-│  API shim needed for OpenRA Lua globals.        │
+│  Tier 2 (Lua)   ██████              ~10%      │
+│  Campaign missions run unmodified (D024).        │
+│  IC Lua API is strict superset of OpenRA's.      │
 │                                                 │
-│  Tier 3 (WASM)  ██████              ~15%      │
-│  Novel mechanics: Berserkable, Warpable,        │
-│  KeepsDistance, Attachable, custom abilities.    │
+│  Tier 3 (WASM)  ███                ~5%       │
+│  Truly novel mechanics only: Berserkable,        │
+│  Warpable, KeepsDistance, Attachable.             │
 │                                                 │
 └─────────────────────────────────────────────────┘
 ```
@@ -172,11 +179,12 @@ In IC, activities map to ECS system behaviors, triggered by conditions or orders
 
 ### Verdict
 
-**Not plug-and-play, but a realistic and beneficial migration.**
+**Not plug-and-play, but a realistic and beneficial migration — dramatically improved by D023–D029.**
 
-- **~85% of content** (YAML rules, assets, maps, Lua missions, built-in mechanics) migrates with minimal to zero effort.
-- **~15% of content** (~50 novel C# traits) requires WASM rewrites — significant but bounded work.
+- **~95% of content** (YAML rules via D025 runtime loading + D023 aliases, assets, maps, Lua missions via D024 superset API, built-in mechanics via D029) migrates with **zero effort** — no conversion tools, no code changes.
+- **~5% of content** (~20 truly novel C# traits) requires WASM rewrites — bounded and well-identified.
 - The migration is a **net positive**: CA ends up with better performance, multiplayer, distribution, and maintainability.
+- **Zero-friction evaluation:** Point IC at an OpenRA mod directory (D026) and it loads. No commitment required to test.
 - IC **benefits too**: CA's requirements for mind control, teleport networks, carriers, shields, and upgrades validate and drive our component library design. If IC supports CA, it supports any OpenRA mod.
 
 ### Lessons for IC Design

@@ -22,6 +22,9 @@ Phase 0 (Foundation)
 - `ra-formats` crate: parse `.mix` archives, SHP/TMP sprites, `.aud` audio, `.pal` palettes, `.vqa` video
 - Parse OpenRA YAML manifests, map format, rule definitions
 - `miniyaml2yaml` converter tool
+- **Runtime MiniYAML loading (D025):** MiniYAML files load directly at runtime — auto-converts in memory, no pre-conversion required
+- **OpenRA vocabulary alias registry (D023):** Accept OpenRA trait names (`Armament`, `Valued`, etc.) as YAML key aliases alongside IC-native names
+- **OpenRA mod manifest parser (D026):** Parse OpenRA `mod.yaml` manifests, map directory layout to IC equivalents
 - CLI tool to dump/inspect/validate RA assets
 - Extensive tests against known-good OpenRA data
 
@@ -36,6 +39,9 @@ Open source `ra-formats` early. Useful standalone, builds credibility and commun
 
 ### Exit Criteria
 - Can parse any OpenRA mod's YAML rules into typed Rust structs
+- Can parse any OpenRA mod's MiniYAML rules into typed Rust structs (runtime conversion, D025)
+- Can load an OpenRA mod directory via `mod.yaml` manifest (D026)
+- OpenRA trait name aliases resolve correctly to IC components (D023)
 - Can extract and display sprites from .mix archives
 - Can convert MiniYAML to standard YAML losslessly
 
@@ -73,6 +79,11 @@ Open source `ra-formats` early. Useful standalone, builds credibility and commun
 ### Deliverables
 - ECS-based simulation layer (`ra-sim`)
 - Components mirroring OpenRA traits: Mobile, Health, Attackable, Armament, Building, Buildable, Harvester
+- **Canonical enum names matching OpenRA (D027):** Locomotor (`Foot`, `Wheeled`, `Tracked`, `Float`, `Fly`), Armor (`None`, `Light`, `Medium`, `Heavy`, `Wood`, `Concrete`), Target types, Damage states, Stances
+- **Condition system (D028):** `Conditions` component, `GrantConditionOn*` YAML traits, `requires:`/`disabled_by:` on any component field
+- **Multiplier system (D028):** `StatModifiers` per-entity modifier stack, fixed-point multiplication, applicable to speed/damage/range/reload/cost/sight
+- **Full damage pipeline (D028):** Armament → Projectile entity → travel → Warhead(s) → Versus table → DamageMultiplier → Health
+- **Cross-game component library (D029):** Mind control, carrier/spawner, teleport networks, shield system, upgrade system, delayed weapons (7 first-party systems)
 - Fixed-point coordinate system (no floats in sim)
 - Deterministic RNG
 - Pathfinding: Hierarchical A* or flowfields
@@ -93,6 +104,11 @@ Units moving, shooting, dying — headless sim + rendered. Record replay file. P
 - Can run 1000-unit battle headless at > 60 ticks/second
 - Replay file records and plays back correctly (bit-identical)
 - State hash matches between two independent runs with same inputs
+- Condition system operational: YAML `requires:`/`disabled_by:` fields affect component behavior at runtime
+- Multiplier system operational: veterancy/terrain/crate modifiers stack and resolve correctly via fixed-point math
+- Full damage pipeline: projectile entities travel, warheads apply composable effects, Versus table resolves armor-weapon interactions
+- All 7 cross-game components functional: mind control, carriers, teleport networks, shields, upgrades, delayed weapons, dual asset rendering
+- OpenRA canonical enum names used for locomotors, armor types, target types, stances (D027)
 
 ## Phase 3: Game Chrome (Months 12–16)
 

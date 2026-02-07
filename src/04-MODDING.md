@@ -163,9 +163,67 @@ struct LlmMeta {
 }
 ```
 
-### MiniYAML Migration
+### MiniYAML Migration & Runtime Loading
 
-Part of `ra-formats` crate: a `miniyaml2yaml` converter tool that translates existing OpenRA mod data to standard YAML. One-time migration per mod.
+**Converter tool:** `ra-formats` includes a `miniyaml2yaml` CLI converter that translates existing OpenRA mod data to standard YAML. Available for permanent, clean migration.
+
+**Runtime loading (D025):** MiniYAML files also load directly at runtime — no pre-conversion required. When `ra-formats` detects tab-indented content with `^` inheritance or `@` suffixes, it auto-converts in memory. The result is identical to what the converter would produce. This means existing OpenRA mods can be dropped into IC and played immediately.
+
+```
+┌─────────────────────────────────────────────────────────┐
+│           MiniYAML Loading Pipeline                     │
+│                                                         │
+│  .yaml file ──→ Format detection                        │
+│                   │                                     │
+│                   ├─ Standard YAML → serde_yaml parse   │
+│                   │                                     │
+│                   └─ MiniYAML detected                  │
+│                       │                                 │
+│                       ├─ MiniYAML parser (tabs, ^, @)   │
+│                       ├─ Intermediate tree              │
+│                       ├─ Alias resolution (D023)        │
+│                       └─ Typed Rust structs             │
+│                                                         │
+│  Both paths produce identical output.                   │
+│  Runtime conversion adds ~10-50ms per mod (cached).     │
+└─────────────────────────────────────────────────────────┘
+```
+
+### OpenRA Vocabulary Aliases (D023)
+
+OpenRA trait names are accepted as aliases for IC-native YAML keys. Both forms are valid:
+
+```yaml
+# OpenRA-style (accepted via alias)
+rifle_infantry:
+    Armament:
+        Weapon: M1Carbine
+    Valued:
+        Cost: 100
+
+# IC-native style (preferred)
+rifle_infantry:
+    combat:
+        weapon: m1_carbine
+    buildable:
+        cost: 100
+```
+
+The alias registry lives in `ra-formats` and maps all ~130 OpenRA trait names to IC components. When an alias is used, parsing succeeds with a deprecation warning: `"Armament" is accepted but deprecated; prefer "combat"`. Warnings can be suppressed per-mod.
+
+### OpenRA Mod Manifest Loading (D026)
+
+IC can parse OpenRA's `mod.yaml` manifest format directly. Point IC at an existing OpenRA mod directory:
+
+```bash
+# Run an OpenRA mod directly (auto-converts at load time)
+ic mod run --openra-dir /path/to/openra-mod/
+
+# Import for permanent migration
+ic mod import /path/to/openra-mod/ --output ./my-ic-mod/
+```
+
+Sections like `Rules`, `Sequences`, `Weapons`, `Maps`, `Voices`, `Music` are mapped to IC equivalents. `Assemblies` (C# DLLs) are flagged as warnings — units using unavailable traits get placeholder rendering.
 
 ### Why Not TOML / RON / JSON?
 
@@ -196,6 +254,42 @@ Part of `ra-formats` crate: a `miniyaml2yaml` converter tool that translates exi
 - Embedding CPython is heavy (~15-30MB)
 - Sandboxing is basically unsolvable — security disaster for community mods
 - `import os; os.system("rm -rf /")` is one mod away
+
+### Lua API — Strict Superset of OpenRA (D024)
+
+Iron Curtain's Lua API is a **strict superset** of OpenRA's 16 global objects. All OpenRA Lua missions run unmodified — same function names, same parameter signatures, same return types.
+
+**OpenRA-compatible globals (all supported identically):**
+
+| Global           | Purpose                            |
+| ---------------- | ---------------------------------- |
+| `Actor`          | Create, query, manipulate actors   |
+| `Map`            | Terrain, bounds, spatial queries   |
+| `Trigger`        | Event hooks (OnKilled, AfterDelay) |
+| `Media`          | Audio, video, text display         |
+| `Player`         | Player state, resources, diplomacy |
+| `Reinforcements` | Spawn units at edges/drops         |
+| `Camera`         | Pan, position, shake               |
+| `DateTime`       | Game time queries                  |
+| `Objectives`     | Mission objective management       |
+| `Lighting`       | Global lighting control            |
+| `UserInterface`  | UI text, notifications             |
+| `Utils`          | Math, random, table utilities      |
+| `Beacon`         | Map beacon management              |
+| `Radar`          | Radar ping control                 |
+| `HSLColor`       | Color construction                 |
+| `WDist`          | Distance unit conversion           |
+
+**IC-exclusive extensions (additive, no conflicts):**
+
+| Global     | Purpose                         |
+| ---------- | ------------------------------- |
+| `Campaign` | Branching campaign state (D021) |
+| `Weather`  | Dynamic weather control (D022)  |
+| `Workshop` | Mod metadata queries            |
+| `LLM`      | LLM integration hooks (Phase 7) |
+
+Each actor reference exposes properties matching its components (`.Health`, `.Location`, `.Owner`, `.Move()`, `.Attack()`, `.Stop()`, `.Guard()`, `.Deploy()`, etc.) — identical to OpenRA's actor property groups.
 
 ### Lua API Examples
 

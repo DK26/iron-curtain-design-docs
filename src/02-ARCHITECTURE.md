@@ -131,6 +131,10 @@ ECS is a natural fit for RTS: hundreds of units with composable behaviors.
 
 OpenRA's "traits" are effectively components. Map them directly. The table below shows the **RA1 game module's** default components. Other game modules (RA2, TD) register additional components — the ECS is open for extension without modifying the engine core.
 
+**OpenRA vocabulary compatibility (D023):** OpenRA trait names are accepted as YAML aliases. `Armament` and `combat` both resolve to the same component. This means existing OpenRA YAML definitions load without renaming.
+
+**Canonical enum names (D027):** Locomotor types (`Foot`, `Wheeled`, `Tracked`, `Float`, `Fly`), armor types (`None`, `Light`, `Medium`, `Heavy`, `Wood`, `Concrete`), target types, damage states, and stances match OpenRA's names exactly. Versus tables and weapon definitions copy-paste without translation.
+
 | OpenRA Trait | ECS Component | Purpose |
 | `Health` | `Health { current: i32, max: i32 }` | Hit points |
 | `Mobile` | `Mobile { speed: i32, locomotor: LocomotorType }` | Can move |
