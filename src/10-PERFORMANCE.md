@@ -296,6 +296,109 @@ fn movement_system(mut query: Query<(&mut Position, &Velocity)>) {
 | 2-core scaling       | 1x (single-threaded)                          | ~1.5x (work-stealing helps where applicable) | rayon adaptive                          |
 | 8-core scaling       | 1x (single-threaded)                          | ~3-5x (diminishing returns on game logic)    | rayon work-stealing                     |
 
+## GPU & Hardware Compatibility (Bevy/wgpu Constraints)
+
+Bevy renders via `wgpu`, which translates to native GPU APIs. This creates a **hardware floor** that interacts with our "2012 laptop" performance target.
+
+### wgpu Backend Matrix
+
+| Backend | Min API Version   | Typical GPU Era                              | wgpu Support Level           |
+| ------- | ----------------- | -------------------------------------------- | ---------------------------- |
+| Vulkan  | 1.0+              | 2016+ (discrete), 2014+ (integrated Haswell) | First-class                  |
+| DX12    | Windows 10        | 2015+                                        | First-class                  |
+| Metal   | macOS 10.14       | 2018+ Macs                                   | First-class                  |
+| OpenGL  | GL 3.3+ / ES 3.0+ | 2010+                                        | **Downlevel / best-effort**  |
+| WebGPU  | Modern browsers   | 2023+                                        | First-class                  |
+| WebGL2  | ES 3.0 equiv      | Most browsers                                | **Downlevel, severe limits** |
+
+### The 2012 Laptop Problem
+
+A typical 2012 laptop has an **Intel HD 4000** (Ivy Bridge). This GPU supports OpenGL 4.0 but **has no Vulkan driver**. It falls back to wgpu's GL 3.3 backend, which is downlevel — meaning reduced resource limits:
+
+| Resource                  | Vulkan/DX12 (WebGPU defaults) | GL 3.3 Downlevel | WebGL2        |
+| ------------------------- | ----------------------------- | ---------------- | ------------- |
+| Max texture dimension     | 8192×8192                     | **2048×2048**    | **2048×2048** |
+| Storage buffers per stage | 8                             | **4**            | **0**         |
+| Uniform buffer size       | 64 KiB                        | **16 KiB**       | **16 KiB**    |
+| Compute shaders           | Yes                           | GL 4.3+ only     | **None**      |
+| Color attachments         | 8                             | **4**            | **4**         |
+| Storage textures          | 4                             | 4                | **0**         |
+
+### Impact on Our Feature Plans
+
+| Feature                        | Problem on Downlevel Hardware                                        | Severity | Mitigation                                        |
+| ------------------------------ | -------------------------------------------------------------------- | -------- | ------------------------------------------------- |
+| GPU particle weather           | Compute shaders needed; HD 4000 has GL 4.0, compute needs 4.3        | High     | CPU particle fallback (Tier 0)                    |
+| Shader terrain blending (D022) | Complex fragment shaders + texture arrays hit uniform/sampler limits | Medium   | Palette tinting fallback (zero extra resources)   |
+| Post-processing chain          | Bloom, color grading, SSR need MRT + decent fill rate                | Medium   | Disable post-FX on Tier 0                         |
+| Dynamic lighting               | Multiple render targets, shadow maps                                 | Medium   | Static baked lighting on Tier 0                   |
+| HD sprite sheets               | 2048px max texture on downlevel                                      | Low      | Split sprite sheets at asset build time           |
+| WebGL2/WASM visuals            | Zero compute, zero storage buffers, no GPU particles                 | High     | Target WebGPU-only for browser (or accept limits) |
+| Simulation / ECS               | **No impact** — pure CPU, no GPU dependency                          | None     | —                                                 |
+| Audio / Networking / Modding   | **No impact** — none touch the GPU                                   | None     | —                                                 |
+
+**Key insight:** The "2012 laptop" target is achievable for the **simulation** (500 units, < 40ms tick) because the sim is pure CPU. The **rendering** must degrade gracefully — reduced visual effects, not broken gameplay.
+
+### Render Quality Tiers
+
+`ra-render` queries device capabilities at startup via wgpu's adapter limits and selects a render tier stored in the `RenderSettings` resource. All tiers produce an identical, playable game — they differ only in visual richness.
+
+| Tier | Name         | Target Hardware                              | GPU Particles | Post-FX       | Weather Visuals       | Dynamic Lighting          | Texture Limits |
+| ---- | ------------ | -------------------------------------------- | ------------- | ------------- | --------------------- | ------------------------- | -------------- |
+| 0    | **Baseline** | GL 3.3 (Intel HD 4000), WebGL2               | CPU fallback  | None          | Palette tinting       | None (baked)              | 2048×2048 max  |
+| 1    | **Standard** | Vulkan/DX12 basic (Intel HD 5000+, GTX 600+) | GPU compute   | Basic (bloom) | Overlay sprites       | Point lights              | 8192×8192      |
+| 2    | **Enhanced** | Vulkan/DX12 capable (GTX 900+, RX 400+)      | GPU compute   | Full chain    | Shader blending       | Full + shadows            | 8192×8192      |
+| 3    | **Ultra**    | High-end desktop                             | GPU compute   | Full + SSR    | Shader + accumulation | Dynamic + cascade shadows | 16384×16384    |
+
+**Tier selection is automatic but overridable.** Detected at startup from `wgpu::Adapter::limits()` and `wgpu::Adapter::features()`. Players can force a lower tier in settings. Mods can ship tier-specific assets.
+
+```rust
+/// ra-render: runtime render configuration
+pub struct RenderSettings {
+    pub tier: RenderTier,           // Auto-detected or user-forced
+    pub fps_cap: u32,               // 30, 60, 144, 240, uncapped
+    pub resolution_scale: f32,      // 0.5 - 2.0 (render resolution vs display)
+    pub particle_density: f32,      // 0.0 - 1.0 (scales particle count)
+    pub post_fx_enabled: bool,      // Master toggle for all post-processing
+    pub weather_visual_mode: WeatherVisualMode,  // PaletteTint, Overlay, ShaderBlend
+    pub sprite_sheet_max: u32,      // Derived from adapter texture limits
+}
+
+pub enum RenderTier {
+    Baseline,   // Tier 0: GL 3.3 / WebGL2 — functional but plain
+    Standard,   // Tier 1: Basic Vulkan/DX12 — GPU particles, basic post-FX
+    Enhanced,   // Tier 2: Capable GPU — full visual pipeline
+    Ultra,      // Tier 3: High-end — everything maxed
+}
+```
+
+### Mitigation Strategies
+
+1. **CPU particle fallback:** Bevy supports CPU-side particle emission. Lower particle count but functional. Weather rain/snow works on Tier 0 — just fewer particles.
+
+2. **Sprite sheet splitting:** The asset pipeline (Phase 0, `ra-formats`) splits large sprite sheets into 2048×2048 chunks at build time when targeting downlevel. Zero runtime cost — the splitting is a bake step.
+
+3. **WebGPU-first browser strategy:** WebGPU is supported in Chrome, Edge, and Firefox (2023+). Rather than maintaining a severely limited WebGL2 fallback, target WebGPU for the browser build (Phase 7) and document WebGL2 as best-effort.
+
+4. **Graceful detection, not crashes:** If the GPU doesn't meet even Tier 0 requirements, show a clear error message with hardware info and suggest driver updates. Never crash with a raw wgpu error.
+
+5. **Shader complexity budget:** All shaders must compile on GL 3.3 (or have a GL 3.3 variant). Complex shaders (terrain blending, weather) provide simplified fallback paths via `#ifdef` or shader permutations.
+
+### Hardware Floor Summary
+
+| Concern    | Our Minimum                                         | Notes                                               |
+| ---------- | --------------------------------------------------- | --------------------------------------------------- |
+| GPU API    | OpenGL 3.3 (fallback) / Vulkan 1.0 (preferred)      | wgpu auto-selects best available backend            |
+| GPU memory | 256 MB                                              | Classic RA sprites are tiny; HD sprites need more   |
+| OS         | Windows 7 SP1+ / macOS 10.14+ / Linux (X11/Wayland) | DX12 requires Windows 10; GL 3.3 works on 7         |
+| CPU        | 2 cores, SSE2                                       | Sim runs fine; Bevy itself needs ~2 threads minimum |
+| RAM        | 4 GB                                                | Engine targets < 150 MB for 1000 units              |
+| Disk       | ~500 MB                                             | Engine + classic assets; HD assets add ~1-2 GB      |
+
+**Bottom line:** Bevy/wgpu will run on 2012 hardware, but **visual features must tier down automatically.** The sim is completely unaffected. The architecture already has `RenderSettings` — we formalize it into the tier system above.
+
+---
+
 ## Profiling & Regression Strategy
 
 ### Automated Benchmarks (CI)

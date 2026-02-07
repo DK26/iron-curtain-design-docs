@@ -24,7 +24,7 @@ Violating any of these is a bug. Do not propose designs that break them.
 
 4. **Bevy is the framework.** ECS scheduling, rendering, asset pipeline, audio. Custom render passes and SIMD only where profiling justifies it. Pin Bevy version per development phase.
 
-5. **Efficiency-first performance.** Better algorithms → cache-friendly ECS → simulation LOD → amortized work → zero-allocation hot paths → THEN multi-core as a bonus. A 2-core 2012 laptop must run 500 units smoothly. Do not reach for `par_iter()` before profiling.
+5. **Efficiency-first performance.** Better algorithms → cache-friendly ECS → simulation LOD → amortized work → zero-allocation hot paths → THEN multi-core as a bonus. A 2-core 2012 laptop must run 500 units smoothly (sim target). Render quality tiers down automatically on older GPUs (GL 3.3 fallback → no compute shaders, no post-FX, CPU particles). See `10-PERFORMANCE.md` § "GPU & Hardware Compatibility". Do not reach for `par_iter()` before profiling.
 
 6. **Real YAML, not MiniYAML.** Standard `serde_yaml` with inheritance resolved at load time. A `miniyaml2yaml` converter exists for migration.
 
