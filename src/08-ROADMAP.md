@@ -19,7 +19,7 @@ Phase 0 (Foundation)
 **Goal:** Read everything OpenRA reads, produce nothing visible yet.
 
 ### Deliverables
-- `ra-formats` crate: parse `.mix` archives, SHP/TMP sprites, `.aud` audio, `.pal` palettes
+- `ra-formats` crate: parse `.mix` archives, SHP/TMP sprites, `.aud` audio, `.pal` palettes, `.vqa` video
 - Parse OpenRA YAML manifests, map format, rule definitions
 - `miniyaml2yaml` converter tool
 - CLI tool to dump/inspect/validate RA assets
@@ -112,20 +112,26 @@ Units moving, shooting, dying — headless sim + rendered. Record replay file. P
 
 ## Phase 4: AI & Single Player (Months 16–20)
 
-**Goal:** Campaign missions and skirmish AI.
+**Goal:** Complete campaign support and skirmish AI. Unlike OpenRA, single-player is a first-class deliverable, not an afterthought.
 
 ### Deliverables
 - Lua-based scripting for mission scripts
 - WASM mod runtime (basic)
 - Basic skirmish AI: harvest, build, attack patterns
 - Campaign mission loading (OpenRA mission format)
+- **Campaign framework:** automatic mission progression, briefing screens between missions, mission select screen, campaign state persistence (completed missions, score, difficulty)
+- **FMV cutscene playback** between missions (original `.vqa` briefings and victory/defeat sequences)
+- **Full Allied and Soviet campaigns** for Red Alert, playable start to finish
 
 ### Key Architecture Work
 - Lua sandbox with engine bindings
 - WASM host API with capability system (see `06-SECURITY.md`)
+- Campaign state machine: briefing → mission → debrief → next mission (no exit-to-menu between levels)
+- Mission select UI with map overview and difficulty indicators
 
 ### Exit Criteria
-- Can play through first few Allied and Soviet campaign missions
+- Can play through **all** Allied and Soviet campaign missions start to finish
+- Automatic progression between missions with briefing screens
 - Skirmish AI provides a basic challenge
 
 ## Phase 5: Multiplayer (Months 20–26)

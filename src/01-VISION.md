@@ -54,16 +54,17 @@ OpenRA's map editor is a standalone tool. Our editor runs inside the game with l
 
 ### OpenRA's Limitations (what we improve on)
 
-| Area        | OpenRA Today                             | Our Engine                                   |
-| ----------- | ---------------------------------------- | -------------------------------------------- |
-| Runtime     | C# / .NET — GC pauses, heavy runtime     | Rust — no GC, predictable perf               |
-| Threading   | Single-threaded game loop                | Parallel systems via ECS                     |
-| Modding     | Powerful but requires C# for deep mods   | YAML + Lua + WASM (no compile step)          |
-| Map editor  | Separate tool, recently improved         | In-engine editor (Phase 6)                   |
-| Multiplayer | Desyncs common, hard to debug            | Snapshottable sim enables desync pinpointing |
-| Portability | Desktop only (Mono/.NET)                 | Native + WASM (browser) + mobile             |
-| Engine age  | Started 2007, showing architectural debt | Clean-sheet modern design                    |
-
+| Area         | OpenRA Today                              | Our Engine                                   |
+| ------------ | ----------------------------------------- | -------------------------------------------- |
+| Runtime      | C# / .NET — GC pauses, heavy runtime      | Rust — no GC, predictable perf               |
+| Threading    | Single-threaded game loop                 | Parallel systems via ECS                     |
+| Modding      | Powerful but requires C# for deep mods    | YAML + Lua + WASM (no compile step)          |
+| Map editor   | Separate tool, recently improved          | In-engine editor (Phase 6)                   |
+| Multiplayer  | Desyncs common, hard to debug             | Snapshottable sim enables desync pinpointing |
+| Portability  | Desktop only (Mono/.NET)                  | Native + WASM (browser) + mobile             |
+| Engine age   | Started 2007, showing architectural debt  | Clean-sheet modern design                    |
+| Campaigns    | Incomplete — many are broken or cut short | Full campaign support as first-class feature |
+| Mission flow | Manual mission selection between levels   | Automatic progression with briefing screens  |  | Asset quality | Cannot fix original palette/sprite flaws | Bevy post-FX: palette correction, color grading, optional upscaling |
 ### What Makes People Actually Switch
 
 1. **Better performance** — visible: bigger maps, more units, no stutters
@@ -82,6 +83,8 @@ Item 5 is the linchpin. If existing mods just work, migration cost drops to near
 - 14.8k GitHub stars, actively maintained
 - Latest release: 20250330 (March 2025) — new map editor, HD asset support, post-processing
 - Mature community, mod ecosystem, server infrastructure
+- Multiplayer-first focus — single-player campaigns often incomplete (Dune 2000: only 1 of 3 campaigns fully playable; TD campaign also incomplete)
+- SDK supports non-Westwood games (KKND, Swarm Assault, Hard Vacuum, Dune II remake) — validates our multi-game extensibility approach (D018)
 
 **Vanilla Conquer** (C++)
 - Cross-platform builds of actual EA source code
@@ -130,8 +133,9 @@ These are the projects we actively study. Each serves a different purpose — do
 - **Mod ecosystem:** Understand what modders actually build so our modding tiers serve real needs.
 
 **What NOT to copy:**
-- **Unit balance.** OpenRA deliberately rebalances units away from the original game toward competitive multiplayer fairness. This makes iconic units feel underwhelming (see Gameplay Philosophy below). We default to classic RA balance.
+- **Unit balance.** OpenRA deliberately rebalances units away from the original game toward competitive multiplayer fairness. This makes iconic units feel underwhelming (see Gameplay Philosophy below). We default to classic RA balance. This pattern repeats across every game they support — Dune 2000 units are also rebalanced away from originals.
 - **Simulation internals bug-for-bug.** We're not bit-identical — we're better-algorithms-identical.
+- **Campaign neglect.** OpenRA's multiplayer-first culture has left single-player campaigns systematically incomplete across all supported games. Dune 2000 has only 1 of 3 campaigns playable; TD campaigns are also incomplete; there's no automatic mission progression (players exit to menu between missions). **Campaign completeness is a first-class goal for us** — every shipped game module must have all original campaigns fully playable with automatic progression, briefing screens, and mission select.
 
 ### EA Red Alert Source — https://github.com/electronicarts/CnC_Red_Alert
 
