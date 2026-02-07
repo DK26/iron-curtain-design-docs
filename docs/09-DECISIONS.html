@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-5d435b9e.js";
+            window.path_to_searchindex_js = "searchindex-2da77212.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-6f79e187.js"></script>
@@ -992,14 +992,71 @@ dependencies:
     version: "^1.0"
     source: workshop
 </code></pre>
+<h3 id="repository-types-artifactory-model"><a class="header" href="#repository-types-artifactory-model">Repository Types (Artifactory Model)</a></h3>
+<p>The Workshop uses three repository types, directly inspired by Artifactory’s local/remote/virtual model:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Repository Type</th><th>Artifactory Analog</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Local</strong></td><td>Local repository</td><td>A directory on disk following Workshop structure. Stores artifacts you create. Used for development, LAN parties, offline play, pre-publish testing.</td></tr>
+<tr><td><strong>Remote</strong></td><td>Remote repository</td><td>A Workshop server (official or community-hosted). Artifacts are downloaded and cached locally on first access. Cache is used for subsequent requests — works offline after first pull.</td></tr>
+<tr><td><strong>Virtual</strong></td><td>Virtual repository</td><td>The aggregated view across all configured sources. The <code>ic</code> CLI and in-game browser query the virtual repository — it merges listings from all local + remote sources, deduplicates by resource ID, and resolves version conflicts using priority ordering.</td></tr>
+</tbody>
+</table>
+</div>
+<p>The <code>settings.yaml</code> <code>sources:</code> list defines which local and remote repositories compose the virtual repository. This is the federation model — the client never queries raw servers directly, it queries its virtual repository.</p>
+<h3 id="artifact-integrity"><a class="header" href="#artifact-integrity">Artifact Integrity</a></h3>
+<p>Every published artifact includes cryptographic checksums for integrity verification:</p>
+<ul>
+<li><strong>SHA-256 checksum</strong> stored in the package manifest and on the Workshop server</li>
+<li><code>ic mod install</code> verifies checksums after download — mismatch → abort + warning</li>
+<li><code>ic.lock</code> records both version AND checksum for each dependency — guarantees byte-identical installs across machines</li>
+<li>Protects against: corrupted downloads, CDN tampering, mirror drift</li>
+<li>Workshop server computes checksums on upload; clients verify on download. Trust but verify.</li>
+</ul>
+<h3 id="promotion--maturity-channels"><a class="header" href="#promotion--maturity-channels">Promotion &amp; Maturity Channels</a></h3>
+<p>Artifacts can be published to maturity channels, allowing staged releases:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Channel</th><th>Purpose</th><th>Visibility</th></tr>
+</thead>
+<tbody>
+<tr><td><code>dev</code></td><td>Work-in-progress, local testing</td><td>Author only (local repos only)</td></tr>
+<tr><td><code>beta</code></td><td>Pre-release, community testing</td><td>Opt-in (users enable beta flag)</td></tr>
+<tr><td><code>release</code></td><td>Stable, production-ready</td><td>Default (everyone sees these)</td></tr>
+</tbody>
+</table>
+</div>
+<pre><code class="language-yaml"># mod.yaml
+mod:
+  version: "1.3.0-beta.1"            # semver pre-release tag
+  channel: beta                       # publish to beta channel
+</code></pre>
+<ul>
+<li><code>ic mod publish --channel beta</code> → visible only to users who opt in to beta resources</li>
+<li><code>ic mod publish</code> (no flag) → release channel by default</li>
+<li><code>ic mod install</code> pulls from release channel unless <code>--include-beta</code> is specified</li>
+<li>Promotion: <code>ic mod promote 1.3.0-beta.1 release</code> → moves artifact to release channel without re-upload</li>
+</ul>
+<h3 id="replication--mirroring"><a class="header" href="#replication--mirroring">Replication &amp; Mirroring</a></h3>
+<p>Community Workshop servers can replicate from the official server (pull replication, Artifactory-style):</p>
+<ul>
+<li><strong>Pull replication:</strong> Community server periodically syncs popular artifacts from official. Reduces latency for regional players, provides redundancy.</li>
+<li><strong>Selective sync:</strong> Community servers choose which categories/namespaces to replicate (e.g., replicate all Maps but not Mods)</li>
+<li><strong>Offline bundles:</strong> <code>ic workshop export-bundle</code> creates a portable archive of selected resources for LAN parties or airgapped environments. <code>ic workshop import-bundle</code> loads them into a local repository.</li>
+</ul>
 <h3 id="dependency-resolution"><a class="header" href="#dependency-resolution">Dependency Resolution</a></h3>
 <p>Cargo-inspired version solving:</p>
 <ul>
 <li><strong>Semver ranges:</strong> <code>^1.2</code> (&gt;=1.2.0, &lt;2.0.0), <code>~1.2</code> (&gt;=1.2.0, &lt;1.3.0), <code>&gt;=1.0, &lt;3.0</code>, exact <code>=1.2.3</code></li>
-<li><strong>Lockfile:</strong> <code>ic.lock</code> records exact resolved versions for reproducible installs</li>
+<li><strong>Lockfile:</strong> <code>ic.lock</code> records exact resolved versions + SHA-256 checksums for reproducible installs</li>
 <li><strong>Transitive resolution:</strong> If mod A depends on resource B which depends on resource C, all three are resolved</li>
 <li><strong>Conflict detection:</strong> Two dependencies requiring incompatible versions of the same resource → error with resolution suggestions</li>
 <li><strong>Deduplication:</strong> Same resource pulled by multiple dependents is stored once in local cache</li>
+<li><strong>Offline resolution:</strong> Once cached, all dependencies resolve from local cache — no network required</li>
 </ul>
 <h3 id="cli-extensions"><a class="header" href="#cli-extensions">CLI Extensions</a></h3>
 <pre><code>ic mod resolve         # compute dependency graph, report conflicts
@@ -1054,6 +1111,7 @@ workshop:
 <li>Single source only (simpler but doesn’t scale for a registry model — what happens when the official server is down?)</li>
 <li>Full decentralization with no official server (too chaotic for discoverability)</li>
 <li>Git-based distribution like Go modules (too complex for non-developer modders)</li>
+<li>Steam Workshop only (platform lock-in, no WASM/browser target, no self-hosting)</li>
 </ul>
 <p><strong>Phase:</strong> Phase 6 (Workshop infrastructure), with preparatory work in Phase 3 (manifest format finalized) and Phase 4 (LLM integration).</p>
 <hr>

@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-5d435b9e.js";
+            window.path_to_searchindex_js = "searchindex-2da77212.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-6f79e187.js"></script>
@@ -1379,24 +1379,75 @@ LLM generates:
 </code></pre>
 <p>The template/scene system makes this tractable — the LLM composes from known building blocks rather than generating raw code. Campaign graphs are validated at load time (no orphan nodes, all outcomes have targets).</p>
 <h3 id="configurable-workshop-server"><a class="header" href="#configurable-workshop-server">Configurable Workshop Server</a></h3>
-<p>The Workshop is a <strong>federated multi-source registry</strong> (D030). The client aggregates listings from multiple sources simultaneously, with priority-based deduplication.</p>
+<p>The Workshop is a <strong>universal artifact repository for game resources</strong> — an Artifactory-style federated registry (D030). The client aggregates listings from multiple sources simultaneously via a virtual repository view, with priority-based deduplication.</p>
+<p>Just as JFrog Artifactory stores Maven, npm, Docker, and PyPI artifacts under one roof with unified metadata and federation, our Workshop stores music, sprites, maps, mods, and every other game asset type under one registry with semver, license tracking, integrity verification, and multi-source resolution.</p>
+<h4 id="repository-types-artifactory-model"><a class="header" href="#repository-types-artifactory-model">Repository Types (Artifactory Model)</a></h4>
+<p>The Workshop uses three repository types, directly inspired by Artifactory:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Repository Type</th><th>Artifactory Analog</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Local</strong></td><td>Local repository</td><td>A directory on disk following Workshop structure. Stores artifacts you create. Used for development, LAN parties, offline play, pre-publish testing.</td></tr>
+<tr><td><strong>Remote</strong></td><td>Remote repository</td><td>A Workshop server (official or community-hosted). Artifacts are downloaded and cached locally on first access. Cache is used for subsequent requests — works offline after first pull.</td></tr>
+<tr><td><strong>Virtual</strong></td><td>Virtual repository</td><td>The aggregated view across all configured sources. The <code>ic</code> CLI and in-game browser query the virtual repository — it merges listings from all local + remote sources, deduplicates by resource ID, and resolves version conflicts using priority ordering.</td></tr>
+</tbody>
+</table>
+</div>
 <pre><code class="language-yaml"># settings.yaml
 workshop:
   sources:
-    - url: "https://workshop.ironcurtain.gg"     # official (always included, default)
-      priority: 1                                 # highest priority
-    - url: "https://mods.myclan.com/workshop"     # community-hosted
+    - url: "https://workshop.ironcurtain.gg"     # remote: official (always included, default)
+      priority: 1                                 # highest priority in virtual view
+    - url: "https://mods.myclan.com/workshop"     # remote: community-hosted
       priority: 2
-    - path: "C:/my-local-workshop"                # local directory (offline/dev)
+    - path: "C:/my-local-workshop"                # local: directory on disk
       priority: 3
   deduplicate: true               # same resource ID from multiple sources → highest priority wins
+  cache_dir: "~/.ic/cache"        # local cache for remote artifacts
 </code></pre>
-<p><strong>Official server:</strong> We host one. Default for all players. Curated categories, search, ratings, download counts.</p>
-<p><strong>Community servers:</strong> Anyone can host their own (open-source server binary, same Rust stack as relay/tracking servers). Clans, modding communities, tournament organizers. Useful for private content, regional servers, or alternative curation policies.</p>
-<p><strong>Local directory:</strong> A folder on disk that follows the Workshop directory structure. Works offline. Ideal for mod developers testing before publishing, or LAN-party content distribution.</p>
-<p><strong>Why federated multi-source:</strong> A dependency system inherently benefits from federation — tournament organizers publish to their server, LAN parties use local directories, the official server is the default. Deduplication by resource ID + priority ordering handles conflicts cleanly. If the official server is unreachable, community mirrors and local caches still resolve dependencies.</p>
+<p><strong>Official server (remote):</strong> We host one. Default for all players. Curated categories, search, ratings, download counts.</p>
+<p><strong>Community servers (remote):</strong> Anyone can host their own (open-source server binary, same Rust stack as relay/tracking servers). Clans, modding communities, tournament organizers. Useful for private content, regional servers, or alternative curation policies.</p>
+<p><strong>Local directory (local):</strong> A folder on disk that follows the Workshop directory structure. Works fully offline. Ideal for mod developers testing before publishing, or LAN-party content distribution.</p>
+<p><strong>Virtual view:</strong> The <code>ic</code> CLI and in-game browser always query the virtual repository — they never talk to raw servers directly. The virtual view merges all configured sources, handles deduplication, and respects priority ordering. This is transparent to the user.</p>
+<h4 id="artifact-integrity"><a class="header" href="#artifact-integrity">Artifact Integrity</a></h4>
+<p>Every published artifact includes cryptographic checksums for integrity verification:</p>
+<ul>
+<li><strong>SHA-256 checksum</strong> stored in the package manifest and on the Workshop server</li>
+<li><code>ic mod install</code> verifies checksums after download — mismatch → abort + warning</li>
+<li><code>ic.lock</code> records both version AND SHA-256 checksum for each dependency — guarantees byte-identical installs across machines</li>
+<li>Protects against: corrupted downloads, CDN tampering, mirror drift</li>
+<li>Workshop server computes checksums on upload; clients verify on download</li>
+</ul>
+<h4 id="promotion--maturity-channels"><a class="header" href="#promotion--maturity-channels">Promotion &amp; Maturity Channels</a></h4>
+<p>Artifacts can be published to maturity channels, allowing staged releases:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Channel</th><th>Purpose</th><th>Visibility</th></tr>
+</thead>
+<tbody>
+<tr><td><code>dev</code></td><td>Work-in-progress, local testing</td><td>Author only (local repos only)</td></tr>
+<tr><td><code>beta</code></td><td>Pre-release, community testing</td><td>Opt-in (users enable beta flag)</td></tr>
+<tr><td><code>release</code></td><td>Stable, production-ready</td><td>Default (everyone sees these)</td></tr>
+</tbody>
+</table>
+</div>
+<pre><code>ic mod publish --channel beta     # visible only to users who opt in to beta
+ic mod publish                    # release channel (default)
+ic mod promote 1.3.0-beta.1 release  # promote without re-upload
+ic mod install --include-beta     # pull beta resources
+</code></pre>
+<h4 id="replication--mirroring"><a class="header" href="#replication--mirroring">Replication &amp; Mirroring</a></h4>
+<p>Community Workshop servers can replicate from the official server (pull replication, Artifactory-style):</p>
+<ul>
+<li><strong>Pull replication:</strong> Community server periodically syncs popular artifacts from official. Reduces latency for regional players, provides redundancy.</li>
+<li><strong>Selective sync:</strong> Community servers choose which categories/namespaces to replicate (e.g., replicate all Maps but not Mods)</li>
+<li><strong>Offline bundles:</strong> <code>ic workshop export-bundle</code> creates a portable archive of selected resources for LAN parties or airgapped environments. <code>ic workshop import-bundle</code> loads them into a local repository.</li>
+</ul>
 <h3 id="workshop-resource-registry--dependency-system-d030"><a class="header" href="#workshop-resource-registry--dependency-system-d030">Workshop Resource Registry &amp; Dependency System (D030)</a></h3>
-<p>The Workshop operates as a <strong>crates.io-style resource registry</strong>. Any game asset — music, sprites, textures, cutscenes, maps, sound effects, voice lines, templates, balance presets — is individually publishable as a versioned, licensed resource. Others (including LLM agents) can discover, depend on, and pull resources automatically.</p>
+<p>The Workshop operates as a <strong>universal artifact repository for game resources</strong>. Any game asset — music, sprites, textures, cutscenes, maps, sound effects, voice lines, templates, balance presets — is individually publishable as a versioned, integrity-verified, licensed artifact. Others (including LLM agents) can discover, depend on, and pull resources automatically.</p>
 <h4 id="resource-identity--versioning"><a class="header" href="#resource-identity--versioning">Resource Identity &amp; Versioning</a></h4>
 <p>Every Workshop resource gets a globally unique identifier:</p>
 <pre><code>Format:  namespace/name@version
@@ -1434,22 +1485,26 @@ dependencies:
 </thead>
 <tbody>
 <tr><td>Semver ranges</td><td><code>^1.2</code> (&gt;=1.2.0, &lt;2.0.0), <code>~1.2</code> (&gt;=1.2.0, &lt;1.3.0), <code>&gt;=1.0, &lt;3.0</code>, exact <code>=1.2.3</code></td></tr>
-<tr><td>Lockfile (<code>ic.lock</code>)</td><td>Records exact resolved versions for reproducible installs</td></tr>
+<tr><td>Lockfile (<code>ic.lock</code>)</td><td>Records exact resolved versions + SHA-256 checksums for reproducible installs</td></tr>
 <tr><td>Transitive resolution</td><td>Pulled automatically; diamond dependencies resolved to compatible version</td></tr>
 <tr><td>Conflict detection</td><td>Two deps require incompatible versions → error with suggestions</td></tr>
 <tr><td>Deduplication</td><td>Same resource from multiple dependents stored once in local cache</td></tr>
 <tr><td>Optional dependencies</td><td><code>optional: true</code> — mod works without it; UI offers to install if available</td></tr>
+<tr><td>Offline resolution</td><td>Once cached, all dependencies resolve from local cache — no network required</td></tr>
 </tbody>
 </table>
 </div>
 <h4 id="cli-commands-for-dependency-management"><a class="header" href="#cli-commands-for-dependency-management">CLI Commands for Dependency Management</a></h4>
 <p>These extend the <code>ic</code> CLI (D020):</p>
 <pre><code>ic mod resolve         # compute dependency graph, report conflicts
-ic mod install         # download all dependencies to local cache
+ic mod install         # download all dependencies to local cache (verifies SHA-256)
 ic mod update          # update deps to latest compatible versions (respects semver)
 ic mod tree            # display dependency tree (like `cargo tree`)
 ic mod lock            # regenerate ic.lock from current mod.yaml
 ic mod audit           # check dependency licenses for compatibility
+ic mod promote         # promote artifact to a higher channel (beta → release)
+ic workshop export-bundle  # export selected resources as portable offline archive
+ic workshop import-bundle  # import offline archive into local repository
 </code></pre>
 <p>Example workflow:</p>
 <pre><code>$ ic mod install
@@ -1584,6 +1639,8 @@ llm:
     fn search(&amp;self, query: &amp;str, category: ResourceCategory) -&gt; Result&lt;Vec&lt;ResourceListing&gt;&gt;;
     fn resolve(&amp;self, deps: &amp;[Dependency]) -&gt; Result&lt;DependencyGraph&gt;;   // D030: dep resolution
     fn audit_licenses(&amp;self, graph: &amp;DependencyGraph) -&gt; Result&lt;LicenseReport&gt;; // D030: license check
+    fn promote(&amp;self, id: &amp;ResourceId, to_channel: Channel) -&gt; Result&lt;()&gt;; // D030: channel promotion
+    fn replicate(&amp;self, filter: &amp;ResourceFilter, target: &amp;str) -&gt; Result&lt;ReplicationReport&gt;; // D030: pull replication
 }
 
 /// Globally unique resource identifier: "namespace/name@version"
@@ -1607,6 +1664,8 @@ pub struct ResourcePackage {
     pub llm_meta: Option&lt;LlmResourceMeta&gt;, // LLM-readable description
     pub category: ResourceCategory,   // Music, Sprites, Map, Mod, etc.
     pub files: Vec&lt;PackageFile&gt;,      // the actual content
+    pub checksum: Sha256Hash,         // artifact integrity (computed on publish)
+    pub channel: Channel,             // dev | beta | release
     pub dependencies: Vec&lt;Dependency&gt;,// other workshop items this requires
     pub compatibility: VersionInfo,   // engine version + game module this targets
 }
