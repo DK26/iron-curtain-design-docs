@@ -128,6 +128,8 @@ Every major design decision, with rationale and alternatives considered. Referen
 - Signed replays
 - Cheap to run (doesn't run sim, just forwards orders)
 
+**Validated by:** C&C Generals/Zero Hour's "packet router" — a client-side star topology where one player collected and rebroadcast all commands. Same concept, but our server-hosted version eliminates host advantage and adds neutral time authority. See `research/generals-zero-hour-netcode-analysis.md`.
+
 **Alternatives available:** Pure P2P lockstep, fog-authoritative server, rollback — all implementable as `NetworkModel` variants.
 
 ---

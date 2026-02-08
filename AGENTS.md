@@ -18,7 +18,7 @@ Violating any of these is a bug. Do not propose designs that break them.
 
 1. **Simulation is pure and deterministic.** No I/O, no floats, no network awareness in `ra-sim`. Takes orders, produces state. Fixed-point math only (`i32`/`i64`, never `f32`/`f64` in game logic). Same inputs → identical outputs on all platforms.
 
-2. **Network model is pluggable via trait.** `GameLoop<N: NetworkModel>` is generic. The sim has zero imports from `ra-net`. They share only `ra-protocol`. Swapping lockstep for rollback touches zero sim code.
+2. **Network model is pluggable via trait.** `GameLoop<N: NetworkModel, I: InputSource>` is generic over both network model and input source. The sim has zero imports from `ra-net`. They share only `ra-protocol`. Swapping lockstep for rollback touches zero sim code.
 
 3. **Modding is tiered: YAML → Lua → WASM.** Each tier is optional and sandboxed. YAML for data (80% of mods), Lua for scripting (missions, abilities), WASM for power users (total conversions). No C# ever. No recompilation.
 
@@ -186,8 +186,12 @@ These are the **RA1 game module's** default components. Other game modules (RA2,
 
 - **Maphack:** Architectural limit in lockstep (all clients have full state). Partial mitigation via memory obfuscation. Real fix: fog-authoritative server.
 - **Order injection:** Deterministic validation in sim rejects impossible orders. Relay server also validates.
+- **Order forgery (P2P):** Ed25519 per-order signing with ephemeral session keys. Relay mode: relay stamps orders with authenticated sender slot.
 - **Lag switch:** Relay server owns the clock. Miss the window → orders dropped. Strikes system.
 - **Speed hack:** Relay owns tick cadence — client clock irrelevant.
+- **State saturation:** Order rate caps (`ProtocolLimits.max_orders_per_tick`) + relay bandwidth arbitration prevent any single player from flooding the order pipeline. Based on Bryant & Saiedian (2021) attack taxonomy.
+- **Transport encryption:** DTLS 1.3 / TLS 1.3 for all game traffic. Never custom crypto. Generals used XOR with a fixed key — cautionary example.
+- **Protocol hardening:** `BoundedReader` with remaining-bytes tracking, hard size caps on all fields, per-connection memory budgets. Inspired by Generals source code analysis (receive-side parsers had zero bounds checking). See `research/rts-netcode-security-vulnerabilities.md`.
 - **Automation/botting:** Relay-side behavioral analysis (APM patterns, reaction times, input entropy). Detection, not prevention. No kernel-level anti-cheat.
 - **Match result fraud:** `CertifiedMatchResult` signed by relay server. Only signed results update rankings.
 - **Replay tampering:** Ed25519-signed hash chain.
@@ -223,20 +227,20 @@ Key insight from EA source: original uses `OutList`/`DoList` pattern for order q
 
 When you need deeper detail, read the specific design doc:
 
-| Topic                                                                                      | Read                        |
-| ------------------------------------------------------------------------------------------ | --------------------------- |
-| Goals, competitive landscape, why this exists                                              | `src/01-VISION.md`          |
-| Crate structure, ECS, sim/render split, game loop, UI themes                               | `src/02-ARCHITECTURE.md`    |
-| NetworkModel trait, relay server, CS2 sub-tick, lockstep                                   | `src/03-NETCODE.md`         |
-| YAML rules, Lua scripting, WASM modules, sandboxing, LLM metadata, Mod SDK, resource packs | `src/04-MODDING.md`         |
-| File formats, EA source code insights, coordinate systems                                  | `src/05-FORMATS.md`         |
-| Threat model, maphack, order validation, replay signing                                    | `src/06-SECURITY.md`        |
-| Cross-engine play, OrderCodec, SimReconciler, ProtocolAdapter                              | `src/07-CROSS-ENGINE.md`    |
-| 36-month phased roadmap with exit criteria                                                 | `src/08-ROADMAP.md`         |
-| Full decision log with rationale and alternatives                                          | `src/09-DECISIONS.md`       |
-| Efficiency pyramid, profiling, performance targets, benchmarks                             | `src/10-PERFORMANCE.md`     |
-| OpenRA feature catalog (~700 traits), gap analysis, migration mapping                      | `src/11-OPENRA-FEATURES.md` |
-| Combined Arms mod migration, Remastered recreation feasibility                             | `src/12-MOD-MIGRATION.md`   |
+| Topic                                                                                             | Read                        |
+| ------------------------------------------------------------------------------------------------- | --------------------------- |
+| Goals, competitive landscape, why this exists                                                     | `src/01-VISION.md`          |
+| Crate structure, ECS, sim/render split, game loop, UI themes                                      | `src/02-ARCHITECTURE.md`    |
+| NetworkModel trait, relay server, CS2 sub-tick, lockstep, adaptive run-ahead                      | `src/03-NETCODE.md`         |
+| YAML rules, Lua scripting, WASM modules, sandboxing, LLM metadata, Mod SDK, resource packs        | `src/04-MODDING.md`         |
+| File formats, EA source code insights, coordinate systems                                         | `src/05-FORMATS.md`         |
+| Threat model, maphack, order validation, replay signing, transport encryption, protocol hardening | `src/06-SECURITY.md`        |
+| Cross-engine play, OrderCodec, SimReconciler, ProtocolAdapter                                     | `src/07-CROSS-ENGINE.md`    |
+| 36-month phased roadmap with exit criteria                                                        | `src/08-ROADMAP.md`         |
+| Full decision log with rationale and alternatives                                                 | `src/09-DECISIONS.md`       |
+| Efficiency pyramid, profiling, performance targets, benchmarks                                    | `src/10-PERFORMANCE.md`     |
+| OpenRA feature catalog (~700 traits), gap analysis, migration mapping                             | `src/11-OPENRA-FEATURES.md` |
+| Combined Arms mod migration, Remastered recreation feasibility                                    | `src/12-MOD-MIGRATION.md`   |
 
 ## Working With This Codebase
 
@@ -293,6 +297,7 @@ These are the projects we actively study. Each serves a different purpose:
 
 - **EA Red Alert source:** https://github.com/electronicarts/CnC_Red_Alert (GPL v3) — **Canonical gameplay values.** Damage tables, weapon ranges, unit speeds, fire rates. When OpenRA and EA source disagree, EA source wins for our `classic` balance preset. Also: `OutList`/`DoList` order pattern, integer math validation.
 - **EA Remastered Collection:** https://github.com/electronicarts/CnC_Remastered_Collection — **UI/UX gold standard.** Source is GPL v3 but covers ONLY the C++ engine DLLs (`TiberianDawn.dll`, `RedAlert.dll`) and Map Editor. The remaster's networking and rendering layers are proprietary C# (not open-sourced). Art/audio/video assets are proprietary EA — users must own the game. Language breakdown: 84% C++, 9% C#, 5% C, 2% Assembly. The C++ engine runs as a headless sim DLL called synchronously by the C# client (`Glyphx_Queue_AI()` bypasses all original networking). Original rendering is software-to-RAM, intercepted via `DLL_Draw_Intercept` for GPU rendering by the C# layer.
+- **EA Generals / Zero Hour source:** https://github.com/electronicarts/CnC_Generals_Zero_Hour (GPL v3) — **Netcode reference.** Most sophisticated C&C networking codebase (~500KB). UDP lockstep with adaptive run-ahead (adjusts input delay based on latency AND client FPS), three-state frame readiness with automatic resend, delta-compressed TLV wire format, packet router (star topology — validates our relay server design D007), disconnect blame attribution via pings, debug network simulation tools. See `research/generals-zero-hour-netcode-analysis.md` for full analysis.
 - **EA Tiberian Dawn source:** https://github.com/electronicarts/CnC_Tiberian_Dawn — **Shared C&C engine lineage.** Cross-reference with RA source for ambiguous behavior. Future TD game module reference.
 - **OpenRA:** https://github.com/OpenRA/OpenRA — **Architecture and UX patterns** (trait system, command interface, mod ecosystem). Also: **issue tracker as community pain point radar** — recurring complaints = our design opportunities. Do NOT copy their unit balance (see D019). **Verified netcode facts:** TCP-based lockstep with server relay (not P2P). Single-threaded game loop with background network I/O threads. Static `OrderLatency` (dynamic buffering is a TODO). Per-frame CRC sync hashing via `[VerifySync]` attribute and runtime IL-generated hash functions. Sync report buffer only 7 frames deep (recurring pain point). 135+ desync issues in tracker. NAT traversal via UPnP/NAT-PMP (`Mono.Nat`). No anti-cheat beyond order ownership validation. March 2025 release added post-processing effects.
 - **OpenRA Mod SDK:** https://github.com/OpenRA/OpenRAModSDK — **Mod developer experience reference.** Template repo approach, engine version pinning, packaging pipeline, directory conventions. Studied for D020 (`ic` CLI tool). Pain points we solve: C# requirement, MiniYAML, GPL contamination, no workshop, no hot-reload.

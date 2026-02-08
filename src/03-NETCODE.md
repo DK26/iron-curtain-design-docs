@@ -107,10 +107,31 @@ CS2 is client-server authoritative with prediction and interpolation. An RTS wit
 ```
 Local input at tick 50 → scheduled for tick 53 (3-tick delay)
 Remote input has 3 ticks to arrive before we need it
-Delay dynamically adjusted based on connection quality
+Delay dynamically adjusted based on connection quality AND client performance
 ```
 
 This is what OpenRA and most RTS games use. The "lag" players feel is intentional input delay, not network stalling.
+
+#### Adaptive Run-Ahead (Inspired by C&C Generals)
+
+The input delay ("run-ahead") is not static. It adapts dynamically based on **both** network latency **and** client frame rate — a pattern proven by C&C Generals/Zero Hour (see `research/generals-zero-hour-netcode-analysis.md`). Generals tracked a 200-sample rolling latency history plus a "packet arrival cushion" (how many frames early orders arrive) to decide when to adjust. Their run-ahead changes were themselves synchronized network commands, ensuring all clients switch on the same frame.
+
+We adopt this pattern:
+
+```rust
+/// Sent periodically by each client to report its performance characteristics.
+/// The relay server (or P2P host) uses this to adjust the tick deadline.
+pub struct ClientMetrics {
+    pub avg_latency_us: u32,      // Rolling average RTT to relay/host (microseconds)
+    pub avg_fps: u16,             // Client's current rendering frame rate
+    pub arrival_cushion: i16,     // How many ticks early orders typically arrive
+    pub tick_processing_us: u32,  // How long the client takes to process one sim tick
+}
+```
+
+Why FPS matters: a player running at 15 FPS needs roughly 67ms to process and display each frame. If run-ahead is only 2 ticks (66ms at 30 tps), they have zero margin — any network jitter causes a stall. By incorporating FPS into the adaptive algorithm, we prevent slow machines from dragging down the experience for everyone.
+
+For the relay model, `ClientMetrics` informs the relay's tick deadline calculation. For P2P lockstep, all clients agree on a shared run-ahead value (just like Generals' synchronized `RUNAHEAD` command).
 
 ### Model 2: Relay Server with Time Authority (recommended default)
 
@@ -153,7 +174,11 @@ impl RelayServer {
 
 ### Model 3: Fog-Authoritative Server (anti-maphack)
 
-Server runs full sim, sends each client only entities they should see. Breaks pure lockstep (clients run partial sims), requires server compute per game. See `06-SECURITY.md` for details.
+Server runs full sim, sends each client only entities they should see. Breaks pure lockstep (clients run partial sims), requires server compute per game. See `06-SECURITY.md` for full threat analysis.
+
+**Entity prioritization:** The server can't send every visible entity every tick — bandwidth is finite. We adopt Fiedler's priority accumulator (2015): each entity tracks priority persistently between frames, accruing additional priority based on staleness (time since last sent to this client). Units in combat and projectiles are highest priority (sent every tick); distant static structures are lowest (deferred but eventually sent). This guarantees a strict bandwidth upper bound while ensuring no entity is permanently starved. See `06-SECURITY.md` § Vulnerability 1 for the full design.
+
+**Traffic class consideration:** For FogAuth mode, player *input* (orders) and server *state* (entity updates) have different reliability requirements. Orders are small, latency-critical, and loss-intolerant — best suited for a reliable ordered channel. State updates are larger, frequent, and can tolerate occasional loss (the next update supersedes) — suited for an unreliable channel with delta compression. Bryant & Saiedian (2021) recommend this segregation. A dual-channel approach (reliable for orders, unreliable for state) would optimize both latency and bandwidth.
 
 ### Model 4: Rollback / GGPO-style (experimental future)
 
@@ -263,6 +288,56 @@ impl NetworkModel for LocalNetwork {
 
 At 30 tps, a click-to-move in single player is confirmed within ~33ms — imperceptible to humans (reaction time is ~200ms). Combined with visual prediction, the game feels **instant**.
 
+## Frame Data Resilience
+
+UDP is unreliable — packets can arrive corrupted, duplicated, reordered, or not at all. Inspired by C&C Generals' `FrameDataManager` (see `research/generals-zero-hour-netcode-analysis.md`), our frame data handling uses a three-state readiness model rather than a simple ready/waiting binary:
+
+```rust
+pub enum FrameReadiness {
+    Ready,                     // All orders received and verified
+    Waiting,                   // Still expecting orders from one or more players
+    Corrupted { from: PlayerId }, // Orders received but failed integrity check — request resend
+}
+```
+
+When `Corrupted` is detected, the system automatically requests retransmission from the specific player (or relay). A circular buffer retains the last N ticks of sent frame data (Generals used 65 frames) so resend requests can be fulfilled without re-generating the data.
+
+This is strictly better than the relay model's "missed deadline → Idle" fallback: a corrupted packet that arrives on time gets a second chance via resend rather than being silently replaced with no-op. The deadline-based Idle fallback remains as the last resort if resend also fails.
+
+## Network Simulation Tools (Development)
+
+Inspired by Generals' debug network simulation features, all `NetworkModel` implementations support artificial network condition injection:
+
+```rust
+/// Configurable network conditions for testing. Applied at the transport layer.
+/// Only available in debug/development builds — compiled out of release.
+pub struct NetworkSimConfig {
+    pub latency_ms: u32,          // Artificial one-way latency added to each packet
+    pub jitter_ms: u32,           // Random ± jitter on top of latency
+    pub packet_loss_pct: f32,     // Percentage of packets silently dropped (0.0–100.0)
+    pub corruption_pct: f32,      // Percentage of packets with random bit flips
+    pub bandwidth_limit_kbps: Option<u32>,  // Throttle outgoing bandwidth
+    pub duplicate_pct: f32,       // Percentage of packets sent twice
+    pub reorder_pct: f32,         // Percentage of packets delivered out of order
+}
+```
+
+This is invaluable for testing edge cases (desync under packet loss, adaptive run-ahead behavior, frame resend logic) without needing actual bad networks. Accessible via debug console or lobby settings in development builds.
+
+## Disconnect Handling
+
+Graceful disconnection is a first-class protocol concern, not an afterthought. Inspired by Generals' 7-type disconnect protocol (see `research/generals-zero-hour-netcode-analysis.md`), we handle disconnects deterministically:
+
+**Relay model:** The relay server detects disconnection via heartbeat timeout and notifies all clients of the specific tick on which the player is removed. All clients process the removal on the same tick — deterministic.
+
+**P2P lockstep model:** When a player appears unresponsive:
+1. **Ping verification** — all players ping the suspect to confirm unreachability (prevents false blame from asymmetric routing)
+2. **Blame attribution** — ping results determine who is actually disconnected vs. who is just slow
+3. **Coordinated removal** — remaining players agree on a specific tick number to remove the disconnected player, ensuring all sims stay synchronized
+4. **Historical frame buffer** — recent frame data is preserved so if the disconnecting player was also the packet router (P2P star topology), other players can recover missed frames
+
+For competitive/ranked games, disconnect blame feeds into the match result: the blamed player takes the loss; remaining players can optionally continue or end the match without penalty.
+
 ## Desync Detection & Debugging
 
 Every `NetworkModel` must accept `report_sync_hash()`. The system works:
@@ -296,6 +371,17 @@ pub struct OpenRACodec {
 ```
 
 See `07-CROSS-ENGINE.md` for full cross-engine compatibility design.
+
+### Delta-Compressed Native Wire Format
+
+Inspired by C&C Generals' `NetPacket` format (see `research/generals-zero-hour-netcode-analysis.md`), our `NativeCodec` uses delta-compressed tag-length-value (TLV) encoding:
+
+- **Tag bytes** — single ASCII byte identifies the field: `T`ype, `K`(tic**K**), `P`layer, `S`ub-tick, `D`ata
+- **Delta encoding** — fields are only written when they differ from the previous order in the same packet. If the same player sends 5 orders on the same tick, the player ID and tick number are written once.
+- **Empty-tick compression** — ticks with no orders compress to a single byte (Generals used `Z`). In a typical RTS, ~80% of ticks have zero orders from any given player.
+- **MTU-aware packet sizing** — packets stay under 476 bytes (single IP fragment, no UDP fragmentation). Fragmented UDP packets multiply loss probability — if any fragment is lost, the entire packet is dropped.
+
+For typical RTS traffic (0-2 orders per player per tick, long stretches of idle), this compresses wire traffic by roughly 5-10x compared to naively serializing every `TimestampedOrder`.
 
 ## Replay System
 

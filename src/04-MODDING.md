@@ -319,11 +319,54 @@ end)
 ### Lua Sandbox Rules
 
 - Only engine-provided functions available (no `io`, `os`, `require` from filesystem)
+- `os.time()`, `os.clock()`, `os.date()` are removed entirely — Lua scripts read game time via `Trigger.GetTick()` and `DateTime.GameTime`
 - Fixed-point math provided via engine bindings (no raw floats)
-- Execution time limits per tick
+- Execution resource limits per tick (see `LuaExecutionLimits` below)
 - Memory limits per mod
 
 **Determinism note:** Lua's internal number type is `f64`, but this does not affect sim determinism. Lua has **read-only access** to game state and **write access exclusively through orders** (and campaign state writes like `Campaign.set_flag()`, which are themselves deterministic because they execute at the same pipeline step on every client). The sim processes orders deterministically — Lua cannot directly modify sim components. Lua evaluation produces identical results across all clients because it runs at the same point in the system pipeline (the `triggers` step, see system execution order in `02-ARCHITECTURE.md`), with the same game state as input, on every tick. Any Lua-driven campaign state mutations are applied deterministically within this step, ensuring save/load and replay consistency.
+
+**Additional determinism safeguards:**
+
+- **String hashing → deterministic `pairs()`:** Lua's internal string hash uses a randomized seed by default (since Lua 5.3.3). The sandbox initializes `mlua` with a fixed seed, making hash table slot ordering identical across all clients. Combined with our deterministic pipeline (same code, same state, same insertion order on every client), this makes `pairs()` iteration order deterministic without modification. No sorted wrapper is needed — `pairs()` runs at native speed (zero overhead). For mod authors who want *explicit* ordering for gameplay clarity (e.g., "process units alphabetically"), the engine provides `Utils.SortedPairs(t)` — but this is a convenience for readability, not a determinism requirement. `ipairs()` is already deterministic (sequential integer keys) and should be preferred for array-style tables.
+- **Garbage collection timing:** Lua's GC is configured with a fixed-step incremental mode (`LUA_GCINC`) with identical parameters on all clients. Finalizers (`__gc` metamethods) are disabled in the sandbox — mods cannot register them. This eliminates GC-timing-dependent side effects.
+- **`math.random()`:** Removed from the sandbox. Mods use the engine-provided `Utils.RandomInteger(min, max)` which draws from the sim's deterministic PRNG.
+
+### Lua Execution Resource Limits
+
+WASM mods have `WasmExecutionLimits` (see Tier 3 below). Lua scripts need equivalent protection — without execution budgets, a Lua `while true do end` would block the deterministic tick indefinitely, freezing all clients in lockstep.
+
+The `mlua` crate supports instruction count hooks via `Lua::set_hook(HookTriggers::every_nth_instruction(N), callback)`. The engine uses this to enforce per-tick execution budgets:
+
+```rust
+/// Per-tick execution budget for Lua scripts, enforced via mlua instruction hooks.
+/// Exceeding the instruction limit terminates the script's current callback —
+/// the sim continues without the script's remaining contributions for that tick.
+/// A warning is logged and the mod is flagged for the host.
+pub struct LuaExecutionLimits {
+    pub max_instructions_per_tick: u32,    // mlua instruction hook fires at this count
+    pub max_memory_bytes: usize,           // mlua memory limit callback
+    pub max_entity_spawns_per_tick: u32,   // Mirrors WASM limit — prevents chain-reactive spawns
+    pub max_orders_per_tick: u32,          // Prevents order pipeline flooding
+    pub max_host_calls_per_tick: u32,      // Bounds engine API call volume
+}
+
+impl Default for LuaExecutionLimits {
+    fn default() -> Self {
+        Self {
+            max_instructions_per_tick: 1_000_000,  // ~1M Lua instructions — generous for missions
+            max_memory_bytes: 8 * 1024 * 1024,     // 8 MB (Lua is lighter than WASM)
+            max_entity_spawns_per_tick: 32,
+            max_orders_per_tick: 64,
+            max_host_calls_per_tick: 1024,
+        }
+    }
+}
+```
+
+**Why this matters:** The same reasoning as WASM limits applies. In deterministic lockstep, a runaway Lua script on one client blocks the tick for all players (everyone waits for the slowest client). The instruction limit ensures Lua callbacks complete in bounded time. Because the limit is deterministic (same instruction budget, same cutoff point), all clients agree on when a script is terminated — no desync.
+
+**Mod authors can request higher limits** via their mod manifest, same as WASM mods. The lobby displays requested limits and players can accept or reject. Campaign/mission scripts bundled with the game use elevated limits since they are trusted first-party content.
 
 ## Tier 3: WASM Modules
 
@@ -373,6 +416,39 @@ pub enum NetworkAccess {
     // NEVER unrestricted
 }
 ```
+
+### WASM Execution Resource Limits
+
+Capability-based API controls *what* a mod can do. Execution resource limits control *how much*. Without them, a mod could consume unbounded CPU or spawn unbounded entities — degrading performance for all players and potentially overwhelming the network layer (Bryant & Saiedian 2021 documented this in Risk of Rain 2: "procedurally generated effects combined to produce unintended chain-reactive behavior which may ultimately overwhelm the ability for game clients to render objects or handle sending/receiving of game update messages").
+
+```rust
+/// Per-tick execution budget enforced by the WASM runtime (wasmtime fuel metering).
+/// Exceeding any limit terminates the mod's tick callback early — the sim continues
+/// without the mod's remaining contributions for that tick.
+pub struct WasmExecutionLimits {
+    pub fuel_per_tick: u64,              // wasmtime fuel units (~1 per wasm instruction)
+    pub max_memory_bytes: usize,         // WASM linear memory cap (default: 16 MB)
+    pub max_entity_spawns_per_tick: u32, // Prevents chain-reactive entity explosions (default: 32)
+    pub max_orders_per_tick: u32,        // AI mods can't flood the order pipeline (default: 64)
+    pub max_host_calls_per_tick: u32,    // Bounds API call volume (default: 1024)
+}
+
+impl Default for WasmExecutionLimits {
+    fn default() -> Self {
+        Self {
+            fuel_per_tick: 1_000_000,       // ~1M instructions — generous for most mods
+            max_memory_bytes: 16 * 1024 * 1024,  // 16 MB
+            max_entity_spawns_per_tick: 32,
+            max_orders_per_tick: 64,
+            max_host_calls_per_tick: 1024,
+        }
+    }
+}
+```
+
+**Why this matters for multiplayer:** In deterministic lockstep, all clients run the same mods. A mod that consumes excessive CPU causes tick overruns on slower machines, triggering adaptive run-ahead increases for everyone. A mod that spawns hundreds of entities per tick inflates state size and network traffic. The execution limits prevent a single mod from degrading the experience — and because the limits are deterministic (same fuel budget, same cutoff point), all clients agree on when a mod is throttled.
+
+**Mod authors can request higher limits** via their mod manifest. The lobby displays requested limits and players can accept or reject. Tournament/ranked play enforces stricter defaults.
 
 ### 3D Rendering Mods (Tier 3 Showcase)
 

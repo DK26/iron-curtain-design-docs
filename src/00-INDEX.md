@@ -33,7 +33,7 @@ A Rust-native RTS engine that supports OpenRA resource formats (`.mix`, `.shp`, 
 These are non-negotiable across the entire project:
 
 1. **Simulation is pure and deterministic.** No I/O, no floats, no network awareness. Takes orders, produces state. Period.
-2. **Network model is pluggable via trait.** Game loop is generic over `NetworkModel`. Swapping lockstep for rollback touches zero sim code.
+2. **Network model is pluggable via trait.** `GameLoop<N: NetworkModel, I: InputSource>` is generic over both network model and input source. The sim has zero imports from `ra-net`. They share only `ra-protocol`. Swapping lockstep for rollback touches zero sim code.
 3. **Modding is tiered.** YAML (data) → Lua (scripting) → WASM (power). Each tier is optional and sandboxed.
 4. **Bevy as framework.** ECS scheduling, rendering, asset pipeline, audio — Bevy handles infrastructure so we focus on game logic. Custom render passes and SIMD only where profiling justifies it.
 5. **Efficiency-first performance.** Better algorithms, cache-friendly ECS, zero-allocation hot paths, simulation LOD, amortized work — THEN multi-core as a bonus layer. A 2-core laptop must run 500 units smoothly.
