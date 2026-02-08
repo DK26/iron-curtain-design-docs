@@ -406,7 +406,9 @@ Implementing the OpenRA master server protocol means Iron Curtain games can appe
 
 ### Tracking Server Implementation
 
-The server itself is straightforward — a REST or WebSocket API backed by an in-memory store with TTL expiry. No database needed. Listings expire if the host stops sending heartbeats.
+The server itself is straightforward — a REST or WebSocket API backed by an in-memory store with TTL expiry. No database needed — listings are ephemeral and expire if the host stops sending heartbeats.
+
+> **Note:** The tracking server is the only backend service with truly ephemeral data. The relay, workshop, and matchmaking servers all persist data beyond process lifetime using embedded SQLite (D034). See `09-DECISIONS.md` § D034 for the full storage model.
 
 ## Backend Infrastructure (Tracking + Relay)
 
@@ -440,16 +442,16 @@ There must never be a single point of failure that takes down the entire multipl
                           └─────┬──────────┬──────────┬───────┘
                                 │          │          │
                           ┌─────▼──┐ ┌─────▼──┐ ┌────▼───┐
-                          │ Relay  │ │ Relay  │ │ Relay  │   ← stateless per-game
-                          │  Pod   │ │  Pod   │ │  Pod   │      sessions (sticky)
-                          └────────┘ └────────┘ └────────┘
+                          │ Relay  │ │ Relay  │ │ Relay  │   ← per-game sessions
+                          │  Pod   │ │  Pod   │ │  Pod   │      (sticky, SQLite for
+                          └────────┘ └────────┘ └────────┘       persistent records)
 ```
 
 ### Design Principles
 
-1. **Just a binary.** Each server is a single Rust executable with zero mandatory dependencies. Run it directly (`./tracking-server` or `./relay-server`), as a systemd service, in Docker, or in Kubernetes — whatever suits the operator. No database, no runtime, no JVM. Download, configure, run.
+1. **Just a binary.** Each server is a single Rust executable with zero mandatory external dependencies. Run it directly (`./tracking-server` or `./relay-server`), as a systemd service, in Docker, or in Kubernetes — whatever suits the operator. No external database, no runtime, no JVM. Download, configure, run. Services that need persistent storage use an embedded SQLite database file (D034) — no separate database process to install or operate.
 
-2. **Stateless processes.** Each tracking server instance holds no critical state — for a single-instance deployment, listings live in memory with TTL expiry. For multi-instance deployments, listings are shared via Redis (or equivalent KV store). Killing the process loses nothing permanent. Relay servers hold per-game session state but games are short-lived; if a relay dies, the game reconnects or falls back to P2P.
+2. **Stateless or self-contained.** The tracking server holds no critical state — listings live in memory with TTL expiry (for multi-instance: shared via Redis). The relay, workshop, and matchmaking servers persist data (match results, resource metadata, ratings) to an embedded SQLite file (D034). Killing a process loses only in-flight game sessions — persistent records survive in the `.db` file. Relay servers hold per-game session state in memory but games are short-lived; if a relay dies, the game reconnects or falls back to P2P.
 
 3. **Community self-hosting is a first-class use case.** A clan, tournament organizer, or hobbyist runs the same binary on their own machine. No cloud account needed. No Docker needed. The binary reads a config file or env vars and starts listening. For those who prefer containers, `docker-compose up` works too. For production scale, Helm charts are available.
 
@@ -498,12 +500,17 @@ services:
       - MAX_PLAYERS_PER_GAME=16
       - TICK_TIMEOUT=5s         # drop orders after 5s — anti-lag-switch
       - REGION=eu-west          # reported to tracking server
+    volumes:
+      - relay-data:/data        # SQLite DB for match results, profiles (D034)
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9091/healthz"]
 
   redis:
     image: redis:7-alpine       # only needed for multi-instance tracking
     profiles: ["scaled"]
+
+volumes:
+  relay-data:                   # persistent storage for relay's SQLite DB
 ```
 
 **Option 3: Kubernetes / Helm (production scale)**
@@ -556,12 +563,12 @@ The tracking and relay servers are standalone Rust binaries (not Bevy — no ECS
 
 ### Failure Modes
 
-| Failure                      | Impact                                             | Recovery                                                   |
-| ---------------------------- | -------------------------------------------------- | ---------------------------------------------------------- |
-| Tracking server dies         | Browse requests fail; existing games unaffected    | Restart process; multi-instance setups have other replicas |
-| All tracking servers down    | No game browser; existing games unaffected         | Direct IP, join codes, QR still work                       |
-| Relay server dies            | Games on that instance disconnect                  | Clients reconnect to another instance or fall back to P2P  |
-| Official infra fully offline | Community tracking/relay servers still operational | Federation means no single operator is critical            |
+| Failure                      | Impact                                                                                                 | Recovery                                                   |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------- |
+| Tracking server dies         | Browse requests fail; existing games unaffected                                                        | Restart process; multi-instance setups have other replicas |
+| All tracking servers down    | No game browser; existing games unaffected                                                             | Direct IP, join codes, QR still work                       |
+| Relay server dies            | Games on that instance disconnect; persistent data (match results, profiles) survives in SQLite (D034) | Clients reconnect to another instance or fall back to P2P  |
+| Official infra fully offline | Community tracking/relay servers still operational                                                     | Federation means no single operator is critical            |
 
 ## Multi-Player Scaling (Beyond 2 Players)
 

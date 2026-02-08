@@ -97,6 +97,7 @@ Open source `ra-formats` early. Useful standalone, builds credibility and commun
 - **System execution order documented and fixed**
 - **State hashing for desync detection**
 - **Engine telemetry foundation (D031):** `tracing` span instrumentation on sim systems; per-system tick timing; gameplay event stream (`GameplayEvent` enum) behind `telemetry` feature flag; zero-cost when disabled
+- **Client-side SQLite storage (D034):** Replay catalog, save game index, gameplay event log, asset index — embedded SQLite for local metadata; queryable without OTEL stack
 
 ### Release
 Units moving, shooting, dying — headless sim + rendered. Record replay file. Play it back.
@@ -199,6 +200,7 @@ Units moving, shooting, dying — headless sim + rendered. Record replay file. P
 - Spectator feed: relay forwards tick orders to observers with configurable delay
 - Behavioral analysis pipeline on relay server
 - **Backend OTEL telemetry (D031):** relay + tracking + workshop servers emit metrics/traces/logs via OpenTelemetry; `/healthz`, `/readyz`, `/metrics` endpoints; distributed trace IDs for desync debugging across clients and relay; pre-built Grafana dashboards; optional `docker-compose.observability.yaml` overlay for self-hosters
+- **Backend SQLite storage (D034):** Relay server persists match results, desync reports, behavioral profiles; matchmaking server persists player ratings, match history, seasonal data — all in embedded SQLite, no external database
 
 ### Exit Criteria
 - Two players can play a full game over the internet
@@ -222,7 +224,7 @@ Units moving, shooting, dying — headless sim + rendered. Record replay file. P
 - **Mod templates:** `data-mod`, `scripted-mod`, `total-conversion`, `map-pack`, `asset-pack` via `ic mod init`
 - **`mod.yaml` manifest** with typed schema, semver engine version pinning, dependency declarations
 - **VS Code extension** for mod development: YAML schema validation, Lua LSP, `ic` integration
-- **Workshop resource registry (D030):** Federated multi-source workshop server with crates.io-style dependency resolution
+- **Workshop resource registry (D030):** Federated multi-source workshop server with crates.io-style dependency resolution; backed by embedded SQLite with FTS5 search (D034)
 - **Dependency management CLI:** `ic mod resolve/install/update/tree/lock/audit` — full dependency lifecycle
 - **License enforcement:** Every published resource requires SPDX license; `ic mod audit` checks dependency tree compatibility
 - **Individual resource publishing:** Music, sprites, textures, voice lines, cutscenes, palettes, UI themes — all publishable as independent versioned resources

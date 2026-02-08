@@ -1101,7 +1101,7 @@ pub enum GameplayEvent {
 
 These events are:
 - **Emitted as OTEL log records** with structured attributes (not free-text — every field is filterable)
-- **Collected locally** into a gameplay event log alongside replays (enriched replays)
+- **Collected locally** into a SQLite gameplay event log alongside replays (D034) — queryable with ad-hoc SQL without an OTEL stack
 - **Optionally exported** to a collector for batch analysis (tournament servers, AI training pipelines)
 
 #### State Inspection (Development & Debugging)
@@ -1567,6 +1567,114 @@ Critical for multiplayer: some toggles change game rules, others are purely cosm
 - Bundle QoL into balance presets (rejected — "I want OpenRA's attack-move but classic unit values" is a legitimate preference; conflating balance with UX is a design mistake)
 
 **Phase:** Phase 3 (alongside D032 UI themes and sidebar work). QoL toggles are implemented as system-level config flags — each system checks its toggle on initialization. Preset YAML files are authored during Phase 2 (simulation) as features are built.
+
+---
+
+---
+
+## D034: SQLite as Embedded Storage for Services and Client
+
+**Decision:** Use SQLite (via `rusqlite`) as the embedded database for all backend services that need persistent state and for the game client's local metadata indices. No external database dependency required for any deployment.
+
+**What this means:** Every service that persists data beyond a single process lifetime uses an embedded SQLite database file. The "just a binary" philosophy (see `03-NETCODE.md` § Backend Infrastructure) is preserved — an operator downloads a binary, runs it, and persistence is a `.db` file next to the executable. No PostgreSQL, no MySQL, no managed database service.
+
+**Where SQLite is used:**
+
+### Backend Services
+
+| Service                | What it stores                                                                                                              | Why not in-memory                                                                                                                                                                                                        |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Relay server**       | `CertifiedMatchResult` records, `DesyncReport` events, `PlayerBehaviorProfile` history, replay archive metadata             | Match results and behavioral data are valuable beyond the game session — operators need to query desync patterns, review suspicion scores, link replays to match records. A relay restart shouldn't erase match history. |
+| **Workshop server**    | Resource metadata, versions, dependencies, download counts, ratings, search index (FTS5), license data, replication cursors | This is a package registry — functionally equivalent to crates.io's data layer. Search, dependency resolution, and version queries are relational workloads.                                                             |
+| **Matchmaking server** | Player ratings (Glicko-2), match history, seasonal league data, leaderboards                                                | Ratings and match history must survive restarts. Leaderboard queries (`top N`, per-faction, per-map) are natural SQL.                                                                                                    |
+| **Tournament server**  | Brackets, match results, map pool votes, community reports                                                                  | Tournament state spans hours/days; must survive restarts. Bracket queries and result reporting are relational.                                                                                                           |
+
+### Game Client (local)
+
+| Data                   | What it stores                                                                   | Benefit                                                                                                                                                                       |
+| ---------------------- | -------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Replay catalog**     | Player names, map, factions, date, duration, result, file path, signature status | Browse and search local replays without scanning files on disk. Filter by map, opponent, date range.                                                                          |
+| **Save game index**    | Save name, campaign, mission, timestamp, playtime, thumbnail path                | Fast save browser without deserializing every save file on launch.                                                                                                            |
+| **Workshop cache**     | Downloaded resource metadata, versions, checksums, dependency graph              | Offline dependency resolution. Know what's installed without scanning the filesystem.                                                                                         |
+| **Map catalog**        | Map name, player count, size, author, source (local/workshop/OpenRA), tags       | Browse local maps from all sources with a single query.                                                                                                                       |
+| **Gameplay event log** | Structured `GameplayEvent` records (D031) per game session                       | Queryable post-game analysis without an OTEL stack: `SELECT weapon, AVG(damage) FROM combat_events WHERE session_id = ?`. Mod developers debug balance with SQL, not Grafana. |
+| **Asset index**        | `.mix` archive contents, MiniYAML conversion cache (keyed by file hash)          | Skip re-parsing on startup. Know which `.mix` contains which file without opening every archive.                                                                              |
+
+### Where SQLite is NOT used
+
+| Area                | Why not                                                                                                                                                |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **`ra-sim`**        | No I/O in the sim. Ever. Invariant #1.                                                                                                                 |
+| **Tracking server** | Truly ephemeral data — game listings with TTL. In-memory is correct.                                                                                   |
+| **Hot paths**       | No DB queries per tick. All SQLite access is at load time, between games, or on UI/background threads.                                                 |
+| **Save game data**  | Save files are serde-serialized sim snapshots loaded as a whole unit. No partial queries needed. SQLite indexes their *metadata*, not their *content*. |
+| **Campaign state**  | Loaded/saved as a unit inside save games. Fits in memory. No relational queries.                                                                       |
+
+### Why SQLite specifically
+
+- **`rusqlite`** is a mature, well-maintained Rust crate with no unsafe surprises
+- **Single-file database** — fits the "just a binary" deployment model. No connection strings, no separate database process, no credentials to manage
+- **Self-hosting alignment** — a community relay operator on a €5 VPS gets persistent match history without installing or operating a database server
+- **FTS5 full-text search** — covers workshop resource search and replay text search without Elasticsearch or a separate search service
+- **WAL mode** — handles concurrent reads from web endpoints while a single writer persists new records. Sufficient for community-scale deployments (hundreds of concurrent users, not millions)
+- **WASM-compatible** — `sql.js` (Emscripten build of SQLite) or `sqlite-wasm` for the browser target. The client-side replay catalog and gameplay event log work in the browser build.
+- **Ad-hoc investigation** — any operator can open the `.db` file in DB Browser for SQLite, DBeaver, or the `sqlite3` CLI and run queries immediately. No Grafana dashboards required. This fills the gap between "just stdout logs" and "full OTEL stack" for community self-hosters.
+
+### Relationship to D031 (OTEL Telemetry)
+
+D031 (OTEL) and D034 (SQLite) are complementary, not competing:
+
+| Concern                   | D031 (OTEL)                                  | D034 (SQLite)                                                          |
+| ------------------------- | -------------------------------------------- | ---------------------------------------------------------------------- |
+| **Real-time monitoring**  | Yes — Prometheus metrics, Grafana dashboards | No                                                                     |
+| **Distributed tracing**   | Yes — Jaeger traces across clients and relay | No                                                                     |
+| **Persistent records**    | No — metrics are time-windowed, logs rotate  | Yes — match history, ratings, replays are permanent                    |
+| **Ad-hoc investigation**  | Requires OTEL stack running                  | Just open the `.db` file                                               |
+| **Offline operation**     | No — needs collector + backends              | Yes — works standalone                                                 |
+| **Client-side debugging** | Requires exporting to a collector            | Local `.db` file, queryable immediately                                |
+| **AI training pipeline**  | Yes — Parquet/Arrow export for ML            | Source data — gameplay events could be exported from SQLite to Parquet |
+
+OTEL is for operational monitoring and distributed debugging. SQLite is for persistent records, metadata indices, and standalone investigation. Tournament servers and relay servers use both — OTEL for dashboards, SQLite for match history.
+
+### Schema Migration
+
+Each service manages its own schema using embedded SQL migrations (numbered, applied on startup). The `rusqlite` `user_version` pragma tracks the current schema version. Forward-only migrations — the binary upgrades the database file automatically on first launch after an update.
+
+### Scaling Path
+
+SQLite is the default and the right choice for 95% of deployments. For the official infrastructure at high scale, individual services can optionally be configured to use PostgreSQL by swapping the storage backend trait implementation. The schema is designed to be portable (standard SQL, no SQLite-specific syntax). FTS5 is used for full-text search on Workshop and replay catalogs — a PostgreSQL backend would substitute `tsvector`/`tsquery` for the same queries. This is a future optimization, not a launch requirement.
+
+Each service defines its own storage trait — no god-trait mixing unrelated concerns:
+
+```rust
+/// Relay server storage — match results, desync reports, behavioral profiles.
+pub trait RelayStorage: Send + Sync {
+    fn store_match_result(&self, result: &CertifiedMatchResult) -> Result<()>;
+    fn query_matches(&self, filter: &MatchFilter) -> Result<Vec<MatchRecord>>;
+    fn store_desync_report(&self, report: &DesyncReport) -> Result<()>;
+    fn update_behavior_profile(&self, player: PlayerId, profile: &BehaviorProfile) -> Result<()>;
+}
+
+/// Matchmaking server storage — ratings, match history, leaderboards.
+pub trait MatchmakingStorage: Send + Sync {
+    fn update_rating(&self, player: PlayerId, rating: &Glicko2Rating) -> Result<()>;
+    fn leaderboard(&self, scope: &LeaderboardScope, limit: u32) -> Result<Vec<LeaderboardEntry>>;
+    fn match_history(&self, player: PlayerId, limit: u32) -> Result<Vec<MatchRecord>>;
+}
+
+/// Workshop server storage — resource metadata, versions, dependencies, search.
+pub trait WorkshopStorage: Send + Sync {
+    fn publish_resource(&self, meta: &ResourceMetadata) -> Result<()>;
+    fn search(&self, query: &str, filter: &ResourceFilter) -> Result<Vec<ResourceListing>>;
+    fn resolve_deps(&self, root: &ResourceId, range: &VersionRange) -> Result<DependencyGraph>;
+}
+
+/// SQLite implementation — each service gets its own SqliteXxxStorage struct
+/// wrapping a rusqlite::Connection (WAL mode, foreign keys on, journal_size_limit set).
+/// PostgreSQL implementations are optional, behind `#[cfg(feature = "postgres")]`.
+```
+
+**Phase:** SQLite storage for relay and client lands in Phase 2 (replay catalog, save game index, gameplay event log). Workshop server storage lands in Phase 6 (D030). Matchmaking and tournament storage land in Phase 5 (competitive infrastructure). The `StorageBackend` trait is defined early but PostgreSQL implementation is deferred until scale requires it.
 
 ---
 

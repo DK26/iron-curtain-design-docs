@@ -1777,6 +1777,8 @@ The LLM sees workshop resources through their `llm_meta` fields. A music track t
 
 ### Workshop API
 
+The Workshop server stores all resource metadata, versions, dependencies, ratings, and search indices in an embedded SQLite database (D034). No external database required — the server is a single Rust binary that creates its `.db` file on first run. FTS5 provides full-text search over resource names, descriptions, and `llm_meta` tags. WAL mode handles concurrent reads from browse/search endpoints.
+
 ```rust
 pub trait WorkshopClient: Send + Sync {
     fn browse(&self, filter: &ResourceFilter) -> Result<Vec<ResourceListing>>;
