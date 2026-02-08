@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-ba27a783.js";
+            window.path_to_searchindex_js = "searchindex-9b3eccc9.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-ef8cba4b.js"></script>
@@ -461,7 +461,7 @@ fn movement_system(mut query: Query&lt;(&amp;mut Position, &amp;Velocity)&gt;) {
 </table>
 </div>
 <p><strong>Combined effect:</strong> A single-player click-to-move that takes ~200ms in OpenRA (order latency + tick time + potential GC jank) should take ~33ms in Iron Curtain — imperceptible to human reaction time. Multiplayer improves from “at the mercy of the worst connection” to a fixed, predictable deadline.</p>
-<p>See <code>03-NETCODE.md</code> § “Input Responsiveness” for the full architectural analysis, including visual prediction and single-player zero-delay.</p>
+<p>See <code>03-NETCODE.md</code> § “Why It Feels Faster Than OpenRA” for the full architectural analysis, including visual prediction and single-player zero-delay.</p>
 <h2 id="gpu--hardware-compatibility-bevywgpu-constraints"><a class="header" href="#gpu--hardware-compatibility-bevywgpu-constraints">GPU &amp; Hardware Compatibility (Bevy/wgpu Constraints)</a></h2>
 <p>Bevy renders via <code>wgpu</code>, which translates to native GPU APIs. This creates a <strong>hardware floor</strong> that interacts with our “2012 laptop” performance target.</p>
 <h3 id="wgpu-backend-matrix"><a class="header" href="#wgpu-backend-matrix">wgpu Backend Matrix</a></h3>
