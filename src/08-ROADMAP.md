@@ -249,18 +249,21 @@ Units moving, shooting, dying — headless sim + rendered. Record replay file. P
 
 ## Phase 7: AI Content & Polish (Months 32–36+)
 
-**Goal:** LLM-generated missions, visual polish, and feature parity.
+**Goal:** Optional LLM-generated missions (BYOLLM), visual polish, and feature parity.
 
-### Deliverables — AI Content Generation
-- `ra-llm` crate: LLM integration for mission generation
+### Deliverables — AI Content Generation (Optional — BYOLLM)
+
+All LLM features require the player to configure their own LLM provider. The game is fully functional without one.
+
+- `ra-llm` crate: optional LLM integration for mission generation
 - In-game mission generator UI: describe scenario → playable mission
 - Generated output: standard YAML map + Lua trigger scripts + briefing text
 - Difficulty scaling: same scenario at different challenge levels
 - Mission sharing: rate, remix, publish generated missions
 - Campaign generation: connected multi-mission storylines (experimental)
 - Adaptive difficulty: AI observes playstyle, generates targeted challenges (experimental)
-- **LLM-driven Workshop resource discovery (D030):** LLM searches Workshop by `llm_meta` tags, evaluates fitness, auto-pulls resources as dependencies for generated content; license-aware filtering
-- **LLM player-aware generation (D034):** `ra-llm` reads local SQLite for player context — faction preferences, unit usage patterns, win/loss streaks, campaign roster state; generates personalized missions, adaptive briefings, post-match commentary, coaching suggestions, rivalry narratives
+- **LLM-driven Workshop resource discovery (D030):** When LLM provider is configured, LLM can search Workshop by `llm_meta` tags, evaluate fitness, auto-pull resources as dependencies for generated content; license-aware filtering
+- **LLM player-aware generation (D034):** When LLM provider is configured, `ra-llm` reads local SQLite for player context — faction preferences, unit usage patterns, win/loss streaks, campaign roster state; generates personalized missions, adaptive briefings, post-match commentary, coaching suggestions, rivalry narratives
 - **AI training data pipeline (D031):** gameplay event stream → OTEL collector → Parquet/Arrow columnar format → ML training; build order learning, engagement patterns, balance analysis from aggregated match telemetry
 
 ### Deliverables — Visual Polish (Bevy Rendering)
@@ -280,6 +283,6 @@ Units moving, shooting, dying — headless sim + rendered. Record replay file. P
 
 ### Exit Criteria
 - A competitive OpenRA player can switch and feel at home
-- LLM mission generator produces varied, fun, playable missions
+- When an LLM provider is configured, the mission generator produces varied, fun, playable missions
 - Browser version is playable
 - At least one total conversion mod exists on the platform

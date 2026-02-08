@@ -67,7 +67,7 @@ Once I committed, the ideas came fast.
 
 **Security done through architecture** — not a kernel-level anti-cheat, but real defenses: order validation inside the simulation, signed replays, relay servers that own the clock. Stuff that comes from building backend systems and knowing how people cheat.
 
-**LLM-generated missions** — this is the part that excites me most. What if you could describe a scenario in plain English and get a playable mission? Like OFP's mission editor, but you just tell it what you want. The output is standard YAML and Lua, fully editable. Infinite content.
+**LLM-generated missions** — this is the part that excites me most. What if you could describe a scenario in plain English and get a playable mission? Like OFP's mission editor, but you just tell it what you want. The output is standard YAML and Lua, fully editable. You bring your own LLM — local or cloud, your choice. The game works perfectly without one, but for those who opt in: infinite content.
 
 ## Where This Is Now
 

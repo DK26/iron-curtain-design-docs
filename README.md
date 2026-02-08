@@ -45,7 +45,7 @@ Iron Curtain asks: *what if we kept everything OpenRA got right — the communit
 
 **Switchable balance presets.** Choose between classic RA balance (EA source values), OpenRA balance, or Remastered balance in the lobby — not as a mod, as a game option.
 
-**AI-generated missions and campaigns.** An in-game interface where you describe a scenario — "a desperate defense of a bridge against overwhelming Soviet armor with limited air support" — and an LLM generates a playable mission: terrain, objectives, enemy composition, triggers, briefing text. This is a late-phase feature (Phase 7), but it's a core part of the vision.
+**Optional AI-generated missions and campaigns (BYOLLM).** An in-game interface where you describe a scenario — "a desperate defense of a bridge against overwhelming Soviet armor with limited air support" — and an LLM generates a playable mission: terrain, objectives, enemy composition, triggers, briefing text. This requires you to bring your own LLM provider (local or cloud) — the engine never ships or requires one. Every feature works fully without it. This is a late-phase feature (Phase 7) that enhances the experience for players who opt in.
 
 **Branching campaigns.** Non-linear campaign graphs with persistent state — unit rosters, veterancy, and equipment carry over between missions. Inspired by Operation Flashpoint's approach to scenario design.
 
@@ -107,7 +107,7 @@ No C# required. No recompilation. WASM mods will run at near-native speed in a s
 | Browser play      | Not possible                                         | WASM build planned (Phase 7)                                               |
 | Networking        | TCP lockstep with server relay, static order latency | Relay server with time authority, lag-switch protection, sub-tick fairness |
 | Map editor        | Standalone tool                                      | In-engine editor with live preview (architecture TBD)                      |
-| AI content        | Hand-crafted campaigns                               | Hand-crafted + LLM-generated missions                                      |
+| AI content        | Hand-crafted campaigns                               | Hand-crafted + optional LLM-generated missions (BYOLLM)                    |
 | Replays           | Full game recording and playback                     | Signed, tamper-proof, with desync diagnosis                                |
 | Mod compatibility | Native format                                        | Loads OpenRA formats + provides migration tools                            |
 | Community         | 18 years of maps, mods, servers                      | Designed for compatibility — shared server browser, same maps, same mods   |

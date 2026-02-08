@@ -241,14 +241,14 @@ See `10-PERFORMANCE.md` for full details, targets, and implementation patterns.
 
 ## D016: LLM-Generated Missions and Campaigns
 
-**Decision:** Integrate LLM-powered mission generation as a first-class feature (Phase 7), with an in-game UI for describing scenarios in natural language.
+**Decision:** Provide an optional LLM-powered mission generation system (Phase 7) via the `ra-llm` crate. Players bring their own LLM provider (BYOLLM) — the engine never ships or requires one. Every game feature works fully without an LLM configured.
 
 **Rationale:**
-- Transforms Red Alert from finite content to infinite content
+- Transforms Red Alert from finite content to infinite content — for players who opt in
 - Generated output is standard YAML + Lua — fully editable, shareable, learnable
 - No other RTS (Red Alert or otherwise) offers this capability
 - LLM quality is sufficient for terrain layout, objective design, AI behavior scripting
-- Modular: `ra-llm` crate is optional, game works without it
+- **Strictly optional:** `ra-llm` crate is optional, game works without it. No feature — campaigns, skirmish, multiplayer, modding, analytics — depends on LLM availability. The LLM enhances the experience; it never gates it
 
 **Scope:**
 - Phase 7: single mission generation (terrain, objectives, enemy composition, triggers, briefing)
@@ -1593,14 +1593,14 @@ Critical for multiplayer: some toggles change game rules, others are purely cosm
 
 ### Game Client (local)
 
-| Data                   | What it stores                                                                   | Benefit                                                                                                                                                                       |
-| ---------------------- | -------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Replay catalog**     | Player names, map, factions, date, duration, result, file path, signature status | Browse and search local replays without scanning files on disk. Filter by map, opponent, date range.                                                                          |
-| **Save game index**    | Save name, campaign, mission, timestamp, playtime, thumbnail path                | Fast save browser without deserializing every save file on launch.                                                                                                            |
-| **Workshop cache**     | Downloaded resource metadata, versions, checksums, dependency graph              | Offline dependency resolution. Know what's installed without scanning the filesystem.                                                                                         |
-| **Map catalog**        | Map name, player count, size, author, source (local/workshop/OpenRA), tags       | Browse local maps from all sources with a single query.                                                                                                                       |
+| Data                   | What it stores                                                                   | Benefit                                                                                                                                                                                                                                                             |
+| ---------------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Replay catalog**     | Player names, map, factions, date, duration, result, file path, signature status | Browse and search local replays without scanning files on disk. Filter by map, opponent, date range.                                                                                                                                                                |
+| **Save game index**    | Save name, campaign, mission, timestamp, playtime, thumbnail path                | Fast save browser without deserializing every save file on launch.                                                                                                                                                                                                  |
+| **Workshop cache**     | Downloaded resource metadata, versions, checksums, dependency graph              | Offline dependency resolution. Know what's installed without scanning the filesystem.                                                                                                                                                                               |
+| **Map catalog**        | Map name, player count, size, author, source (local/workshop/OpenRA), tags       | Browse local maps from all sources with a single query.                                                                                                                                                                                                             |
 | **Gameplay event log** | Structured `GameplayEvent` records (D031) per game session                       | Queryable post-game analysis without an OTEL stack: `SELECT json_extract(data_json, '$.weapon'), AVG(json_extract(data_json, '$.damage')) FROM gameplay_events WHERE event_type = 'combat' AND session_id = ?`. Mod developers debug balance with SQL, not Grafana. |
-| **Asset index**        | `.mix` archive contents, MiniYAML conversion cache (keyed by file hash)          | Skip re-parsing on startup. Know which `.mix` contains which file without opening every archive.                                                                              |
+| **Asset index**        | `.mix` archive contents, MiniYAML conversion cache (keyed by file hash)          | Skip re-parsing on startup. Know which `.mix` contains which file without opening every archive.                                                                                                                                                                    |
 
 ### Where SQLite is NOT used
 
@@ -1638,17 +1638,19 @@ D031 (OTEL) and D034 (SQLite) are complementary, not competing:
 
 OTEL is for operational monitoring and distributed debugging. SQLite is for persistent records, metadata indices, and standalone investigation. Tournament servers and relay servers use both — OTEL for dashboards, SQLite for match history.
 
-### Three Consumers of Player Data
+### Consumers of Player Data
 
-SQLite isn't just infrastructure — it's a UX pillar. Three crates read the client-side database to deliver features no other RTS offers:
+SQLite isn't just infrastructure — it's a UX pillar. Multiple crates read the client-side database to deliver features no other RTS offers:
 
-| Consumer                    | Crate    | What it reads                                                                          | What it produces                                                                                                  |
-| --------------------------- | -------- | -------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| **Player-facing analytics** | `ra-ui`  | `gameplay_events`, `matches`, `match_players`, `campaign_missions`, `roster_snapshots` | Post-game stats screen, career stats page, campaign dashboard with roster/veterancy graphs, mod balance dashboard |
-| **LLM personalization**     | `ra-llm` | `matches`, `gameplay_events`, `campaign_missions`, `roster_snapshots`                  | Personalized missions, adaptive briefings, post-match commentary, coaching suggestions, rivalry narratives        |
-| **Adaptive AI**             | `ra-ai`  | `matches`, `match_players`, `gameplay_events`                                          | Difficulty adjustment, build order variety, counter-strategy selection based on player tendencies                 |
+| Consumer                    | Crate    | What it reads                                                                          | What it produces                                                                                                  | Required?                                                 |
+| --------------------------- | -------- | -------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| **Player-facing analytics** | `ra-ui`  | `gameplay_events`, `matches`, `match_players`, `campaign_missions`, `roster_snapshots` | Post-game stats screen, career stats page, campaign dashboard with roster/veterancy graphs, mod balance dashboard | Always on                                                 |
+| **Adaptive AI**             | `ra-ai`  | `matches`, `match_players`, `gameplay_events`                                          | Difficulty adjustment, build order variety, counter-strategy selection based on player tendencies                 | Always on                                                 |
+| **LLM personalization**     | `ra-llm` | `matches`, `gameplay_events`, `campaign_missions`, `roster_snapshots`                  | Personalized missions, adaptive briefings, post-match commentary, coaching suggestions, rivalry narratives        | **Optional** — requires BYOLLM provider configured (D016) |
 
-All three are read-only consumers of the same SQLite database. The sim writes nothing (invariant #1) — `gameplay_events` are recorded by a Bevy observer system outside `ra-sim`, and `matches`/`campaign_missions` are written at session boundaries.
+Player analytics and adaptive AI are always available. LLM personalization activates only when the player has configured an LLM provider — the game is fully functional without it.
+
+All consumers are read-only. The sim writes nothing (invariant #1) — `gameplay_events` are recorded by a Bevy observer system outside `ra-sim`, and `matches`/`campaign_missions` are written at session boundaries.
 
 ### Player-Facing Analytics (`ra-ui`)
 
@@ -1682,9 +1684,9 @@ No other RTS surfaces your own match data this way. SQLite makes it trivial — 
 - `ic mod stats` CLI command reads the same SQLite database
 - All data: `SELECT ... FROM gameplay_events WHERE mod_id = ?`
 
-### LLM Personalization (`ra-llm`)
+### LLM Personalization (`ra-llm`) — Optional, BYOLLM
 
-The LLM doesn't just generate random missions — it reads your history and generates *for you*. `ra-llm` queries the local SQLite database (read-only) and injects player context into generation prompts. No data leaves the device unless the user's chosen LLM provider is cloud-based (BYOLLM, see D016).
+When a player has configured an LLM provider (see BYOLLM in D016), `ra-llm` reads the local SQLite database (read-only) and injects player context into generation prompts. This is entirely optional — every game feature works without it. No data leaves the device unless the user's chosen LLM provider is cloud-based.
 
 **Personalized mission generation:**
 - "You've been playing Soviet heavy armor for 12 games. Here's a mission that forces infantry-first tactics."
