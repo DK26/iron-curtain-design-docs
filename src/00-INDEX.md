@@ -13,20 +13,20 @@ A Rust-native RTS engine that supports OpenRA resource formats (`.mix`, `.shp`, 
 
 ## Document Index
 
-| #   | Document             | Purpose                                                              | Read When...                                                           |
-| --- | -------------------- | -------------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| 01  | `01-VISION.md`       | Project goals, competitive landscape, why this should exist          | You need to understand the project's purpose and market position       |
-| 02  | `02-ARCHITECTURE.md` | Core architecture: crate structure, ECS, sim/render split, game loop | You need to make any structural or code-level decision                 |
-| 03  | `03-NETCODE.md`      | Network models, CS2 sub-tick insights, relay server, pluggable trait | You're working on multiplayer, networking, or the sim/network boundary |
-| 04  | `04-MODDING.md`      | YAML rules, Lua scripting, WASM modules, templating                  | You're working on data formats, scripting, or mod support              |
-| 05  | `05-FORMATS.md`      | File formats, original source code insights, compatibility layer     | You're working on asset loading, ra-formats crate, or OpenRA interop   |
-| 06  | `06-SECURITY.md`     | Threat model, vulnerabilities, mitigations for online play           | You're working on networking, modding sandbox, or anti-cheat           |
-| 07  | `07-CROSS-ENGINE.md` | Cross-engine compatibility, protocol adapters, reconciliation        | You're exploring OpenRA interop or multi-engine play                   |
-| 08  | `08-ROADMAP.md`      | 36-month development plan with phased milestones                     | You need to plan work or understand phase dependencies                 |
-| 09  | `09-DECISIONS.md`    | Decision log with rationale for every major choice                   | You want to understand WHY a decision was made, or revisit one         |
-| 10  | `10-PERFORMANCE.md`  | Efficiency-first performance philosophy, targets, profiling          | You're optimizing a system, choosing algorithms, or adding parallelism |
-| 11  | `11-OPENRA-FEATURES.md` | OpenRA feature catalog (~700 traits), gap analysis, migration mapping | You're assessing feature parity or planning which systems to build next |
-| 12  | `12-MOD-MIGRATION.md`   | Combined Arms mod migration, Remastered recreation feasibility       | You're validating modding architecture against real-world mods          |
+| #   | Document                | Purpose                                                                                   | Read When...                                                            |
+| --- | ----------------------- | ----------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| 01  | `01-VISION.md`          | Project goals, competitive landscape, why this should exist                               | You need to understand the project's purpose and market position        |
+| 02  | `02-ARCHITECTURE.md`    | Core architecture: crate structure, ECS, sim/render split, game loop                      | You need to make any structural or code-level decision                  |
+| 03  | `03-NETCODE.md`         | Unified relay lockstep netcode, sub-tick ordering, adaptive run-ahead, NetworkModel trait | You're working on multiplayer, networking, or the sim/network boundary  |
+| 04  | `04-MODDING.md`         | YAML rules, Lua scripting, WASM modules, templating                                       | You're working on data formats, scripting, or mod support               |
+| 05  | `05-FORMATS.md`         | File formats, original source code insights, compatibility layer                          | You're working on asset loading, ra-formats crate, or OpenRA interop    |
+| 06  | `06-SECURITY.md`        | Threat model, vulnerabilities, mitigations for online play                                | You're working on networking, modding sandbox, or anti-cheat            |
+| 07  | `07-CROSS-ENGINE.md`    | Cross-engine compatibility, protocol adapters, reconciliation                             | You're exploring OpenRA interop or multi-engine play                    |
+| 08  | `08-ROADMAP.md`         | 36-month development plan with phased milestones                                          | You need to plan work or understand phase dependencies                  |
+| 09  | `09-DECISIONS.md`       | Decision log with rationale for every major choice                                        | You want to understand WHY a decision was made, or revisit one          |
+| 10  | `10-PERFORMANCE.md`     | Efficiency-first performance philosophy, targets, profiling                               | You're optimizing a system, choosing algorithms, or adding parallelism  |
+| 11  | `11-OPENRA-FEATURES.md` | OpenRA feature catalog (~700 traits), gap analysis, migration mapping                     | You're assessing feature parity or planning which systems to build next |
+| 12  | `12-MOD-MIGRATION.md`   | Combined Arms mod migration, Remastered recreation feasibility                            | You're validating modding architecture against real-world mods          |
 
 ## Key Architectural Invariants
 

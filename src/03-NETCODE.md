@@ -1,47 +1,18 @@
 # 03 — Network Architecture
 
-## Core Design: Pluggable Network Model
+## Our Netcode
 
-The network layer is fully abstracted behind a trait. The simulation and game loop never know which network model is running.
+Iron Curtain uses **one** netcode: relay-assisted deterministic lockstep with sub-tick order fairness. It's not a menu of alternatives — it's a single, unified design. The `NetworkModel` trait exists so we can test this netcode, run it in single-player, and deploy it with or without a relay server — not because we're building multiple netcodes.
 
-```rust
-pub trait NetworkModel: Send + Sync {
-    /// Local player submits an order
-    fn submit_order(&mut self, order: TimestampedOrder);
-    /// Poll for the next tick's confirmed orders (None = not ready yet)
-    fn poll_tick(&mut self) -> Option<TickOrders>;
-    /// Report local sim hash for desync detection
-    fn report_sync_hash(&mut self, tick: u64, hash: u64);
-    /// Connection/sync status
-    fn status(&self) -> NetworkStatus;
-    /// Diagnostic info (latency, packet loss, etc.)
-    fn diagnostics(&self) -> NetworkDiagnostics;
-}
-```
+Key influences:
+- **Counter-Strike 2** — sub-tick timestamps for order fairness
+- **C&C Generals/Zero Hour** — adaptive run-ahead, frame resilience, delta-compressed wire format, disconnect handling
+- **OpenRA** — what to avoid: TCP stalling, static order latency, shallow sync buffers
+- **Bryant & Saiedian (2021)** — state saturation taxonomy, traffic class segregation
 
-### Planned Implementations
+## The Protocol
 
-| Implementation            | Use Case                            | Priority |
-| ------------------------- | ----------------------------------- | -------- |
-| `LocalNetwork`            | Single player, tests                | Phase 2  |
-| `ReplayPlayback`          | Watching replays                    | Phase 2  |
-| `LockstepNetwork`         | OpenRA-style multiplayer            | Phase 5  |
-| `RelayLockstepNetwork`    | Relay server with time authority    | Phase 5  |
-| `FogAuthoritativeNetwork` | Anti-maphack (server runs sim)      | Future   |
-| `RollbackNetwork`         | GGPO-style (requires sim snapshots) | Future   |
-| `ProtocolAdapter<N>`      | Cross-engine compatibility wrapper  | Future   |
-
-### Benefits of Trait Abstraction
-
-- Sim never touches networking concerns
-- Full testability (run entire sim with `LocalNetwork`)
-- Community can contribute better netcode without understanding game logic
-- Players could choose network model in lobby (if both agree)
-- Cross-engine adapters wrap existing models transparently
-
-## Shared Protocol Types
-
-Defined in `ra-protocol` crate — the ONLY shared dependency between sim and net:
+All protocol types live in the `ra-protocol` crate — the ONLY shared dependency between sim and net:
 
 ```rust
 #[derive(Clone, Serialize, Deserialize, Hash)]
@@ -55,7 +26,7 @@ pub enum PlayerOrder {
     // ... every possible player action
 }
 
-/// Sub-tick timestamp on every order (CS2-inspired)
+/// Sub-tick timestamp on every order (CS2-inspired, see below)
 #[derive(Clone, Serialize, Deserialize)]
 pub struct TimestampedOrder {
     pub player: PlayerId,
@@ -82,27 +53,51 @@ impl TickOrders {
 }
 ```
 
-## CS2 Sub-Tick: What We Borrow
+## How It Works
 
-### What CS2 Does
+### Architecture: Relay with Time Authority
+
+The relay server is the recommended deployment for multiplayer. It does NOT run the sim — it's a lightweight order router with time authority:
+
+```
+┌────────┐         ┌──────────────┐         ┌────────┐
+│Player A│────────▶│ Relay Server │◀────────│Player B│
+│        │◀────────│  (timestamped│────────▶│        │
+└────────┘         │   ordering)  │         └────────┘
+                   └──────────────┘
+```
+
+Every tick:
+1. The relay receives timestamped orders from all players
+2. Orders them chronologically within the tick (CS2 insight — see below)
+3. Broadcasts the canonical `TickOrders` to all clients
+4. All clients run the identical deterministic sim on those orders
+
+The relay also:
+- Detects lag switches and cheating attempts (see anti-lag-switch below)
+- Handles NAT traversal (no port forwarding needed)
+- Signs replays for tamper-proofing (see `06-SECURITY.md`)
+- Validates order signatures and rate limits (see `06-SECURITY.md`)
+
+This design was validated by C&C Generals/Zero Hour's "packet router" — a client-side star topology where one player collected and rebroadcast all commands. Same concept, but our server-hosted version eliminates host advantage and adds neutral time authority. See `research/generals-zero-hour-netcode-analysis.md`.
+
+For small games (2-3 players) on LAN or with direct connectivity, the same netcode runs without a relay via P2P lockstep (see "The NetworkModel Trait" section below for deployment modes).
+
+### Sub-Tick Order Fairness (from CS2)
 
 Counter-Strike 2 introduced "sub-tick" architecture: instead of processing all actions at discrete tick boundaries, the client timestamps every input with sub-tick precision. The server collects inputs from all clients and processes them in chronological order within each tick window. The server still ticks at 64Hz, but events are ordered by their actual timestamps.
 
-### What's Relevant for RTS
-
-The core idea — **timestamped orders processed in chronological order within a tick** — produces fairer results for edge cases:
+For an RTS, the core idea — **timestamped orders processed in chronological order within a tick** — produces fairer results for edge cases:
 
 - Two players grabbing the same crate → the one who clicked first gets it
 - Engineer vs engineer racing to capture a building → chronological winner
 - Simultaneous attack orders → processed in actual order, not arrival order
 
-### What's NOT Relevant
+**What's NOT relevant from CS2:** CS2 is client-server authoritative with prediction and interpolation. An RTS with hundreds of units can't afford server-authoritative simulation — the bandwidth would be enormous. We stay with deterministic lockstep (clients run identical sims), so CS2's prediction/reconciliation doesn't apply.
 
-CS2 is client-server authoritative with prediction and interpolation. An RTS with hundreds of units can't afford server-authoritative simulation — the bandwidth would be enormous. We stay with deterministic lockstep (clients run identical sims), so CS2's prediction/reconciliation doesn't directly apply.
+### Adaptive Run-Ahead (from C&C Generals)
 
-## Network Model Details
-
-### Model 1: Lockstep with Input Delay (starting model)
+Every lockstep RTS has inherent input delay — the game schedules your order a few ticks into the future so remote players' orders have time to arrive:
 
 ```
 Local input at tick 50 → scheduled for tick 53 (3-tick delay)
@@ -110,11 +105,7 @@ Remote input has 3 ticks to arrive before we need it
 Delay dynamically adjusted based on connection quality AND client performance
 ```
 
-This is what OpenRA and most RTS games use. The "lag" players feel is intentional input delay, not network stalling.
-
-#### Adaptive Run-Ahead (Inspired by C&C Generals)
-
-The input delay ("run-ahead") is not static. It adapts dynamically based on **both** network latency **and** client frame rate — a pattern proven by C&C Generals/Zero Hour (see `research/generals-zero-hour-netcode-analysis.md`). Generals tracked a 200-sample rolling latency history plus a "packet arrival cushion" (how many frames early orders arrive) to decide when to adjust. Their run-ahead changes were themselves synchronized network commands, ensuring all clients switch on the same frame.
+This input delay ("run-ahead") is not static. It adapts dynamically based on **both** network latency **and** client frame rate — a pattern proven by C&C Generals/Zero Hour (see `research/generals-zero-hour-netcode-analysis.md`). Generals tracked a 200-sample rolling latency history plus a "packet arrival cushion" (how many frames early orders arrive) to decide when to adjust. Their run-ahead changes were themselves synchronized network commands, ensuring all clients switch on the same frame.
 
 We adopt this pattern:
 
@@ -131,26 +122,11 @@ pub struct ClientMetrics {
 
 Why FPS matters: a player running at 15 FPS needs roughly 67ms to process and display each frame. If run-ahead is only 2 ticks (66ms at 30 tps), they have zero margin — any network jitter causes a stall. By incorporating FPS into the adaptive algorithm, we prevent slow machines from dragging down the experience for everyone.
 
-For the relay model, `ClientMetrics` informs the relay's tick deadline calculation. For P2P lockstep, all clients agree on a shared run-ahead value (just like Generals' synchronized `RUNAHEAD` command).
+For the relay deployment, `ClientMetrics` informs the relay's tick deadline calculation. For P2P lockstep, all clients agree on a shared run-ahead value (just like Generals' synchronized `RUNAHEAD` command).
 
-### Model 2: Relay Server with Time Authority (recommended default)
+### Anti-Lag-Switch
 
-```
-┌────────┐         ┌──────────────┐         ┌────────┐
-│Player A│────────▶│ Relay Server │◀────────│Player B│
-│        │◀────────│  (timestamped│────────▶│        │
-└────────┘         │   ordering)  │         └────────┘
-                   └──────────────┘
-```
-
-The relay server does NOT run the sim. It:
-1. Receives timestamped orders from all players
-2. Orders them chronologically (CS2 insight)
-3. Broadcasts canonical tick order to all clients
-4. Detects lag switches and cheating attempts
-5. Handles NAT traversal (no port forwarding needed)
-
-**Anti-lag-switch mechanism:**
+The relay server owns the clock. If your orders don't arrive within the tick deadline, they're dropped — replaced with `PlayerOrder::Idle`. Lag switch only punishes the attacker:
 
 ```rust
 impl RelayServer {
@@ -172,55 +148,59 @@ impl RelayServer {
 }
 ```
 
-### Model 3: Fog-Authoritative Server (anti-maphack)
+Repeated late deliveries accumulate strikes. Enough strikes → disconnection. The relay's tick cadence is authoritative — client clock is irrelevant. See `06-SECURITY.md` for the full anti-cheat implications.
 
-Server runs full sim, sends each client only entities they should see. Breaks pure lockstep (clients run partial sims), requires server compute per game. See `06-SECURITY.md` for full threat analysis.
+### Frame Data Resilience (from C&C Generals)
 
-**Entity prioritization:** The server can't send every visible entity every tick — bandwidth is finite. We adopt Fiedler's priority accumulator (2015): each entity tracks priority persistently between frames, accruing additional priority based on staleness (time since last sent to this client). Units in combat and projectiles are highest priority (sent every tick); distant static structures are lowest (deferred but eventually sent). This guarantees a strict bandwidth upper bound while ensuring no entity is permanently starved. See `06-SECURITY.md` § Vulnerability 1 for the full design.
+UDP is unreliable — packets can arrive corrupted, duplicated, reordered, or not at all. Inspired by C&C Generals' `FrameDataManager` (see `research/generals-zero-hour-netcode-analysis.md`), our frame data handling uses a three-state readiness model rather than a simple ready/waiting binary:
 
-**Traffic class consideration:** For FogAuth mode, player *input* (orders) and server *state* (entity updates) have different reliability requirements. Orders are small, latency-critical, and loss-intolerant — best suited for a reliable ordered channel. State updates are larger, frequent, and can tolerate occasional loss (the next update supersedes) — suited for an unreliable channel with delta compression. Bryant & Saiedian (2021) recommend this segregation. A dual-channel approach (reliable for orders, unreliable for state) would optimize both latency and bandwidth.
-
-### Model 4: Rollback / GGPO-style (experimental future)
-
-Requires snapshottable sim (already designed). Client predicts with local input, rolls back on misprediction. Expensive for RTS (re-simulating hundreds of entities), but feasible with Rust's performance. See GGPO documentation for reference implementation.
-
-## Input Responsiveness: Why Our Model Feels Faster
-
-Every lockstep RTS has inherent input delay — the game must wait for all players' orders before advancing. This is **architectural**, not a bug. But how much delay, and who pays for it, varies dramatically.
-
-### OpenRA's Stalling Model
-
-OpenRA uses TCP-based lockstep where the game advances only when ALL clients have submitted orders for the current net frame (`OrderManager.TryTick()` checks `pendingOrders.All(...)`):
-
-```
-Tick 50: waiting for Player A's orders... ✓ (10ms)
-         waiting for Player B's orders... ✓ (15ms)
-         waiting for Player C's orders... ⏳ (280ms — bad WiFi)
-         → ALL players frozen for 280ms. Everyone suffers.
+```rust
+pub enum FrameReadiness {
+    Ready,                     // All orders received and verified
+    Waiting,                   // Still expecting orders from one or more players
+    Corrupted { from: PlayerId }, // Orders received but failed integrity check — request resend
+}
 ```
 
-Additionally (verified from source):
-- Orders are batched every `NetFrameInterval` frames (not every tick), adding batching delay
-- The server adds `OrderLatency` frames to every order (default 1 for local, higher for MP game speeds)
-- `OrderBuffer` dynamically adjusts per-player `TickScale` (up to 10% speedup) based on delivery timing
-- Even in **single player**, `EchoConnection` projects orders 1 frame forward
-- C# GC pauses add unpredictable jank on top of the architectural delay
+When `Corrupted` is detected, the system automatically requests retransmission from the specific player (or relay). A circular buffer retains the last N ticks of sent frame data (Generals used 65 frames) so resend requests can be fulfilled without re-generating the data.
 
-The perceived input lag when clicking units in OpenRA is estimated at ~100-200ms — a combination of intentional lockstep delay, order batching, and runtime overhead.
+This is strictly better than pure "missed deadline → Idle" fallback: a corrupted packet that arrives on time gets a second chance via resend rather than being silently replaced with no-op. The deadline-based Idle fallback remains as the last resort if resend also fails.
 
-### Our Relay Model: No Stalling
+### Wire Format: Delta-Compressed TLV (from C&C Generals)
 
-The relay server owns the clock. It broadcasts tick orders on a fixed deadline — missed orders are replaced with `PlayerOrder::Idle`:
+Inspired by C&C Generals' `NetPacket` format (see `research/generals-zero-hour-netcode-analysis.md`), the native wire format uses delta-compressed tag-length-value (TLV) encoding:
 
-```
-Tick 50: relay deadline = 80ms
-         Player A orders arrive at 10ms  → ✓ included
-         Player B orders arrive at 15ms  → ✓ included  
-         Player C orders arrive at 280ms → ✗ missed deadline → Idle
-         → Relay broadcasts at 80ms. No stall. Player C's units idle.
-```
+- **Tag bytes** — single ASCII byte identifies the field: `T`ype, `K`(tic**K**), `P`layer, `S`ub-tick, `D`ata
+- **Delta encoding** — fields are only written when they differ from the previous order in the same packet. If the same player sends 5 orders on the same tick, the player ID and tick number are written once.
+- **Empty-tick compression** — ticks with no orders compress to a single byte (Generals used `Z`). In a typical RTS, ~80% of ticks have zero orders from any given player.
+- **MTU-aware packet sizing** — packets stay under 476 bytes (single IP fragment, no UDP fragmentation). Fragmented UDP packets multiply loss probability — if any fragment is lost, the entire packet is dropped.
 
-Honest players on good connections always get responsive gameplay. A lagging player hurts only themselves.
+For typical RTS traffic (0-2 orders per player per tick, long stretches of idle), this compresses wire traffic by roughly 5-10x compared to naively serializing every `TimestampedOrder`.
+
+For cross-engine play, the wire format is abstracted behind an `OrderCodec` trait — see `07-CROSS-ENGINE.md`.
+
+### Desync Detection & Debugging
+
+Every tick, each client hashes their sim state. Hashes are compared (by relay server, or exchanged P2P):
+
+1. On mismatch → desync detected at specific tick
+2. Because sim is snapshottable (D010), dump full state and diff to pinpoint exact divergence
+
+This is a **killer feature**. OpenRA has 135+ desync issues in their tracker — desyncs are a persistent, hard-to-debug problem. They hash game state per frame (via `[VerifySync]` attribute) and detect desyncs, but their sync report buffer is only 7 frames deep, which often isn't enough to capture the divergence point. Our architecture makes desyncs both detectable AND diagnosable.
+
+### Disconnect Handling (from C&C Generals)
+
+Graceful disconnection is a first-class protocol concern, not an afterthought. Inspired by Generals' 7-type disconnect protocol (see `research/generals-zero-hour-netcode-analysis.md`), we handle disconnects deterministically:
+
+**With relay:** The relay server detects disconnection via heartbeat timeout and notifies all clients of the specific tick on which the player is removed. All clients process the removal on the same tick — deterministic.
+
+**P2P (without relay):** When a player appears unresponsive:
+1. **Ping verification** — all players ping the suspect to confirm unreachability (prevents false blame from asymmetric routing)
+2. **Blame attribution** — ping results determine who is actually disconnected vs. who is just slow
+3. **Coordinated removal** — remaining players agree on a specific tick number to remove the disconnected player, ensuring all sims stay synchronized
+4. **Historical frame buffer** — recent frame data is preserved so if the disconnecting player was also the packet router (P2P star topology), other players can recover missed frames
+
+For competitive/ranked games, disconnect blame feeds into the match result: the blamed player takes the loss; remaining players can optionally continue or end the match without penalty.
 
 ### Visual Prediction (Cosmetic, Not Sim)
 
@@ -248,22 +228,94 @@ fn on_move_order_issued(click_pos: WorldPos, selected_units: &[Entity]) {
 
 This is purely cosmetic — the sim doesn't advance until the confirmed order arrives. But it eliminates the **perceived** lag. The selection ring snaps, the unit rotates, the acknowledgment voice plays — all before the network round-trip completes.
 
+## Why It Feels Faster Than OpenRA
+
+Every lockstep RTS has inherent input delay — the game must wait for all players' orders before advancing. This is **architectural**, not a bug. But how much delay, and who pays for it, varies dramatically.
+
+### OpenRA's Stalling Model
+
+OpenRA uses TCP-based lockstep where the game advances only when ALL clients have submitted orders for the current net frame (`OrderManager.TryTick()` checks `pendingOrders.All(...)`):
+
+```
+Tick 50: waiting for Player A's orders... ✓ (10ms)
+         waiting for Player B's orders... ✓ (15ms)
+         waiting for Player C's orders... ⏳ (280ms — bad WiFi)
+         → ALL players frozen for 280ms. Everyone suffers.
+```
+
+Additionally (verified from source):
+- Orders are batched every `NetFrameInterval` frames (not every tick), adding batching delay
+- The server adds `OrderLatency` frames to every order (default 1 for local, higher for MP game speeds)
+- `OrderBuffer` dynamically adjusts per-player `TickScale` (up to 10% speedup) based on delivery timing
+- Even in **single player**, `EchoConnection` projects orders 1 frame forward
+- C# GC pauses add unpredictable jank on top of the architectural delay
+
+The perceived input lag when clicking units in OpenRA is estimated at ~100-200ms — a combination of intentional lockstep delay, order batching, and runtime overhead.
+
+### Our Model: No Stalling
+
+The relay server owns the clock. It broadcasts tick orders on a fixed deadline — missed orders are replaced with `PlayerOrder::Idle`:
+
+```
+Tick 50: relay deadline = 80ms
+         Player A orders arrive at 10ms  → ✓ included
+         Player B orders arrive at 15ms  → ✓ included  
+         Player C orders arrive at 280ms → ✗ missed deadline → Idle
+         → Relay broadcasts at 80ms. No stall. Player C's units idle.
+```
+
+Honest players on good connections always get responsive gameplay. A lagging player hurts only themselves.
+
 ### Input Latency Comparison
 
 *OpenRA values are from source code analysis, not runtime benchmarks. Tick processing times are estimates.*
 
-| Factor                      | OpenRA                               | Iron Curtain (Relay)                  | Improvement                            |
-| --------------------------- | ------------------------------------ | ------------------------------------- | -------------------------------------- |
-| Waiting for slowest client  | Yes — everyone freezes               | No — relay drops late orders          | Eliminates worst-case stalls entirely  |
-| Order batching interval     | Every N frames (`NetFrameInterval`)  | Every tick                            | No batching delay                      |
-| Order scheduling delay      | +`OrderLatency` ticks                | +1 tick (next relay broadcast)        | Fewer ticks of delay                   |
-| Tick processing time        | Estimated 30-60ms (limits tick rate) | ~8ms (allows higher tick rate)        | 4-8x faster per tick                   |
-| Achievable tick rate        | ~15 tps                              | 30+ tps                               | 2x shorter lockstep window             |
-| GC pauses during processing | C# GC characteristic                 | 0ms                                   | Eliminates unpredictable hitches       |
-| Visual feedback on click    | Waits for order confirmation         | Immediate (cosmetic prediction)       | Perceived lag drops to near-zero       |
-| Single-player order delay   | 1 projected frame (~66ms at 15 tps)  | 0 frames (`LocalNetwork` = next tick) | Zero delay                             |
-| Worst connection impact     | Freezes all players                  | Only affects the lagging player       | Architectural fairness                 |
-| Future: rollback prediction | Not possible (no snapshots)          | Possible (D010 enables GGPO)          | Could eliminate all perceived MP delay |
+| Factor                      | OpenRA                               | Iron Curtain                          | Improvement                           |
+| --------------------------- | ------------------------------------ | ------------------------------------- | ------------------------------------- |
+| Waiting for slowest client  | Yes — everyone freezes               | No — relay drops late orders          | Eliminates worst-case stalls entirely |
+| Order batching interval     | Every N frames (`NetFrameInterval`)  | Every tick                            | No batching delay                     |
+| Order scheduling delay      | +`OrderLatency` ticks                | +1 tick (next relay broadcast)        | Fewer ticks of delay                  |
+| Tick processing time        | Estimated 30-60ms (limits tick rate) | ~8ms (allows higher tick rate)        | 4-8x faster per tick                  |
+| Achievable tick rate        | ~15 tps                              | 30+ tps                               | 2x shorter lockstep window            |
+| GC pauses during processing | C# GC characteristic                 | 0ms                                   | Eliminates unpredictable hitches      |
+| Visual feedback on click    | Waits for order confirmation         | Immediate (cosmetic prediction)       | Perceived lag drops to near-zero      |
+| Single-player order delay   | 1 projected frame (~66ms at 15 tps)  | 0 frames (`LocalNetwork` = next tick) | Zero delay                            |
+| Worst connection impact     | Freezes all players                  | Only affects the lagging player       | Architectural fairness                |
+| Architectural headroom      | No sim snapshots                     | Snapshottable sim (D010) enables future rollback/GGPO | Path to eliminating perceived MP delay |
+
+## The NetworkModel Trait
+
+The netcode described above is expressed as a trait — not because we're building multiple netcodes, but because it gives us testability, single-player support, and deployment flexibility. The sim and game loop never know which deployment mode is running.
+
+```rust
+pub trait NetworkModel: Send + Sync {
+    /// Local player submits an order
+    fn submit_order(&mut self, order: TimestampedOrder);
+    /// Poll for the next tick's confirmed orders (None = not ready yet)
+    fn poll_tick(&mut self) -> Option<TickOrders>;
+    /// Report local sim hash for desync detection
+    fn report_sync_hash(&mut self, tick: u64, hash: u64);
+    /// Connection/sync status
+    fn status(&self) -> NetworkStatus;
+    /// Diagnostic info (latency, packet loss, etc.)
+    fn diagnostics(&self) -> NetworkDiagnostics;
+}
+```
+
+### Deployment Modes
+
+The same netcode runs in four modes. The first two are utility adapters (no network involved). The last two are real multiplayer deployments of the same protocol:
+
+| Implementation         | What It Is                                | When Used                      | Phase   |
+| ---------------------- | ----------------------------------------- | ------------------------------ | ------- |
+| `LocalNetwork`         | Pass-through — orders go straight to sim  | Single player, automated tests | Phase 2 |
+| `ReplayPlayback`       | File reader — feeds saved orders into sim | Watching replays               | Phase 2 |
+| `LockstepNetwork`      | P2P deployment (same protocol, no relay)  | LAN, ≤3 players, direct IP     | Phase 5 |
+| `RelayLockstepNetwork` | Relay deployment (recommended for online) | Internet multiplayer, ranked   | Phase 5 |
+
+`LockstepNetwork` and `RelayLockstepNetwork` implement the same netcode. The difference is topology: P2P uses direct connections (full mesh for 2-3 players, star topology for 4+), while relay routes everything through a neutral server. Both use adaptive run-ahead, frame resilience, delta-compressed TLV, and Ed25519 signing.
+
+**Sub-tick ordering in P2P:** Without a neutral relay, there is no central time authority. Instead, each client sorts orders deterministically by `(sub_tick_time, player_id)` — the player ID tiebreaker ensures all clients produce the same canonical order even with identical timestamps. This is slightly less fair than relay ordering (clock skew between peers can bias who "clicked first"), but acceptable for LAN/small-group play where latencies are low. The relay deployment eliminates this issue entirely with neutral time authority, and additionally provides lag-switch protection, NAT traversal, and signed replays.
 
 ### Single-Player: Zero Delay
 
@@ -288,23 +340,63 @@ impl NetworkModel for LocalNetwork {
 
 At 30 tps, a click-to-move in single player is confirmed within ~33ms — imperceptible to humans (reaction time is ~200ms). Combined with visual prediction, the game feels **instant**.
 
-## Frame Data Resilience
+### Replay Playback
 
-UDP is unreliable — packets can arrive corrupted, duplicated, reordered, or not at all. Inspired by C&C Generals' `FrameDataManager` (see `research/generals-zero-hour-netcode-analysis.md`), our frame data handling uses a three-state readiness model rather than a simple ready/waiting binary:
+Replays are a natural byproduct of the architecture:
+
+```
+Replay file = initial state + sequence of TickOrders
+Playback = feed TickOrders through Simulation via ReplayPlayback NetworkModel
+```
+
+Replays are signed by the relay server for tamper-proofing (see `06-SECURITY.md`).
+
+## Future Architectures
+
+The `NetworkModel` trait also keeps the door open for fundamentally different networking approaches in the future. These are NOT the same netcode — they are genuinely different architectures with different trade-offs. None are planned for initial development.
+
+### Fog-Authoritative Server (anti-maphack)
+
+Server runs full sim, sends each client only entities they should see. Breaks pure lockstep (clients run partial sims), requires server compute per game. See `06-SECURITY.md` for full threat analysis.
+
+**Entity prioritization:** The server can't send every visible entity every tick — bandwidth is finite. We adopt Fiedler's priority accumulator (2015): each entity tracks priority persistently between frames, accruing additional priority based on staleness (time since last sent to this client). Units in combat and projectiles are highest priority (sent every tick); distant static structures are lowest (deferred but eventually sent). This guarantees a strict bandwidth upper bound while ensuring no entity is permanently starved. See `06-SECURITY.md` § Vulnerability 1 for the full design.
+
+**Traffic class consideration:** For FogAuth mode, player *input* (orders) and server *state* (entity updates) have different reliability requirements. Orders are small, latency-critical, and loss-intolerant — best suited for a reliable ordered channel. State updates are larger, frequent, and can tolerate occasional loss (the next update supersedes) — suited for an unreliable channel with delta compression. Bryant & Saiedian (2021) recommend this segregation. A dual-channel approach (reliable for orders, unreliable for state) would optimize both latency and bandwidth.
+
+### Rollback / GGPO-Style (experimental)
+
+Requires snapshottable sim (already designed via D010). Client predicts with local input, rolls back on misprediction. Expensive for RTS (re-simulating hundreds of entities), but feasible with Rust's performance. See GGPO documentation for reference implementation.
+
+### Cross-Engine Protocol Adapter
+
+A `ProtocolAdapter<N>` wrapper translates between Iron Curtain's native protocol and other engines' wire formats (e.g., OpenRA). Uses the `OrderCodec` trait for format translation. See `07-CROSS-ENGINE.md` for full design.
+
+## OrderCodec: Wire Format Abstraction
+
+For cross-engine play and protocol versioning, the wire format is abstracted behind a trait:
 
 ```rust
-pub enum FrameReadiness {
-    Ready,                     // All orders received and verified
-    Waiting,                   // Still expecting orders from one or more players
-    Corrupted { from: PlayerId }, // Orders received but failed integrity check — request resend
+pub trait OrderCodec: Send + Sync {
+    fn encode(&self, order: &TimestampedOrder) -> Result<Vec<u8>>;
+    fn decode(&self, bytes: &[u8]) -> Result<TimestampedOrder>;
+    fn protocol_id(&self) -> ProtocolId;
+}
+
+/// Native format — fast, compact, versioned (delta-compressed TLV)
+pub struct NativeCodec { version: u32 }
+
+/// Translates to/from OpenRA's wire format
+pub struct OpenRACodec {
+    order_map: OrderTranslationTable,
+    coord_transform: CoordTransform,
 }
 ```
 
-When `Corrupted` is detected, the system automatically requests retransmission from the specific player (or relay). A circular buffer retains the last N ticks of sent frame data (Generals used 65 frames) so resend requests can be fulfilled without re-generating the data.
+See `07-CROSS-ENGINE.md` for full cross-engine compatibility design.
 
-This is strictly better than the relay model's "missed deadline → Idle" fallback: a corrupted packet that arrives on time gets a second chance via resend rather than being silently replaced with no-op. The deadline-based Idle fallback remains as the last resort if resend also fails.
+## Development Tools
 
-## Network Simulation Tools (Development)
+### Network Simulation
 
 Inspired by Generals' debug network simulation features, all `NetworkModel` implementations support artificial network condition injection:
 
@@ -324,79 +416,9 @@ pub struct NetworkSimConfig {
 
 This is invaluable for testing edge cases (desync under packet loss, adaptive run-ahead behavior, frame resend logic) without needing actual bad networks. Accessible via debug console or lobby settings in development builds.
 
-## Disconnect Handling
-
-Graceful disconnection is a first-class protocol concern, not an afterthought. Inspired by Generals' 7-type disconnect protocol (see `research/generals-zero-hour-netcode-analysis.md`), we handle disconnects deterministically:
-
-**Relay model:** The relay server detects disconnection via heartbeat timeout and notifies all clients of the specific tick on which the player is removed. All clients process the removal on the same tick — deterministic.
-
-**P2P lockstep model:** When a player appears unresponsive:
-1. **Ping verification** — all players ping the suspect to confirm unreachability (prevents false blame from asymmetric routing)
-2. **Blame attribution** — ping results determine who is actually disconnected vs. who is just slow
-3. **Coordinated removal** — remaining players agree on a specific tick number to remove the disconnected player, ensuring all sims stay synchronized
-4. **Historical frame buffer** — recent frame data is preserved so if the disconnecting player was also the packet router (P2P star topology), other players can recover missed frames
-
-For competitive/ranked games, disconnect blame feeds into the match result: the blamed player takes the loss; remaining players can optionally continue or end the match without penalty.
-
-## Desync Detection & Debugging
-
-Every `NetworkModel` must accept `report_sync_hash()`. The system works:
-
-1. Each client hashes their sim state after each tick
-2. Hashes are compared (by relay server, or exchanged P2P)
-3. On mismatch → desync detected at specific tick
-4. Because sim is snapshottable, dump full state and diff to pinpoint exact divergence
-
-This is a **killer feature**. OpenRA has 135+ desync issues in their tracker — desyncs are a persistent, hard-to-debug problem. They hash game state per frame (via `[VerifySync]` attribute) and detect desyncs, but their sync report buffer is only 7 frames deep, which often isn't enough to capture the divergence point. Our architecture makes desyncs both detectable AND diagnosable.
-
-## OrderCodec: Wire Format Abstraction
-
-For future cross-engine play and protocol versioning:
-
-```rust
-pub trait OrderCodec: Send + Sync {
-    fn encode(&self, order: &TimestampedOrder) -> Result<Vec<u8>>;
-    fn decode(&self, bytes: &[u8]) -> Result<TimestampedOrder>;
-    fn protocol_id(&self) -> ProtocolId;
-}
-
-/// Native format — fast, compact, versioned
-pub struct NativeCodec { version: u32 }
-
-/// Translates to/from OpenRA's wire format
-pub struct OpenRACodec {
-    order_map: OrderTranslationTable,
-    coord_transform: CoordTransform,
-}
-```
-
-See `07-CROSS-ENGINE.md` for full cross-engine compatibility design.
-
-### Delta-Compressed Native Wire Format
-
-Inspired by C&C Generals' `NetPacket` format (see `research/generals-zero-hour-netcode-analysis.md`), our `NativeCodec` uses delta-compressed tag-length-value (TLV) encoding:
-
-- **Tag bytes** — single ASCII byte identifies the field: `T`ype, `K`(tic**K**), `P`layer, `S`ub-tick, `D`ata
-- **Delta encoding** — fields are only written when they differ from the previous order in the same packet. If the same player sends 5 orders on the same tick, the player ID and tick number are written once.
-- **Empty-tick compression** — ticks with no orders compress to a single byte (Generals used `Z`). In a typical RTS, ~80% of ticks have zero orders from any given player.
-- **MTU-aware packet sizing** — packets stay under 476 bytes (single IP fragment, no UDP fragmentation). Fragmented UDP packets multiply loss probability — if any fragment is lost, the entire packet is dropped.
-
-For typical RTS traffic (0-2 orders per player per tick, long stretches of idle), this compresses wire traffic by roughly 5-10x compared to naively serializing every `TimestampedOrder`.
-
-## Replay System
-
-Replays are a natural byproduct of the architecture:
-
-```
-Replay file = initial state + sequence of TickOrders
-Playback = feed TickOrders through Simulation via ReplayPlayback NetworkModel
-```
-
-Replays are signed by the relay server for tamper-proofing (see `06-SECURITY.md`).
-
 ## Connection Establishment
 
-Connection method is a concern *below* `NetworkModel`. By the time a `NetworkModel` is constructed, transport is already established. The discovery/connection flow:
+Connection method is a concern *below* the `NetworkModel`. By the time a `NetworkModel` is constructed, transport is already established. The discovery/connection flow:
 
 ```
 Discovery (tracking server / join code / direct IP / QR)
@@ -437,11 +459,11 @@ Same as join code, encoded as QR. Player scans from phone → opens game client 
 
 ### Via Relay Server
 
-When direct P2P fails (symmetric NAT, corporate firewalls), fall back to relay. The relay server is already designed for this (Model 2). Connection through relay also provides lag-switch protection and sub-tick ordering as a bonus.
+When direct P2P fails (symmetric NAT, corporate firewalls), fall back to the relay server. Connection through relay also provides lag-switch protection and sub-tick ordering as a bonus.
 
 ### Via Tracking Server
 
-Player browses public game listings, picks one, client connects directly to the host (or relay). See Tracking Servers section below.
+Player browses public game listings, picks one, client connects directly to the host (or relay). See Game Discovery section below.
 
 ## Tracking Servers (Game Browser)
 
@@ -685,7 +707,7 @@ Direct P2P lockstep with 2-3 players uses a full mesh (everyone connects to ever
       D
 
 4+ players: relay server (recommended)
-  B → R ← C        R = relay, all benefits of Model 2
+  B → R ← C        R = relay, all benefits of relay deployment
       ↑
       D
 ```
