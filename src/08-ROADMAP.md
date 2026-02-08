@@ -137,6 +137,13 @@ Units moving, shooting, dying — headless sim + rendered. Record replay file. P
 - Single-player skirmish against scripted dummy AI (first "playable" milestone)
 - Feels like Red Alert to someone who's played it before
 
+**Stretch goals (target Phase 3, can slip to early Phase 4 without blocking):**
+- **Chart component in `ra-ui`:** Lightweight Bevy 2D chart renderer (line, bar, pie, heatmap, stacked area) for post-game and career screens
+- **Post-game stats screen (D034):** Unit production timeline, resource curves, combat heatmap, APM graph, head-to-head comparison — all from SQLite `gameplay_events`
+- **Career stats page (D034):** Win rate by faction/map/opponent, rating history graph, session history with replay links — from SQLite `matches` + `match_players`
+
+> **Note:** Phase 3's hard goal is "feels like Red Alert" — sidebar, audio, selection, build placement. The stats screens and chart component are high-value polish but depend on accumulated gameplay data, so they can mature alongside Phase 4 without blocking the "playable" milestone.
+
 ## Phase 4: AI & Single Player (Months 16–20)
 
 **Goal:** Complete campaign support and skirmish AI. Unlike OpenRA, single-player is a first-class deliverable, not an afterthought.
@@ -152,6 +159,8 @@ Units moving, shooting, dying — headless sim + rendered. Record replay file. P
 - **Continuous campaign flow:** briefing → mission → debrief → next mission (no exit-to-menu between levels)
 - **Campaign select and mission map UI:** visualize campaign graph, show current position, replay completed missions
 - **Adaptive difficulty via campaign state:** designer-authored conditional bonuses/penalties based on cumulative performance
+- **Campaign dashboard (D034):** Roster composition graphs per mission, veterancy progression for named units, campaign path visualization, performance trends — from SQLite `campaign_missions` + `roster_snapshots`
+- **`ra-ai` reads player history (D034):** Skirmish AI queries SQLite `matches` + `gameplay_events` for difficulty scaling, build order variety, and counter-strategy selection between games
 - **FMV cutscene playback** between missions (original `.vqa` briefings and victory/defeat sequences)
 - **Full Allied and Soviet campaigns** for Red Alert, playable start to finish
 
@@ -229,6 +238,7 @@ Units moving, shooting, dying — headless sim + rendered. Record replay file. P
 - **License enforcement:** Every published resource requires SPDX license; `ic mod audit` checks dependency tree compatibility
 - **Individual resource publishing:** Music, sprites, textures, voice lines, cutscenes, palettes, UI themes — all publishable as independent versioned resources
 - **Lockfile system:** `ic.lock` for reproducible dependency resolution across machines
+- **Mod balance dashboard (D034):** Unit win-rate contribution, cost-efficiency scatter plots, engagement outcome distributions from SQLite `gameplay_events`; `ic mod stats` CLI reads same database
 
 ### Exit Criteria
 - Someone ports an existing OpenRA mod (Tiberian Dawn, Dune 2000) and it runs
@@ -250,6 +260,7 @@ Units moving, shooting, dying — headless sim + rendered. Record replay file. P
 - Campaign generation: connected multi-mission storylines (experimental)
 - Adaptive difficulty: AI observes playstyle, generates targeted challenges (experimental)
 - **LLM-driven Workshop resource discovery (D030):** LLM searches Workshop by `llm_meta` tags, evaluates fitness, auto-pulls resources as dependencies for generated content; license-aware filtering
+- **LLM player-aware generation (D034):** `ra-llm` reads local SQLite for player context — faction preferences, unit usage patterns, win/loss streaks, campaign roster state; generates personalized missions, adaptive briefings, post-match commentary, coaching suggestions, rivalry narratives
 - **AI training data pipeline (D031):** gameplay event stream → OTEL collector → Parquet/Arrow columnar format → ML training; build order learning, engagement patterns, balance analysis from aggregated match telemetry
 
 ### Deliverables — Visual Polish (Bevy Rendering)

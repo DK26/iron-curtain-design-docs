@@ -252,6 +252,7 @@ See `10-PERFORMANCE.md` for full details, targets, and implementation patterns.
 
 **Scope:**
 - Phase 7: single mission generation (terrain, objectives, enemy composition, triggers, briefing)
+- Phase 7: player-aware generation — LLM reads local SQLite (D034) for faction history, unit preferences, win rates, campaign roster state; injects player context into prompts for personalized missions, adaptive briefings, post-match commentary, coaching suggestions, and rivalry narratives
 - Future: multi-mission campaigns, adaptive difficulty, cooperative scenario design
 
 **Implementation approach:**
@@ -259,6 +260,7 @@ See `10-PERFORMANCE.md` for full details, targets, and implementation patterns.
 - Same format as hand-crafted missions — no special runtime
 - Validation pass ensures generated content is playable (valid unit types, reachable objectives)
 - Can use local models or API-based models (user choice)
+- Player data for personalization comes from local SQLite queries (read-only) — no data leaves the device unless the user's LLM provider is cloud-based (BYOLLM architecture)
 
 **Bring-Your-Own-LLM (BYOLLM) architecture:**
 - `ra-llm` defines a `LlmProvider` trait — any backend that accepts a prompt and returns structured text
@@ -1597,7 +1599,7 @@ Critical for multiplayer: some toggles change game rules, others are purely cosm
 | **Save game index**    | Save name, campaign, mission, timestamp, playtime, thumbnail path                | Fast save browser without deserializing every save file on launch.                                                                                                            |
 | **Workshop cache**     | Downloaded resource metadata, versions, checksums, dependency graph              | Offline dependency resolution. Know what's installed without scanning the filesystem.                                                                                         |
 | **Map catalog**        | Map name, player count, size, author, source (local/workshop/OpenRA), tags       | Browse local maps from all sources with a single query.                                                                                                                       |
-| **Gameplay event log** | Structured `GameplayEvent` records (D031) per game session                       | Queryable post-game analysis without an OTEL stack: `SELECT weapon, AVG(damage) FROM combat_events WHERE session_id = ?`. Mod developers debug balance with SQL, not Grafana. |
+| **Gameplay event log** | Structured `GameplayEvent` records (D031) per game session                       | Queryable post-game analysis without an OTEL stack: `SELECT json_extract(data_json, '$.weapon'), AVG(json_extract(data_json, '$.damage')) FROM gameplay_events WHERE event_type = 'combat' AND session_id = ?`. Mod developers debug balance with SQL, not Grafana. |
 | **Asset index**        | `.mix` archive contents, MiniYAML conversion cache (keyed by file hash)          | Skip re-parsing on startup. Know which `.mix` contains which file without opening every archive.                                                                              |
 
 ### Where SQLite is NOT used
@@ -1635,6 +1637,155 @@ D031 (OTEL) and D034 (SQLite) are complementary, not competing:
 | **AI training pipeline**  | Yes — Parquet/Arrow export for ML            | Source data — gameplay events could be exported from SQLite to Parquet |
 
 OTEL is for operational monitoring and distributed debugging. SQLite is for persistent records, metadata indices, and standalone investigation. Tournament servers and relay servers use both — OTEL for dashboards, SQLite for match history.
+
+### Three Consumers of Player Data
+
+SQLite isn't just infrastructure — it's a UX pillar. Three crates read the client-side database to deliver features no other RTS offers:
+
+| Consumer                    | Crate    | What it reads                                                                          | What it produces                                                                                                  |
+| --------------------------- | -------- | -------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| **Player-facing analytics** | `ra-ui`  | `gameplay_events`, `matches`, `match_players`, `campaign_missions`, `roster_snapshots` | Post-game stats screen, career stats page, campaign dashboard with roster/veterancy graphs, mod balance dashboard |
+| **LLM personalization**     | `ra-llm` | `matches`, `gameplay_events`, `campaign_missions`, `roster_snapshots`                  | Personalized missions, adaptive briefings, post-match commentary, coaching suggestions, rivalry narratives        |
+| **Adaptive AI**             | `ra-ai`  | `matches`, `match_players`, `gameplay_events`                                          | Difficulty adjustment, build order variety, counter-strategy selection based on player tendencies                 |
+
+All three are read-only consumers of the same SQLite database. The sim writes nothing (invariant #1) — `gameplay_events` are recorded by a Bevy observer system outside `ra-sim`, and `matches`/`campaign_missions` are written at session boundaries.
+
+### Player-Facing Analytics (`ra-ui`)
+
+No other RTS surfaces your own match data this way. SQLite makes it trivial — queries run on a background thread, results drive a lightweight chart component in `ra-ui` (Bevy 2D: line, bar, pie, heatmap, stacked area).
+
+**Post-game stats screen** (after every match):
+- Unit production timeline (stacked area: units built per minute by type)
+- Resource income/expenditure curves
+- Combat engagement heatmap (where fights happened on the map)
+- APM over time, army value graph, tech tree timing
+- Head-to-head comparison table vs opponent
+- All data: `SELECT ... FROM gameplay_events WHERE session_id = ?`
+
+**Career stats page** (main menu):
+- Win rate by faction, map, opponent, game mode — over time and lifetime
+- Rating history graph (Glicko-2 from matchmaking, synced to local DB)
+- Most-used units, highest kill-count units, signature strategies
+- Session history: date, map, opponent, result, duration — clickable → replay
+- All data: `SELECT ... FROM matches JOIN match_players ...`
+
+**Campaign dashboard** (D021 integration):
+- Roster composition graph per mission (how your army evolves across the campaign)
+- Veterancy progression: track named units across missions (the tank that survived from mission 1)
+- Campaign path visualization: which branches you took, which missions you replayed
+- Performance trends: completion time, casualties, resource efficiency per mission
+- All data: `SELECT ... FROM campaign_missions JOIN roster_snapshots ...`
+
+**Mod balance dashboard** (Phase 6, for mod developers):
+- Unit win-rate contribution, cost-efficiency scatter plots, engagement outcome distributions
+- Compare across balance presets (D019) or mod versions
+- `ic mod stats` CLI command reads the same SQLite database
+- All data: `SELECT ... FROM gameplay_events WHERE mod_id = ?`
+
+### LLM Personalization (`ra-llm`)
+
+The LLM doesn't just generate random missions — it reads your history and generates *for you*. `ra-llm` queries the local SQLite database (read-only) and injects player context into generation prompts. No data leaves the device unless the user's chosen LLM provider is cloud-based (BYOLLM, see D016).
+
+**Personalized mission generation:**
+- "You've been playing Soviet heavy armor for 12 games. Here's a mission that forces infantry-first tactics."
+- "Your win rate drops against Allied naval. This coastal defense mission trains that weakness."
+- Prompt includes: faction preferences, unit usage patterns, win/loss streaks, map size preferences — all from SQLite aggregates.
+
+**Adaptive briefings:**
+- Campaign briefings reference your actual roster: "Commander, your veteran Tesla Tank squad from Vladivostok is available for this operation."
+- Difficulty framing adapts to performance: struggling player gets "intel reports suggest light resistance"; dominant player gets "expect fierce opposition."
+- Queries `roster_snapshots` and `campaign_missions` tables.
+
+**Post-match commentary:**
+- LLM generates a narrative summary of the match from `gameplay_events`: "The turning point was at 8:42 when your MiG strike destroyed the Allied War Factory, halting tank production for 3 minutes."
+- Highlights unusual events: first-ever use of a unit type, personal records, close calls.
+- Optional — disabled by default, requires LLM provider configured.
+
+**Coaching suggestions:**
+- "You built 40 Rifle Infantry across 5 games but they had a 12% survival rate. Consider mixing in APCs for transport."
+- "Your average expansion timing is 6:30. Top players expand at 4:00-5:00."
+- Queries aggregate statistics from `gameplay_events` across multiple sessions.
+
+**Rivalry narratives:**
+- Track frequent opponents from `matches` table: "You're 3-7 against PlayerX. They favor Allied air rushes — here's a counter-strategy mission."
+- Generate rivalry-themed campaign missions featuring opponent tendencies.
+
+### Adaptive AI (`ra-ai`)
+
+`ra-ai` reads the player's match history to calibrate skirmish and campaign AI behavior. No learning during the match — all adaptation happens between games by querying SQLite.
+
+- **Difficulty scaling:** AI selects from difficulty presets based on player win rate over recent N games. Avoids both stomps and frustration.
+- **Build order variety:** AI avoids repeating the same strategy the player has already beaten. Queries `gameplay_events` for AI build patterns the player countered successfully.
+- **Counter-strategy selection:** If the player's last 5 games show heavy tank play, AI is more likely to choose anti-armor compositions.
+- **Campaign-specific:** In branching campaigns (D021), AI reads the player's roster strength from `roster_snapshots` and adjusts reinforcement timing accordingly.
+
+This is designer-authored adaptation (the AI author sets the rules for how history influences behavior), not machine learning. The SQLite queries are simple aggregates run at mission load time.
+
+**Fallback:** When no match history is available (first launch, empty database, WASM/headless builds without SQLite), `ra-ai` falls back to default difficulty presets and random strategy selection. All SQLite reads are behind an `Option<impl AiHistorySource>` — the AI is fully functional without it, just not personalized.
+
+### Client-Side Schema (Key Tables)
+
+```sql
+-- Match history (synced from matchmaking server when online, always written locally)
+CREATE TABLE matches (
+    id              INTEGER PRIMARY KEY,
+    session_id      TEXT NOT NULL UNIQUE,
+    map_name        TEXT NOT NULL,
+    game_mode       TEXT NOT NULL,
+    balance_preset  TEXT NOT NULL,
+    mod_id          TEXT,
+    duration_ticks  INTEGER NOT NULL,
+    started_at      TEXT NOT NULL,
+    replay_path     TEXT,
+    replay_hash     BLOB
+);
+
+CREATE TABLE match_players (
+    match_id    INTEGER REFERENCES matches(id),
+    player_name TEXT NOT NULL,
+    faction     TEXT NOT NULL,
+    team        INTEGER,
+    result      TEXT NOT NULL,  -- 'victory', 'defeat', 'disconnect', 'draw'
+    is_local    INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (match_id, player_name)
+);
+
+-- Gameplay events (D031 structured events, written per session)
+CREATE TABLE gameplay_events (
+    id          INTEGER PRIMARY KEY,
+    session_id  TEXT NOT NULL,
+    tick        INTEGER NOT NULL,
+    event_type  TEXT NOT NULL,   -- 'unit_built', 'unit_killed', 'building_placed', ...
+    player      TEXT,
+    data_json   TEXT NOT NULL    -- event-specific payload
+);
+
+-- Campaign state (D021 branching campaigns)
+CREATE TABLE campaign_missions (
+    id              INTEGER PRIMARY KEY,
+    campaign_id     TEXT NOT NULL,
+    mission_id      TEXT NOT NULL,
+    outcome         TEXT NOT NULL,
+    duration_ticks  INTEGER NOT NULL,
+    completed_at    TEXT NOT NULL,
+    casualties      INTEGER,
+    resources_spent INTEGER
+);
+
+CREATE TABLE roster_snapshots (
+    id          INTEGER PRIMARY KEY,
+    mission_id  INTEGER REFERENCES campaign_missions(id),
+    snapshot_at TEXT NOT NULL,   -- 'mission_start' or 'mission_end'
+    roster_json TEXT NOT NULL    -- serialized unit list with veterancy, equipment
+);
+
+-- FTS5 for replay and map search (contentless — populated via triggers on matches + match_players)
+CREATE VIRTUAL TABLE replay_search USING fts5(
+    player_names, map_name, factions, content=''
+);
+-- Triggers on INSERT into matches/match_players aggregate player_names and factions
+-- into the FTS index. Contentless means FTS stores its own copy — no content= source mismatch.
+```
 
 ### Schema Migration
 

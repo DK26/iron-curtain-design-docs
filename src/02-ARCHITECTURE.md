@@ -353,15 +353,17 @@ ra-protocol  (shared types: PlayerOrder, TimestampedOrder)
     ├── ra-net      (depends on: ra-protocol)
     ├── ra-formats  (standalone — .mix, .shp, .pal, YAML)
     ├── ra-render   (depends on: ra-sim for reading state)
-    ├── ra-ui       (depends on: ra-sim, ra-render)
+    ├── ra-ui       (depends on: ra-sim, ra-render; reads SQLite for player analytics — D034)
     ├── ra-audio    (depends on: ra-formats)
     ├── ra-script   (depends on: ra-sim, ra-protocol)
-    ├── ra-ai       (depends on: ra-sim, ra-protocol)
-    ├── ra-llm      (depends on: ra-sim, ra-script, ra-protocol)
+    ├── ra-ai       (depends on: ra-sim, ra-protocol; reads SQLite for adaptive difficulty — D034)
+    ├── ra-llm      (depends on: ra-sim, ra-script, ra-protocol; reads SQLite for personalization — D034)
     └── ra-game     (depends on: everything above)
 ```
 
 **Critical boundary:** `ra-sim` never imports from `ra-net`. `ra-net` never imports from `ra-sim`. They only share `ra-protocol`.
+
+**Storage boundary:** `ra-sim` never reads or writes SQLite (invariant #1). Three crates are read-only consumers of the client-side SQLite database: `ra-ui` (post-game stats, career page, campaign dashboard), `ra-llm` (personalized missions, adaptive briefings, coaching), `ra-ai` (difficulty scaling, counter-strategy selection). Gameplay events are written by a Bevy observer system in `ra-game`, outside the deterministic sim. See D034 in `09-DECISIONS.md`.
 
 ## Multi-Game Extensibility (Game Modules)
 

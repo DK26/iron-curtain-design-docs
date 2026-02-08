@@ -56,18 +56,18 @@ OpenRA's map editor is a standalone tool. Our editor runs inside the game with l
 
 ### OpenRA's Limitations (what we improve on)
 
-| Area         | OpenRA Today                            | Our Engine                                           |
-| ------------ | --------------------------------------- | ---------------------------------------------------- |
-| Runtime      | C# / .NET — GC pauses, heavy runtime    | Rust — no GC, predictable perf                       |
-| Threading    | Single-threaded game loop (verified)    | Parallel systems via ECS                             |
-| Modding      | Powerful but requires C# for deep mods  | YAML + Lua + WASM (no compile step)                  |
-| Map editor   | Separate tool, recently improved        | In-engine editor (Phase 6)                           |
-| Multiplayer  | 135+ desync issues tracked              | Snapshottable sim enables desync pinpointing         |
-| Competitive  | Community ladders via CnCNet            | Ranked matchmaking, anti-cheat, tournament mode      |
-| Portability  | Desktop only (Mono/.NET)                | Native + WASM (browser) + mobile                     |
-| Engine age   | Started 2007, actively maintained       | Clean-sheet modern design                            |
-| Campaigns    | Some incomplete (TD, Dune 2000)         | Branching campaigns with persistent state (D021)     |
-| Mission flow | Manual mission selection between levels | Continuous flow: briefing → mission → debrief → next |
+| Area          | OpenRA Today                             | Our Engine                                                          |
+| ------------- | ---------------------------------------- | ------------------------------------------------------------------- |
+| Runtime       | C# / .NET — GC pauses, heavy runtime     | Rust — no GC, predictable perf                                      |
+| Threading     | Single-threaded game loop (verified)     | Parallel systems via ECS                                            |
+| Modding       | Powerful but requires C# for deep mods   | YAML + Lua + WASM (no compile step)                                 |
+| Map editor    | Separate tool, recently improved         | In-engine editor (Phase 6)                                          |
+| Multiplayer   | 135+ desync issues tracked               | Snapshottable sim enables desync pinpointing                        |
+| Competitive   | Community ladders via CnCNet             | Ranked matchmaking, anti-cheat, tournament mode                     |
+| Portability   | Desktop only (Mono/.NET)                 | Native + WASM (browser) + mobile                                    |
+| Engine age    | Started 2007, actively maintained        | Clean-sheet modern design                                           |
+| Campaigns     | Some incomplete (TD, Dune 2000)          | Branching campaigns with persistent state (D021)                    |
+| Mission flow  | Manual mission selection between levels  | Continuous flow: briefing → mission → debrief → next                |
 | Asset quality | Cannot fix original palette/sprite flaws | Bevy post-FX: palette correction, color grading, optional upscaling |
 
 ### What Makes People Actually Switch
@@ -76,11 +76,13 @@ OpenRA's map editor is a standalone tool. Our editor runs inside the game with l
 2. **Better modding** — WASM scripting, in-engine editor, hot reload
 3. **Campaigns that flow** — branching paths, persistent units, no menu between missions, failure continues the story
 4. **Competitive infrastructure** — ranked matchmaking, anti-cheat, tournaments, signed replays — OpenRA has none of this
-5. **Runs everywhere** — browser via WASM, mobile, Steam Deck natively
-6. **Better multiplayer** — desync debugging, smoother netcode, relay server
-7. **OpenRA mod compatibility** — existing community migrates without losing work
+5. **Player analytics** — post-game stats, career page, campaign dashboard with roster graphs — your match history is queryable data, not a forgotten replay folder
+6. **Runs everywhere** — browser via WASM, mobile, Steam Deck natively
+7. **Better multiplayer** — desync debugging, smoother netcode, relay server
+8. **LLM-personalized content** — missions generated from your play history, adaptive briefings, coaching suggestions — no other RTS does this
+9. **OpenRA mod compatibility** — existing community migrates without losing work
 
-Item 7 is the linchpin. If existing mods just work, migration cost drops to near zero.
+Item 9 is the linchpin. If existing mods just work, migration cost drops to near zero.
 
 ## Competitive Play
 
