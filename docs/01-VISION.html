@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-4750be1b.js";
+            window.path_to_searchindex_js = "searchindex-ba27a783.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-ef8cba4b.js"></script>
@@ -202,7 +202,7 @@
 <tr><td>Platforms</td><td>Windows, Xbox</td><td>Windows, macOS, Linux</td><td>All + Browser + Mobile</td></tr>
 <tr><td>Max units (smooth)</td><td>Unknown (not benchmarked)</td><td>Community reports lag at 300-500 units</td><td>2000+ target</td></tr>
 <tr><td>Modding</td><td>Steam Workshop maps, limited API</td><td>MiniYAML + C# (recompile for deep mods)</td><td>YAML + Lua + WASM (no recompile ever)</td></tr>
-<tr><td>AI content</td><td>Fixed campaigns</td><td>Fixed campaigns + community missions</td><td>Branching campaigns + LLM-generated missions</td></tr>
+<tr><td>AI content</td><td>Fixed campaigns</td><td>Fixed campaigns + community missions</td><td>Branching campaigns + optional LLM-generated missions (BYOLLM)</td></tr>
 <tr><td>Multiplayer</td><td>Proprietary networking (not open-sourced)</td><td>TCP lockstep, 135+ desync issues tracked</td><td>Relay server, desync diagnosis, signed replays</td></tr>
 <tr><td>Competitive</td><td>No ranked, no anti-cheat</td><td>Community ladders via CnCNet</td><td>Ranked matchmaking, Glicko-2, relay-certified results</td></tr>
 <tr><td>Graphics pipeline</td><td>HD sprites, proprietary renderer</td><td>Custom renderer with post-processing (since March 2025)</td><td>Bevy + wgpu: shaders, post-FX, dynamic lighting, particles</td></tr>
@@ -212,10 +212,10 @@
 </table>
 </div>
 <h3 id="new-capabilities-not-found-elsewhere"><a class="header" href="#new-capabilities-not-found-elsewhere">New Capabilities Not Found Elsewhere</a></h3>
-<p><strong>LLM-Generated Missions and Campaigns</strong></p>
-<p>An in-game interface where players describe a scenario in natural language and receive a fully playable mission — map layout, objectives, enemy AI, triggers, briefing text. Generated content is standard YAML + Lua, fully editable and shareable.</p>
+<p><strong>Optional LLM-Generated Missions and Campaigns (BYOLLM)</strong></p>
+<p>An optional in-game interface where players describe a scenario in natural language and receive a fully playable mission — map layout, objectives, enemy AI, triggers, briefing text. Generated content is standard YAML + Lua, fully editable and shareable. Requires the player to configure their own LLM provider (local or cloud) — the engine never ships or requires a specific model.</p>
 <p>Future extensions: multi-mission campaign generation, adaptive difficulty that responds to player style, cooperative scenario generation for multiplayer.</p>
-<p>This transforms Red Alert from a game with finite content to a game with infinite content.</p>
+<p>For players who opt in, this transforms Red Alert from a game with finite content to a game with infinite content. Players who prefer hand-crafted content lose nothing — every feature works without an LLM.</p>
 <p><strong>Bevy Rendering Pipeline</strong></p>
 <p>Building on Bevy’s modern rendering stack unlocks visual capabilities beyond what OpenRA or the Remastered Collection currently offer:</p>
 <ul>
@@ -257,11 +257,13 @@
 <li><strong>Better modding</strong> — WASM scripting, in-engine editor, hot reload</li>
 <li><strong>Campaigns that flow</strong> — branching paths, persistent units, no menu between missions, failure continues the story</li>
 <li><strong>Competitive infrastructure</strong> — ranked matchmaking, anti-cheat, tournaments, signed replays — OpenRA has none of this</li>
+<li><strong>Player analytics</strong> — post-game stats, career page, campaign dashboard with roster graphs — your match history is queryable data, not a forgotten replay folder</li>
 <li><strong>Runs everywhere</strong> — browser via WASM, mobile, Steam Deck natively</li>
 <li><strong>Better multiplayer</strong> — desync debugging, smoother netcode, relay server</li>
+<li><strong>Optional LLM enhancements</strong> (BYOLLM) — bring your own LLM for generated missions, adaptive briefings, coaching suggestions — enhances the experience but never required</li>
 <li><strong>OpenRA mod compatibility</strong> — existing community migrates without losing work</li>
 </ol>
-<p>Item 7 is the linchpin. If existing mods just work, migration cost drops to near zero.</p>
+<p>Item 9 is the linchpin. If existing mods just work, migration cost drops to near zero.</p>
 <h2 id="competitive-play"><a class="header" href="#competitive-play">Competitive Play</a></h2>
 <p>Red Alert has a dedicated competitive community (primarily through OpenRA and CnCNet). CnCNet provides community ladders and tournament infrastructure, but there’s no integrated ranked system, no automated anti-cheat, and desyncs remain a persistent issue (135+ tracked in OpenRA’s issue tracker). This is a significant opportunity.</p>
 <h3 id="ranked-matchmaking"><a class="header" href="#ranked-matchmaking">Ranked Matchmaking</a></h3>

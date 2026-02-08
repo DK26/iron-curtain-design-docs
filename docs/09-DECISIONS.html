@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-4750be1b.js";
+            window.path_to_searchindex_js = "searchindex-ba27a783.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-ef8cba4b.js"></script>
@@ -295,6 +295,7 @@
 <li>Signed replays</li>
 <li>Cheap to run (doesn’t run sim, just forwards orders)</li>
 </ul>
+<p><strong>Validated by:</strong> C&amp;C Generals/Zero Hour’s “packet router” — a client-side star topology where one player collected and rebroadcast all commands. Same concept, but our server-hosted version eliminates host advantage and adds neutral time authority. See <code>research/generals-zero-hour-netcode-analysis.md</code>.</p>
 <p><strong>Alternatives available:</strong> Pure P2P lockstep, fog-authoritative server, rollback — all implementable as <code>NetworkModel</code> variants.</p>
 <hr>
 <h2 id="d008-sub-tick-timestamps-on-orders"><a class="header" href="#d008-sub-tick-timestamps-on-orders">D008: Sub-Tick Timestamps on Orders</a></h2>
@@ -385,18 +386,19 @@
 <p>See <code>10-PERFORMANCE.md</code> for full details, targets, and implementation patterns.</p>
 <hr>
 <h2 id="d016-llm-generated-missions-and-campaigns"><a class="header" href="#d016-llm-generated-missions-and-campaigns">D016: LLM-Generated Missions and Campaigns</a></h2>
-<p><strong>Decision:</strong> Integrate LLM-powered mission generation as a first-class feature (Phase 7), with an in-game UI for describing scenarios in natural language.</p>
+<p><strong>Decision:</strong> Provide an optional LLM-powered mission generation system (Phase 7) via the <code>ra-llm</code> crate. Players bring their own LLM provider (BYOLLM) — the engine never ships or requires one. Every game feature works fully without an LLM configured.</p>
 <p><strong>Rationale:</strong></p>
 <ul>
-<li>Transforms Red Alert from finite content to infinite content</li>
+<li>Transforms Red Alert from finite content to infinite content — for players who opt in</li>
 <li>Generated output is standard YAML + Lua — fully editable, shareable, learnable</li>
 <li>No other RTS (Red Alert or otherwise) offers this capability</li>
 <li>LLM quality is sufficient for terrain layout, objective design, AI behavior scripting</li>
-<li>Modular: <code>ra-llm</code> crate is optional, game works without it</li>
+<li><strong>Strictly optional:</strong> <code>ra-llm</code> crate is optional, game works without it. No feature — campaigns, skirmish, multiplayer, modding, analytics — depends on LLM availability. The LLM enhances the experience; it never gates it</li>
 </ul>
 <p><strong>Scope:</strong></p>
 <ul>
 <li>Phase 7: single mission generation (terrain, objectives, enemy composition, triggers, briefing)</li>
+<li>Phase 7: player-aware generation — LLM reads local SQLite (D034) for faction history, unit preferences, win rates, campaign roster state; injects player context into prompts for personalized missions, adaptive briefings, post-match commentary, coaching suggestions, and rivalry narratives</li>
 <li>Future: multi-mission campaigns, adaptive difficulty, cooperative scenario design</li>
 </ul>
 <p><strong>Implementation approach:</strong></p>
@@ -405,6 +407,7 @@
 <li>Same format as hand-crafted missions — no special runtime</li>
 <li>Validation pass ensures generated content is playable (valid unit types, reachable objectives)</li>
 <li>Can use local models or API-based models (user choice)</li>
+<li>Player data for personalization comes from local SQLite queries (read-only) — no data leaves the device unless the user’s LLM provider is cloud-based (BYOLLM architecture)</li>
 </ul>
 <p><strong>Bring-Your-Own-LLM (BYOLLM) architecture:</strong></p>
 <ul>
@@ -1229,7 +1232,7 @@ pub enum GameplayEvent {
 <p>These events are:</p>
 <ul>
 <li><strong>Emitted as OTEL log records</strong> with structured attributes (not free-text — every field is filterable)</li>
-<li><strong>Collected locally</strong> into a gameplay event log alongside replays (enriched replays)</li>
+<li><strong>Collected locally</strong> into a SQLite gameplay event log alongside replays (D034) — queryable with ad-hoc SQL without an OTEL stack</li>
 <li><strong>Optionally exported</strong> to a collector for batch analysis (tournament servers, AI training pipelines)</li>
 </ul>
 <h4 id="state-inspection-development--debugging"><a class="header" href="#state-inspection-development--debugging">State Inspection (Development &amp; Debugging)</a></h4>
@@ -1699,6 +1702,272 @@ qol:
 <li>Bundle QoL into balance presets (rejected — “I want OpenRA’s attack-move but classic unit values” is a legitimate preference; conflating balance with UX is a design mistake)</li>
 </ul>
 <p><strong>Phase:</strong> Phase 3 (alongside D032 UI themes and sidebar work). QoL toggles are implemented as system-level config flags — each system checks its toggle on initialization. Preset YAML files are authored during Phase 2 (simulation) as features are built.</p>
+<hr>
+<hr>
+<h2 id="d034-sqlite-as-embedded-storage-for-services-and-client"><a class="header" href="#d034-sqlite-as-embedded-storage-for-services-and-client">D034: SQLite as Embedded Storage for Services and Client</a></h2>
+<p><strong>Decision:</strong> Use SQLite (via <code>rusqlite</code>) as the embedded database for all backend services that need persistent state and for the game client’s local metadata indices. No external database dependency required for any deployment.</p>
+<p><strong>What this means:</strong> Every service that persists data beyond a single process lifetime uses an embedded SQLite database file. The “just a binary” philosophy (see <code>03-NETCODE.md</code> § Backend Infrastructure) is preserved — an operator downloads a binary, runs it, and persistence is a <code>.db</code> file next to the executable. No PostgreSQL, no MySQL, no managed database service.</p>
+<p><strong>Where SQLite is used:</strong></p>
+<h3 id="backend-services"><a class="header" href="#backend-services">Backend Services</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Service</th><th>What it stores</th><th>Why not in-memory</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Relay server</strong></td><td><code>CertifiedMatchResult</code> records, <code>DesyncReport</code> events, <code>PlayerBehaviorProfile</code> history, replay archive metadata</td><td>Match results and behavioral data are valuable beyond the game session — operators need to query desync patterns, review suspicion scores, link replays to match records. A relay restart shouldn’t erase match history.</td></tr>
+<tr><td><strong>Workshop server</strong></td><td>Resource metadata, versions, dependencies, download counts, ratings, search index (FTS5), license data, replication cursors</td><td>This is a package registry — functionally equivalent to crates.io’s data layer. Search, dependency resolution, and version queries are relational workloads.</td></tr>
+<tr><td><strong>Matchmaking server</strong></td><td>Player ratings (Glicko-2), match history, seasonal league data, leaderboards</td><td>Ratings and match history must survive restarts. Leaderboard queries (<code>top N</code>, per-faction, per-map) are natural SQL.</td></tr>
+<tr><td><strong>Tournament server</strong></td><td>Brackets, match results, map pool votes, community reports</td><td>Tournament state spans hours/days; must survive restarts. Bracket queries and result reporting are relational.</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="game-client-local"><a class="header" href="#game-client-local">Game Client (local)</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Data</th><th>What it stores</th><th>Benefit</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Replay catalog</strong></td><td>Player names, map, factions, date, duration, result, file path, signature status</td><td>Browse and search local replays without scanning files on disk. Filter by map, opponent, date range.</td></tr>
+<tr><td><strong>Save game index</strong></td><td>Save name, campaign, mission, timestamp, playtime, thumbnail path</td><td>Fast save browser without deserializing every save file on launch.</td></tr>
+<tr><td><strong>Workshop cache</strong></td><td>Downloaded resource metadata, versions, checksums, dependency graph</td><td>Offline dependency resolution. Know what’s installed without scanning the filesystem.</td></tr>
+<tr><td><strong>Map catalog</strong></td><td>Map name, player count, size, author, source (local/workshop/OpenRA), tags</td><td>Browse local maps from all sources with a single query.</td></tr>
+<tr><td><strong>Gameplay event log</strong></td><td>Structured <code>GameplayEvent</code> records (D031) per game session</td><td>Queryable post-game analysis without an OTEL stack: <code>SELECT json_extract(data_json, '$.weapon'), AVG(json_extract(data_json, '$.damage')) FROM gameplay_events WHERE event_type = 'combat' AND session_id = ?</code>. Mod developers debug balance with SQL, not Grafana.</td></tr>
+<tr><td><strong>Asset index</strong></td><td><code>.mix</code> archive contents, MiniYAML conversion cache (keyed by file hash)</td><td>Skip re-parsing on startup. Know which <code>.mix</code> contains which file without opening every archive.</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="where-sqlite-is-not-used"><a class="header" href="#where-sqlite-is-not-used">Where SQLite is NOT used</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Area</th><th>Why not</th></tr>
+</thead>
+<tbody>
+<tr><td><strong><code>ra-sim</code></strong></td><td>No I/O in the sim. Ever. Invariant #1.</td></tr>
+<tr><td><strong>Tracking server</strong></td><td>Truly ephemeral data — game listings with TTL. In-memory is correct.</td></tr>
+<tr><td><strong>Hot paths</strong></td><td>No DB queries per tick. All SQLite access is at load time, between games, or on UI/background threads.</td></tr>
+<tr><td><strong>Save game data</strong></td><td>Save files are serde-serialized sim snapshots loaded as a whole unit. No partial queries needed. SQLite indexes their <em>metadata</em>, not their <em>content</em>.</td></tr>
+<tr><td><strong>Campaign state</strong></td><td>Loaded/saved as a unit inside save games. Fits in memory. No relational queries.</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="why-sqlite-specifically"><a class="header" href="#why-sqlite-specifically">Why SQLite specifically</a></h3>
+<ul>
+<li><strong><code>rusqlite</code></strong> is a mature, well-maintained Rust crate with no unsafe surprises</li>
+<li><strong>Single-file database</strong> — fits the “just a binary” deployment model. No connection strings, no separate database process, no credentials to manage</li>
+<li><strong>Self-hosting alignment</strong> — a community relay operator on a €5 VPS gets persistent match history without installing or operating a database server</li>
+<li><strong>FTS5 full-text search</strong> — covers workshop resource search and replay text search without Elasticsearch or a separate search service</li>
+<li><strong>WAL mode</strong> — handles concurrent reads from web endpoints while a single writer persists new records. Sufficient for community-scale deployments (hundreds of concurrent users, not millions)</li>
+<li><strong>WASM-compatible</strong> — <code>sql.js</code> (Emscripten build of SQLite) or <code>sqlite-wasm</code> for the browser target. The client-side replay catalog and gameplay event log work in the browser build.</li>
+<li><strong>Ad-hoc investigation</strong> — any operator can open the <code>.db</code> file in DB Browser for SQLite, DBeaver, or the <code>sqlite3</code> CLI and run queries immediately. No Grafana dashboards required. This fills the gap between “just stdout logs” and “full OTEL stack” for community self-hosters.</li>
+</ul>
+<h3 id="relationship-to-d031-otel-telemetry"><a class="header" href="#relationship-to-d031-otel-telemetry">Relationship to D031 (OTEL Telemetry)</a></h3>
+<p>D031 (OTEL) and D034 (SQLite) are complementary, not competing:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Concern</th><th>D031 (OTEL)</th><th>D034 (SQLite)</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Real-time monitoring</strong></td><td>Yes — Prometheus metrics, Grafana dashboards</td><td>No</td></tr>
+<tr><td><strong>Distributed tracing</strong></td><td>Yes — Jaeger traces across clients and relay</td><td>No</td></tr>
+<tr><td><strong>Persistent records</strong></td><td>No — metrics are time-windowed, logs rotate</td><td>Yes — match history, ratings, replays are permanent</td></tr>
+<tr><td><strong>Ad-hoc investigation</strong></td><td>Requires OTEL stack running</td><td>Just open the <code>.db</code> file</td></tr>
+<tr><td><strong>Offline operation</strong></td><td>No — needs collector + backends</td><td>Yes — works standalone</td></tr>
+<tr><td><strong>Client-side debugging</strong></td><td>Requires exporting to a collector</td><td>Local <code>.db</code> file, queryable immediately</td></tr>
+<tr><td><strong>AI training pipeline</strong></td><td>Yes — Parquet/Arrow export for ML</td><td>Source data — gameplay events could be exported from SQLite to Parquet</td></tr>
+</tbody>
+</table>
+</div>
+<p>OTEL is for operational monitoring and distributed debugging. SQLite is for persistent records, metadata indices, and standalone investigation. Tournament servers and relay servers use both — OTEL for dashboards, SQLite for match history.</p>
+<h3 id="consumers-of-player-data"><a class="header" href="#consumers-of-player-data">Consumers of Player Data</a></h3>
+<p>SQLite isn’t just infrastructure — it’s a UX pillar. Multiple crates read the client-side database to deliver features no other RTS offers:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Consumer</th><th>Crate</th><th>What it reads</th><th>What it produces</th><th>Required?</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Player-facing analytics</strong></td><td><code>ra-ui</code></td><td><code>gameplay_events</code>, <code>matches</code>, <code>match_players</code>, <code>campaign_missions</code>, <code>roster_snapshots</code></td><td>Post-game stats screen, career stats page, campaign dashboard with roster/veterancy graphs, mod balance dashboard</td><td>Always on</td></tr>
+<tr><td><strong>Adaptive AI</strong></td><td><code>ra-ai</code></td><td><code>matches</code>, <code>match_players</code>, <code>gameplay_events</code></td><td>Difficulty adjustment, build order variety, counter-strategy selection based on player tendencies</td><td>Always on</td></tr>
+<tr><td><strong>LLM personalization</strong></td><td><code>ra-llm</code></td><td><code>matches</code>, <code>gameplay_events</code>, <code>campaign_missions</code>, <code>roster_snapshots</code></td><td>Personalized missions, adaptive briefings, post-match commentary, coaching suggestions, rivalry narratives</td><td><strong>Optional</strong> — requires BYOLLM provider configured (D016)</td></tr>
+</tbody>
+</table>
+</div>
+<p>Player analytics and adaptive AI are always available. LLM personalization activates only when the player has configured an LLM provider — the game is fully functional without it.</p>
+<p>All consumers are read-only. The sim writes nothing (invariant #1) — <code>gameplay_events</code> are recorded by a Bevy observer system outside <code>ra-sim</code>, and <code>matches</code>/<code>campaign_missions</code> are written at session boundaries.</p>
+<h3 id="player-facing-analytics-ra-ui"><a class="header" href="#player-facing-analytics-ra-ui">Player-Facing Analytics (<code>ra-ui</code>)</a></h3>
+<p>No other RTS surfaces your own match data this way. SQLite makes it trivial — queries run on a background thread, results drive a lightweight chart component in <code>ra-ui</code> (Bevy 2D: line, bar, pie, heatmap, stacked area).</p>
+<p><strong>Post-game stats screen</strong> (after every match):</p>
+<ul>
+<li>Unit production timeline (stacked area: units built per minute by type)</li>
+<li>Resource income/expenditure curves</li>
+<li>Combat engagement heatmap (where fights happened on the map)</li>
+<li>APM over time, army value graph, tech tree timing</li>
+<li>Head-to-head comparison table vs opponent</li>
+<li>All data: <code>SELECT ... FROM gameplay_events WHERE session_id = ?</code></li>
+</ul>
+<p><strong>Career stats page</strong> (main menu):</p>
+<ul>
+<li>Win rate by faction, map, opponent, game mode — over time and lifetime</li>
+<li>Rating history graph (Glicko-2 from matchmaking, synced to local DB)</li>
+<li>Most-used units, highest kill-count units, signature strategies</li>
+<li>Session history: date, map, opponent, result, duration — clickable → replay</li>
+<li>All data: <code>SELECT ... FROM matches JOIN match_players ...</code></li>
+</ul>
+<p><strong>Campaign dashboard</strong> (D021 integration):</p>
+<ul>
+<li>Roster composition graph per mission (how your army evolves across the campaign)</li>
+<li>Veterancy progression: track named units across missions (the tank that survived from mission 1)</li>
+<li>Campaign path visualization: which branches you took, which missions you replayed</li>
+<li>Performance trends: completion time, casualties, resource efficiency per mission</li>
+<li>All data: <code>SELECT ... FROM campaign_missions JOIN roster_snapshots ...</code></li>
+</ul>
+<p><strong>Mod balance dashboard</strong> (Phase 6, for mod developers):</p>
+<ul>
+<li>Unit win-rate contribution, cost-efficiency scatter plots, engagement outcome distributions</li>
+<li>Compare across balance presets (D019) or mod versions</li>
+<li><code>ic mod stats</code> CLI command reads the same SQLite database</li>
+<li>All data: <code>SELECT ... FROM gameplay_events WHERE mod_id = ?</code></li>
+</ul>
+<h3 id="llm-personalization-ra-llm--optional-byollm"><a class="header" href="#llm-personalization-ra-llm--optional-byollm">LLM Personalization (<code>ra-llm</code>) — Optional, BYOLLM</a></h3>
+<p>When a player has configured an LLM provider (see BYOLLM in D016), <code>ra-llm</code> reads the local SQLite database (read-only) and injects player context into generation prompts. This is entirely optional — every game feature works without it. No data leaves the device unless the user’s chosen LLM provider is cloud-based.</p>
+<p><strong>Personalized mission generation:</strong></p>
+<ul>
+<li>“You’ve been playing Soviet heavy armor for 12 games. Here’s a mission that forces infantry-first tactics.”</li>
+<li>“Your win rate drops against Allied naval. This coastal defense mission trains that weakness.”</li>
+<li>Prompt includes: faction preferences, unit usage patterns, win/loss streaks, map size preferences — all from SQLite aggregates.</li>
+</ul>
+<p><strong>Adaptive briefings:</strong></p>
+<ul>
+<li>Campaign briefings reference your actual roster: “Commander, your veteran Tesla Tank squad from Vladivostok is available for this operation.”</li>
+<li>Difficulty framing adapts to performance: struggling player gets “intel reports suggest light resistance”; dominant player gets “expect fierce opposition.”</li>
+<li>Queries <code>roster_snapshots</code> and <code>campaign_missions</code> tables.</li>
+</ul>
+<p><strong>Post-match commentary:</strong></p>
+<ul>
+<li>LLM generates a narrative summary of the match from <code>gameplay_events</code>: “The turning point was at 8:42 when your MiG strike destroyed the Allied War Factory, halting tank production for 3 minutes.”</li>
+<li>Highlights unusual events: first-ever use of a unit type, personal records, close calls.</li>
+<li>Optional — disabled by default, requires LLM provider configured.</li>
+</ul>
+<p><strong>Coaching suggestions:</strong></p>
+<ul>
+<li>“You built 40 Rifle Infantry across 5 games but they had a 12% survival rate. Consider mixing in APCs for transport.”</li>
+<li>“Your average expansion timing is 6:30. Top players expand at 4:00-5:00.”</li>
+<li>Queries aggregate statistics from <code>gameplay_events</code> across multiple sessions.</li>
+</ul>
+<p><strong>Rivalry narratives:</strong></p>
+<ul>
+<li>Track frequent opponents from <code>matches</code> table: “You’re 3-7 against PlayerX. They favor Allied air rushes — here’s a counter-strategy mission.”</li>
+<li>Generate rivalry-themed campaign missions featuring opponent tendencies.</li>
+</ul>
+<h3 id="adaptive-ai-ra-ai"><a class="header" href="#adaptive-ai-ra-ai">Adaptive AI (<code>ra-ai</code>)</a></h3>
+<p><code>ra-ai</code> reads the player’s match history to calibrate skirmish and campaign AI behavior. No learning during the match — all adaptation happens between games by querying SQLite.</p>
+<ul>
+<li><strong>Difficulty scaling:</strong> AI selects from difficulty presets based on player win rate over recent N games. Avoids both stomps and frustration.</li>
+<li><strong>Build order variety:</strong> AI avoids repeating the same strategy the player has already beaten. Queries <code>gameplay_events</code> for AI build patterns the player countered successfully.</li>
+<li><strong>Counter-strategy selection:</strong> If the player’s last 5 games show heavy tank play, AI is more likely to choose anti-armor compositions.</li>
+<li><strong>Campaign-specific:</strong> In branching campaigns (D021), AI reads the player’s roster strength from <code>roster_snapshots</code> and adjusts reinforcement timing accordingly.</li>
+</ul>
+<p>This is designer-authored adaptation (the AI author sets the rules for how history influences behavior), not machine learning. The SQLite queries are simple aggregates run at mission load time.</p>
+<p><strong>Fallback:</strong> When no match history is available (first launch, empty database, WASM/headless builds without SQLite), <code>ra-ai</code> falls back to default difficulty presets and random strategy selection. All SQLite reads are behind an <code>Option&lt;impl AiHistorySource&gt;</code> — the AI is fully functional without it, just not personalized.</p>
+<h3 id="client-side-schema-key-tables"><a class="header" href="#client-side-schema-key-tables">Client-Side Schema (Key Tables)</a></h3>
+<pre><code class="language-sql">-- Match history (synced from matchmaking server when online, always written locally)
+CREATE TABLE matches (
+    id              INTEGER PRIMARY KEY,
+    session_id      TEXT NOT NULL UNIQUE,
+    map_name        TEXT NOT NULL,
+    game_mode       TEXT NOT NULL,
+    balance_preset  TEXT NOT NULL,
+    mod_id          TEXT,
+    duration_ticks  INTEGER NOT NULL,
+    started_at      TEXT NOT NULL,
+    replay_path     TEXT,
+    replay_hash     BLOB
+);
+
+CREATE TABLE match_players (
+    match_id    INTEGER REFERENCES matches(id),
+    player_name TEXT NOT NULL,
+    faction     TEXT NOT NULL,
+    team        INTEGER,
+    result      TEXT NOT NULL,  -- 'victory', 'defeat', 'disconnect', 'draw'
+    is_local    INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (match_id, player_name)
+);
+
+-- Gameplay events (D031 structured events, written per session)
+CREATE TABLE gameplay_events (
+    id          INTEGER PRIMARY KEY,
+    session_id  TEXT NOT NULL,
+    tick        INTEGER NOT NULL,
+    event_type  TEXT NOT NULL,   -- 'unit_built', 'unit_killed', 'building_placed', ...
+    player      TEXT,
+    data_json   TEXT NOT NULL    -- event-specific payload
+);
+
+-- Campaign state (D021 branching campaigns)
+CREATE TABLE campaign_missions (
+    id              INTEGER PRIMARY KEY,
+    campaign_id     TEXT NOT NULL,
+    mission_id      TEXT NOT NULL,
+    outcome         TEXT NOT NULL,
+    duration_ticks  INTEGER NOT NULL,
+    completed_at    TEXT NOT NULL,
+    casualties      INTEGER,
+    resources_spent INTEGER
+);
+
+CREATE TABLE roster_snapshots (
+    id          INTEGER PRIMARY KEY,
+    mission_id  INTEGER REFERENCES campaign_missions(id),
+    snapshot_at TEXT NOT NULL,   -- 'mission_start' or 'mission_end'
+    roster_json TEXT NOT NULL    -- serialized unit list with veterancy, equipment
+);
+
+-- FTS5 for replay and map search (contentless — populated via triggers on matches + match_players)
+CREATE VIRTUAL TABLE replay_search USING fts5(
+    player_names, map_name, factions, content=''
+);
+-- Triggers on INSERT into matches/match_players aggregate player_names and factions
+-- into the FTS index. Contentless means FTS stores its own copy — no content= source mismatch.
+</code></pre>
+<h3 id="schema-migration"><a class="header" href="#schema-migration">Schema Migration</a></h3>
+<p>Each service manages its own schema using embedded SQL migrations (numbered, applied on startup). The <code>rusqlite</code> <code>user_version</code> pragma tracks the current schema version. Forward-only migrations — the binary upgrades the database file automatically on first launch after an update.</p>
+<h3 id="scaling-path"><a class="header" href="#scaling-path">Scaling Path</a></h3>
+<p>SQLite is the default and the right choice for 95% of deployments. For the official infrastructure at high scale, individual services can optionally be configured to use PostgreSQL by swapping the storage backend trait implementation. The schema is designed to be portable (standard SQL, no SQLite-specific syntax). FTS5 is used for full-text search on Workshop and replay catalogs — a PostgreSQL backend would substitute <code>tsvector</code>/<code>tsquery</code> for the same queries. This is a future optimization, not a launch requirement.</p>
+<p>Each service defines its own storage trait — no god-trait mixing unrelated concerns:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Relay server storage — match results, desync reports, behavioral profiles.
+pub trait RelayStorage: Send + Sync {
+    fn store_match_result(&amp;self, result: &amp;CertifiedMatchResult) -&gt; Result&lt;()&gt;;
+    fn query_matches(&amp;self, filter: &amp;MatchFilter) -&gt; Result&lt;Vec&lt;MatchRecord&gt;&gt;;
+    fn store_desync_report(&amp;self, report: &amp;DesyncReport) -&gt; Result&lt;()&gt;;
+    fn update_behavior_profile(&amp;self, player: PlayerId, profile: &amp;BehaviorProfile) -&gt; Result&lt;()&gt;;
+}
+
+/// Matchmaking server storage — ratings, match history, leaderboards.
+pub trait MatchmakingStorage: Send + Sync {
+    fn update_rating(&amp;self, player: PlayerId, rating: &amp;Glicko2Rating) -&gt; Result&lt;()&gt;;
+    fn leaderboard(&amp;self, scope: &amp;LeaderboardScope, limit: u32) -&gt; Result&lt;Vec&lt;LeaderboardEntry&gt;&gt;;
+    fn match_history(&amp;self, player: PlayerId, limit: u32) -&gt; Result&lt;Vec&lt;MatchRecord&gt;&gt;;
+}
+
+/// Workshop server storage — resource metadata, versions, dependencies, search.
+pub trait WorkshopStorage: Send + Sync {
+    fn publish_resource(&amp;self, meta: &amp;ResourceMetadata) -&gt; Result&lt;()&gt;;
+    fn search(&amp;self, query: &amp;str, filter: &amp;ResourceFilter) -&gt; Result&lt;Vec&lt;ResourceListing&gt;&gt;;
+    fn resolve_deps(&amp;self, root: &amp;ResourceId, range: &amp;VersionRange) -&gt; Result&lt;DependencyGraph&gt;;
+}
+
+/// SQLite implementation — each service gets its own SqliteXxxStorage struct
+/// wrapping a rusqlite::Connection (WAL mode, foreign keys on, journal_size_limit set).
+/// PostgreSQL implementations are optional, behind `#[cfg(feature = "postgres")]`.
+<span class="boring">}</span></code></pre>
+<p><strong>Phase:</strong> SQLite storage for relay and client lands in Phase 2 (replay catalog, save game index, gameplay event log). Workshop server storage lands in Phase 6 (D030). Matchmaking and tournament storage land in Phase 5 (competitive infrastructure). The <code>StorageBackend</code> trait is defined early but PostgreSQL implementation is deferred until scale requires it.</p>
 <hr>
 <h2 id="pending-decisions"><a class="header" href="#pending-decisions">PENDING DECISIONS</a></h2>
 <div class="table-wrapper">

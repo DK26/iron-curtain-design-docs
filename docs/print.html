@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-4750be1b.js";
+            window.path_to_searchindex_js = "searchindex-ba27a783.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-ef8cba4b.js"></script>
@@ -209,7 +209,7 @@
 <p>These are non-negotiable across the entire project:</p>
 <ol>
 <li><strong>Simulation is pure and deterministic.</strong> No I/O, no floats, no network awareness. Takes orders, produces state. Period.</li>
-<li><strong>Network model is pluggable via trait.</strong> Game loop is generic over <code>NetworkModel</code>. Swapping lockstep for rollback touches zero sim code.</li>
+<li><strong>Network model is pluggable via trait.</strong> <code>GameLoop&lt;N: NetworkModel, I: InputSource&gt;</code> is generic over both network model and input source. The sim has zero imports from <code>ra-net</code>. They share only <code>ra-protocol</code>. Swapping lockstep for rollback touches zero sim code.</li>
 <li><strong>Modding is tiered.</strong> YAML (data) → Lua (scripting) → WASM (power). Each tier is optional and sandboxed.</li>
 <li><strong>Bevy as framework.</strong> ECS scheduling, rendering, asset pipeline, audio — Bevy handles infrastructure so we focus on game logic. Custom render passes and SIMD only where profiling justifies it.</li>
 <li><strong>Efficiency-first performance.</strong> Better algorithms, cache-friendly ECS, zero-allocation hot paths, simulation LOD, amortized work — THEN multi-core as a bonus layer. A 2-core laptop must run 500 units smoothly.</li>
@@ -272,7 +272,7 @@
 <p><strong>Switchable netcode</strong> — inspired by how CS2 does sub-tick processing and relay servers. If we pick the wrong networking model, or something better comes along, we should be able to swap it without touching the simulation code.</p>
 <p><strong>Community independence</strong> — the game should never die because someone turns off a server. Self-hosted everything. Federated workshop. No single point of failure.</p>
 <p><strong>Security done through architecture</strong> — not a kernel-level anti-cheat, but real defenses: order validation inside the simulation, signed replays, relay servers that own the clock. Stuff that comes from building backend systems and knowing how people cheat.</p>
-<p><strong>LLM-generated missions</strong> — this is the part that excites me most. What if you could describe a scenario in plain English and get a playable mission? Like OFP’s mission editor, but you just tell it what you want. The output is standard YAML and Lua, fully editable. Infinite content.</p>
+<p><strong>LLM-generated missions</strong> — this is the part that excites me most. What if you could describe a scenario in plain English and get a playable mission? Like OFP’s mission editor, but you just tell it what you want. The output is standard YAML and Lua, fully editable. You bring your own LLM — local or cloud, your choice. The game works perfectly without one, but for those who opt in: infinite content.</p>
 <h2 id="where-this-is-now"><a class="header" href="#where-this-is-now">Where This Is Now</a></h2>
 <p>I put all of these ideas together and did a serious research phase to figure out what’s actually feasible. These design documents are the result. They cover architecture, networking, modding, security, performance, file format compatibility, cross-engine play, and a 36-month roadmap.</p>
 <p>Every decision has a rationale. Every system has been thought through against the others. It’s designed to be built piece by piece, tested in isolation, and contributed to by anyone who cares to.</p>
@@ -302,7 +302,7 @@
 <tr><td>Platforms</td><td>Windows, Xbox</td><td>Windows, macOS, Linux</td><td>All + Browser + Mobile</td></tr>
 <tr><td>Max units (smooth)</td><td>Unknown (not benchmarked)</td><td>Community reports lag at 300-500 units</td><td>2000+ target</td></tr>
 <tr><td>Modding</td><td>Steam Workshop maps, limited API</td><td>MiniYAML + C# (recompile for deep mods)</td><td>YAML + Lua + WASM (no recompile ever)</td></tr>
-<tr><td>AI content</td><td>Fixed campaigns</td><td>Fixed campaigns + community missions</td><td>Branching campaigns + LLM-generated missions</td></tr>
+<tr><td>AI content</td><td>Fixed campaigns</td><td>Fixed campaigns + community missions</td><td>Branching campaigns + optional LLM-generated missions (BYOLLM)</td></tr>
 <tr><td>Multiplayer</td><td>Proprietary networking (not open-sourced)</td><td>TCP lockstep, 135+ desync issues tracked</td><td>Relay server, desync diagnosis, signed replays</td></tr>
 <tr><td>Competitive</td><td>No ranked, no anti-cheat</td><td>Community ladders via CnCNet</td><td>Ranked matchmaking, Glicko-2, relay-certified results</td></tr>
 <tr><td>Graphics pipeline</td><td>HD sprites, proprietary renderer</td><td>Custom renderer with post-processing (since March 2025)</td><td>Bevy + wgpu: shaders, post-FX, dynamic lighting, particles</td></tr>
@@ -312,10 +312,10 @@
 </table>
 </div>
 <h3 id="new-capabilities-not-found-elsewhere"><a class="header" href="#new-capabilities-not-found-elsewhere">New Capabilities Not Found Elsewhere</a></h3>
-<p><strong>LLM-Generated Missions and Campaigns</strong></p>
-<p>An in-game interface where players describe a scenario in natural language and receive a fully playable mission — map layout, objectives, enemy AI, triggers, briefing text. Generated content is standard YAML + Lua, fully editable and shareable.</p>
+<p><strong>Optional LLM-Generated Missions and Campaigns (BYOLLM)</strong></p>
+<p>An optional in-game interface where players describe a scenario in natural language and receive a fully playable mission — map layout, objectives, enemy AI, triggers, briefing text. Generated content is standard YAML + Lua, fully editable and shareable. Requires the player to configure their own LLM provider (local or cloud) — the engine never ships or requires a specific model.</p>
 <p>Future extensions: multi-mission campaign generation, adaptive difficulty that responds to player style, cooperative scenario generation for multiplayer.</p>
-<p>This transforms Red Alert from a game with finite content to a game with infinite content.</p>
+<p>For players who opt in, this transforms Red Alert from a game with finite content to a game with infinite content. Players who prefer hand-crafted content lose nothing — every feature works without an LLM.</p>
 <p><strong>Bevy Rendering Pipeline</strong></p>
 <p>Building on Bevy’s modern rendering stack unlocks visual capabilities beyond what OpenRA or the Remastered Collection currently offer:</p>
 <ul>
@@ -357,11 +357,13 @@
 <li><strong>Better modding</strong> — WASM scripting, in-engine editor, hot reload</li>
 <li><strong>Campaigns that flow</strong> — branching paths, persistent units, no menu between missions, failure continues the story</li>
 <li><strong>Competitive infrastructure</strong> — ranked matchmaking, anti-cheat, tournaments, signed replays — OpenRA has none of this</li>
+<li><strong>Player analytics</strong> — post-game stats, career page, campaign dashboard with roster graphs — your match history is queryable data, not a forgotten replay folder</li>
 <li><strong>Runs everywhere</strong> — browser via WASM, mobile, Steam Deck natively</li>
 <li><strong>Better multiplayer</strong> — desync debugging, smoother netcode, relay server</li>
+<li><strong>Optional LLM enhancements</strong> (BYOLLM) — bring your own LLM for generated missions, adaptive briefings, coaching suggestions — enhances the experience but never required</li>
 <li><strong>OpenRA mod compatibility</strong> — existing community migrates without losing work</li>
 </ol>
-<p>Item 7 is the linchpin. If existing mods just work, migration cost drops to near zero.</p>
+<p>Item 9 is the linchpin. If existing mods just work, migration cost drops to near zero.</p>
 <h2 id="competitive-play"><a class="header" href="#competitive-play">Competitive Play</a></h2>
 <p>Red Alert has a dedicated competitive community (primarily through OpenRA and CnCNet). CnCNet provides community ladders and tournament infrastructure, but there’s no integrated ranked system, no automated anti-cheat, and desyncs remain a persistent issue (135+ tracked in OpenRA’s issue tracker). This is a significant opportunity.</p>
 <h3 id="ranked-matchmaking"><a class="header" href="#ranked-matchmaking">Ranked Matchmaking</a></h3>
@@ -912,14 +914,15 @@ pub enum ScreenClass {
     ├── ra-net      (depends on: ra-protocol)
     ├── ra-formats  (standalone — .mix, .shp, .pal, YAML)
     ├── ra-render   (depends on: ra-sim for reading state)
-    ├── ra-ui       (depends on: ra-sim, ra-render)
+    ├── ra-ui       (depends on: ra-sim, ra-render; reads SQLite for player analytics — D034)
     ├── ra-audio    (depends on: ra-formats)
     ├── ra-script   (depends on: ra-sim, ra-protocol)
-    ├── ra-ai       (depends on: ra-sim, ra-protocol)
-    ├── ra-llm      (depends on: ra-sim, ra-script, ra-protocol)
+    ├── ra-ai       (depends on: ra-sim, ra-protocol; reads SQLite for adaptive difficulty — D034)
+    ├── ra-llm      (depends on: ra-sim, ra-script, ra-protocol; reads SQLite for personalization — D034)
     └── ra-game     (depends on: everything above)
 </code></pre>
 <p><strong>Critical boundary:</strong> <code>ra-sim</code> never imports from <code>ra-net</code>. <code>ra-net</code> never imports from <code>ra-sim</code>. They only share <code>ra-protocol</code>.</p>
+<p><strong>Storage boundary:</strong> <code>ra-sim</code> never reads or writes SQLite (invariant #1). Three crates are read-only consumers of the client-side SQLite database: <code>ra-ui</code> (post-game stats, career page, campaign dashboard), <code>ra-llm</code> (personalized missions, adaptive briefings, coaching), <code>ra-ai</code> (difficulty scaling, counter-strategy selection). Gameplay events are written by a Bevy observer system in <code>ra-game</code>, outside the deterministic sim. See D034 in <code>09-DECISIONS.md</code>.</p>
 <h2 id="multi-game-extensibility-game-modules"><a class="header" href="#multi-game-extensibility-game-modules">Multi-Game Extensibility (Game Modules)</a></h2>
 <p>The engine is designed as a <strong>game-agnostic RTS framework</strong> with Red Alert as the first game module. The same engine should be able to run RA2, Tiberian Dawn, Dune 2000, or an original game as a different game module — like OpenRA runs TD, RA, and D2K on one engine.</p>
 <h3 id="game-module-concept"><a class="header" href="#game-module-concept">Game Module Concept</a></h3>
@@ -1152,9 +1155,25 @@ impl TickOrders {
 <h3 id="model-1-lockstep-with-input-delay-starting-model"><a class="header" href="#model-1-lockstep-with-input-delay-starting-model">Model 1: Lockstep with Input Delay (starting model)</a></h3>
 <pre><code>Local input at tick 50 → scheduled for tick 53 (3-tick delay)
 Remote input has 3 ticks to arrive before we need it
-Delay dynamically adjusted based on connection quality
+Delay dynamically adjusted based on connection quality AND client performance
 </code></pre>
 <p>This is what OpenRA and most RTS games use. The “lag” players feel is intentional input delay, not network stalling.</p>
+<h4 id="adaptive-run-ahead-inspired-by-cc-generals"><a class="header" href="#adaptive-run-ahead-inspired-by-cc-generals">Adaptive Run-Ahead (Inspired by C&amp;C Generals)</a></h4>
+<p>The input delay (“run-ahead”) is not static. It adapts dynamically based on <strong>both</strong> network latency <strong>and</strong> client frame rate — a pattern proven by C&amp;C Generals/Zero Hour (see <code>research/generals-zero-hour-netcode-analysis.md</code>). Generals tracked a 200-sample rolling latency history plus a “packet arrival cushion” (how many frames early orders arrive) to decide when to adjust. Their run-ahead changes were themselves synchronized network commands, ensuring all clients switch on the same frame.</p>
+<p>We adopt this pattern:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Sent periodically by each client to report its performance characteristics.
+/// The relay server (or P2P host) uses this to adjust the tick deadline.
+pub struct ClientMetrics {
+    pub avg_latency_us: u32,      // Rolling average RTT to relay/host (microseconds)
+    pub avg_fps: u16,             // Client's current rendering frame rate
+    pub arrival_cushion: i16,     // How many ticks early orders typically arrive
+    pub tick_processing_us: u32,  // How long the client takes to process one sim tick
+}
+<span class="boring">}</span></code></pre>
+<p>Why FPS matters: a player running at 15 FPS needs roughly 67ms to process and display each frame. If run-ahead is only 2 ticks (66ms at 30 tps), they have zero margin — any network jitter causes a stall. By incorporating FPS into the adaptive algorithm, we prevent slow machines from dragging down the experience for everyone.</p>
+<p>For the relay model, <code>ClientMetrics</code> informs the relay’s tick deadline calculation. For P2P lockstep, all clients agree on a shared run-ahead value (just like Generals’ synchronized <code>RUNAHEAD</code> command).</p>
 <h3 id="model-2-relay-server-with-time-authority-recommended-default"><a class="header" href="#model-2-relay-server-with-time-authority-recommended-default">Model 2: Relay Server with Time Authority (recommended default)</a></h3>
 <pre><code>┌────────┐         ┌──────────────┐         ┌────────┐
 │Player A│────────▶│ Relay Server │◀────────│Player B│
@@ -1192,7 +1211,9 @@ Delay dynamically adjusted based on connection quality
 }
 <span class="boring">}</span></code></pre>
 <h3 id="model-3-fog-authoritative-server-anti-maphack"><a class="header" href="#model-3-fog-authoritative-server-anti-maphack">Model 3: Fog-Authoritative Server (anti-maphack)</a></h3>
-<p>Server runs full sim, sends each client only entities they should see. Breaks pure lockstep (clients run partial sims), requires server compute per game. See <code>06-SECURITY.md</code> for details.</p>
+<p>Server runs full sim, sends each client only entities they should see. Breaks pure lockstep (clients run partial sims), requires server compute per game. See <code>06-SECURITY.md</code> for full threat analysis.</p>
+<p><strong>Entity prioritization:</strong> The server can’t send every visible entity every tick — bandwidth is finite. We adopt Fiedler’s priority accumulator (2015): each entity tracks priority persistently between frames, accruing additional priority based on staleness (time since last sent to this client). Units in combat and projectiles are highest priority (sent every tick); distant static structures are lowest (deferred but eventually sent). This guarantees a strict bandwidth upper bound while ensuring no entity is permanently starved. See <code>06-SECURITY.md</code> § Vulnerability 1 for the full design.</p>
+<p><strong>Traffic class consideration:</strong> For FogAuth mode, player <em>input</em> (orders) and server <em>state</em> (entity updates) have different reliability requirements. Orders are small, latency-critical, and loss-intolerant — best suited for a reliable ordered channel. State updates are larger, frequent, and can tolerate occasional loss (the next update supersedes) — suited for an unreliable channel with delta compression. Bryant &amp; Saiedian (2021) recommend this segregation. A dual-channel approach (reliable for orders, unreliable for state) would optimize both latency and bandwidth.</p>
 <h3 id="model-4-rollback--ggpo-style-experimental-future"><a class="header" href="#model-4-rollback--ggpo-style-experimental-future">Model 4: Rollback / GGPO-style (experimental future)</a></h3>
 <p>Requires snapshottable sim (already designed). Client predicts with local input, rolls back on misprediction. Expensive for RTS (re-simulating hundreds of entities), but feasible with Rust’s performance. See GGPO documentation for reference implementation.</p>
 <h2 id="input-responsiveness-why-our-model-feels-faster"><a class="header" href="#input-responsiveness-why-our-model-feels-faster">Input Responsiveness: Why Our Model Feels Faster</a></h2>
@@ -1286,6 +1307,46 @@ fn on_move_order_issued(click_pos: WorldPos, selected_units: &amp;[Entity]) {
 }
 <span class="boring">}</span></code></pre>
 <p>At 30 tps, a click-to-move in single player is confirmed within ~33ms — imperceptible to humans (reaction time is ~200ms). Combined with visual prediction, the game feels <strong>instant</strong>.</p>
+<h2 id="frame-data-resilience"><a class="header" href="#frame-data-resilience">Frame Data Resilience</a></h2>
+<p>UDP is unreliable — packets can arrive corrupted, duplicated, reordered, or not at all. Inspired by C&amp;C Generals’ <code>FrameDataManager</code> (see <code>research/generals-zero-hour-netcode-analysis.md</code>), our frame data handling uses a three-state readiness model rather than a simple ready/waiting binary:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub enum FrameReadiness {
+    Ready,                     // All orders received and verified
+    Waiting,                   // Still expecting orders from one or more players
+    Corrupted { from: PlayerId }, // Orders received but failed integrity check — request resend
+}
+<span class="boring">}</span></code></pre>
+<p>When <code>Corrupted</code> is detected, the system automatically requests retransmission from the specific player (or relay). A circular buffer retains the last N ticks of sent frame data (Generals used 65 frames) so resend requests can be fulfilled without re-generating the data.</p>
+<p>This is strictly better than the relay model’s “missed deadline → Idle” fallback: a corrupted packet that arrives on time gets a second chance via resend rather than being silently replaced with no-op. The deadline-based Idle fallback remains as the last resort if resend also fails.</p>
+<h2 id="network-simulation-tools-development"><a class="header" href="#network-simulation-tools-development">Network Simulation Tools (Development)</a></h2>
+<p>Inspired by Generals’ debug network simulation features, all <code>NetworkModel</code> implementations support artificial network condition injection:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Configurable network conditions for testing. Applied at the transport layer.
+/// Only available in debug/development builds — compiled out of release.
+pub struct NetworkSimConfig {
+    pub latency_ms: u32,          // Artificial one-way latency added to each packet
+    pub jitter_ms: u32,           // Random ± jitter on top of latency
+    pub packet_loss_pct: f32,     // Percentage of packets silently dropped (0.0–100.0)
+    pub corruption_pct: f32,      // Percentage of packets with random bit flips
+    pub bandwidth_limit_kbps: Option&lt;u32&gt;,  // Throttle outgoing bandwidth
+    pub duplicate_pct: f32,       // Percentage of packets sent twice
+    pub reorder_pct: f32,         // Percentage of packets delivered out of order
+}
+<span class="boring">}</span></code></pre>
+<p>This is invaluable for testing edge cases (desync under packet loss, adaptive run-ahead behavior, frame resend logic) without needing actual bad networks. Accessible via debug console or lobby settings in development builds.</p>
+<h2 id="disconnect-handling"><a class="header" href="#disconnect-handling">Disconnect Handling</a></h2>
+<p>Graceful disconnection is a first-class protocol concern, not an afterthought. Inspired by Generals’ 7-type disconnect protocol (see <code>research/generals-zero-hour-netcode-analysis.md</code>), we handle disconnects deterministically:</p>
+<p><strong>Relay model:</strong> The relay server detects disconnection via heartbeat timeout and notifies all clients of the specific tick on which the player is removed. All clients process the removal on the same tick — deterministic.</p>
+<p><strong>P2P lockstep model:</strong> When a player appears unresponsive:</p>
+<ol>
+<li><strong>Ping verification</strong> — all players ping the suspect to confirm unreachability (prevents false blame from asymmetric routing)</li>
+<li><strong>Blame attribution</strong> — ping results determine who is actually disconnected vs. who is just slow</li>
+<li><strong>Coordinated removal</strong> — remaining players agree on a specific tick number to remove the disconnected player, ensuring all sims stay synchronized</li>
+<li><strong>Historical frame buffer</strong> — recent frame data is preserved so if the disconnecting player was also the packet router (P2P star topology), other players can recover missed frames</li>
+</ol>
+<p>For competitive/ranked games, disconnect blame feeds into the match result: the blamed player takes the loss; remaining players can optionally continue or end the match without penalty.</p>
 <h2 id="desync-detection--debugging"><a class="header" href="#desync-detection--debugging">Desync Detection &amp; Debugging</a></h2>
 <p>Every <code>NetworkModel</code> must accept <code>report_sync_hash()</code>. The system works:</p>
 <ol>
@@ -1315,6 +1376,15 @@ pub struct OpenRACodec {
 }
 <span class="boring">}</span></code></pre>
 <p>See <code>07-CROSS-ENGINE.md</code> for full cross-engine compatibility design.</p>
+<h3 id="delta-compressed-native-wire-format"><a class="header" href="#delta-compressed-native-wire-format">Delta-Compressed Native Wire Format</a></h3>
+<p>Inspired by C&amp;C Generals’ <code>NetPacket</code> format (see <code>research/generals-zero-hour-netcode-analysis.md</code>), our <code>NativeCodec</code> uses delta-compressed tag-length-value (TLV) encoding:</p>
+<ul>
+<li><strong>Tag bytes</strong> — single ASCII byte identifies the field: <code>T</code>ype, <code>K</code>(tic<strong>K</strong>), <code>P</code>layer, <code>S</code>ub-tick, <code>D</code>ata</li>
+<li><strong>Delta encoding</strong> — fields are only written when they differ from the previous order in the same packet. If the same player sends 5 orders on the same tick, the player ID and tick number are written once.</li>
+<li><strong>Empty-tick compression</strong> — ticks with no orders compress to a single byte (Generals used <code>Z</code>). In a typical RTS, ~80% of ticks have zero orders from any given player.</li>
+<li><strong>MTU-aware packet sizing</strong> — packets stay under 476 bytes (single IP fragment, no UDP fragmentation). Fragmented UDP packets multiply loss probability — if any fragment is lost, the entire packet is dropped.</li>
+</ul>
+<p>For typical RTS traffic (0-2 orders per player per tick, long stretches of idle), this compresses wire traffic by roughly 5-10x compared to naively serializing every <code>TimestampedOrder</code>.</p>
 <h2 id="replay-system"><a class="header" href="#replay-system">Replay System</a></h2>
 <p>Replays are a natural byproduct of the architecture:</p>
 <pre><code>Replay file = initial state + sequence of TickOrders
@@ -1394,7 +1464,10 @@ tracking_servers:
 <h3 id="openra-shared-browser"><a class="header" href="#openra-shared-browser">OpenRA Shared Browser</a></h3>
 <p>Implementing the OpenRA master server protocol means Iron Curtain games can appear in OpenRA’s game browser (and vice versa), tagged by engine. Players see the full community. This is the Level 0 cross-engine compatibility from <code>07-CROSS-ENGINE.md</code>.</p>
 <h3 id="tracking-server-implementation"><a class="header" href="#tracking-server-implementation">Tracking Server Implementation</a></h3>
-<p>The server itself is straightforward — a REST or WebSocket API backed by an in-memory store with TTL expiry. No database needed. Listings expire if the host stops sending heartbeats.</p>
+<p>The server itself is straightforward — a REST or WebSocket API backed by an in-memory store with TTL expiry. No database needed — listings are ephemeral and expire if the host stops sending heartbeats.</p>
+<blockquote>
+<p><strong>Note:</strong> The tracking server is the only backend service with truly ephemeral data. The relay, workshop, and matchmaking servers all persist data beyond process lifetime using embedded SQLite (D034). See <code>09-DECISIONS.md</code> § D034 for the full storage model.</p>
+</blockquote>
 <h2 id="backend-infrastructure-tracking--relay"><a class="header" href="#backend-infrastructure-tracking--relay">Backend Infrastructure (Tracking + Relay)</a></h2>
 <p>Both the tracking server and relay server are <strong>standalone Rust binaries</strong>. The simplest deployment is running the executable on any computer — a home PC, a friend’s always-on machine, a €5 VPS, or a Raspberry Pi. No containers, no cloud, no special infrastructure required.</p>
 <p>For larger-scale or production deployments, both services also ship as container images with docker-compose.yaml (one-command setup) and Helm charts (Kubernetes). But containers are an option, not a requirement.</p>
@@ -1421,17 +1494,17 @@ tracking_servers:
                           └─────┬──────────┬──────────┬───────┘
                                 │          │          │
                           ┌─────▼──┐ ┌─────▼──┐ ┌────▼───┐
-                          │ Relay  │ │ Relay  │ │ Relay  │   ← stateless per-game
-                          │  Pod   │ │  Pod   │ │  Pod   │      sessions (sticky)
-                          └────────┘ └────────┘ └────────┘
+                          │ Relay  │ │ Relay  │ │ Relay  │   ← per-game sessions
+                          │  Pod   │ │  Pod   │ │  Pod   │      (sticky, SQLite for
+                          └────────┘ └────────┘ └────────┘       persistent records)
 </code></pre>
 <h3 id="design-principles"><a class="header" href="#design-principles">Design Principles</a></h3>
 <ol>
 <li>
-<p><strong>Just a binary.</strong> Each server is a single Rust executable with zero mandatory dependencies. Run it directly (<code>./tracking-server</code> or <code>./relay-server</code>), as a systemd service, in Docker, or in Kubernetes — whatever suits the operator. No database, no runtime, no JVM. Download, configure, run.</p>
+<p><strong>Just a binary.</strong> Each server is a single Rust executable with zero mandatory external dependencies. Run it directly (<code>./tracking-server</code> or <code>./relay-server</code>), as a systemd service, in Docker, or in Kubernetes — whatever suits the operator. No external database, no runtime, no JVM. Download, configure, run. Services that need persistent storage use an embedded SQLite database file (D034) — no separate database process to install or operate.</p>
 </li>
 <li>
-<p><strong>Stateless processes.</strong> Each tracking server instance holds no critical state — for a single-instance deployment, listings live in memory with TTL expiry. For multi-instance deployments, listings are shared via Redis (or equivalent KV store). Killing the process loses nothing permanent. Relay servers hold per-game session state but games are short-lived; if a relay dies, the game reconnects or falls back to P2P.</p>
+<p><strong>Stateless or self-contained.</strong> The tracking server holds no critical state — listings live in memory with TTL expiry (for multi-instance: shared via Redis). The relay, workshop, and matchmaking servers persist data (match results, resource metadata, ratings) to an embedded SQLite file (D034). Killing a process loses only in-flight game sessions — persistent records survive in the <code>.db</code> file. Relay servers hold per-game session state in memory but games are short-lived; if a relay dies, the game reconnects or falls back to P2P.</p>
 </li>
 <li>
 <p><strong>Community self-hosting is a first-class use case.</strong> A clan, tournament organizer, or hobbyist runs the same binary on their own machine. No cloud account needed. No Docker needed. The binary reads a config file or env vars and starts listening. For those who prefer containers, <code>docker-compose up</code> works too. For production scale, Helm charts are available.</p>
@@ -1478,12 +1551,17 @@ services:
       - MAX_PLAYERS_PER_GAME=16
       - TICK_TIMEOUT=5s         # drop orders after 5s — anti-lag-switch
       - REGION=eu-west          # reported to tracking server
+    volumes:
+      - relay-data:/data        # SQLite DB for match results, profiles (D034)
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9091/healthz"]
 
   redis:
     image: redis:7-alpine       # only needed for multi-instance tracking
     profiles: ["scaled"]
+
+volumes:
+  relay-data:                   # persistent storage for relay's SQLite DB
 </code></pre>
 <p><strong>Option 3: Kubernetes / Helm (production scale)</strong></p>
 <p>For the official deployment or large community servers that need horizontal scaling:</p>
@@ -1539,7 +1617,7 @@ relay:
 <tbody>
 <tr><td>Tracking server dies</td><td>Browse requests fail; existing games unaffected</td><td>Restart process; multi-instance setups have other replicas</td></tr>
 <tr><td>All tracking servers down</td><td>No game browser; existing games unaffected</td><td>Direct IP, join codes, QR still work</td></tr>
-<tr><td>Relay server dies</td><td>Games on that instance disconnect</td><td>Clients reconnect to another instance or fall back to P2P</td></tr>
+<tr><td>Relay server dies</td><td>Games on that instance disconnect; persistent data (match results, profiles) survives in SQLite (D034)</td><td>Clients reconnect to another instance or fall back to P2P</td></tr>
 <tr><td>Official infra fully offline</td><td>Community tracking/relay servers still operational</td><td>Federation means no single operator is critical</td></tr>
 </tbody>
 </table>
@@ -1902,11 +1980,49 @@ end)
 <h3 id="lua-sandbox-rules"><a class="header" href="#lua-sandbox-rules">Lua Sandbox Rules</a></h3>
 <ul>
 <li>Only engine-provided functions available (no <code>io</code>, <code>os</code>, <code>require</code> from filesystem)</li>
+<li><code>os.time()</code>, <code>os.clock()</code>, <code>os.date()</code> are removed entirely — Lua scripts read game time via <code>Trigger.GetTick()</code> and <code>DateTime.GameTime</code></li>
 <li>Fixed-point math provided via engine bindings (no raw floats)</li>
-<li>Execution time limits per tick</li>
+<li>Execution resource limits per tick (see <code>LuaExecutionLimits</code> below)</li>
 <li>Memory limits per mod</li>
 </ul>
 <p><strong>Determinism note:</strong> Lua’s internal number type is <code>f64</code>, but this does not affect sim determinism. Lua has <strong>read-only access</strong> to game state and <strong>write access exclusively through orders</strong> (and campaign state writes like <code>Campaign.set_flag()</code>, which are themselves deterministic because they execute at the same pipeline step on every client). The sim processes orders deterministically — Lua cannot directly modify sim components. Lua evaluation produces identical results across all clients because it runs at the same point in the system pipeline (the <code>triggers</code> step, see system execution order in <code>02-ARCHITECTURE.md</code>), with the same game state as input, on every tick. Any Lua-driven campaign state mutations are applied deterministically within this step, ensuring save/load and replay consistency.</p>
+<p><strong>Additional determinism safeguards:</strong></p>
+<ul>
+<li><strong>String hashing → deterministic <code>pairs()</code>:</strong> Lua’s internal string hash uses a randomized seed by default (since Lua 5.3.3). The sandbox initializes <code>mlua</code> with a fixed seed, making hash table slot ordering identical across all clients. Combined with our deterministic pipeline (same code, same state, same insertion order on every client), this makes <code>pairs()</code> iteration order deterministic without modification. No sorted wrapper is needed — <code>pairs()</code> runs at native speed (zero overhead). For mod authors who want <em>explicit</em> ordering for gameplay clarity (e.g., “process units alphabetically”), the engine provides <code>Utils.SortedPairs(t)</code> — but this is a convenience for readability, not a determinism requirement. <code>ipairs()</code> is already deterministic (sequential integer keys) and should be preferred for array-style tables.</li>
+<li><strong>Garbage collection timing:</strong> Lua’s GC is configured with a fixed-step incremental mode (<code>LUA_GCINC</code>) with identical parameters on all clients. Finalizers (<code>__gc</code> metamethods) are disabled in the sandbox — mods cannot register them. This eliminates GC-timing-dependent side effects.</li>
+<li><strong><code>math.random()</code>:</strong> Removed from the sandbox. Mods use the engine-provided <code>Utils.RandomInteger(min, max)</code> which draws from the sim’s deterministic PRNG.</li>
+</ul>
+<h3 id="lua-execution-resource-limits"><a class="header" href="#lua-execution-resource-limits">Lua Execution Resource Limits</a></h3>
+<p>WASM mods have <code>WasmExecutionLimits</code> (see Tier 3 below). Lua scripts need equivalent protection — without execution budgets, a Lua <code>while true do end</code> would block the deterministic tick indefinitely, freezing all clients in lockstep.</p>
+<p>The <code>mlua</code> crate supports instruction count hooks via <code>Lua::set_hook(HookTriggers::every_nth_instruction(N), callback)</code>. The engine uses this to enforce per-tick execution budgets:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Per-tick execution budget for Lua scripts, enforced via mlua instruction hooks.
+/// Exceeding the instruction limit terminates the script's current callback —
+/// the sim continues without the script's remaining contributions for that tick.
+/// A warning is logged and the mod is flagged for the host.
+pub struct LuaExecutionLimits {
+    pub max_instructions_per_tick: u32,    // mlua instruction hook fires at this count
+    pub max_memory_bytes: usize,           // mlua memory limit callback
+    pub max_entity_spawns_per_tick: u32,   // Mirrors WASM limit — prevents chain-reactive spawns
+    pub max_orders_per_tick: u32,          // Prevents order pipeline flooding
+    pub max_host_calls_per_tick: u32,      // Bounds engine API call volume
+}
+
+impl Default for LuaExecutionLimits {
+    fn default() -&gt; Self {
+        Self {
+            max_instructions_per_tick: 1_000_000,  // ~1M Lua instructions — generous for missions
+            max_memory_bytes: 8 * 1024 * 1024,     // 8 MB (Lua is lighter than WASM)
+            max_entity_spawns_per_tick: 32,
+            max_orders_per_tick: 64,
+            max_host_calls_per_tick: 1024,
+        }
+    }
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Why this matters:</strong> The same reasoning as WASM limits applies. In deterministic lockstep, a runaway Lua script on one client blocks the tick for all players (everyone waits for the slowest client). The instruction limit ensures Lua callbacks complete in bounded time. Because the limit is deterministic (same instruction budget, same cutoff point), all clients agree on when a script is terminated — no desync.</p>
+<p><strong>Mod authors can request higher limits</strong> via their mod manifest, same as WASM mods. The lobby displays requested limits and players can accept or reject. Campaign/mission scripts bundled with the game use elevated limits since they are trusted first-party content.</p>
 <h2 id="tier-3-wasm-modules"><a class="header" href="#tier-3-wasm-modules">Tier 3: WASM Modules</a></h2>
 <h3 id="rationale"><a class="header" href="#rationale">Rationale</a></h3>
 <ul>
@@ -1953,6 +2069,35 @@ pub enum NetworkAccess {
     // NEVER unrestricted
 }
 <span class="boring">}</span></code></pre>
+<h3 id="wasm-execution-resource-limits"><a class="header" href="#wasm-execution-resource-limits">WASM Execution Resource Limits</a></h3>
+<p>Capability-based API controls <em>what</em> a mod can do. Execution resource limits control <em>how much</em>. Without them, a mod could consume unbounded CPU or spawn unbounded entities — degrading performance for all players and potentially overwhelming the network layer (Bryant &amp; Saiedian 2021 documented this in Risk of Rain 2: “procedurally generated effects combined to produce unintended chain-reactive behavior which may ultimately overwhelm the ability for game clients to render objects or handle sending/receiving of game update messages”).</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Per-tick execution budget enforced by the WASM runtime (wasmtime fuel metering).
+/// Exceeding any limit terminates the mod's tick callback early — the sim continues
+/// without the mod's remaining contributions for that tick.
+pub struct WasmExecutionLimits {
+    pub fuel_per_tick: u64,              // wasmtime fuel units (~1 per wasm instruction)
+    pub max_memory_bytes: usize,         // WASM linear memory cap (default: 16 MB)
+    pub max_entity_spawns_per_tick: u32, // Prevents chain-reactive entity explosions (default: 32)
+    pub max_orders_per_tick: u32,        // AI mods can't flood the order pipeline (default: 64)
+    pub max_host_calls_per_tick: u32,    // Bounds API call volume (default: 1024)
+}
+
+impl Default for WasmExecutionLimits {
+    fn default() -&gt; Self {
+        Self {
+            fuel_per_tick: 1_000_000,       // ~1M instructions — generous for most mods
+            max_memory_bytes: 16 * 1024 * 1024,  // 16 MB
+            max_entity_spawns_per_tick: 32,
+            max_orders_per_tick: 64,
+            max_host_calls_per_tick: 1024,
+        }
+    }
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Why this matters for multiplayer:</strong> In deterministic lockstep, all clients run the same mods. A mod that consumes excessive CPU causes tick overruns on slower machines, triggering adaptive run-ahead increases for everyone. A mod that spawns hundreds of entities per tick inflates state size and network traffic. The execution limits prevent a single mod from degrading the experience — and because the limits are deterministic (same fuel budget, same cutoff point), all clients agree on when a mod is throttled.</p>
+<p><strong>Mod authors can request higher limits</strong> via their mod manifest. The lobby displays requested limits and players can accept or reject. Tournament/ranked play enforces stricter defaults.</p>
 <h3 id="3d-rendering-mods-tier-3-showcase"><a class="header" href="#3d-rendering-mods-tier-3-showcase">3D Rendering Mods (Tier 3 Showcase)</a></h3>
 <p>The most powerful example of Tier 3 modding: replacing the entire visual presentation with 3D rendering. A “3D Red Alert” mod swaps sprites for GLTF meshes and the isometric camera for a free-rotating 3D camera — while the simulation, networking, pathfinding, and rules are completely unchanged.</p>
 <p>This works because Bevy already ships a full 3D pipeline. The mod doesn’t build a 3D engine — it uses Bevy’s existing 3D renderer through the WASM mod API.</p>
@@ -3252,6 +3397,7 @@ llm:
 <p>The LLM sees workshop resources through their <code>llm_meta</code> fields. A music track tagged <code>summary: "Military march, Soviet theme, orchestral, 2:30"</code> and <code>composition_hints: "Pairs well with Soviet faction voice lines"</code> lets the LLM intelligently select and compose assets for a coherent mission experience.</p>
 <p><strong>License-aware generation:</strong> The LLM filters by license compatibility — if generating content for a CC-BY mod, it only pulls CC-BY-compatible resources (<code>CC0-1.0</code>, <code>CC-BY-4.0</code>), excluding <code>CC-BY-NC-4.0</code> or <code>CC-BY-SA-4.0</code> unless the mod’s own license is compatible.</p>
 <h3 id="workshop-api"><a class="header" href="#workshop-api">Workshop API</a></h3>
+<p>The Workshop server stores all resource metadata, versions, dependencies, ratings, and search indices in an embedded SQLite database (D034). No external database required — the server is a single Rust binary that creates its <code>.db</code> file on first run. FTS5 provides full-text search over resource names, descriptions, and <code>llm_meta</code> tags. WAL mode handles concurrent reads from browse/search endpoints.</p>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>pub trait WorkshopClient: Send + Sync {
@@ -3705,7 +3851,12 @@ impl CoordTransform {
 <tbody>
 <tr><td>Maphack</td><td><strong>OPEN</strong></td><td><strong>OPEN</strong></td><td><strong>BLOCKED</strong> ✓</td></tr>
 <tr><td>Order injection</td><td>Sim rejects</td><td>Server rejects</td><td>Server rejects</td></tr>
+<tr><td>Order forgery</td><td>Ed25519 per-order sigs</td><td>Server stamps + sigs</td><td>Server stamps + sigs</td></tr>
 <tr><td>Lag switch</td><td><strong>OPEN</strong></td><td><strong>BLOCKED</strong> ✓</td><td><strong>BLOCKED</strong> ✓</td></tr>
+<tr><td>Eavesdropping</td><td>DTLS encrypted</td><td>TLS encrypted</td><td>TLS encrypted</td></tr>
+<tr><td>Packet forgery</td><td>AEAD rejects</td><td>TLS rejects</td><td>TLS rejects</td></tr>
+<tr><td>Protocol DoS</td><td>Rate limit + size caps</td><td>Relay absorbs + limits</td><td>Server absorbs + limits</td></tr>
+<tr><td>State saturation</td><td><strong>OPEN</strong></td><td>Rate caps ✓</td><td>Rate caps ✓</td></tr>
 <tr><td>Desync exploit</td><td>Possible</td><td>Server-only analysis</td><td>N/A</td></tr>
 <tr><td>Replay tampering</td><td><strong>OPEN</strong></td><td>Signed ✓</td><td>Signed ✓</td></tr>
 <tr><td>WASM mod cheating</td><td>Sandbox</td><td>Sandbox</td><td>Sandbox</td></tr>
@@ -3717,6 +3868,7 @@ impl CoordTransform {
 </table>
 </div>
 <p><strong>Recommendation:</strong> Relay server is the minimum for ranked/competitive play. Fog-authoritative server for high-stakes tournaments.</p>
+<p><strong>A note on lockstep and DoS resilience:</strong> Bryant &amp; Saiedian (2021) observe that deterministic lockstep is surprisingly the <em>best</em> architecture for resisting volumetric denial-of-service attacks. Because the simulation halts and awaits input from all clients before progressing, an attacker attempting to exhaust a victim’s bandwidth unintentionally introduces lag into their own experience as well. The relay server model adds further resilience — the relay absorbs attack traffic without forwarding it to clients.</p>
 <h2 id="vulnerability-1-maphack-architectural-limit"><a class="header" href="#vulnerability-1-maphack-architectural-limit">Vulnerability 1: Maphack (Architectural Limit)</a></h2>
 <h3 id="the-problem"><a class="header" href="#the-problem">The Problem</a></h3>
 <p>Both clients must simulate everything (enemy movement, production, harvesting), so all game state exists in process memory. Fog of war is a rendering filter — the data is always there.</p>
@@ -3754,6 +3906,7 @@ impl NetworkModel for FogAuthoritativeNetwork {
 }
 <span class="boring">}</span></code></pre>
 <p><strong>Trade-off:</strong> Relay server (just forwards orders) = cheap VPS handles thousands of games. Authoritative sim server = real CPU per game.</p>
+<p><strong>Entity prioritization (Fiedler’s priority accumulator):</strong> When the fog-authoritative server sends partial state to each client, it must decide <em>what</em> to send within the bandwidth budget. Fiedler (2015) devised a priority accumulator that tracks object priority persistently between frames — objects accrue additional priority based on staleness (time since last update). High-priority objects (units in combat, projectiles) are sent every frame; low-priority objects (distant static structures) are deferred but eventually sent. This ensures a strict bandwidth upper bound while guaranteeing no object is permanently starved. Iron Curtain’s <code>FogAuthoritativeNetwork</code> should implement this pattern: player-owned units and nearby enemies at highest priority, distant visible terrain objects at lowest, with staleness-based promotion ensuring eventual consistency.</p>
 <h2 id="vulnerability-2-order-injection--spoofing"><a class="header" href="#vulnerability-2-order-injection--spoofing">Vulnerability 2: Order Injection / Spoofing</a></h2>
 <h3 id="the-problem-1"><a class="header" href="#the-problem-1">The Problem</a></h3>
 <p>Malicious client sends impossible orders (build without resources, control enemy units).</p>
@@ -4089,6 +4242,218 @@ impl RankingService {
 }
 <span class="boring">}</span></code></pre>
 <p><strong>Key:</strong> Only relay-server-signed results update rankings. Direct P2P games can be played for fun but don’t affect ranked standings.</p>
+<h2 id="vulnerability-14-transport-layer-attacks-eavesdropping--packet-forgery"><a class="header" href="#vulnerability-14-transport-layer-attacks-eavesdropping--packet-forgery">Vulnerability 14: Transport Layer Attacks (Eavesdropping &amp; Packet Forgery)</a></h2>
+<h3 id="the-problem-13"><a class="header" href="#the-problem-13">The Problem</a></h3>
+<p>If game traffic is unencrypted or weakly encrypted, any on-path observer (same WiFi, ISP, VPN provider) can read all game data and forge packets. C&amp;C Generals used XOR with a fixed starting key <code>0xFade</code> — this is not encryption. The key is hardcoded, the increment (<code>0x00000321</code>) is constant, and a comment in the source reads “just for fun” (see <code>Transport.cpp</code> lines 42-56). Any packet could be decrypted instantly even before the GPL source release. Combined with no packet authentication (the “validation” is a simple non-cryptographic CRC), an attacker had full read/write access to all game traffic.</p>
+<p>This is not a theoretical concern. Game traffic on public WiFi, tournament LANs, or shared networks is trivially interceptable.</p>
+<h3 id="mitigation-dtls-13--noise-protocol"><a class="header" href="#mitigation-dtls-13--noise-protocol">Mitigation: DTLS 1.3 / Noise Protocol</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub enum TransportSecurity {
+    /// Relay mode: clients connect via TLS 1.3 to the relay server.
+    /// The relay terminates TLS and re-encrypts for each recipient.
+    /// Simplest model — clients authenticate to the relay, relay handles forwarding.
+    RelayTls {
+        server_cert: Certificate,
+        client_session_token: SessionToken,
+    },
+
+    /// Direct P2P: DTLS 1.3 over UDP for encrypted datagrams.
+    /// Key exchange during connection establishment (noise protocol handshake).
+    DirectDtls {
+        peer_public_key: Ed25519PublicKey,
+        session_keys: ChaCha20Poly1305Keys,
+    },
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Key design choices:</strong></p>
+<ul>
+<li><strong>Never roll custom crypto.</strong> Generals’ XOR is the cautionary example. Use established libraries (<code>rustls</code>, <code>snow</code> for noise protocol, <code>ring</code> for primitives).</li>
+<li><strong>Relay mode makes this simple.</strong> Clients open a TLS connection to the relay — standard web-grade encryption. The relay is the trust anchor.</li>
+<li><strong>Direct P2P uses DTLS.</strong> UDP-compatible TLS. The connection establishment phase (join code / direct IP) exchanges public keys. The noise protocol (<code>snow</code> crate) is an alternative with lower overhead for game traffic.</li>
+<li><strong>Authenticated encryption.</strong> Every packet is both encrypted AND authenticated (ChaCha20-Poly1305 or AES-256-GCM). Tampering is detected and the packet is dropped. This eliminates the entire class of packet-modification attacks that Generals’ XOR+CRC allowed.</li>
+<li><strong>No encrypted passwords on the wire.</strong> Lobby authentication uses session tokens issued during TLS handshake. Generals transmitted “encrypted” passwords using trivially reversible bit manipulation (see <code>encrypt.cpp</code> — passwords truncated to 8 characters, then XOR’d). We use SRP or OAuth2 — passwords never leave the client.</li>
+</ul>
+<h3 id="what-this-prevents"><a class="header" href="#what-this-prevents">What This Prevents</a></h3>
+<ul>
+<li>Eavesdropping on game state (reading opponent’s orders in transit)</li>
+<li>Packet injection (forging orders that appear to come from another player)</li>
+<li>Replay attacks (re-sending captured packets from a previous game)</li>
+<li>Credential theft (capturing lobby passwords from network traffic)</li>
+</ul>
+<h2 id="vulnerability-15-protocol-parsing-exploitation-malformed-input"><a class="header" href="#vulnerability-15-protocol-parsing-exploitation-malformed-input">Vulnerability 15: Protocol Parsing Exploitation (Malformed Input)</a></h2>
+<h3 id="the-problem-14"><a class="header" href="#the-problem-14">The Problem</a></h3>
+<p>Even with memory-safe code, a malicious peer can craft protocol messages designed to exploit the parser: oversized fields that exhaust memory, deeply nested structures that blow the stack, or invalid enum variants that cause panics. The goal is denial of service — crashing or freezing the target.</p>
+<p>C&amp;C Generals’ receive-side code is the canonical cautionary tale. The send-side is careful — every <code>FillBufferWith*</code> function checks <code>isRoomFor*</code> against <code>MAX_PACKET_SIZE</code>. But the receive-side parsers (<code>readGameMessage</code>, <code>readChatMessage</code>, <code>readFileMessage</code>, etc.) operate on raw <code>(UnsignedByte *data, Int &amp;i)</code> with <strong>no size parameter</strong>. They trust every length field, blindly advance the read cursor, and never check if they’ve run past the buffer end. Specific examples verified in Generals GPL source:</p>
+<ul>
+<li><strong><code>readFileMessage</code></strong>: reads a filename with <code>while (data[i] != 0)</code> — no length limit. A packet without a null terminator overflows a stack buffer. Then <code>dataLength</code> from the packet controls both <code>new UnsignedByte[dataLength]</code> (unbounded allocation) and <code>memcpy(buf, data + i, dataLength)</code> (out-of-bounds read).</li>
+<li><strong><code>readChatMessage</code></strong>: <code>length</code> byte controls <code>memcpy(text, data + i, length * sizeof(UnsignedShort))</code>. No check that the packet actually contains that many bytes.</li>
+<li><strong><code>readWrapperMessage</code></strong>: reassembles chunked commands with network-supplied <code>totalDataLength</code>. An attacker claiming billions of bytes forces unbounded allocation.</li>
+<li><strong><code>ConstructNetCommandMsgFromRawData</code></strong>: dispatches to type-specific readers, but an unknown command type leaves <code>msg</code> as NULL, then dereferences it — instant crash.</li>
+</ul>
+<p>Rust eliminates the buffer overflows (slices enforce bounds), but not the denial-of-service vectors.</p>
+<h3 id="mitigation-defense-in-depth-protocol-parsing"><a class="header" href="#mitigation-defense-in-depth-protocol-parsing">Mitigation: Defense-in-Depth Protocol Parsing</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// All protocol parsing goes through a BoundedReader that tracks remaining bytes.
+/// Every read operation checks available length first. Underflow returns Err, never panics.
+pub struct BoundedReader&lt;'a&gt; {
+    data: &amp;'a [u8],
+    pos: usize,
+}
+
+impl&lt;'a&gt; BoundedReader&lt;'a&gt; {
+    pub fn read_u8(&amp;mut self) -&gt; Result&lt;u8, ProtocolError&gt; {
+        if self.pos &gt;= self.data.len() { return Err(ProtocolError::Truncated); }
+        let val = self.data[self.pos];
+        self.pos += 1;
+        Ok(val)
+    }
+
+    pub fn read_bytes(&amp;mut self, len: usize) -&gt; Result&lt;&amp;'a [u8], ProtocolError&gt; {
+        if self.pos + len &gt; self.data.len() { return Err(ProtocolError::Truncated); }
+        let slice = &amp;self.data[self.pos..self.pos + len];
+        self.pos += len;
+        Ok(slice)
+    }
+
+    pub fn remaining(&amp;self) -&gt; usize { self.data.len() - self.pos }
+}
+
+/// Hard limits on all protocol fields — reject before allocating.
+pub struct ProtocolLimits {
+    pub max_order_size: usize,               // 4 KB — single order
+    pub max_orders_per_tick: usize,           // 256 — per player
+    pub max_chat_message_length: usize,       // 512 chars
+    pub max_file_transfer_size: usize,        // 64 KB — map files
+    pub max_pending_data_per_peer: usize,     // 256 KB — total buffered per connection
+    pub max_reassembled_command_size: usize,  // 64 KB — chunked/wrapper commands
+}
+
+/// Command type dispatch uses exhaustive matching — unknown types return Err.
+fn parse_command(reader: &amp;mut BoundedReader, cmd_type: u8) -&gt; Result&lt;NetCommand, ProtocolError&gt; {
+    match cmd_type {
+        CMD_FRAME =&gt; parse_frame_command(reader),
+        CMD_ORDER =&gt; parse_order_command(reader),
+        CMD_CHAT  =&gt; parse_chat_command(reader),
+        CMD_ACK   =&gt; parse_ack_command(reader),
+        CMD_FILE  =&gt; parse_file_command(reader),
+        _         =&gt; Err(ProtocolError::UnknownCommandType(cmd_type)),
+    }
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Design principles (each addresses a specific Generals vulnerability):</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Principle</th><th>Addresses</th><th>Implementation</th></tr>
+</thead>
+<tbody>
+<tr><td>Length-delimited reads</td><td>All read*Message functions lacking bounds checks</td><td><code>BoundedReader</code> with remaining-bytes tracking</td></tr>
+<tr><td>Hard size caps</td><td>Unbounded allocation via network-supplied lengths</td><td><code>ProtocolLimits</code> checked before any allocation</td></tr>
+<tr><td>Exhaustive command dispatch</td><td>NULL dereference on unknown command type</td><td>Rust <code>match</code> with <code>_ =&gt; Err(...)</code></td></tr>
+<tr><td>Per-connection memory budget</td><td>Wrapper/chunking memory exhaustion</td><td>Track per-peer buffered bytes, disconnect on exceeded</td></tr>
+<tr><td>Rate limiting at transport layer</td><td>Packet flood consuming parse CPU</td><td>Max packets/second per source IP, connection cookies</td></tr>
+<tr><td>Separate parse and execute</td><td>Malformed input affecting game state</td><td>Parse into validated types first, then execute. Parse failures never touch sim.</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>The core insight from Generals:</strong> Send-side code is careful (validates sizes before building packets). Receive-side code trusts everything. This asymmetry is the root cause of most vulnerabilities. Our protocol layer must apply the same rigor to <strong>parsing</strong> as to <strong>serialization</strong> — which Rust’s type system naturally encourages via <code>serde::Deserialize</code> with explicit error handling.</p>
+<blockquote>
+<p>For the full vulnerability catalog from Generals source code analysis, see <code>research/rts-netcode-security-vulnerabilities.md</code>.</p>
+</blockquote>
+<h2 id="vulnerability-16-order-source-authentication-p2p-forgery"><a class="header" href="#vulnerability-16-order-source-authentication-p2p-forgery">Vulnerability 16: Order Source Authentication (P2P Forgery)</a></h2>
+<h3 id="the-problem-15"><a class="header" href="#the-problem-15">The Problem</a></h3>
+<p>In relay mode, the relay server stamps each order with the authenticated sender’s player slot — forgery is prevented by the trusted relay. But in direct P2P modes (<code>LockstepNetwork</code>), orders contain a self-declared <code>playerID</code>. A malicious client can forge orders with another player’s ID, sending commands for units they don’t own.</p>
+<p>Generals’ <code>ConstructNetCommandMsgFromRawData</code> reads the player ID from the ‘P’ tag in the packet data with no validation against the source address. Any peer can claim to be any player.</p>
+<p>Order <em>validation</em> (D012) catches ownership violations — commanding units you don’t own is rejected deterministically. But without authentication, a malicious client can still forge valid orders <em>as</em> the victim player (e.g., ordering the victim’s units to walk into danger). Validation checks whether the <em>order</em> is legal for that player — it doesn’t check whether the <em>sender</em> is that player.</p>
+<h3 id="mitigation-ed25519-per-order-signing"><a class="header" href="#mitigation-ed25519-per-order-signing">Mitigation: Ed25519 Per-Order Signing</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct AuthenticatedOrder {
+    pub order: TimestampedOrder,
+    pub signature: Ed25519Signature,  // Signed by sender's session keypair
+}
+
+/// Each player generates an ephemeral Ed25519 keypair at game start.
+/// Public keys are exchanged during lobby setup (over TLS — see Vulnerability 14).
+/// The relay server also holds all public keys and validates signatures before forwarding.
+pub struct SessionAuth {
+    pub player_id: PlayerId,
+    pub signing_key: Ed25519SigningKey,   // Private — never leaves client
+    pub peer_keys: HashMap&lt;PlayerId, Ed25519VerifyingKey&gt;,  // All players' public keys
+}
+
+impl SessionAuth {
+    /// Sign an outgoing order
+    pub fn sign_order(&amp;self, order: &amp;TimestampedOrder) -&gt; AuthenticatedOrder {
+        let bytes = order.to_canonical_bytes();
+        let signature = self.signing_key.sign(&amp;bytes);
+        AuthenticatedOrder { order: order.clone(), signature }
+    }
+
+    /// Verify an incoming order came from the claimed player
+    pub fn verify_order(&amp;self, auth_order: &amp;AuthenticatedOrder) -&gt; Result&lt;(), AuthError&gt; {
+        let expected_key = self.peer_keys.get(&amp;auth_order.order.player)
+            .ok_or(AuthError::UnknownPlayer)?;
+        let bytes = auth_order.order.to_canonical_bytes();
+        expected_key.verify(&amp;bytes, &amp;auth_order.signature)
+            .map_err(|_| AuthError::InvalidSignature)
+    }
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Key design choices:</strong></p>
+<ul>
+<li><strong>Ephemeral session keys.</strong> Generated fresh for each game. No long-lived keys to steal. Key exchange happens during lobby setup over the encrypted channel (Vulnerability 14).</li>
+<li><strong>Defense in depth.</strong> Relay mode: relay validates signatures AND stamps orders. P2P mode: each client validates all peers’ signatures. Both: sim validates order legality (D012).</li>
+<li><strong>Overhead is minimal.</strong> Ed25519 signing is ~15,000 ops/second on a single core. At peak RTS APM (~300 orders/minute = 5/second), signature overhead is negligible.</li>
+<li><strong>Replays include signatures.</strong> The signed order chain in replays allows post-hoc verification that no orders were tampered with — useful for tournament dispute resolution.</li>
+</ul>
+<h2 id="vulnerability-17-state-saturation-order-flooding"><a class="header" href="#vulnerability-17-state-saturation-order-flooding">Vulnerability 17: State Saturation (Order Flooding)</a></h2>
+<h3 id="the-problem-16"><a class="header" href="#the-problem-16">The Problem</a></h3>
+<p>Bryant &amp; Saiedian (2021) introduced the term “state saturation” to describe a class of lag-based attack where a player generates disproportionate network traffic through rapid game actions — starving other players’ command messages and gaining a competitive edge. Their companion paper (<em>A State Saturation Attack against Massively Multiplayer Online Videogames</em>, ICISSP 2021) demonstrated this via animation canceling: rapidly interrupting actions generates far more state updates than normal play, consuming bandwidth that would otherwise carry opponents’ orders.</p>
+<p>The companion ICISSP paper (2021) demonstrated this empirically via Elder Scrolls Online: when players exploited animation canceling (rapidly alternating offensive and defensive inputs to bypass client-side throttling), network traffic increased by <strong>+175% packets sent</strong> and <strong>+163% packets received</strong> compared to the intended baseline. A prominent community figure demonstrated a <strong>50% DPS increase</strong> (70K → 107K) through this technique — proving the competitive advantage is real and measurable.</p>
+<p>In an RTS context, this could manifest as:</p>
+<ul>
+<li><strong>Order flooding:</strong> Spamming hundreds of move/stop/move/stop commands per tick to consume relay server processing capacity and delay other players’ orders</li>
+<li><strong>Chain-reactive mod effects:</strong> A mod creates ability chains that spawn hundreds of entities or effects per tick, overwhelming the sim and network (the paper’s Risk of Rain 2 case study found “procedurally generated effects combined to produce unintended chain-reactive behavior which may ultimately overwhelm the ability for game clients to render objects or handle sending/receiving of game update messages”)</li>
+<li><strong>Build order spam:</strong> Rapidly queuing and canceling production to generate maximum order traffic</li>
+</ul>
+<h3 id="mitigation-already-addressed-by-design"><a class="header" href="#mitigation-already-addressed-by-design">Mitigation: Already Addressed by Design</a></h3>
+<p>Our architecture prevents state saturation at multiple layers:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Orders per player are hard-capped at the protocol level.
+pub struct ProtocolLimits {
+    pub max_orders_per_tick: usize,     // 256 — no player can flood the pipeline
+    pub max_order_size: usize,          // 4 KB — no single oversized order
+    pub max_pending_data_per_peer: usize, // 256 KB — total buffered per connection
+}
+
+/// The relay server enforces fair bandwidth allocation.
+impl RelayServer {
+    fn process_player_orders(&amp;mut self, player: PlayerId, orders: Vec&lt;PlayerOrder&gt;) {
+        // Hard cap: excess orders silently dropped
+        let accepted = &amp;orders[..orders.len().min(self.limits.max_orders_per_tick)];
+
+        // Behavioral flag: sustained max-rate ordering is suspicious
+        self.profiles[player].record_order_rate(accepted.len());
+
+        self.tick_orders.add(player, accepted);
+    }
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Why this works for Iron Curtain specifically:</strong></p>
+<ul>
+<li><strong>Relay server (D007) is the bandwidth arbiter.</strong> Each player gets equal processing. One player’s flood cannot starve another’s inputs — the relay processes all players’ orders independently within the tick window.</li>
+<li><strong>Order rate caps (ProtocolLimits)</strong> prevent any single player from exceeding 256 orders per tick. Normal RTS play peaks around 5-10 orders/tick even at professional APM levels.</li>
+<li><strong>WASM mod sandbox</strong> limits entity creation and instruction count per tick, preventing chain-reactive state explosions from mod code.</li>
+<li><strong>Sub-tick timestamps (D008)</strong> ensure that even within a tick, order priority is based on actual submission time — not on who flooded more orders.</li>
+</ul>
+<p><strong>Lesson from the ESO case study:</strong> The Elder Scrolls Online relied on client-side “soft throttling” (animations that gate input) alongside server-side “hard throttling” (cooldown timers). Players bypassed the soft throttle by using different input types to interrupt animations — the priority/interrupt system intended for reactive defense became an exploit. The lesson: <strong>client-side throttling that can be circumvented by input type-switching is ineffective.</strong> Server-side validation is the real throttle — which is exactly what our relay does. Zenimax eventually moved block validation server-side, adding an RTT penalty — the same trade-off our relay architecture accepts by design.</p>
+<blockquote>
+<p><strong>Academic reference:</strong> Bryant, B.D. &amp; Saiedian, H. (2021). <em>An evaluation of videogame network architecture performance and security.</em> Computer Networks, 192, 108128. DOI: <a href="https://doi.org/10.1016/j.comnet.2021.108128">10.1016/j.comnet.2021.108128</a>. Companion: Bryant, B.D. &amp; Saiedian, H. (2021). <em>A State Saturation Attack against Massively Multiplayer Online Videogames.</em> ICISSP 2021.</p>
+</blockquote>
 <h2 id="competitive-integrity-summary"><a class="header" href="#competitive-integrity-summary">Competitive Integrity Summary</a></h2>
 <p>Iron Curtain’s anti-cheat is <strong>architectural, not bolted on.</strong> Every defense emerges from design decisions made for other reasons:</p>
 <div class="table-wrapper">
@@ -4099,8 +4464,13 @@ impl RankingService {
 <tbody>
 <tr><td>Maphack</td><td>Fog-authoritative server</td><td>Network model architecture</td></tr>
 <tr><td>Order injection</td><td>Deterministic validation in sim</td><td>Sim purity (invariant #1)</td></tr>
+<tr><td>Order forgery (P2P)</td><td>Ed25519 per-order signing</td><td>Session auth design</td></tr>
 <tr><td>Lag switch</td><td>Relay server owns the clock</td><td>Relay architecture (D007)</td></tr>
 <tr><td>Speed hack</td><td>Relay tick authority</td><td>Same as above</td></tr>
+<tr><td>State saturation</td><td>Rate caps + relay bandwidth arbiter</td><td>ProtocolLimits + relay (D007)</td></tr>
+<tr><td>Eavesdropping</td><td>DTLS / TLS transport encryption</td><td>Transport security design</td></tr>
+<tr><td>Packet forgery</td><td>Authenticated encryption (AEAD)</td><td>Transport security design</td></tr>
+<tr><td>Protocol DoS</td><td>BoundedReader + size caps + rate limits</td><td>Protocol hardening</td></tr>
 <tr><td>Replay tampering</td><td>Ed25519 signed hash chain</td><td>Replay system design</td></tr>
 <tr><td>Automation</td><td>Behavioral analysis + community reports</td><td>Relay-side observability</td></tr>
 <tr><td>Result fraud</td><td>Relay-certified match results</td><td>Relay architecture</td></tr>
@@ -4342,6 +4712,7 @@ let game = GameLoop::new(sim, renderer, adapted);
 <li><strong>System execution order documented and fixed</strong></li>
 <li><strong>State hashing for desync detection</strong></li>
 <li><strong>Engine telemetry foundation (D031):</strong> <code>tracing</code> span instrumentation on sim systems; per-system tick timing; gameplay event stream (<code>GameplayEvent</code> enum) behind <code>telemetry</code> feature flag; zero-cost when disabled</li>
+<li><strong>Client-side SQLite storage (D034):</strong> Replay catalog, save game index, gameplay event log, asset index — embedded SQLite for local metadata; queryable without OTEL stack</li>
 </ul>
 <h3 id="release-2"><a class="header" href="#release-2">Release</a></h3>
 <p>Units moving, shooting, dying — headless sim + rendered. Record replay file. Play it back.</p>
@@ -4382,6 +4753,15 @@ let game = GameLoop::new(sim, renderer, adapted);
 <li>Single-player skirmish against scripted dummy AI (first “playable” milestone)</li>
 <li>Feels like Red Alert to someone who’s played it before</li>
 </ul>
+<p><strong>Stretch goals (target Phase 3, can slip to early Phase 4 without blocking):</strong></p>
+<ul>
+<li><strong>Chart component in <code>ra-ui</code>:</strong> Lightweight Bevy 2D chart renderer (line, bar, pie, heatmap, stacked area) for post-game and career screens</li>
+<li><strong>Post-game stats screen (D034):</strong> Unit production timeline, resource curves, combat heatmap, APM graph, head-to-head comparison — all from SQLite <code>gameplay_events</code></li>
+<li><strong>Career stats page (D034):</strong> Win rate by faction/map/opponent, rating history graph, session history with replay links — from SQLite <code>matches</code> + <code>match_players</code></li>
+</ul>
+<blockquote>
+<p><strong>Note:</strong> Phase 3’s hard goal is “feels like Red Alert” — sidebar, audio, selection, build placement. The stats screens and chart component are high-value polish but depend on accumulated gameplay data, so they can mature alongside Phase 4 without blocking the “playable” milestone.</p>
+</blockquote>
 <h2 id="phase-4-ai--single-player-months-1620"><a class="header" href="#phase-4-ai--single-player-months-1620">Phase 4: AI &amp; Single Player (Months 16–20)</a></h2>
 <p><strong>Goal:</strong> Complete campaign support and skirmish AI. Unlike OpenRA, single-player is a first-class deliverable, not an afterthought.</p>
 <h3 id="deliverables-4"><a class="header" href="#deliverables-4">Deliverables</a></h3>
@@ -4396,6 +4776,8 @@ let game = GameLoop::new(sim, renderer, adapted);
 <li><strong>Continuous campaign flow:</strong> briefing → mission → debrief → next mission (no exit-to-menu between levels)</li>
 <li><strong>Campaign select and mission map UI:</strong> visualize campaign graph, show current position, replay completed missions</li>
 <li><strong>Adaptive difficulty via campaign state:</strong> designer-authored conditional bonuses/penalties based on cumulative performance</li>
+<li><strong>Campaign dashboard (D034):</strong> Roster composition graphs per mission, veterancy progression for named units, campaign path visualization, performance trends — from SQLite <code>campaign_missions</code> + <code>roster_snapshots</code></li>
+<li><strong><code>ra-ai</code> reads player history (D034):</strong> Skirmish AI queries SQLite <code>matches</code> + <code>gameplay_events</code> for difficulty scaling, build order variety, and counter-strategy selection between games</li>
 <li><strong>FMV cutscene playback</strong> between missions (original <code>.vqa</code> briefings and victory/defeat sequences)</li>
 <li><strong>Full Allied and Soviet campaigns</strong> for Red Alert, playable start to finish</li>
 </ul>
@@ -4446,6 +4828,7 @@ let game = GameLoop::new(sim, renderer, adapted);
 <li>Spectator feed: relay forwards tick orders to observers with configurable delay</li>
 <li>Behavioral analysis pipeline on relay server</li>
 <li><strong>Backend OTEL telemetry (D031):</strong> relay + tracking + workshop servers emit metrics/traces/logs via OpenTelemetry; <code>/healthz</code>, <code>/readyz</code>, <code>/metrics</code> endpoints; distributed trace IDs for desync debugging across clients and relay; pre-built Grafana dashboards; optional <code>docker-compose.observability.yaml</code> overlay for self-hosters</li>
+<li><strong>Backend SQLite storage (D034):</strong> Relay server persists match results, desync reports, behavioral profiles; matchmaking server persists player ratings, match history, seasonal data — all in embedded SQLite, no external database</li>
 </ul>
 <h3 id="exit-criteria-5"><a class="header" href="#exit-criteria-5">Exit Criteria</a></h3>
 <ul>
@@ -4469,11 +4852,12 @@ let game = GameLoop::new(sim, renderer, adapted);
 <li><strong>Mod templates:</strong> <code>data-mod</code>, <code>scripted-mod</code>, <code>total-conversion</code>, <code>map-pack</code>, <code>asset-pack</code> via <code>ic mod init</code></li>
 <li><strong><code>mod.yaml</code> manifest</strong> with typed schema, semver engine version pinning, dependency declarations</li>
 <li><strong>VS Code extension</strong> for mod development: YAML schema validation, Lua LSP, <code>ic</code> integration</li>
-<li><strong>Workshop resource registry (D030):</strong> Federated multi-source workshop server with crates.io-style dependency resolution</li>
+<li><strong>Workshop resource registry (D030):</strong> Federated multi-source workshop server with crates.io-style dependency resolution; backed by embedded SQLite with FTS5 search (D034)</li>
 <li><strong>Dependency management CLI:</strong> <code>ic mod resolve/install/update/tree/lock/audit</code> — full dependency lifecycle</li>
 <li><strong>License enforcement:</strong> Every published resource requires SPDX license; <code>ic mod audit</code> checks dependency tree compatibility</li>
 <li><strong>Individual resource publishing:</strong> Music, sprites, textures, voice lines, cutscenes, palettes, UI themes — all publishable as independent versioned resources</li>
 <li><strong>Lockfile system:</strong> <code>ic.lock</code> for reproducible dependency resolution across machines</li>
+<li><strong>Mod balance dashboard (D034):</strong> Unit win-rate contribution, cost-efficiency scatter plots, engagement outcome distributions from SQLite <code>gameplay_events</code>; <code>ic mod stats</code> CLI reads same database</li>
 </ul>
 <h3 id="exit-criteria-6"><a class="header" href="#exit-criteria-6">Exit Criteria</a></h3>
 <ul>
@@ -4484,17 +4868,19 @@ let game = GameLoop::new(sim, renderer, adapted);
 <li>An individual resource (e.g., a music track) can be published to and pulled from the Workshop independently</li>
 </ul>
 <h2 id="phase-7-ai-content--polish-months-3236"><a class="header" href="#phase-7-ai-content--polish-months-3236">Phase 7: AI Content &amp; Polish (Months 32–36+)</a></h2>
-<p><strong>Goal:</strong> LLM-generated missions, visual polish, and feature parity.</p>
-<h3 id="deliverables--ai-content-generation"><a class="header" href="#deliverables--ai-content-generation">Deliverables — AI Content Generation</a></h3>
+<p><strong>Goal:</strong> Optional LLM-generated missions (BYOLLM), visual polish, and feature parity.</p>
+<h3 id="deliverables--ai-content-generation-optional--byollm"><a class="header" href="#deliverables--ai-content-generation-optional--byollm">Deliverables — AI Content Generation (Optional — BYOLLM)</a></h3>
+<p>All LLM features require the player to configure their own LLM provider. The game is fully functional without one.</p>
 <ul>
-<li><code>ra-llm</code> crate: LLM integration for mission generation</li>
+<li><code>ra-llm</code> crate: optional LLM integration for mission generation</li>
 <li>In-game mission generator UI: describe scenario → playable mission</li>
 <li>Generated output: standard YAML map + Lua trigger scripts + briefing text</li>
 <li>Difficulty scaling: same scenario at different challenge levels</li>
 <li>Mission sharing: rate, remix, publish generated missions</li>
 <li>Campaign generation: connected multi-mission storylines (experimental)</li>
 <li>Adaptive difficulty: AI observes playstyle, generates targeted challenges (experimental)</li>
-<li><strong>LLM-driven Workshop resource discovery (D030):</strong> LLM searches Workshop by <code>llm_meta</code> tags, evaluates fitness, auto-pulls resources as dependencies for generated content; license-aware filtering</li>
+<li><strong>LLM-driven Workshop resource discovery (D030):</strong> When LLM provider is configured, LLM can search Workshop by <code>llm_meta</code> tags, evaluate fitness, auto-pull resources as dependencies for generated content; license-aware filtering</li>
+<li><strong>LLM player-aware generation (D034):</strong> When LLM provider is configured, <code>ra-llm</code> reads local SQLite for player context — faction preferences, unit usage patterns, win/loss streaks, campaign roster state; generates personalized missions, adaptive briefings, post-match commentary, coaching suggestions, rivalry narratives</li>
 <li><strong>AI training data pipeline (D031):</strong> gameplay event stream → OTEL collector → Parquet/Arrow columnar format → ML training; build order learning, engagement patterns, balance analysis from aggregated match telemetry</li>
 </ul>
 <h3 id="deliverables--visual-polish-bevy-rendering"><a class="header" href="#deliverables--visual-polish-bevy-rendering">Deliverables — Visual Polish (Bevy Rendering)</a></h3>
@@ -4517,7 +4903,7 @@ let game = GameLoop::new(sim, renderer, adapted);
 <h3 id="exit-criteria-7"><a class="header" href="#exit-criteria-7">Exit Criteria</a></h3>
 <ul>
 <li>A competitive OpenRA player can switch and feel at home</li>
-<li>LLM mission generator produces varied, fun, playable missions</li>
+<li>When an LLM provider is configured, the mission generator produces varied, fun, playable missions</li>
 <li>Browser version is playable</li>
 <li>At least one total conversion mod exists on the platform</li>
 </ul>
@@ -4637,6 +5023,7 @@ let game = GameLoop::new(sim, renderer, adapted);
 <li>Signed replays</li>
 <li>Cheap to run (doesn’t run sim, just forwards orders)</li>
 </ul>
+<p><strong>Validated by:</strong> C&amp;C Generals/Zero Hour’s “packet router” — a client-side star topology where one player collected and rebroadcast all commands. Same concept, but our server-hosted version eliminates host advantage and adds neutral time authority. See <code>research/generals-zero-hour-netcode-analysis.md</code>.</p>
 <p><strong>Alternatives available:</strong> Pure P2P lockstep, fog-authoritative server, rollback — all implementable as <code>NetworkModel</code> variants.</p>
 <hr>
 <h2 id="d008-sub-tick-timestamps-on-orders"><a class="header" href="#d008-sub-tick-timestamps-on-orders">D008: Sub-Tick Timestamps on Orders</a></h2>
@@ -4727,18 +5114,19 @@ let game = GameLoop::new(sim, renderer, adapted);
 <p>See <code>10-PERFORMANCE.md</code> for full details, targets, and implementation patterns.</p>
 <hr>
 <h2 id="d016-llm-generated-missions-and-campaigns"><a class="header" href="#d016-llm-generated-missions-and-campaigns">D016: LLM-Generated Missions and Campaigns</a></h2>
-<p><strong>Decision:</strong> Integrate LLM-powered mission generation as a first-class feature (Phase 7), with an in-game UI for describing scenarios in natural language.</p>
+<p><strong>Decision:</strong> Provide an optional LLM-powered mission generation system (Phase 7) via the <code>ra-llm</code> crate. Players bring their own LLM provider (BYOLLM) — the engine never ships or requires one. Every game feature works fully without an LLM configured.</p>
 <p><strong>Rationale:</strong></p>
 <ul>
-<li>Transforms Red Alert from finite content to infinite content</li>
+<li>Transforms Red Alert from finite content to infinite content — for players who opt in</li>
 <li>Generated output is standard YAML + Lua — fully editable, shareable, learnable</li>
 <li>No other RTS (Red Alert or otherwise) offers this capability</li>
 <li>LLM quality is sufficient for terrain layout, objective design, AI behavior scripting</li>
-<li>Modular: <code>ra-llm</code> crate is optional, game works without it</li>
+<li><strong>Strictly optional:</strong> <code>ra-llm</code> crate is optional, game works without it. No feature — campaigns, skirmish, multiplayer, modding, analytics — depends on LLM availability. The LLM enhances the experience; it never gates it</li>
 </ul>
 <p><strong>Scope:</strong></p>
 <ul>
 <li>Phase 7: single mission generation (terrain, objectives, enemy composition, triggers, briefing)</li>
+<li>Phase 7: player-aware generation — LLM reads local SQLite (D034) for faction history, unit preferences, win rates, campaign roster state; injects player context into prompts for personalized missions, adaptive briefings, post-match commentary, coaching suggestions, and rivalry narratives</li>
 <li>Future: multi-mission campaigns, adaptive difficulty, cooperative scenario design</li>
 </ul>
 <p><strong>Implementation approach:</strong></p>
@@ -4747,6 +5135,7 @@ let game = GameLoop::new(sim, renderer, adapted);
 <li>Same format as hand-crafted missions — no special runtime</li>
 <li>Validation pass ensures generated content is playable (valid unit types, reachable objectives)</li>
 <li>Can use local models or API-based models (user choice)</li>
+<li>Player data for personalization comes from local SQLite queries (read-only) — no data leaves the device unless the user’s LLM provider is cloud-based (BYOLLM architecture)</li>
 </ul>
 <p><strong>Bring-Your-Own-LLM (BYOLLM) architecture:</strong></p>
 <ul>
@@ -5571,7 +5960,7 @@ pub enum GameplayEvent {
 <p>These events are:</p>
 <ul>
 <li><strong>Emitted as OTEL log records</strong> with structured attributes (not free-text — every field is filterable)</li>
-<li><strong>Collected locally</strong> into a gameplay event log alongside replays (enriched replays)</li>
+<li><strong>Collected locally</strong> into a SQLite gameplay event log alongside replays (D034) — queryable with ad-hoc SQL without an OTEL stack</li>
 <li><strong>Optionally exported</strong> to a collector for batch analysis (tournament servers, AI training pipelines)</li>
 </ul>
 <h4 id="state-inspection-development--debugging"><a class="header" href="#state-inspection-development--debugging">State Inspection (Development &amp; Debugging)</a></h4>
@@ -6041,6 +6430,272 @@ qol:
 <li>Bundle QoL into balance presets (rejected — “I want OpenRA’s attack-move but classic unit values” is a legitimate preference; conflating balance with UX is a design mistake)</li>
 </ul>
 <p><strong>Phase:</strong> Phase 3 (alongside D032 UI themes and sidebar work). QoL toggles are implemented as system-level config flags — each system checks its toggle on initialization. Preset YAML files are authored during Phase 2 (simulation) as features are built.</p>
+<hr>
+<hr>
+<h2 id="d034-sqlite-as-embedded-storage-for-services-and-client"><a class="header" href="#d034-sqlite-as-embedded-storage-for-services-and-client">D034: SQLite as Embedded Storage for Services and Client</a></h2>
+<p><strong>Decision:</strong> Use SQLite (via <code>rusqlite</code>) as the embedded database for all backend services that need persistent state and for the game client’s local metadata indices. No external database dependency required for any deployment.</p>
+<p><strong>What this means:</strong> Every service that persists data beyond a single process lifetime uses an embedded SQLite database file. The “just a binary” philosophy (see <code>03-NETCODE.md</code> § Backend Infrastructure) is preserved — an operator downloads a binary, runs it, and persistence is a <code>.db</code> file next to the executable. No PostgreSQL, no MySQL, no managed database service.</p>
+<p><strong>Where SQLite is used:</strong></p>
+<h3 id="backend-services"><a class="header" href="#backend-services">Backend Services</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Service</th><th>What it stores</th><th>Why not in-memory</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Relay server</strong></td><td><code>CertifiedMatchResult</code> records, <code>DesyncReport</code> events, <code>PlayerBehaviorProfile</code> history, replay archive metadata</td><td>Match results and behavioral data are valuable beyond the game session — operators need to query desync patterns, review suspicion scores, link replays to match records. A relay restart shouldn’t erase match history.</td></tr>
+<tr><td><strong>Workshop server</strong></td><td>Resource metadata, versions, dependencies, download counts, ratings, search index (FTS5), license data, replication cursors</td><td>This is a package registry — functionally equivalent to crates.io’s data layer. Search, dependency resolution, and version queries are relational workloads.</td></tr>
+<tr><td><strong>Matchmaking server</strong></td><td>Player ratings (Glicko-2), match history, seasonal league data, leaderboards</td><td>Ratings and match history must survive restarts. Leaderboard queries (<code>top N</code>, per-faction, per-map) are natural SQL.</td></tr>
+<tr><td><strong>Tournament server</strong></td><td>Brackets, match results, map pool votes, community reports</td><td>Tournament state spans hours/days; must survive restarts. Bracket queries and result reporting are relational.</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="game-client-local"><a class="header" href="#game-client-local">Game Client (local)</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Data</th><th>What it stores</th><th>Benefit</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Replay catalog</strong></td><td>Player names, map, factions, date, duration, result, file path, signature status</td><td>Browse and search local replays without scanning files on disk. Filter by map, opponent, date range.</td></tr>
+<tr><td><strong>Save game index</strong></td><td>Save name, campaign, mission, timestamp, playtime, thumbnail path</td><td>Fast save browser without deserializing every save file on launch.</td></tr>
+<tr><td><strong>Workshop cache</strong></td><td>Downloaded resource metadata, versions, checksums, dependency graph</td><td>Offline dependency resolution. Know what’s installed without scanning the filesystem.</td></tr>
+<tr><td><strong>Map catalog</strong></td><td>Map name, player count, size, author, source (local/workshop/OpenRA), tags</td><td>Browse local maps from all sources with a single query.</td></tr>
+<tr><td><strong>Gameplay event log</strong></td><td>Structured <code>GameplayEvent</code> records (D031) per game session</td><td>Queryable post-game analysis without an OTEL stack: <code>SELECT json_extract(data_json, '$.weapon'), AVG(json_extract(data_json, '$.damage')) FROM gameplay_events WHERE event_type = 'combat' AND session_id = ?</code>. Mod developers debug balance with SQL, not Grafana.</td></tr>
+<tr><td><strong>Asset index</strong></td><td><code>.mix</code> archive contents, MiniYAML conversion cache (keyed by file hash)</td><td>Skip re-parsing on startup. Know which <code>.mix</code> contains which file without opening every archive.</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="where-sqlite-is-not-used"><a class="header" href="#where-sqlite-is-not-used">Where SQLite is NOT used</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Area</th><th>Why not</th></tr>
+</thead>
+<tbody>
+<tr><td><strong><code>ra-sim</code></strong></td><td>No I/O in the sim. Ever. Invariant #1.</td></tr>
+<tr><td><strong>Tracking server</strong></td><td>Truly ephemeral data — game listings with TTL. In-memory is correct.</td></tr>
+<tr><td><strong>Hot paths</strong></td><td>No DB queries per tick. All SQLite access is at load time, between games, or on UI/background threads.</td></tr>
+<tr><td><strong>Save game data</strong></td><td>Save files are serde-serialized sim snapshots loaded as a whole unit. No partial queries needed. SQLite indexes their <em>metadata</em>, not their <em>content</em>.</td></tr>
+<tr><td><strong>Campaign state</strong></td><td>Loaded/saved as a unit inside save games. Fits in memory. No relational queries.</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="why-sqlite-specifically"><a class="header" href="#why-sqlite-specifically">Why SQLite specifically</a></h3>
+<ul>
+<li><strong><code>rusqlite</code></strong> is a mature, well-maintained Rust crate with no unsafe surprises</li>
+<li><strong>Single-file database</strong> — fits the “just a binary” deployment model. No connection strings, no separate database process, no credentials to manage</li>
+<li><strong>Self-hosting alignment</strong> — a community relay operator on a €5 VPS gets persistent match history without installing or operating a database server</li>
+<li><strong>FTS5 full-text search</strong> — covers workshop resource search and replay text search without Elasticsearch or a separate search service</li>
+<li><strong>WAL mode</strong> — handles concurrent reads from web endpoints while a single writer persists new records. Sufficient for community-scale deployments (hundreds of concurrent users, not millions)</li>
+<li><strong>WASM-compatible</strong> — <code>sql.js</code> (Emscripten build of SQLite) or <code>sqlite-wasm</code> for the browser target. The client-side replay catalog and gameplay event log work in the browser build.</li>
+<li><strong>Ad-hoc investigation</strong> — any operator can open the <code>.db</code> file in DB Browser for SQLite, DBeaver, or the <code>sqlite3</code> CLI and run queries immediately. No Grafana dashboards required. This fills the gap between “just stdout logs” and “full OTEL stack” for community self-hosters.</li>
+</ul>
+<h3 id="relationship-to-d031-otel-telemetry"><a class="header" href="#relationship-to-d031-otel-telemetry">Relationship to D031 (OTEL Telemetry)</a></h3>
+<p>D031 (OTEL) and D034 (SQLite) are complementary, not competing:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Concern</th><th>D031 (OTEL)</th><th>D034 (SQLite)</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Real-time monitoring</strong></td><td>Yes — Prometheus metrics, Grafana dashboards</td><td>No</td></tr>
+<tr><td><strong>Distributed tracing</strong></td><td>Yes — Jaeger traces across clients and relay</td><td>No</td></tr>
+<tr><td><strong>Persistent records</strong></td><td>No — metrics are time-windowed, logs rotate</td><td>Yes — match history, ratings, replays are permanent</td></tr>
+<tr><td><strong>Ad-hoc investigation</strong></td><td>Requires OTEL stack running</td><td>Just open the <code>.db</code> file</td></tr>
+<tr><td><strong>Offline operation</strong></td><td>No — needs collector + backends</td><td>Yes — works standalone</td></tr>
+<tr><td><strong>Client-side debugging</strong></td><td>Requires exporting to a collector</td><td>Local <code>.db</code> file, queryable immediately</td></tr>
+<tr><td><strong>AI training pipeline</strong></td><td>Yes — Parquet/Arrow export for ML</td><td>Source data — gameplay events could be exported from SQLite to Parquet</td></tr>
+</tbody>
+</table>
+</div>
+<p>OTEL is for operational monitoring and distributed debugging. SQLite is for persistent records, metadata indices, and standalone investigation. Tournament servers and relay servers use both — OTEL for dashboards, SQLite for match history.</p>
+<h3 id="consumers-of-player-data"><a class="header" href="#consumers-of-player-data">Consumers of Player Data</a></h3>
+<p>SQLite isn’t just infrastructure — it’s a UX pillar. Multiple crates read the client-side database to deliver features no other RTS offers:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Consumer</th><th>Crate</th><th>What it reads</th><th>What it produces</th><th>Required?</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Player-facing analytics</strong></td><td><code>ra-ui</code></td><td><code>gameplay_events</code>, <code>matches</code>, <code>match_players</code>, <code>campaign_missions</code>, <code>roster_snapshots</code></td><td>Post-game stats screen, career stats page, campaign dashboard with roster/veterancy graphs, mod balance dashboard</td><td>Always on</td></tr>
+<tr><td><strong>Adaptive AI</strong></td><td><code>ra-ai</code></td><td><code>matches</code>, <code>match_players</code>, <code>gameplay_events</code></td><td>Difficulty adjustment, build order variety, counter-strategy selection based on player tendencies</td><td>Always on</td></tr>
+<tr><td><strong>LLM personalization</strong></td><td><code>ra-llm</code></td><td><code>matches</code>, <code>gameplay_events</code>, <code>campaign_missions</code>, <code>roster_snapshots</code></td><td>Personalized missions, adaptive briefings, post-match commentary, coaching suggestions, rivalry narratives</td><td><strong>Optional</strong> — requires BYOLLM provider configured (D016)</td></tr>
+</tbody>
+</table>
+</div>
+<p>Player analytics and adaptive AI are always available. LLM personalization activates only when the player has configured an LLM provider — the game is fully functional without it.</p>
+<p>All consumers are read-only. The sim writes nothing (invariant #1) — <code>gameplay_events</code> are recorded by a Bevy observer system outside <code>ra-sim</code>, and <code>matches</code>/<code>campaign_missions</code> are written at session boundaries.</p>
+<h3 id="player-facing-analytics-ra-ui"><a class="header" href="#player-facing-analytics-ra-ui">Player-Facing Analytics (<code>ra-ui</code>)</a></h3>
+<p>No other RTS surfaces your own match data this way. SQLite makes it trivial — queries run on a background thread, results drive a lightweight chart component in <code>ra-ui</code> (Bevy 2D: line, bar, pie, heatmap, stacked area).</p>
+<p><strong>Post-game stats screen</strong> (after every match):</p>
+<ul>
+<li>Unit production timeline (stacked area: units built per minute by type)</li>
+<li>Resource income/expenditure curves</li>
+<li>Combat engagement heatmap (where fights happened on the map)</li>
+<li>APM over time, army value graph, tech tree timing</li>
+<li>Head-to-head comparison table vs opponent</li>
+<li>All data: <code>SELECT ... FROM gameplay_events WHERE session_id = ?</code></li>
+</ul>
+<p><strong>Career stats page</strong> (main menu):</p>
+<ul>
+<li>Win rate by faction, map, opponent, game mode — over time and lifetime</li>
+<li>Rating history graph (Glicko-2 from matchmaking, synced to local DB)</li>
+<li>Most-used units, highest kill-count units, signature strategies</li>
+<li>Session history: date, map, opponent, result, duration — clickable → replay</li>
+<li>All data: <code>SELECT ... FROM matches JOIN match_players ...</code></li>
+</ul>
+<p><strong>Campaign dashboard</strong> (D021 integration):</p>
+<ul>
+<li>Roster composition graph per mission (how your army evolves across the campaign)</li>
+<li>Veterancy progression: track named units across missions (the tank that survived from mission 1)</li>
+<li>Campaign path visualization: which branches you took, which missions you replayed</li>
+<li>Performance trends: completion time, casualties, resource efficiency per mission</li>
+<li>All data: <code>SELECT ... FROM campaign_missions JOIN roster_snapshots ...</code></li>
+</ul>
+<p><strong>Mod balance dashboard</strong> (Phase 6, for mod developers):</p>
+<ul>
+<li>Unit win-rate contribution, cost-efficiency scatter plots, engagement outcome distributions</li>
+<li>Compare across balance presets (D019) or mod versions</li>
+<li><code>ic mod stats</code> CLI command reads the same SQLite database</li>
+<li>All data: <code>SELECT ... FROM gameplay_events WHERE mod_id = ?</code></li>
+</ul>
+<h3 id="llm-personalization-ra-llm--optional-byollm"><a class="header" href="#llm-personalization-ra-llm--optional-byollm">LLM Personalization (<code>ra-llm</code>) — Optional, BYOLLM</a></h3>
+<p>When a player has configured an LLM provider (see BYOLLM in D016), <code>ra-llm</code> reads the local SQLite database (read-only) and injects player context into generation prompts. This is entirely optional — every game feature works without it. No data leaves the device unless the user’s chosen LLM provider is cloud-based.</p>
+<p><strong>Personalized mission generation:</strong></p>
+<ul>
+<li>“You’ve been playing Soviet heavy armor for 12 games. Here’s a mission that forces infantry-first tactics.”</li>
+<li>“Your win rate drops against Allied naval. This coastal defense mission trains that weakness.”</li>
+<li>Prompt includes: faction preferences, unit usage patterns, win/loss streaks, map size preferences — all from SQLite aggregates.</li>
+</ul>
+<p><strong>Adaptive briefings:</strong></p>
+<ul>
+<li>Campaign briefings reference your actual roster: “Commander, your veteran Tesla Tank squad from Vladivostok is available for this operation.”</li>
+<li>Difficulty framing adapts to performance: struggling player gets “intel reports suggest light resistance”; dominant player gets “expect fierce opposition.”</li>
+<li>Queries <code>roster_snapshots</code> and <code>campaign_missions</code> tables.</li>
+</ul>
+<p><strong>Post-match commentary:</strong></p>
+<ul>
+<li>LLM generates a narrative summary of the match from <code>gameplay_events</code>: “The turning point was at 8:42 when your MiG strike destroyed the Allied War Factory, halting tank production for 3 minutes.”</li>
+<li>Highlights unusual events: first-ever use of a unit type, personal records, close calls.</li>
+<li>Optional — disabled by default, requires LLM provider configured.</li>
+</ul>
+<p><strong>Coaching suggestions:</strong></p>
+<ul>
+<li>“You built 40 Rifle Infantry across 5 games but they had a 12% survival rate. Consider mixing in APCs for transport.”</li>
+<li>“Your average expansion timing is 6:30. Top players expand at 4:00-5:00.”</li>
+<li>Queries aggregate statistics from <code>gameplay_events</code> across multiple sessions.</li>
+</ul>
+<p><strong>Rivalry narratives:</strong></p>
+<ul>
+<li>Track frequent opponents from <code>matches</code> table: “You’re 3-7 against PlayerX. They favor Allied air rushes — here’s a counter-strategy mission.”</li>
+<li>Generate rivalry-themed campaign missions featuring opponent tendencies.</li>
+</ul>
+<h3 id="adaptive-ai-ra-ai"><a class="header" href="#adaptive-ai-ra-ai">Adaptive AI (<code>ra-ai</code>)</a></h3>
+<p><code>ra-ai</code> reads the player’s match history to calibrate skirmish and campaign AI behavior. No learning during the match — all adaptation happens between games by querying SQLite.</p>
+<ul>
+<li><strong>Difficulty scaling:</strong> AI selects from difficulty presets based on player win rate over recent N games. Avoids both stomps and frustration.</li>
+<li><strong>Build order variety:</strong> AI avoids repeating the same strategy the player has already beaten. Queries <code>gameplay_events</code> for AI build patterns the player countered successfully.</li>
+<li><strong>Counter-strategy selection:</strong> If the player’s last 5 games show heavy tank play, AI is more likely to choose anti-armor compositions.</li>
+<li><strong>Campaign-specific:</strong> In branching campaigns (D021), AI reads the player’s roster strength from <code>roster_snapshots</code> and adjusts reinforcement timing accordingly.</li>
+</ul>
+<p>This is designer-authored adaptation (the AI author sets the rules for how history influences behavior), not machine learning. The SQLite queries are simple aggregates run at mission load time.</p>
+<p><strong>Fallback:</strong> When no match history is available (first launch, empty database, WASM/headless builds without SQLite), <code>ra-ai</code> falls back to default difficulty presets and random strategy selection. All SQLite reads are behind an <code>Option&lt;impl AiHistorySource&gt;</code> — the AI is fully functional without it, just not personalized.</p>
+<h3 id="client-side-schema-key-tables"><a class="header" href="#client-side-schema-key-tables">Client-Side Schema (Key Tables)</a></h3>
+<pre><code class="language-sql">-- Match history (synced from matchmaking server when online, always written locally)
+CREATE TABLE matches (
+    id              INTEGER PRIMARY KEY,
+    session_id      TEXT NOT NULL UNIQUE,
+    map_name        TEXT NOT NULL,
+    game_mode       TEXT NOT NULL,
+    balance_preset  TEXT NOT NULL,
+    mod_id          TEXT,
+    duration_ticks  INTEGER NOT NULL,
+    started_at      TEXT NOT NULL,
+    replay_path     TEXT,
+    replay_hash     BLOB
+);
+
+CREATE TABLE match_players (
+    match_id    INTEGER REFERENCES matches(id),
+    player_name TEXT NOT NULL,
+    faction     TEXT NOT NULL,
+    team        INTEGER,
+    result      TEXT NOT NULL,  -- 'victory', 'defeat', 'disconnect', 'draw'
+    is_local    INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (match_id, player_name)
+);
+
+-- Gameplay events (D031 structured events, written per session)
+CREATE TABLE gameplay_events (
+    id          INTEGER PRIMARY KEY,
+    session_id  TEXT NOT NULL,
+    tick        INTEGER NOT NULL,
+    event_type  TEXT NOT NULL,   -- 'unit_built', 'unit_killed', 'building_placed', ...
+    player      TEXT,
+    data_json   TEXT NOT NULL    -- event-specific payload
+);
+
+-- Campaign state (D021 branching campaigns)
+CREATE TABLE campaign_missions (
+    id              INTEGER PRIMARY KEY,
+    campaign_id     TEXT NOT NULL,
+    mission_id      TEXT NOT NULL,
+    outcome         TEXT NOT NULL,
+    duration_ticks  INTEGER NOT NULL,
+    completed_at    TEXT NOT NULL,
+    casualties      INTEGER,
+    resources_spent INTEGER
+);
+
+CREATE TABLE roster_snapshots (
+    id          INTEGER PRIMARY KEY,
+    mission_id  INTEGER REFERENCES campaign_missions(id),
+    snapshot_at TEXT NOT NULL,   -- 'mission_start' or 'mission_end'
+    roster_json TEXT NOT NULL    -- serialized unit list with veterancy, equipment
+);
+
+-- FTS5 for replay and map search (contentless — populated via triggers on matches + match_players)
+CREATE VIRTUAL TABLE replay_search USING fts5(
+    player_names, map_name, factions, content=''
+);
+-- Triggers on INSERT into matches/match_players aggregate player_names and factions
+-- into the FTS index. Contentless means FTS stores its own copy — no content= source mismatch.
+</code></pre>
+<h3 id="schema-migration"><a class="header" href="#schema-migration">Schema Migration</a></h3>
+<p>Each service manages its own schema using embedded SQL migrations (numbered, applied on startup). The <code>rusqlite</code> <code>user_version</code> pragma tracks the current schema version. Forward-only migrations — the binary upgrades the database file automatically on first launch after an update.</p>
+<h3 id="scaling-path"><a class="header" href="#scaling-path">Scaling Path</a></h3>
+<p>SQLite is the default and the right choice for 95% of deployments. For the official infrastructure at high scale, individual services can optionally be configured to use PostgreSQL by swapping the storage backend trait implementation. The schema is designed to be portable (standard SQL, no SQLite-specific syntax). FTS5 is used for full-text search on Workshop and replay catalogs — a PostgreSQL backend would substitute <code>tsvector</code>/<code>tsquery</code> for the same queries. This is a future optimization, not a launch requirement.</p>
+<p>Each service defines its own storage trait — no god-trait mixing unrelated concerns:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Relay server storage — match results, desync reports, behavioral profiles.
+pub trait RelayStorage: Send + Sync {
+    fn store_match_result(&amp;self, result: &amp;CertifiedMatchResult) -&gt; Result&lt;()&gt;;
+    fn query_matches(&amp;self, filter: &amp;MatchFilter) -&gt; Result&lt;Vec&lt;MatchRecord&gt;&gt;;
+    fn store_desync_report(&amp;self, report: &amp;DesyncReport) -&gt; Result&lt;()&gt;;
+    fn update_behavior_profile(&amp;self, player: PlayerId, profile: &amp;BehaviorProfile) -&gt; Result&lt;()&gt;;
+}
+
+/// Matchmaking server storage — ratings, match history, leaderboards.
+pub trait MatchmakingStorage: Send + Sync {
+    fn update_rating(&amp;self, player: PlayerId, rating: &amp;Glicko2Rating) -&gt; Result&lt;()&gt;;
+    fn leaderboard(&amp;self, scope: &amp;LeaderboardScope, limit: u32) -&gt; Result&lt;Vec&lt;LeaderboardEntry&gt;&gt;;
+    fn match_history(&amp;self, player: PlayerId, limit: u32) -&gt; Result&lt;Vec&lt;MatchRecord&gt;&gt;;
+}
+
+/// Workshop server storage — resource metadata, versions, dependencies, search.
+pub trait WorkshopStorage: Send + Sync {
+    fn publish_resource(&amp;self, meta: &amp;ResourceMetadata) -&gt; Result&lt;()&gt;;
+    fn search(&amp;self, query: &amp;str, filter: &amp;ResourceFilter) -&gt; Result&lt;Vec&lt;ResourceListing&gt;&gt;;
+    fn resolve_deps(&amp;self, root: &amp;ResourceId, range: &amp;VersionRange) -&gt; Result&lt;DependencyGraph&gt;;
+}
+
+/// SQLite implementation — each service gets its own SqliteXxxStorage struct
+/// wrapping a rusqlite::Connection (WAL mode, foreign keys on, journal_size_limit set).
+/// PostgreSQL implementations are optional, behind `#[cfg(feature = "postgres")]`.
+<span class="boring">}</span></code></pre>
+<p><strong>Phase:</strong> SQLite storage for relay and client lands in Phase 2 (replay catalog, save game index, gameplay event log). Workshop server storage lands in Phase 6 (D030). Matchmaking and tournament storage land in Phase 5 (competitive infrastructure). The <code>StorageBackend</code> trait is defined early but PostgreSQL implementation is deferred until scale requires it.</p>
 <hr>
 <h2 id="pending-decisions"><a class="header" href="#pending-decisions">PENDING DECISIONS</a></h2>
 <div class="table-wrapper">

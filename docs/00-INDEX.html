@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-4750be1b.js";
+            window.path_to_searchindex_js = "searchindex-ba27a783.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-ef8cba4b.js"></script>
@@ -211,7 +211,7 @@
 <p>These are non-negotiable across the entire project:</p>
 <ol>
 <li><strong>Simulation is pure and deterministic.</strong> No I/O, no floats, no network awareness. Takes orders, produces state. Period.</li>
-<li><strong>Network model is pluggable via trait.</strong> Game loop is generic over <code>NetworkModel</code>. Swapping lockstep for rollback touches zero sim code.</li>
+<li><strong>Network model is pluggable via trait.</strong> <code>GameLoop&lt;N: NetworkModel, I: InputSource&gt;</code> is generic over both network model and input source. The sim has zero imports from <code>ra-net</code>. They share only <code>ra-protocol</code>. Swapping lockstep for rollback touches zero sim code.</li>
 <li><strong>Modding is tiered.</strong> YAML (data) → Lua (scripting) → WASM (power). Each tier is optional and sandboxed.</li>
 <li><strong>Bevy as framework.</strong> ECS scheduling, rendering, asset pipeline, audio — Bevy handles infrastructure so we focus on game logic. Custom render passes and SIMD only where profiling justifies it.</li>
 <li><strong>Efficiency-first performance.</strong> Better algorithms, cache-friendly ECS, zero-allocation hot paths, simulation LOD, amortized work — THEN multi-core as a bonus layer. A 2-core laptop must run 500 units smoothly.</li>

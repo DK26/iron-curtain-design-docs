@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-4750be1b.js";
+            window.path_to_searchindex_js = "searchindex-ba27a783.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-ef8cba4b.js"></script>
@@ -521,14 +521,15 @@ pub enum ScreenClass {
     ├── ra-net      (depends on: ra-protocol)
     ├── ra-formats  (standalone — .mix, .shp, .pal, YAML)
     ├── ra-render   (depends on: ra-sim for reading state)
-    ├── ra-ui       (depends on: ra-sim, ra-render)
+    ├── ra-ui       (depends on: ra-sim, ra-render; reads SQLite for player analytics — D034)
     ├── ra-audio    (depends on: ra-formats)
     ├── ra-script   (depends on: ra-sim, ra-protocol)
-    ├── ra-ai       (depends on: ra-sim, ra-protocol)
-    ├── ra-llm      (depends on: ra-sim, ra-script, ra-protocol)
+    ├── ra-ai       (depends on: ra-sim, ra-protocol; reads SQLite for adaptive difficulty — D034)
+    ├── ra-llm      (depends on: ra-sim, ra-script, ra-protocol; reads SQLite for personalization — D034)
     └── ra-game     (depends on: everything above)
 </code></pre>
 <p><strong>Critical boundary:</strong> <code>ra-sim</code> never imports from <code>ra-net</code>. <code>ra-net</code> never imports from <code>ra-sim</code>. They only share <code>ra-protocol</code>.</p>
+<p><strong>Storage boundary:</strong> <code>ra-sim</code> never reads or writes SQLite (invariant #1). Three crates are read-only consumers of the client-side SQLite database: <code>ra-ui</code> (post-game stats, career page, campaign dashboard), <code>ra-llm</code> (personalized missions, adaptive briefings, coaching), <code>ra-ai</code> (difficulty scaling, counter-strategy selection). Gameplay events are written by a Bevy observer system in <code>ra-game</code>, outside the deterministic sim. See D034 in <code>09-DECISIONS.md</code>.</p>
 <h2 id="multi-game-extensibility-game-modules"><a class="header" href="#multi-game-extensibility-game-modules">Multi-Game Extensibility (Game Modules)</a></h2>
 <p>The engine is designed as a <strong>game-agnostic RTS framework</strong> with Red Alert as the first game module. The same engine should be able to run RA2, Tiberian Dawn, Dune 2000, or an original game as a different game module — like OpenRA runs TD, RA, and D2K on one engine.</p>
 <h3 id="game-module-concept"><a class="header" href="#game-module-concept">Game Module Concept</a></h3>

@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-4750be1b.js";
+            window.path_to_searchindex_js = "searchindex-ba27a783.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-ef8cba4b.js"></script>
@@ -275,6 +275,7 @@
 <li><strong>System execution order documented and fixed</strong></li>
 <li><strong>State hashing for desync detection</strong></li>
 <li><strong>Engine telemetry foundation (D031):</strong> <code>tracing</code> span instrumentation on sim systems; per-system tick timing; gameplay event stream (<code>GameplayEvent</code> enum) behind <code>telemetry</code> feature flag; zero-cost when disabled</li>
+<li><strong>Client-side SQLite storage (D034):</strong> Replay catalog, save game index, gameplay event log, asset index — embedded SQLite for local metadata; queryable without OTEL stack</li>
 </ul>
 <h3 id="release-2"><a class="header" href="#release-2">Release</a></h3>
 <p>Units moving, shooting, dying — headless sim + rendered. Record replay file. Play it back.</p>
@@ -315,6 +316,15 @@
 <li>Single-player skirmish against scripted dummy AI (first “playable” milestone)</li>
 <li>Feels like Red Alert to someone who’s played it before</li>
 </ul>
+<p><strong>Stretch goals (target Phase 3, can slip to early Phase 4 without blocking):</strong></p>
+<ul>
+<li><strong>Chart component in <code>ra-ui</code>:</strong> Lightweight Bevy 2D chart renderer (line, bar, pie, heatmap, stacked area) for post-game and career screens</li>
+<li><strong>Post-game stats screen (D034):</strong> Unit production timeline, resource curves, combat heatmap, APM graph, head-to-head comparison — all from SQLite <code>gameplay_events</code></li>
+<li><strong>Career stats page (D034):</strong> Win rate by faction/map/opponent, rating history graph, session history with replay links — from SQLite <code>matches</code> + <code>match_players</code></li>
+</ul>
+<blockquote>
+<p><strong>Note:</strong> Phase 3’s hard goal is “feels like Red Alert” — sidebar, audio, selection, build placement. The stats screens and chart component are high-value polish but depend on accumulated gameplay data, so they can mature alongside Phase 4 without blocking the “playable” milestone.</p>
+</blockquote>
 <h2 id="phase-4-ai--single-player-months-1620"><a class="header" href="#phase-4-ai--single-player-months-1620">Phase 4: AI &amp; Single Player (Months 16–20)</a></h2>
 <p><strong>Goal:</strong> Complete campaign support and skirmish AI. Unlike OpenRA, single-player is a first-class deliverable, not an afterthought.</p>
 <h3 id="deliverables-4"><a class="header" href="#deliverables-4">Deliverables</a></h3>
@@ -329,6 +339,8 @@
 <li><strong>Continuous campaign flow:</strong> briefing → mission → debrief → next mission (no exit-to-menu between levels)</li>
 <li><strong>Campaign select and mission map UI:</strong> visualize campaign graph, show current position, replay completed missions</li>
 <li><strong>Adaptive difficulty via campaign state:</strong> designer-authored conditional bonuses/penalties based on cumulative performance</li>
+<li><strong>Campaign dashboard (D034):</strong> Roster composition graphs per mission, veterancy progression for named units, campaign path visualization, performance trends — from SQLite <code>campaign_missions</code> + <code>roster_snapshots</code></li>
+<li><strong><code>ra-ai</code> reads player history (D034):</strong> Skirmish AI queries SQLite <code>matches</code> + <code>gameplay_events</code> for difficulty scaling, build order variety, and counter-strategy selection between games</li>
 <li><strong>FMV cutscene playback</strong> between missions (original <code>.vqa</code> briefings and victory/defeat sequences)</li>
 <li><strong>Full Allied and Soviet campaigns</strong> for Red Alert, playable start to finish</li>
 </ul>
@@ -379,6 +391,7 @@
 <li>Spectator feed: relay forwards tick orders to observers with configurable delay</li>
 <li>Behavioral analysis pipeline on relay server</li>
 <li><strong>Backend OTEL telemetry (D031):</strong> relay + tracking + workshop servers emit metrics/traces/logs via OpenTelemetry; <code>/healthz</code>, <code>/readyz</code>, <code>/metrics</code> endpoints; distributed trace IDs for desync debugging across clients and relay; pre-built Grafana dashboards; optional <code>docker-compose.observability.yaml</code> overlay for self-hosters</li>
+<li><strong>Backend SQLite storage (D034):</strong> Relay server persists match results, desync reports, behavioral profiles; matchmaking server persists player ratings, match history, seasonal data — all in embedded SQLite, no external database</li>
 </ul>
 <h3 id="exit-criteria-5"><a class="header" href="#exit-criteria-5">Exit Criteria</a></h3>
 <ul>
@@ -402,11 +415,12 @@
 <li><strong>Mod templates:</strong> <code>data-mod</code>, <code>scripted-mod</code>, <code>total-conversion</code>, <code>map-pack</code>, <code>asset-pack</code> via <code>ic mod init</code></li>
 <li><strong><code>mod.yaml</code> manifest</strong> with typed schema, semver engine version pinning, dependency declarations</li>
 <li><strong>VS Code extension</strong> for mod development: YAML schema validation, Lua LSP, <code>ic</code> integration</li>
-<li><strong>Workshop resource registry (D030):</strong> Federated multi-source workshop server with crates.io-style dependency resolution</li>
+<li><strong>Workshop resource registry (D030):</strong> Federated multi-source workshop server with crates.io-style dependency resolution; backed by embedded SQLite with FTS5 search (D034)</li>
 <li><strong>Dependency management CLI:</strong> <code>ic mod resolve/install/update/tree/lock/audit</code> — full dependency lifecycle</li>
 <li><strong>License enforcement:</strong> Every published resource requires SPDX license; <code>ic mod audit</code> checks dependency tree compatibility</li>
 <li><strong>Individual resource publishing:</strong> Music, sprites, textures, voice lines, cutscenes, palettes, UI themes — all publishable as independent versioned resources</li>
 <li><strong>Lockfile system:</strong> <code>ic.lock</code> for reproducible dependency resolution across machines</li>
+<li><strong>Mod balance dashboard (D034):</strong> Unit win-rate contribution, cost-efficiency scatter plots, engagement outcome distributions from SQLite <code>gameplay_events</code>; <code>ic mod stats</code> CLI reads same database</li>
 </ul>
 <h3 id="exit-criteria-6"><a class="header" href="#exit-criteria-6">Exit Criteria</a></h3>
 <ul>
@@ -417,17 +431,19 @@
 <li>An individual resource (e.g., a music track) can be published to and pulled from the Workshop independently</li>
 </ul>
 <h2 id="phase-7-ai-content--polish-months-3236"><a class="header" href="#phase-7-ai-content--polish-months-3236">Phase 7: AI Content &amp; Polish (Months 32–36+)</a></h2>
-<p><strong>Goal:</strong> LLM-generated missions, visual polish, and feature parity.</p>
-<h3 id="deliverables--ai-content-generation"><a class="header" href="#deliverables--ai-content-generation">Deliverables — AI Content Generation</a></h3>
+<p><strong>Goal:</strong> Optional LLM-generated missions (BYOLLM), visual polish, and feature parity.</p>
+<h3 id="deliverables--ai-content-generation-optional--byollm"><a class="header" href="#deliverables--ai-content-generation-optional--byollm">Deliverables — AI Content Generation (Optional — BYOLLM)</a></h3>
+<p>All LLM features require the player to configure their own LLM provider. The game is fully functional without one.</p>
 <ul>
-<li><code>ra-llm</code> crate: LLM integration for mission generation</li>
+<li><code>ra-llm</code> crate: optional LLM integration for mission generation</li>
 <li>In-game mission generator UI: describe scenario → playable mission</li>
 <li>Generated output: standard YAML map + Lua trigger scripts + briefing text</li>
 <li>Difficulty scaling: same scenario at different challenge levels</li>
 <li>Mission sharing: rate, remix, publish generated missions</li>
 <li>Campaign generation: connected multi-mission storylines (experimental)</li>
 <li>Adaptive difficulty: AI observes playstyle, generates targeted challenges (experimental)</li>
-<li><strong>LLM-driven Workshop resource discovery (D030):</strong> LLM searches Workshop by <code>llm_meta</code> tags, evaluates fitness, auto-pulls resources as dependencies for generated content; license-aware filtering</li>
+<li><strong>LLM-driven Workshop resource discovery (D030):</strong> When LLM provider is configured, LLM can search Workshop by <code>llm_meta</code> tags, evaluate fitness, auto-pull resources as dependencies for generated content; license-aware filtering</li>
+<li><strong>LLM player-aware generation (D034):</strong> When LLM provider is configured, <code>ra-llm</code> reads local SQLite for player context — faction preferences, unit usage patterns, win/loss streaks, campaign roster state; generates personalized missions, adaptive briefings, post-match commentary, coaching suggestions, rivalry narratives</li>
 <li><strong>AI training data pipeline (D031):</strong> gameplay event stream → OTEL collector → Parquet/Arrow columnar format → ML training; build order learning, engagement patterns, balance analysis from aggregated match telemetry</li>
 </ul>
 <h3 id="deliverables--visual-polish-bevy-rendering"><a class="header" href="#deliverables--visual-polish-bevy-rendering">Deliverables — Visual Polish (Bevy Rendering)</a></h3>
@@ -450,7 +466,7 @@
 <h3 id="exit-criteria-7"><a class="header" href="#exit-criteria-7">Exit Criteria</a></h3>
 <ul>
 <li>A competitive OpenRA player can switch and feel at home</li>
-<li>LLM mission generator produces varied, fun, playable missions</li>
+<li>When an LLM provider is configured, the mission generator produces varied, fun, playable missions</li>
 <li>Browser version is playable</li>
 <li>At least one total conversion mod exists on the platform</li>
 </ul>

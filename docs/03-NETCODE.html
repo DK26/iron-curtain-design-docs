@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-4750be1b.js";
+            window.path_to_searchindex_js = "searchindex-ba27a783.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-ef8cba4b.js"></script>
@@ -280,9 +280,25 @@ impl TickOrders {
 <h3 id="model-1-lockstep-with-input-delay-starting-model"><a class="header" href="#model-1-lockstep-with-input-delay-starting-model">Model 1: Lockstep with Input Delay (starting model)</a></h3>
 <pre><code>Local input at tick 50 → scheduled for tick 53 (3-tick delay)
 Remote input has 3 ticks to arrive before we need it
-Delay dynamically adjusted based on connection quality
+Delay dynamically adjusted based on connection quality AND client performance
 </code></pre>
 <p>This is what OpenRA and most RTS games use. The “lag” players feel is intentional input delay, not network stalling.</p>
+<h4 id="adaptive-run-ahead-inspired-by-cc-generals"><a class="header" href="#adaptive-run-ahead-inspired-by-cc-generals">Adaptive Run-Ahead (Inspired by C&amp;C Generals)</a></h4>
+<p>The input delay (“run-ahead”) is not static. It adapts dynamically based on <strong>both</strong> network latency <strong>and</strong> client frame rate — a pattern proven by C&amp;C Generals/Zero Hour (see <code>research/generals-zero-hour-netcode-analysis.md</code>). Generals tracked a 200-sample rolling latency history plus a “packet arrival cushion” (how many frames early orders arrive) to decide when to adjust. Their run-ahead changes were themselves synchronized network commands, ensuring all clients switch on the same frame.</p>
+<p>We adopt this pattern:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Sent periodically by each client to report its performance characteristics.
+/// The relay server (or P2P host) uses this to adjust the tick deadline.
+pub struct ClientMetrics {
+    pub avg_latency_us: u32,      // Rolling average RTT to relay/host (microseconds)
+    pub avg_fps: u16,             // Client's current rendering frame rate
+    pub arrival_cushion: i16,     // How many ticks early orders typically arrive
+    pub tick_processing_us: u32,  // How long the client takes to process one sim tick
+}
+<span class="boring">}</span></code></pre>
+<p>Why FPS matters: a player running at 15 FPS needs roughly 67ms to process and display each frame. If run-ahead is only 2 ticks (66ms at 30 tps), they have zero margin — any network jitter causes a stall. By incorporating FPS into the adaptive algorithm, we prevent slow machines from dragging down the experience for everyone.</p>
+<p>For the relay model, <code>ClientMetrics</code> informs the relay’s tick deadline calculation. For P2P lockstep, all clients agree on a shared run-ahead value (just like Generals’ synchronized <code>RUNAHEAD</code> command).</p>
 <h3 id="model-2-relay-server-with-time-authority-recommended-default"><a class="header" href="#model-2-relay-server-with-time-authority-recommended-default">Model 2: Relay Server with Time Authority (recommended default)</a></h3>
 <pre><code>┌────────┐         ┌──────────────┐         ┌────────┐
 │Player A│────────▶│ Relay Server │◀────────│Player B│
@@ -320,7 +336,9 @@ Delay dynamically adjusted based on connection quality
 }
 <span class="boring">}</span></code></pre>
 <h3 id="model-3-fog-authoritative-server-anti-maphack"><a class="header" href="#model-3-fog-authoritative-server-anti-maphack">Model 3: Fog-Authoritative Server (anti-maphack)</a></h3>
-<p>Server runs full sim, sends each client only entities they should see. Breaks pure lockstep (clients run partial sims), requires server compute per game. See <code>06-SECURITY.md</code> for details.</p>
+<p>Server runs full sim, sends each client only entities they should see. Breaks pure lockstep (clients run partial sims), requires server compute per game. See <code>06-SECURITY.md</code> for full threat analysis.</p>
+<p><strong>Entity prioritization:</strong> The server can’t send every visible entity every tick — bandwidth is finite. We adopt Fiedler’s priority accumulator (2015): each entity tracks priority persistently between frames, accruing additional priority based on staleness (time since last sent to this client). Units in combat and projectiles are highest priority (sent every tick); distant static structures are lowest (deferred but eventually sent). This guarantees a strict bandwidth upper bound while ensuring no entity is permanently starved. See <code>06-SECURITY.md</code> § Vulnerability 1 for the full design.</p>
+<p><strong>Traffic class consideration:</strong> For FogAuth mode, player <em>input</em> (orders) and server <em>state</em> (entity updates) have different reliability requirements. Orders are small, latency-critical, and loss-intolerant — best suited for a reliable ordered channel. State updates are larger, frequent, and can tolerate occasional loss (the next update supersedes) — suited for an unreliable channel with delta compression. Bryant &amp; Saiedian (2021) recommend this segregation. A dual-channel approach (reliable for orders, unreliable for state) would optimize both latency and bandwidth.</p>
 <h3 id="model-4-rollback--ggpo-style-experimental-future"><a class="header" href="#model-4-rollback--ggpo-style-experimental-future">Model 4: Rollback / GGPO-style (experimental future)</a></h3>
 <p>Requires snapshottable sim (already designed). Client predicts with local input, rolls back on misprediction. Expensive for RTS (re-simulating hundreds of entities), but feasible with Rust’s performance. See GGPO documentation for reference implementation.</p>
 <h2 id="input-responsiveness-why-our-model-feels-faster"><a class="header" href="#input-responsiveness-why-our-model-feels-faster">Input Responsiveness: Why Our Model Feels Faster</a></h2>
@@ -414,6 +432,46 @@ fn on_move_order_issued(click_pos: WorldPos, selected_units: &amp;[Entity]) {
 }
 <span class="boring">}</span></code></pre>
 <p>At 30 tps, a click-to-move in single player is confirmed within ~33ms — imperceptible to humans (reaction time is ~200ms). Combined with visual prediction, the game feels <strong>instant</strong>.</p>
+<h2 id="frame-data-resilience"><a class="header" href="#frame-data-resilience">Frame Data Resilience</a></h2>
+<p>UDP is unreliable — packets can arrive corrupted, duplicated, reordered, or not at all. Inspired by C&amp;C Generals’ <code>FrameDataManager</code> (see <code>research/generals-zero-hour-netcode-analysis.md</code>), our frame data handling uses a three-state readiness model rather than a simple ready/waiting binary:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub enum FrameReadiness {
+    Ready,                     // All orders received and verified
+    Waiting,                   // Still expecting orders from one or more players
+    Corrupted { from: PlayerId }, // Orders received but failed integrity check — request resend
+}
+<span class="boring">}</span></code></pre>
+<p>When <code>Corrupted</code> is detected, the system automatically requests retransmission from the specific player (or relay). A circular buffer retains the last N ticks of sent frame data (Generals used 65 frames) so resend requests can be fulfilled without re-generating the data.</p>
+<p>This is strictly better than the relay model’s “missed deadline → Idle” fallback: a corrupted packet that arrives on time gets a second chance via resend rather than being silently replaced with no-op. The deadline-based Idle fallback remains as the last resort if resend also fails.</p>
+<h2 id="network-simulation-tools-development"><a class="header" href="#network-simulation-tools-development">Network Simulation Tools (Development)</a></h2>
+<p>Inspired by Generals’ debug network simulation features, all <code>NetworkModel</code> implementations support artificial network condition injection:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Configurable network conditions for testing. Applied at the transport layer.
+/// Only available in debug/development builds — compiled out of release.
+pub struct NetworkSimConfig {
+    pub latency_ms: u32,          // Artificial one-way latency added to each packet
+    pub jitter_ms: u32,           // Random ± jitter on top of latency
+    pub packet_loss_pct: f32,     // Percentage of packets silently dropped (0.0–100.0)
+    pub corruption_pct: f32,      // Percentage of packets with random bit flips
+    pub bandwidth_limit_kbps: Option&lt;u32&gt;,  // Throttle outgoing bandwidth
+    pub duplicate_pct: f32,       // Percentage of packets sent twice
+    pub reorder_pct: f32,         // Percentage of packets delivered out of order
+}
+<span class="boring">}</span></code></pre>
+<p>This is invaluable for testing edge cases (desync under packet loss, adaptive run-ahead behavior, frame resend logic) without needing actual bad networks. Accessible via debug console or lobby settings in development builds.</p>
+<h2 id="disconnect-handling"><a class="header" href="#disconnect-handling">Disconnect Handling</a></h2>
+<p>Graceful disconnection is a first-class protocol concern, not an afterthought. Inspired by Generals’ 7-type disconnect protocol (see <code>research/generals-zero-hour-netcode-analysis.md</code>), we handle disconnects deterministically:</p>
+<p><strong>Relay model:</strong> The relay server detects disconnection via heartbeat timeout and notifies all clients of the specific tick on which the player is removed. All clients process the removal on the same tick — deterministic.</p>
+<p><strong>P2P lockstep model:</strong> When a player appears unresponsive:</p>
+<ol>
+<li><strong>Ping verification</strong> — all players ping the suspect to confirm unreachability (prevents false blame from asymmetric routing)</li>
+<li><strong>Blame attribution</strong> — ping results determine who is actually disconnected vs. who is just slow</li>
+<li><strong>Coordinated removal</strong> — remaining players agree on a specific tick number to remove the disconnected player, ensuring all sims stay synchronized</li>
+<li><strong>Historical frame buffer</strong> — recent frame data is preserved so if the disconnecting player was also the packet router (P2P star topology), other players can recover missed frames</li>
+</ol>
+<p>For competitive/ranked games, disconnect blame feeds into the match result: the blamed player takes the loss; remaining players can optionally continue or end the match without penalty.</p>
 <h2 id="desync-detection--debugging"><a class="header" href="#desync-detection--debugging">Desync Detection &amp; Debugging</a></h2>
 <p>Every <code>NetworkModel</code> must accept <code>report_sync_hash()</code>. The system works:</p>
 <ol>
@@ -443,6 +501,15 @@ pub struct OpenRACodec {
 }
 <span class="boring">}</span></code></pre>
 <p>See <code>07-CROSS-ENGINE.md</code> for full cross-engine compatibility design.</p>
+<h3 id="delta-compressed-native-wire-format"><a class="header" href="#delta-compressed-native-wire-format">Delta-Compressed Native Wire Format</a></h3>
+<p>Inspired by C&amp;C Generals’ <code>NetPacket</code> format (see <code>research/generals-zero-hour-netcode-analysis.md</code>), our <code>NativeCodec</code> uses delta-compressed tag-length-value (TLV) encoding:</p>
+<ul>
+<li><strong>Tag bytes</strong> — single ASCII byte identifies the field: <code>T</code>ype, <code>K</code>(tic<strong>K</strong>), <code>P</code>layer, <code>S</code>ub-tick, <code>D</code>ata</li>
+<li><strong>Delta encoding</strong> — fields are only written when they differ from the previous order in the same packet. If the same player sends 5 orders on the same tick, the player ID and tick number are written once.</li>
+<li><strong>Empty-tick compression</strong> — ticks with no orders compress to a single byte (Generals used <code>Z</code>). In a typical RTS, ~80% of ticks have zero orders from any given player.</li>
+<li><strong>MTU-aware packet sizing</strong> — packets stay under 476 bytes (single IP fragment, no UDP fragmentation). Fragmented UDP packets multiply loss probability — if any fragment is lost, the entire packet is dropped.</li>
+</ul>
+<p>For typical RTS traffic (0-2 orders per player per tick, long stretches of idle), this compresses wire traffic by roughly 5-10x compared to naively serializing every <code>TimestampedOrder</code>.</p>
 <h2 id="replay-system"><a class="header" href="#replay-system">Replay System</a></h2>
 <p>Replays are a natural byproduct of the architecture:</p>
 <pre><code>Replay file = initial state + sequence of TickOrders
@@ -522,7 +589,10 @@ tracking_servers:
 <h3 id="openra-shared-browser"><a class="header" href="#openra-shared-browser">OpenRA Shared Browser</a></h3>
 <p>Implementing the OpenRA master server protocol means Iron Curtain games can appear in OpenRA’s game browser (and vice versa), tagged by engine. Players see the full community. This is the Level 0 cross-engine compatibility from <code>07-CROSS-ENGINE.md</code>.</p>
 <h3 id="tracking-server-implementation"><a class="header" href="#tracking-server-implementation">Tracking Server Implementation</a></h3>
-<p>The server itself is straightforward — a REST or WebSocket API backed by an in-memory store with TTL expiry. No database needed. Listings expire if the host stops sending heartbeats.</p>
+<p>The server itself is straightforward — a REST or WebSocket API backed by an in-memory store with TTL expiry. No database needed — listings are ephemeral and expire if the host stops sending heartbeats.</p>
+<blockquote>
+<p><strong>Note:</strong> The tracking server is the only backend service with truly ephemeral data. The relay, workshop, and matchmaking servers all persist data beyond process lifetime using embedded SQLite (D034). See <code>09-DECISIONS.md</code> § D034 for the full storage model.</p>
+</blockquote>
 <h2 id="backend-infrastructure-tracking--relay"><a class="header" href="#backend-infrastructure-tracking--relay">Backend Infrastructure (Tracking + Relay)</a></h2>
 <p>Both the tracking server and relay server are <strong>standalone Rust binaries</strong>. The simplest deployment is running the executable on any computer — a home PC, a friend’s always-on machine, a €5 VPS, or a Raspberry Pi. No containers, no cloud, no special infrastructure required.</p>
 <p>For larger-scale or production deployments, both services also ship as container images with docker-compose.yaml (one-command setup) and Helm charts (Kubernetes). But containers are an option, not a requirement.</p>
@@ -549,17 +619,17 @@ tracking_servers:
                           └─────┬──────────┬──────────┬───────┘
                                 │          │          │
                           ┌─────▼──┐ ┌─────▼──┐ ┌────▼───┐
-                          │ Relay  │ │ Relay  │ │ Relay  │   ← stateless per-game
-                          │  Pod   │ │  Pod   │ │  Pod   │      sessions (sticky)
-                          └────────┘ └────────┘ └────────┘
+                          │ Relay  │ │ Relay  │ │ Relay  │   ← per-game sessions
+                          │  Pod   │ │  Pod   │ │  Pod   │      (sticky, SQLite for
+                          └────────┘ └────────┘ └────────┘       persistent records)
 </code></pre>
 <h3 id="design-principles"><a class="header" href="#design-principles">Design Principles</a></h3>
 <ol>
 <li>
-<p><strong>Just a binary.</strong> Each server is a single Rust executable with zero mandatory dependencies. Run it directly (<code>./tracking-server</code> or <code>./relay-server</code>), as a systemd service, in Docker, or in Kubernetes — whatever suits the operator. No database, no runtime, no JVM. Download, configure, run.</p>
+<p><strong>Just a binary.</strong> Each server is a single Rust executable with zero mandatory external dependencies. Run it directly (<code>./tracking-server</code> or <code>./relay-server</code>), as a systemd service, in Docker, or in Kubernetes — whatever suits the operator. No external database, no runtime, no JVM. Download, configure, run. Services that need persistent storage use an embedded SQLite database file (D034) — no separate database process to install or operate.</p>
 </li>
 <li>
-<p><strong>Stateless processes.</strong> Each tracking server instance holds no critical state — for a single-instance deployment, listings live in memory with TTL expiry. For multi-instance deployments, listings are shared via Redis (or equivalent KV store). Killing the process loses nothing permanent. Relay servers hold per-game session state but games are short-lived; if a relay dies, the game reconnects or falls back to P2P.</p>
+<p><strong>Stateless or self-contained.</strong> The tracking server holds no critical state — listings live in memory with TTL expiry (for multi-instance: shared via Redis). The relay, workshop, and matchmaking servers persist data (match results, resource metadata, ratings) to an embedded SQLite file (D034). Killing a process loses only in-flight game sessions — persistent records survive in the <code>.db</code> file. Relay servers hold per-game session state in memory but games are short-lived; if a relay dies, the game reconnects or falls back to P2P.</p>
 </li>
 <li>
 <p><strong>Community self-hosting is a first-class use case.</strong> A clan, tournament organizer, or hobbyist runs the same binary on their own machine. No cloud account needed. No Docker needed. The binary reads a config file or env vars and starts listening. For those who prefer containers, <code>docker-compose up</code> works too. For production scale, Helm charts are available.</p>
@@ -606,12 +676,17 @@ services:
       - MAX_PLAYERS_PER_GAME=16
       - TICK_TIMEOUT=5s         # drop orders after 5s — anti-lag-switch
       - REGION=eu-west          # reported to tracking server
+    volumes:
+      - relay-data:/data        # SQLite DB for match results, profiles (D034)
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9091/healthz"]
 
   redis:
     image: redis:7-alpine       # only needed for multi-instance tracking
     profiles: ["scaled"]
+
+volumes:
+  relay-data:                   # persistent storage for relay's SQLite DB
 </code></pre>
 <p><strong>Option 3: Kubernetes / Helm (production scale)</strong></p>
 <p>For the official deployment or large community servers that need horizontal scaling:</p>
@@ -667,7 +742,7 @@ relay:
 <tbody>
 <tr><td>Tracking server dies</td><td>Browse requests fail; existing games unaffected</td><td>Restart process; multi-instance setups have other replicas</td></tr>
 <tr><td>All tracking servers down</td><td>No game browser; existing games unaffected</td><td>Direct IP, join codes, QR still work</td></tr>
-<tr><td>Relay server dies</td><td>Games on that instance disconnect</td><td>Clients reconnect to another instance or fall back to P2P</td></tr>
+<tr><td>Relay server dies</td><td>Games on that instance disconnect; persistent data (match results, profiles) survives in SQLite (D034)</td><td>Clients reconnect to another instance or fall back to P2P</td></tr>
 <tr><td>Official infra fully offline</td><td>Community tracking/relay servers still operational</td><td>Federation means no single operator is critical</td></tr>
 </tbody>
 </table>

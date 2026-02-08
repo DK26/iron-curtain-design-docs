@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-4750be1b.js";
+            window.path_to_searchindex_js = "searchindex-ba27a783.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-ef8cba4b.js"></script>
@@ -471,11 +471,49 @@ end)
 <h3 id="lua-sandbox-rules"><a class="header" href="#lua-sandbox-rules">Lua Sandbox Rules</a></h3>
 <ul>
 <li>Only engine-provided functions available (no <code>io</code>, <code>os</code>, <code>require</code> from filesystem)</li>
+<li><code>os.time()</code>, <code>os.clock()</code>, <code>os.date()</code> are removed entirely — Lua scripts read game time via <code>Trigger.GetTick()</code> and <code>DateTime.GameTime</code></li>
 <li>Fixed-point math provided via engine bindings (no raw floats)</li>
-<li>Execution time limits per tick</li>
+<li>Execution resource limits per tick (see <code>LuaExecutionLimits</code> below)</li>
 <li>Memory limits per mod</li>
 </ul>
 <p><strong>Determinism note:</strong> Lua’s internal number type is <code>f64</code>, but this does not affect sim determinism. Lua has <strong>read-only access</strong> to game state and <strong>write access exclusively through orders</strong> (and campaign state writes like <code>Campaign.set_flag()</code>, which are themselves deterministic because they execute at the same pipeline step on every client). The sim processes orders deterministically — Lua cannot directly modify sim components. Lua evaluation produces identical results across all clients because it runs at the same point in the system pipeline (the <code>triggers</code> step, see system execution order in <code>02-ARCHITECTURE.md</code>), with the same game state as input, on every tick. Any Lua-driven campaign state mutations are applied deterministically within this step, ensuring save/load and replay consistency.</p>
+<p><strong>Additional determinism safeguards:</strong></p>
+<ul>
+<li><strong>String hashing → deterministic <code>pairs()</code>:</strong> Lua’s internal string hash uses a randomized seed by default (since Lua 5.3.3). The sandbox initializes <code>mlua</code> with a fixed seed, making hash table slot ordering identical across all clients. Combined with our deterministic pipeline (same code, same state, same insertion order on every client), this makes <code>pairs()</code> iteration order deterministic without modification. No sorted wrapper is needed — <code>pairs()</code> runs at native speed (zero overhead). For mod authors who want <em>explicit</em> ordering for gameplay clarity (e.g., “process units alphabetically”), the engine provides <code>Utils.SortedPairs(t)</code> — but this is a convenience for readability, not a determinism requirement. <code>ipairs()</code> is already deterministic (sequential integer keys) and should be preferred for array-style tables.</li>
+<li><strong>Garbage collection timing:</strong> Lua’s GC is configured with a fixed-step incremental mode (<code>LUA_GCINC</code>) with identical parameters on all clients. Finalizers (<code>__gc</code> metamethods) are disabled in the sandbox — mods cannot register them. This eliminates GC-timing-dependent side effects.</li>
+<li><strong><code>math.random()</code>:</strong> Removed from the sandbox. Mods use the engine-provided <code>Utils.RandomInteger(min, max)</code> which draws from the sim’s deterministic PRNG.</li>
+</ul>
+<h3 id="lua-execution-resource-limits"><a class="header" href="#lua-execution-resource-limits">Lua Execution Resource Limits</a></h3>
+<p>WASM mods have <code>WasmExecutionLimits</code> (see Tier 3 below). Lua scripts need equivalent protection — without execution budgets, a Lua <code>while true do end</code> would block the deterministic tick indefinitely, freezing all clients in lockstep.</p>
+<p>The <code>mlua</code> crate supports instruction count hooks via <code>Lua::set_hook(HookTriggers::every_nth_instruction(N), callback)</code>. The engine uses this to enforce per-tick execution budgets:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Per-tick execution budget for Lua scripts, enforced via mlua instruction hooks.
+/// Exceeding the instruction limit terminates the script's current callback —
+/// the sim continues without the script's remaining contributions for that tick.
+/// A warning is logged and the mod is flagged for the host.
+pub struct LuaExecutionLimits {
+    pub max_instructions_per_tick: u32,    // mlua instruction hook fires at this count
+    pub max_memory_bytes: usize,           // mlua memory limit callback
+    pub max_entity_spawns_per_tick: u32,   // Mirrors WASM limit — prevents chain-reactive spawns
+    pub max_orders_per_tick: u32,          // Prevents order pipeline flooding
+    pub max_host_calls_per_tick: u32,      // Bounds engine API call volume
+}
+
+impl Default for LuaExecutionLimits {
+    fn default() -&gt; Self {
+        Self {
+            max_instructions_per_tick: 1_000_000,  // ~1M Lua instructions — generous for missions
+            max_memory_bytes: 8 * 1024 * 1024,     // 8 MB (Lua is lighter than WASM)
+            max_entity_spawns_per_tick: 32,
+            max_orders_per_tick: 64,
+            max_host_calls_per_tick: 1024,
+        }
+    }
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Why this matters:</strong> The same reasoning as WASM limits applies. In deterministic lockstep, a runaway Lua script on one client blocks the tick for all players (everyone waits for the slowest client). The instruction limit ensures Lua callbacks complete in bounded time. Because the limit is deterministic (same instruction budget, same cutoff point), all clients agree on when a script is terminated — no desync.</p>
+<p><strong>Mod authors can request higher limits</strong> via their mod manifest, same as WASM mods. The lobby displays requested limits and players can accept or reject. Campaign/mission scripts bundled with the game use elevated limits since they are trusted first-party content.</p>
 <h2 id="tier-3-wasm-modules"><a class="header" href="#tier-3-wasm-modules">Tier 3: WASM Modules</a></h2>
 <h3 id="rationale"><a class="header" href="#rationale">Rationale</a></h3>
 <ul>
@@ -522,6 +560,35 @@ pub enum NetworkAccess {
     // NEVER unrestricted
 }
 <span class="boring">}</span></code></pre>
+<h3 id="wasm-execution-resource-limits"><a class="header" href="#wasm-execution-resource-limits">WASM Execution Resource Limits</a></h3>
+<p>Capability-based API controls <em>what</em> a mod can do. Execution resource limits control <em>how much</em>. Without them, a mod could consume unbounded CPU or spawn unbounded entities — degrading performance for all players and potentially overwhelming the network layer (Bryant &amp; Saiedian 2021 documented this in Risk of Rain 2: “procedurally generated effects combined to produce unintended chain-reactive behavior which may ultimately overwhelm the ability for game clients to render objects or handle sending/receiving of game update messages”).</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Per-tick execution budget enforced by the WASM runtime (wasmtime fuel metering).
+/// Exceeding any limit terminates the mod's tick callback early — the sim continues
+/// without the mod's remaining contributions for that tick.
+pub struct WasmExecutionLimits {
+    pub fuel_per_tick: u64,              // wasmtime fuel units (~1 per wasm instruction)
+    pub max_memory_bytes: usize,         // WASM linear memory cap (default: 16 MB)
+    pub max_entity_spawns_per_tick: u32, // Prevents chain-reactive entity explosions (default: 32)
+    pub max_orders_per_tick: u32,        // AI mods can't flood the order pipeline (default: 64)
+    pub max_host_calls_per_tick: u32,    // Bounds API call volume (default: 1024)
+}
+
+impl Default for WasmExecutionLimits {
+    fn default() -&gt; Self {
+        Self {
+            fuel_per_tick: 1_000_000,       // ~1M instructions — generous for most mods
+            max_memory_bytes: 16 * 1024 * 1024,  // 16 MB
+            max_entity_spawns_per_tick: 32,
+            max_orders_per_tick: 64,
+            max_host_calls_per_tick: 1024,
+        }
+    }
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Why this matters for multiplayer:</strong> In deterministic lockstep, all clients run the same mods. A mod that consumes excessive CPU causes tick overruns on slower machines, triggering adaptive run-ahead increases for everyone. A mod that spawns hundreds of entities per tick inflates state size and network traffic. The execution limits prevent a single mod from degrading the experience — and because the limits are deterministic (same fuel budget, same cutoff point), all clients agree on when a mod is throttled.</p>
+<p><strong>Mod authors can request higher limits</strong> via their mod manifest. The lobby displays requested limits and players can accept or reject. Tournament/ranked play enforces stricter defaults.</p>
 <h3 id="3d-rendering-mods-tier-3-showcase"><a class="header" href="#3d-rendering-mods-tier-3-showcase">3D Rendering Mods (Tier 3 Showcase)</a></h3>
 <p>The most powerful example of Tier 3 modding: replacing the entire visual presentation with 3D rendering. A “3D Red Alert” mod swaps sprites for GLTF meshes and the isometric camera for a free-rotating 3D camera — while the simulation, networking, pathfinding, and rules are completely unchanged.</p>
 <p>This works because Bevy already ships a full 3D pipeline. The mod doesn’t build a 3D engine — it uses Bevy’s existing 3D renderer through the WASM mod API.</p>
@@ -1821,6 +1888,7 @@ llm:
 <p>The LLM sees workshop resources through their <code>llm_meta</code> fields. A music track tagged <code>summary: "Military march, Soviet theme, orchestral, 2:30"</code> and <code>composition_hints: "Pairs well with Soviet faction voice lines"</code> lets the LLM intelligently select and compose assets for a coherent mission experience.</p>
 <p><strong>License-aware generation:</strong> The LLM filters by license compatibility — if generating content for a CC-BY mod, it only pulls CC-BY-compatible resources (<code>CC0-1.0</code>, <code>CC-BY-4.0</code>), excluding <code>CC-BY-NC-4.0</code> or <code>CC-BY-SA-4.0</code> unless the mod’s own license is compatible.</p>
 <h3 id="workshop-api"><a class="header" href="#workshop-api">Workshop API</a></h3>
+<p>The Workshop server stores all resource metadata, versions, dependencies, ratings, and search indices in an embedded SQLite database (D034). No external database required — the server is a single Rust binary that creates its <code>.db</code> file on first run. FTS5 provides full-text search over resource names, descriptions, and <code>llm_meta</code> tags. WAL mode handles concurrent reads from browse/search endpoints.</p>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>pub trait WorkshopClient: Send + Sync {

@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-4750be1b.js";
+            window.path_to_searchindex_js = "searchindex-ba27a783.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-ef8cba4b.js"></script>
@@ -192,7 +192,12 @@
 <tbody>
 <tr><td>Maphack</td><td><strong>OPEN</strong></td><td><strong>OPEN</strong></td><td><strong>BLOCKED</strong> ✓</td></tr>
 <tr><td>Order injection</td><td>Sim rejects</td><td>Server rejects</td><td>Server rejects</td></tr>
+<tr><td>Order forgery</td><td>Ed25519 per-order sigs</td><td>Server stamps + sigs</td><td>Server stamps + sigs</td></tr>
 <tr><td>Lag switch</td><td><strong>OPEN</strong></td><td><strong>BLOCKED</strong> ✓</td><td><strong>BLOCKED</strong> ✓</td></tr>
+<tr><td>Eavesdropping</td><td>DTLS encrypted</td><td>TLS encrypted</td><td>TLS encrypted</td></tr>
+<tr><td>Packet forgery</td><td>AEAD rejects</td><td>TLS rejects</td><td>TLS rejects</td></tr>
+<tr><td>Protocol DoS</td><td>Rate limit + size caps</td><td>Relay absorbs + limits</td><td>Server absorbs + limits</td></tr>
+<tr><td>State saturation</td><td><strong>OPEN</strong></td><td>Rate caps ✓</td><td>Rate caps ✓</td></tr>
 <tr><td>Desync exploit</td><td>Possible</td><td>Server-only analysis</td><td>N/A</td></tr>
 <tr><td>Replay tampering</td><td><strong>OPEN</strong></td><td>Signed ✓</td><td>Signed ✓</td></tr>
 <tr><td>WASM mod cheating</td><td>Sandbox</td><td>Sandbox</td><td>Sandbox</td></tr>
@@ -204,6 +209,7 @@
 </table>
 </div>
 <p><strong>Recommendation:</strong> Relay server is the minimum for ranked/competitive play. Fog-authoritative server for high-stakes tournaments.</p>
+<p><strong>A note on lockstep and DoS resilience:</strong> Bryant &amp; Saiedian (2021) observe that deterministic lockstep is surprisingly the <em>best</em> architecture for resisting volumetric denial-of-service attacks. Because the simulation halts and awaits input from all clients before progressing, an attacker attempting to exhaust a victim’s bandwidth unintentionally introduces lag into their own experience as well. The relay server model adds further resilience — the relay absorbs attack traffic without forwarding it to clients.</p>
 <h2 id="vulnerability-1-maphack-architectural-limit"><a class="header" href="#vulnerability-1-maphack-architectural-limit">Vulnerability 1: Maphack (Architectural Limit)</a></h2>
 <h3 id="the-problem"><a class="header" href="#the-problem">The Problem</a></h3>
 <p>Both clients must simulate everything (enemy movement, production, harvesting), so all game state exists in process memory. Fog of war is a rendering filter — the data is always there.</p>
@@ -241,6 +247,7 @@ impl NetworkModel for FogAuthoritativeNetwork {
 }
 <span class="boring">}</span></code></pre>
 <p><strong>Trade-off:</strong> Relay server (just forwards orders) = cheap VPS handles thousands of games. Authoritative sim server = real CPU per game.</p>
+<p><strong>Entity prioritization (Fiedler’s priority accumulator):</strong> When the fog-authoritative server sends partial state to each client, it must decide <em>what</em> to send within the bandwidth budget. Fiedler (2015) devised a priority accumulator that tracks object priority persistently between frames — objects accrue additional priority based on staleness (time since last update). High-priority objects (units in combat, projectiles) are sent every frame; low-priority objects (distant static structures) are deferred but eventually sent. This ensures a strict bandwidth upper bound while guaranteeing no object is permanently starved. Iron Curtain’s <code>FogAuthoritativeNetwork</code> should implement this pattern: player-owned units and nearby enemies at highest priority, distant visible terrain objects at lowest, with staleness-based promotion ensuring eventual consistency.</p>
 <h2 id="vulnerability-2-order-injection--spoofing"><a class="header" href="#vulnerability-2-order-injection--spoofing">Vulnerability 2: Order Injection / Spoofing</a></h2>
 <h3 id="the-problem-1"><a class="header" href="#the-problem-1">The Problem</a></h3>
 <p>Malicious client sends impossible orders (build without resources, control enemy units).</p>
@@ -576,6 +583,218 @@ impl RankingService {
 }
 <span class="boring">}</span></code></pre>
 <p><strong>Key:</strong> Only relay-server-signed results update rankings. Direct P2P games can be played for fun but don’t affect ranked standings.</p>
+<h2 id="vulnerability-14-transport-layer-attacks-eavesdropping--packet-forgery"><a class="header" href="#vulnerability-14-transport-layer-attacks-eavesdropping--packet-forgery">Vulnerability 14: Transport Layer Attacks (Eavesdropping &amp; Packet Forgery)</a></h2>
+<h3 id="the-problem-13"><a class="header" href="#the-problem-13">The Problem</a></h3>
+<p>If game traffic is unencrypted or weakly encrypted, any on-path observer (same WiFi, ISP, VPN provider) can read all game data and forge packets. C&amp;C Generals used XOR with a fixed starting key <code>0xFade</code> — this is not encryption. The key is hardcoded, the increment (<code>0x00000321</code>) is constant, and a comment in the source reads “just for fun” (see <code>Transport.cpp</code> lines 42-56). Any packet could be decrypted instantly even before the GPL source release. Combined with no packet authentication (the “validation” is a simple non-cryptographic CRC), an attacker had full read/write access to all game traffic.</p>
+<p>This is not a theoretical concern. Game traffic on public WiFi, tournament LANs, or shared networks is trivially interceptable.</p>
+<h3 id="mitigation-dtls-13--noise-protocol"><a class="header" href="#mitigation-dtls-13--noise-protocol">Mitigation: DTLS 1.3 / Noise Protocol</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub enum TransportSecurity {
+    /// Relay mode: clients connect via TLS 1.3 to the relay server.
+    /// The relay terminates TLS and re-encrypts for each recipient.
+    /// Simplest model — clients authenticate to the relay, relay handles forwarding.
+    RelayTls {
+        server_cert: Certificate,
+        client_session_token: SessionToken,
+    },
+
+    /// Direct P2P: DTLS 1.3 over UDP for encrypted datagrams.
+    /// Key exchange during connection establishment (noise protocol handshake).
+    DirectDtls {
+        peer_public_key: Ed25519PublicKey,
+        session_keys: ChaCha20Poly1305Keys,
+    },
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Key design choices:</strong></p>
+<ul>
+<li><strong>Never roll custom crypto.</strong> Generals’ XOR is the cautionary example. Use established libraries (<code>rustls</code>, <code>snow</code> for noise protocol, <code>ring</code> for primitives).</li>
+<li><strong>Relay mode makes this simple.</strong> Clients open a TLS connection to the relay — standard web-grade encryption. The relay is the trust anchor.</li>
+<li><strong>Direct P2P uses DTLS.</strong> UDP-compatible TLS. The connection establishment phase (join code / direct IP) exchanges public keys. The noise protocol (<code>snow</code> crate) is an alternative with lower overhead for game traffic.</li>
+<li><strong>Authenticated encryption.</strong> Every packet is both encrypted AND authenticated (ChaCha20-Poly1305 or AES-256-GCM). Tampering is detected and the packet is dropped. This eliminates the entire class of packet-modification attacks that Generals’ XOR+CRC allowed.</li>
+<li><strong>No encrypted passwords on the wire.</strong> Lobby authentication uses session tokens issued during TLS handshake. Generals transmitted “encrypted” passwords using trivially reversible bit manipulation (see <code>encrypt.cpp</code> — passwords truncated to 8 characters, then XOR’d). We use SRP or OAuth2 — passwords never leave the client.</li>
+</ul>
+<h3 id="what-this-prevents"><a class="header" href="#what-this-prevents">What This Prevents</a></h3>
+<ul>
+<li>Eavesdropping on game state (reading opponent’s orders in transit)</li>
+<li>Packet injection (forging orders that appear to come from another player)</li>
+<li>Replay attacks (re-sending captured packets from a previous game)</li>
+<li>Credential theft (capturing lobby passwords from network traffic)</li>
+</ul>
+<h2 id="vulnerability-15-protocol-parsing-exploitation-malformed-input"><a class="header" href="#vulnerability-15-protocol-parsing-exploitation-malformed-input">Vulnerability 15: Protocol Parsing Exploitation (Malformed Input)</a></h2>
+<h3 id="the-problem-14"><a class="header" href="#the-problem-14">The Problem</a></h3>
+<p>Even with memory-safe code, a malicious peer can craft protocol messages designed to exploit the parser: oversized fields that exhaust memory, deeply nested structures that blow the stack, or invalid enum variants that cause panics. The goal is denial of service — crashing or freezing the target.</p>
+<p>C&amp;C Generals’ receive-side code is the canonical cautionary tale. The send-side is careful — every <code>FillBufferWith*</code> function checks <code>isRoomFor*</code> against <code>MAX_PACKET_SIZE</code>. But the receive-side parsers (<code>readGameMessage</code>, <code>readChatMessage</code>, <code>readFileMessage</code>, etc.) operate on raw <code>(UnsignedByte *data, Int &amp;i)</code> with <strong>no size parameter</strong>. They trust every length field, blindly advance the read cursor, and never check if they’ve run past the buffer end. Specific examples verified in Generals GPL source:</p>
+<ul>
+<li><strong><code>readFileMessage</code></strong>: reads a filename with <code>while (data[i] != 0)</code> — no length limit. A packet without a null terminator overflows a stack buffer. Then <code>dataLength</code> from the packet controls both <code>new UnsignedByte[dataLength]</code> (unbounded allocation) and <code>memcpy(buf, data + i, dataLength)</code> (out-of-bounds read).</li>
+<li><strong><code>readChatMessage</code></strong>: <code>length</code> byte controls <code>memcpy(text, data + i, length * sizeof(UnsignedShort))</code>. No check that the packet actually contains that many bytes.</li>
+<li><strong><code>readWrapperMessage</code></strong>: reassembles chunked commands with network-supplied <code>totalDataLength</code>. An attacker claiming billions of bytes forces unbounded allocation.</li>
+<li><strong><code>ConstructNetCommandMsgFromRawData</code></strong>: dispatches to type-specific readers, but an unknown command type leaves <code>msg</code> as NULL, then dereferences it — instant crash.</li>
+</ul>
+<p>Rust eliminates the buffer overflows (slices enforce bounds), but not the denial-of-service vectors.</p>
+<h3 id="mitigation-defense-in-depth-protocol-parsing"><a class="header" href="#mitigation-defense-in-depth-protocol-parsing">Mitigation: Defense-in-Depth Protocol Parsing</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// All protocol parsing goes through a BoundedReader that tracks remaining bytes.
+/// Every read operation checks available length first. Underflow returns Err, never panics.
+pub struct BoundedReader&lt;'a&gt; {
+    data: &amp;'a [u8],
+    pos: usize,
+}
+
+impl&lt;'a&gt; BoundedReader&lt;'a&gt; {
+    pub fn read_u8(&amp;mut self) -&gt; Result&lt;u8, ProtocolError&gt; {
+        if self.pos &gt;= self.data.len() { return Err(ProtocolError::Truncated); }
+        let val = self.data[self.pos];
+        self.pos += 1;
+        Ok(val)
+    }
+
+    pub fn read_bytes(&amp;mut self, len: usize) -&gt; Result&lt;&amp;'a [u8], ProtocolError&gt; {
+        if self.pos + len &gt; self.data.len() { return Err(ProtocolError::Truncated); }
+        let slice = &amp;self.data[self.pos..self.pos + len];
+        self.pos += len;
+        Ok(slice)
+    }
+
+    pub fn remaining(&amp;self) -&gt; usize { self.data.len() - self.pos }
+}
+
+/// Hard limits on all protocol fields — reject before allocating.
+pub struct ProtocolLimits {
+    pub max_order_size: usize,               // 4 KB — single order
+    pub max_orders_per_tick: usize,           // 256 — per player
+    pub max_chat_message_length: usize,       // 512 chars
+    pub max_file_transfer_size: usize,        // 64 KB — map files
+    pub max_pending_data_per_peer: usize,     // 256 KB — total buffered per connection
+    pub max_reassembled_command_size: usize,  // 64 KB — chunked/wrapper commands
+}
+
+/// Command type dispatch uses exhaustive matching — unknown types return Err.
+fn parse_command(reader: &amp;mut BoundedReader, cmd_type: u8) -&gt; Result&lt;NetCommand, ProtocolError&gt; {
+    match cmd_type {
+        CMD_FRAME =&gt; parse_frame_command(reader),
+        CMD_ORDER =&gt; parse_order_command(reader),
+        CMD_CHAT  =&gt; parse_chat_command(reader),
+        CMD_ACK   =&gt; parse_ack_command(reader),
+        CMD_FILE  =&gt; parse_file_command(reader),
+        _         =&gt; Err(ProtocolError::UnknownCommandType(cmd_type)),
+    }
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Design principles (each addresses a specific Generals vulnerability):</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Principle</th><th>Addresses</th><th>Implementation</th></tr>
+</thead>
+<tbody>
+<tr><td>Length-delimited reads</td><td>All read*Message functions lacking bounds checks</td><td><code>BoundedReader</code> with remaining-bytes tracking</td></tr>
+<tr><td>Hard size caps</td><td>Unbounded allocation via network-supplied lengths</td><td><code>ProtocolLimits</code> checked before any allocation</td></tr>
+<tr><td>Exhaustive command dispatch</td><td>NULL dereference on unknown command type</td><td>Rust <code>match</code> with <code>_ =&gt; Err(...)</code></td></tr>
+<tr><td>Per-connection memory budget</td><td>Wrapper/chunking memory exhaustion</td><td>Track per-peer buffered bytes, disconnect on exceeded</td></tr>
+<tr><td>Rate limiting at transport layer</td><td>Packet flood consuming parse CPU</td><td>Max packets/second per source IP, connection cookies</td></tr>
+<tr><td>Separate parse and execute</td><td>Malformed input affecting game state</td><td>Parse into validated types first, then execute. Parse failures never touch sim.</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>The core insight from Generals:</strong> Send-side code is careful (validates sizes before building packets). Receive-side code trusts everything. This asymmetry is the root cause of most vulnerabilities. Our protocol layer must apply the same rigor to <strong>parsing</strong> as to <strong>serialization</strong> — which Rust’s type system naturally encourages via <code>serde::Deserialize</code> with explicit error handling.</p>
+<blockquote>
+<p>For the full vulnerability catalog from Generals source code analysis, see <code>research/rts-netcode-security-vulnerabilities.md</code>.</p>
+</blockquote>
+<h2 id="vulnerability-16-order-source-authentication-p2p-forgery"><a class="header" href="#vulnerability-16-order-source-authentication-p2p-forgery">Vulnerability 16: Order Source Authentication (P2P Forgery)</a></h2>
+<h3 id="the-problem-15"><a class="header" href="#the-problem-15">The Problem</a></h3>
+<p>In relay mode, the relay server stamps each order with the authenticated sender’s player slot — forgery is prevented by the trusted relay. But in direct P2P modes (<code>LockstepNetwork</code>), orders contain a self-declared <code>playerID</code>. A malicious client can forge orders with another player’s ID, sending commands for units they don’t own.</p>
+<p>Generals’ <code>ConstructNetCommandMsgFromRawData</code> reads the player ID from the ‘P’ tag in the packet data with no validation against the source address. Any peer can claim to be any player.</p>
+<p>Order <em>validation</em> (D012) catches ownership violations — commanding units you don’t own is rejected deterministically. But without authentication, a malicious client can still forge valid orders <em>as</em> the victim player (e.g., ordering the victim’s units to walk into danger). Validation checks whether the <em>order</em> is legal for that player — it doesn’t check whether the <em>sender</em> is that player.</p>
+<h3 id="mitigation-ed25519-per-order-signing"><a class="header" href="#mitigation-ed25519-per-order-signing">Mitigation: Ed25519 Per-Order Signing</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct AuthenticatedOrder {
+    pub order: TimestampedOrder,
+    pub signature: Ed25519Signature,  // Signed by sender's session keypair
+}
+
+/// Each player generates an ephemeral Ed25519 keypair at game start.
+/// Public keys are exchanged during lobby setup (over TLS — see Vulnerability 14).
+/// The relay server also holds all public keys and validates signatures before forwarding.
+pub struct SessionAuth {
+    pub player_id: PlayerId,
+    pub signing_key: Ed25519SigningKey,   // Private — never leaves client
+    pub peer_keys: HashMap&lt;PlayerId, Ed25519VerifyingKey&gt;,  // All players' public keys
+}
+
+impl SessionAuth {
+    /// Sign an outgoing order
+    pub fn sign_order(&amp;self, order: &amp;TimestampedOrder) -&gt; AuthenticatedOrder {
+        let bytes = order.to_canonical_bytes();
+        let signature = self.signing_key.sign(&amp;bytes);
+        AuthenticatedOrder { order: order.clone(), signature }
+    }
+
+    /// Verify an incoming order came from the claimed player
+    pub fn verify_order(&amp;self, auth_order: &amp;AuthenticatedOrder) -&gt; Result&lt;(), AuthError&gt; {
+        let expected_key = self.peer_keys.get(&amp;auth_order.order.player)
+            .ok_or(AuthError::UnknownPlayer)?;
+        let bytes = auth_order.order.to_canonical_bytes();
+        expected_key.verify(&amp;bytes, &amp;auth_order.signature)
+            .map_err(|_| AuthError::InvalidSignature)
+    }
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Key design choices:</strong></p>
+<ul>
+<li><strong>Ephemeral session keys.</strong> Generated fresh for each game. No long-lived keys to steal. Key exchange happens during lobby setup over the encrypted channel (Vulnerability 14).</li>
+<li><strong>Defense in depth.</strong> Relay mode: relay validates signatures AND stamps orders. P2P mode: each client validates all peers’ signatures. Both: sim validates order legality (D012).</li>
+<li><strong>Overhead is minimal.</strong> Ed25519 signing is ~15,000 ops/second on a single core. At peak RTS APM (~300 orders/minute = 5/second), signature overhead is negligible.</li>
+<li><strong>Replays include signatures.</strong> The signed order chain in replays allows post-hoc verification that no orders were tampered with — useful for tournament dispute resolution.</li>
+</ul>
+<h2 id="vulnerability-17-state-saturation-order-flooding"><a class="header" href="#vulnerability-17-state-saturation-order-flooding">Vulnerability 17: State Saturation (Order Flooding)</a></h2>
+<h3 id="the-problem-16"><a class="header" href="#the-problem-16">The Problem</a></h3>
+<p>Bryant &amp; Saiedian (2021) introduced the term “state saturation” to describe a class of lag-based attack where a player generates disproportionate network traffic through rapid game actions — starving other players’ command messages and gaining a competitive edge. Their companion paper (<em>A State Saturation Attack against Massively Multiplayer Online Videogames</em>, ICISSP 2021) demonstrated this via animation canceling: rapidly interrupting actions generates far more state updates than normal play, consuming bandwidth that would otherwise carry opponents’ orders.</p>
+<p>The companion ICISSP paper (2021) demonstrated this empirically via Elder Scrolls Online: when players exploited animation canceling (rapidly alternating offensive and defensive inputs to bypass client-side throttling), network traffic increased by <strong>+175% packets sent</strong> and <strong>+163% packets received</strong> compared to the intended baseline. A prominent community figure demonstrated a <strong>50% DPS increase</strong> (70K → 107K) through this technique — proving the competitive advantage is real and measurable.</p>
+<p>In an RTS context, this could manifest as:</p>
+<ul>
+<li><strong>Order flooding:</strong> Spamming hundreds of move/stop/move/stop commands per tick to consume relay server processing capacity and delay other players’ orders</li>
+<li><strong>Chain-reactive mod effects:</strong> A mod creates ability chains that spawn hundreds of entities or effects per tick, overwhelming the sim and network (the paper’s Risk of Rain 2 case study found “procedurally generated effects combined to produce unintended chain-reactive behavior which may ultimately overwhelm the ability for game clients to render objects or handle sending/receiving of game update messages”)</li>
+<li><strong>Build order spam:</strong> Rapidly queuing and canceling production to generate maximum order traffic</li>
+</ul>
+<h3 id="mitigation-already-addressed-by-design"><a class="header" href="#mitigation-already-addressed-by-design">Mitigation: Already Addressed by Design</a></h3>
+<p>Our architecture prevents state saturation at multiple layers:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Orders per player are hard-capped at the protocol level.
+pub struct ProtocolLimits {
+    pub max_orders_per_tick: usize,     // 256 — no player can flood the pipeline
+    pub max_order_size: usize,          // 4 KB — no single oversized order
+    pub max_pending_data_per_peer: usize, // 256 KB — total buffered per connection
+}
+
+/// The relay server enforces fair bandwidth allocation.
+impl RelayServer {
+    fn process_player_orders(&amp;mut self, player: PlayerId, orders: Vec&lt;PlayerOrder&gt;) {
+        // Hard cap: excess orders silently dropped
+        let accepted = &amp;orders[..orders.len().min(self.limits.max_orders_per_tick)];
+
+        // Behavioral flag: sustained max-rate ordering is suspicious
+        self.profiles[player].record_order_rate(accepted.len());
+
+        self.tick_orders.add(player, accepted);
+    }
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Why this works for Iron Curtain specifically:</strong></p>
+<ul>
+<li><strong>Relay server (D007) is the bandwidth arbiter.</strong> Each player gets equal processing. One player’s flood cannot starve another’s inputs — the relay processes all players’ orders independently within the tick window.</li>
+<li><strong>Order rate caps (ProtocolLimits)</strong> prevent any single player from exceeding 256 orders per tick. Normal RTS play peaks around 5-10 orders/tick even at professional APM levels.</li>
+<li><strong>WASM mod sandbox</strong> limits entity creation and instruction count per tick, preventing chain-reactive state explosions from mod code.</li>
+<li><strong>Sub-tick timestamps (D008)</strong> ensure that even within a tick, order priority is based on actual submission time — not on who flooded more orders.</li>
+</ul>
+<p><strong>Lesson from the ESO case study:</strong> The Elder Scrolls Online relied on client-side “soft throttling” (animations that gate input) alongside server-side “hard throttling” (cooldown timers). Players bypassed the soft throttle by using different input types to interrupt animations — the priority/interrupt system intended for reactive defense became an exploit. The lesson: <strong>client-side throttling that can be circumvented by input type-switching is ineffective.</strong> Server-side validation is the real throttle — which is exactly what our relay does. Zenimax eventually moved block validation server-side, adding an RTT penalty — the same trade-off our relay architecture accepts by design.</p>
+<blockquote>
+<p><strong>Academic reference:</strong> Bryant, B.D. &amp; Saiedian, H. (2021). <em>An evaluation of videogame network architecture performance and security.</em> Computer Networks, 192, 108128. DOI: <a href="https://doi.org/10.1016/j.comnet.2021.108128">10.1016/j.comnet.2021.108128</a>. Companion: Bryant, B.D. &amp; Saiedian, H. (2021). <em>A State Saturation Attack against Massively Multiplayer Online Videogames.</em> ICISSP 2021.</p>
+</blockquote>
 <h2 id="competitive-integrity-summary"><a class="header" href="#competitive-integrity-summary">Competitive Integrity Summary</a></h2>
 <p>Iron Curtain’s anti-cheat is <strong>architectural, not bolted on.</strong> Every defense emerges from design decisions made for other reasons:</p>
 <div class="table-wrapper">
@@ -586,8 +805,13 @@ impl RankingService {
 <tbody>
 <tr><td>Maphack</td><td>Fog-authoritative server</td><td>Network model architecture</td></tr>
 <tr><td>Order injection</td><td>Deterministic validation in sim</td><td>Sim purity (invariant #1)</td></tr>
+<tr><td>Order forgery (P2P)</td><td>Ed25519 per-order signing</td><td>Session auth design</td></tr>
 <tr><td>Lag switch</td><td>Relay server owns the clock</td><td>Relay architecture (D007)</td></tr>
 <tr><td>Speed hack</td><td>Relay tick authority</td><td>Same as above</td></tr>
+<tr><td>State saturation</td><td>Rate caps + relay bandwidth arbiter</td><td>ProtocolLimits + relay (D007)</td></tr>
+<tr><td>Eavesdropping</td><td>DTLS / TLS transport encryption</td><td>Transport security design</td></tr>
+<tr><td>Packet forgery</td><td>Authenticated encryption (AEAD)</td><td>Transport security design</td></tr>
+<tr><td>Protocol DoS</td><td>BoundedReader + size caps + rate limits</td><td>Protocol hardening</td></tr>
 <tr><td>Replay tampering</td><td>Ed25519 signed hash chain</td><td>Replay system design</td></tr>
 <tr><td>Automation</td><td>Behavioral analysis + community reports</td><td>Relay-side observability</td></tr>
 <tr><td>Result fraud</td><td>Relay-certified match results</td><td>Relay architecture</td></tr>

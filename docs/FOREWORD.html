@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-4750be1b.js";
+            window.path_to_searchindex_js = "searchindex-ba27a783.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-ef8cba4b.js"></script>
@@ -218,7 +218,7 @@
 <p><strong>Switchable netcode</strong> — inspired by how CS2 does sub-tick processing and relay servers. If we pick the wrong networking model, or something better comes along, we should be able to swap it without touching the simulation code.</p>
 <p><strong>Community independence</strong> — the game should never die because someone turns off a server. Self-hosted everything. Federated workshop. No single point of failure.</p>
 <p><strong>Security done through architecture</strong> — not a kernel-level anti-cheat, but real defenses: order validation inside the simulation, signed replays, relay servers that own the clock. Stuff that comes from building backend systems and knowing how people cheat.</p>
-<p><strong>LLM-generated missions</strong> — this is the part that excites me most. What if you could describe a scenario in plain English and get a playable mission? Like OFP’s mission editor, but you just tell it what you want. The output is standard YAML and Lua, fully editable. Infinite content.</p>
+<p><strong>LLM-generated missions</strong> — this is the part that excites me most. What if you could describe a scenario in plain English and get a playable mission? Like OFP’s mission editor, but you just tell it what you want. The output is standard YAML and Lua, fully editable. You bring your own LLM — local or cloud, your choice. The game works perfectly without one, but for those who opt in: infinite content.</p>
 <h2 id="where-this-is-now"><a class="header" href="#where-this-is-now">Where This Is Now</a></h2>
 <p>I put all of these ideas together and did a serious research phase to figure out what’s actually feasible. These design documents are the result. They cover architecture, networking, modding, security, performance, file format compatibility, cross-engine play, and a 36-month roadmap.</p>
 <p>Every decision has a rationale. Every system has been thought through against the others. It’s designed to be built piece by piece, tested in isolation, and contributed to by anyone who cares to.</p>
