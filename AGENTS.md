@@ -170,7 +170,7 @@ Iron Curtain **ships** one netcode: relay-assisted deterministic lockstep with s
 | ------------------------- | ----------------------------------------- | ------------------------------ | ------ |
 | `LocalNetwork`            | Pass-through — orders go straight to sim  | Single player, automated tests | 2      |
 | `ReplayPlayback`          | File reader — feeds saved orders into sim | Watching replays               | 2      |
-| `LockstepNetwork`         | P2P deployment (same protocol, no relay)  | LAN, ≤3 players, direct IP    | 5      |
+| `LockstepNetwork`         | P2P deployment (same protocol, no relay)  | LAN, ≤3 players, direct IP     | 5      |
 | `RelayLockstepNetwork`    | Relay deployment (recommended for online) | Internet multiplayer, ranked   | 5      |
 | `FogAuthoritativeNetwork` | Server runs full sim, partial visibility  | Anti-maphack (future arch)     | Future |
 | `RollbackNetwork`         | GGPO-style prediction + rollback          | Experimental (future arch)     | Future |
@@ -243,6 +243,7 @@ When you need deeper detail, read the specific design doc:
 | Efficiency pyramid, profiling, performance targets, benchmarks                                    | `src/10-PERFORMANCE.md`     |
 | OpenRA feature catalog (~700 traits), gap analysis, migration mapping                             | `src/11-OPENRA-FEATURES.md` |
 | Combined Arms mod migration, Remastered recreation feasibility                                    | `src/12-MOD-MIGRATION.md`   |
+| Development philosophy, design review principles, lessons from C&C creators and OpenRA            | `src/13-PHILOSOPHY.md`      |
 
 ## Working With This Codebase
 
@@ -265,6 +266,23 @@ When you need deeper detail, read the specific design doc:
 5. If it touches networking, ensure the sim remains unaware — work through the `NetworkModel` trait.
 6. If it touches modding, respect the tiered model and sandbox constraints.
 7. If adding a new resource type (unit, weapon, structure, map), consider including an `llm:` metadata block with `summary`, `role`, and `tactical_notes`. This metadata is always optional — resources work without it. See `src/04-MODDING.md` § "LLM-Readable Resource Metadata".
+
+### Design & Code Review Philosophy
+
+All design and code review should be guided by — but not limited to — the development philosophy documented in `src/13-PHILOSOPHY.md`. That chapter compiles the publicly-stated principles of the original C&C creators (Joe Bostic, Brett Sperry, Louis Castle, Frank Klepacki, and others) and the OpenRA team. Full quotes and source material are in `research/westwood-ea-development-philosophy.md`.
+
+Key review principles drawn from the original creators:
+
+1. **"Does this make the toy soldiers come alive?"** (Bostic) — Every feature should serve the core fantasy. If it doesn't, it needs strong justification.
+2. **Fun beats documentation** (Bostic) — If something plays well but contradicts the design doc, update the doc. If it's in the doc but plays poorly, cut it.
+3. **Separate simulation from I/O** (EA source code) — The sim is the part that survives decades. Keep it pure. Rendering and networking are replaceable.
+4. **Data-driven everything** (Westwood INI philosophy) — Game values belong in YAML, not code. If a modder would want to change it, it shouldn't require recompilation.
+5. **Encourage experimentation** (Klepacki) — Write good work first, then adapt for constraints. Don't pre-optimize into mediocrity.
+6. **Great teams make great games** (Long) — Team dynamics matter more than individual technical skill. Documentation, clear invariants, and respectful collaboration enable great teams.
+7. **Scope to what you have** (Legg) — Two less-than-excellent systems are worse than one excellent system. Each phase should focus.
+8. **Make temporary compromises explicit** (OpenRA lesson) — Label experiments as experiments. Use toggles (D033) so early-phase decisions don't become irrevocable identity.
+
+These are guidelines, not a rigid checklist. Keep an open mind — the original creators themselves discovered their best ideas by iterating, not by following specifications. When a design decision feels uncertain, the philosophy doc provides grounding but should never prevent innovation.
 
 ### Known Duplication to Fix
 - Performance details appear in both `src/09-DECISIONS.md` (D015) and `src/10-PERFORMANCE.md` — the latter is canonical

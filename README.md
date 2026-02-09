@@ -276,6 +276,7 @@ See the [design documents](https://dk26.github.io/iron-curtain-design-docs/) for
 | [10-PERFORMANCE](https://dk26.github.io/iron-curtain-design-docs/10-PERFORMANCE.html)         | Efficiency-first performance philosophy               |
 | [11-OPENRA-FEATURES](https://dk26.github.io/iron-curtain-design-docs/11-OPENRA-FEATURES.html) | OpenRA feature catalog and gap analysis               |
 | [12-MOD-MIGRATION](https://dk26.github.io/iron-curtain-design-docs/12-MOD-MIGRATION.html)     | Mod migration case studies                            |
+| [13-PHILOSOPHY](https://dk26.github.io/iron-curtain-design-docs/13-PHILOSOPHY.html)           | Development philosophy and design review principles   |
 
 ## Contributing
 

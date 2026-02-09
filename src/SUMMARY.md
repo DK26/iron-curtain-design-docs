@@ -17,3 +17,4 @@
 - [Performance Philosophy](10-PERFORMANCE.md)
 - [OpenRA Feature Reference & Gap Analysis](11-OPENRA-FEATURES.md)
 - [Mod Migration Case Studies](12-MOD-MIGRATION.md)
+- [Development Philosophy](13-PHILOSOPHY.md)
