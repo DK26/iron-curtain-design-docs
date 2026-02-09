@@ -7,6 +7,8 @@ Iron Curtain uses **one** netcode: relay-assisted deterministic lockstep with su
 Key influences:
 - **Counter-Strike 2** — sub-tick timestamps for order fairness
 - **C&C Generals/Zero Hour** — adaptive run-ahead, frame resilience, delta-compressed wire format, disconnect handling
+- **OpenTTD** — multi-level desync debugging, token-based liveness, reconnection via state transfer
+- **Minetest** — time-budget rate control (LagPool), half-open connection defense
 - **OpenRA** — what to avoid: TCP stalling, static order latency, shallow sync buffers
 - **Bryant & Saiedian (2021)** — state saturation taxonomy, traffic class segregation
 
@@ -150,6 +152,42 @@ impl RelayServer {
 
 Repeated late deliveries accumulate strikes. Enough strikes → disconnection. The relay's tick cadence is authoritative — client clock is irrelevant. See `06-SECURITY.md` for the full anti-cheat implications.
 
+**Token-based liveness** (from OpenTTD): The relay embeds a random nonce in each FRAME packet. The client must echo it in their ACK. This distinguishes "slow but actively processing" from "TCP-alive but frozen" — a client that maintains a connection without processing game frames (crashed renderer, debugger attached, frozen UI) is caught within one missed token, not just by eventual heartbeat timeout. The token check is separate from frame acknowledgment: legitimate lag (slow packets) delays the ACK but eventually echoes the correct token, while a frozen client never echoes.
+
+### Order Rate Control
+
+Order throughput is controlled by three independent layers, each catching what the others miss:
+
+**Layer 1 — Time-budget pool (primary).** Inspired by Minetest's LagPool anti-cheat system. Each player has an order budget that refills at a fixed rate per tick and caps at a burst limit:
+
+```rust
+pub struct OrderBudget {
+    pub tokens: u32,         // Current budget (each order costs 1 token)
+    pub refill_per_tick: u32, // Tokens added per tick (e.g., 16 at 30 tps)
+    pub burst_cap: u32,       // Maximum tokens (e.g., 128)
+}
+
+impl OrderBudget {
+    fn tick(&mut self) {
+        self.tokens = (self.tokens + self.refill_per_tick).min(self.burst_cap);
+    }
+    
+    fn try_consume(&mut self, count: u32) -> u32 {
+        let accepted = count.min(self.tokens);
+        self.tokens -= accepted;
+        accepted // excess orders silently dropped
+    }
+}
+```
+
+Why this is better than a flat cap: normal play (5-10 orders/tick) never touches the limit. Legitimate bursts (mass-select 50 units and move) consume from the burst budget and succeed. Sustained abuse (bot spamming hundreds of orders per second) exhausts the budget within a few ticks, and excess orders are silently dropped. During real network lag (no orders submitted), the budget refills naturally — when the player reconnects, they have a full burst budget for their queued commands.
+
+**Layer 2 — Bandwidth throttle.** A token bucket rate limiter on raw bytes per client (from OpenTTD). `bytes_per_tick` adds tokens each tick, `bytes_per_tick_burst` caps the bucket. This catches oversized orders or rapid data that might pass the order-count budget but overwhelm bandwidth. Parameters are tuned so legitimate traffic never hits the limit.
+
+**Layer 3 — Hard ceiling.** An absolute maximum of 256 orders per player per tick (defined in `ProtocolLimits`). This is the last resort — if somehow both budget and bandwidth checks fail, this hard cap prevents any single player from flooding the tick's order list. See `06-SECURITY.md` § Vulnerability 15 for the full `ProtocolLimits` definition.
+
+**Half-open connection defense** (from Minetest): New UDP connections to the relay are marked half-open. The relay inhibits retransmission and ping responses until the client proves liveness by using its assigned session ID in a valid packet. This prevents the relay from being usable as a UDP amplification reflector — critical for any internet-facing server.
+
 ### Frame Data Resilience (from C&C Generals)
 
 UDP is unreliable — packets can arrive corrupted, duplicated, reordered, or not at all. Inspired by C&C Generals' `FrameDataManager` (see `research/generals-zero-hour-netcode-analysis.md`), our frame data handling uses a three-state readiness model rather than a simple ready/waiting binary:
@@ -181,12 +219,63 @@ For cross-engine play, the wire format is abstracted behind an `OrderCodec` trai
 
 ### Desync Detection & Debugging
 
-Every tick, each client hashes their sim state. Hashes are compared (by relay server, or exchanged P2P):
+Desyncs are the hardest problem in lockstep netcode. OpenRA has 135+ desync issues in their tracker — they hash game state per frame (via `[VerifySync]` attribute) but their sync report buffer is only 7 frames deep, which often isn't enough to capture the divergence point. Our architecture makes desyncs both **detectable** AND **diagnosable**, drawing on 20+ years of OpenTTD's battle-tested desync debugging infrastructure.
 
-1. On mismatch → desync detected at specific tick
-2. Because sim is snapshottable (D010), dump full state and diff to pinpoint exact divergence
+#### Dual-Mode State Hashing
 
-This is a **killer feature**. OpenRA has 135+ desync issues in their tracker — desyncs are a persistent, hard-to-debug problem. They hash game state per frame (via `[VerifySync]` attribute) and detect desyncs, but their sync report buffer is only 7 frames deep, which often isn't enough to capture the divergence point. Our architecture makes desyncs both detectable AND diagnosable.
+Every tick, each client hashes their sim state. But a full `state_hash()` over the entire ECS world is expensive. We use a two-tier approach (validated by both OpenTTD and 0 A.D.):
+
+- **Primary: RNG state comparison.** Every sync frame, clients exchange their deterministic RNG seed. If the RNG diverges, the sim has diverged — this catches ~99% of desyncs at near-zero cost. The RNG is advanced by every stochastic sim operation (combat rolls, scatter patterns, AI decisions), so any state divergence quickly contaminates it.
+- **Fallback: Full state hash.** Periodically (every N ticks, configurable — default 120, ~4 seconds at 30 tps) or when RNG drift is detected, compute and compare a full `state_hash()`. This catches the rare case where a desync affects only deterministic state that doesn't touch the RNG.
+
+The relay server (or P2P peers) compares hashes. On mismatch → desync detected at a specific tick. Because the sim is snapshottable (D010), dump full state and diff to pinpoint exact divergence — entity by entity, component by component.
+
+#### Debug Levels (from OpenTTD)
+
+Desync diagnosis uses configurable debug levels. Each level adds overhead, so higher levels are only enabled when actively hunting a bug:
+
+```rust
+/// Debug levels for desync diagnosis. Set via config or debug console.
+/// Each level includes all lower levels.
+pub enum DesyncDebugLevel {
+    /// Level 0: No debug overhead. RNG sync only. Production default.
+    Off = 0,
+    /// Level 1: Log all orders to a structured file (order-log.bin).
+    /// Enables order-log replay for offline diagnosis.
+    OrderLog = 1,
+    /// Level 2: Run derived-state validation every tick.
+    /// Checks that caches (spatial hash, fog grid, pathfinding data)
+    /// match authoritative state. Zero production impact — debug only.
+    CacheValidation = 2,
+    /// Level 3: Save periodic snapshots at configurable interval.
+    /// Names: desync_{game_seed}_{tick}.snap for bisection.
+    PeriodicSnapshots = 3,
+}
+```
+
+**Level 1 — Order logging.** Every order is logged to a structured binary file with the tick number and sync state at that tick. This enables **order-log replay**: load the initial state + replay orders, comparing logged sync state against replayed state at each tick. When they diverge, you've found the exact tick where the desync was introduced. OpenTTD has used this technique for 20+ years — it's the most effective desync diagnosis tool ever built for lockstep games.
+
+**Level 2 — Cache validation.** Systematic validation of derived/cached data against source-of-truth data every tick. The spatial hash, fog-of-war grid, pathfinding caches, and any other precomputed data are recomputed from authoritative ECS state and compared. A mismatch means a cache update was missed somewhere — a cache bug, not a sim bug. OpenTTD's `CheckCaches()` function validates towns, companies, vehicles, and stations this way. This catches an entire class of bugs that full-state hashing misses (the cache diverges, but the authoritative state is still correct — until something reads the stale cache).
+
+**Level 3 — Periodic snapshots.** Save full sim snapshots at a configurable interval (default: every 300 ticks, ~10 seconds). Snapshots are named `desync_{game_seed}_{tick}.snap` — sorting by seed groups snapshots from the same game, sorting by tick within a game enables binary search for the divergence point. This is OpenTTD's `dmp_cmds_XXXXXXXX_YYYYYYYY.sav` pattern adapted for IC.
+
+#### Validation Purity Enforcement
+
+Order validation (D012, `06-SECURITY.md` § Vulnerability 2) must have **zero side effects**. OpenTTD learned this the hard way — their "test run" of commands sometimes modified state, causing desyncs that took years to find. In debug builds, we enforce purity automatically:
+
+```rust
+#[cfg(debug_assertions)]
+fn validate_order_checked(&mut self, player: PlayerId, order: &PlayerOrder) -> OrderValidity {
+    let hash_before = self.state_hash();
+    let result = self.validate_order(player, order);
+    let hash_after = self.state_hash();
+    assert_eq!(hash_before, hash_after,
+        "validate_order() modified sim state! Order: {:?}, Player: {:?}", order, player);
+    result
+}
+```
+
+This `debug_assert` catches validation impurity at the moment it happens, not weeks later when a desync report arrives. Zero cost in release builds.
 
 ### Disconnect Handling (from C&C Generals)
 
@@ -201,6 +290,29 @@ Graceful disconnection is a first-class protocol concern, not an afterthought. I
 4. **Historical frame buffer** — recent frame data is preserved so if the disconnecting player was also the packet router (P2P star topology), other players can recover missed frames
 
 For competitive/ranked games, disconnect blame feeds into the match result: the blamed player takes the loss; remaining players can optionally continue or end the match without penalty.
+
+### Reconnection
+
+A disconnected player can rejoin a game in progress. This uses the same snapshottable sim (D010) that enables save games and replays:
+
+1. **Reconnecting client contacts the relay** (or host in P2P). The relay verifies identity via the session key established at game start.
+2. **Server creates a snapshot** of the current sim state and streams it to the reconnecting client. Any pending orders queued during the snapshot are sent alongside it (from OpenTTD: `NetworkSyncCommandQueue`), closing the gap between snapshot creation and delivery.
+3. **Client loads the snapshot** and enters a catchup state, processing ticks at accelerated speed until it reaches the current tick.
+4. **Client becomes active** once it's within one tick of the server. Orders resume flowing normally.
+
+```rust
+pub enum ClientStatus {
+    Connecting,          // Transport established, awaiting authentication
+    Authorized,          // Identity verified, awaiting state transfer
+    Downloading,         // Receiving snapshot
+    CatchingUp,          // Processing ticks at accelerated speed
+    Active,              // Fully synced, orders flowing
+}
+```
+
+The relay server sends keepalive messages to the reconnecting client during download (prevents timeout) and queues that player's slot as `PlayerOrder::Idle` until catchup completes. Other players experience no interruption — the game never pauses for a reconnection.
+
+**Timeout:** If reconnection doesn't complete within a configurable window (default: 60 seconds), the player is permanently dropped. This prevents a malicious player from cycling disconnect/reconnect to disrupt the game indefinitely.
 
 ### Visual Prediction (Cosmetic, Not Sim)
 
@@ -270,17 +382,17 @@ Honest players on good connections always get responsive gameplay. A lagging pla
 
 *OpenRA values are from source code analysis, not runtime benchmarks. Tick processing times are estimates.*
 
-| Factor                      | OpenRA                               | Iron Curtain                          | Improvement                           |
-| --------------------------- | ------------------------------------ | ------------------------------------- | ------------------------------------- |
-| Waiting for slowest client  | Yes — everyone freezes               | No — relay drops late orders          | Eliminates worst-case stalls entirely |
-| Order batching interval     | Every N frames (`NetFrameInterval`)  | Every tick                            | No batching delay                     |
-| Order scheduling delay      | +`OrderLatency` ticks                | +1 tick (next relay broadcast)        | Fewer ticks of delay                  |
-| Tick processing time        | Estimated 30-60ms (limits tick rate) | ~8ms (allows higher tick rate)        | 4-8x faster per tick                  |
-| Achievable tick rate        | ~15 tps                              | 30+ tps                               | 2x shorter lockstep window            |
-| GC pauses during processing | C# GC characteristic                 | 0ms                                   | Eliminates unpredictable hitches      |
-| Visual feedback on click    | Waits for order confirmation         | Immediate (cosmetic prediction)       | Perceived lag drops to near-zero      |
-| Single-player order delay   | 1 projected frame (~66ms at 15 tps)  | 0 frames (`LocalNetwork` = next tick) | Zero delay                            |
-| Worst connection impact     | Freezes all players                  | Only affects the lagging player       | Architectural fairness                |
+| Factor                      | OpenRA                               | Iron Curtain                                          | Improvement                            |
+| --------------------------- | ------------------------------------ | ----------------------------------------------------- | -------------------------------------- |
+| Waiting for slowest client  | Yes — everyone freezes               | No — relay drops late orders                          | Eliminates worst-case stalls entirely  |
+| Order batching interval     | Every N frames (`NetFrameInterval`)  | Every tick                                            | No batching delay                      |
+| Order scheduling delay      | +`OrderLatency` ticks                | +1 tick (next relay broadcast)                        | Fewer ticks of delay                   |
+| Tick processing time        | Estimated 30-60ms (limits tick rate) | ~8ms (allows higher tick rate)                        | 4-8x faster per tick                   |
+| Achievable tick rate        | ~15 tps                              | 30+ tps                                               | 2x shorter lockstep window             |
+| GC pauses during processing | C# GC characteristic                 | 0ms                                                   | Eliminates unpredictable hitches       |
+| Visual feedback on click    | Waits for order confirmation         | Immediate (cosmetic prediction)                       | Perceived lag drops to near-zero       |
+| Single-player order delay   | 1 projected frame (~66ms at 15 tps)  | 0 frames (`LocalNetwork` = next tick)                 | Zero delay                             |
+| Worst connection impact     | Freezes all players                  | Only affects the lagging player                       | Architectural fairness                 |
 | Architectural headroom      | No sim snapshots                     | Snapshottable sim (D010) enables future rollback/GGPO | Path to eliminating perceived MP delay |
 
 ## The NetworkModel Trait
@@ -357,11 +469,7 @@ The `NetworkModel` trait also keeps the door open for fundamentally different ne
 
 ### Fog-Authoritative Server (anti-maphack)
 
-Server runs full sim, sends each client only entities they should see. Breaks pure lockstep (clients run partial sims), requires server compute per game. See `06-SECURITY.md` for full threat analysis.
-
-**Entity prioritization:** The server can't send every visible entity every tick — bandwidth is finite. We adopt Fiedler's priority accumulator (2015): each entity tracks priority persistently between frames, accruing additional priority based on staleness (time since last sent to this client). Units in combat and projectiles are highest priority (sent every tick); distant static structures are lowest (deferred but eventually sent). This guarantees a strict bandwidth upper bound while ensuring no entity is permanently starved. See `06-SECURITY.md` § Vulnerability 1 for the full design.
-
-**Traffic class consideration:** For FogAuth mode, player *input* (orders) and server *state* (entity updates) have different reliability requirements. Orders are small, latency-critical, and loss-intolerant — best suited for a reliable ordered channel. State updates are larger, frequent, and can tolerate occasional loss (the next update supersedes) — suited for an unreliable channel with delta compression. Bryant & Saiedian (2021) recommend this segregation. A dual-channel approach (reliable for orders, unreliable for state) would optimize both latency and bandwidth.
+Server runs full sim, sends each client only entities they should see. Breaks pure lockstep (clients run partial sims), requires server compute per game. Uses Fiedler's priority accumulator (2015) for bandwidth-bounded entity updates — units in combat are highest priority, distant static structures are deferred but eventually sent. See `06-SECURITY.md` § Vulnerability 1 for the full design including entity prioritization and traffic class segregation.
 
 ### Rollback / GGPO-Style (experimental)
 
@@ -415,6 +523,17 @@ pub struct NetworkSimConfig {
 ```
 
 This is invaluable for testing edge cases (desync under packet loss, adaptive run-ahead behavior, frame resend logic) without needing actual bad networks. Accessible via debug console or lobby settings in development builds.
+
+### Diagnostic Overlay
+
+A real-time network health display (inspired by Quake 3's lagometer) renders as a debug overlay in development builds:
+
+- **Tick timing bar** — shows how long each sim tick takes to process, with color coding (green = within budget, yellow = approaching limit, red = over budget)
+- **Order delivery timeline** — visualizes when each player's orders arrive relative to the tick deadline. Highlights late arrivals and idle substitutions.
+- **Sync health** — shows RNG hash match/mismatch per sync frame. A red flash on mismatch gives immediate visual feedback during desync debugging.
+- **Latency graph** — per-player RTT history (rolling 60 ticks). Shows jitter, trends, and spikes.
+
+The overlay is toggled via debug console (`net_diag 1`) and compiled out of release builds. It uses the same data already collected by `NetworkDiagnostics` — no additional overhead.
 
 ## Connection Establishment
 

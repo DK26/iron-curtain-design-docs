@@ -164,15 +164,17 @@ These are the **RA1 game module's** default components. Other game modules (RA2,
 
 ## Network Models
 
-| Implementation            | Use Case                           | Phase  |
-| ------------------------- | ---------------------------------- | ------ |
-| `LocalNetwork`            | Single player, tests               | 2      |
-| `ReplayPlayback`          | Watching replays                   | 2      |
-| `LockstepNetwork`         | Traditional multiplayer            | 5      |
-| `RelayLockstepNetwork`    | Relay server (recommended default) | 5      |
-| `FogAuthoritativeNetwork` | Anti-maphack (server runs sim)     | Future |
-| `RollbackNetwork`         | GGPO-style                         | Future |
-| `ProtocolAdapter<N>`      | Cross-engine wrapper               | Future |
+Iron Curtain **ships** one netcode: relay-assisted deterministic lockstep with sub-tick order fairness. `LockstepNetwork` and `RelayLockstepNetwork` implement the same protocol — the difference is topology. The `NetworkModel` trait is deliberately pluggable (D006) — the community can contribute entirely different netcode without touching sim code. The last three rows are future first-party architectures; third-party implementations are also possible.
+
+| Implementation            | What It Is                                | When Used                      | Phase  |
+| ------------------------- | ----------------------------------------- | ------------------------------ | ------ |
+| `LocalNetwork`            | Pass-through — orders go straight to sim  | Single player, automated tests | 2      |
+| `ReplayPlayback`          | File reader — feeds saved orders into sim | Watching replays               | 2      |
+| `LockstepNetwork`         | P2P deployment (same protocol, no relay)  | LAN, ≤3 players, direct IP    | 5      |
+| `RelayLockstepNetwork`    | Relay deployment (recommended for online) | Internet multiplayer, ranked   | 5      |
+| `FogAuthoritativeNetwork` | Server runs full sim, partial visibility  | Anti-maphack (future arch)     | Future |
+| `RollbackNetwork`         | GGPO-style prediction + rollback          | Experimental (future arch)     | Future |
+| `ProtocolAdapter<N>`      | Cross-engine wire format translation      | OpenRA interop (future arch)   | Future |
 
 **Connection methods** (below `NetworkModel`, transport-layer): direct IP, join codes (rendezvous + hole-punch), QR codes, relay fallback. See `src/03-NETCODE.md`.
 
@@ -189,7 +191,7 @@ These are the **RA1 game module's** default components. Other game modules (RA2,
 - **Order forgery (P2P):** Ed25519 per-order signing with ephemeral session keys. Relay mode: relay stamps orders with authenticated sender slot.
 - **Lag switch:** Relay server owns the clock. Miss the window → orders dropped. Strikes system.
 - **Speed hack:** Relay owns tick cadence — client clock irrelevant.
-- **State saturation:** Order rate caps (`ProtocolLimits.max_orders_per_tick`) + relay bandwidth arbitration prevent any single player from flooding the order pipeline. Based on Bryant & Saiedian (2021) attack taxonomy.
+- **State saturation:** Three-layer rate control — time-budget pool (`OrderBudget`, from Minetest's LagPool) + bandwidth throttle + hard cap (`ProtocolLimits.max_orders_per_tick`) + relay bandwidth arbitration prevent any single player from flooding the order pipeline. Based on Bryant & Saiedian (2021) attack taxonomy.
 - **Transport encryption:** DTLS 1.3 / TLS 1.3 for all game traffic. Never custom crypto. Generals used XOR with a fixed key — cautionary example.
 - **Protocol hardening:** `BoundedReader` with remaining-bytes tracking, hard size caps on all fields, per-connection memory budgets. Inspired by Generals source code analysis (receive-side parsers had zero bounds checking). See `research/rts-netcode-security-vulnerabilities.md`.
 - **Automation/botting:** Relay-side behavioral analysis (APM patterns, reaction times, input entropy). Detection, not prevention. No kernel-level anti-cheat.
@@ -265,7 +267,6 @@ When you need deeper detail, read the specific design doc:
 7. If adding a new resource type (unit, weapon, structure, map), consider including an `llm:` metadata block with `summary`, `role`, and `tactical_notes`. This metadata is always optional — resources work without it. See `src/04-MODDING.md` § "LLM-Readable Resource Metadata".
 
 ### Known Duplication to Fix
-- `src/00-INDEX.md` lists invariant #5 twice (duplicate line)
 - Performance details appear in both `src/09-DECISIONS.md` (D015) and `src/10-PERFORMANCE.md` — the latter is canonical
 
 ### Mistakes to Never Repeat

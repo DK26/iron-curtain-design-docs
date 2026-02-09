@@ -73,6 +73,8 @@ impl NetworkModel for FogAuthoritativeNetwork {
 
 **Entity prioritization (Fiedler's priority accumulator):** When the fog-authoritative server sends partial state to each client, it must decide *what* to send within the bandwidth budget. Fiedler (2015) devised a priority accumulator that tracks object priority persistently between frames — objects accrue additional priority based on staleness (time since last update). High-priority objects (units in combat, projectiles) are sent every frame; low-priority objects (distant static structures) are deferred but eventually sent. This ensures a strict bandwidth upper bound while guaranteeing no object is permanently starved. Iron Curtain's `FogAuthoritativeNetwork` should implement this pattern: player-owned units and nearby enemies at highest priority, distant visible terrain objects at lowest, with staleness-based promotion ensuring eventual consistency.
 
+**Traffic class segregation:** In FogAuth mode, player *input* (orders) and server *state* (entity updates) have different reliability requirements. Orders are small, latency-critical, and loss-intolerant — best suited for a reliable ordered channel. State updates are larger, frequent, and can tolerate occasional loss (the next update supersedes) — suited for an unreliable channel with delta compression. Bryant & Saiedian (2021) recommend this segregation. A dual-channel approach (reliable for orders, unreliable for state) optimizes both latency and bandwidth.
+
 ## Vulnerability 2: Order Injection / Spoofing
 
 ### The Problem
@@ -118,13 +120,11 @@ impl RelayServer {
             match self.receive_orders_from(player, deadline) {
                 Ok(orders) => self.tick_orders.add(player, orders),
                 Err(Timeout) => {
-                    self.player_budgets[player].strikes += 1;
-                    if strikes > 3 {
-                        // Drop or use last known orders
-                        self.tick_orders.add(player, PlayerOrder::RepeatLast);
-                    } else {
-                        self.tick_orders.add(player, PlayerOrder::Idle);
-                    }
+                    // Missed deadline → always Idle (never RepeatLast —
+                    // repeating the last order benefits the attacker)
+                    self.tick_orders.add(player, PlayerOrder::Idle);
+                    self.player_strikes[player] += 1;
+                    // Enough strikes → disconnect
                 }
             }
         }
@@ -134,7 +134,7 @@ impl RelayServer {
 }
 ```
 
-Server owns the clock. Miss the window → your orders are dropped. Lag switch only punishes the attacker.
+Server owns the clock. Miss the window → your orders are replaced with Idle. Lag switch only punishes the attacker. Repeated late deliveries accumulate strikes; enough strikes trigger disconnection. See `03-NETCODE.md` § Order Rate Control for the full three-layer rate limiting system (time-budget pool + bandwidth throttle + hard ceiling).
 
 ## Vulnerability 4: Desync Exploit for Information Gathering
 
@@ -541,9 +541,11 @@ impl<'a> BoundedReader<'a> {
 }
 
 /// Hard limits on all protocol fields — reject before allocating.
+/// These are the absolute ceilings. The primary rate control is the
+/// time-budget pool (OrderBudget) — see `03-NETCODE.md` § Order Rate Control.
 pub struct ProtocolLimits {
     pub max_order_size: usize,               // 4 KB — single order
-    pub max_orders_per_tick: usize,           // 256 — per player
+    pub max_orders_per_tick: usize,           // 256 — per player (hard ceiling)
     pub max_chat_message_length: usize,       // 512 chars
     pub max_file_transfer_size: usize,        // 64 KB — map files
     pub max_pending_data_per_peer: usize,     // 256 KB — total buffered per connection
@@ -645,20 +647,32 @@ In an RTS context, this could manifest as:
 
 ### Mitigation: Already Addressed by Design
 
-Our architecture prevents state saturation at multiple layers:
+Our architecture prevents state saturation at three independent layers — see `03-NETCODE.md` § Order Rate Control for the full design:
 
 ```rust
-/// Orders per player are hard-capped at the protocol level.
+/// Layer 1: Time-budget pool (primary). Each player has an OrderBudget that
+/// refills per tick and caps at a burst limit. Handles burst legitimately,
+/// catches sustained abuse. Inspired by Minetest's LagPool.
+
+/// Layer 2: Bandwidth throttle. Token bucket on raw bytes per client.
+/// Catches oversized orders that pass the order-count budget.
+
+/// Layer 3: Hard ceiling (ProtocolLimits). Absolute maximum regardless
+/// of budget/bandwidth — the last resort.
 pub struct ProtocolLimits {
     pub max_orders_per_tick: usize,     // 256 — no player can flood the pipeline
     pub max_order_size: usize,          // 4 KB — no single oversized order
     pub max_pending_data_per_peer: usize, // 256 KB — total buffered per connection
 }
 
-/// The relay server enforces fair bandwidth allocation.
+/// The relay server enforces all three layers.
 impl RelayServer {
     fn process_player_orders(&mut self, player: PlayerId, orders: Vec<PlayerOrder>) {
-        // Hard cap: excess orders silently dropped
+        // Layer 1: Consume from time-budget pool
+        let budget_accepted = self.budgets[player].try_consume(orders.len() as u32);
+        let orders = &orders[..budget_accepted as usize];
+
+        // Layer 3: Hard cap as absolute ceiling
         let accepted = &orders[..orders.len().min(self.limits.max_orders_per_tick)];
 
         // Behavioral flag: sustained max-rate ordering is suspicious
@@ -683,23 +697,23 @@ impl RelayServer {
 
 Iron Curtain's anti-cheat is **architectural, not bolted on.** Every defense emerges from design decisions made for other reasons:
 
-| Threat              | Defense                                 | Source                        |
-| ------------------- | --------------------------------------- | ----------------------------- |
-| Maphack             | Fog-authoritative server                | Network model architecture    |
-| Order injection     | Deterministic validation in sim         | Sim purity (invariant #1)     |
-| Order forgery (P2P) | Ed25519 per-order signing               | Session auth design           |
-| Lag switch          | Relay server owns the clock             | Relay architecture (D007)     |
-| Speed hack          | Relay tick authority                    | Same as above                 |
-| State saturation    | Rate caps + relay bandwidth arbiter     | ProtocolLimits + relay (D007) |
-| Eavesdropping       | DTLS / TLS transport encryption         | Transport security design     |
-| Packet forgery      | Authenticated encryption (AEAD)         | Transport security design     |
-| Protocol DoS        | BoundedReader + size caps + rate limits | Protocol hardening            |
-| Replay tampering    | Ed25519 signed hash chain               | Replay system design          |
-| Automation          | Behavioral analysis + community reports | Relay-side observability      |
-| Result fraud        | Relay-certified match results           | Relay architecture            |
-| Version mismatch    | Protocol handshake                      | Lobby system                  |
-| WASM mod abuse      | Capability-based sandbox                | Modding architecture (D005)   |
-| Desync exploit      | Server-side only analysis               | Security by design            |
+| Threat              | Defense                                           | Source                                      |
+| ------------------- | ------------------------------------------------- | ------------------------------------------- |
+| Maphack             | Fog-authoritative server                          | Network model architecture                  |
+| Order injection     | Deterministic validation in sim                   | Sim purity (invariant #1)                   |
+| Order forgery (P2P) | Ed25519 per-order signing                         | Session auth design                         |
+| Lag switch          | Relay server owns the clock                       | Relay architecture (D007)                   |
+| Speed hack          | Relay tick authority                              | Same as above                               |
+| State saturation    | Time-budget pool + bandwidth throttle + hard caps | OrderBudget + ProtocolLimits + relay (D007) |
+| Eavesdropping       | DTLS / TLS transport encryption                   | Transport security design                   |
+| Packet forgery      | Authenticated encryption (AEAD)                   | Transport security design                   |
+| Protocol DoS        | BoundedReader + size caps + rate limits           | Protocol hardening                          |
+| Replay tampering    | Ed25519 signed hash chain                         | Replay system design                        |
+| Automation          | Behavioral analysis + community reports           | Relay-side observability                    |
+| Result fraud        | Relay-certified match results                     | Relay architecture                          |
+| Version mismatch    | Protocol handshake                                | Lobby system                                |
+| WASM mod abuse      | Capability-based sandbox                          | Modding architecture (D005)                 |
+| Desync exploit      | Server-side only analysis                         | Security by design                          |
 
 **No kernel-level anti-cheat.** Open-source, cross-platform, no ring-0 drivers. We accept that lockstep RTS will always have a maphack risk in P2P/relay modes — the fog-authoritative server is the real answer for high-stakes play.
 

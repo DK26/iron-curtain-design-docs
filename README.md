@@ -234,6 +234,26 @@ All of this while maintaining the classic isometric aesthetic. The game should l
 
 If you've spent years building an OpenRA mod, Iron Curtain is designed to be your upgrade path — not a wall.
 
+## How the Netcode Was Designed
+
+Designing multiplayer networking for an RTS is hard. Getting it wrong means desyncs, lag, cheating, and frustrated players. Rather than guess, we did the research.
+
+An LLM was used as a strict research tool — not to generate the design, but to systematically read and analyze the networking source code of over 20 open-source games and multiple academic papers. For each project, the LLM produced structured analyses: architecture breakdowns, protocol descriptions, vulnerability assessments, and cross-project comparisons. Every analysis was then reviewed, questioned, and verified by a human. The LLM accelerated comprehension across hundreds of thousands of lines of C, C++, Rust, Scala, and C# — the human made every design decision.
+
+The full research is published in the `research/` directory. Here's what was studied:
+
+**Electronic Arts GPL source releases** — Four EA codebases were analyzed: **C&C Generals/Zero Hour** (2003, the most sophisticated C&C networking code — adaptive run-ahead, delta-compressed wire format, packet router relay), **C&C Remastered Collection** (2020, Petroglyph Games — confirmed the original `OutList → DoList` order pipeline and integer math determinism), **C&C Red Alert** (1996, Westwood Studios — canonical gameplay values), and **C&C Tiberian Dawn** (1995, Westwood Studios — cross-reference for ambiguous behavior). All released under GPL v3.
+
+**Valve's Counter-Strike 2** — CS2's publicly documented sub-tick processing model inspired the designed order fairness system. Two players acting in the same tick get their actions processed in the order they actually occurred.
+
+**Open-source RTS engines** — **OpenRA** (18 years of community development — studied as both positive and negative reference), **0 A.D.** (Wildfire Games, 20+ years — dual-mode sync hashing, serialization testing), **Spring Engine** (powers Beyond All Reason and Zero-K — SyncDebugger binary search for desync diagnosis), **Warzone 2100** (open-sourced 2004, maintained 20+ years — Ed25519 identity, encrypted networking), **OpenBW** (clean-room StarCraft reimplementation — selective hashing, commit-reveal seeding), **Stratagus/Wargus** (general-purpose RTS engine — dual sync checks), **OpenTTD** (20+ years of mature deterministic lockstep — multi-level desync debugging, purity enforcement).
+
+**Open-source non-RTS games** — **Minetest/Luanti** (15+ years — LagPool rate limiting that informed a core component of the security design), **Quake 3/ioquake3** (id Software — delta encoding and compression techniques from John Carmack), **Veloren** (Rust — closest architectural relative, transport abstraction), **Hypersomnia** (most sophisticated open-source rollback architecture found), **DDraceNetwork** (200+ servers — traffic monitoring, anti-abuse), **Space Station 14** (per-component visibility for anti-maphack), **Fish Folk Jumpy/Bones** (Rust ECS rollback networking), **Lichess** (100M+ games — matchmaking algorithms, dual AI anti-cheat, tournament scoring, Glicko-2 ratings), **Chrono Divide** (browser-based RTS — WASM target reference).
+
+**Academic papers** — Bryant & Saiedian (2021, University of Kansas) on state saturation attacks and network architecture security; Buro (2002, University of Alberta) on hack-free RTS environments; Chambers et al. (2005) on information exposure in RTS; Yan & Randell (2005) on cheating classification.
+
+Every major component of the netcode traces back to a real, working system. No single project had all the answers — the value was in studying enough of them to see which patterns emerge independently across unrelated codebases. Those are the patterns most likely to be correct.
+
 ## Project Status
 
 📐 **Design phase** — architecture documents in progress, implementation not yet started.
@@ -276,11 +296,51 @@ This project is in its earliest stages. If you're interested in:
 
 ## Acknowledgments
 
-- **Westwood Studios** — for creating Red Alert and defining the RTS genre
-- **Electronic Arts** — for releasing the original source code under GPL v3
-- **The OpenRA team** — 18 years of brilliant community engineering that we build upon and respect
-- **The Bevy community** — for building the Rust game engine we needed
-- **Frank Klepacki** — Hell March forever
+This project stands on the work of thousands of developers across decades of open-source game development.
+
+**Electronic Arts and Westwood Studios** — for creating Red Alert and defining the RTS genre, and for releasing the source code of C&C Red Alert, Tiberian Dawn, Generals/Zero Hour, and the Remastered Collection under GPL v3. This gave the community access to the real engineering behind the games that started the genre. **Petroglyph Games**, founded by former Westwood developers, deserves particular thanks for their work on the Remastered Collection.
+
+**The OpenRA team** — for over 18 years of keeping the Command & Conquer community alive. OpenRA proved that an open-source RTS engine can build a real, active community. Its trait system, mod ecosystem, and years of accumulated gameplay feedback are an invaluable resource. Iron Curtain exists because OpenRA proved this kind of project can work.
+
+**Wildfire Games and the 0 A.D. community** — for over two decades of work on one of the most ambitious open-source games ever attempted.
+
+**The Spring Engine community** — for building and maintaining an RTS engine that powers games like Beyond All Reason and Zero-K. Their SyncDebugger is a masterclass in desync diagnosis.
+
+**The Warzone 2100 community** — for taking a 1999 commercial game, open-sourcing it, and maintaining it for over 20 years.
+
+**The OpenTTD team** — for arguably the most mature open-source deterministic lockstep implementation in existence, refined over 20+ years.
+
+**The Minetest / Luanti community** — for 15 years of running open servers and developing abuse prevention systems we adopted directly.
+
+**id Software and the ioquake3 community** — for Quake 3's networking code, which established patterns still used across the industry 25 years later.
+
+**The Veloren team** — for building the most architecturally relevant Rust multiplayer game we studied.
+
+**TeamHypersomnia** — for the most sophisticated open-source rollback architecture we found anywhere.
+
+**The DDraceNetwork community** — for real-world solutions to traffic monitoring and anti-abuse at scale across 200+ servers.
+
+**The Space Wizards community (Space Station 14)** — for their per-component visibility system, the most relevant reference for anti-maphack architecture.
+
+**The Fish Folk community** — for Jumpy and the Bones framework, practical Rust ECS rollback networking.
+
+**The Wargus / Stratagus community** — for maintaining a general-purpose open-source RTS engine.
+
+**The OpenBW contributors** — for a clean-room StarCraft: Brood War reimplementation.
+
+**Lichess.org** — for open-sourcing the competitive infrastructure behind the largest free chess platform in the world. Special thanks to Thibault Duplessis and the Lichess community for proving that open-source competitive gaming at massive scale is possible.
+
+**Chrono Divide** — for showing what a browser-based RTS can look like.
+
+**Valve** — for publicly documenting the Counter-Strike 2 sub-tick processing model that inspired our order fairness system.
+
+**The academic researchers** — Blake D. Bryant, Hossein Saiedian, Michael Buro, Chris Chambers and co-authors, and Jeff Yan and Brian Randell — for peer-reviewed work that grounded our threat model in science.
+
+**The Bevy community** — for building the Rust game engine we needed.
+
+**Frank Klepacki** — Hell March forever.
+
+Every one of these projects represents years — in some cases decades — of hard work by people who chose to share what they built. This project is better because they did.
 
 **Created by David Krasnitsky**
 
