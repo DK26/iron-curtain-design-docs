@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-9b3eccc9.js";
+            window.path_to_searchindex_js = "searchindex-8c5b1adc.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-ef8cba4b.js"></script>
+        <script src="toc-a85074c4.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -248,6 +248,7 @@ impl NetworkModel for FogAuthoritativeNetwork {
 <span class="boring">}</span></code></pre>
 <p><strong>Trade-off:</strong> Relay server (just forwards orders) = cheap VPS handles thousands of games. Authoritative sim server = real CPU per game.</p>
 <p><strong>Entity prioritization (Fiedler’s priority accumulator):</strong> When the fog-authoritative server sends partial state to each client, it must decide <em>what</em> to send within the bandwidth budget. Fiedler (2015) devised a priority accumulator that tracks object priority persistently between frames — objects accrue additional priority based on staleness (time since last update). High-priority objects (units in combat, projectiles) are sent every frame; low-priority objects (distant static structures) are deferred but eventually sent. This ensures a strict bandwidth upper bound while guaranteeing no object is permanently starved. Iron Curtain’s <code>FogAuthoritativeNetwork</code> should implement this pattern: player-owned units and nearby enemies at highest priority, distant visible terrain objects at lowest, with staleness-based promotion ensuring eventual consistency.</p>
+<p><strong>Traffic class segregation:</strong> In FogAuth mode, player <em>input</em> (orders) and server <em>state</em> (entity updates) have different reliability requirements. Orders are small, latency-critical, and loss-intolerant — best suited for a reliable ordered channel. State updates are larger, frequent, and can tolerate occasional loss (the next update supersedes) — suited for an unreliable channel with delta compression. Bryant &amp; Saiedian (2021) recommend this segregation. A dual-channel approach (reliable for orders, unreliable for state) optimizes both latency and bandwidth.</p>
 <h2 id="vulnerability-2-order-injection--spoofing"><a class="header" href="#vulnerability-2-order-injection--spoofing">Vulnerability 2: Order Injection / Spoofing</a></h2>
 <h3 id="the-problem-1"><a class="header" href="#the-problem-1">The Problem</a></h3>
 <p>Malicious client sends impossible orders (build without resources, control enemy units).</p>
@@ -287,13 +288,11 @@ impl NetworkModel for FogAuthoritativeNetwork {
             match self.receive_orders_from(player, deadline) {
                 Ok(orders) =&gt; self.tick_orders.add(player, orders),
                 Err(Timeout) =&gt; {
-                    self.player_budgets[player].strikes += 1;
-                    if strikes &gt; 3 {
-                        // Drop or use last known orders
-                        self.tick_orders.add(player, PlayerOrder::RepeatLast);
-                    } else {
-                        self.tick_orders.add(player, PlayerOrder::Idle);
-                    }
+                    // Missed deadline → always Idle (never RepeatLast —
+                    // repeating the last order benefits the attacker)
+                    self.tick_orders.add(player, PlayerOrder::Idle);
+                    self.player_strikes[player] += 1;
+                    // Enough strikes → disconnect
                 }
             }
         }
@@ -302,7 +301,7 @@ impl NetworkModel for FogAuthoritativeNetwork {
     }
 }
 <span class="boring">}</span></code></pre>
-<p>Server owns the clock. Miss the window → your orders are dropped. Lag switch only punishes the attacker.</p>
+<p>Server owns the clock. Miss the window → your orders are replaced with Idle. Lag switch only punishes the attacker. Repeated late deliveries accumulate strikes; enough strikes trigger disconnection. See <code>03-NETCODE.md</code> § Order Rate Control for the full three-layer rate limiting system (time-budget pool + bandwidth throttle + hard ceiling).</p>
 <h2 id="vulnerability-4-desync-exploit-for-information-gathering"><a class="header" href="#vulnerability-4-desync-exploit-for-information-gathering">Vulnerability 4: Desync Exploit for Information Gathering</a></h2>
 <h3 id="the-problem-3"><a class="header" href="#the-problem-3">The Problem</a></h3>
 <p>Cheating client intentionally causes desync, then analyzes desync report to extract hidden state.</p>
@@ -662,9 +661,11 @@ impl&lt;'a&gt; BoundedReader&lt;'a&gt; {
 }
 
 /// Hard limits on all protocol fields — reject before allocating.
+/// These are the absolute ceilings. The primary rate control is the
+/// time-budget pool (OrderBudget) — see `03-NETCODE.md` § Order Rate Control.
 pub struct ProtocolLimits {
     pub max_order_size: usize,               // 4 KB — single order
-    pub max_orders_per_tick: usize,           // 256 — per player
+    pub max_orders_per_tick: usize,           // 256 — per player (hard ceiling)
     pub max_chat_message_length: usize,       // 512 chars
     pub max_file_transfer_size: usize,        // 64 KB — map files
     pub max_pending_data_per_peer: usize,     // 256 KB — total buffered per connection
@@ -761,20 +762,32 @@ impl SessionAuth {
 <li><strong>Build order spam:</strong> Rapidly queuing and canceling production to generate maximum order traffic</li>
 </ul>
 <h3 id="mitigation-already-addressed-by-design"><a class="header" href="#mitigation-already-addressed-by-design">Mitigation: Already Addressed by Design</a></h3>
-<p>Our architecture prevents state saturation at multiple layers:</p>
+<p>Our architecture prevents state saturation at three independent layers — see <code>03-NETCODE.md</code> § Order Rate Control for the full design:</p>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
-</span>/// Orders per player are hard-capped at the protocol level.
+</span>/// Layer 1: Time-budget pool (primary). Each player has an OrderBudget that
+/// refills per tick and caps at a burst limit. Handles burst legitimately,
+/// catches sustained abuse. Inspired by Minetest's LagPool.
+
+/// Layer 2: Bandwidth throttle. Token bucket on raw bytes per client.
+/// Catches oversized orders that pass the order-count budget.
+
+/// Layer 3: Hard ceiling (ProtocolLimits). Absolute maximum regardless
+/// of budget/bandwidth — the last resort.
 pub struct ProtocolLimits {
     pub max_orders_per_tick: usize,     // 256 — no player can flood the pipeline
     pub max_order_size: usize,          // 4 KB — no single oversized order
     pub max_pending_data_per_peer: usize, // 256 KB — total buffered per connection
 }
 
-/// The relay server enforces fair bandwidth allocation.
+/// The relay server enforces all three layers.
 impl RelayServer {
     fn process_player_orders(&amp;mut self, player: PlayerId, orders: Vec&lt;PlayerOrder&gt;) {
-        // Hard cap: excess orders silently dropped
+        // Layer 1: Consume from time-budget pool
+        let budget_accepted = self.budgets[player].try_consume(orders.len() as u32);
+        let orders = &amp;orders[..budget_accepted as usize];
+
+        // Layer 3: Hard cap as absolute ceiling
         let accepted = &amp;orders[..orders.len().min(self.limits.max_orders_per_tick)];
 
         // Behavioral flag: sustained max-rate ordering is suspicious
@@ -808,7 +821,7 @@ impl RelayServer {
 <tr><td>Order forgery (P2P)</td><td>Ed25519 per-order signing</td><td>Session auth design</td></tr>
 <tr><td>Lag switch</td><td>Relay server owns the clock</td><td>Relay architecture (D007)</td></tr>
 <tr><td>Speed hack</td><td>Relay tick authority</td><td>Same as above</td></tr>
-<tr><td>State saturation</td><td>Rate caps + relay bandwidth arbiter</td><td>ProtocolLimits + relay (D007)</td></tr>
+<tr><td>State saturation</td><td>Time-budget pool + bandwidth throttle + hard caps</td><td>OrderBudget + ProtocolLimits + relay (D007)</td></tr>
 <tr><td>Eavesdropping</td><td>DTLS / TLS transport encryption</td><td>Transport security design</td></tr>
 <tr><td>Packet forgery</td><td>Authenticated encryption (AEAD)</td><td>Transport security design</td></tr>
 <tr><td>Protocol DoS</td><td>BoundedReader + size caps + rate limits</td><td>Protocol hardening</td></tr>
