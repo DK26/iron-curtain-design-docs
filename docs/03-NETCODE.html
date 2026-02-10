@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-8c5b1adc.js";
+            window.path_to_searchindex_js = "searchindex-54ce139c.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-a85074c4.js"></script>
@@ -198,10 +198,10 @@
 </span><span class="boring">fn main() {
 </span>#[derive(Clone, Serialize, Deserialize, Hash)]
 pub enum PlayerOrder {
-    Move { unit_ids: Vec&lt;UnitId&gt;, target: CellPos },
+    Move { unit_ids: Vec&lt;UnitId&gt;, target: WorldPos },
     Attack { unit_ids: Vec&lt;UnitId&gt;, target: Target },
-    Build { structure: StructureType, position: CellPos },
-    SetRallyPoint { building: BuildingId, position: CellPos },
+    Build { structure: StructureType, position: WorldPos },
+    SetRallyPoint { building: BuildingId, position: WorldPos },
     Sell { building: BuildingId },
     Idle,  // Explicit no-op — keeps player in the tick's order list for timing/presence
     // ... every possible player action
@@ -684,6 +684,18 @@ pub struct GameListing {
     pub players: Vec&lt;PlayerInfo&gt;, // current players in lobby
     pub status: LobbyStatus,     // waiting, in_progress, full
     pub engine: EngineId,         // "iron-curtain" or "openra" (for cross-browser)
+    pub required_mods: Vec&lt;ModDependency&gt;, // mods needed to join (D030: auto-download)
+}
+
+/// Mod dependency for auto-download on lobby join (D030).
+/// When a player joins a lobby, the client checks `required_mods` against
+/// local cache. Missing mods are fetched from the Workshop automatically
+/// (CS:GO-style). See `04-MODDING.md` § "Auto-Download on Lobby Join".
+pub struct ModDependency {
+    pub id: String,               // Workshop resource ID: "namespace/name"
+    pub version: VersionReq,      // semver range
+    pub checksum: Sha256Hash,     // integrity verification
+    pub size_bytes: u64,          // for progress UI and consent prompt
 }
 <span class="boring">}</span></code></pre>
 <h3 id="official-tracking-server"><a class="header" href="#official-tracking-server">Official Tracking Server</a></h3>

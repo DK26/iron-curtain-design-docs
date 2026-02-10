@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-8c5b1adc.js";
+            window.path_to_searchindex_js = "searchindex-54ce139c.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-a85074c4.js"></script>
@@ -186,9 +186,9 @@
 <ul>
 <li>Supports OpenRA resource formats (<code>.mix</code>, <code>.shp</code>, <code>.pal</code>, YAML rules)</li>
 <li>Reimagines internals with modern architecture (not a port)</li>
-<li>Offers superior performance, modding, portability, and multiplayer</li>
+<li>Explores different tradeoffs: performance, modding depth, portability, and multiplayer architecture</li>
 <li>Provides OpenRA mod compatibility as the zero-cost migration path</li>
-<li>Is <strong>game-agnostic at the engine layer</strong> — Red Alert is the first game module; RA2, Tiberian Dawn, and original games are future modules on the same engine</li>
+<li>Is <strong>game-agnostic at the engine layer</strong> — Red Alert is the first game module; RA2, Tiberian Dawn, and original games are future modules on the same engine (RA2 is a future community goal, not a scheduled deliverable)</li>
 </ul>
 <h2 id="why-this-deserves-to-exist"><a class="header" href="#why-this-deserves-to-exist">Why This Deserves to Exist</a></h2>
 <h3 id="capabilities-beyond-openra-and-the-remastered-collection"><a class="header" href="#capabilities-beyond-openra-and-the-remastered-collection">Capabilities Beyond OpenRA and the Remastered Collection</a></h3>
@@ -200,24 +200,29 @@
 <tbody>
 <tr><td>Engine</td><td>Original C++ as DLL, proprietary C# client</td><td>C# / .NET (2007)</td><td>Rust + Bevy (2026)</td></tr>
 <tr><td>Platforms</td><td>Windows, Xbox</td><td>Windows, macOS, Linux</td><td>All + Browser + Mobile</td></tr>
-<tr><td>Max units (smooth)</td><td>Unknown (not benchmarked)</td><td>Community reports lag at 300-500 units</td><td>2000+ target</td></tr>
+<tr><td>Max units (smooth)</td><td>Unknown (not benchmarked)</td><td>Community reports of lag in large battles (not independently verified)</td><td>2000+ target</td></tr>
 <tr><td>Modding</td><td>Steam Workshop maps, limited API</td><td>MiniYAML + C# (recompile for deep mods)</td><td>YAML + Lua + WASM (no recompile ever)</td></tr>
-<tr><td>AI content</td><td>Fixed campaigns</td><td>Fixed campaigns + community missions</td><td>Branching campaigns + optional LLM-generated missions (BYOLLM)</td></tr>
+<tr><td>AI content</td><td>Fixed campaigns</td><td>Fixed campaigns + community missions</td><td>Branching campaigns with persistent state (D021)</td></tr>
 <tr><td>Multiplayer</td><td>Proprietary networking (not open-sourced)</td><td>TCP lockstep, 135+ desync issues tracked</td><td>Relay server, desync diagnosis, signed replays</td></tr>
 <tr><td>Competitive</td><td>No ranked, no anti-cheat</td><td>Community ladders via CnCNet</td><td>Ranked matchmaking, Glicko-2, relay-certified results</td></tr>
-<tr><td>Graphics pipeline</td><td>HD sprites, proprietary renderer</td><td>Custom renderer with post-processing (since March 2025)</td><td>Bevy + wgpu: shaders, post-FX, dynamic lighting, particles</td></tr>
+<tr><td>Graphics pipeline</td><td>HD sprites, proprietary renderer</td><td>Custom renderer with post-processing (since March 2025)</td><td>Classic isometric via Bevy + wgpu (HD assets, post-FX, shaders available to modders)</td></tr>
 <tr><td>Source</td><td>C++ engine GPL; networking/rendering proprietary</td><td>Open (GPL)</td><td>Open (GPL)</td></tr>
 <tr><td>Community assets</td><td>Separate ecosystem</td><td>18 years of maps/mods</td><td>Loads all OpenRA assets + migration tools</td></tr>
+<tr><td>Mod distribution</td><td>Steam Workshop (maps only)</td><td>Manual file sharing, forum posts</td><td>Workshop registry with in-game browser, auto-download on lobby join, Steam source</td></tr>
+<tr><td>Creator support</td><td>None</td><td>None</td><td>Voluntary tipping, creator reputation scores, featured badges (D035)</td></tr>
+<tr><td>Achievements</td><td>Steam achievements</td><td>None</td><td>Per-module + mod-defined achievements, Steam sync for Steam builds (D036)</td></tr>
+<tr><td>Governance</td><td>EA-controlled</td><td>Core team, community PRs</td><td>Transparent governance, elected community reps, RFC process (D037)</td></tr>
 </tbody>
 </table>
 </div>
 <h3 id="new-capabilities-not-found-elsewhere"><a class="header" href="#new-capabilities-not-found-elsewhere">New Capabilities Not Found Elsewhere</a></h3>
-<p><strong>Optional LLM-Generated Missions and Campaigns (BYOLLM)</strong></p>
-<p>An optional in-game interface where players describe a scenario in natural language and receive a fully playable mission — map layout, objectives, enemy AI, triggers, briefing text. Generated content is standard YAML + Lua, fully editable and shareable. Requires the player to configure their own LLM provider (local or cloud) — the engine never ships or requires a specific model.</p>
-<p>Future extensions: multi-mission campaign generation, adaptive difficulty that responds to player style, cooperative scenario generation for multiplayer.</p>
-<p>For players who opt in, this transforms Red Alert from a game with finite content to a game with infinite content. Players who prefer hand-crafted content lose nothing — every feature works without an LLM.</p>
-<p><strong>Bevy Rendering Pipeline</strong></p>
-<p>Building on Bevy’s modern rendering stack unlocks visual capabilities beyond what OpenRA or the Remastered Collection currently offer:</p>
+<p><strong>Branching Campaigns with Persistent State (D021)</strong></p>
+<p>Campaigns are directed graphs of missions, not linear sequences. Each mission can have multiple outcomes (“won with bridge intact” vs “won but bridge destroyed”) that lead to different next missions. Failure doesn’t end the campaign — defeat is another branch. Surviving units, veterancy, and equipment carry over between missions. Continuous flow: briefing → mission → debrief → next mission, no exit-to-menu between levels. Inspired by Operation Flashpoint.</p>
+<p><strong>Optional LLM-Generated Missions (BYOLLM — power-user feature)</strong></p>
+<p>For players who want more content: an optional in-game interface where players describe a scenario in natural language and receive a fully playable mission — map layout, objectives, enemy AI, triggers, briefing text. Generated content is standard YAML + Lua, fully editable and shareable. Requires the player to configure their own LLM provider (local or cloud) — the engine never ships or requires a specific model. Every feature works fully without an LLM configured.</p>
+<p><strong>Rendering: Classic First, Modding Possibilities Beyond</strong></p>
+<p>The core rendering goal is to <strong>faithfully reproduce the classic Red Alert isometric aesthetic</strong> — the same sprites, the same feel. HD sprite support is planned so modders can provide higher-resolution assets alongside the originals.</p>
+<p>Because the engine builds on Bevy’s rendering stack (which includes a full 2D and 3D pipeline via wgpu), modders gain access to capabilities far beyond the classic look — if they choose to use them:</p>
 <ul>
 <li>Post-processing: bloom, color grading, screen-space reflections on water</li>
 <li>Dynamic lighting: explosions illuminate surroundings, day/night cycles</li>
@@ -225,26 +230,27 @@
 <li>Dynamic weather: real-time transitions (sunny → overcast → rain → storm), snow accumulation on terrain, puddle formation, seasonal effects — terrain textures respond to weather via palette tinting, overlay sprites, or shader blending (D022)</li>
 <li>Shader effects: chrono-shift shimmer, iron curtain glow, tesla arcs, nuclear flash</li>
 <li>Smooth camera: sub-pixel rendering, cinematic replay camera, smooth zoom</li>
-<li>HD asset pipeline alongside classic sprites</li>
+<li>3D rendering: a Tier 3 (WASM) mod can replace the sprite renderer entirely with 3D models while the simulation stays unchanged</li>
 </ul>
-<p>The visual goal: Red Alert as you remember it through rose-tinted glasses — classic aesthetic, modern polish.</p>
-<p><strong>In-Engine Map Editor</strong></p>
-<p>OpenRA’s map editor is a standalone tool. Our editor runs inside the game with live preview, instant testing, and direct publishing. Lower barrier to content creation.</p>
-<h3 id="openras-limitations-what-we-improve-on"><a class="header" href="#openras-limitations-what-we-improve-on">OpenRA’s Limitations (what we improve on)</a></h3>
+<p>These are <strong>modding possibilities enabled by the engine’s architecture</strong>, not development goals for the base game. The base game ships with the classic isometric aesthetic. Visual enhancements are content that modders and the community build on top.</p>
+<p><strong>In-Engine Scenario Editor (D038)</strong></p>
+<p>OpenRA’s map editor is a standalone terrain/actor tool. Our editor runs inside the game and goes further — not just terrain/unit placement, but full mission logic: visual triggers with countdown/timeout timers, waypoints, drag-and-drop modules (wave spawner, patrol route, guard position, reinforcements, objectives), compositions (reusable prefabs), Probability of Presence per entity for replayability, layers, and a Game Master mode for live scenario manipulation. Inspired by Operation Flashpoint’s mission editor and Arma 3’s Eden Editor.</p>
+<h3 id="architectural-differences-from-openra"><a class="header" href="#architectural-differences-from-openra">Architectural Differences from OpenRA</a></h3>
+<p>OpenRA is a mature, actively maintained project with 18 years of community investment. These are genuine architectural differences, not criticisms:</p>
 <div class="table-wrapper">
 <table>
 <thead>
-<tr><th>Area</th><th>OpenRA Today</th><th>Our Engine</th></tr>
+<tr><th>Area</th><th>OpenRA</th><th>Iron Curtain</th></tr>
 </thead>
 <tbody>
-<tr><td>Runtime</td><td>C# / .NET — GC pauses, heavy runtime</td><td>Rust — no GC, predictable perf</td></tr>
+<tr><td>Runtime</td><td>C# / .NET (mature, productive)</td><td>Rust — no GC, predictable perf, WASM target</td></tr>
 <tr><td>Threading</td><td>Single-threaded game loop (verified)</td><td>Parallel systems via ECS</td></tr>
 <tr><td>Modding</td><td>Powerful but requires C# for deep mods</td><td>YAML + Lua + WASM (no compile step)</td></tr>
-<tr><td>Map editor</td><td>Separate tool, recently improved</td><td>In-engine editor (Phase 6)</td></tr>
-<tr><td>Multiplayer</td><td>135+ desync issues tracked</td><td>Snapshottable sim enables desync pinpointing</td></tr>
-<tr><td>Competitive</td><td>Community ladders via CnCNet</td><td>Ranked matchmaking, anti-cheat, tournament mode</td></tr>
-<tr><td>Portability</td><td>Desktop only (Mono/.NET)</td><td>Native + WASM (browser) + mobile</td></tr>
-<tr><td>Engine age</td><td>Started 2007, actively maintained</td><td>Clean-sheet modern design</td></tr>
+<tr><td>Map editor</td><td>Separate tool, recently improved</td><td>In-engine scenario editor with mission logic (D038, Phase 6)</td></tr>
+<tr><td>Multiplayer</td><td>135+ desync issues tracked</td><td>Snapshottable sim designed for desync pinpointing</td></tr>
+<tr><td>Competitive</td><td>Community ladders via CnCNet</td><td>Integrated ranked matchmaking, tournament mode</td></tr>
+<tr><td>Portability</td><td>Desktop (Windows, macOS, Linux)</td><td>Desktop + WASM (browser) + mobile</td></tr>
+<tr><td>Maturity</td><td>18 years, battle-tested, large community</td><td>Clean-sheet modern design, unproven</td></tr>
 <tr><td>Campaigns</td><td>Some incomplete (TD, Dune 2000)</td><td>Branching campaigns with persistent state (D021)</td></tr>
 <tr><td>Mission flow</td><td>Manual mission selection between levels</td><td>Continuous flow: briefing → mission → debrief → next</td></tr>
 <tr><td>Asset quality</td><td>Cannot fix original palette/sprite flaws</td><td>Bevy post-FX: palette correction, color grading, optional upscaling</td></tr>
@@ -254,16 +260,19 @@
 <h3 id="what-makes-people-actually-switch"><a class="header" href="#what-makes-people-actually-switch">What Makes People Actually Switch</a></h3>
 <ol>
 <li><strong>Better performance</strong> — visible: bigger maps, more units, no stutters</li>
-<li><strong>Better modding</strong> — WASM scripting, in-engine editor, hot reload</li>
 <li><strong>Campaigns that flow</strong> — branching paths, persistent units, no menu between missions, failure continues the story</li>
+<li><strong>Better modding</strong> — WASM scripting, in-engine editor, hot reload</li>
 <li><strong>Competitive infrastructure</strong> — ranked matchmaking, anti-cheat, tournaments, signed replays — OpenRA has none of this</li>
 <li><strong>Player analytics</strong> — post-game stats, career page, campaign dashboard with roster graphs — your match history is queryable data, not a forgotten replay folder</li>
-<li><strong>Runs everywhere</strong> — browser via WASM, mobile, Steam Deck natively</li>
 <li><strong>Better multiplayer</strong> — desync debugging, smoother netcode, relay server</li>
-<li><strong>Optional LLM enhancements</strong> (BYOLLM) — bring your own LLM for generated missions, adaptive briefings, coaching suggestions — enhances the experience but never required</li>
+<li><strong>Runs everywhere</strong> — browser via WASM, mobile, Steam Deck natively</li>
 <li><strong>OpenRA mod compatibility</strong> — existing community migrates without losing work</li>
+<li><strong>Workshop with auto-download</strong> — join a game, missing mods download automatically (CS:GO-style); no manual file hunting</li>
+<li><strong>Creator recognition</strong> — reputation scores, featured badges, optional tipping — modders get credit and visibility</li>
+<li><strong>Achievement system</strong> — per-game-module achievements stored locally, mod-defined achievements via YAML + Lua, Steam sync for Steam builds</li>
+<li><strong>Optional LLM enhancements</strong> (BYOLLM) — bring your own LLM for generated missions, adaptive briefings, coaching suggestions — a quiet power-user feature, not a headline</li>
 </ol>
-<p>Item 9 is the linchpin. If existing mods just work, migration cost drops to near zero.</p>
+<p>Item 8 is the linchpin. If existing mods just work, migration cost drops to near zero.</p>
 <h2 id="competitive-play"><a class="header" href="#competitive-play">Competitive Play</a></h2>
 <p>Red Alert has a dedicated competitive community (primarily through OpenRA and CnCNet). CnCNet provides community ladders and tournament infrastructure, but there’s no integrated ranked system, no automated anti-cheat, and desyncs remain a persistent issue (135+ tracked in OpenRA’s issue tracker). This is a significant opportunity.</p>
 <h3 id="ranked-matchmaking"><a class="header" href="#ranked-matchmaking">Ranked Matchmaking</a></h3>
@@ -333,11 +342,11 @@
 </div>
 <h2 id="competitive-landscape"><a class="header" href="#competitive-landscape">Competitive Landscape</a></h2>
 <h3 id="active-projects"><a class="header" href="#active-projects">Active Projects</a></h3>
-<p><strong>OpenRA</strong> (C#) — The project to beat</p>
+<p><strong>OpenRA</strong> (C#) — The community standard</p>
 <ul>
-<li>14.8k GitHub stars, actively maintained</li>
+<li>14.8k GitHub stars, actively maintained, 18 years of community investment</li>
 <li>Latest release: 20250330 (March 2025) — new map editor, HD asset support, post-processing</li>
-<li>Mature community, mod ecosystem, server infrastructure</li>
+<li>Mature community, mod ecosystem, server infrastructure — the project that proved open-source C&amp;C is viable</li>
 <li>Multiplayer-first focus — single-player campaigns often incomplete (Dune 2000: only 1 of 3 campaigns fully playable; TD campaign also incomplete)</li>
 <li>SDK supports non-Westwood games (KKND, Swarm Assault, Hard Vacuum, Dune II remake) — validates our multi-game extensibility approach (D018)</li>
 </ul>

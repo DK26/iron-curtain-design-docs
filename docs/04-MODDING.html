@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-8c5b1adc.js";
+            window.path_to_searchindex_js = "searchindex-54ce139c.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-a85074c4.js"></script>
@@ -608,11 +608,11 @@ impl Renderable for MeshRenderer {
     }
 }
 
-impl CameraController for FreeCam3D {
-    fn screen_to_cell(&amp;self, screen_pos: Vec2, terrain: &amp;TerrainData) -&gt; CellPos {
-        // 3D raycast against terrain mesh → grid cell
+impl ScreenToWorld for FreeCam3D {
+    fn screen_to_world(&amp;self, screen_pos: Vec2, terrain: &amp;TerrainData) -&gt; WorldPos {
+        // 3D raycast against terrain mesh → world position
         let ray = self.camera.screen_to_ray(screen_pos);
-        terrain.raycast(ray).to_cell_pos()
+        terrain.raycast(ray).to_world_pos()
     }
 }
 <span class="boring">}</span></code></pre>
@@ -780,6 +780,9 @@ pub fn render_mission_template(
 <p>This is dramatically more reliable than raw generation. The template constrains the LLM’s output to valid parameter space, and the schema validates it. The LLM becomes a smart form-filler, not an unconstrained code generator.</p>
 <h3 id="scene-templates-composable-building-blocks"><a class="header" href="#scene-templates-composable-building-blocks">Scene Templates (Composable Building Blocks)</a></h3>
 <p>Inspired by Operation Flashpoint / ArmA’s mission editor: scene templates are <strong>sub-mission components</strong> — reusable, pre-scripted building blocks that snap together inside a mission. Each scene template has its own trigger logic, AI behavior, and Lua scripts already written and tested. The user or LLM only fills in parameters.</p>
+<blockquote>
+<p><strong>Visual editor equivalent:</strong> The in-engine scenario editor (D038) exposes these same building blocks as <strong>modules</strong> — drag-and-drop logic nodes with a properties panel. Scene templates are the YAML/Lua format; modules are the visual editor face. Same underlying data — a composition saved in the editor can be loaded as a scene template by Lua/LLM, and vice versa. See <code>09-DECISIONS.md</code> § D038.</p>
+</blockquote>
 <p><strong>Template hierarchy:</strong></p>
 <pre><code>Scene Template    — a single scripted encounter or event
   ↓ composed into
@@ -1887,6 +1890,112 @@ llm:
 </code></pre>
 <p>The LLM sees workshop resources through their <code>llm_meta</code> fields. A music track tagged <code>summary: "Military march, Soviet theme, orchestral, 2:30"</code> and <code>composition_hints: "Pairs well with Soviet faction voice lines"</code> lets the LLM intelligently select and compose assets for a coherent mission experience.</p>
 <p><strong>License-aware generation:</strong> The LLM filters by license compatibility — if generating content for a CC-BY mod, it only pulls CC-BY-compatible resources (<code>CC0-1.0</code>, <code>CC-BY-4.0</code>), excluding <code>CC-BY-NC-4.0</code> or <code>CC-BY-SA-4.0</code> unless the mod’s own license is compatible.</p>
+<h3 id="steam-workshop-integration-d030"><a class="header" href="#steam-workshop-integration-d030">Steam Workshop Integration (D030)</a></h3>
+<p>Steam Workshop is an <strong>optional distribution source</strong>, not a replacement for the IC Workshop. Resources published to Steam Workshop appear in the virtual repository alongside IC Workshop and local resources. Priority ordering determines which source wins when the same resource exists in multiple places.</p>
+<pre><code class="language-yaml"># settings.yaml — Steam Workshop as an additional source
+workshop:
+  sources:
+    - url: "https://workshop.ironcurtain.gg"     # official IC Workshop
+      priority: 1
+    - type: steam_workshop                        # Steam Workshop source
+      app_id: 0000000                             # IC's Steam app ID
+      priority: 2
+    - path: "C:/my-local-workshop"
+      priority: 3
+</code></pre>
+<p><strong>Key design constraints:</strong></p>
+<ul>
+<li>IC Workshop is always the primary source — Steam is additive, never required</li>
+<li>Resources can be published to both IC Workshop and Steam Workshop simultaneously via <code>ic mod publish --also-steam</code></li>
+<li>Steam Workshop subscriptions sync to local cache automatically</li>
+<li>No Steam lock-in — the game is fully functional without Steam</li>
+</ul>
+<h3 id="in-game-workshop-browser-d030"><a class="header" href="#in-game-workshop-browser-d030">In-Game Workshop Browser (D030)</a></h3>
+<p>The in-game browser queries the virtual repository (all configured sources merged). UX inspired by CS:GO/Steam Workshop browser:</p>
+<ul>
+<li><strong>Search:</strong> FTS5-powered full-text search across names, descriptions, tags, and <code>llm_meta</code> fields</li>
+<li><strong>Filter:</strong> By category (map, mod, music, sprites, etc.), game module (RA1, TD, RA2), rating, download count, author, license</li>
+<li><strong>Sort:</strong> By popularity, newest, highest rated, most downloaded, trending (recent velocity)</li>
+<li><strong>Preview:</strong> Screenshot gallery, description, dependency tree, license info, author profile with reputation badge</li>
+<li><strong>One-click subscribe:</strong> Adds to local cache, resolves dependencies automatically</li>
+<li><strong>Collections:</strong> Curated bundles (“Best Soviet mods”, “Tournament map pool Season 5”)</li>
+<li><strong>Creator profiles:</strong> Author page showing all published resources, reputation score, tip links (D035)</li>
+</ul>
+<h3 id="auto-download-on-lobby-join-d030"><a class="header" href="#auto-download-on-lobby-join-d030">Auto-Download on Lobby Join (D030)</a></h3>
+<p>When a player joins a multiplayer lobby, the client checks <code>GameListing.required_mods</code> (see <code>03-NETCODE.md</code> § <code>GameListing</code>) against the local cache. Missing resources trigger automatic download:</p>
+<ol>
+<li><strong>Diff:</strong> Compare <code>required_mods</code> against local cache</li>
+<li><strong>Prompt:</strong> Show missing resources with total download size and estimated time</li>
+<li><strong>Download:</strong> Fetch from virtual repository (IC Workshop → Steam Workshop → community sources by priority)</li>
+<li><strong>Verify:</strong> SHA-256 checksum validation for every downloaded artifact</li>
+<li><strong>Install:</strong> Place in local cache, update dependency graph</li>
+<li><strong>Ready:</strong> Player joins game with all required content</li>
+</ol>
+<p>Players can cancel at any time. Auto-download respects bandwidth limits configured in settings. Resources downloaded this way persist in the local cache for future sessions.</p>
+<h3 id="creator-reputation-system-d030"><a class="header" href="#creator-reputation-system-d030">Creator Reputation System (D030)</a></h3>
+<p>Creators earn reputation through community signals:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Signal</th><th>Weight</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td>Total downloads</td><td>Medium</td><td>Cumulative downloads across all published resources</td></tr>
+<tr><td>Average rating</td><td>High</td><td>Mean star rating across published resources (minimum 10 ratings to display)</td></tr>
+<tr><td>Dependency count</td><td>High</td><td>How many other resources/mods depend on this creator’s work</td></tr>
+<tr><td>Publish consistency</td><td>Low</td><td>Regular updates and new content over time</td></tr>
+<tr><td>Community reports</td><td>Negative</td><td>DMCA strikes, policy violations reduce reputation</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Badges:</strong></p>
+<ul>
+<li><strong>Verified</strong> — identity confirmed (e.g., linked GitHub account)</li>
+<li><strong>Prolific</strong> — 10+ published resources with ≥4.0 average rating</li>
+<li><strong>Foundation</strong> — resources depended on by 50+ other resources</li>
+<li><strong>Curator</strong> — maintains high-quality curated collections</li>
+</ul>
+<p>Reputation is displayed but not gatekeeping — any registered user can publish. Badges appear on resource listings, in-game browser, and author profiles. See <code>09-DECISIONS.md</code> § D030 for full design.</p>
+<h3 id="content-moderation--dmcatakedown-policy-d030"><a class="header" href="#content-moderation--dmcatakedown-policy-d030">Content Moderation &amp; DMCA/Takedown Policy (D030)</a></h3>
+<p>The Workshop must be a safe, legal distribution platform. Content moderation is a combination of automated scanning, community reporting, and moderator review.</p>
+<p><strong>Prohibited content:</strong> Malware, hate speech, illegal content, impersonation of other creators.</p>
+<p><strong>DMCA/IP takedown process (due process, not shoot-first):</strong></p>
+<ol>
+<li><strong>Reporter files takedown request</strong> via Workshop UI or email, specifying the resource and the claim (DMCA, license violation, policy violation)</li>
+<li><strong>Resource is flagged</strong> — not immediately removed — and the author is notified with a 72-hour response window</li>
+<li><strong>Author can counter-claim</strong> (e.g., they hold the rights, the reporter is mistaken)</li>
+<li><strong>Workshop moderators review</strong> — if the claim is valid, the resource is delisted (not deleted — remains in local caches of existing users)</li>
+<li><strong>Repeat offenders</strong> accumulate strikes. Three strikes → account publishing privileges suspended. Appeals process available.</li>
+<li><strong>DMCA safe harbor:</strong> The Workshop server operator (official or community-hosted) follows standard DMCA safe harbor procedures</li>
+</ol>
+<p><strong>Lessons applied:</strong> ArmA’s heavy-handed approach (IP bans for mod redistribution) chilled creativity. Skyrim’s paid mods debacle showed mandatory paywalls destroy goodwill. Our policy: due process, transparency, no mandatory monetization.</p>
+<h3 id="creator-recognition--voluntary-tipping-d035"><a class="header" href="#creator-recognition--voluntary-tipping-d035">Creator Recognition — Voluntary Tipping (D035)</a></h3>
+<p>Creators can optionally include tip/sponsorship links in their resource metadata. Iron Curtain <strong>never processes payments</strong> — we simply display links.</p>
+<pre><code class="language-yaml"># In resource manifest
+creator:
+  name: "alice"
+  tip_links:
+    - platform: ko-fi
+      url: "https://ko-fi.com/alice"
+    - platform: github-sponsors
+      url: "https://github.com/sponsors/alice"
+</code></pre>
+<p>Tip links appear on resource pages, author profiles, and in the in-game browser. No mandatory paywalls — all Workshop content is free to download. This is a deliberate design choice informed by the Skyrim paid mods controversy and ArmA’s gray-zone monetization issues.</p>
+<h3 id="achievement-system-integration-d036"><a class="header" href="#achievement-system-integration-d036">Achievement System Integration (D036)</a></h3>
+<p>Mod-defined achievements are publishable as Workshop resources. A mod can ship an achievement pack that defines achievements triggered by Lua scripts:</p>
+<pre><code class="language-yaml"># achievements/my-mod-achievements.yaml
+achievements:
+  - id: "my_mod.nuclear_winter"
+    title: "Nuclear Winter"
+    description: "Win a match using only nuclear weapons"
+    icon: "icons/nuclear_winter.png"
+    game_module: ra1
+    category: competitive
+    trigger: lua
+    script: "triggers/nuclear_winter.lua"
+</code></pre>
+<p>Achievement packs are versioned, dependency-tracked, and license-required like all Workshop resources. Engine-defined achievements (campaign completion, competitive milestones) ship with the game and cannot be overridden by mods.</p>
+<p>See <code>09-DECISIONS.md</code> § D036 for the full achievement system design including SQL schema and category taxonomy.</p>
 <h3 id="workshop-api"><a class="header" href="#workshop-api">Workshop API</a></h3>
 <p>The Workshop server stores all resource metadata, versions, dependencies, ratings, and search indices in an embedded SQLite database (D034). No external database required — the server is a single Rust binary that creates its <code>.db</code> file on first run. FTS5 provides full-text search over resource names, descriptions, and <code>llm_meta</code> tags. WAL mode handles concurrent reads from browse/search endpoints.</p>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
@@ -1903,6 +2012,8 @@ llm:
     fn replicate(&amp;self, filter: &amp;ResourceFilter, target: &amp;str) -&gt; Result&lt;ReplicationReport&gt;; // D030: pull replication
     fn create_token(&amp;self, name: &amp;str, scopes: &amp;[TokenScope], expires: Duration) -&gt; Result&lt;ApiToken&gt;; // CI/CD auth
     fn revoke_token(&amp;self, token_id: &amp;str) -&gt; Result&lt;()&gt;; // CI/CD: revoke compromised tokens
+    fn report_content(&amp;self, id: &amp;ResourceId, reason: ContentReport) -&gt; Result&lt;()&gt;; // D030: content moderation
+    fn get_creator_profile(&amp;self, namespace: &amp;str) -&gt; Result&lt;CreatorProfile&gt;; // D030: creator reputation
 }
 
 /// Globally unique resource identifier: "namespace/name@version"

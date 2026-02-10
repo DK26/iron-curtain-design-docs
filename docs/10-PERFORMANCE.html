@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-8c5b1adc.js";
+            window.path_to_searchindex_js = "searchindex-54ce139c.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-a85074c4.js"></script>
@@ -210,8 +210,8 @@
 </code></pre>
 <h2 id="layer-1-algorithmic-efficiency"><a class="header" href="#layer-1-algorithmic-efficiency">Layer 1: Algorithmic Efficiency</a></h2>
 <p>Better algorithms on one core beat bad algorithms on eight cores. This is where 90% of the performance comes from.</p>
-<h3 id="pathfinding-flowfields-replace-per-unit-a"><a class="header" href="#pathfinding-flowfields-replace-per-unit-a">Pathfinding: Flowfields Replace Per-Unit A*</a></h3>
-<p>When 50 units move to the same area, OpenRA computes 50 separate A* paths.</p>
+<h3 id="pathfinding-flowfields-replace-per-unit-a-ra1-pathfinder-implementation"><a class="header" href="#pathfinding-flowfields-replace-per-unit-a-ra1-pathfinder-implementation">Pathfinding: Flowfields Replace Per-Unit A* (RA1 <code>Pathfinder</code> Implementation)</a></h3>
+<p>The RA1 game module implements the <code>Pathfinder</code> trait with grid-based flowfields. When 50 units move to the same area, OpenRA computes 50 separate A* paths.</p>
 <pre><code>OpenRA (per-unit A*):
   50 units × ~200 nodes explored × ~10 ops/node = ~100,000 operations
 
@@ -223,14 +223,14 @@ Flowfield:
 10x reduction. No threading involved.
 </code></pre>
 <p>The 51st unit ordered to the same area costs zero — the field already exists. Flowfields amortize across all units sharing a destination.</p>
-<h3 id="spatial-indexing-grid-hash-replaces-brute-force-range-checks"><a class="header" href="#spatial-indexing-grid-hash-replaces-brute-force-range-checks">Spatial Indexing: Grid Hash Replaces Brute-Force Range Checks</a></h3>
+<h3 id="spatial-indexing-grid-hash-replaces-brute-force-range-checks-ra1-spatialindex-implementation"><a class="header" href="#spatial-indexing-grid-hash-replaces-brute-force-range-checks-ra1-spatialindex-implementation">Spatial Indexing: Grid Hash Replaces Brute-Force Range Checks (RA1 <code>SpatialIndex</code> Implementation)</a></h3>
 <p>“Which enemies are in range of this turret?”</p>
 <pre><code>Brute force: 1000 units × 1000 units = 1,000,000 distance checks/tick
 Spatial hash: 1000 units × ~8 nearby   =     8,000 distance checks/tick
 
 125x reduction. No threading involved.
 </code></pre>
-<p>A spatial hash grid divides the map into cells. Each entity registers in its cell. Range queries only check nearby cells. O(1) lookup per cell, O(k) per query where k is the number of nearby entities (typically &lt; 20).</p>
+<p>A spatial hash divides the world into buckets. Each entity registers in its bucket. Range queries only check nearby buckets. O(1) lookup per bucket, O(k) per query where k is the number of nearby entities (typically &lt; 20). The bucket size is a tunable parameter independent of any game grid — the same spatial hash structure works for grid-based and continuous-space games.</p>
 <h3 id="hierarchical-pathfinding-coarse-then-fine"><a class="header" href="#hierarchical-pathfinding-coarse-then-fine">Hierarchical Pathfinding: Coarse Then Fine</a></h3>
 <p>Break the map into ~32x32 cell chunks. Path between chunks first (few nodes, fast), then path within the current chunk only. Most of the map is never pathfinded at all. Units approaching a new chunk compute the next fine-grained path just before entering.</p>
 <h2 id="layer-2-cache-friendly-data-layout"><a class="header" href="#layer-2-cache-friendly-data-layout">Layer 2: Cache-Friendly Data Layout</a></h2>
@@ -274,7 +274,7 @@ COLD (rarely accessed, lives in Resources):
 }
 
 fn assign_sim_lod(
-    unit_pos: CellPos,
+    unit_pos: WorldPos,
     in_combat: bool,
     near_enemy: bool,
     near_friendly_base: bool,  // deterministic — same on all clients
@@ -330,13 +330,14 @@ fn assign_sim_lod(
 <p>Heap allocation is expensive: the allocator touches cold memory, fragments the heap, and (in C#) creates GC pressure. Rust eliminates GC, but allocation itself still costs cache misses.</p>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
-</span>/// Pre-allocated scratch space reused every tick
-/// Initialized once at game start, never reallocated
+</span>/// Pre-allocated scratch space reused every tick.
+/// Initialized once at game start, never reallocated.
+/// Pathfinder and SpatialIndex implementations maintain their own scratch buffers
+/// internally — pathfinding scratch is not in this struct.
 pub struct TickScratch {
     damage_events: Vec&lt;DamageEvent&gt;,       // capacity: 4096
-    path_open_set: BinaryHeap&lt;PathNode&gt;,   // capacity: 8192
-    path_closed_set: HashSet&lt;CellPos&gt;,     // capacity: 8192
-    visible_cells: BitVec,                 // capacity: map_width × map_height
+    spatial_results: Vec&lt;EntityId&gt;,        // capacity: 2048 (reused by SpatialIndex queries)
+    visibility_dirty: Vec&lt;EntityId&gt;,       // capacity: 1024 (entities needing fog update)
     validated_orders: Vec&lt;ValidatedOrder&gt;,  // capacity: 256
     combat_pairs: Vec&lt;(Entity, Entity)&gt;,   // capacity: 2048
 }
@@ -346,9 +347,8 @@ impl TickScratch {
         // .clear() sets length to 0 but keeps allocated memory
         // Zero bytes allocated on heap during the hot loop
         self.damage_events.clear();
-        self.path_open_set.clear();
-        self.path_closed_set.clear();
-        self.visible_cells.fill(false);
+        self.spatial_results.clear();
+        self.visibility_dirty.clear();
         self.validated_orders.clear();
         self.combat_pairs.clear();
     }

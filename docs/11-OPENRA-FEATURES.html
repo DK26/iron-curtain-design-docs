@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-8c5b1adc.js";
+            window.path_to_searchindex_js = "searchindex-54ce139c.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-a85074c4.js"></script>
@@ -2473,10 +2473,9 @@ rifle_infantry:
 <p>IC extends with additional globals: <code>Campaign</code> (D021 branching campaigns), <code>Weather</code> (D022 dynamic weather), <code>Workshop</code> (mod queries), <code>LLM</code> (Phase 7 integration).</p>
 <p>Each actor reference exposes properties matching its components (<code>.Health</code>, <code>.Location</code>, <code>.Owner</code>, <code>.Move()</code>, <code>.Attack()</code>, <code>.Stop()</code>, <code>.Guard()</code>, <code>.Deploy()</code>, etc.) — identical to OpenRA’s actor property groups.</p>
 <hr>
-<h2 id="30-map-editor--deferred-p005"><a class="header" href="#30-map-editor--deferred-p005">30. Map Editor ⚠️ DEFERRED (P005)</a></h2>
+<h2 id="30-map-editor--resolved-d038"><a class="header" href="#30-map-editor--resolved-d038">30. Map Editor ✅ RESOLVED (D038)</a></h2>
 <p><strong>OpenRA:</strong> Full in-engine map editor with actor placement, terrain painting, resource placement, tile editing, undo/redo, script cell triggers, marker layers, road/path tiling tool.</p>
-<p><strong>Iron Curtain status:</strong> Acknowledged as pending decision P005 (Phase 6). Architecture decision: in-engine vs separate process.</p>
-<p><strong>Recommendation:</strong> The in-engine approach is better for modder UX (they already have the game running, instant preview). OpenRA’s integrated editor is one of its biggest strengths.</p>
+<p><strong>Iron Curtain status:</strong> Resolved as D038 — in-engine scenario editor (OFP/Eden-inspired). Goes beyond OpenRA’s map editor to include full mission logic editing: triggers with countdown/timeout timers and min/mid/max randomization, waypoints, pre-built modules (wave spawner, patrol route, guard position, reinforcements, objectives), visual connection lines, Probability of Presence per entity for replayability, compositions (reusable prefabs), layers, Simple/Advanced mode toggle, preview/test button, Game Master mode, Workshop publishing. See <code>09-DECISIONS.md</code> § D038 for full design.</p>
 <hr>
 <h2 id="31-debug--developer-tools--partial"><a class="header" href="#31-debug--developer-tools--partial">31. Debug / Developer Tools ⚠️ PARTIAL</a></h2>
 <p><strong>OpenRA:</strong> <code>DeveloperMode</code> (instant build, give cash, unlimited power, build anywhere), combat debug overlay, pathfinder overlay, actor map overlay, performance graph, asset browser.</p>
@@ -2545,7 +2544,7 @@ rifle_infantry:
 <hr>
 <h2 id="38-procedural-map-generation--partial"><a class="header" href="#38-procedural-map-generation--partial">38. Procedural Map Generation ⚠️ PARTIAL</a></h2>
 <p><strong>OpenRA:</strong> <code>ClassicMapGenerator</code> (38KB) — procedural map generation with terrain types, resource placement, spawn points.</p>
-<p><strong>Iron Curtain status:</strong> Not explicitly designed, though LLM-generated missions (Phase 7) may cover this. The map editor (P005) should include generation tools.</p>
+<p><strong>Iron Curtain status:</strong> Not explicitly designed, though LLM-generated missions (Phase 7) may cover this. The in-engine scenario editor (D038) should include generation tools.</p>
 <hr>
 <h2 id="39-localization--i18n--missing"><a class="header" href="#39-localization--i18n--missing">39. Localization / i18n ❌ MISSING</a></h2>
 <p><strong>OpenRA:</strong> <code>FluentMessages</code> section in mod manifest — full localization support using Project Fluent.</p>
@@ -2666,6 +2665,14 @@ rifle_infantry:
 <tr><td><strong>Video as workshop resource</strong></td><td><code>04-MODDING.md</code></td><td>Not present</td></tr>
 <tr><td><strong>Scene templates</strong> (parameterized mission building blocks)</td><td><code>04-MODDING.md</code></td><td>Not present</td></tr>
 <tr><td><strong>Adaptive difficulty</strong> (via campaign state or LLM)</td><td><code>04-MODDING.md</code>, <code>01-VISION.md</code></td><td>Not present</td></tr>
+<tr><td><strong>In-game Workshop browser</strong> (search, filter, one-click)</td><td>D030, <code>04-MODDING.md</code></td><td>Not present (forum sharing only)</td></tr>
+<tr><td><strong>Auto-download on lobby join</strong> (CS:GO-style)</td><td>D030, <code>03-NETCODE.md</code></td><td>Not present (manual install)</td></tr>
+<tr><td><strong>Steam Workshop as source</strong> (optional, federated)</td><td>D030, <code>04-MODDING.md</code></td><td>Not present</td></tr>
+<tr><td><strong>Creator reputation &amp; badges</strong></td><td>D030, <code>04-MODDING.md</code></td><td>Not present</td></tr>
+<tr><td><strong>DMCA/takedown policy</strong> (due process)</td><td>D030, <code>09-DECISIONS.md</code></td><td>Not present</td></tr>
+<tr><td><strong>Creator recognition &amp; tipping</strong></td><td>D035, <code>04-MODDING.md</code></td><td>Not present</td></tr>
+<tr><td><strong>Achievement system</strong> (engine + mod-defined)</td><td>D036, <code>09-DECISIONS.md</code></td><td>Not present</td></tr>
+<tr><td><strong>Community governance model</strong> (elected reps, RFC process)</td><td>D037, <code>09-DECISIONS.md</code></td><td>Core team only, no formal governance</td></tr>
 </tbody>
 </table>
 </div>

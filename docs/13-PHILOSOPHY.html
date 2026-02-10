@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-8c5b1adc.js";
+            window.path_to_searchindex_js = "searchindex-54ce139c.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-a85074c4.js"></script>
@@ -304,6 +304,104 @@ Competitors like Warcraft used unit caps for balance and performance. Westwood r
 </blockquote>
 <p>The goal of pathfinding and AI isn’t mathematical perfection. It’s believability. A unit that takes a slightly suboptimal route is fine. A unit that vibrates back and forth because it recalculated its path every tick and couldn’t decide is “artificial idiocy.”</p>
 <p><strong>Rule:</strong> When designing AI or pathfinding, do not aim for “optimal.” Aim for “predictable.” Rely on heuristics (see “Layered Pathfinding Heuristics” in Engineering Methods below) rather than expensive perfection.</p>
+<h3 id="10-build-with-the-community-not-just-for-them"><a class="header" href="#10-build-with-the-community-not-just-for-them">10. Build With the Community, Not Just For Them</a></h3>
+<p>Iron Curtain exists because of a community — the players and modders who kept C&amp;C alive for 30 years through OpenRA, competitive leagues (RAGL), third-party mods (Combined Arms, Romanov’s Vengeance), and preservation projects. Every design decision should consider how it affects these people.</p>
+<p>This means:</p>
+<ul>
+<li><strong>Check community pain points before designing.</strong> OpenRA’s issue tracker (135+ desync issues, recurring modding friction, performance complaints), forum discussions, and mod developer feedback are primary design inputs, not afterthoughts. If a recurring complaint exists, the design should address it — or explicitly document why it doesn’t.</li>
+<li><strong>Don’t break what works.</strong> The community has invested years in maps, mods, and workflows. Compatibility decisions (D023, D025, D026, D027) aren’t just technical — they’re respect for people’s work.</li>
+<li><strong>Governance follows community, not the other way around.</strong> D037 is aspirational until a real community exists. Don’t build election systems for a project with five contributors.</li>
+<li><strong>Earn trust through transparency.</strong> Public design docs, documented decision rationale, and honest scope communication (no “RA2 coming soon” when nobody is building it) are how an open-source project earns contributors.</li>
+</ul>
+<p><strong>Rule:</strong> Before finalizing any design decision, ask: <em>“How does this affect the people who will actually use this?”</em> Check the community pain points documented in <a href="01-VISION.html">01-VISION.md</a>, the OpenRA gap analysis in <a href="11-OPENRA-FEATURES.html">11-OPENRA-FEATURES.md</a>, and the governance principles in D037. If a decision benefits the architecture but hurts the community experience, the community experience wins — unless an architectural invariant is at stake.</p>
+<hr>
+<h2 id="game-design-principles"><a class="header" href="#game-design-principles">Game Design Principles</a></h2>
+<p>The principles above guide how we <em>build</em>. The principles below guide what we <em>build</em> — the player-facing design philosophy that Westwood refined across a decade of RTS games. These are drawn from GDC talks (Louis Castle, 1997 &amp; 1998), Ars Technica’s “War Stories” interview (Castle, 2019), and post-mortem interviews. They complement the development principles — if “Fun Beats Documentation” says <em>how to decide</em>, these say <em>what to aim for</em>.</p>
+<h3 id="11-immediate-feedback--the-one-second-rule"><a class="header" href="#11-immediate-feedback--the-one-second-rule">11. Immediate Feedback — The One-Second Rule</a></h3>
+<p>Louis Castle emphasized that players should receive feedback for every action within one second. Click a unit — it acknowledges with a voice line and visual cue. Issue an order — the unit visibly begins responding. The player should never wonder “did the game hear me?”</p>
+<p>This isn’t about latency targets — it’s about <em>perceived responsiveness</em>. A click that produces silence is worse than a click that produces a “not yet” response.</p>
+<p><strong>Rule:</strong> Every player action must produce audible and visible feedback within one second. Unit selection → voice line. Order issued → animation change. Build started → sound cue. If a system doesn’t have feedback, it needs feedback before it needs features.</p>
+<p><strong>Where this applies:</strong></p>
+<ul>
+<li>Unit voice and animation responses in <code>ra-render</code> and <code>ra-audio</code> (Phase 3)</li>
+<li>Build queue feedback in <code>ra-ui</code> (Phase 3)</li>
+<li>Input handling in <code>ra-game</code> — cursor changes, click acknowledgment</li>
+</ul>
+<h3 id="12-visual-clarity--the-one-second-screenshot"><a class="header" href="#12-visual-clarity--the-one-second-screenshot">12. Visual Clarity — The One-Second Screenshot</a></h3>
+<p>You should be able to look at a screenshot for one second and know: who is winning, what units are on screen, and where the resources are. This was a core Westwood design test. If the screen is confusing, it doesn’t matter how deep the strategy is — the player has lost contact with their toy soldiers.</p>
+<p><strong>Rule:</strong> Unit silhouettes must be distinguishable at gameplay zoom. Faction colors must read clearly. Resource locations must be visually distinct from terrain. Health states should be glanceable. When designing sprites, effects, or UI, ask: “Can I read this in one second?”</p>
+<p><strong>Where this applies:</strong></p>
+<ul>
+<li>Sprite design guidelines for modders in <a href="04-MODDING.html">04-MODDING.md</a></li>
+<li>Render quality tiers in <a href="10-PERFORMANCE.html">10-PERFORMANCE.md</a> — even the lowest tier must preserve readability</li>
+<li>Color palette choices for faction differentiation</li>
+</ul>
+<h3 id="13-reduce-cognitive-load--smart-defaults"><a class="header" href="#13-reduce-cognitive-load--smart-defaults">13. Reduce Cognitive Load — Smart Defaults</a></h3>
+<p>Westwood’s context-sensitive cursor was one of their greatest contributions to the genre: the cursor changes based on what it’s over (attack icon on enemies, move icon on terrain, harvest icon on resources), so the player communicates intent with a single click. The sidebar build menu was a deliberate choice to let players manage their base without moving the camera away from combat.</p>
+<p>The principle: never make the player think about <em>how</em> to do something when they should be thinking about <em>what</em> to do.</p>
+<p><strong>Rule:</strong> Interface design should minimize the gap between player intent and game action. Default to the most likely action. Cursor, hotkeys, and UI layout should match what the player is already thinking. This extends to modding: mod installation should be one click, not a manual file dance.</p>
+<p><strong>Where this applies:</strong></p>
+<ul>
+<li>Input system design via <code>InputSource</code> trait (Invariant #10)</li>
+<li>UI layout in <code>ra-ui</code> — sidebar vs bottom-bar is a theme choice (D032), but all layouts should follow “build without losing the battlefield”</li>
+<li>Mod SDK UX (D020) — <code>ic mod install</code> should be trivially simple</li>
+</ul>
+<h3 id="14-asymmetric-faction-identity"><a class="header" href="#14-asymmetric-faction-identity">14. Asymmetric Faction Identity</a></h3>
+<p>Westwood believed that factions should never be mirrors of each other. GDI represents might and armor — slow, expensive, powerful. Nod represents stealth and speed — cheap, fragile, hit-and-run. The philosophy: balance doesn’t mean equal stats. It means every “overpowered” tool has a specific, skill-based counter.</p>
+<p>This creates the experience that playing Faction B feels like a <em>different game</em> than playing Faction A — different tempo, different priorities, different emotional arc. If you can swap faction skins and nothing changes, the faction design has failed.</p>
+<p><strong>Rule:</strong> When defining faction rules in YAML, design for identity contrast, not stat parity. Every faction strength should create a corresponding vulnerability. Balance is achieved through asymmetric counter-play, not symmetric stat lines. D019 (switchable balance presets) supports tuning the degree of asymmetry, but the principle holds across all presets.</p>
+<p><strong>Where this applies:</strong></p>
+<ul>
+<li>Unit and weapon definitions in YAML rules (<a href="04-MODDING.html">04-MODDING.md</a>)</li>
+<li>Damage type matrices / versus tables (<a href="11-OPENRA-FEATURES.html">11-OPENRA-FEATURES.md</a>)</li>
+<li>Balance presets (D019) — even the “classic” preset preserves Westwood’s asymmetric intent</li>
+</ul>
+<h3 id="15-the-core-loop--extract-build-amass-crush"><a class="header" href="#15-the-core-loop--extract-build-amass-crush">15. The Core Loop — Extract, Build, Amass, Crush</a></h3>
+<p>The most successful C&amp;C titles follow a four-step core loop:</p>
+<ol>
+<li><strong>Extract</strong> resources</li>
+<li><strong>Build</strong> base</li>
+<li><strong>Amass</strong> army</li>
+<li><strong>Crush</strong> enemy</li>
+</ol>
+<p>Every game system should feed into this loop. The original Westwood team learned (and EA relearned) that features which distract from the core loop — hero units that overshadow armies, global powers that bypass base-building — weaken the game’s identity. “Kitchen sink” feature creep that doesn’t serve the loop produces unfocused games.</p>
+<p><strong>Rule:</strong> When evaluating a feature, ask: “Which step of the core loop does this serve?” If the answer is “none — it’s a parallel system,” the feature needs strong justification. This is the game-design-specific version of “Scope to What You Have” (Principle 6).</p>
+<p><strong>Where this applies:</strong></p>
+<ul>
+<li>System design decisions in <a href="02-ARCHITECTURE.html">02-ARCHITECTURE.md</a> — every sim system should map to a loop step</li>
+<li>Feature proposals — the first question after “does it make the toy soldiers come alive?” is “which loop step does it serve?”</li>
+<li>Mod review guidelines — total conversions can define their own loop, but the default RA1 module should stay faithful to this one</li>
+</ul>
+<h3 id="16-game-feel--the-juice"><a class="header" href="#16-game-feel--the-juice">16. Game Feel — “The Juice”</a></h3>
+<p>Westwood (and later EA with the SAGE engine) understood that impact matters as much as mechanics. Buildings shouldn’t just vanish — they should crumble. Debris should be physical. Explosions should feel weighty. Units should leave husks. During the Generals/C&amp;C3 era, EA formalized this as “physics as fun” — the visceral, physical feedback that makes commanding an army feel <em>powerful</em>.</p>
+<p>The checklist: Do explosions feel impactful? Does the screen communicate force? Do destroyed units leave evidence that a battle happened? Do weapons feel different from each other — not just in damage numbers, but in visual and audio weight?</p>
+<p><strong>Rule:</strong> “Juice” goes into the render and audio layers, not the sim. The sim tracks damage, death, and debris spawning deterministically. The renderer and audio system make it <em>feel good</em>. When a system works correctly but doesn’t feel satisfying, the problem is almost always missing juice, not missing mechanics.</p>
+<p><strong>Where this applies:</strong></p>
+<ul>
+<li>Rendering effects in <code>ra-render</code> — destruction animations, particle effects, screen shake (all render-side, never sim-side)</li>
+<li>Audio feedback in <code>ra-audio</code> — weapon-specific impact sounds, explosion scaling</li>
+<li>Modding: effects should be YAML-configurable (explosion type, debris count, screen shake intensity) so modders can tune game feel without code</li>
+</ul>
+<h3 id="17-audio-drives-tempo"><a class="header" href="#17-audio-drives-tempo">17. Audio Drives Tempo</a></h3>
+<p>Frank Klepacki’s philosophy extended beyond “write good music” to a specific insight about gameplay coupling: the music should match the tempo of the game. High-energy industrial metal and techno during combat keeps the player’s actions-per-minute high. Ambient tension during build-up phases lets the player think. “Hell March” isn’t just a good track — it’s a gameplay accelerator.</p>
+<p>This extends to unit responses. Each unit’s voice should reflect its personality and role — the bravado of a Commando, the professionalism of a Tank, the nervousness of a Conscript. Audio is characterization, not decoration.</p>
+<p><strong>Rule:</strong> Audio design (Phase 3) should be tested against gameplay tempo, not in isolation. Does the music make the player want to act? Do unit voices reinforce the fantasy? The <code>ra-audio</code> system should support dynamic music states (combat/exploration/tension) that respond to game state, not just random playlist shuffling.</p>
+<p><strong>Where this applies:</strong></p>
+<ul>
+<li>Dynamic music system in <code>ra-audio</code> (Phase 3)</li>
+<li>Unit voice design guidelines for modders</li>
+<li>Audio LOD — critical feedback sounds (unit acknowledgment, attack alerts) must never be culled, even under heavy audio load</li>
+</ul>
+<h3 id="18-the-damage-matrix--no-monocultures"><a class="header" href="#18-the-damage-matrix--no-monocultures">18. The Damage Matrix — No Monocultures</a></h3>
+<p>The C&amp;C series formalized damage types (armor-piercing, explosive, fire, etc.) against armor classes (none, light, heavy, wood, concrete) into explicit versus tables. This mathematical structure ensures that no single unit composition can dominate without a counter. Westwood established this with the original RA’s warhead/armor system; EA expanded it during the Generals/C&amp;C3 era with more granular categories.</p>
+<p>The design principle isn’t “add more damage types.” It’s: every viable strategy must have a viable counter-strategy. If playtesting reveals a monoculture (one unit type dominates), the versus table is the first place to look.</p>
+<p><strong>Rule:</strong> The damage pipeline (D028) should make the versus table moddable, inspectable, and central to balance work. The table is YAML data, not code. Balance presets (D019) may use different versus tables. The mod SDK should include tools to visualize the counter-play graph.</p>
+<p><strong>Where this applies:</strong></p>
+<ul>
+<li>Damage pipeline and versus tables in <code>ra-sim</code> (D028, Phase 2 hard requirement)</li>
+<li>Balance preset definitions (D019)</li>
+<li>Modding documentation — versus table editing should be a first tutorial, not an advanced topic</li>
+</ul>
 <hr>
 <h2 id="engineering-methods"><a class="header" href="#engineering-methods">Engineering Methods</a></h2>
 <p>These are not principles — they’re specific engineering practices validated by Westwood’s code and OpenRA’s 18 years of open-source development.</p>
@@ -387,6 +485,7 @@ Competitors like Warcraft used unit caps for balance and performance. Westwood r
 <li>Could a modder change this value without recompiling? Should they be able to?</li>
 <li>Is this scoped appropriately for the current phase?</li>
 <li>If this is a compromise, is it explicitly labeled and reversible?</li>
+<li>How does this affect the community — players, modders, server hosts, contributors? Does it address a known pain point or create a new one?</li>
 </ol>
 <h3 id="for-feature-proposals"><a class="header" href="#for-feature-proposals">For Feature Proposals</a></h3>
 <p>When proposing a new feature:</p>
@@ -395,6 +494,7 @@ Competitors like Warcraft used unit caps for balance and performance. Westwood r
 <li>Cross-reference the relevant design docs (<a href="02-ARCHITECTURE.html">02-ARCHITECTURE.md</a>, <a href="08-ROADMAP.html">08-ROADMAP.md</a>, etc.)</li>
 <li>If it conflicts with a principle, acknowledge the trade-off — don’t pretend the conflict doesn’t exist</li>
 <li>Check <a href="09-DECISIONS.html">09-DECISIONS.md</a> — has this already been decided?</li>
+<li>Consider community impact — does this address a known pain point? Does it create friction for existing workflows? Check <a href="01-VISION.html">01-VISION.md</a> and <a href="11-OPENRA-FEATURES.html">11-OPENRA-FEATURES.md</a> for documented community needs</li>
 </ol>
 <h3 id="for-llm-agents"><a class="header" href="#for-llm-agents">For LLM Agents</a></h3>
 <p>If you’re an AI agent working on this project:</p>

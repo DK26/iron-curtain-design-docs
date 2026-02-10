@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-8c5b1adc.js";
+            window.path_to_searchindex_js = "searchindex-54ce139c.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-a85074c4.js"></script>
@@ -212,6 +212,12 @@
 <li>Define <code>CoordTransform</code> (coordinate system translation)</li>
 <li>Study OpenRA architecture: Game loop, World/Actor/Trait hierarchy, OrderManager, mod manifest system</li>
 </ul>
+<h3 id="community-foundation-d037"><a class="header" href="#community-foundation-d037">Community Foundation (D037)</a></h3>
+<ul>
+<li>Code of conduct and contribution guidelines published</li>
+<li>RFC process documented for major design decisions</li>
+<li>License decision finalized (P006)</li>
+</ul>
 <h3 id="release"><a class="header" href="#release">Release</a></h3>
 <p>Open source <code>ra-formats</code> early. Useful standalone, builds credibility and community interest.</p>
 <h3 id="exit-criteria"><a class="header" href="#exit-criteria">Exit Criteria</a></h3>
@@ -222,9 +228,10 @@
 <li>OpenRA trait name aliases resolve correctly to IC components (D023)</li>
 <li>Can extract and display sprites from .mix archives</li>
 <li>Can convert MiniYAML to standard YAML losslessly</li>
+<li>Code of conduct and RFC process published (D037)</li>
 </ul>
 <h2 id="phase-1-rendering-slice-months-36"><a class="header" href="#phase-1-rendering-slice-months-36">Phase 1: Rendering Slice (Months 3–6)</a></h2>
-<p><strong>Goal:</strong> Render a map with units standing on it. No gameplay. Demonstrate Bevy’s visual capabilities.</p>
+<p><strong>Goal:</strong> Render a Red Alert map faithfully with units standing on it. No gameplay. Classic isometric aesthetic.</p>
 <h3 id="deliverables-1"><a class="header" href="#deliverables-1">Deliverables</a></h3>
 <ul>
 <li>Bevy-based isometric tile renderer with palette-aware shading</li>
@@ -232,8 +239,8 @@
 <li>Shroud/fog-of-war rendering</li>
 <li>Camera: smooth scroll, zoom, minimap</li>
 <li>Load OpenRA map, render correctly</li>
-<li>Basic post-processing: bloom on explosions, color grading</li>
-<li>Shader prototypes: chrono-shift shimmer, tesla coil glow (visual showcase)</li>
+<li>Render quality tier auto-detection (see <code>10-PERFORMANCE.md</code> § “Render Quality Tiers”)</li>
+<li>Optional visual showcase: basic post-processing (bloom, color grading) and shader prototypes (chrono-shift shimmer, tesla coil glow) to demonstrate modding possibilities</li>
 </ul>
 <h3 id="key-architecture-work-1"><a class="header" href="#key-architecture-work-1">Key Architecture Work</a></h3>
 <ul>
@@ -242,7 +249,7 @@
 <li>HD asset pipeline: support high-res sprites alongside classic 8-bit assets</li>
 </ul>
 <h3 id="release-1"><a class="header" href="#release-1">Release</a></h3>
-<p>“Red Alert map rendered in Rust at 4K 144fps with modern post-processing” — visual showcase generates buzz.</p>
+<p>“Red Alert map rendered faithfully in Rust at 4K 144fps” — visual showcase generates buzz.</p>
 <h3 id="exit-criteria-1"><a class="header" href="#exit-criteria-1">Exit Criteria</a></h3>
 <ul>
 <li>Can load and render any OpenRA Red Alert map</li>
@@ -252,6 +259,9 @@
 </ul>
 <h2 id="phase-2-simulation-core-months-612--critical"><a class="header" href="#phase-2-simulation-core-months-612--critical">Phase 2: Simulation Core (Months 6–12) — CRITICAL</a></h2>
 <p><strong>Goal:</strong> Units move, shoot, die. The engine exists.</p>
+<blockquote>
+<p><strong>Gap acknowledgment:</strong> The ECS component model currently documents ~9 core components (Health, Mobile, Attackable, Armament, Building, Buildable, Harvester, Selectable, LlmMeta). The gap analysis in <code>11-OPENRA-FEATURES.md</code> identifies <strong>~30+ additional gameplay systems</strong> that are prerequisites for a playable Red Alert: power, building placement, transport, capture, stealth/cloak, infantry sub-cells, crates, mines, crush, guard/patrol, deploy/transform, garrison, production queue, veterancy, docking, radar, GPS, chronoshift, iron curtain, paratroopers, naval, bridge, tunnels, and more. These systems need design and implementation during Phase 2. The gap count is a feature of honest planning, not a sign of incompleteness — the <code>11-OPENRA-FEATURES.md</code> priority assessment (P0/P1/P2/P3) provides the triage order.</p>
+</blockquote>
 <h3 id="deliverables-2"><a class="header" href="#deliverables-2">Deliverables</a></h3>
 <ul>
 <li>ECS-based simulation layer (<code>ra-sim</code>)</li>
@@ -263,7 +273,7 @@
 <li><strong>Cross-game component library (D029):</strong> Mind control, carrier/spawner, teleport networks, shield system, upgrade system, delayed weapons (7 first-party systems)</li>
 <li>Fixed-point coordinate system (no floats in sim)</li>
 <li>Deterministic RNG</li>
-<li>Pathfinding: Hierarchical A* or flowfields</li>
+<li>Pathfinding: <code>Pathfinder</code> trait + grid flowfield implementation (D013)</li>
 <li>Order system: Player inputs → Orders → deterministic sim application</li>
 <li><code>LocalNetwork</code> and <code>ReplayPlayback</code> NetworkModel implementations</li>
 <li>Sim snapshot/restore for save games and future rollback</li>
@@ -305,7 +315,11 @@
 <li>Radar panel as multi-mode display: minimap (default), comm video feed (RA2-style), tactical overlay</li>
 <li>Unit selection: box select, ctrl-groups, tab cycling</li>
 <li>Build placement with validity checking</li>
-<li>Audio: EVA voice lines, unit responses, ambient, music (<code>.aud</code> playback)</li>
+<li>Audio: EVA voice lines, unit responses, ambient, music (<code>.aud</code> playback)
+<ul>
+<li><strong>Audio system design (P003):</strong> Resolve audio library choice; design <code>.aud</code> IMA ADPCM decoding pipeline; dynamic music state machine (combat/build/idle transitions — original RA had this); music-as-Workshop-resource architecture; investigate loading remastered soundtrack if player owns Remastered Collection</li>
+</ul>
+</li>
 <li>Custom UI layer on <code>wgpu</code> for game HUD</li>
 <li><code>egui</code> for dev tools/debug overlays</li>
 <li><strong>UI theme system (D032):</strong> YAML-driven switchable themes (Classic, Remastered, Modern); chrome sprite sheets, color palettes, font configuration; shellmap live menu backgrounds; first-launch theme picker</li>
@@ -321,9 +335,10 @@
 <li><strong>Chart component in <code>ra-ui</code>:</strong> Lightweight Bevy 2D chart renderer (line, bar, pie, heatmap, stacked area) for post-game and career screens</li>
 <li><strong>Post-game stats screen (D034):</strong> Unit production timeline, resource curves, combat heatmap, APM graph, head-to-head comparison — all from SQLite <code>gameplay_events</code></li>
 <li><strong>Career stats page (D034):</strong> Win rate by faction/map/opponent, rating history graph, session history with replay links — from SQLite <code>matches</code> + <code>match_players</code></li>
+<li><strong>Achievement infrastructure (D036):</strong> SQLite achievement tables, engine-defined campaign/exploration achievements, Lua trigger API for mod-defined achievements, Steam achievement sync for Steam builds</li>
 </ul>
 <blockquote>
-<p><strong>Note:</strong> Phase 3’s hard goal is “feels like Red Alert” — sidebar, audio, selection, build placement. The stats screens and chart component are high-value polish but depend on accumulated gameplay data, so they can mature alongside Phase 4 without blocking the “playable” milestone.</p>
+<p><strong>Note:</strong> Phase 3’s hard goal is “feels like Red Alert” — sidebar, audio, selection, build placement. The stats screens, chart component, and achievement infrastructure are high-value polish but depend on accumulated gameplay data, so they can mature alongside Phase 4 without blocking the “playable” milestone.</p>
 </blockquote>
 <h2 id="phase-4-ai--single-player-months-1620"><a class="header" href="#phase-4-ai--single-player-months-1620">Phase 4: AI &amp; Single Player (Months 16–20)</a></h2>
 <p><strong>Goal:</strong> Complete campaign support and skirmish AI. Unlike OpenRA, single-player is a first-class deliverable, not an afterthought.</p>
@@ -354,6 +369,7 @@
 <li>Veterancy persistence across missions</li>
 <li>Mission select UI with campaign graph visualization and difficulty indicators</li>
 <li><strong><code>ic</code> CLI prototype:</strong> <code>ic mod init</code>, <code>ic mod check</code>, <code>ic mod run</code> — early tooling for Lua script development (full SDK in Phase 6)</li>
+<li><strong>Minimal Workshop (D030 early delivery):</strong> Central IC Workshop server + <code>ic mod publish</code> + <code>ic mod install</code> + basic in-game browser + auto-download on lobby join. Simple HTTP REST API, SQLite-backed. No federation, no replication, no promotion channels yet — those are Phase 6</li>
 </ul>
 <h3 id="exit-criteria-4"><a class="header" href="#exit-criteria-4">Exit Criteria</a></h3>
 <ul>
@@ -379,6 +395,8 @@
 <li><strong>Tournament mode:</strong> bracket API, relay-certified <code>CertifiedMatchResult</code>, server-side replay archive</li>
 <li><strong>Competitive map pool:</strong> curated per-season, community-nominated</li>
 <li><strong>Anti-cheat:</strong> relay-side behavioral analysis (APM, reaction time, pattern entropy), suspicion scoring, community reports</li>
+<li><strong>Competitive governance (D037):</strong> Competitive committee formation, seasonal map pool curation process, community representative elections</li>
+<li><strong>Competitive achievements (D036):</strong> Ranked placement, league promotion, season finish, tournament participation achievements</li>
 </ul>
 <h3 id="key-architecture-work-4"><a class="header" href="#key-architecture-work-4">Key Architecture Work</a></h3>
 <ul>
@@ -403,11 +421,15 @@
 </ul>
 <h2 id="phase-6-modding--ecosystem-months-2632"><a class="header" href="#phase-6-modding--ecosystem-months-2632">Phase 6: Modding &amp; Ecosystem (Months 26–32)</a></h2>
 <p><strong>Goal:</strong> This is where you win long-term.</p>
+<blockquote>
+<p><strong>Phased Workshop delivery (D030):</strong> A minimal Workshop (central server + <code>ic mod publish</code> + <code>ic mod install</code> + in-game browser + auto-download on lobby join) should ship during Phase 4–5 alongside the <code>ic</code> CLI. Phase 6 adds the full Artifactory-level features: federation, community servers, replication, promotion channels, CI/CD token scoping, creator reputation, DMCA process. This avoids holding Workshop infrastructure hostage until month 26.</p>
+</blockquote>
 <h3 id="deliverables-6"><a class="header" href="#deliverables-6">Deliverables</a></h3>
 <ul>
 <li>Full OpenRA YAML rule compatibility (existing mods load)</li>
 <li>WASM mod scripting with full capability system</li>
-<li>In-engine map editor (OpenRA’s biggest UX gap)</li>
+<li><strong>In-engine scenario editor (D038):</strong> OFP/Eden-inspired visual editor for maps AND mission logic — terrain painting, unit placement, triggers (area-based with countdown/timeout timers and min/mid/max randomization), waypoints, pre-built modules (wave spawner, patrol route, guard position, reinforcements, objectives, weather change, etc.), visual connection lines between triggers/modules/waypoints, Probability of Presence per entity for replayability, compositions (reusable prefabs), layers with lock/visibility, Simple/Advanced mode toggle, preview/test button, direct Workshop publishing</li>
+<li><strong>Game Master mode (D038):</strong> Zeus-inspired real-time scenario manipulation during live gameplay — one player controls enemy faction strategy, places reinforcements, triggers events, adjusts difficulty; uses editor UI on a live sim; budget system prevents flooding</li>
 <li>Asset hot-reloading for mod development</li>
 <li>Mod manager + workshop-style distribution</li>
 <li>Tera templating for YAML generation (nice-to-have)</li>
@@ -421,17 +443,30 @@
 <li><strong>Individual resource publishing:</strong> Music, sprites, textures, voice lines, cutscenes, palettes, UI themes — all publishable as independent versioned resources</li>
 <li><strong>Lockfile system:</strong> <code>ic.lock</code> for reproducible dependency resolution across machines</li>
 <li><strong>Mod balance dashboard (D034):</strong> Unit win-rate contribution, cost-efficiency scatter plots, engagement outcome distributions from SQLite <code>gameplay_events</code>; <code>ic mod stats</code> CLI reads same database</li>
+<li><strong>Steam Workshop integration (D030):</strong> Optional distribution channel — subscribe via Steam, auto-sync, IC Workshop remains primary; no Steam lock-in</li>
+<li><strong>In-game Workshop browser (D030):</strong> Search, filter by category/game-module/rating, preview screenshots, one-click subscribe, dependency auto-resolution</li>
+<li><strong>Auto-download on lobby join (D030):</strong> CS:GO-style automatic mod/map download when joining a game that requires content the player doesn’t have; progress UI with cancel option</li>
+<li><strong>Creator reputation system (D030):</strong> Trust scores from download counts, ratings, curation endorsements; tiered badges (New/Trusted/Verified/Featured); influences search ranking</li>
+<li><strong>Content moderation &amp; DMCA/takedown policy (D030):</strong> Community reporting, automated scanning for known-bad content, 72-hour response window, due process with appeal path; Workshop moderator tooling</li>
+<li><strong>Creator tipping &amp; sponsorship (D035):</strong> Optional tip links in resource metadata (Ko-fi/Patreon/GitHub Sponsors); IC never processes payments; no mandatory paywalls on mods</li>
+<li><strong>Achievement packs (D036):</strong> Mod-defined achievements via YAML + Lua triggers, publishable as Workshop resources; achievement browser in game UI</li>
+<li><strong>Community governance tooling (D037):</strong> Workshop moderator dashboard, community representative election system, game module steward roles</li>
 </ul>
 <h3 id="exit-criteria-6"><a class="header" href="#exit-criteria-6">Exit Criteria</a></h3>
 <ul>
 <li>Someone ports an existing OpenRA mod (Tiberian Dawn, Dune 2000) and it runs</li>
-<li>In-engine map editor is more capable than OpenRA’s standalone tool</li>
+<li>In-engine scenario editor is more capable than OpenRA’s standalone map editor: supports terrain painting, unit placement, triggers with timers, waypoints, modules, compositions, and Workshop publishing</li>
 <li>A mod can declare 3+ Workshop resource dependencies and <code>ic mod install</code> resolves, downloads, and caches them correctly</li>
 <li><code>ic mod audit</code> correctly identifies license incompatibilities in a dependency tree</li>
 <li>An individual resource (e.g., a music track) can be published to and pulled from the Workshop independently</li>
+<li>In-game Workshop browser can search, filter, and install resources with dependency auto-resolution</li>
+<li>Joining a lobby with required mods triggers auto-download with progress UI</li>
+<li>Creator reputation badges display correctly on resource listings</li>
+<li>DMCA/takedown process handles a test case end-to-end within 72 hours</li>
+<li>At least one mod-defined achievement pack loads and triggers correctly</li>
 </ul>
 <h2 id="phase-7-ai-content--polish-months-3236"><a class="header" href="#phase-7-ai-content--polish-months-3236">Phase 7: AI Content &amp; Polish (Months 32–36+)</a></h2>
-<p><strong>Goal:</strong> Optional LLM-generated missions (BYOLLM), visual polish, and feature parity.</p>
+<p><strong>Goal:</strong> Optional LLM-generated missions (BYOLLM), visual modding infrastructure, and feature parity.</p>
 <h3 id="deliverables--ai-content-generation-optional--byollm"><a class="header" href="#deliverables--ai-content-generation-optional--byollm">Deliverables — AI Content Generation (Optional — BYOLLM)</a></h3>
 <p>All LLM features require the player to configure their own LLM provider. The game is fully functional without one.</p>
 <ul>
@@ -446,13 +481,14 @@
 <li><strong>LLM player-aware generation (D034):</strong> When LLM provider is configured, <code>ra-llm</code> reads local SQLite for player context — faction preferences, unit usage patterns, win/loss streaks, campaign roster state; generates personalized missions, adaptive briefings, post-match commentary, coaching suggestions, rivalry narratives</li>
 <li><strong>AI training data pipeline (D031):</strong> gameplay event stream → OTEL collector → Parquet/Arrow columnar format → ML training; build order learning, engagement patterns, balance analysis from aggregated match telemetry</li>
 </ul>
-<h3 id="deliverables--visual-polish-bevy-rendering"><a class="header" href="#deliverables--visual-polish-bevy-rendering">Deliverables — Visual Polish (Bevy Rendering)</a></h3>
+<h3 id="deliverables--visual-modding-infrastructure-bevy-rendering"><a class="header" href="#deliverables--visual-modding-infrastructure-bevy-rendering">Deliverables — Visual Modding Infrastructure (Bevy Rendering)</a></h3>
+<p>These are optional visual enhancements that ship as engine capabilities for modders and community content creators. The base game uses the classic isometric aesthetic established in Phase 1.</p>
 <ul>
-<li>Full post-processing pipeline: bloom, color grading, ambient occlusion</li>
-<li>Dynamic lighting: explosions, muzzle flash, day/night cycle (optional game mode)</li>
-<li>GPU particle systems: smoke trails, fire propagation, weather effects (rain, snow, sandstorm, fog, blizzard, storm — see <code>04-MODDING.md</code> § “weather scene template”)</li>
+<li>Post-processing pipeline available to modders: bloom, color grading, ambient occlusion</li>
+<li>Dynamic lighting infrastructure: explosions, muzzle flash, day/night cycle (optional game mode)</li>
+<li>GPU particle system infrastructure: smoke trails, fire propagation, weather effects (rain, snow, sandstorm, fog, blizzard, storm — see <code>04-MODDING.md</code> § “weather scene template”)</li>
 <li>Weather system: per-map or trigger-based, render-only or with optional sim effects (visibility, speed modifiers)</li>
-<li>Polished shader effects: chrono-shift, iron curtain, gap generator, nuke flash</li>
+<li>Shader effect library: chrono-shift, iron curtain, gap generator, nuke flash</li>
 <li>Cinematic replay camera with smooth interpolation</li>
 </ul>
 <h3 id="deliverables--platform--ecosystem"><a class="header" href="#deliverables--platform--ecosystem">Deliverables — Platform &amp; Ecosystem</a></h3>
