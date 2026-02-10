@@ -495,7 +495,7 @@ ic mod update-engine       # bump engine version
 - Only branching on win/lose (rejected — named outcomes are trivially more expressive with no added complexity)
 - No unit persistence (rejected — OFP: Resistance proves this is the feature that creates campaign investment)
 
-**Phase:** Phase 4 (AI & Single Player). Campaign graph engine and Lua Campaign API are core Phase 4 deliverables.
+**Phase:** Phase 4 (AI & Single Player). Campaign graph engine and Lua Campaign API are core Phase 4 deliverables. The visual Campaign Editor in D038 (Phase 6) builds on this system — D021 provides the sim-side engine, D038 provides the visual authoring tools.
 
 ---
 
@@ -800,11 +800,11 @@ ic mod update-engine       # bump engine version
 
 The Workshop design below is comprehensive, but it ships incrementally:
 
-| Phase     | Scope                                                                                                                                    | Complexity   |
-| --------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
-| Phase 4–5 | **Minimal viable Workshop:** Central IC server + `ic mod publish` + `ic mod install` + in-game browser + auto-download on lobby join     | Medium       |
+| Phase     | Scope                                                                                                                                                                       | Complexity   |
+| --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| Phase 4–5 | **Minimal viable Workshop:** Central IC server + `ic mod publish` + `ic mod install` + in-game browser + auto-download on lobby join                                        | Medium       |
 | Phase 6   | **Full Workshop:** Federation, community servers, replication, promotion channels, CI/CD token scoping, creator reputation, DMCA process, Steam Workshop as optional source | High         |
-| Phase 7+  | **Advanced:** LLM-driven discovery, premium hosting tiers                                                                                                                  | Low priority |
+| Phase 7+  | **Advanced:** LLM-driven discovery, premium hosting tiers                                                                                                                   | Low priority |
 
 The Artifactory-level federation design is the end state, not the MVP. Ship simple, iterate toward complex.
 
@@ -2185,6 +2185,923 @@ pub trait WorkshopStorage: Send + Sync {
 
 ---
 
+## D038 — In-Engine Scenario Editor (OFP/Eden-Inspired)
+
+**Resolves:** P005 (Map editor architecture)
+
+**Decision:** In-engine scenario editor — not just a map/terrain painter, but a full visual mission authoring tool inspired by Operation Flashpoint's mission editor (2001) and Arma 3's Eden Editor (2016). Runs inside the game with live isometric preview. Combines terrain editing (tiles, resources, cliffs) with scenario logic editing (unit placement, triggers, waypoints, modules). Two complexity tiers: Simple mode (accessible) and Advanced mode (full power).
+
+**Rationale:**
+
+The OFP mission editor is one of the most successful content creation tools in gaming history. It shipped with a $40 game in 2001 and generated thousands of community missions across 15 years — despite having no undo button. Its success came from three principles:
+
+1. **Accessibility through layered complexity.** Easy mode hides advanced fields. A beginner places units and waypoints in minutes. An advanced user adds triggers, conditions, probability of presence, and scripting. Same data, different UI.
+2. **Emergent behavior from simple building blocks.** Guard + Guarded By creates dynamic multi-group defense behavior from pure placement — zero scripting. Synchronization lines coordinate multi-group operations. Triggers with countdown/timeout timers and min/mid/max randomization create unpredictable encounters.
+3. **The editor IS the game.** Not a separate tool, not a different application. You're inside the engine, placing things on the actual map, hitting "Preview" to test instantly. This collapses the create→test→iterate loop to seconds.
+
+Eden Editor (2016) evolved these principles: 3D placement, undo/redo, 154 pre-built modules (complex logic as drag-and-drop nodes), compositions (reusable prefabs), layers (organizational folders), and Steam Workshop publishing directly from the editor. Arma Reforger (2022) added budget systems, behavior trees for waypoints, controller support, and a real-time Game Master mode.
+
+**Iron Curtain applies these lessons to the RTS genre.** An RTS scenario editor has different needs than a military sim — isometric view instead of first-person, base-building and resource placement instead of terrain sculpting, wave-based encounters instead of patrol routes. But the underlying principles are identical: layered complexity, emergent behavior from simple rules, and zero barrier between editing and playing.
+
+### Architecture
+
+The scenario editor is a Bevy plugin (`ra-ui` crate, editor module) that reuses the game's rendering and simulation systems. It is NOT a separate process — it runs in the same Bevy `App` with additional editor-only systems and UI.
+
+```
+┌─────────────────────────────────────────────────┐
+│                 Scenario Editor                  │
+│                                                  │
+│  ┌──────────┐  ┌──────────┐  ┌───────────────┐ │
+│  │  Terrain  │  │  Entity   │  │   Logic       │ │
+│  │  Painter  │  │  Placer   │  │   Editor      │ │
+│  │           │  │           │  │               │ │
+│  │ tiles     │  │ units     │  │ triggers      │ │
+│  │ resources │  │ buildings │  │ waypoints     │ │
+│  │ cliffs    │  │ props     │  │ modules       │ │
+│  │ water     │  │ markers   │  │ regions       │ │
+│  └──────────┘  └──────────┘  └───────────────┘ │
+│                                                  │
+│  ┌──────────────────────────────────────────┐   │
+│  │            Attributes Panel               │   │
+│  │  Per-entity properties (GUI, not code)    │   │
+│  └──────────────────────────────────────────┘   │
+│                                                  │
+│  ┌─────────┐  ┌──────────┐  ┌──────────────┐   │
+│  │ Layers  │  │ Comps    │  │ Preview/Test │   │
+│  │ Panel   │  │ Library  │  │ Button       │   │
+│  └─────────┘  └──────────┘  └──────────────┘   │
+│                                                  │
+│  ┌─────────┐  ┌──────────┐  ┌──────────────┐   │
+│  │ Script  │  │ Vars     │  │ Complexity   │   │
+│  │ Editor  │  │ Panel    │  │ Meter        │   │
+│  └─────────┘  └──────────┘  └──────────────┘   │
+│                                                  │
+│  ┌──────────────────────────────────────────┐   │
+│  │           Campaign Editor                 │   │
+│  │  Graph · State · Intermissions · Dialogue │   │
+│  └──────────────────────────────────────────┘   │
+│                                                  │
+│  Uses: ra-render (isometric view)                │
+│        ra-sim   (preview playback)               │
+│        ra-ui    (panels, attributes)             │
+└─────────────────────────────────────────────────┘
+```
+
+### Editing Modes
+
+| Mode            | Purpose                                                               | OFP Equivalent                         |
+| --------------- | --------------------------------------------------------------------- | -------------------------------------- |
+| **Terrain**     | Paint tiles, place resources (ore/gems), sculpt cliffs, water         | N/A (OFP had fixed terrains)           |
+| **Entities**    | Place units, buildings, props, markers                                | F1 (Units) + F6 (Markers)              |
+| **Groups**      | Organize units into squads/formations, set group behavior             | F2 (Groups)                            |
+| **Triggers**    | Place area-based conditional logic (win/lose, events, spawns)         | F3 (Triggers)                          |
+| **Waypoints**   | Assign movement/behavior orders to groups                             | F4 (Waypoints)                         |
+| **Connections** | Link triggers ↔ waypoints ↔ modules visually                          | F5 (Synchronization)                   |
+| **Modules**     | Pre-packaged game logic nodes                                         | F7 (Modules)                           |
+| **Regions**     | Draw named spatial zones reusable across triggers and scripts         | N/A (AoE2/StarCraft concept)           |
+| **Scripts**     | Browse and edit external `.lua` files referenced by inline scripts    | OFP mission folder `.sqs`/`.sqf` files |
+| **Campaign**    | Visual campaign graph — mission ordering, branching, persistent state | N/A (no RTS editor has this)           |
+
+### Entity Attributes Panel
+
+Every placed entity has a GUI properties panel (no code required). This replaces OFP's "Init" field for most use cases while keeping advanced scripting available.
+
+**Unit attributes (example):**
+
+| Attribute                   | Type              | Description                                |
+| --------------------------- | ----------------- | ------------------------------------------ |
+| **Type**                    | dropdown          | Unit class (filtered by faction)           |
+| **Name**                    | text              | Variable name for Lua scripting            |
+| **Faction**                 | dropdown          | Owner: Player 1–8, Neutral, Creeps         |
+| **Facing**                  | slider 0–360      | Starting direction                         |
+| **Stance**                  | enum              | Guard / Patrol / Hold / Aggressive         |
+| **Health**                  | slider 0–100%     | Starting hit points                        |
+| **Veterancy**               | enum              | None / Rookie / Veteran / Elite            |
+| **Probability of Presence** | slider 0–100%     | Random chance to exist at mission start    |
+| **Condition of Presence**   | expression        | Lua boolean (e.g., `difficulty >= "hard"`) |
+| **Placement Radius**        | slider 0–10 cells | Random starting position within radius     |
+| **Init Script**             | text (multi-line) | Inline Lua — the primary scripting surface |
+
+**Probability of Presence** is the single most important replayability feature from OFP. Every entity — units, buildings, resource patches, props — can have a percentage chance of existing when the mission loads. Combined with Condition of Presence, this creates two-factor randomization: "50% chance this tank platoon spawns, but only on Hard difficulty." A player replaying the same mission encounters different enemy compositions each time. This is trivially deterministic — the mission seed determines all rolls.
+
+### Named Regions
+
+Inspired by Age of Empires II's trigger areas and StarCraft's "locations" — both independently proved that named spatial zones are how non-programmers think about RTS mission logic. A **region** is a named area on the map (rectangle or ellipse) that can be referenced by name across multiple triggers, modules, and scripts.
+
+Regions are NOT triggers — they have no logic of their own. They are spatial labels. A region named `bridge_crossing` can be referenced by:
+- Trigger 1: "IF Player 1 faction present in `bridge_crossing` → activate reinforcements"
+- Trigger 2: "IF `bridge_crossing` has no enemies → play victory audio"
+- Lua script: `Region.unit_count("bridge_crossing", faction.allied) >= 5`
+- Module: Wave Spawner configured to spawn at `bridge_crossing`
+
+This separation prevents the common RTS editor mistake of coupling spatial areas to individual triggers. In AoE2, if three triggers need to reference the same map area, you create three identical areas. In IC, you create one region and reference it three times.
+
+**Region attributes:**
+
+| Attribute   | Type               | Description                                           |
+| ----------- | ------------------ | ----------------------------------------------------- |
+| **Name**    | text               | Unique identifier (e.g., `enemy_base`, `ambush_zone`) |
+| **Shape**   | rect / ellipse     | Cell-aligned or free-form                             |
+| **Color**   | color picker       | Editor visualization color (not visible in-game)      |
+| **Tags**    | text[]             | Optional categorization for search/filter             |
+| **Z-layer** | ground / air / any | Which unit layers the region applies to               |
+
+### Inline Scripting (OFP-Style)
+
+OFP's most powerful feature was also its simplest: double-click a unit, type a line of SQF in the Init field, done. No separate IDE, no file management, no project setup. The scripting lived *on the entity*. For anything complex, the Init field called an external script file — one line bridges the gap between visual editing and full programming.
+
+IC follows the same model with Lua. The **Init Script** field on every entity is the primary scripting surface — not a secondary afterthought.
+
+**Inline scripting examples:**
+
+```lua
+-- Simple: one-liner directly on the entity
+this:set_stance("hold")
+
+-- Medium: a few lines of inline behavior
+this:set_patrol_route("north_road")
+this:on_damaged(function() Var.set("alarm_triggered", true) end)
+
+-- Complex: inline calls an external script file
+dofile("scripts/elite_guard.lua")(this)
+
+-- OFP equivalent of `nul = [this] execVM "patrol.sqf"`
+run_script("scripts/convoy_escort.lua", { unit = this, route = "highway" })
+```
+
+This is exactly how OFP worked: most units have no Init script at all (pure visual placement). Some have one-liners. A few call external files for complex behavior. The progression is organic — a designer starts with visual placement, realizes they need a small tweak, types a line, and naturally graduates to scripting when they're ready. No mode switch, no separate tool.
+
+**Inline scripts run at entity spawn time** — when the mission loads (or when the entity is dynamically spawned by a trigger/module). The `this` variable refers to the entity the script is attached to.
+
+**Triggers and modules also have inline script fields:**
+- Trigger **On Activation**: inline Lua that runs when the trigger fires
+- Trigger **On Deactivation**: inline Lua for repeatable triggers
+- Module **Custom Logic**: override or extend a module's default behavior
+
+Every inline script field has:
+- **Syntax highlighting** for Lua with IC API keywords
+- **Autocompletion** for entity names, region names, variables, and the IC Lua API (D024)
+- **Error markers** shown inline before preview (not in a crash log)
+- **Expand button** — opens the field in a larger editing pane for multi-line scripts without leaving the entity's properties panel
+
+### Script Files Panel
+
+When inline scripts call external files (`dofile("scripts/ambush.lua")`), those files need to live somewhere. The **Script Files Panel** manages them — it's the editor for the external script files that inline scripts reference.
+
+This is the same progression OFP used: Init field → `execVM "script.sqf"` → the .sqf file lives in the mission folder. IC keeps the external files *inside the editor* rather than requiring alt-tab to a text editor.
+
+**Script Files Panel features:**
+- **File browser** — lists all `.lua` files in the mission
+- **New file** — create a script file, it's immediately available to inline `dofile()` calls
+- **Syntax highlighting** and **autocompletion** (same as inline fields)
+- **Live reload** — edit a script file during preview, save, changes take effect next tick
+- **API reference sidebar** — searchable IC Lua API docs without leaving the editor
+- **Breakpoints and watch** (Advanced mode) — pause the sim on a breakpoint, inspect variables
+
+**Script scope hierarchy (mirrors the natural progression):**
+```
+Inline init scripts  — on entities, run at spawn (the starting point)
+Inline trigger scripts — on triggers, run on activation/deactivation
+External script files  — called by inline scripts for complex logic
+Mission init script    — special file that runs once at mission start
+```
+
+The tiered model: most users never write a script. Some write one-liners on entities. A few create external files. The progression is seamless — there's no cliff between "visual editing" and "programming," just a gentle slope that starts with `this:set_stance("hold")`.
+
+### Variables Panel
+
+AoE2 scenario designers used invisible units placed off-screen as makeshift variables. StarCraft modders abused the "deaths" counter as integer storage. Both are hacks because the editors lacked native state management.
+
+IC provides a **Variables Panel** — mission-wide state visible and editable in the GUI. Triggers and modules can read/write variables without Lua.
+
+| Variable Type | Example                     | Use Case                             |
+| ------------- | --------------------------- | ------------------------------------ |
+| **Switch**    | `bridge_destroyed` (on/off) | Boolean flags for trigger conditions |
+| **Counter**   | `waves_survived` (integer)  | Counting events, tracking progress   |
+| **Timer**     | `mission_clock` (ticks)     | Elapsed time tracking                |
+| **Text**      | `player_callsign` (string)  | Dynamic text for briefings/dialogue  |
+
+**Variable operations in triggers (no Lua required):**
+- Set variable, increment/decrement counter, toggle switch
+- Condition: "IF `waves_survived` >= 5 → trigger victory"
+- Module connection: Wave Spawner increments `waves_survived` after each wave
+
+Variables are visible in the Variables Panel, named by the designer, and referenced by name everywhere. Lua scripts access them via `Var.get("waves_survived")` / `Var.set("waves_survived", 5)`. All variables are deterministic sim state (included in snapshots and replays).
+
+### Scenario Complexity Meter
+
+Inspired by TimeSplitters' memory bar — a persistent, always-visible indicator of scenario complexity and estimated performance impact.
+
+```
+┌──────────────────────────────────────────────┐
+│  Complexity: ████████████░░░░░░░░  58%       │
+│  Entities: 247/500  Triggers: 34/200         │
+│  Scripts: 3 files   Regions: 12              │
+└──────────────────────────────────────────────┘
+```
+
+The meter reflects:
+- **Entity count** vs recommended maximum (per target platform)
+- **Trigger count** and nesting depth
+- **Script complexity** (line count, hook count)
+- **Estimated tick cost** — based on entity types and AI behaviors
+
+The meter is a **guideline, not a hard limit**. Exceeding 100% shows a warning ("This scenario may perform poorly on lower-end hardware") but doesn't prevent saving or publishing. Power users can push past it; casual creators stay within safe bounds without thinking about performance.
+
+### Trigger Organization
+
+The AoE2 Scenario Editor's trigger list collapses into an unmanageable wall at 200+ triggers — no folders, no search, no visual overview. IC prevents this from day one:
+
+- **Folders** — group triggers by purpose ("Phase 1", "Enemy AI", "Cinematics", "Victory Conditions")
+- **Search / Filter** — find triggers by name, condition type, connected entity, or variable reference
+- **Color coding** — triggers inherit their folder's color for visual scanning
+- **Flow graph view** — toggle between list view and a visual node graph showing trigger chains, connections to modules, and variable flow. Read-only visualization, not a node-based editor (that's the "Alternatives Considered" item). Lets designers see the big picture of complex mission logic without reading every trigger.
+- **Collapse / expand** — folders collapse to single lines; individual triggers collapse to show only name + condition summary
+
+### Undo / Redo
+
+OFP's editor shipped without undo. Eden added it 15 years later. IC ships with full undo/redo from day one.
+
+- **Unlimited undo stack** (bounded by memory, not count)
+- Covers all operations: entity placement/deletion/move, trigger edits, terrain painting, variable changes, layer operations
+- **Redo** restores undone actions until a new action branches the history
+- Undo history survives save/load within a session
+- **Ctrl+Z / Ctrl+Y** (desktop), equivalent bindings on controller
+
+### Trigger System (RTS-Adapted)
+
+OFP's trigger system adapted for RTS gameplay:
+
+| Attribute            | Description                                                                                                          |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| **Area**             | Rectangle or ellipse on the isometric map (cell-aligned or free-form)                                                |
+| **Activation**       | Who triggers it: Any Player / Specific Player / Any Unit / Faction Units / No Unit (condition-only)                  |
+| **Condition Type**   | Present / Not Present / Destroyed / Built / Captured / Harvested                                                     |
+| **Custom Condition** | Lua expression (e.g., `Player.cash(1) >= 5000`)                                                                      |
+| **Repeatable**       | Once or Repeatedly (with re-arm)                                                                                     |
+| **Timer**            | Countdown (fires after delay, condition can lapse) or Timeout (condition must persist for full duration)             |
+| **Timer Values**     | Min / Mid / Max — randomized, gravitating toward Mid. Prevents predictable timing.                                   |
+| **Trigger Type**     | None / Victory / Defeat / Reveal Area / Spawn Wave / Play Audio / Weather Change / Reinforcements / Objective Update |
+| **On Activation**    | Advanced: Lua script                                                                                                 |
+| **On Deactivation**  | Advanced: Lua script (repeatable triggers only)                                                                      |
+| **Effects**          | Play music track / Play sound / Show message / Camera flash / Screen shake                                           |
+
+**RTS-specific trigger conditions:**
+
+| Condition               | Description                                                         | OFP Equivalent   |
+| ----------------------- | ------------------------------------------------------------------- | ---------------- |
+| `faction_present`       | Any unit of faction X is alive inside the trigger area              | Side Present     |
+| `faction_not_present`   | No units of faction X inside trigger area                           | Side Not Present |
+| `building_destroyed`    | Specific building is destroyed                                      | N/A              |
+| `building_captured`     | Specific building changed ownership                                 | N/A              |
+| `building_built`        | Player has constructed building type X                              | N/A              |
+| `unit_count`            | Faction has ≥ N units of type X alive                               | N/A              |
+| `resources_collected`   | Player has harvested ≥ N resources                                  | N/A              |
+| `timer_elapsed`         | N ticks since mission start (or since trigger activation)           | N/A              |
+| `area_seized`           | Faction dominates the trigger area (adapted from OFP's "Seized by") | Seized by Side   |
+| `all_destroyed_in_area` | Every enemy unit/building inside the area is destroyed              | N/A              |
+| `custom_lua`            | Arbitrary Lua expression                                            | Custom Condition |
+
+**Countdown vs Timeout with Min/Mid/Max** is crucial for RTS missions. Example: "Reinforcements arrive 3–7 minutes after the player captures the bridge" (Countdown, Min=3m, Mid=5m, Max=7m). The player can't memorize the exact timing. In OFP, this was the key to making missions feel alive rather than scripted.
+
+### Module System (Pre-Packaged Logic Nodes)
+
+Modules are IC's equivalent of Eden Editor's 154 built-in modules — complex game logic packaged as drag-and-drop nodes with a properties panel. Non-programmers get 80% of the power without writing Lua.
+
+**Built-in module library (initial set):**
+
+| Category        | Module            | Parameters                                    | Logic                                                                                   |
+| --------------- | ----------------- | --------------------------------------------- | --------------------------------------------------------------------------------------- |
+| **Spawning**    | Wave Spawner      | waves[], interval, escalation, entry_points[] | Spawns enemy units in configurable waves                                                |
+| **Spawning**    | Reinforcements    | units[], entry_point, trigger, delay          | Sends units from map edge on trigger                                                    |
+| **Spawning**    | Probability Group | units[], probability 0–100%                   | Group exists only if random roll passes (visual wrapper around Probability of Presence) |
+| **AI Behavior** | Patrol Route      | waypoints[], alert_radius, response           | Units cycle waypoints, engage if threat detected                                        |
+| **AI Behavior** | Guard Position    | position, radius, priority                    | Units defend location; peel to attack nearby threats (OFP Guard/Guarded By pattern)     |
+| **AI Behavior** | Hunt and Destroy  | area, unit_types[], aggression                | AI actively searches for and engages enemies in area                                    |
+| **AI Behavior** | Harvest Zone      | area, harvesters, refinery                    | AI harvests resources in designated zone                                                |
+| **Objectives**  | Destroy Target    | target, description, optional                 | Player must destroy specific building/unit                                              |
+| **Objectives**  | Capture Building  | building, description, optional               | Player must engineer-capture building                                                   |
+| **Objectives**  | Defend Position   | area, duration, description                   | Player must keep faction presence in area for N ticks                                   |
+| **Objectives**  | Timed Objective   | target, time_limit, failure_consequence       | Objective with countdown timer                                                          |
+| **Objectives**  | Escort Convoy     | convoy_units[], route, description            | Protect moving units along a path                                                       |
+| **Events**      | Reveal Map Area   | area, trigger, delay                          | Removes shroud from an area                                                             |
+| **Events**      | Play Briefing     | text, audio_ref, portrait                     | Shows briefing panel with text and audio                                                |
+| **Events**      | Camera Pan        | from, to, duration, trigger                   | Cinematic camera movement on trigger                                                    |
+| **Events**      | Weather Change    | type, intensity, transition_time, trigger     | Changes weather on trigger activation                                                   |
+| **Events**      | Dialogue          | lines[], trigger                              | In-game dialogue sequence                                                               |
+| **Flow**        | Mission Timer     | duration, visible, warning_threshold          | Global countdown affecting mission end                                                  |
+| **Flow**        | Checkpoint        | trigger, save_state                           | Auto-save when trigger fires                                                            |
+| **Flow**        | Branch            | condition, true_path, false_path              | Campaign branching point (D021)                                                         |
+| **Flow**        | Difficulty Gate   | min_difficulty, entities[]                    | Entities only exist above threshold difficulty                                          |
+| **Effects**     | Explosion         | position, size, trigger                       | Cosmetic explosion on trigger                                                           |
+| **Effects**     | Sound Emitter     | sound_ref, trigger, loop                      | Play sound effect from position                                                         |
+| **Effects**     | Music Trigger     | track, trigger, fade_time                     | Change music track on trigger activation                                                |
+| **Multiplayer** | Spawn Point       | faction, position                             | Player starting location in MP scenarios                                                |
+| **Multiplayer** | Crate Drop        | position, trigger, contents                   | Random powerup/crate on trigger                                                         |
+
+Modules connect to triggers and other entities via **visual connection lines** — same as OFP's synchronization system. A "Reinforcements" module connected to a trigger means the reinforcements arrive when the trigger fires. No scripting required.
+
+**Custom modules** can be created by modders — a YAML definition + Lua implementation, publishable via Workshop (D030). The community can extend the module library indefinitely.
+
+### Compositions (Reusable Building Blocks)
+
+Compositions are saved groups of entities, triggers, modules, and connections — like Eden Editor's custom compositions. They bridge the gap between individual entity placement and full scene templates (04-MODDING.md).
+
+**Hierarchy:**
+
+```
+Entity           — single unit, building, trigger, or module
+  ↓ grouped into
+Composition      — reusable cluster (base layout, defensive formation, scripted encounter)
+  ↓ assembled into
+Scenario         — complete mission with objectives, terrain, all compositions placed
+  ↓ sequenced into (via Campaign Editor)
+Campaign         — branching multi-mission graph with persistent state, intermissions, and dialogue (D021)
+```
+
+**Built-in compositions:**
+
+| Composition         | Contents                                                                          |
+| ------------------- | --------------------------------------------------------------------------------- |
+| Soviet Base (Small) | Construction Yard, Power Plant, Barracks, Ore Refinery, 3 harvesters, guard units |
+| Allied Outpost      | Pillbox ×2, AA Gun, Power Plant, guard units with patrol waypoints                |
+| Ore Field (Rich)    | Ore cells + ore truck spawn trigger                                               |
+| Ambush Point        | Hidden units + area trigger + attack waypoints (Probability of Presence per unit) |
+| Bridge Checkpoint   | Bridge + guarding units + trigger for crossing detection                          |
+| Air Patrol          | Aircraft with looping patrol waypoints + scramble trigger                         |
+| Coastal Defense     | Naval turrets + submarine patrol + radar                                          |
+
+**Workflow:**
+1. Place entities, arrange them, connect triggers/modules
+2. Select all → "Save as Composition" → name, category, description
+3. Composition appears in the Compositions Library panel
+4. Drag composition onto any map to place a pre-built cluster
+5. Publish to Workshop (D030) — community compositions become shared building blocks
+
+This completes the content creation pipeline: compositions are the visual-editor equivalent of scene templates (04-MODDING.md). Scene templates are YAML/Lua for programmatic use and LLM generation. Compositions are the same concept for visual editing. They share the same underlying data format — a composition saved in the editor can be loaded as a scene template by Lua/LLM, and vice versa.
+
+### Layers
+
+Organizational folders for managing complex scenarios:
+
+- Group entities by purpose: "Phase 1 — Base Defense", "Phase 2 — Counterattack", "Enemy Patrols", "Civilian Traffic"
+- **Visibility toggle** — hide layers in the editor without affecting runtime (essential when a mission has 500+ entities)
+- **Lock toggle** — prevent accidental edits to finalized layers
+- **Runtime show/hide** — Lua can show/hide entire layers at runtime: `Editor.show_layer("Phase2_Reinforcements")` — all entities in the layer spawn simultaneously
+
+### Preview / Test
+
+- **Preview button** — starts the sim from current editor state. Play the mission, then return to editor. No compilation, no export, no separate process.
+- **Play from cursor** — start the preview with the camera at the current editor position (Eden Editor's "play from here")
+- **Speed controls** — preview at 2x/4x/8x to quickly reach later mission stages
+- **Instant restart** — reset to editor state without re-entering the editor
+
+### Simple vs Advanced Mode
+
+Inspired by OFP's Easy/Advanced toggle:
+
+| Feature                         | Simple Mode | Advanced Mode |
+| ------------------------------- | ----------- | ------------- |
+| Entity placement                | ✓           | ✓             |
+| Faction/facing/health           | ✓           | ✓             |
+| Basic triggers (win/lose/timer) | ✓           | ✓             |
+| Waypoints (move/patrol/guard)   | ✓           | ✓             |
+| Modules                         | ✓           | ✓             |
+| Probability of Presence         | —           | ✓             |
+| Condition of Presence           | —           | ✓             |
+| Custom Lua conditions           | —           | ✓             |
+| Init scripts per entity         | —           | ✓             |
+| Countdown/Timeout timers        | —           | ✓             |
+| Min/Mid/Max randomization       | —           | ✓             |
+| Connection lines                | —           | ✓             |
+| Layer management                | —           | ✓             |
+| Campaign editor                 | —           | ✓             |
+| Named regions                   | —           | ✓             |
+| Variables panel                 | —           | ✓             |
+| Inline Lua scripts on entities  | —           | ✓             |
+| External script files panel     | —           | ✓             |
+| Trigger folders & flow graph    | —           | ✓             |
+| Intermission screens            | —           | ✓             |
+| Dialogue editor                 | —           | ✓             |
+| Campaign state dashboard        | —           | ✓             |
+| Multiplayer / co-op properties  | —           | ✓             |
+| Game mode templates             | ✓           | ✓             |
+
+Simple mode covers 80% of what a casual scenario creator needs. Advanced mode exposes the full power. Same data format — a mission created in Simple mode can be opened in Advanced mode and extended.
+
+### Campaign Editor
+
+D021 defines the campaign *system* — branching mission graphs, persistent rosters, story flags. But a system without an editor means campaigns are hand-authored YAML, which limits who can create them. The Campaign Editor makes D021's full power visual.
+
+Every RTS editor ever shipped treats missions as isolated units. Warcraft III's World Editor came closest — it had a campaign screen with mission ordering and global variables — but even that was a flat list with linear flow. No visual branching, no state flow visualization, no intermission screens, no dialogue trees. The result: almost nobody creates custom RTS campaigns, because the tooling makes it miserable.
+
+The Campaign Editor operates at a level above the Scenario Editor. Where the Scenario Editor zooms into one mission, the Campaign Editor zooms out to see the entire campaign structure. Double-click a mission node → the Scenario Editor opens for that mission. Back out → you're at the campaign graph again.
+
+#### Visual Campaign Graph
+
+The core view: missions as nodes, outcomes as directed edges.
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    Campaign: Red Tide Rising                     │
+│                                                                  │
+│    ┌─────────┐   victory    ┌──────────┐   bridge_held           │
+│    │ Mission │─────────────→│ Mission  │───────────────→ ...     │
+│    │   1     │              │   2      │                         │
+│    │ Beach   │   defeat     │ Bridge   │   bridge_lost           │
+│    │ Landing │──────┐       │ Assault  │──────┐                  │
+│    └─────────┘      │       └──────────┘      │                  │
+│                     │                         │                  │
+│                     ▼                         ▼                  │
+│               ┌──────────┐             ┌──────────┐             │
+│               │ Mission  │             │ Mission  │             │
+│               │   1B     │             │   3B     │             │
+│               │ Retreat  │             │ Fallback │             │
+│               └──────────┘             └──────────┘             │
+│                                                                  │
+│   [+ Add Mission]  [+ Add Transition]  [Validate Graph]         │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Node (mission) properties:**
+
+| Property         | Description                                                                                |
+| ---------------- | ------------------------------------------------------------------------------------------ |
+| **Mission file** | Link to the scenario (created in Scenario Editor)                                          |
+| **Display name** | Shown in campaign graph and briefing                                                       |
+| **Outcomes**     | Named results this mission can produce (e.g., `victory`, `defeat`, `bridge_intact`)        |
+| **Briefing**     | Text/audio/portrait shown before the mission                                               |
+| **Debriefing**   | Text/audio shown after the mission, per outcome                                            |
+| **Intermission** | Optional between-mission screen (see Intermission Screens below)                           |
+| **Roster in**    | What units the player receives: `none`, `carry_forward`, `preset`, `merge`                 |
+| **Roster out**   | Carryover mode for surviving units: `none`, `surviving`, `extracted`, `selected`, `custom` |
+
+**Edge (transition) properties:**
+
+| Property          | Description                                                                         |
+| ----------------- | ----------------------------------------------------------------------------------- |
+| **From outcome**  | Which named outcome triggers this transition                                        |
+| **To mission**    | Destination mission node                                                            |
+| **Condition**     | Optional Lua expression or story flag check (e.g., `Flag.get("scientist_rescued")`) |
+| **Weight**        | Probability weight when multiple edges share the same outcome (see below)           |
+| **Roster filter** | Override roster carryover for this specific path                                    |
+
+#### Randomized and Conditional Paths
+
+D021 defines deterministic branching — outcome X always leads to mission Y. The Campaign Editor extends this with weighted and conditional edges, enabling randomized campaign structures.
+
+**Weighted random:** When multiple edges share the same outcome, weights determine probability. The roll is seeded from the campaign save (deterministic for replays).
+
+```yaml
+# Mission 3 outcome "victory" → random next mission
+transitions:
+  - from_outcome: victory
+    to: mission_4a_snow      # weight 40%
+    weight: 40
+  - from_outcome: victory
+    to: mission_4b_desert    # weight 60%
+    weight: 60
+```
+
+Visually in the graph editor, weighted edges show their probability and use varying line thickness.
+
+**Conditional edges:** An edge with a condition is only eligible if the condition passes. Conditions are evaluated before weights. This enables "if you rescued the scientist, always go to the lab mission; otherwise, random between two alternatives."
+
+**Mission pools:** A pool node represents "pick N missions from this set" — the campaign equivalent of side quests. The player gets a random subset, plays them in any order, then proceeds. Enables roguelike campaign structures.
+
+```
+┌──────────┐         ┌─────────────────┐         ┌──────────┐
+│ Mission  │────────→│   Side Mission   │────────→│ Mission  │
+│    3     │         │   Pool (2 of 5)  │         │    4     │
+└──────────┘         │                  │         └──────────┘
+                     │ ☐ Raid Supply    │
+                     │ ☐ Rescue POWs    │
+                     │ ☐ Sabotage Rail  │
+                     │ ☐ Defend Village │
+                     │ ☐ Naval Strike   │
+                     └─────────────────┘
+```
+
+Mission pools are a natural fit for the persistent roster system — side missions that strengthen (or deplete) the player's forces before a major battle.
+
+#### Persistent State Dashboard
+
+The biggest reason campaign creation is painful in every RTS editor: you can't see what state flows between missions. Story flags are set in Lua buried inside mission scripts. Roster carryover is configured in YAML you never visualize. Variables disappear between missions unless you manually manage them.
+
+The **Persistent State Dashboard** makes campaign state visible and editable in the GUI.
+
+**Roster view:**
+```
+┌──────────────────────────────────────────────────────┐
+│  Campaign Roster                                      │
+│                                                       │
+│  Mission 1 → Mission 2:  Carryover: surviving         │
+│  ├── Tanya (named hero)     ★ Must survive            │
+│  ├── Medium Tanks ×4        ↝ Survivors carry forward  │
+│  └── Engineers ×2           ↝ Survivors carry forward  │
+│                                                       │
+│  Mission 2 → Mission 3:  Carryover: extracted          │
+│  ├── Extraction zone: bridge_south                    │
+│  └── Only units in zone at mission end carry forward  │
+│                                                       │
+│  Named Characters: Tanya, Volkov, Stavros              │
+│  Equipment Pool: Captured MiG, Prototype Chrono        │
+└──────────────────────────────────────────────────────┘
+```
+
+**Story flags view:** A table of every flag across the entire campaign — where it's set, where it's read, current value in test runs. See at a glance: "The flag `bridge_destroyed` is set in Mission 2's trigger #14, read in Mission 4's Condition of Presence on the bridge entity and Mission 5's briefing text."
+
+| Flag                | Set in                | Read in                               | Type    |
+| ------------------- | --------------------- | ------------------------------------- | ------- |
+| `bridge_destroyed`  | Mission 2, trigger 14 | Mission 4 (CoP), Mission 5 (briefing) | switch  |
+| `scientist_rescued` | Mission 3, Lua script | Mission 4 (edge condition)            | switch  |
+| `tanks_captured`    | Mission 2, debrief    | Mission 3 (roster merge)              | counter |
+| `player_reputation` | Multiple missions     | Mission 6 (dialogue branches)         | counter |
+
+**Campaign variables:** Separate from per-mission variables (Variables Panel). Campaign variables persist across ALL missions. Per-mission variables reset. The dashboard shows which scope each variable belongs to and highlights conflicts (same name in both scopes).
+
+#### Intermission Screens
+
+Between missions, the player sees an intermission — not just a text briefing, but a customizable screen layout. This is where campaigns become more than "mission list" and start feeling like a *game within the game*.
+
+**Built-in intermission templates:**
+
+| Template              | Layout                                                                        | Use Case                                   |
+| --------------------- | ----------------------------------------------------------------------------- | ------------------------------------------ |
+| **Briefing Only**     | Portrait + text + "Begin Mission" button                                      | Simple campaigns, classic RA style         |
+| **Roster Management** | Unit list with keep/dismiss, equipment assignment, formation arrangement      | OFP: Resistance style unit management      |
+| **Base Screen**       | Persistent base view — spend resources on upgrades that carry forward         | Between-mission base building (C&C3 style) |
+| **Shop / Armory**     | Campaign inventory + purchase panel + currency                                | RPG-style equipment management             |
+| **Dialogue**          | Portrait + branching text choices (see Dialogue Editor below)                 | Story-driven campaigns, RPG conversations  |
+| **World Map**         | Map with mission locations — player chooses next mission from available nodes | Non-linear campaigns, Total War style      |
+| **Debrief + Stats**   | Mission results, casualties, performance grade, story flag changes            | Post-mission feedback                      |
+| **Custom**            | Empty canvas — arrange any combination of panels via the layout editor        | Total creative freedom                     |
+
+Intermissions are defined per campaign node (between "finish Mission 2" and "start Mission 3"). They can chain: debrief → roster management → briefing → begin mission.
+
+**Intermission panels (building blocks):**
+
+- **Text panel** — rich text with variable substitution (`"Commander, we lost {Var.get('casualties')} soldiers."`).
+- **Portrait panel** — character portrait + name. Links to Named Characters.
+- **Roster panel** — surviving units from previous mission. Player can dismiss, reorganize, assign equipment.
+- **Inventory panel** — campaign-wide items. Drag onto units to equip. Purchase from shop with campaign currency.
+- **Choice panel** — buttons that set story flags or campaign variables. "Execute the prisoner? [Yes] [No]" → sets `prisoner_executed` flag.
+- **Map panel** — shows campaign geography. Highlights available next missions if using mission pools.
+- **Stats panel** — mission performance: time, casualties, objectives completed, units destroyed.
+- **Custom Lua panel** — advanced panel that runs arbitrary Lua to generate content dynamically.
+
+These panels compose freely. A "Base Screen" template is just a preset arrangement: roster panel on the left, inventory panel center, stats panel right, briefing text bottom. The Custom template starts empty and lets the designer arrange any combination.
+
+#### Dialogue Editor
+
+Branching dialogue isn't RPG-exclusive — it's what separates a campaign with a story from a campaign that's just a mission list. "Commander, we've intercepted enemy communications. Do we attack now or wait for reinforcements?" That's a dialogue tree. The choice sets a story flag that changes the next mission's layout.
+
+The Dialogue Editor is a visual branching tree editor, similar to tools like Twine or Ink but built into the scenario editor.
+
+```
+┌──────────────────────────────────────────────────────┐
+│  Dialogue: Mission 3 Briefing                         │
+│                                                       │
+│  ┌────────────────────┐                               │
+│  │ STAVROS:            │                               │
+│  │ "The bridge is       │                               │
+│  │  heavily defended." │                               │
+│  └────────┬───────────┘                               │
+│           │                                            │
+│     ┌─────┴─────┐                                      │
+│     │           │                                      │
+│  ┌──▼───┐  ┌───▼────┐                                  │
+│  │Attack│  │Flank   │                                  │
+│  │Now   │  │Through │                                  │
+│  │      │  │Forest  │                                  │
+│  └──┬───┘  └───┬────┘                                  │
+│     │          │                                       │
+│  sets:       sets:                                     │
+│  approach=   approach=                                 │
+│  "direct"    "flank"                                   │
+│     │          │                                       │
+│  ┌──▼──────────▼──┐                                    │
+│  │ TANYA:          │                                    │
+│  │ "I'll take       │                                    │
+│  │  point."         │                                    │
+│  └─────────────────┘                                    │
+└──────────────────────────────────────────────────────┘
+```
+
+**Dialogue node properties:**
+
+| Property      | Description                                                        |
+| ------------- | ------------------------------------------------------------------ |
+| **Speaker**   | Character name + portrait reference                                |
+| **Text**      | Dialogue line (supports variable substitution)                     |
+| **Audio**     | Optional voice-over reference                                      |
+| **Choices**   | Player responses — each is an outgoing edge                        |
+| **Condition** | Node only appears if condition is true (enables adaptive dialogue) |
+| **Effects**   | On reaching this node: set flags, adjust variables, give items     |
+
+**Conditional dialogue:** Nodes can have conditions — "Only show this line if `scientist_rescued` is true." This means the same dialogue tree adapts to campaign state. A character references events from earlier missions without the designer creating separate trees per path.
+
+**Dialogue in missions:** Dialogue trees aren't limited to intermissions. They can trigger during a mission — an NPC unit triggers a dialogue when approached or when a trigger fires. The dialogue pauses the game (or runs alongside it, designer's choice) and the player's choice sets flags that affect the mission in real-time.
+
+#### Named Characters
+
+A **named character** is a persistent entity identity that survives across missions. Not a specific unit instance (those die) — a character definition that can have multiple appearances.
+
+| Property          | Description                                                             |
+| ----------------- | ----------------------------------------------------------------------- |
+| **Name**          | Display name ("Tanya", "Commander Volkov")                              |
+| **Portrait**      | Image reference for dialogue and intermission screens                   |
+| **Unit type**     | Default unit type when spawned (can change per mission)                 |
+| **Traits**        | Arbitrary key-value pairs (strength, charisma, rank — designer-defined) |
+| **Inventory**     | Items this character carries (from campaign inventory system)           |
+| **Biography**     | Text shown in roster screen, updated by Lua as the campaign progresses  |
+| **Must survive**  | If true, character death → mission failure (or specific outcome)        |
+| **Death outcome** | Named outcome triggered if this character dies (e.g., `tanya_killed`)   |
+
+Named characters bridge scenarios and intermissions. Tanya in Mission 1 is the same Tanya in Mission 5 — same veterancy, same kill count, same equipment. If she dies in Mission 3 and doesn't have "must survive," the campaign continues without her — and future dialogue trees skip her lines via conditions.
+
+This is the primitive that makes RPG campaigns possible. A designer creates 6 named characters, gives them traits and portraits, writes dialogue between them, and lets the player manage their roster between missions. That's an RPG party in an RTS shell — no engine changes required, just creative use of the campaign editor's building blocks.
+
+#### Campaign Inventory
+
+Persistent items that exist at the campaign level, not within any specific mission.
+
+| Property       | Description                                                |
+| -------------- | ---------------------------------------------------------- |
+| **Name**       | Item identifier (`prototype_chrono`, `captured_mig`)       |
+| **Display**    | Name, icon, description shown in intermission screens      |
+| **Quantity**   | Stack count (1 for unique items, N for consumables)        |
+| **Category**   | Grouping for inventory panel (equipment, intel, resources) |
+| **Effects**    | Optional Lua — what happens when used/equipped             |
+| **Assignable** | Can be assigned to named characters in roster screen       |
+
+Items are added via Lua (`Campaign.add_item("captured_mig", 1)`) or via debrief/intermission choices. They're spent, equipped, or consumed in later missions or intermissions.
+
+Combined with named characters and the roster screen: a player captures enemy equipment in Mission 2, assigns it to a character in the intermission, and that character spawns with it in Mission 3. The system is general-purpose — "items" can be weapons, vehicles, intel documents, key cards, magical artifacts, or anything the designer defines.
+
+#### Campaign Testing
+
+The Campaign Editor includes tools for testing campaign flow without playing every mission to completion:
+
+- **Graph validation** — checks for dead ends (outcomes with no outgoing edge), unreachable missions, circular paths (unless intentional), and missing mission files
+- **Jump to mission** — start any mission with simulated campaign state (set flags, roster, and inventory to test a specific path)
+- **Fast-forward state** — manually set campaign variables and flags to simulate having played earlier missions
+- **Path coverage** — highlights which campaign paths have been test-played and which haven't. Color-coded: green (tested), yellow (partially tested), red (untested)
+- **Campaign playthrough** — play the entire campaign with accelerated sim (or auto-resolve missions) to verify flow and state propagation
+- **State inspector** — during preview, shows live campaign state: current flags, roster, inventory, variables, which path was taken
+
+#### Reference Material (Campaign Editors)
+
+The campaign editor design draws from these (in addition to the scenario editor references above):
+
+- **Warcraft III World Editor (2002):** The closest any RTS came to campaign editing — campaign screen with mission ordering, cinematic editor, global variables persistent across maps. Still linear and limited: no visual branching, no roster management, no intermission screen customization. IC takes WC3's foundation and adds the graph, state, and intermission layers.
+- **RPG Maker (1992–present):** Campaign-level persistent variables, party management, item/equipment systems, branching dialogue. Proves these systems work for non-programmers. IC adapts the persistence model for RTS context.
+- **Twine / Ink (interactive fiction tools):** Visual branching narrative editors. Twine's node-and-edge graph directly inspired IC's campaign graph view. Ink's conditional text ("You remember the bridge{bridge_destroyed: 's destruction| still standing}") inspired IC's variable substitution in dialogue.
+- **Heroes of Might and Magic III (1999):** Campaign with carryover — hero stats, army, artifacts persist between maps. Proved that persistent state between RTS-adjacent missions creates investment. Limited to linear ordering.
+- **FTL / Slay the Spire (roguelikes):** Randomized mission path selection, persistent resources, risk/reward side missions. Inspired IC's mission pools and weighted random paths.
+- **OFP: Resistance (2002):** The gold standard for persistent campaigns — surviving soldiers, captured equipment, emotional investment. Every feature in IC's campaign editor exists because OFP: Resistance proved persistent campaigns are transformative.
+
+### Game Master Mode (Zeus-Inspired)
+
+A real-time scenario manipulation mode where one player (the Game Master) controls the scenario while others play. Derived from the scenario editor's UI but operates on a live game.
+
+**Use cases:**
+- **Cooperative campaigns** — a human GM controls the enemy faction, placing reinforcements, directing attacks, adjusting difficulty in real-time based on how players are doing
+- **Training** — a GM creates escalating challenges for new players
+- **Events** — community game nights with a live GM creating surprises
+- **Content testing** — mission designers test their scenarios with real players while making live adjustments
+
+**Game Master controls:**
+- Place/remove units and buildings (from a budget — prevents flooding)
+- Direct AI unit groups (attack here, retreat, patrol)
+- Change weather, time of day
+- Trigger scripted events (reinforcements, briefings, explosions)
+- Reveal/hide map areas
+- Adjust resource levels
+- Pause sim for dramatic reveals (if all players agree)
+
+**Not included at launch:** Player control of individual units (RTS is about armies, not individual soldiers). The GM operates at the strategic level — directing groups, managing resources, triggering events.
+
+**Phase:** Game Master mode is a Phase 6–7 deliverable. It reuses 90% of the scenario editor's systems — the main new work is the real-time overlay UI and budget/permission system.
+
+### Publishing
+
+Scenarios created in the editor export as standard IC mission format (YAML map + Lua scripts + assets). They can be:
+- Saved locally
+- Published to Workshop (D030) with one click
+- Shared as files
+- Used in campaigns (D021) — or created directly in the Campaign Editor
+- Assembled into full campaigns and published as campaign packs
+- Loaded by the LLM for remixing (D016)
+
+### Reference Material
+
+The scenario editor design draws from:
+- **OFP mission editor (2001):** Probability of Presence, triggers with countdown/timeout, Guard/Guarded By, synchronization, Easy/Advanced toggle. The gold standard for "simple, not bloated, not limiting."
+- **OFP: Resistance (2002):** Persistent campaign — surviving soldiers, captured equipment, emotional investment. The campaign editor exists because Resistance proved persistent campaigns are transformative.
+- **Arma 3 Eden Editor (2016):** 3D placement, modules (154 built-in), compositions, layers, Workshop integration, undo/redo
+- **Arma Reforger Game Master (2022):** Budget system, real-time manipulation, controller support, simplified objectives
+- **Age of Empires II Scenario Editor (1999):** Condition-effect trigger system (the RTS gold standard — 25+ years of community use), trigger areas as spatial logic. Cautionary lesson: flat trigger list collapses at scale — IC adds folders, search, and flow graph to prevent this.
+- **StarCraft Campaign Editor / SCMDraft (1998+):** Named locations (spatial regions referenced by name across triggers). The "location" concept directly inspired IC's Named Regions. Also: open file format enabled community editors — validates IC's YAML approach.
+- **Warcraft III World Editor:** GUI-based triggers with conditions, actions, and variables. IC's module system and Variables Panel serve the same role.
+- **TimeSplitters 2/3 MapMaker (2002/2005):** Visible memory/complexity budget bar — always know what you can afford. Inspired IC's Scenario Complexity Meter.
+- **Super Mario Maker (2015/2019):** Element interactions create depth without parameter bloat. Behaviors emerge from spatial arrangement. Instant build-test loop measured in seconds.
+- **LittleBigPlanet 2 (2011):** Pre-packaged logic modules (drop-in game patterns). Directly inspired IC's module system. Cautionary lesson: server shutdown destroyed 10M+ creations — content survival is non-negotiable (IC uses local-first storage + Workshop export).
+- **RPG Maker (1992–present):** Tiered complexity architecture (visual events → scripting). Validates IC's Simple → Advanced → Lua progression.
+- **Halo Forge (2007–present):** In-game real-time editing with instant playtesting. Evolution from minimal (Halo 3) to powerful (Infinite) proves: ship simple, grow over iterations. Also: game mode prefabs (Strongholds, CTF) that designers customize — directly inspired IC's Game Mode Templates.
+- **Far Cry 2 Map Editor (2008):** Terrain sculpting separated from mission logic. Proves environment creation and scenario scripting can be independent workflows.
+- **Divinity: Original Sin 2 (2017):** Co-op campaign with persistent state, per-player dialogue choices that affect the shared story. Game Master mode with real-time scenario manipulation. Proved co-op campaign RPG works — and that the tooling for CREATING co-op content matters as much as the runtime support.
+- **Doom community editors (1994–present):** Open data formats enable 30+ years of community tools. The WAD format's openness is why Doom modding exists — validates IC's YAML-based scenario format.
+- **OpenRA map editor:** Terrain painting, resource placement, actor placement — but standalone tool (we improve by being in-engine)
+
+### Multiplayer & Co-op Scenario Tools
+
+Most RTS editors treat multiplayer as an afterthought — place some spawn points, done. Creating a proper co-op mission, a team scenario with split objectives, or a campaign playable by two friends requires hacking around the editor's single-player assumptions. IC's editor treats multiplayer and co-op as first-class authoring targets.
+
+#### Player Slot Configuration
+
+Every scenario has a **Player Slots panel** — the central hub for multiplayer setup.
+
+| Property           | Description                                                                      |
+| ------------------ | -------------------------------------------------------------------------------- |
+| **Slot count**     | Number of human player slots (1–8). Solo missions = 1. Co-op = 2+.               |
+| **Faction**        | Which faction each slot controls (or "any" for lobby selection)                  |
+| **Team**           | Team assignment (Team 1, Team 2, FFA, Configurable in lobby)                     |
+| **Spawn area**     | Starting position/area per slot                                                  |
+| **Starting units** | Pre-placed entities assigned to this slot                                        |
+| **Color**          | Default color (overridable in lobby)                                             |
+| **AI fallback**    | What happens if this slot is unfilled: AI takes over, slot disabled, or required |
+
+The designer places entities and assigns them to player slots via the Attributes Panel — a dropdown says "belongs to Player 1 / Player 2 / Player 3 / Any." Triggers and objectives can be scoped to specific slots or shared.
+
+#### Co-op Mission Modes
+
+The editor supports several co-op configurations. These are set per-mission in the scenario properties:
+
+| Mode                 | Description                                                                                               | Example                                                               |
+| -------------------- | --------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| **Allied Factions**  | Each player controls a separate allied faction with their own base, army, and economy                     | Player 1: Allies infantry push. Player 2: Soviet armor support.       |
+| **Shared Command**   | Players share a single faction. Units can be assigned to specific players or freely controlled by anyone. | One player manages economy/production, the other commands the army.   |
+| **Commander + Ops**  | One player has the base and production (Commander), the other controls field units only (Operations).     | Commander builds and sends reinforcements. Ops does all the fighting. |
+| **Asymmetric**       | Players have fundamentally different gameplay. One does RTS, the other does Game Master or support roles. | Player 1 plays the mission. Player 2 controls enemy as GM.            |
+| **Split Objectives** | Players have different objectives on the same map. Both must succeed for mission victory.                 | Player 1: capture the bridge. Player 2: defend the base.              |
+
+#### Per-Player Objectives & Triggers
+
+The key to good co-op missions: players need their own goals, not just shared ones.
+
+- **Objective assignment** — each objective module has a "Player" dropdown: All Players, Player 1, Player 2, etc. Shared objectives require all assigned players to contribute. Per-player objectives belong to one player.
+- **Trigger scoping** — triggers can fire based on a specific player's actions: "When Player 2's units enter this region" vs "When any allied unit enters this region." The trigger's faction/player filter handles this.
+- **Per-player briefings** — the briefing module supports per-slot text: Player 1 sees "Commander, your objective is the bridge..." while Player 2 sees "Comrade, you will hold the flank..."
+- **Split victory conditions** — the mission can require ALL players to complete their individual objectives, or ANY player, or a custom Lua condition combining them.
+
+#### Co-op Campaigns
+
+Co-op extends beyond individual missions into campaigns (D021). The Campaign Editor supports multi-player campaigns with these additional properties per mission node:
+
+| Property          | Description                                                                      |
+| ----------------- | -------------------------------------------------------------------------------- |
+| **Player count**  | Min and max human players for this mission (1 for solo-compatible, 2+ for co-op) |
+| **Co-op mode**    | Which mode applies (see table above)                                             |
+| **Solo fallback** | How the mission plays if solo: AI ally, simplified objectives, or unavailable    |
+
+**Shared roster management:** In persistent campaigns, the carried-forward roster is shared between co-op players. The intermission screen shows the combined roster with options for dividing control:
+
+- **Draft** — players take turns picking units from the survivor pool (fantasy football for tanks)
+- **Split by type** — infantry to Player 1, vehicles to Player 2 (configured by the scenario designer)
+- **Free claim** — each player grabs what they want from the shared pool, first come first served
+- **Designer-assigned** — the mission YAML specifies which named characters belong to which player slot
+
+**Drop-in / drop-out:** If a co-op player disconnects mid-mission, their units revert to AI control (or a configurable fallback: pause, auto-extract, or continue without). Reconnection restores control.
+
+#### Multiplayer Testing
+
+Testing multiplayer scenarios is painful in every editor — you normally need to launch two game instances and play both yourself. IC reduces this friction:
+
+- **Multi-slot preview** — preview the mission with AI controlling unfilled player slots. Test your co-op triggers and per-player objectives without needing a real partner.
+- **Slot switching** — during preview, hot-switch between player viewpoints to verify each player's experience (camera, fog of war, objectives).
+- **Network delay simulation** — preview with configurable artificial latency to catch timing-sensitive trigger issues in multiplayer.
+- **Lobby preview** — see how the mission appears in the multiplayer lobby before publishing: slot configuration, team layout, map preview, description.
+
+### Game Mode Templates
+
+Almost every popular RTS game mode can be built with IC's existing module system + triggers + Lua. But discoverability matters — a modder shouldn't need to reinvent the Survival mode from scratch when the pattern is well-known.
+
+**Game Mode Templates** are pre-configured scenario setups: a starting point with the right modules, triggers, variables, and victory conditions already wired. The designer customizes the specifics (which units, which map, which waves) without building the infrastructure.
+
+**Built-in templates:**
+
+| Template                | Inspired By                     | What's Pre-Configured                                                                                                            |
+| ----------------------- | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| **Skirmish (Standard)** | Every RTS                       | Spawn points, tech tree, resource deposits, standard victory conditions (destroy all enemy buildings)                            |
+| **Survival / Horde**    | They Are Billions, CoD Zombies  | Wave Spawners with escalation, base defense zone, wave counter variable, survival timer, difficulty scaling per wave             |
+| **King of the Hill**    | FPS/RTS variants                | Central capture zone, scoreboard tracking cumulative hold time per faction, configurable score-to-win                            |
+| **Regicide**            | AoE2                            | King/Commander unit per player (named character, must-survive), kill the king = victory, king abilities optional                 |
+| **Treaty**              | AoE2                            | No-combat timer (configurable), force peace during treaty, countdown display, auto-reveal on treaty end                          |
+| **Nomad**               | AoE2                            | No starting base — each player gets only an MCV (or equivalent). Random spawn positions. Land grab gameplay.                     |
+| **Empire Wars**         | AoE2 DE                         | Pre-built base per player (configurable: small/medium/large), starting army, skip early game                                     |
+| **Assassination**       | StarCraft UMS                   | Commander unit per player (powerful but fragile), protect yours, kill theirs. Commander death = defeat.                          |
+| **Tower Defense**       | Desktop TD, custom WC3 maps     | Pre-defined enemy paths (waypoints), restricted build zones, economy from kills, wave system with boss rounds                    |
+| **Tug of War**          | WC3 custom maps                 | Automated unit spawning on timer, player controls upgrades/abilities/composition. Push the enemy back.                           |
+| **Base Defense**        | They Are Billions, C&C missions | Defend a position for N minutes/waves. Pre-placed base, incoming attacks from multiple directions, escalating difficulty.        |
+| **Capture the Flag**    | FPS tradition                   | Each player has a flag entity (or MCV). Steal the opponent's and return it to your base. Combines economy + raiding.             |
+| **Free for All**        | Every RTS                       | 3+ players, no alliances allowed. Last player standing. Diplomacy module optional (alliances that can be broken).                |
+| **Diplomacy**           | Civilization, AoE4              | FFA with dynamic alliance system. Players can propose/accept/break alliances. Shared vision opt-in. Betrayal is a game mechanic. |
+| **Sandbox**             | Garry's Mod, Minecraft Creative | Unlimited resources, no enemies, no victory condition. Pure building and experimentation. Good for testing and screenshots.      |
+| **Co-op Survival**      | Deep Rock Galactic, Helldivers  | Multiple human players vs escalating AI waves. Shared base. Team objectives. Difficulty scales with player count.                |
+| **Sudden Death**        | Various                         | No rebuilding — if a building is destroyed, it's gone. Every engagement is high-stakes. Smaller starting armies.                 |
+
+**Templates are starting points, not constraints.** Open a template, add your own triggers/modules/Lua, publish to Workshop. Templates save 30–60 minutes of boilerplate setup and ensure the core game mode logic is correct.
+
+**Phasing:** Not all 17 templates ship simultaneously. **Phase 6 core set** (8 templates): Skirmish, Survival/Horde, King of the Hill, Regicide, Free for All, Co-op Survival, Sandbox, Base Defense — these cover the most common community needs and validate the template system. **Phase 7 / community-contributed** (9 templates): Treaty, Nomad, Empire Wars, Assassination, Tower Defense, Tug of War, Capture the Flag, Diplomacy, Sudden Death — these are well-defined patterns that the community can build and publish via Workshop before (or instead of) first-party implementation. Scope to what you have (Principle #6); don't ship 17 mediocre templates when 8 excellent ones plus a thriving Workshop library serves players better.
+
+**Custom game mode templates:** Modders can create new templates and publish them to Workshop (D030). A "Zombie Survival" template, a "MOBA Lanes" template, a "RPG Quest Hub" template — the community extends the library indefinitely. Templates use the same composition + module + trigger format as everything else.
+
+**Templates + Co-op:** Several templates have natural co-op variants. Co-op Survival is explicit, but most templates work with 2+ players if the designer adds co-op spawn points and per-player objectives.
+
+### Editor Onboarding for Veterans
+
+The IC editor's concepts — triggers, waypoints, entities, layers — aren't new. They're the same ideas that OFP, AoE2, StarCraft, and WC3 editors have used for decades. But each editor uses different names, different hotkeys, and different workflows. A 20-year AoE2 scenario editor veteran has deep muscle memory that IC shouldn't fight — it should channel.
+
+**"Coming From" profile (first-launch):**
+
+When the editor opens for the first time, a non-blocking welcome panel asks: "Which editor are you most familiar with?" Options:
+
+| Profile             | Sets Default Keybindings | Sets Terminology Hints | Sets Tutorial Path                       |
+| ------------------- | ------------------------ | ---------------------- | ---------------------------------------- |
+| **New to editing**  | IC Default               | IC terms only          | Full guided tour, start with Simple mode |
+| **OFP / Eden**      | F1–F7 mode switching     | OFP equivalents shown  | Skip basics, focus on RTS differences    |
+| **AoE2**            | AoE2 trigger workflow    | AoE2 equivalents shown | Skip triggers, focus on Lua + modules    |
+| **StarCraft / WC3** | WC3 trigger shortcuts    | Location→Region, etc.  | Skip locations, focus on compositions    |
+| **Other / Skip**    | IC Default               | No hints               | Condensed overview                       |
+
+This is a **one-time suggestion, not a lock-in.** Profile can be changed anytime in settings. All it does is set initial keybindings and toggle contextual hints.
+
+**Customizable keybinding presets:**
+
+Full key remapping with shipped presets:
+
+```
+IC Default   — Tab cycles modes, 1-9 entity selection, Space preview
+OFP Classic  — F1-F7 modes, Enter properties, Space preview
+Eden Modern  — Ctrl+1-7 modes, double-click properties, P preview
+AoE2 Style   — T triggers, U units, R resources, Ctrl+C copy trigger
+WC3 Style    — Ctrl+T trigger editor, Ctrl+B triggers browser
+```
+
+Not just hotkeys — mode switching behavior and right-click context menus adapt to the profile. OFP veterans expect right-click on empty ground to deselect; AoE2 veterans expect right-click to open a context menu.
+
+**Terminology Rosetta Stone:**
+
+A toggleable panel (or contextual tooltips) that maps IC terms to familiar ones:
+
+| IC Term                 | OFP / Eden              | AoE2                         | StarCraft / WC3         |
+| ----------------------- | ----------------------- | ---------------------------- | ----------------------- |
+| Region                  | Trigger (area-only)     | Trigger Area                 | Location                |
+| Module                  | Module                  | Looping Trigger Pattern      | GUI Trigger Template    |
+| Composition             | Composition             | (Copy-paste group)           | Template                |
+| Variables Panel         | (setVariable in SQF)    | (Invisible unit on map edge) | Deaths counter / Switch |
+| Inline Script           | Init field (SQF)        | —                            | Custom Script           |
+| Connection              | Synchronize             | —                            | —                       |
+| Layer                   | Layer                   | —                            | —                       |
+| Probability of Presence | Probability of Presence | —                            | —                       |
+| Named Character         | Playable unit           | Named hero (scenario)        | Named hero              |
+
+Displayed as **tooltips on hover** — when an AoE2 veteran hovers over "Region" in the UI, a tiny tooltip says "AoE2: Trigger Area." Not blocking, not patronizing, just a quick orientation aid. Tooltips disappear after the first few uses (configurable).
+
+**Interactive migration cheat sheets:**
+
+Context-sensitive help that recognizes familiar patterns:
+
+- Designer opens Variables Panel → tip: "In AoE2, you might have used invisible units placed off-screen as variables. IC has native variables — no workarounds needed."
+- Designer creates first trigger → tip: "In OFP, triggers were areas on the map. IC triggers work the same way, but you can also use Regions for reusable areas across multiple triggers."
+- Designer writes first Lua line → tip: "Coming from SQF? Here's a quick Lua comparison: `_myVar = 5` → `local myVar = 5`. `hint \"hello\"` → `Game.message(\"hello\")`. Full cheat sheet: Help → SQF to Lua."
+
+These only appear once per concept. They're dismissable and disable-all with one toggle. They're not tutorials — they're translation aids.
+
+**Scenario import (partial):**
+
+Full import of complex scenarios from other engines is unrealistic — but partial import of the most tedious-to-recreate elements saves real time:
+
+- **AoE2 trigger import** — parse AoE2 scenario trigger data, convert condition→effect pairs to IC triggers + modules. Not all triggers translate, but simple ones (timer, area detection, unit death) map cleanly.
+- **StarCraft trigger import** — parse StarCraft triggers, convert locations to IC Regions, convert trigger conditions/actions to IC equivalents.
+- **OFP mission.sqm import** — parse entity placements, trigger positions, and waypoint connections. SQF init scripts flag as "needs Lua conversion" but the spatial layout transfers.
+- **OpenRA .oramap entities** — already supported by the asset pipeline (D025/D026). Editor imports the map and entity placement directly.
+
+Import is always **best-effort** with clear reporting: "Imported 47 of 52 triggers. 5 triggers used features without IC equivalents — see import log." Better to import 90% and fix 10% than to recreate 100% from scratch.
+
+**The 30-minute goal:** A veteran editor from ANY background should feel productive within 30 minutes. Not expert — productive. They recognize familiar concepts wearing new names, their muscle memory partially transfers via keybinding presets, and the migration cheat sheet fills the gaps. The learning curve is a gentle slope, not a cliff.
+
+### Alternatives Considered
+
+1. **Standalone tool (like OpenRA):** Rejected. Separate process means no live preview, no reuse of rendering/sim code, higher maintenance burden, worse UX. OFP's editor succeeded precisely because it was in-game.
+2. **Text-only editing (YAML + Lua):** Already supported for power users and LLM generation. The visual editor is the accessibility layer on top of the same data format.
+3. **Node-based visual scripting (like Unreal Blueprints):** Too complex for the casual audience. Modules + triggers cover the sweet spot. Advanced users write Lua directly. A node editor is a potential Phase 7+ community contribution.
+
+**Phase:** Core scenario editor (terrain + entities + triggers + waypoints + modules + preview) ships in Phase 6. Campaign editor, compositions, game mode templates, multiplayer/co-op scenario tools, and Workshop publishing ship alongside. Game Master mode ships in Phase 6–7. The campaign editor's graph, state dashboard, and intermission screens build on D021's campaign system (Phase 4) — the sim-side campaign engine must exist before the visual editor can drive it.
+
+---
+
 ## PENDING DECISIONS
 
 | ID   | Topic                                                                                 | Needs Resolution By |
@@ -2193,7 +3110,7 @@ pub trait WorkshopStorage: Send + Sync {
 | P002 | Fixed-point scale (256? 1024? match OpenRA's 1024?)                                   | Phase 2 start       |
 | P003 | Audio library choice + music integration design (see note below)                      | Phase 3 start       |
 | P004 | Lobby/matchmaking protocol specifics                                                  | Phase 5 start       |
-| P005 | Map editor architecture (in-engine vs separate process)                               | Phase 6 start       |
+| P005 | ~~Map editor architecture~~ — RESOLVED: In-engine scenario editor (D038)              | Resolved            |
 | P006 | License choice (see tension analysis below)                                           | Phase 0 start       |
 | P007 | ~~Workshop: single source vs multi-source~~ — RESOLVED: Federated multi-source (D030) | Resolved            |
 

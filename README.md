@@ -67,7 +67,7 @@ No C# required. No recompilation. WASM mods will run at near-native speed in a s
 
 **Workshop with dependency management.** A federated resource registry (inspired by crates.io and Artifactory) where any asset type — maps, sprites, music, balance patches, total conversions — can be published individually with semver dependencies and SHA-256 integrity checks. Community-hosted mirrors supported. No single point of failure.
 
-**Map editor.** Create, test, and publish maps without leaving the game, with live preview and hot-reload. (Architecture — in-engine vs. separate process — is still under evaluation.)
+**Scenario editor.** Create, test, and publish maps and missions without leaving the game — OFP/Eden-inspired in-engine editor (D038) with terrain painting, unit placement, visual triggers, waypoints, drag-and-drop logic modules, reusable compositions, Probability of Presence for replayability, Simple/Advanced mode, and a Zeus-inspired Game Master mode for live scenario manipulation.
 
 ### 🏗️ For Developers
 
@@ -108,7 +108,7 @@ No C# required. No recompilation. WASM mods will run at near-native speed in a s
 | Modding           | MiniYAML + C# (requires recompilation for deep mods) | Standard YAML + Lua + WASM (no recompilation ever)                         |
 | Browser play      | Not possible                                         | WASM build planned (Phase 7)                                               |
 | Networking        | TCP lockstep with server relay, static order latency | Relay server with time authority, lag-switch protection, sub-tick fairness |
-| Map editor        | Standalone tool                                      | In-engine editor with live preview (architecture TBD)                      |
+| Map editor        | Standalone tool                                      | In-engine scenario editor with mission logic, triggers, modules (D038)     |
 | AI content        | Hand-crafted campaigns                               | Hand-crafted + optional LLM-generated missions (BYOLLM)                    |
 | Replays           | Full game recording and playback                     | Signed, tamper-proof, with desync diagnosis                                |
 | Mod compatibility | Native format                                        | Loads OpenRA formats + provides migration tools                            |

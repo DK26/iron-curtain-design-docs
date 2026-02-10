@@ -672,6 +672,8 @@ This is dramatically more reliable than raw generation. The template constrains 
 
 Inspired by Operation Flashpoint / ArmA's mission editor: scene templates are **sub-mission components** — reusable, pre-scripted building blocks that snap together inside a mission. Each scene template has its own trigger logic, AI behavior, and Lua scripts already written and tested. The user or LLM only fills in parameters.
 
+> **Visual editor equivalent:** The in-engine scenario editor (D038) exposes these same building blocks as **modules** — drag-and-drop logic nodes with a properties panel. Scene templates are the YAML/Lua format; modules are the visual editor face. Same underlying data — a composition saved in the editor can be loaded as a scene template by Lua/LLM, and vice versa. See `09-DECISIONS.md` § D038.
+
 **Template hierarchy:**
 
 ```

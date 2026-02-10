@@ -1925,13 +1925,11 @@ Each actor reference exposes properties matching its components (`.Health`, `.Lo
 
 ---
 
-## 30. Map Editor ⚠️ DEFERRED (P005)
+## 30. Map Editor ✅ RESOLVED (D038)
 
 **OpenRA:** Full in-engine map editor with actor placement, terrain painting, resource placement, tile editing, undo/redo, script cell triggers, marker layers, road/path tiling tool.
 
-**Iron Curtain status:** Acknowledged as pending decision P005 (Phase 6). Architecture decision: in-engine vs separate process.
-
-**Recommendation:** The in-engine approach is better for modder UX (they already have the game running, instant preview). OpenRA's integrated editor is one of its biggest strengths.
+**Iron Curtain status:** Resolved as D038 — in-engine scenario editor (OFP/Eden-inspired). Goes beyond OpenRA's map editor to include full mission logic editing: triggers with countdown/timeout timers and min/mid/max randomization, waypoints, pre-built modules (wave spawner, patrol route, guard position, reinforcements, objectives), visual connection lines, Probability of Presence per entity for replayability, compositions (reusable prefabs), layers, Simple/Advanced mode toggle, preview/test button, Game Master mode, Workshop publishing. See `09-DECISIONS.md` § D038 for full design.
 
 ---
 
@@ -2026,7 +2024,7 @@ Each actor reference exposes properties matching its components (`.Health`, `.Lo
 
 **OpenRA:** `ClassicMapGenerator` (38KB) — procedural map generation with terrain types, resource placement, spawn points.
 
-**Iron Curtain status:** Not explicitly designed, though LLM-generated missions (Phase 7) may cover this. The map editor (P005) should include generation tools.
+**Iron Curtain status:** Not explicitly designed, though LLM-generated missions (Phase 7) may cover this. The in-engine scenario editor (D038) should include generation tools.
 
 ---
 

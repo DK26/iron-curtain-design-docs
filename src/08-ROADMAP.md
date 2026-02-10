@@ -240,7 +240,8 @@ Units moving, shooting, dying — headless sim + rendered. Record replay file. P
 ### Deliverables
 - Full OpenRA YAML rule compatibility (existing mods load)
 - WASM mod scripting with full capability system
-- In-engine map editor (OpenRA's biggest UX gap)
+- **In-engine scenario editor (D038):** OFP/Eden-inspired visual editor for maps AND mission logic — terrain painting, unit placement, triggers (area-based with countdown/timeout timers and min/mid/max randomization), waypoints, pre-built modules (wave spawner, patrol route, guard position, reinforcements, objectives, weather change, etc.), visual connection lines between triggers/modules/waypoints, Probability of Presence per entity for replayability, compositions (reusable prefabs), layers with lock/visibility, Simple/Advanced mode toggle, preview/test button, direct Workshop publishing
+- **Game Master mode (D038):** Zeus-inspired real-time scenario manipulation during live gameplay — one player controls enemy faction strategy, places reinforcements, triggers events, adjusts difficulty; uses editor UI on a live sim; budget system prevents flooding
 - Asset hot-reloading for mod development
 - Mod manager + workshop-style distribution
 - Tera templating for YAML generation (nice-to-have)
@@ -265,7 +266,7 @@ Units moving, shooting, dying — headless sim + rendered. Record replay file. P
 
 ### Exit Criteria
 - Someone ports an existing OpenRA mod (Tiberian Dawn, Dune 2000) and it runs
-- In-engine map editor is more capable than OpenRA's standalone tool
+- In-engine scenario editor is more capable than OpenRA's standalone map editor: supports terrain painting, unit placement, triggers with timers, waypoints, modules, compositions, and Workshop publishing
 - A mod can declare 3+ Workshop resource dependencies and `ic mod install` resolves, downloads, and caches them correctly
 - `ic mod audit` correctly identifies license incompatibilities in a dependency tree
 - An individual resource (e.g., a music track) can be published to and pulled from the Workshop independently

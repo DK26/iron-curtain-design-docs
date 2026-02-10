@@ -56,9 +56,9 @@ Because the engine builds on Bevy's rendering stack (which includes a full 2D an
 
 These are **modding possibilities enabled by the engine's architecture**, not development goals for the base game. The base game ships with the classic isometric aesthetic. Visual enhancements are content that modders and the community build on top.
 
-**In-Engine Map Editor**
+**In-Engine Scenario Editor (D038)**
 
-OpenRA's map editor is a standalone tool. Our editor runs inside the game with live preview, instant testing, and direct publishing. Lower barrier to content creation.
+OpenRA's map editor is a standalone terrain/actor tool. Our editor runs inside the game and goes further — not just terrain/unit placement, but full mission logic: visual triggers with countdown/timeout timers, waypoints, drag-and-drop modules (wave spawner, patrol route, guard position, reinforcements, objectives), compositions (reusable prefabs), Probability of Presence per entity for replayability, layers, and a Game Master mode for live scenario manipulation. Inspired by Operation Flashpoint's mission editor and Arma 3's Eden Editor.
 
 ### Architectural Differences from OpenRA
 
@@ -69,7 +69,7 @@ OpenRA is a mature, actively maintained project with 18 years of community inves
 | Runtime       | C# / .NET (mature, productive)           | Rust — no GC, predictable perf, WASM target                         |
 | Threading     | Single-threaded game loop (verified)     | Parallel systems via ECS                                            |
 | Modding       | Powerful but requires C# for deep mods   | YAML + Lua + WASM (no compile step)                                 |
-| Map editor    | Separate tool, recently improved         | In-engine editor (Phase 6)                                          |
+| Map editor    | Separate tool, recently improved         | In-engine scenario editor with mission logic (D038, Phase 6)        |
 | Multiplayer   | 135+ desync issues tracked               | Snapshottable sim designed for desync pinpointing                   |
 | Competitive   | Community ladders via CnCNet             | Integrated ranked matchmaking, tournament mode                      |
 | Portability   | Desktop (Windows, macOS, Linux)          | Desktop + WASM (browser) + mobile                                   |
