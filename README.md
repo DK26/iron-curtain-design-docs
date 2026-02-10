@@ -85,16 +85,16 @@ No C# required. No recompilation. WASM mods will run at near-native speed in a s
 
 ### vs. C&C Remastered Collection
 
-|                     | Remastered Collection                                              | Iron Curtain (planned)                                                                |
-| ------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------- |
-| Graphics            | 4K remastered sprites                                              | OpenRA sprites + Bevy rendering pipeline (shaders, post-processing, HD asset support) |
-| Platforms           | Windows, Xbox                                                      | Windows, macOS, Linux, Browser, Steam Deck, Mobile                                    |
-| Multiplayer servers | Proprietary networking layer (not open-sourced)                    | Self-hostable relay servers, no single point of failure                               |
-| Modding             | Steam Workshop maps, limited mod API                               | YAML + Lua + WASM, total conversion capable                                           |
-| Source              | Original C++ engine GPL; remaster networking/rendering proprietary | Open source (license TBD)                                                             |
-| AI missions         | Fixed campaign only                                                | LLM-generated missions (Phase 7)                                                      |
-| Engine              | Original C++ engine as DLL, called by proprietary C# client        | Modern Rust + Bevy                                                                    |
-| Price               | $19.99                                                             | Free                                                                                  |
+|                     | Remastered Collection                                              | Iron Curtain (planned)                                                                      |
+| ------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------- |
+| Graphics            | 4K remastered sprites                                              | Classic isometric sprites (HD asset support planned, visual enhancements possible via Bevy) |
+| Platforms           | Windows, Xbox                                                      | Windows, macOS, Linux, Browser, Steam Deck, Mobile                                          |
+| Multiplayer servers | Proprietary networking layer (not open-sourced)                    | Self-hostable relay servers, no single point of failure                                     |
+| Modding             | Steam Workshop maps, limited mod API                               | YAML + Lua + WASM, total conversion capable                                                 |
+| Source              | Original C++ engine GPL; remaster networking/rendering proprietary | Open source (license TBD)                                                                   |
+| AI missions         | Fixed campaign only                                                | LLM-generated missions (Phase 7)                                                            |
+| Engine              | Original C++ engine as DLL, called by proprietary C# client        | Modern Rust + Bevy                                                                          |
+| Price               | $19.99                                                             | Free                                                                                        |
 
 ### vs. OpenRA
 
@@ -162,18 +162,20 @@ Generated missions are standard YAML + Lua — you can edit them, share them, le
 - **Community sharing** — rate, remix, and share generated missions
 - **Cooperative scenario design** — describe a scenario in chat, play it minutes later with friends
 
-## Bevy Rendering Capabilities
+## Rendering
 
-Building on Bevy will open up visual possibilities beyond what OpenRA or the Remastered Collection currently offer:
+The core rendering goal is straightforward: **faithfully reproduce the classic Red Alert isometric look.** The same sprites, the same aesthetic, the same feel. HD sprite support is planned so modders can provide higher-resolution assets alongside the originals.
+
+Because Iron Curtain builds on Bevy's rendering stack (which includes a full 2D and 3D pipeline via wgpu), modders will have access to capabilities far beyond the classic look — if they choose to use them:
 
 - **Post-processing effects** — bloom, color grading, screen-space reflections on water
 - **Dynamic lighting** — explosions illuminate nearby terrain and units, day/night cycles
 - **Particle systems** — GPU-accelerated smoke, fire, debris, weather effects
 - **Shader-based effects** — chrono-shift shimmer, iron curtain glow, tesla coil arcs, nuclear flash
-- **HD asset pipeline** — support for high-resolution sprite sheets alongside classic assets
+- **3D rendering** — a Tier 3 (WASM) mod can replace the sprite renderer entirely with 3D models while the simulation remains unchanged
 - **Smooth camera** — sub-pixel rendering, smooth zoom, cinematic replay camera
 
-All of this while maintaining the classic isometric aesthetic. The game should look like Red Alert remembered through rose-tinted glasses — not photorealistic, but *better than you remember.*
+These are **modding possibilities enabled by the engine's architecture**, not development goals. The base game ships with the classic isometric aesthetic. Visual enhancements are content that modders and the community can build on top.
 
 ## Architecture at a Glance
 

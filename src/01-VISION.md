@@ -13,18 +13,18 @@ Build a Rust-native RTS engine that:
 
 ### Capabilities Beyond OpenRA and the Remastered Collection
 
-| Capability         | Remastered Collection                            | OpenRA                                                  | Iron Curtain                                                   |
-| ------------------ | ------------------------------------------------ | ------------------------------------------------------- | -------------------------------------------------------------- |
-| Engine             | Original C++ as DLL, proprietary C# client       | C# / .NET (2007)                                        | Rust + Bevy (2026)                                             |
-| Platforms          | Windows, Xbox                                    | Windows, macOS, Linux                                   | All + Browser + Mobile                                         |
-| Max units (smooth) | Unknown (not benchmarked)                        | Community reports lag at 300-500 units                  | 2000+ target                                                   |
-| Modding            | Steam Workshop maps, limited API                 | MiniYAML + C# (recompile for deep mods)                 | YAML + Lua + WASM (no recompile ever)                          |
-| AI content         | Fixed campaigns                                  | Fixed campaigns + community missions                    | Branching campaigns + optional LLM-generated missions (BYOLLM) |
-| Multiplayer        | Proprietary networking (not open-sourced)        | TCP lockstep, 135+ desync issues tracked                | Relay server, desync diagnosis, signed replays                 |
-| Competitive        | No ranked, no anti-cheat                         | Community ladders via CnCNet                            | Ranked matchmaking, Glicko-2, relay-certified results          |
-| Graphics pipeline  | HD sprites, proprietary renderer                 | Custom renderer with post-processing (since March 2025) | Bevy + wgpu: shaders, post-FX, dynamic lighting, particles     |
-| Source             | C++ engine GPL; networking/rendering proprietary | Open (GPL)                                              | Open (GPL)                                                     |
-| Community assets   | Separate ecosystem                               | 18 years of maps/mods                                   | Loads all OpenRA assets + migration tools                      |
+| Capability         | Remastered Collection                            | OpenRA                                                  | Iron Curtain                                                                         |
+| ------------------ | ------------------------------------------------ | ------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| Engine             | Original C++ as DLL, proprietary C# client       | C# / .NET (2007)                                        | Rust + Bevy (2026)                                                                   |
+| Platforms          | Windows, Xbox                                    | Windows, macOS, Linux                                   | All + Browser + Mobile                                                               |
+| Max units (smooth) | Unknown (not benchmarked)                        | Community reports lag at 300-500 units                  | 2000+ target                                                                         |
+| Modding            | Steam Workshop maps, limited API                 | MiniYAML + C# (recompile for deep mods)                 | YAML + Lua + WASM (no recompile ever)                                                |
+| AI content         | Fixed campaigns                                  | Fixed campaigns + community missions                    | Branching campaigns + optional LLM-generated missions (BYOLLM)                       |
+| Multiplayer        | Proprietary networking (not open-sourced)        | TCP lockstep, 135+ desync issues tracked                | Relay server, desync diagnosis, signed replays                                       |
+| Competitive        | No ranked, no anti-cheat                         | Community ladders via CnCNet                            | Ranked matchmaking, Glicko-2, relay-certified results                                |
+| Graphics pipeline  | HD sprites, proprietary renderer                 | Custom renderer with post-processing (since March 2025) | Classic isometric via Bevy + wgpu (HD assets, post-FX, shaders available to modders) |
+| Source             | C++ engine GPL; networking/rendering proprietary | Open (GPL)                                              | Open (GPL)                                                                           |
+| Community assets   | Separate ecosystem                               | 18 years of maps/mods                                   | Loads all OpenRA assets + migration tools                                            |
 
 ### New Capabilities Not Found Elsewhere
 
@@ -36,9 +36,11 @@ Future extensions: multi-mission campaign generation, adaptive difficulty that r
 
 For players who opt in, this transforms Red Alert from a game with finite content to a game with infinite content. Players who prefer hand-crafted content lose nothing — every feature works without an LLM.
 
-**Bevy Rendering Pipeline**
+**Rendering: Classic First, Modding Possibilities Beyond**
 
-Building on Bevy's modern rendering stack unlocks visual capabilities beyond what OpenRA or the Remastered Collection currently offer:
+The core rendering goal is to **faithfully reproduce the classic Red Alert isometric aesthetic** — the same sprites, the same feel. HD sprite support is planned so modders can provide higher-resolution assets alongside the originals.
+
+Because the engine builds on Bevy's rendering stack (which includes a full 2D and 3D pipeline via wgpu), modders gain access to capabilities far beyond the classic look — if they choose to use them:
 
 - Post-processing: bloom, color grading, screen-space reflections on water
 - Dynamic lighting: explosions illuminate surroundings, day/night cycles
@@ -46,9 +48,9 @@ Building on Bevy's modern rendering stack unlocks visual capabilities beyond wha
 - Dynamic weather: real-time transitions (sunny → overcast → rain → storm), snow accumulation on terrain, puddle formation, seasonal effects — terrain textures respond to weather via palette tinting, overlay sprites, or shader blending (D022)
 - Shader effects: chrono-shift shimmer, iron curtain glow, tesla arcs, nuclear flash
 - Smooth camera: sub-pixel rendering, cinematic replay camera, smooth zoom
-- HD asset pipeline alongside classic sprites
+- 3D rendering: a Tier 3 (WASM) mod can replace the sprite renderer entirely with 3D models while the simulation stays unchanged
 
-The visual goal: Red Alert as you remember it through rose-tinted glasses — classic aesthetic, modern polish.
+These are **modding possibilities enabled by the engine's architecture**, not development goals for the base game. The base game ships with the classic isometric aesthetic. Visual enhancements are content that modders and the community build on top.
 
 **In-Engine Map Editor**
 

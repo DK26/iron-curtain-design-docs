@@ -6,22 +6,22 @@
 - ECS *is* our architecture — Bevy gives it to us with scheduling, queries, and parallel system execution out of the box
 - Saves 2–4 months of engine plumbing (windowing, asset pipeline, audio, rendering scaffolding)
 - Plugin system maps naturally to pluggable networking (`NetworkModel` as a Bevy plugin)
-- Bevy's 2D + 3D rendering pipeline covers both classic isometric sprites and future 3D mods
+- Bevy's 2D rendering pipeline handles classic isometric sprites; the 3D pipeline is available passively for modders (see "3D Rendering as a Mod")
 - `wgpu` is Bevy's backend — we still get low-level control via custom render passes where profiling justifies it
 - Breaking API changes are manageable: pin Bevy version per development phase, upgrade between phases
 
 **Bevy provides:**
 
-| Concern     | Bevy Subsystem         | Notes                                                   |
-| ----------- | ---------------------- | ------------------------------------------------------- |
-| Windowing   | `bevy_winit`           | Cross-platform, handles lifecycle events                |
-| Rendering   | `bevy_render` + `wgpu` | Custom isometric sprite passes + standard 3D pipeline   |
-| ECS         | `bevy_ecs`             | Archetypes, system scheduling, change detection         |
-| Asset I/O   | `bevy_asset`           | Hot-reloading, platform-agnostic (WASM/mobile-safe)     |
-| Audio       | `bevy_audio`           | Platform-routed; `ra-audio` wraps for .aud/.ogg/EVA     |
-| Dev tools   | `egui` via `bevy_egui` | Immediate-mode debug overlays                           |
-| Scripting   | `mlua` (Bevy resource) | Lua embedding, integrated as non-send resource          |
-| Mod runtime | `wasmtime` / `wasmer`  | WASM sandboxed execution (Bevy system, not Bevy plugin) |
+| Concern     | Bevy Subsystem         | Notes                                                            |
+| ----------- | ---------------------- | ---------------------------------------------------------------- |
+| Windowing   | `bevy_winit`           | Cross-platform, handles lifecycle events                         |
+| Rendering   | `bevy_render` + `wgpu` | Custom isometric sprite passes; 3D pipeline available to modders |
+| ECS         | `bevy_ecs`             | Archetypes, system scheduling, change detection                  |
+| Asset I/O   | `bevy_asset`           | Hot-reloading, platform-agnostic (WASM/mobile-safe)              |
+| Audio       | `bevy_audio`           | Platform-routed; `ra-audio` wraps for .aud/.ogg/EVA              |
+| Dev tools   | `egui` via `bevy_egui` | Immediate-mode debug overlays                                    |
+| Scripting   | `mlua` (Bevy resource) | Lua embedding, integrated as non-send resource                   |
+| Mod runtime | `wasmtime` / `wasmer`  | WASM sandboxed execution (Bevy system, not Bevy plugin)          |
 
 ## Simulation / Render Split (Critical Architecture)
 
@@ -400,7 +400,7 @@ pub trait GameModule {
 | **Sim core**   | `Simulation`, `apply_tick()`, `snapshot()`, state hashing, order validation pipeline | Components, systems, rules, resource types                     |
 | **Positions**  | `WorldPos { x, y, z }`, `CellPos { x, y, z }`, pathfinding grid                      | Whether Z is used (RA1: flat, RA2: elevation)                  |
 | **Networking** | `NetworkModel` trait, relay server, lockstep, replays                                | `PlayerOrder` variants (game-specific commands)                |
-| **Rendering**  | Camera, sprite batching, post-FX pipeline, UI framework                              | Sprite renderer (RA1), voxel renderer (RA2), terrain elevation |
+| **Rendering**  | Camera, sprite batching, UI framework; post-FX pipeline available to modders         | Sprite renderer (RA1), voxel renderer (RA2), terrain elevation |
 | **Modding**    | YAML loader, Lua runtime, WASM sandbox, workshop                                     | Rule schemas, API surface exposed to scripts                   |
 | **Formats**    | `.mix` parser, archive loading                                                       | `.shp` variant (RA1), `.vxl`/`.hva` (RA2), map format          |
 

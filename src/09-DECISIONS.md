@@ -275,23 +275,23 @@ See `10-PERFORMANCE.md` for full details, targets, and implementation patterns.
 
 ---
 
-## D017: Bevy Rendering Pipeline for Visual Enhancement
+## D017: Bevy Rendering Pipeline — Classic Base, Modding Possibilities
 
-**Decision:** Leverage Bevy's modern rendering pipeline (wgpu, shaders, post-processing) to deliver visual quality beyond both OpenRA and the Remastered Collection while maintaining the classic isometric aesthetic.
+**Decision:** Use Bevy's rendering pipeline (wgpu) to faithfully reproduce the classic Red Alert isometric aesthetic. Bevy's more advanced rendering capabilities (shaders, post-processing, dynamic lighting, particles, 3D) are available as modding infrastructure — not as base game goals.
 
 **Rationale:**
-- OpenRA's renderer has evolved (post-processing added in March 2025) but remains limited by its C#/.NET architecture
-- Remastered Collection has HD sprites but the renderer is proprietary and not extensible by modders
-- Bevy + wgpu enables: bloom, color grading, dynamic lighting, GPU particles, custom shaders
-- Classic aesthetic preserved — these are enhancements, not a style change
-- Shader effects bring special abilities to life: chrono-shift shimmer, tesla arcs, nuclear flash
+- The core rendering goal is a faithful classic Red Alert clone: isometric sprites, palette-aware shading, fog of war
+- Bevy + wgpu provides this solidly via 2D sprite batching and the isometric layer
+- Because Bevy includes a full rendering pipeline, advanced visual capabilities (bloom, color grading, GPU particles, dynamic lighting, custom shaders) are **passively available** to modders without extra engine work
+- This enables community-created visual enhancements: shader effects for chrono-shift, tesla arcs, weather particles, or even full 3D rendering mods (see D018, `02-ARCHITECTURE.md` § "3D Rendering as a Mod")
+- Render quality tiers (Baseline → Ultra) automatically degrade for older hardware — the base classic aesthetic works on all tiers
 
 **Scope:**
-- Phase 1: basic post-processing prototypes (bloom, color grading)
-- Phase 3: polished effects for game chrome
-- Phase 7: full visual pipeline (dynamic lighting, particles, weather, cinematic camera)
+- Phase 1: faithful isometric tile renderer, sprite animation, shroud, camera — showcase optional post-processing prototypes to demonstrate modding potential
+- Phase 3+: rendering supports whatever the game chrome needs
+- Phase 7: visual modding infrastructure (particle systems, shader library, weather rendering) — tools for modders, not base game goals
 
-**Design principle:** The game should look like Red Alert remembered through rose-tinted glasses. Better than you remember, but unmistakably Red Alert.
+**Design principle:** The base game looks like Red Alert. Modders can make it look like whatever they want.
 
 ---
 

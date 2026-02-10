@@ -47,7 +47,7 @@ Open source `ra-formats` early. Useful standalone, builds credibility and commun
 
 ## Phase 1: Rendering Slice (Months 3–6)
 
-**Goal:** Render a map with units standing on it. No gameplay. Demonstrate Bevy's visual capabilities.
+**Goal:** Render a Red Alert map faithfully with units standing on it. No gameplay. Classic isometric aesthetic.
 
 ### Deliverables
 - Bevy-based isometric tile renderer with palette-aware shading
@@ -55,8 +55,8 @@ Open source `ra-formats` early. Useful standalone, builds credibility and commun
 - Shroud/fog-of-war rendering
 - Camera: smooth scroll, zoom, minimap
 - Load OpenRA map, render correctly
-- Basic post-processing: bloom on explosions, color grading
-- Shader prototypes: chrono-shift shimmer, tesla coil glow (visual showcase)
+- Render quality tier auto-detection (see `10-PERFORMANCE.md` § "Render Quality Tiers")
+- Optional visual showcase: basic post-processing (bloom, color grading) and shader prototypes (chrono-shift shimmer, tesla coil glow) to demonstrate modding possibilities
 
 ### Key Architecture Work
 - Bevy plugin structure: `ra-render` as a Bevy plugin reading from sim state
@@ -64,7 +64,7 @@ Open source `ra-formats` early. Useful standalone, builds credibility and commun
 - HD asset pipeline: support high-res sprites alongside classic 8-bit assets
 
 ### Release
-"Red Alert map rendered in Rust at 4K 144fps with modern post-processing" — visual showcase generates buzz.
+"Red Alert map rendered faithfully in Rust at 4K 144fps" — visual showcase generates buzz.
 
 ### Exit Criteria
 - Can load and render any OpenRA Red Alert map
@@ -249,7 +249,7 @@ Units moving, shooting, dying — headless sim + rendered. Record replay file. P
 
 ## Phase 7: AI Content & Polish (Months 32–36+)
 
-**Goal:** Optional LLM-generated missions (BYOLLM), visual polish, and feature parity.
+**Goal:** Optional LLM-generated missions (BYOLLM), visual modding infrastructure, and feature parity.
 
 ### Deliverables — AI Content Generation (Optional — BYOLLM)
 
@@ -266,12 +266,15 @@ All LLM features require the player to configure their own LLM provider. The gam
 - **LLM player-aware generation (D034):** When LLM provider is configured, `ra-llm` reads local SQLite for player context — faction preferences, unit usage patterns, win/loss streaks, campaign roster state; generates personalized missions, adaptive briefings, post-match commentary, coaching suggestions, rivalry narratives
 - **AI training data pipeline (D031):** gameplay event stream → OTEL collector → Parquet/Arrow columnar format → ML training; build order learning, engagement patterns, balance analysis from aggregated match telemetry
 
-### Deliverables — Visual Polish (Bevy Rendering)
-- Full post-processing pipeline: bloom, color grading, ambient occlusion
-- Dynamic lighting: explosions, muzzle flash, day/night cycle (optional game mode)
-- GPU particle systems: smoke trails, fire propagation, weather effects (rain, snow, sandstorm, fog, blizzard, storm — see `04-MODDING.md` § "weather scene template")
+### Deliverables — Visual Modding Infrastructure (Bevy Rendering)
+
+These are optional visual enhancements that ship as engine capabilities for modders and community content creators. The base game uses the classic isometric aesthetic established in Phase 1.
+
+- Post-processing pipeline available to modders: bloom, color grading, ambient occlusion
+- Dynamic lighting infrastructure: explosions, muzzle flash, day/night cycle (optional game mode)
+- GPU particle system infrastructure: smoke trails, fire propagation, weather effects (rain, snow, sandstorm, fog, blizzard, storm — see `04-MODDING.md` § "weather scene template")
 - Weather system: per-map or trigger-based, render-only or with optional sim effects (visibility, speed modifiers)
-- Polished shader effects: chrono-shift, iron curtain, gap generator, nuke flash
+- Shader effect library: chrono-shift, iron curtain, gap generator, nuke flash
 - Cinematic replay camera with smooth interpolation
 
 ### Deliverables — Platform & Ecosystem
