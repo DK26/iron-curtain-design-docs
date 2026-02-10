@@ -608,6 +608,18 @@ pub struct GameListing {
     pub players: Vec<PlayerInfo>, // current players in lobby
     pub status: LobbyStatus,     // waiting, in_progress, full
     pub engine: EngineId,         // "iron-curtain" or "openra" (for cross-browser)
+    pub required_mods: Vec<ModDependency>, // mods needed to join (D030: auto-download)
+}
+
+/// Mod dependency for auto-download on lobby join (D030).
+/// When a player joins a lobby, the client checks `required_mods` against
+/// local cache. Missing mods are fetched from the Workshop automatically
+/// (CS:GO-style). See `04-MODDING.md` § "Auto-Download on Lobby Join".
+pub struct ModDependency {
+    pub id: String,               // Workshop resource ID: "namespace/name"
+    pub version: VersionReq,      // semver range
+    pub checksum: Sha256Hash,     // integrity verification
+    pub size_bytes: u64,          // for progress UI and consent prompt
 }
 ```
 

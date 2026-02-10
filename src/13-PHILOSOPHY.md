@@ -155,13 +155,25 @@ The goal of pathfinding and AI isn't mathematical perfection. It's believability
 
 **Rule:** When designing AI or pathfinding, do not aim for "optimal." Aim for "predictable." Rely on heuristics (see "Layered Pathfinding Heuristics" in Engineering Methods below) rather than expensive perfection.
 
+### 10. Build With the Community, Not Just For Them
+
+Iron Curtain exists because of a community — the players and modders who kept C&C alive for 30 years through OpenRA, competitive leagues (RAGL), third-party mods (Combined Arms, Romanov's Vengeance), and preservation projects. Every design decision should consider how it affects these people.
+
+This means:
+- **Check community pain points before designing.** OpenRA's issue tracker (135+ desync issues, recurring modding friction, performance complaints), forum discussions, and mod developer feedback are primary design inputs, not afterthoughts. If a recurring complaint exists, the design should address it — or explicitly document why it doesn't.
+- **Don't break what works.** The community has invested years in maps, mods, and workflows. Compatibility decisions (D023, D025, D026, D027) aren't just technical — they're respect for people's work.
+- **Governance follows community, not the other way around.** D037 is aspirational until a real community exists. Don't build election systems for a project with five contributors.
+- **Earn trust through transparency.** Public design docs, documented decision rationale, and honest scope communication (no "RA2 coming soon" when nobody is building it) are how an open-source project earns contributors.
+
+**Rule:** Before finalizing any design decision, ask: *"How does this affect the people who will actually use this?"* Check the community pain points documented in [01-VISION.md](01-VISION.md), the OpenRA gap analysis in [11-OPENRA-FEATURES.md](11-OPENRA-FEATURES.md), and the governance principles in D037. If a decision benefits the architecture but hurts the community experience, the community experience wins — unless an architectural invariant is at stake.
+
 ---
 
 ## Game Design Principles
 
 The principles above guide how we *build*. The principles below guide what we *build* — the player-facing design philosophy that Westwood refined across a decade of RTS games. These are drawn from GDC talks (Louis Castle, 1997 & 1998), Ars Technica's "War Stories" interview (Castle, 2019), and post-mortem interviews. They complement the development principles — if "Fun Beats Documentation" says *how to decide*, these say *what to aim for*.
 
-### 10. Immediate Feedback — The One-Second Rule
+### 11. Immediate Feedback — The One-Second Rule
 
 Louis Castle emphasized that players should receive feedback for every action within one second. Click a unit — it acknowledges with a voice line and visual cue. Issue an order — the unit visibly begins responding. The player should never wonder "did the game hear me?"
 
@@ -174,7 +186,7 @@ This isn't about latency targets — it's about *perceived responsiveness*. A cl
 - Build queue feedback in `ra-ui` (Phase 3)
 - Input handling in `ra-game` — cursor changes, click acknowledgment
 
-### 11. Visual Clarity — The One-Second Screenshot
+### 12. Visual Clarity — The One-Second Screenshot
 
 You should be able to look at a screenshot for one second and know: who is winning, what units are on screen, and where the resources are. This was a core Westwood design test. If the screen is confusing, it doesn't matter how deep the strategy is — the player has lost contact with their toy soldiers.
 
@@ -185,7 +197,7 @@ You should be able to look at a screenshot for one second and know: who is winni
 - Render quality tiers in [10-PERFORMANCE.md](10-PERFORMANCE.md) — even the lowest tier must preserve readability
 - Color palette choices for faction differentiation
 
-### 12. Reduce Cognitive Load — Smart Defaults
+### 13. Reduce Cognitive Load — Smart Defaults
 
 Westwood's context-sensitive cursor was one of their greatest contributions to the genre: the cursor changes based on what it's over (attack icon on enemies, move icon on terrain, harvest icon on resources), so the player communicates intent with a single click. The sidebar build menu was a deliberate choice to let players manage their base without moving the camera away from combat.
 
@@ -198,7 +210,7 @@ The principle: never make the player think about *how* to do something when they
 - UI layout in `ra-ui` — sidebar vs bottom-bar is a theme choice (D032), but all layouts should follow "build without losing the battlefield"
 - Mod SDK UX (D020) — `ic mod install` should be trivially simple
 
-### 13. Asymmetric Faction Identity
+### 14. Asymmetric Faction Identity
 
 Westwood believed that factions should never be mirrors of each other. GDI represents might and armor — slow, expensive, powerful. Nod represents stealth and speed — cheap, fragile, hit-and-run. The philosophy: balance doesn't mean equal stats. It means every "overpowered" tool has a specific, skill-based counter.
 
@@ -211,7 +223,7 @@ This creates the experience that playing Faction B feels like a *different game*
 - Damage type matrices / versus tables ([11-OPENRA-FEATURES.md](11-OPENRA-FEATURES.md))
 - Balance presets (D019) — even the "classic" preset preserves Westwood's asymmetric intent
 
-### 14. The Core Loop — Extract, Build, Amass, Crush
+### 15. The Core Loop — Extract, Build, Amass, Crush
 
 The most successful C&C titles follow a four-step core loop:
 
@@ -229,7 +241,7 @@ Every game system should feed into this loop. The original Westwood team learned
 - Feature proposals — the first question after "does it make the toy soldiers come alive?" is "which loop step does it serve?"
 - Mod review guidelines — total conversions can define their own loop, but the default RA1 module should stay faithful to this one
 
-### 15. Game Feel — "The Juice"
+### 16. Game Feel — "The Juice"
 
 Westwood (and later EA with the SAGE engine) understood that impact matters as much as mechanics. Buildings shouldn't just vanish — they should crumble. Debris should be physical. Explosions should feel weighty. Units should leave husks. During the Generals/C&C3 era, EA formalized this as "physics as fun" — the visceral, physical feedback that makes commanding an army feel *powerful*.
 
@@ -242,7 +254,7 @@ The checklist: Do explosions feel impactful? Does the screen communicate force? 
 - Audio feedback in `ra-audio` — weapon-specific impact sounds, explosion scaling
 - Modding: effects should be YAML-configurable (explosion type, debris count, screen shake intensity) so modders can tune game feel without code
 
-### 16. Audio Drives Tempo
+### 17. Audio Drives Tempo
 
 Frank Klepacki's philosophy extended beyond "write good music" to a specific insight about gameplay coupling: the music should match the tempo of the game. High-energy industrial metal and techno during combat keeps the player's actions-per-minute high. Ambient tension during build-up phases lets the player think. "Hell March" isn't just a good track — it's a gameplay accelerator.
 
@@ -255,7 +267,7 @@ This extends to unit responses. Each unit's voice should reflect its personality
 - Unit voice design guidelines for modders
 - Audio LOD — critical feedback sounds (unit acknowledgment, attack alerts) must never be culled, even under heavy audio load
 
-### 17. The Damage Matrix — No Monocultures
+### 18. The Damage Matrix — No Monocultures
 
 The C&C series formalized damage types (armor-piercing, explosive, fire, etc.) against armor classes (none, light, heavy, wood, concrete) into explicit versus tables. This mathematical structure ensures that no single unit composition can dominate without a counter. Westwood established this with the original RA's warhead/armor system; EA expanded it during the Generals/C&C3 era with more granular categories.
 
@@ -377,6 +389,7 @@ Key questions to ask during review:
 3. Could a modder change this value without recompiling? Should they be able to?
 4. Is this scoped appropriately for the current phase?
 5. If this is a compromise, is it explicitly labeled and reversible?
+6. How does this affect the community — players, modders, server hosts, contributors? Does it address a known pain point or create a new one?
 
 ### For Feature Proposals
 
@@ -385,6 +398,7 @@ When proposing a new feature:
 2. Cross-reference the relevant design docs ([02-ARCHITECTURE.md](02-ARCHITECTURE.md), [08-ROADMAP.md](08-ROADMAP.md), etc.)
 3. If it conflicts with a principle, acknowledge the trade-off — don't pretend the conflict doesn't exist
 4. Check [09-DECISIONS.md](09-DECISIONS.md) — has this already been decided?
+5. Consider community impact — does this address a known pain point? Does it create friction for existing workflows? Check [01-VISION.md](01-VISION.md) and [11-OPENRA-FEATURES.md](11-OPENRA-FEATURES.md) for documented community needs
 
 ### For LLM Agents
 

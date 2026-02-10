@@ -34,6 +34,11 @@ Phase 0 (Foundation)
 - Define `CoordTransform` (coordinate system translation)
 - Study OpenRA architecture: Game loop, World/Actor/Trait hierarchy, OrderManager, mod manifest system
 
+### Community Foundation (D037)
+- Code of conduct and contribution guidelines published
+- RFC process documented for major design decisions
+- License decision finalized (P006)
+
 ### Release
 Open source `ra-formats` early. Useful standalone, builds credibility and community interest.
 
@@ -44,6 +49,7 @@ Open source `ra-formats` early. Useful standalone, builds credibility and commun
 - OpenRA trait name aliases resolve correctly to IC components (D023)
 - Can extract and display sprites from .mix archives
 - Can convert MiniYAML to standard YAML losslessly
+- Code of conduct and RFC process published (D037)
 
 ## Phase 1: Rendering Slice (Months 3–6)
 
@@ -75,6 +81,8 @@ Open source `ra-formats` early. Useful standalone, builds credibility and commun
 ## Phase 2: Simulation Core (Months 6–12) — CRITICAL
 
 **Goal:** Units move, shoot, die. The engine exists.
+
+> **Gap acknowledgment:** The ECS component model currently documents ~9 core components (Health, Mobile, Attackable, Armament, Building, Buildable, Harvester, Selectable, LlmMeta). The gap analysis in `11-OPENRA-FEATURES.md` identifies **~30+ additional gameplay systems** that are prerequisites for a playable Red Alert: power, building placement, transport, capture, stealth/cloak, infantry sub-cells, crates, mines, crush, guard/patrol, deploy/transform, garrison, production queue, veterancy, docking, radar, GPS, chronoshift, iron curtain, paratroopers, naval, bridge, tunnels, and more. These systems need design and implementation during Phase 2. The gap count is a feature of honest planning, not a sign of incompleteness — the `11-OPENRA-FEATURES.md` priority assessment (P0/P1/P2/P3) provides the triage order.
 
 ### Deliverables
 - ECS-based simulation layer (`ra-sim`)
@@ -128,6 +136,7 @@ Units moving, shooting, dying — headless sim + rendered. Record replay file. P
 - Unit selection: box select, ctrl-groups, tab cycling
 - Build placement with validity checking
 - Audio: EVA voice lines, unit responses, ambient, music (`.aud` playback)
+  - **Audio system design (P003):** Resolve audio library choice; design `.aud` IMA ADPCM decoding pipeline; dynamic music state machine (combat/build/idle transitions — original RA had this); music-as-Workshop-resource architecture; investigate loading remastered soundtrack if player owns Remastered Collection
 - Custom UI layer on `wgpu` for game HUD
 - `egui` for dev tools/debug overlays
 - **UI theme system (D032):** YAML-driven switchable themes (Classic, Remastered, Modern); chrome sprite sheets, color palettes, font configuration; shellmap live menu backgrounds; first-launch theme picker
@@ -141,8 +150,9 @@ Units moving, shooting, dying — headless sim + rendered. Record replay file. P
 - **Chart component in `ra-ui`:** Lightweight Bevy 2D chart renderer (line, bar, pie, heatmap, stacked area) for post-game and career screens
 - **Post-game stats screen (D034):** Unit production timeline, resource curves, combat heatmap, APM graph, head-to-head comparison — all from SQLite `gameplay_events`
 - **Career stats page (D034):** Win rate by faction/map/opponent, rating history graph, session history with replay links — from SQLite `matches` + `match_players`
+- **Achievement infrastructure (D036):** SQLite achievement tables, engine-defined campaign/exploration achievements, Lua trigger API for mod-defined achievements, Steam achievement sync for Steam builds
 
-> **Note:** Phase 3's hard goal is "feels like Red Alert" — sidebar, audio, selection, build placement. The stats screens and chart component are high-value polish but depend on accumulated gameplay data, so they can mature alongside Phase 4 without blocking the "playable" milestone.
+> **Note:** Phase 3's hard goal is "feels like Red Alert" — sidebar, audio, selection, build placement. The stats screens, chart component, and achievement infrastructure are high-value polish but depend on accumulated gameplay data, so they can mature alongside Phase 4 without blocking the "playable" milestone.
 
 ## Phase 4: AI & Single Player (Months 16–20)
 
@@ -173,6 +183,7 @@ Units moving, shooting, dying — headless sim + rendered. Record replay file. P
 - Veterancy persistence across missions
 - Mission select UI with campaign graph visualization and difficulty indicators
 - **`ic` CLI prototype:** `ic mod init`, `ic mod check`, `ic mod run` — early tooling for Lua script development (full SDK in Phase 6)
+- **Minimal Workshop (D030 early delivery):** Central IC Workshop server + `ic mod publish` + `ic mod install` + basic in-game browser + auto-download on lobby join. Simple HTTP REST API, SQLite-backed. No federation, no replication, no promotion channels yet — those are Phase 6
 
 ### Exit Criteria
 - Can play through **all** Allied and Soviet campaign missions start to finish
@@ -198,6 +209,8 @@ Units moving, shooting, dying — headless sim + rendered. Record replay file. P
 - **Tournament mode:** bracket API, relay-certified `CertifiedMatchResult`, server-side replay archive
 - **Competitive map pool:** curated per-season, community-nominated
 - **Anti-cheat:** relay-side behavioral analysis (APM, reaction time, pattern entropy), suspicion scoring, community reports
+- **Competitive governance (D037):** Competitive committee formation, seasonal map pool curation process, community representative elections
+- **Competitive achievements (D036):** Ranked placement, league promotion, season finish, tournament participation achievements
 
 ### Key Architecture Work
 - Sub-tick timestamped orders (CS2 insight)
@@ -222,6 +235,8 @@ Units moving, shooting, dying — headless sim + rendered. Record replay file. P
 
 **Goal:** This is where you win long-term.
 
+> **Phased Workshop delivery (D030):** A minimal Workshop (central server + `ic mod publish` + `ic mod install` + in-game browser + auto-download on lobby join) should ship during Phase 4–5 alongside the `ic` CLI. Phase 6 adds the full Artifactory-level features: federation, community servers, replication, promotion channels, CI/CD token scoping, creator reputation, DMCA process. This avoids holding Workshop infrastructure hostage until month 26.
+
 ### Deliverables
 - Full OpenRA YAML rule compatibility (existing mods load)
 - WASM mod scripting with full capability system
@@ -239,6 +254,14 @@ Units moving, shooting, dying — headless sim + rendered. Record replay file. P
 - **Individual resource publishing:** Music, sprites, textures, voice lines, cutscenes, palettes, UI themes — all publishable as independent versioned resources
 - **Lockfile system:** `ic.lock` for reproducible dependency resolution across machines
 - **Mod balance dashboard (D034):** Unit win-rate contribution, cost-efficiency scatter plots, engagement outcome distributions from SQLite `gameplay_events`; `ic mod stats` CLI reads same database
+- **Steam Workshop integration (D030):** Optional distribution channel — subscribe via Steam, auto-sync, IC Workshop remains primary; no Steam lock-in
+- **In-game Workshop browser (D030):** Search, filter by category/game-module/rating, preview screenshots, one-click subscribe, dependency auto-resolution
+- **Auto-download on lobby join (D030):** CS:GO-style automatic mod/map download when joining a game that requires content the player doesn't have; progress UI with cancel option
+- **Creator reputation system (D030):** Trust scores from download counts, ratings, curation endorsements; tiered badges (New/Trusted/Verified/Featured); influences search ranking
+- **Content moderation & DMCA/takedown policy (D030):** Community reporting, automated scanning for known-bad content, 72-hour response window, due process with appeal path; Workshop moderator tooling
+- **Creator tipping & sponsorship (D035):** Optional tip links in resource metadata (Ko-fi/Patreon/GitHub Sponsors); IC never processes payments; no mandatory paywalls on mods
+- **Achievement packs (D036):** Mod-defined achievements via YAML + Lua triggers, publishable as Workshop resources; achievement browser in game UI
+- **Community governance tooling (D037):** Workshop moderator dashboard, community representative election system, game module steward roles
 
 ### Exit Criteria
 - Someone ports an existing OpenRA mod (Tiberian Dawn, Dune 2000) and it runs
@@ -246,6 +269,11 @@ Units moving, shooting, dying — headless sim + rendered. Record replay file. P
 - A mod can declare 3+ Workshop resource dependencies and `ic mod install` resolves, downloads, and caches them correctly
 - `ic mod audit` correctly identifies license incompatibilities in a dependency tree
 - An individual resource (e.g., a music track) can be published to and pulled from the Workshop independently
+- In-game Workshop browser can search, filter, and install resources with dependency auto-resolution
+- Joining a lobby with required mods triggers auto-download with progress UI
+- Creator reputation badges display correctly on resource listings
+- DMCA/takedown process handles a test case end-to-end within 72 hours
+- At least one mod-defined achievement pack loads and triggers correctly
 
 ## Phase 7: AI Content & Polish (Months 32–36+)
 

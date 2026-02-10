@@ -5,36 +5,40 @@
 Build a Rust-native RTS engine that:
 - Supports OpenRA resource formats (`.mix`, `.shp`, `.pal`, YAML rules)
 - Reimagines internals with modern architecture (not a port)
-- Offers superior performance, modding, portability, and multiplayer
+- Explores different tradeoffs: performance, modding depth, portability, and multiplayer architecture
 - Provides OpenRA mod compatibility as the zero-cost migration path
-- Is **game-agnostic at the engine layer** — Red Alert is the first game module; RA2, Tiberian Dawn, and original games are future modules on the same engine
+- Is **game-agnostic at the engine layer** — Red Alert is the first game module; RA2, Tiberian Dawn, and original games are future modules on the same engine (RA2 is a future community goal, not a scheduled deliverable)
 
 ## Why This Deserves to Exist
 
 ### Capabilities Beyond OpenRA and the Remastered Collection
 
-| Capability         | Remastered Collection                            | OpenRA                                                  | Iron Curtain                                                                         |
-| ------------------ | ------------------------------------------------ | ------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| Engine             | Original C++ as DLL, proprietary C# client       | C# / .NET (2007)                                        | Rust + Bevy (2026)                                                                   |
-| Platforms          | Windows, Xbox                                    | Windows, macOS, Linux                                   | All + Browser + Mobile                                                               |
-| Max units (smooth) | Unknown (not benchmarked)                        | Community reports lag at 300-500 units                  | 2000+ target                                                                         |
-| Modding            | Steam Workshop maps, limited API                 | MiniYAML + C# (recompile for deep mods)                 | YAML + Lua + WASM (no recompile ever)                                                |
-| AI content         | Fixed campaigns                                  | Fixed campaigns + community missions                    | Branching campaigns + optional LLM-generated missions (BYOLLM)                       |
-| Multiplayer        | Proprietary networking (not open-sourced)        | TCP lockstep, 135+ desync issues tracked                | Relay server, desync diagnosis, signed replays                                       |
-| Competitive        | No ranked, no anti-cheat                         | Community ladders via CnCNet                            | Ranked matchmaking, Glicko-2, relay-certified results                                |
-| Graphics pipeline  | HD sprites, proprietary renderer                 | Custom renderer with post-processing (since March 2025) | Classic isometric via Bevy + wgpu (HD assets, post-FX, shaders available to modders) |
-| Source             | C++ engine GPL; networking/rendering proprietary | Open (GPL)                                              | Open (GPL)                                                                           |
-| Community assets   | Separate ecosystem                               | 18 years of maps/mods                                   | Loads all OpenRA assets + migration tools                                            |
+| Capability         | Remastered Collection                            | OpenRA                                                                 | Iron Curtain                                                                         |
+| ------------------ | ------------------------------------------------ | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| Engine             | Original C++ as DLL, proprietary C# client       | C# / .NET (2007)                                                       | Rust + Bevy (2026)                                                                   |
+| Platforms          | Windows, Xbox                                    | Windows, macOS, Linux                                                  | All + Browser + Mobile                                                               |
+| Max units (smooth) | Unknown (not benchmarked)                        | Community reports of lag in large battles (not independently verified) | 2000+ target                                                                         |
+| Modding            | Steam Workshop maps, limited API                 | MiniYAML + C# (recompile for deep mods)                                | YAML + Lua + WASM (no recompile ever)                                                |
+| AI content         | Fixed campaigns                                  | Fixed campaigns + community missions                                   | Branching campaigns with persistent state (D021)                                     |
+| Multiplayer        | Proprietary networking (not open-sourced)        | TCP lockstep, 135+ desync issues tracked                               | Relay server, desync diagnosis, signed replays                                       |
+| Competitive        | No ranked, no anti-cheat                         | Community ladders via CnCNet                                           | Ranked matchmaking, Glicko-2, relay-certified results                                |
+| Graphics pipeline  | HD sprites, proprietary renderer                 | Custom renderer with post-processing (since March 2025)                | Classic isometric via Bevy + wgpu (HD assets, post-FX, shaders available to modders) |
+| Source             | C++ engine GPL; networking/rendering proprietary | Open (GPL)                                                             | Open (GPL)                                                                           |
+| Community assets   | Separate ecosystem                               | 18 years of maps/mods                                                  | Loads all OpenRA assets + migration tools                                            |
+| Mod distribution   | Steam Workshop (maps only)                       | Manual file sharing, forum posts                                       | Workshop registry with in-game browser, auto-download on lobby join, Steam source    |
+| Creator support    | None                                             | None                                                                   | Voluntary tipping, creator reputation scores, featured badges (D035)                 |
+| Achievements       | Steam achievements                               | None                                                                   | Per-module + mod-defined achievements, Steam sync for Steam builds (D036)            |
+| Governance         | EA-controlled                                    | Core team, community PRs                                               | Transparent governance, elected community reps, RFC process (D037)                   |
 
 ### New Capabilities Not Found Elsewhere
 
-**Optional LLM-Generated Missions and Campaigns (BYOLLM)**
+**Branching Campaigns with Persistent State (D021)**
 
-An optional in-game interface where players describe a scenario in natural language and receive a fully playable mission — map layout, objectives, enemy AI, triggers, briefing text. Generated content is standard YAML + Lua, fully editable and shareable. Requires the player to configure their own LLM provider (local or cloud) — the engine never ships or requires a specific model.
+Campaigns are directed graphs of missions, not linear sequences. Each mission can have multiple outcomes ("won with bridge intact" vs "won but bridge destroyed") that lead to different next missions. Failure doesn't end the campaign — defeat is another branch. Surviving units, veterancy, and equipment carry over between missions. Continuous flow: briefing → mission → debrief → next mission, no exit-to-menu between levels. Inspired by Operation Flashpoint.
 
-Future extensions: multi-mission campaign generation, adaptive difficulty that responds to player style, cooperative scenario generation for multiplayer.
+**Optional LLM-Generated Missions (BYOLLM — power-user feature)**
 
-For players who opt in, this transforms Red Alert from a game with finite content to a game with infinite content. Players who prefer hand-crafted content lose nothing — every feature works without an LLM.
+For players who want more content: an optional in-game interface where players describe a scenario in natural language and receive a fully playable mission — map layout, objectives, enemy AI, triggers, briefing text. Generated content is standard YAML + Lua, fully editable and shareable. Requires the player to configure their own LLM provider (local or cloud) — the engine never ships or requires a specific model. Every feature works fully without an LLM configured.
 
 **Rendering: Classic First, Modding Possibilities Beyond**
 
@@ -56,18 +60,20 @@ These are **modding possibilities enabled by the engine's architecture**, not de
 
 OpenRA's map editor is a standalone tool. Our editor runs inside the game with live preview, instant testing, and direct publishing. Lower barrier to content creation.
 
-### OpenRA's Limitations (what we improve on)
+### Architectural Differences from OpenRA
 
-| Area          | OpenRA Today                             | Our Engine                                                          |
+OpenRA is a mature, actively maintained project with 18 years of community investment. These are genuine architectural differences, not criticisms:
+
+| Area          | OpenRA                                   | Iron Curtain                                                        |
 | ------------- | ---------------------------------------- | ------------------------------------------------------------------- |
-| Runtime       | C# / .NET — GC pauses, heavy runtime     | Rust — no GC, predictable perf                                      |
+| Runtime       | C# / .NET (mature, productive)           | Rust — no GC, predictable perf, WASM target                         |
 | Threading     | Single-threaded game loop (verified)     | Parallel systems via ECS                                            |
 | Modding       | Powerful but requires C# for deep mods   | YAML + Lua + WASM (no compile step)                                 |
 | Map editor    | Separate tool, recently improved         | In-engine editor (Phase 6)                                          |
-| Multiplayer   | 135+ desync issues tracked               | Snapshottable sim enables desync pinpointing                        |
-| Competitive   | Community ladders via CnCNet             | Ranked matchmaking, anti-cheat, tournament mode                     |
-| Portability   | Desktop only (Mono/.NET)                 | Native + WASM (browser) + mobile                                    |
-| Engine age    | Started 2007, actively maintained        | Clean-sheet modern design                                           |
+| Multiplayer   | 135+ desync issues tracked               | Snapshottable sim designed for desync pinpointing                   |
+| Competitive   | Community ladders via CnCNet             | Integrated ranked matchmaking, tournament mode                      |
+| Portability   | Desktop (Windows, macOS, Linux)          | Desktop + WASM (browser) + mobile                                   |
+| Maturity      | 18 years, battle-tested, large community | Clean-sheet modern design, unproven                                 |
 | Campaigns     | Some incomplete (TD, Dune 2000)          | Branching campaigns with persistent state (D021)                    |
 | Mission flow  | Manual mission selection between levels  | Continuous flow: briefing → mission → debrief → next                |
 | Asset quality | Cannot fix original palette/sprite flaws | Bevy post-FX: palette correction, color grading, optional upscaling |
@@ -75,16 +81,19 @@ OpenRA's map editor is a standalone tool. Our editor runs inside the game with l
 ### What Makes People Actually Switch
 
 1. **Better performance** — visible: bigger maps, more units, no stutters
-2. **Better modding** — WASM scripting, in-engine editor, hot reload
-3. **Campaigns that flow** — branching paths, persistent units, no menu between missions, failure continues the story
+2. **Campaigns that flow** — branching paths, persistent units, no menu between missions, failure continues the story
+3. **Better modding** — WASM scripting, in-engine editor, hot reload
 4. **Competitive infrastructure** — ranked matchmaking, anti-cheat, tournaments, signed replays — OpenRA has none of this
 5. **Player analytics** — post-game stats, career page, campaign dashboard with roster graphs — your match history is queryable data, not a forgotten replay folder
-6. **Runs everywhere** — browser via WASM, mobile, Steam Deck natively
-7. **Better multiplayer** — desync debugging, smoother netcode, relay server
-8. **Optional LLM enhancements** (BYOLLM) — bring your own LLM for generated missions, adaptive briefings, coaching suggestions — enhances the experience but never required
-9. **OpenRA mod compatibility** — existing community migrates without losing work
+6. **Better multiplayer** — desync debugging, smoother netcode, relay server
+7. **Runs everywhere** — browser via WASM, mobile, Steam Deck natively
+8. **OpenRA mod compatibility** — existing community migrates without losing work
+9. **Workshop with auto-download** — join a game, missing mods download automatically (CS:GO-style); no manual file hunting
+10. **Creator recognition** — reputation scores, featured badges, optional tipping — modders get credit and visibility
+11. **Achievement system** — per-game-module achievements stored locally, mod-defined achievements via YAML + Lua, Steam sync for Steam builds
+12. **Optional LLM enhancements** (BYOLLM) — bring your own LLM for generated missions, adaptive briefings, coaching suggestions — a quiet power-user feature, not a headline
 
-Item 9 is the linchpin. If existing mods just work, migration cost drops to near zero.
+Item 8 is the linchpin. If existing mods just work, migration cost drops to near zero.
 
 ## Competitive Play
 
@@ -149,10 +158,10 @@ Competitive play demands rock-solid performance — stutters during a crucial mi
 
 ### Active Projects
 
-**OpenRA** (C#) — The project to beat
-- 14.8k GitHub stars, actively maintained
+**OpenRA** (C#) — The community standard
+- 14.8k GitHub stars, actively maintained, 18 years of community investment
 - Latest release: 20250330 (March 2025) — new map editor, HD asset support, post-processing
-- Mature community, mod ecosystem, server infrastructure
+- Mature community, mod ecosystem, server infrastructure — the project that proved open-source C&C is viable
 - Multiplayer-first focus — single-player campaigns often incomplete (Dune 2000: only 1 of 3 campaigns fully playable; TD campaign also incomplete)
 - SDK supports non-Westwood games (KKND, Swarm Assault, Hard Vacuum, Dune II remake) — validates our multi-game extensibility approach (D018)
 

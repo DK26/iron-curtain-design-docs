@@ -270,6 +270,8 @@ See `10-PERFORMANCE.md` for full details, targets, and implementation patterns.
 - Phase 7: player-aware generation — LLM reads local SQLite (D034) for faction history, unit preferences, win rates, campaign roster state; injects player context into prompts for personalized missions, adaptive briefings, post-match commentary, coaching suggestions, and rivalry narratives
 - Future: multi-mission campaigns, adaptive difficulty, cooperative scenario design
 
+> **Positioning note:** LLM features are a quiet power-user capability, not a project headline. The primary single-player story is the hand-authored branching campaign system (D021), which requires no LLM and is genuinely excellent on its own merits. LLM generation is for players who want more content — it should never appear before D021 in marketing or documentation ordering. The word “AI” in gaming contexts attracts immediate hostility from a significant audience segment regardless of implementation quality. Lead with campaigns, reveal LLM as “also, modders and power users can use AI tools if they want.”
+
 **Implementation approach:**
 - LLM generates YAML map definition + Lua trigger scripts
 - Same format as hand-crafted missions — no special runtime
@@ -344,6 +346,8 @@ See `02-ARCHITECTURE.md` § "Architectural Openness: Beyond Isometric" for the f
 However, **3D rendering mods for isometric-family games are explicitly supported.** A "3D Red Alert" Tier 3 mod can replace sprites with GLTF meshes and the isometric camera with a free 3D camera — without changing the sim, networking, or pathfinding. Bevy's built-in 3D pipeline makes this feasible. Cross-view multiplayer (2D vs 3D players in the same game) works because the sim is view-agnostic. See `02-ARCHITECTURE.md` § "3D Rendering as a Mod".
 
 **Phase:** Baked into architecture from Phase 0. RA2 module is a potential Phase 8+ project.
+
+> **Expectation management:** The community’s most-requested feature is RA2 support. The architecture deliberately supports it (game-agnostic traits, extensible ECS, pluggable pathfinding), but **RA2 is a future community goal, not a scheduled deliverable.** No timeline, staffing, or exit criteria exist for any game module beyond RA1. When the community reads “game-agnostic,” they should understand: the architecture won’t block RA2, but nobody is building it yet.
 
 ---
 
@@ -792,6 +796,18 @@ ic mod update-engine       # bump engine version
 
 **Key Design Elements:**
 
+### Phased Delivery Strategy
+
+The Workshop design below is comprehensive, but it ships incrementally:
+
+| Phase     | Scope                                                                                                                                    | Complexity   |
+| --------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| Phase 4–5 | **Minimal viable Workshop:** Central IC server + `ic mod publish` + `ic mod install` + in-game browser + auto-download on lobby join     | Medium       |
+| Phase 6   | **Full Workshop:** Federation, community servers, replication, promotion channels, CI/CD token scoping, creator reputation, DMCA process, Steam Workshop as optional source | High         |
+| Phase 7+  | **Advanced:** LLM-driven discovery, premium hosting tiers                                                                                                                  | Low priority |
+
+The Artifactory-level federation design is the end state, not the MVP. Ship simple, iterate toward complex.
+
 ### Resource Identity & Versioning
 
 Every Workshop resource gets a globally unique identifier: `namespace/name@version`.
@@ -1006,7 +1022,324 @@ Rationale: Single-source is too limiting for a resource registry. Crates.io has 
 - Git-based distribution like Go modules (too complex for non-developer modders)
 - Steam Workshop only (platform lock-in, no WASM/browser target, no self-hosting)
 
-**Phase:** Phase 6 (Workshop infrastructure), with preparatory work in Phase 3 (manifest format finalized) and Phase 4 (LLM integration).
+### Steam Workshop Integration
+
+The federated model includes **Steam Workshop as a source type** alongside IC-native Workshop servers and local directories. For Steam builds, the Workshop browser can query Steam Workshop in addition to IC sources:
+
+```yaml
+# settings.yaml (Steam build)
+workshop:
+  sources:
+    - url: "https://workshop.ironcurtain.gg"     # IC official
+      priority: 1
+    - type: steam-workshop                        # Steam Workshop (Steam builds only)
+      app_id: <steam_app_id>
+      priority: 2
+    - path: "C:/my-local-workshop"
+      priority: 3
+```
+
+- **Publish to both:** `ic mod publish` uploads to IC Workshop; Steam builds additionally push to Steam Workshop via Steamworks API. One command, dual publish.
+- **Subscribe from either:** IC resources and Steam Workshop items appear in the same in-game browser (virtual view merges them).
+- **Non-Steam builds are not disadvantaged.** IC's own Workshop is the primary registry. Steam Workshop is an optional distribution channel that broadens reach for creators on Steam.
+- **Maps are the primary Steam Workshop content type** (matching Remastered's pattern). Full mods are better served by the IC Workshop due to richer metadata, dependency resolution, and federation.
+
+### In-Game Workshop Browser
+
+The Workshop is accessible from the main menu, not only via the `ic` CLI. The in-game browser provides:
+
+- **Search** with full-text search (FTS5 via D034), category filters, tag filters, and sorting (popular, recent, trending, most-depended-on)
+- **Resource detail pages** with description, screenshots/preview, license, author, download count, rating, dependency tree, changelog
+- **One-click install** with automatic dependency resolution — same as `ic mod install` but from the game UI
+- **Ratings and reviews** — 1-5 star rating plus optional text review per user per resource
+- **Creator profiles** — browse all resources by a specific author, see their total downloads, reputation badges
+- **Collections** — user-curated lists of resources ("My Competitive Setup", "Best Soviet Music"), shareable via link
+- **Trending and featured** — algorithmically surfaced (time-weighted download velocity) plus editorially curated featured lists
+
+### Auto-Download on Lobby Join
+
+When a player joins a multiplayer lobby, the game automatically resolves and downloads any required mods, maps, or resource packs that the player doesn't have locally:
+
+1. **Lobby advertises requirements:** The `GameListing` (see `03-NETCODE.md`) includes mod ID, version, and Workshop source for all required resources
+2. **Client checks local cache:** Already have the exact version? Skip download.
+3. **Missing resources auto-resolve:** Client queries the virtual Workshop repository, downloads missing resources, verifies SHA-256 checksums
+4. **Progress UI:** Download progress bar shown in lobby. Game start blocked until all players have all required resources.
+5. **Rejection option:** Player can decline to download and leave the lobby instead.
+6. **Size warning:** Downloads exceeding a configurable threshold (default 100MB) prompt confirmation before proceeding.
+
+This matches CS:GO/CS2's pattern where community maps download automatically when joining a server — zero friction for players. It also solves ArmA Reforger's most-cited community complaint about mod management friction.
+
+### Creator Reputation System
+
+Creators accumulate reputation through their Workshop activity. Reputation is displayed on resource listings and creator profiles:
+
+| Signal              | Weight   | Description                                                                 |
+| ------------------- | -------- | --------------------------------------------------------------------------- |
+| Total downloads     | Medium   | Cumulative downloads across all published resources                         |
+| Average rating      | High     | Mean star rating across published resources (minimum 10 ratings to display) |
+| Dependency count    | High     | How many other resources/mods depend on this creator's work                 |
+| Publish consistency | Low      | Regular updates and new content over time                                   |
+| Community reports   | Negative | DMCA strikes, policy violations reduce reputation                           |
+
+**Badges:**
+- **Verified** — identity confirmed (e.g., linked GitHub account)
+- **Prolific** — 10+ published resources with ≥4.0 average rating
+- **Foundation** — resources depended on by 50+ other resources
+- **Curator** — maintains high-quality curated collections
+
+Reputation is displayed but not gatekeeping — any registered user can publish. Reputation helps players discover trustworthy content in a growing registry.
+
+### Content Moderation & DMCA/Takedown Policy
+
+The Workshop requires a clear content policy and takedown process:
+
+**Prohibited content:**
+- Assets ripped from commercial games without permission (the ArmA community's perennial problem)
+- Malicious content (WASM modules with harmful behavior — mitigated by capability sandbox)
+- Content violating the license declared in its manifest
+- Hate speech, illegal content (standard platform policy)
+
+**Takedown process:**
+1. **Reporter files takedown request** via Workshop UI or email, specifying the resource and the claim (DMCA, license violation, policy violation)
+2. **Resource is flagged** — not immediately removed — and the author is notified with a 72-hour response window
+3. **Author can counter-claim** (e.g., they hold the rights, the reporter is mistaken)
+4. **Workshop moderators review** — if the claim is valid, the resource is delisted (not deleted — remains in local caches of existing users)
+5. **Repeat offenders** accumulate strikes. Three strikes → account publishing privileges suspended. Appeals process available.
+6. **DMCA safe harbor:** The Workshop server operator (official or community-hosted) follows standard DMCA safe harbor procedures. Community-hosted servers set their own moderation policies.
+
+**License enforcement integration:**
+- `ic mod audit` already checks dependency tree license compatibility
+- Workshop server rejects publish if declared license conflicts with dependency licenses
+- Resources with `LicenseRef-Custom` must provide a URL to full license text
+
+**Rationale (from ArmA research):** ArmA's private mod ecosystem exists specifically because the Workshop can't protect creators or manage IP claims. Disney, EA, and others actively DMCA ArmA Workshop content. Bohemia established an IP ban list but the community found it heavy-handed. IC's approach: clear rules, due process, creator notification first — not immediate removal.
+
+**Phase:** Minimal Workshop in Phase 4–5 (central server + publish + browse + auto-download); full Workshop (federation, Steam source, reputation, DMCA) in Phase 6; preparatory work in Phase 3 (manifest format finalized).
+
+---
+
+## D035: Creator Recognition & Attribution
+
+**Decision:** The Workshop supports **voluntary creator recognition** through tipping/sponsorship links and reputation badges. Monetization is never mandatory — all Workshop resources are freely downloadable. Creators can optionally accept tips and link sponsorship profiles.
+
+**Rationale:**
+- The C&C modding community has a 30-year culture of free modding. Mandatory paid content would generate massive resistance and fragment multiplayer (can't join a game if you don't own a required paid map — ArmA DLC demonstrated this problem).
+- Valve's Steam Workshop paid mods experiment (Skyrim, 2015) was reversed within days due to community backlash. The 75/25 revenue split (Valve/creator) was seen as exploitative.
+- Nexus Mods' Donation Points system is well-received as a voluntary model — creators earn money without gating access.
+- CS:GO/CS2's creator economy ($57M+ paid to creators by 2015) works because it's cosmetic-only items curated by Valve — a fundamentally different model than gating gameplay content.
+- ArmA's commissioned mod ecosystem exists in a legal/ethical gray zone with no official framework — creators deserve better.
+- Backend infrastructure (relay servers, Workshop servers, tracking servers) has real hosting costs. Sustainability requires some revenue model.
+
+**Key Design Elements:**
+
+### Creator Tipping
+
+- **Tip jar on resource pages:** Every Workshop resource page has an optional "Support this creator" button. Clicking shows the creator's configured payment links.
+- **Payment links, not payment processing.** IC does not process payments directly. Creators link their own payment platforms:
+
+```yaml
+# In mod.yaml or creator profile
+creator:
+  name: "Alice"
+  tip_links:
+    - platform: "ko-fi"
+      url: "https://ko-fi.com/alice"
+    - platform: "github-sponsors"
+      url: "https://github.com/sponsors/alice"
+    - platform: "patreon"
+      url: "https://patreon.com/alice"
+    - platform: "paypal"
+      url: "https://paypal.me/alice"
+```
+
+- **No IC platform fee on tips.** Tips go directly to creators via their chosen platform. IC takes zero cut.
+- **Aggregate tip link on creator profile:** Creator's profile page shows a single "Support Alice" button linking to their preferred platform.
+
+### Infrastructure Sustainability
+
+The Workshop and backend servers have hosting costs. Sustainability options (not mutually exclusive):
+
+| Model                        | Description                                                                                                   | Precedent                           |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
+| **Community donations**      | Open Collective / GitHub Sponsors for the project itself                                                      | Godot, Blender, Bevy                |
+| **Premium hosting tier**     | Optional paid tier: priority matchmaking queue, larger replay archive, custom clan pages                      | Discord Nitro, private game servers |
+| **Sponsored featured slots** | Creators or communities pay to feature resources in the Workshop's "Featured" section                         | App Store featured placements       |
+| **White-label licensing**    | Tournament organizers or game communities license the engine+infrastructure for their own branded deployments | Many open-source projects           |
+
+**No mandatory paywalls.** The free tier is fully functional — all gameplay features, all maps, all mods, all multiplayer. Premium tiers offer convenience and visibility, never exclusive gameplay content.
+
+**No loot boxes, no skin gambling, no speculative economy.** CS:GO's skin economy generated massive revenue but also attracted gambling sites, scams, and regulatory scrutiny. IC's creator recognition model is direct and transparent.
+
+### Future Expansion Path
+
+The Workshop schema supports monetization metadata from day one, but launches with tips-only:
+
+```yaml
+# Future schema (not implemented at launch)
+mod:
+  pricing:
+    model: "free"                    # free | tip | paid (paid = future)
+    tip_links: [...]                 # voluntary compensation
+    # price: "2.99"                  # future: optional price for premium content
+    # revenue_split: "70/30"         # future: creator/platform split
+```
+
+If the community evolves toward wanting paid content (e.g., professional-quality campaign packs), the schema is ready. But this is a community decision, not a launch feature.
+
+**Alternatives considered:**
+- Mandatory marketplace (Skyrim paid mods disaster — community backlash guaranteed)
+- Revenue share on all downloads (creates perverse incentives, fragments multiplayer)
+- No monetization at all (unsustainable for infrastructure; undervalues creators)
+- EA premium content pathway (licensing conflicts with open-source, gives EA control the community should own)
+
+**Phase:** Phase 6 (integrated with Workshop infrastructure), with creator profile schema defined in Phase 3.
+
+---
+
+## D036: Achievement System
+
+**Decision:** IC includes a **per-game-module achievement system** with built-in and mod-defined achievements, stored locally in SQLite (D034), with optional Workshop sync for community-created achievement packs.
+
+**Rationale:**
+- Achievements provide progression and engagement outside competitive ranking — important for casual players who are the majority of the C&C community
+- Modern RTS players expect achievement systems (Remastered, SC2, AoE4 all have them)
+- Mod-defined achievements drive Workshop adoption: a total conversion mod can define its own achievement set, incentivizing players to explore community content
+- SQLite storage (D034) already handles all persistent client state — achievements are another table
+
+**Key Design Elements:**
+
+### Achievement Categories
+
+| Category        | Examples                                                                      | Scope                         |
+| --------------- | ----------------------------------------------------------------------------- | ----------------------------- |
+| **Campaign**    | "Complete Allied Campaign on Hard", "Zero casualties in mission 3"            | Per-game-module, per-campaign |
+| **Skirmish**    | "Win with only infantry", "Defeat 3 brutal AIs simultaneously"                | Per-game-module               |
+| **Multiplayer** | "Win 10 ranked matches", "Achieve 200 APM in a match"                         | Per-game-module, per-mode     |
+| **Exploration** | "Play every official map", "Try all factions"                                 | Per-game-module               |
+| **Community**   | "Install 5 Workshop mods", "Rate 10 Workshop resources", "Publish a resource" | Cross-module                  |
+| **Mod-defined** | Defined by mod authors in YAML, registered via Workshop                       | Per-mod                       |
+
+### Storage Schema (D034)
+
+```sql
+CREATE TABLE achievements (
+    id              TEXT PRIMARY KEY,     -- "ra1.campaign.allied_hard_complete"
+    game_module     TEXT NOT NULL,        -- "ra1", "td", "ra2"
+    category        TEXT NOT NULL,        -- "campaign", "skirmish", "multiplayer", "community"
+    title           TEXT NOT NULL,
+    description     TEXT NOT NULL,
+    icon            TEXT,                 -- path to achievement icon asset
+    hidden          BOOLEAN DEFAULT 0,    -- hidden until unlocked (surprise achievements)
+    source          TEXT NOT NULL         -- "builtin" or workshop resource ID
+);
+
+CREATE TABLE achievement_progress (
+    achievement_id  TEXT REFERENCES achievements(id),
+    unlocked_at     TEXT,                 -- ISO 8601 timestamp, NULL if locked
+    progress        INTEGER DEFAULT 0,    -- for multi-step achievements (e.g., "win 10 matches": progress=7)
+    target          INTEGER DEFAULT 1,    -- total required for unlock
+    PRIMARY KEY (achievement_id)
+);
+```
+
+### Mod-Defined Achievements
+
+Mod authors define achievements in their `mod.yaml`, which register when the mod is installed:
+
+```yaml
+# mod.yaml (achievement definition in a mod)
+achievements:
+  - id: "my_mod.survive_the_storm"
+    title: "Eye of the Storm"
+    description: "Survive a blizzard event without losing any buildings"
+    category: skirmish
+    icon: "assets/achievements/storm.png"
+    hidden: false
+    trigger: "lua"                     # unlock logic in Lua script
+  - id: "my_mod.build_all_units"
+    title: "Full Arsenal"
+    description: "Build every unit type in a single match"
+    category: skirmish
+    icon: "assets/achievements/arsenal.png"
+    trigger: "lua"
+```
+
+Lua scripts call `Achievement.unlock("my_mod.survive_the_storm")` when conditions are met. The achievement API is part of the Lua globals (alongside `Actor`, `Trigger`, `Map`, etc.).
+
+### Design Constraints
+
+- **No multiplayer achievements that incentivize griefing.** "Kill 100 allied units" → no. "Win 10 team games" → yes.
+- **Campaign achievements are deterministic** — same inputs, same achievement unlock. Replays can verify achievement legitimacy.
+- **Achievement packs are Workshop resources** — community can create themed achievement collections (e.g., "Speedrun Challenges", "Pacifist Run").
+- **Mod achievements are sandboxed to their mod.** Uninstalling a mod hides its achievements (progress preserved, shown as "mod not installed").
+- **Steam achievements sync** (Steam builds only) — built-in achievements map to Steam achievement API. Mod-defined achievements are IC-only.
+
+**Alternatives considered:**
+- Steam achievements only (excludes non-Steam players, can't support mod-defined achievements)
+- No achievement system (misses engagement opportunity, feels incomplete vs modern RTS competitors)
+- Blockchain-verified achievements (needless complexity, community hostility toward crypto/blockchain in games)
+
+**Phase:** Phase 3 (built-in achievement infrastructure + campaign achievements), Phase 6 (mod-defined achievements via Workshop).
+
+---
+
+## D037: Community Governance & Platform Stewardship
+
+**Decision:** IC's community infrastructure (Workshop, tracking servers, competitive systems) operates under a **transparent governance model** with community representation, clear policies, and distributed authority.
+
+**Rationale:**
+- OpenRA's community fragmented partly because governance was opaque — balance changes and feature decisions were made by a small core team without structured community input, leading to the "OpenRA isn't RA1" sentiment
+- ArmA's Workshop moderation is perceived as inconsistent — some IP holders get mods removed, others don't, with no clear published policy
+- CNCnet succeeds partly because it's community-run with clear ownership
+- The Workshop (D030) and competitive systems create platform responsibilities: content moderation, balance curation, server uptime, dispute resolution. These need defined ownership.
+- Self-hosting is a first-class use case (D030 federation) — governance must work even when the official infrastructure is one of many
+
+**Key Design Elements:**
+
+### Governance Structure
+
+| Role                          | Responsibility                                                               | Selection                                                    |
+| ----------------------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| **Project maintainer(s)**     | Engine code, architecture decisions, release schedule                        | Existing (repository owners)                                 |
+| **Workshop moderators**       | Content moderation, DMCA processing, policy enforcement                      | Appointed by maintainers, community nominations              |
+| **Competitive committee**     | Ranked map pool, balance preset curation, tournament rules                   | Elected by active ranked players (annual)                    |
+| **Game module stewards**      | Per-module balance/content decisions (RA1 steward, TD steward, etc.)         | Appointed by maintainers based on community contributions    |
+| **Community representatives** | Advocate for community needs, surface pain points, vote on pending decisions | Elected by community (annual), at least one per major region |
+
+### Transparency Commitments
+
+- **Public decision log** (this document) for all architectural and policy decisions
+- **Monthly community reports** for Workshop statistics (uploads, downloads, moderation actions, takedowns)
+- **Open moderation log** for Workshop takedown actions (stripped of personal details) — the community can see what was removed and why
+- **RFC process for major changes:** Balance preset modifications, Workshop policy changes, and competitive rule changes go through a public comment period before adoption
+- **Community surveys** before major decisions that affect gameplay experience (annually at minimum)
+
+### Self-Hosting Independence
+
+The governance model explicitly supports community independence:
+
+- Any community can host their own Workshop server, tracking server, and relay server
+- Federation (D030) means community servers are peers, not subordinates to the official infrastructure
+- If the official project becomes inactive, the community has all the tools, source code, and infrastructure to continue independently
+- Community-hosted servers set their own moderation policies (within the framework of clear minimum standards for federated discovery)
+
+### Code of Conduct
+
+Standard open-source code of conduct (Contributor Covenant or similar) applies to:
+- Workshop resource descriptions and reviews
+- In-game chat (client-side filtering, not server enforcement for non-ranked games)
+- Competitive play (ranked games: stricter enforcement, report system, temporary bans for verified toxicity)
+- Community forums and communication channels
+
+**Alternatives considered:**
+- BDFL (Benevolent Dictator for Life) model with no community input (faster decisions but risks OpenRA's fate — community alienation)
+- Full democracy (too slow for a game project; bikeshedding on every decision)
+- Corporate governance (inappropriate for an open-source community project)
+- No formal governance (works early, creates problems at scale — better to define structure before it's needed)
+
+**Phase:** Phase 0 (code of conduct, contribution guidelines), Phase 5 (competitive committee), Phase 6 (Workshop moderators, community representatives).
+
+> **Phasing note:** This governance model is aspirational — it describes where the project aims to be at scale, not what launches on day one. At project start, governance is BDFL (maintainer) + trusted contributors, which is appropriate for a project with zero users. Formal elections, committees, and community representatives should not be implemented until there is an active community of 50+ regular contributors. The governance structure documented here is a roadmap, not a launch requirement. Premature formalization risks creating bureaucracy before there are people to govern.
 
 ---
 
@@ -1858,8 +2191,35 @@ pub trait WorkshopStorage: Send + Sync {
 | ---- | ------------------------------------------------------------------------------------- | ------------------- |
 | P001 | ~~ECS crate choice~~ — RESOLVED: Bevy's built-in ECS                                  | Resolved            |
 | P002 | Fixed-point scale (256? 1024? match OpenRA's 1024?)                                   | Phase 2 start       |
-| P003 | Audio library choice                                                                  | Phase 3 start       |
+| P003 | Audio library choice + music integration design (see note below)                      | Phase 3 start       |
 | P004 | Lobby/matchmaking protocol specifics                                                  | Phase 5 start       |
 | P005 | Map editor architecture (in-engine vs separate process)                               | Phase 6 start       |
-| P006 | License choice (GPL v3 to match EA source? MIT? Apache?)                              | Phase 0 start       |
+| P006 | License choice (see tension analysis below)                                           | Phase 0 start       |
 | P007 | ~~Workshop: single source vs multi-source~~ — RESOLVED: Federated multi-source (D030) | Resolved            |
+
+### P003 — Audio System Design Notes
+
+The audio system is the least-designed critical subsystem. Beyond the library choice, Phase 3 needs to resolve:
+
+- **Original `.aud` playback:** Decoding original Westwood `.aud` format (IMA ADPCM, mono, varying sample rates)
+- **Music loading from Remastered Collection:** If the player owns the Remastered Collection, can IC load the remastered soundtrack? Licensing allows personal use of purchased files, but the integration path needs design
+- **Dynamic music states:** Combat/build/idle transitions (original RA had this — "Act on Instinct" during combat, ambient during base building). State machine driven by sim events
+- **Music as Workshop resources:** Swappable soundtrack packs via D030 — architecture supports this, but audio pipeline needs to be resource-pack-aware
+- **Frank Klepacki’s music is integral to C&C identity.** The audio system should treat music as a first-class system, not an afterthought. See `13-PHILOSOPHY.md` § "Audio Drives Tempo"
+
+### P006 — License Tension Analysis
+
+This is the single most consequential undecided item. The license choice has cascading effects on modding, community contributions, and legal relationship with EA’s GPL-licensed source.
+
+**The tension:**
+- **GPL v3** (matching EA source): Ensures legal clarity when referencing EA’s original code for gameplay values and behavior. But GPL requires derivative works to also be GPL — this could mean WASM mods compiled against IC APIs are GPL-contaminated, contradicting D035’s promise that modders choose their own license.
+- **MIT / Apache 2.0:** Maximum modder freedom, but creates legal ambiguity when referencing GPL’d EA source code. Values can be independently derived (clean-room), but any copy-paste of constants or algorithms from EA source requires GPL.
+- **LGPL:** Engine is open, mods can use any license — but LGPL is complex and poorly understood.
+- **Dual license (GPL + commercial):** Some open-source projects offer GPL for community, commercial license for businesses. Adds complexity.
+
+**What needs resolution:**
+1. Can IC reference EA source code values (damage tables, unit speeds) without being GPL?
+2. If the engine is GPL, are WASM mods running in the sandbox considered derivative works?
+3. What license maximizes both community contribution AND modder freedom?
+
+**Recommendation:** Resolve with legal counsel before any public announcement. The Bevy ecosystem uses MIT/Apache 2.0 dual license, which grants maximum flexibility. The EA source code values can potentially be treated as independently derivable facts (not copyrightable expression) — but this needs legal confirmation.

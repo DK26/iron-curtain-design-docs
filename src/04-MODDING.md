@@ -1851,6 +1851,129 @@ The LLM sees workshop resources through their `llm_meta` fields. A music track t
 
 **License-aware generation:** The LLM filters by license compatibility — if generating content for a CC-BY mod, it only pulls CC-BY-compatible resources (`CC0-1.0`, `CC-BY-4.0`), excluding `CC-BY-NC-4.0` or `CC-BY-SA-4.0` unless the mod's own license is compatible.
 
+### Steam Workshop Integration (D030)
+
+Steam Workshop is an **optional distribution source**, not a replacement for the IC Workshop. Resources published to Steam Workshop appear in the virtual repository alongside IC Workshop and local resources. Priority ordering determines which source wins when the same resource exists in multiple places.
+
+```yaml
+# settings.yaml — Steam Workshop as an additional source
+workshop:
+  sources:
+    - url: "https://workshop.ironcurtain.gg"     # official IC Workshop
+      priority: 1
+    - type: steam_workshop                        # Steam Workshop source
+      app_id: 0000000                             # IC's Steam app ID
+      priority: 2
+    - path: "C:/my-local-workshop"
+      priority: 3
+```
+
+**Key design constraints:**
+- IC Workshop is always the primary source — Steam is additive, never required
+- Resources can be published to both IC Workshop and Steam Workshop simultaneously via `ic mod publish --also-steam`
+- Steam Workshop subscriptions sync to local cache automatically
+- No Steam lock-in — the game is fully functional without Steam
+
+### In-Game Workshop Browser (D030)
+
+The in-game browser queries the virtual repository (all configured sources merged). UX inspired by CS:GO/Steam Workshop browser:
+
+- **Search:** FTS5-powered full-text search across names, descriptions, tags, and `llm_meta` fields
+- **Filter:** By category (map, mod, music, sprites, etc.), game module (RA1, TD, RA2), rating, download count, author, license
+- **Sort:** By popularity, newest, highest rated, most downloaded, trending (recent velocity)
+- **Preview:** Screenshot gallery, description, dependency tree, license info, author profile with reputation badge
+- **One-click subscribe:** Adds to local cache, resolves dependencies automatically
+- **Collections:** Curated bundles ("Best Soviet mods", "Tournament map pool Season 5")
+- **Creator profiles:** Author page showing all published resources, reputation score, tip links (D035)
+
+### Auto-Download on Lobby Join (D030)
+
+When a player joins a multiplayer lobby, the client checks `GameListing.required_mods` (see `03-NETCODE.md` § `GameListing`) against the local cache. Missing resources trigger automatic download:
+
+1. **Diff:** Compare `required_mods` against local cache
+2. **Prompt:** Show missing resources with total download size and estimated time
+3. **Download:** Fetch from virtual repository (IC Workshop → Steam Workshop → community sources by priority)
+4. **Verify:** SHA-256 checksum validation for every downloaded artifact
+5. **Install:** Place in local cache, update dependency graph
+6. **Ready:** Player joins game with all required content
+
+Players can cancel at any time. Auto-download respects bandwidth limits configured in settings. Resources downloaded this way persist in the local cache for future sessions.
+
+### Creator Reputation System (D030)
+
+Creators earn reputation through community signals:
+
+| Signal              | Weight   | Description                                                                 |
+| ------------------- | -------- | --------------------------------------------------------------------------- |
+| Total downloads     | Medium   | Cumulative downloads across all published resources                         |
+| Average rating      | High     | Mean star rating across published resources (minimum 10 ratings to display) |
+| Dependency count    | High     | How many other resources/mods depend on this creator's work                 |
+| Publish consistency | Low      | Regular updates and new content over time                                   |
+| Community reports   | Negative | DMCA strikes, policy violations reduce reputation                           |
+
+**Badges:**
+- **Verified** — identity confirmed (e.g., linked GitHub account)
+- **Prolific** — 10+ published resources with ≥4.0 average rating
+- **Foundation** — resources depended on by 50+ other resources
+- **Curator** — maintains high-quality curated collections
+
+Reputation is displayed but not gatekeeping — any registered user can publish. Badges appear on resource listings, in-game browser, and author profiles. See `09-DECISIONS.md` § D030 for full design.
+
+### Content Moderation & DMCA/Takedown Policy (D030)
+
+The Workshop must be a safe, legal distribution platform. Content moderation is a combination of automated scanning, community reporting, and moderator review.
+
+**Prohibited content:** Malware, hate speech, illegal content, impersonation of other creators.
+
+**DMCA/IP takedown process (due process, not shoot-first):**
+
+1. **Reporter files takedown request** via Workshop UI or email, specifying the resource and the claim (DMCA, license violation, policy violation)
+2. **Resource is flagged** — not immediately removed — and the author is notified with a 72-hour response window
+3. **Author can counter-claim** (e.g., they hold the rights, the reporter is mistaken)
+4. **Workshop moderators review** — if the claim is valid, the resource is delisted (not deleted — remains in local caches of existing users)
+5. **Repeat offenders** accumulate strikes. Three strikes → account publishing privileges suspended. Appeals process available.
+6. **DMCA safe harbor:** The Workshop server operator (official or community-hosted) follows standard DMCA safe harbor procedures
+
+**Lessons applied:** ArmA's heavy-handed approach (IP bans for mod redistribution) chilled creativity. Skyrim's paid mods debacle showed mandatory paywalls destroy goodwill. Our policy: due process, transparency, no mandatory monetization.
+
+### Creator Recognition — Voluntary Tipping (D035)
+
+Creators can optionally include tip/sponsorship links in their resource metadata. Iron Curtain **never processes payments** — we simply display links.
+
+```yaml
+# In resource manifest
+creator:
+  name: "alice"
+  tip_links:
+    - platform: ko-fi
+      url: "https://ko-fi.com/alice"
+    - platform: github-sponsors
+      url: "https://github.com/sponsors/alice"
+```
+
+Tip links appear on resource pages, author profiles, and in the in-game browser. No mandatory paywalls — all Workshop content is free to download. This is a deliberate design choice informed by the Skyrim paid mods controversy and ArmA's gray-zone monetization issues.
+
+### Achievement System Integration (D036)
+
+Mod-defined achievements are publishable as Workshop resources. A mod can ship an achievement pack that defines achievements triggered by Lua scripts:
+
+```yaml
+# achievements/my-mod-achievements.yaml
+achievements:
+  - id: "my_mod.nuclear_winter"
+    title: "Nuclear Winter"
+    description: "Win a match using only nuclear weapons"
+    icon: "icons/nuclear_winter.png"
+    game_module: ra1
+    category: competitive
+    trigger: lua
+    script: "triggers/nuclear_winter.lua"
+```
+
+Achievement packs are versioned, dependency-tracked, and license-required like all Workshop resources. Engine-defined achievements (campaign completion, competitive milestones) ship with the game and cannot be overridden by mods.
+
+See `09-DECISIONS.md` § D036 for the full achievement system design including SQL schema and category taxonomy.
+
 ### Workshop API
 
 The Workshop server stores all resource metadata, versions, dependencies, ratings, and search indices in an embedded SQLite database (D034). No external database required — the server is a single Rust binary that creates its `.db` file on first run. FTS5 provides full-text search over resource names, descriptions, and `llm_meta` tags. WAL mode handles concurrent reads from browse/search endpoints.
@@ -1868,6 +1991,8 @@ pub trait WorkshopClient: Send + Sync {
     fn replicate(&self, filter: &ResourceFilter, target: &str) -> Result<ReplicationReport>; // D030: pull replication
     fn create_token(&self, name: &str, scopes: &[TokenScope], expires: Duration) -> Result<ApiToken>; // CI/CD auth
     fn revoke_token(&self, token_id: &str) -> Result<()>; // CI/CD: revoke compromised tokens
+    fn report_content(&self, id: &ResourceId, reason: ContentReport) -> Result<()>; // D030: content moderation
+    fn get_creator_profile(&self, namespace: &str) -> Result<CreatorProfile>; // D030: creator reputation
 }
 
 /// Globally unique resource identifier: "namespace/name@version"

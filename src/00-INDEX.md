@@ -9,7 +9,7 @@
 
 ## What This Is
 
-A Rust-native RTS engine that supports OpenRA resource formats (`.mix`, `.shp`, `.pal`, YAML rules), reimagines internals with modern architecture, and aims to eventually supersede OpenRA by offering superior performance, modding, and portability. Not a clone or port — a genuine improvement with OpenRA mod compatibility as the migration path.
+A Rust-native RTS engine that supports OpenRA resource formats (`.mix`, `.shp`, `.pal`, YAML rules) and reimagines internals with modern architecture. Not a clone or port — a complementary project offering different tradeoffs (performance, modding, portability) with full OpenRA mod compatibility as the zero-cost migration path. OpenRA is an excellent project; IC explores what a clean-sheet Rust design can offer the same community.
 
 ## Document Index
 

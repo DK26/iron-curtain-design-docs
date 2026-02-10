@@ -2132,6 +2132,14 @@ The gap analysis is not one-directional. Iron Curtain's design docs include feat
 | **Video as workshop resource**                              | `04-MODDING.md`                 | Not present                           |
 | **Scene templates** (parameterized mission building blocks) | `04-MODDING.md`                 | Not present                           |
 | **Adaptive difficulty** (via campaign state or LLM)         | `04-MODDING.md`, `01-VISION.md` | Not present                           |
+| **In-game Workshop browser** (search, filter, one-click)    | D030, `04-MODDING.md`           | Not present (forum sharing only)      |
+| **Auto-download on lobby join** (CS:GO-style)               | D030, `03-NETCODE.md`           | Not present (manual install)          |
+| **Steam Workshop as source** (optional, federated)          | D030, `04-MODDING.md`           | Not present                           |
+| **Creator reputation & badges**                             | D030, `04-MODDING.md`           | Not present                           |
+| **DMCA/takedown policy** (due process)                      | D030, `09-DECISIONS.md`         | Not present                           |
+| **Creator recognition & tipping**                           | D035, `04-MODDING.md`           | Not present                           |
+| **Achievement system** (engine + mod-defined)               | D036, `09-DECISIONS.md`         | Not present                           |
+| **Community governance model** (elected reps, RFC process)  | D037, `09-DECISIONS.md`         | Core team only, no formal governance  |
 
 ---
 
