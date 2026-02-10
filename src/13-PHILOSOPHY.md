@@ -157,6 +157,119 @@ The goal of pathfinding and AI isn't mathematical perfection. It's believability
 
 ---
 
+## Game Design Principles
+
+The principles above guide how we *build*. The principles below guide what we *build* — the player-facing design philosophy that Westwood refined across a decade of RTS games. These are drawn from GDC talks (Louis Castle, 1997 & 1998), Ars Technica's "War Stories" interview (Castle, 2019), and post-mortem interviews. They complement the development principles — if "Fun Beats Documentation" says *how to decide*, these say *what to aim for*.
+
+### 10. Immediate Feedback — The One-Second Rule
+
+Louis Castle emphasized that players should receive feedback for every action within one second. Click a unit — it acknowledges with a voice line and visual cue. Issue an order — the unit visibly begins responding. The player should never wonder "did the game hear me?"
+
+This isn't about latency targets — it's about *perceived responsiveness*. A click that produces silence is worse than a click that produces a "not yet" response.
+
+**Rule:** Every player action must produce audible and visible feedback within one second. Unit selection → voice line. Order issued → animation change. Build started → sound cue. If a system doesn't have feedback, it needs feedback before it needs features.
+
+**Where this applies:**
+- Unit voice and animation responses in `ra-render` and `ra-audio` (Phase 3)
+- Build queue feedback in `ra-ui` (Phase 3)
+- Input handling in `ra-game` — cursor changes, click acknowledgment
+
+### 11. Visual Clarity — The One-Second Screenshot
+
+You should be able to look at a screenshot for one second and know: who is winning, what units are on screen, and where the resources are. This was a core Westwood design test. If the screen is confusing, it doesn't matter how deep the strategy is — the player has lost contact with their toy soldiers.
+
+**Rule:** Unit silhouettes must be distinguishable at gameplay zoom. Faction colors must read clearly. Resource locations must be visually distinct from terrain. Health states should be glanceable. When designing sprites, effects, or UI, ask: "Can I read this in one second?"
+
+**Where this applies:**
+- Sprite design guidelines for modders in [04-MODDING.md](04-MODDING.md)
+- Render quality tiers in [10-PERFORMANCE.md](10-PERFORMANCE.md) — even the lowest tier must preserve readability
+- Color palette choices for faction differentiation
+
+### 12. Reduce Cognitive Load — Smart Defaults
+
+Westwood's context-sensitive cursor was one of their greatest contributions to the genre: the cursor changes based on what it's over (attack icon on enemies, move icon on terrain, harvest icon on resources), so the player communicates intent with a single click. The sidebar build menu was a deliberate choice to let players manage their base without moving the camera away from combat.
+
+The principle: never make the player think about *how* to do something when they should be thinking about *what* to do.
+
+**Rule:** Interface design should minimize the gap between player intent and game action. Default to the most likely action. Cursor, hotkeys, and UI layout should match what the player is already thinking. This extends to modding: mod installation should be one click, not a manual file dance.
+
+**Where this applies:**
+- Input system design via `InputSource` trait (Invariant #10)
+- UI layout in `ra-ui` — sidebar vs bottom-bar is a theme choice (D032), but all layouts should follow "build without losing the battlefield"
+- Mod SDK UX (D020) — `ic mod install` should be trivially simple
+
+### 13. Asymmetric Faction Identity
+
+Westwood believed that factions should never be mirrors of each other. GDI represents might and armor — slow, expensive, powerful. Nod represents stealth and speed — cheap, fragile, hit-and-run. The philosophy: balance doesn't mean equal stats. It means every "overpowered" tool has a specific, skill-based counter.
+
+This creates the experience that playing Faction B feels like a *different game* than playing Faction A — different tempo, different priorities, different emotional arc. If you can swap faction skins and nothing changes, the faction design has failed.
+
+**Rule:** When defining faction rules in YAML, design for identity contrast, not stat parity. Every faction strength should create a corresponding vulnerability. Balance is achieved through asymmetric counter-play, not symmetric stat lines. D019 (switchable balance presets) supports tuning the degree of asymmetry, but the principle holds across all presets.
+
+**Where this applies:**
+- Unit and weapon definitions in YAML rules ([04-MODDING.md](04-MODDING.md))
+- Damage type matrices / versus tables ([11-OPENRA-FEATURES.md](11-OPENRA-FEATURES.md))
+- Balance presets (D019) — even the "classic" preset preserves Westwood's asymmetric intent
+
+### 14. The Core Loop — Extract, Build, Amass, Crush
+
+The most successful C&C titles follow a four-step core loop:
+
+1. **Extract** resources
+2. **Build** base
+3. **Amass** army
+4. **Crush** enemy
+
+Every game system should feed into this loop. The original Westwood team learned (and EA relearned) that features which distract from the core loop — hero units that overshadow armies, global powers that bypass base-building — weaken the game's identity. "Kitchen sink" feature creep that doesn't serve the loop produces unfocused games.
+
+**Rule:** When evaluating a feature, ask: "Which step of the core loop does this serve?" If the answer is "none — it's a parallel system," the feature needs strong justification. This is the game-design-specific version of "Scope to What You Have" (Principle 6).
+
+**Where this applies:**
+- System design decisions in [02-ARCHITECTURE.md](02-ARCHITECTURE.md) — every sim system should map to a loop step
+- Feature proposals — the first question after "does it make the toy soldiers come alive?" is "which loop step does it serve?"
+- Mod review guidelines — total conversions can define their own loop, but the default RA1 module should stay faithful to this one
+
+### 15. Game Feel — "The Juice"
+
+Westwood (and later EA with the SAGE engine) understood that impact matters as much as mechanics. Buildings shouldn't just vanish — they should crumble. Debris should be physical. Explosions should feel weighty. Units should leave husks. During the Generals/C&C3 era, EA formalized this as "physics as fun" — the visceral, physical feedback that makes commanding an army feel *powerful*.
+
+The checklist: Do explosions feel impactful? Does the screen communicate force? Do destroyed units leave evidence that a battle happened? Do weapons feel different from each other — not just in damage numbers, but in visual and audio weight?
+
+**Rule:** "Juice" goes into the render and audio layers, not the sim. The sim tracks damage, death, and debris spawning deterministically. The renderer and audio system make it *feel good*. When a system works correctly but doesn't feel satisfying, the problem is almost always missing juice, not missing mechanics.
+
+**Where this applies:**
+- Rendering effects in `ra-render` — destruction animations, particle effects, screen shake (all render-side, never sim-side)
+- Audio feedback in `ra-audio` — weapon-specific impact sounds, explosion scaling
+- Modding: effects should be YAML-configurable (explosion type, debris count, screen shake intensity) so modders can tune game feel without code
+
+### 16. Audio Drives Tempo
+
+Frank Klepacki's philosophy extended beyond "write good music" to a specific insight about gameplay coupling: the music should match the tempo of the game. High-energy industrial metal and techno during combat keeps the player's actions-per-minute high. Ambient tension during build-up phases lets the player think. "Hell March" isn't just a good track — it's a gameplay accelerator.
+
+This extends to unit responses. Each unit's voice should reflect its personality and role — the bravado of a Commando, the professionalism of a Tank, the nervousness of a Conscript. Audio is characterization, not decoration.
+
+**Rule:** Audio design (Phase 3) should be tested against gameplay tempo, not in isolation. Does the music make the player want to act? Do unit voices reinforce the fantasy? The `ra-audio` system should support dynamic music states (combat/exploration/tension) that respond to game state, not just random playlist shuffling.
+
+**Where this applies:**
+- Dynamic music system in `ra-audio` (Phase 3)
+- Unit voice design guidelines for modders
+- Audio LOD — critical feedback sounds (unit acknowledgment, attack alerts) must never be culled, even under heavy audio load
+
+### 17. The Damage Matrix — No Monocultures
+
+The C&C series formalized damage types (armor-piercing, explosive, fire, etc.) against armor classes (none, light, heavy, wood, concrete) into explicit versus tables. This mathematical structure ensures that no single unit composition can dominate without a counter. Westwood established this with the original RA's warhead/armor system; EA expanded it during the Generals/C&C3 era with more granular categories.
+
+The design principle isn't "add more damage types." It's: every viable strategy must have a viable counter-strategy. If playtesting reveals a monoculture (one unit type dominates), the versus table is the first place to look.
+
+**Rule:** The damage pipeline (D028) should make the versus table moddable, inspectable, and central to balance work. The table is YAML data, not code. Balance presets (D019) may use different versus tables. The mod SDK should include tools to visualize the counter-play graph.
+
+**Where this applies:**
+- Damage pipeline and versus tables in `ra-sim` (D028, Phase 2 hard requirement)
+- Balance preset definitions (D019)
+- Modding documentation — versus table editing should be a first tutorial, not an advanced topic
+
+---
+
 ## Engineering Methods
 
 These are not principles — they're specific engineering practices validated by Westwood's code and OpenRA's 18 years of open-source development.

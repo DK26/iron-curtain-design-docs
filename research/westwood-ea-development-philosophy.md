@@ -308,6 +308,92 @@ Every Westwood developer interviewed — Bostic, Legg, Long, Klepacki — indepe
 
 **IC Application:** IC is a passion project built in people's personal time. The design docs exist because the work is interesting, not because someone assigned it. If the project ever starts feeling like obligation rather than passion, revisit Bostic's warning about what killed Westwood: "This shift from passion to profit took its toll."
 
+### Immediate Feedback — The One-Second Rule
+
+Louis Castle emphasized in GDC talks and the Ars Technica "War Stories" interview (2019) that players should receive feedback for every action within one second. This encompasses the full response chain: click a unit → voice line + selection visual; issue a move order → unit turns and begins moving; start a build → audio cue + sidebar animation.
+
+The principle goes beyond input latency. It's about *perceived acknowledgment*. A command that appears to be ignored — even if the sim is processing it — breaks the "bedroom commander" fantasy. The player is issuing orders through a live military feed; the feed must respond.
+
+Castle tied this directly to the context-sensitive cursor design. The cursor itself is feedback: hovering over an enemy shows an attack cursor, hovering over terrain shows a move cursor. The player sees the game's understanding of their intent *before* they click. This pre-click feedback reduces errors and makes the interface feel intelligent.
+
+**IC Application:** The `InputSource` trait (Invariant #10) and `ra-ui` cursor system must implement immediate visual and audio feedback for all player actions. During Phase 3 (Game Chrome), feedback responsiveness should be a review criterion as important as functional correctness. Unit voice acknowledgment, cursor changes, and build queue feedback are not polish — they're core UX.
+
+### Visual Clarity and Readability
+
+Castle described a concrete design test: you should be able to look at a screenshot for one second and know who is winning, what units are on screen, and where the resources are. This "one-second screenshot" test was a check applied throughout Westwood's design process.
+
+The principle drove specific decisions: strong faction color coding, distinctive unit silhouettes at combat zoom levels, clear resource field visuals, and health bar readability. Aesthetic appeal was secondary to gameplay readability. A beautiful screenshot that requires study to parse has failed the test.
+
+**IC Application:** This is a render-side principle with sim-side implications. The `Renderable` trait implementations in `ra-render` must prioritize readability across all quality tiers — even the lowest LOD/GPU fallback path must produce readable gameplay. Modding guidelines should include silhouette and color-contrast requirements for custom unit sprites. D032 (UI themes) must preserve readability regardless of aesthetic choices.
+
+### The Context-Sensitive Cursor and Sidebar Philosophy
+
+Two specific Westwood innovations embody the "reduce cognitive load" principle:
+
+1. **The context-sensitive cursor** changed the RTS interface from "select verb, then select target" (the strategy game tradition) to "the cursor *is* the verb." This was one of the most influential UX innovations in the genre, copied by nearly every RTS that followed. It emerged organically (see Mike Legg on Kyrandia's single-icon cursor) and was refined into C&C's military context.
+
+2. **The sidebar build menu** was a conscious choice to keep the build interface visible at all times. Unlike the bottom-bar approach (StarCraft, Age of Empires), the sidebar lets players queue production without scrolling the camera to their base. This preserves battlefield awareness during production decisions.
+
+Both follow the same principle: never make the player think about *how* to interact when they should be thinking about *what* to do.
+
+**IC Application:** D032 (switchable UI themes) supports sidebar, bottom-bar, and potentially other layouts — but all layouts should follow the "build without losing the battlefield" principle. The `InputSource` trait abstraction (Invariant #10) should make cursor behavior consistent across input methods (mouse, touch, gamepad) while preserving context-sensitivity.
+
+### Asymmetric Faction Identity
+
+Westwood's faction design philosophy was explicit: GDI and Nod were not stat variations — they were *philosophically different armies*. GDI represented might and armor (slow, expensive, powerful). Nod represented stealth and speed (cheap, fragile, hit-and-run). In Red Alert: Allies favor technology and precision; Soviets favor brute force and numbers.
+
+The design test: if you can swap faction skins and the gameplay feels identical, the faction design has failed. Playing Nod should feel like playing a fundamentally different game than playing GDI. This extends beyond unit stats to production structures, tech trees, super weapons, and strategic tempo.
+
+Balance doesn't mean equal stats. It means providing every "overpowered" tool with a specific, skill-based counter. Tesla Coils are devastating on defense — but they're expensive, power-hungry, and immobile. The counter is disruption (destroy power, outmaneuver), not a symmetrically powerful Allied tower.
+
+**IC Application:** D019 (balance presets) and the versus table system (D028) must support asymmetric design natively. Modders should be able to define radically different faction identities in YAML without code changes. The competitive infrastructure should accommodate asymmetric balance (faction-specific leaderboards, faction pick/ban).
+
+### The Core Four-Step Loop
+
+The most enduring C&C design pattern is the core loop:
+
+1. **Extract** — Gather resources (ore, Tiberium, supplies)
+2. **Build** — Construct base structures and expand territory
+3. **Amass** — Produce and organize a military force
+4. **Crush** — Engage and destroy the enemy
+
+Every system in a C&C game should feed into one of these steps. The Westwood-era games that deviated from this loop (Renegade, the cancelled FPS projects) struggled with identity. The EA-era "kitchen sink" approach — adding hero units, global powers, and other systems that bypass the loop — produced unfocused games. The most celebrated C&C titles (RA1, Tiberian Sun, Generals) kept the loop tight.
+
+This is the game-design-specific version of "Scope to What You Have": feature creep that doesn't serve the core loop produces the same result as scope creep in engineering.
+
+**IC Application:** When evaluating game design features (not engine features), the first filter after "does it make the toy soldiers come alive?" is "which loop step does it serve?" Features that introduce a fifth parallel loop (economy management mini-games, hero progression, card systems) need very strong justification.
+
+### Game Feel — "The Juice"
+
+Westwood understood from the beginning that visceral feedback separates a good RTS from a great one. The SAGE engine era (Generals, C&C3) formalized this as "physics as fun" — buildings crumble with physical debris, weapons create visual and audio impact proportional to their power, destroyed units leave husks and wreckage that persist on the battlefield as evidence of combat.
+
+The checklist for "juice":
+- **Impact:** Do explosions feel proportional to the weapon? Does a tank shell hit differently from a rifle round?
+- **Persistence:** Do destroyed units leave husks? Does the battlefield show evidence of combat over time?
+- **Physicality:** Does debris scatter? Do buildings collapse structurally rather than popping out of existence?
+- **Weight:** Do heavy units *feel* heavy? Do light units feel fast and nimble?
+- **Screen communication:** Does the camera communicate force? (Subtle shake on heavy impacts, flash on detonations)
+
+**IC Application:** All "juice" lives in `ra-render` and `ra-audio`, never in `ra-sim`. The sim tracks what happened (unit destroyed, building collapsed, debris spawned). The render and audio systems make it *feel good*. Game-feel parameters (explosion intensity, shake magnitude, debris count) should be YAML-configurable so modders can tune the feel without code changes.
+
+### Audio as Gameplay Driver
+
+Klepacki's philosophy extended beyond "write good music" to a gameplay-coupling insight: music should match the tempo of the game and drive the player's actions-per-minute. "Hell March" isn't just a good track — it's a gameplay accelerator. Players mechanically play faster when high-energy music is driving them. Ambient, tense music during build-up phases lets the player think.
+
+This extends to unit responses: each unit's voice should reflect its personality and role. A Commando's bravado communicates "use me aggressively." A Rifle Infantry's professional acknowledgment communicates "I'm expendable but reliable." Audio is characterization and tactical information, not decoration.
+
+**IC Application:** `ra-audio` should support dynamic music states (combat/build-up/tension/victory) that transition based on game state. Unit voice design is a modding concern (YAML-defined per unit type), but the engine must support the infrastructure: voice priority queuing, distance-based culling that never culls critical acknowledgment sounds, and multiple voice line pools per unit type for variety.
+
+### The Damage Matrix — Counter-Play by Design
+
+Westwood established the warhead/armor versus table in the original Red Alert: each weapon has a warhead type, each unit has an armor class, and a versus table defines the damage multiplier at each intersection. This mathematical structure makes "no monoculture" a design invariant rather than a playtesting hope.
+
+EA expanded this during the Generals/C&C3 era with more granular damage categories (Crush, Sniper, Cannon, Rocket, Flame, etc.) and additional armor classes, creating a richer counter-play web. The principle remained the same: the versus table is the fundamental balance tool.
+
+The design principle isn't "add more damage types." It's: the versus table should make the optimal army composition *depend on what the opponent is building*. If playtesting reveals a monoculture (one unit type or composition dominates regardless of opposition), the versus table is the first diagnostic tool. Single-unit dominance is always a versus-table bug.
+
+**IC Application:** D028 (damage pipeline, Phase 2 hard requirement) must expose the versus table as human-readable YAML data, not buried in code. Balance presets (D019) may define different versus tables. The mod SDK should include visualization tools for the counter-play graph. OpenRA's `Versus` keyword in `Warhead` definitions directly informs our schema (D023/D027 compatibility).
+
 ---
 
 ## Part 3: Their Engineering Methods (What They Built)

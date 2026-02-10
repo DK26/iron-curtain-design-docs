@@ -283,6 +283,13 @@ Key review principles drawn from the original creators:
 7. **Scope to what you have** (Legg) — Two less-than-excellent systems are worse than one excellent system. Each phase should focus.
 8. **Make temporary compromises explicit** (OpenRA lesson) — Label experiments as experiments. Use toggles (D033) so early-phase decisions don't become irrevocable identity.
 
+Game design principles (highlights — full list with rationale in `src/13-PHILOSOPHY.md`):
+
+10. **Immediate feedback — the one-second rule** (Castle) — Every player action produces audible and visible feedback within one second. Silence is a UX bug.
+11. **Visual clarity** (Castle) — One-second screenshot test: who's winning, what's on screen, where are the resources? Readability beats aesthetics.
+13. **Asymmetric faction identity** (Westwood) — Factions must feel like different games, not stat reskins. Balance through counter-play, not stat parity.
+14. **The core loop: Extract → Build → Amass → Crush** (Westwood/EA) — Every game feature should serve one of these steps. Features that bypass the loop need strong justification.
+
 These are guidelines, not a rigid checklist. Keep an open mind — the original creators themselves discovered their best ideas by iterating, not by following specifications. When a design decision feels uncertain, the philosophy doc provides grounding but should never prevent innovation.
 
 ### Known Duplication to Fix
