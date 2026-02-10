@@ -195,15 +195,28 @@ Every major design decision, with rationale and alternatives considered. Referen
 
 ---
 
-## D013: Pathfinding — Hierarchical A* or Flowfields
+## D013: Pathfinding — Trait-Abstracted, Grid Flowfields First
 
-**Decision:** Use advanced pathfinding (hierarchical A* or flowfields), not basic A*.
+**Decision:** Pathfinding and spatial queries are abstracted behind traits (`Pathfinder`, `SpatialIndex`) in the engine core. The RA1 game module implements them with grid-based flowfields and spatial hash. The engine core never calls grid-specific functions directly.
 
 **Rationale:**
 - OpenRA uses basic A* which struggles with large unit groups
 - Hierarchical/flowfield pathfinding handles mass movement far better
-- Well-suited to grid-based terrain
-- One of the visible performance improvements that makes people switch
+- Grid-based implementations are the right choice for the isometric C&C family
+- But pathfinding is a *game module concern*, not an engine-core assumption
+- Abstracting behind a trait costs near-zero now (one trait, one impl) and prevents a rewrite if a future game module needs navmesh or any other spatial model
+- Same philosophy as `NetworkModel` (build `LocalNetwork` first, but the seam exists), `WorldPos.z` (costs one `i32`, saves RA2 rewrite), and `InputSource` (build mouse/keyboard first, touch slots in later)
+
+**Concrete design:**
+- `Pathfinder` trait: `request_path()`, `get_path()`, `is_passable()`, `invalidate_area()`
+- `SpatialIndex` trait: `query_range()`, `update_position()`, `remove()`
+- RA1 module registers `GridFlowfieldPathfinder` + `GridSpatialHash`
+- All sim systems call the traits, never grid-specific data structures
+- See `02-ARCHITECTURE.md` § "Pathfinding & Spatial Queries" for trait definitions
+
+**Performance:** identical to hardcoding. Rust traits monomorphize — the trait call compiles to a direct function call when there's one implementation. Zero overhead.
+
+**What we build now:** Only grid flowfields and spatial hash. The traits exist from day one; alternative implementations are future work (by us or by the community).
 
 ---
 
@@ -307,20 +320,26 @@ See `10-PERFORMANCE.md` for full details, targets, and implementation patterns.
 - RA2 is the most-requested extension — community interest is proven (Chrono Divide exists)
 
 **Concrete changes (baked in from Phase 0):**
-1. `WorldPos` and `CellPos` carry a Z coordinate from day one (RA1 sets z=0)
+1. `WorldPos` carries a Z coordinate from day one (RA1 sets z=0). `CellPos` is a game-module convenience for grid-based games, not an engine-core type.
 2. System execution order is registered per game module, not hardcoded in engine
 3. No game-specific enums in engine core — resource types, unit categories come from YAML / module registration
 4. Renderer uses a `Renderable` trait — sprite and voxel backends implement it equally
-5. `GameModule` trait bundles component registration, system pipeline, format loaders, and render backends
-6. `PlayerOrder` is extensible to game-specific commands
+5. Pathfinding uses a `Pathfinder` trait — grid flowfields are the RA1 impl; navmesh could slot in without touching sim
+6. Spatial queries use a `SpatialIndex` trait — spatial hash is the RA1 impl; BVH/R-tree could slot in without touching combat/targeting
+7. `GameModule` trait bundles component registration, system pipeline, pathfinder, spatial index, format loaders, and render backends
+8. `PlayerOrder` is extensible to game-specific commands
 
 **What this does NOT mean:**
 - We don't build RA2 support now. Red Alert is the sole focus until it ships.
-- We don't add speculative abstractions. Only the six concrete changes above.
+- We don't add speculative abstractions. Only the eight concrete changes above.
 - We don't rename crates from `ra-*` — the project identity is Red Alert. Game modules extend it.
 
-**Scope boundary — the isometric C&C family:**
-Game module extensibility targets: Red Alert, RA2, Tiberian Sun, Tiberian Dawn, Dune 2000. These share the isometric camera, grid-based terrain, sprite/voxel rendering, and `.mix` format lineage. **3D titles (Generals, C&C3, RA3) are out of scope as game modules** — they require free-rotating cameras, mesh rendering, navmesh pathfinding, and unrelated formats. ~60% of the engine wouldn't carry over. If desired later, extract the game-agnostic sim core into a shared RTS framework crate and build a 3D frontend independently.
+**Scope boundary — current targets vs. architectural openness:**
+First-party game module development targets the isometric C&C family: Red Alert, RA2, Tiberian Sun, Tiberian Dawn, Dune 2000. These share the isometric camera, grid-based terrain, sprite/voxel rendering, and `.mix` format lineage. We build only grid-based pathfinding and isometric rendering today.
+
+**3D titles (Generals, C&C3, RA3) are not current targets** but the architecture deliberately avoids closing doors. With pathfinding (`Pathfinder` trait), spatial queries (`SpatialIndex` trait), rendering (`Renderable` trait), camera (`ScreenToWorld` trait), and format loading (`FormatRegistry`) all behind pluggable abstractions, a Generals-class game module would provide its own implementations of these traits while reusing the sim core, networking, modding infrastructure, workshop, competitive systems, replays, and save games. The traits exist from day one — the cost is near-zero, and the benefit is that neither we nor the community need to fork the engine to explore continuous-space games in the future.
+
+See `02-ARCHITECTURE.md` § "Architectural Openness: Beyond Isometric" for the full trait-by-trait breakdown.
 
 However, **3D rendering mods for isometric-family games are explicitly supported.** A "3D Red Alert" Tier 3 mod can replace sprites with GLTF meshes and the isometric camera with a free 3D camera — without changing the sim, networking, or pathfinding. Bevy's built-in 3D pipeline makes this feasible. Cross-view multiplayer (2D vs 3D players in the same game) works because the sim is view-agnostic. See `02-ARCHITECTURE.md` § "3D Rendering as a Mod".
 

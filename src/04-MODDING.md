@@ -472,11 +472,11 @@ impl Renderable for MeshRenderer {
     }
 }
 
-impl CameraController for FreeCam3D {
-    fn screen_to_cell(&self, screen_pos: Vec2, terrain: &TerrainData) -> CellPos {
-        // 3D raycast against terrain mesh → grid cell
+impl ScreenToWorld for FreeCam3D {
+    fn screen_to_world(&self, screen_pos: Vec2, terrain: &TerrainData) -> WorldPos {
+        // 3D raycast against terrain mesh → world position
         let ray = self.camera.screen_to_ray(screen_pos);
-        terrain.raycast(ray).to_cell_pos()
+        terrain.raycast(ray).to_world_pos()
     }
 }
 ```

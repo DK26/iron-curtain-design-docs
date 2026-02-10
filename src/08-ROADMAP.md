@@ -86,7 +86,7 @@ Open source `ra-formats` early. Useful standalone, builds credibility and commun
 - **Cross-game component library (D029):** Mind control, carrier/spawner, teleport networks, shield system, upgrade system, delayed weapons (7 first-party systems)
 - Fixed-point coordinate system (no floats in sim)
 - Deterministic RNG
-- Pathfinding: Hierarchical A* or flowfields
+- Pathfinding: `Pathfinder` trait + grid flowfield implementation (D013)
 - Order system: Player inputs → Orders → deterministic sim application
 - `LocalNetwork` and `ReplayPlayback` NetworkModel implementations
 - Sim snapshot/restore for save games and future rollback

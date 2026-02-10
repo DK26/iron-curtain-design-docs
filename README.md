@@ -1,13 +1,15 @@
 # ⚡ Iron Curtain
 
 
-### Red Alert, rebuilt from the ground up in Rust.
+### A modern, open-source Command & Conquer engine built in Rust.
 
-*The classic you remember. The engine you deserve. The future you get to shape.*
+*Red Alert first. The rest of the C&C family to follow.*
 
 ---
 
-Iron Curtain is an open-source RTS engine designed to bring Command & Conquer: Red Alert into the modern era — not as a remaster with a fresh coat of paint, but as a complete reimagination of what the engine can be. Built in Rust on top of Bevy, it will load your existing OpenRA mods, maps, and assets while targeting performance, modding power, and platform reach that neither OpenRA nor the Remastered Collection can offer.
+Iron Curtain is an open-source RTS engine for Command & Conquer games — starting with Red Alert, with Tiberian Dawn, Red Alert 2, Tiberian Sun, and original games as future game modules on the same engine. Not a port of OpenRA and not a remaster — a clean-sheet engine built in Rust on top of Bevy, designed to load existing OpenRA mods, maps, and assets while targeting performance, modding power, and platform reach that neither OpenRA nor the Remastered Collection can offer.
+
+The engine core is game-agnostic. Pathfinding, spatial queries, rendering, and format loading are all behind pluggable traits — each game module provides its own implementations while sharing the simulation core, networking, modding infrastructure, workshop, competitive systems, replays, and save games.
 
 > ⚠️ **This project is in design phase — no playable build exists yet.** The design documents are in active development. Implementation has not started.
 
@@ -75,7 +77,7 @@ No C# required. No recompilation. WASM mods will run at near-native speed in a s
 
 **Bevy-powered.** Modern ECS architecture with automatic system scheduling, parallel queries, asset hot-reloading, and a massive ecosystem of plugins.
 
-**Multi-game engine.** The engine core is game-agnostic. Red Alert is the first game module; Tiberian Dawn, RA2, and original games are future modules on the same engine via a `GameModule` trait.
+**Multi-game engine.** The engine core is game-agnostic. Red Alert is the first game module; Tiberian Dawn, RA2, Tiberian Sun, and original games are future modules on the same engine via a `GameModule` trait. Pathfinding (`Pathfinder` trait), spatial queries (`SpatialIndex` trait), rendering (`Renderable` trait), and camera (`ScreenToWorld` trait) are all pluggable — the architecture deliberately avoids closing doors on any C&C title, including 3D games like Generals.
 
 **Every crate designed to be useful standalone.** `ra-formats` will parse C&C file formats. `ra-protocol` will define the order system. `ra-sim` will run headless for AI training or automated testing. Use what you need.
 

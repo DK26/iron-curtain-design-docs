@@ -19,10 +19,10 @@ All protocol types live in the `ra-protocol` crate — the ONLY shared dependenc
 ```rust
 #[derive(Clone, Serialize, Deserialize, Hash)]
 pub enum PlayerOrder {
-    Move { unit_ids: Vec<UnitId>, target: CellPos },
+    Move { unit_ids: Vec<UnitId>, target: WorldPos },
     Attack { unit_ids: Vec<UnitId>, target: Target },
-    Build { structure: StructureType, position: CellPos },
-    SetRallyPoint { building: BuildingId, position: CellPos },
+    Build { structure: StructureType, position: WorldPos },
+    SetRallyPoint { building: BuildingId, position: WorldPos },
     Sell { building: BuildingId },
     Idle,  // Explicit no-op — keeps player in the tick's order list for timing/presence
     // ... every possible player action

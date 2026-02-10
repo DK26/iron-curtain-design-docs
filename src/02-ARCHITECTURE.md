@@ -61,7 +61,10 @@ pub struct WorldPos {
     pub z: SimCoord,  // 0 for flat games (RA1), meaningful for elevated terrain (RA2/TS)
 }
 
-/// Cell position on the grid — also 3D-aware.
+/// Cell position on a discrete grid — convenience type for grid-based game modules.
+/// NOT an engine-core requirement. Grid-based games (RA1, RA2, TS, TD, D2K) use CellPos
+/// as their spatial primitive. Continuous-space game modules work with WorldPos directly.
+/// The engine core operates on WorldPos; CellPos is a game-module-level concept.
 pub struct CellPos {
     pub x: i32,
     pub y: i32,
@@ -203,11 +206,65 @@ impl<N: NetworkModel, I: InputSource> GameLoop<N, I> {
 
 **Key property:** `GameLoop` is generic over `N: NetworkModel` and `I: InputSource`. It has zero knowledge of whether it's running single-player or multiplayer, or whether input comes from a mouse, touchscreen, or gamepad. This is the central architectural guarantee.
 
-## Pathfinding
+## Pathfinding & Spatial Queries
 
-**Decision:** Hierarchical A* or flowfields — leap ahead of OpenRA's basic A*.
+**Decision:** Pathfinding and spatial queries are abstracted behind traits — like `NetworkModel`. Grid-based flowfields are the first implementation (RA1 game module). The engine core has no hardcoded assumption about grids vs. continuous space.
 
-OpenRA uses standard A* which struggles with large unit groups. Hierarchical pathfinding or flowfields handle mass unit movement far better and are well-suited to the grid-based terrain.
+OpenRA uses standard A* which struggles with large unit groups. Hierarchical pathfinding or flowfields handle mass unit movement far better and are the right choice for grid-based terrain. But pathfinding is a game-module concern, not an engine-core assumption.
+
+### Pathfinder Trait
+
+```rust
+/// Game modules implement this to provide pathfinding.
+/// Grid-based games use flowfields/hierarchical A*.
+/// Continuous-space games would use navmesh.
+/// The engine core calls this trait — never a specific algorithm.
+pub trait Pathfinder: Send + Sync {
+    /// Request a path from origin to destination.
+    fn request_path(&mut self, origin: WorldPos, dest: WorldPos, locomotor: LocomotorType) -> PathId;
+
+    /// Poll for completed path. Returns waypoints in WorldPos.
+    fn get_path(&self, id: PathId) -> Option<&[WorldPos]>;
+
+    /// Can a unit with this locomotor pass through this position?
+    fn is_passable(&self, pos: WorldPos, locomotor: LocomotorType) -> bool;
+
+    /// Invalidate cached paths (e.g., building placed, bridge destroyed).
+    fn invalidate_area(&mut self, center: WorldPos, radius: SimCoord);
+}
+```
+
+### SpatialIndex Trait
+
+```rust
+/// Game modules implement this for spatial queries (range checks, collision, targeting).
+/// Grid-based games use a spatial hash grid. Continuous-space games could use BVH or R-tree.
+/// The engine core queries this trait — never a specific data structure.
+pub trait SpatialIndex: Send + Sync {
+    /// Find all entities within range of a position.
+    fn query_range(&self, center: WorldPos, range: SimCoord, filter: EntityFilter) -> &[EntityId];
+
+    /// Update entity position in the index.
+    fn update_position(&mut self, entity: EntityId, old: WorldPos, new: WorldPos);
+
+    /// Remove entity from the index.
+    fn remove(&mut self, entity: EntityId);
+}
+```
+
+### Why This Matters
+
+This is the same philosophy as `WorldPos.z` — costs near-zero now, prevents rewrites later:
+
+| Abstraction    | Costs Now                       | Saves Later                                              |
+| -------------- | ------------------------------- | -------------------------------------------------------- |
+| `WorldPos.z`   | One extra `i32` per position    | RA2/TS elevation works without restructuring coordinates |
+| `NetworkModel` | One trait + `LocalNetwork` impl | Multiplayer netcode slots in without touching sim        |
+| `InputSource`  | One trait + mouse/keyboard impl | Touch/gamepad slot in without touching game loop         |
+| `Pathfinder`   | One trait + grid flowfield impl | Navmesh pathfinding slots in without touching sim        |
+| `SpatialIndex` | One trait + spatial hash impl   | BVH/R-tree slots in without touching combat/targeting    |
+
+The RA1 game module registers `GridFlowfieldPathfinder` and `GridSpatialHash`. A future continuous-space game module registers `NavmeshPathfinder` and `BvhSpatialIndex`. The sim core calls the trait — it never knows which one is running.
 
 ## Platform Portability
 
@@ -219,7 +276,7 @@ The engine must not create obstacles for any platform. Desktop is the primary de
 
 2. **UI layout is responsive.** No hardcoded pixel positions. The sidebar, minimap, and build queue use constraint-based layout that adapts to screen size and aspect ratio. Mobile/tablet may use a completely different layout (bottom bar instead of sidebar). `ra-ui` provides layout *profiles*, not a single fixed layout.
 
-3. **Click-to-world is abstracted behind a trait.** Isometric screen→cell (desktop), touch→cell (mobile), and raycast→cell (3D mod) all implement the same `ScreenToWorld` trait, producing a `CellPos`. No isometric math hardcoded in the game loop.
+3. **Click-to-world is abstracted behind a trait.** Isometric screen→world (desktop), touch→world (mobile), and raycast→world (3D mod) all implement the same `ScreenToWorld` trait, producing a `WorldPos`. Grid-based game modules convert to `CellPos` as needed. No isometric math or grid assumption hardcoded in the game loop.
 
 4. **Render quality is configurable per device.** FPS cap, particle density, post-FX toggles, resolution scaling, shadow quality — all runtime-configurable. Mobile caps at 30fps; desktop targets 60-240fps. The renderer reads a `RenderSettings` resource, not compile-time constants. Four render quality tiers (Baseline → Standard → Enhanced → Ultra) are auto-detected from `wgpu::Adapter` capabilities at startup. Tier 0 (Baseline) targets GL 3.3 / WebGL2 hardware — no compute shaders, no post-FX, CPU particle fallback, palette tinting for weather. See `10-PERFORMANCE.md` § "GPU & Hardware Compatibility" for tier definitions and hardware floor analysis.
 
@@ -382,6 +439,12 @@ pub trait GameModule {
     /// Return the ordered system pipeline for this game's simulation tick.
     fn system_pipeline(&self) -> Vec<Box<dyn System>>;
 
+    /// Provide the pathfinding implementation (grid flowfields, navmesh, etc.).
+    fn pathfinder(&self) -> Box<dyn Pathfinder>;
+
+    /// Provide the spatial index implementation (spatial hash, BVH, etc.).
+    fn spatial_index(&self) -> Box<dyn SpatialIndex>;
+
     /// Register format loaders (e.g., .vxl for RA2, .shp for RA1).
     fn register_format_loaders(&self, registry: &mut FormatRegistry);
 
@@ -395,14 +458,15 @@ pub trait GameModule {
 
 ### What the engine provides (game-agnostic)
 
-| Layer          | Game-Agnostic                                                                        | Game-Module-Specific                                           |
-| -------------- | ------------------------------------------------------------------------------------ | -------------------------------------------------------------- |
-| **Sim core**   | `Simulation`, `apply_tick()`, `snapshot()`, state hashing, order validation pipeline | Components, systems, rules, resource types                     |
-| **Positions**  | `WorldPos { x, y, z }`, `CellPos { x, y, z }`, pathfinding grid                      | Whether Z is used (RA1: flat, RA2: elevation)                  |
-| **Networking** | `NetworkModel` trait, relay server, lockstep, replays                                | `PlayerOrder` variants (game-specific commands)                |
-| **Rendering**  | Camera, sprite batching, UI framework; post-FX pipeline available to modders         | Sprite renderer (RA1), voxel renderer (RA2), terrain elevation |
-| **Modding**    | YAML loader, Lua runtime, WASM sandbox, workshop                                     | Rule schemas, API surface exposed to scripts                   |
-| **Formats**    | `.mix` parser, archive loading                                                       | `.shp` variant (RA1), `.vxl`/`.hva` (RA2), map format          |
+| Layer           | Game-Agnostic                                                                        | Game-Module-Specific                                                         |
+| --------------- | ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------- |
+| **Sim core**    | `Simulation`, `apply_tick()`, `snapshot()`, state hashing, order validation pipeline | Components, systems, rules, resource types                                   |
+| **Positions**   | `WorldPos { x, y, z }`                                                               | `CellPos` (grid-based modules), coordinate mapping, z usage                  |
+| **Pathfinding** | `Pathfinder` trait, `SpatialIndex` trait                                             | Grid flowfields (RA1), navmesh (future), spatial hash vs BVH                 |
+| **Networking**  | `NetworkModel` trait, relay server, lockstep, replays                                | `PlayerOrder` variants (game-specific commands)                              |
+| **Rendering**   | Camera, sprite batching, UI framework; post-FX pipeline available to modders         | Sprite renderer (RA1), voxel renderer (RA2), mesh renderer (3D mod/future)   |
+| **Modding**     | YAML loader, Lua runtime, WASM sandbox, workshop                                     | Rule schemas, API surface exposed to scripts                                 |
+| **Formats**     | Archive loading, format registry                                                     | `.mix`/`.shp` (RA1), `.vxl`/`.hva` (RA2), `.big`/`.w3d` (future), map format |
 
 ### RA2 Extension Points
 
@@ -419,9 +483,9 @@ RA2 / Tiberian Sun would add these to the existing engine without modifying the 
 | Prism forwarding              | `PrismForwarder` component + chain calculation system  | New component + system                                |
 | Bridges / tunnels             | Layered pathing with Z transitions                     | Uses existing `CellPos.z`                             |
 
-### Scope Boundary: The Isometric C&C Family
+### Current Target: The Isometric C&C Family
 
-Multi-game extensibility targets the **isometric C&C family**: Red Alert, Red Alert 2, Tiberian Sun, Tiberian Dawn, and Dune 2000 (plus expansions and total conversions in the same visual paradigm). These games share:
+The **first-party game modules** target the **isometric C&C family**: Red Alert, Red Alert 2, Tiberian Sun, Tiberian Dawn, and Dune 2000 (plus expansions and total conversions in the same visual paradigm). These games share:
 
 - Fixed isometric camera
 - Grid-based terrain (with optional elevation for TS/RA2)
@@ -429,26 +493,44 @@ Multi-game extensibility targets the **isometric C&C family**: Red Alert, Red Al
 - `.mix` archives and related format lineage
 - Discrete cell-based pathfinding (flowfields, hierarchical A*)
 
-**C&C Generals and later 3D titles (C&C3, RA3) are out of scope.** They use free-rotating 3D cameras, mesh-based rendering, continuous-space pathfinding (navmesh), and completely unrelated file formats (`.big`, `.w3d`). Supporting them would require replacing ~60% of the engine (renderer, pathfinding, coordinate system, format parsers) — at that point it's a separate project borrowing the sim core, not a game module.
+### Architectural Openness: Beyond Isometric
 
-If a Generals-class game is desired in the future, the correct approach is to extract the game-agnostic crates (`ra-sim`, `ra-protocol`, `ra-net`, `ra-script`) into a shared RTS framework library and build a 3D frontend independently. The `GameModule` trait and deterministic sim architecture make this feasible without forking.
+C&C Generals and later 3D titles (C&C3, RA3) are **not current targets** — we build only grid-based pathfinding and isometric rendering today. But the architecture deliberately avoids closing doors:
+
+| Engine Concern     | Grid Assumption?   | Trait-Abstracted?             | 3D/Continuous Game Needs...                                         |
+| ------------------ | ------------------ | ----------------------------- | ------------------------------------------------------------------- |
+| Coordinates        | No (`WorldPos`)    | N/A — universal               | Nothing. `WorldPos` works for any spatial model.                    |
+| Pathfinding        | Implementation     | Yes (`Pathfinder` trait)      | A `NavmeshPathfinder` impl. Zero sim changes.                       |
+| Spatial queries    | Implementation     | Yes (`SpatialIndex` trait)    | A `BvhSpatialIndex` impl. Zero combat/targeting changes.            |
+| Rendering          | Implementation     | Yes (`Renderable` trait)      | A mesh renderer impl. Already documented ("3D Rendering as a Mod"). |
+| Camera             | Implementation     | Yes (`ScreenToWorld` trait)   | A perspective camera impl. Already documented.                      |
+| Input              | No (`InputSource`) | Yes                           | Nothing. Orders are orders.                                         |
+| Networking         | No                 | Yes (`NetworkModel` trait)    | Nothing. Lockstep works regardless of spatial model.                |
+| Format loaders     | Implementation     | Yes (`FormatRegistry`)        | New parsers for `.big`, `.w3d`, etc. Additive.                      |
+| Building placement | Data-driven        | N/A — YAML rules + components | Different components (no `RequiresBuildableArea`). YAML change.     |
+
+The key insight: the engine core (`Simulation`, `apply_tick()`, `GameLoop`, `NetworkModel`, `Pathfinder`, `SpatialIndex`) is spatial-model-agnostic. Grid-based pathfinding is a *game module implementation*, not an engine assumption — the same way `LocalNetwork` is a network implementation, not the only possible one.
+
+A Generals-class game module would provide its own `Pathfinder` (navmesh), `SpatialIndex` (BVH), `Renderable` (mesh), and format loaders — while reusing the sim core, networking, modding infrastructure, workshop, competitive infrastructure, and all the systems that don't care about spatial representation (production, veterancy, fog of war logic, order validation, replays, save games).
+
+This is not a current development target. We build only the grid implementations. But the trait seams exist from day one, so the door stays open — for us or for the community.
 
 ### 3D Rendering as a Mod (Not a Game Module)
 
-While 3D C&C titles are out of scope as *game modules*, the architecture explicitly supports **3D rendering mods** for isometric-family games. A "3D Red Alert" mod replaces the visual presentation while the simulation, networking, pathfinding, and rules are completely unchanged.
+While 3D C&C titles are not current development targets, the architecture explicitly supports **3D rendering mods** for any game module. A "3D Red Alert" mod replaces the visual presentation while the simulation, networking, pathfinding, and rules are completely unchanged.
 
 This works because the sim/render split is absolute — the sim has no concept of camera, sprites, or visual style. Bevy already ships a full 3D pipeline (PBR materials, GLTF loading, skeletal animation, dynamic lighting, shadows), so a 3D render mod leverages existing infrastructure.
 
 **What changes vs. what doesn't:**
 
-| Layer         | 3D Mod Changes? | Details                                                            |
-| ------------- | --------------- | ------------------------------------------------------------------ |
-| Simulation    | No              | Same tick, same rules, same grid                                   |
-| Pathfinding   | No              | Grid-based flowfields still work (SC2 is 3D but uses grid pathing) |
-| Networking    | No              | Orders are orders                                                  |
-| Rules / YAML  | No              | Tank still costs 800, has 400 HP                                   |
-| Rendering     | Yes             | Sprites → GLTF meshes, isometric camera → free 3D camera           |
-| Input mapping | Yes             | Click-to-world changes from isometric transform to 3D raycast      |
+| Layer         | 3D Mod Changes? | Details                                                                                                                                                               |
+| ------------- | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Simulation    | No              | Same tick, same rules, same grid                                                                                                                                      |
+| Pathfinding   | No              | Grid-based flowfields still work (SC2 is 3D but uses grid pathing). A future game module could provide a `NavmeshPathfinder` instead — independent of the render mod. |
+| Networking    | No              | Orders are orders                                                                                                                                                     |
+| Rules / YAML  | No              | Tank still costs 800, has 400 HP                                                                                                                                      |
+| Rendering     | Yes             | Sprites → GLTF meshes, isometric camera → free 3D camera                                                                                                              |
+| Input mapping | Yes             | Click-to-world changes from isometric transform to 3D raycast                                                                                                         |
 
 **Architectural requirements to enable this:**
 
@@ -474,8 +556,8 @@ rifle_infantry:
       attack: Shoot
 ```
 
-4. **Click-to-world abstracted behind trait.** Isometric screen→cell is a linear transform. 3D perspective screen→cell is a raycast. Both produce a `CellPos`.
-5. **Terrain rendering decoupled from terrain data.** The sim's grid is authoritative. A 3D mod provides visual terrain geometry that matches the grid layout.
+4. **Click-to-world abstracted behind trait.** Isometric screen→world is a linear transform. 3D perspective screen→world is a raycast. Both produce a `WorldPos`. Grid-based game modules convert to `CellPos` as needed.
+5. **Terrain rendering decoupled from terrain data.** The sim's spatial representation is authoritative. A 3D mod provides visual terrain geometry that matches it.
 
 **Key benefits:**
 - **Cross-view multiplayer.** A player running 3D can play against a player running classic isometric — the sim is identical. Like StarCraft Remastered's graphics toggle, but more radical.
@@ -487,8 +569,9 @@ This is a **Tier 3 (WASM) mod** — it replaces a rendering backend, which is to
 ### Design Rules for Multi-Game Safety
 
 1. **No game-specific enums in engine core.** Don't put `enum ResourceType { Ore, Gems }` in `ra-sim`. Resource types come from YAML rules / game module registration.
-2. **Position is always 3D.** `WorldPos` and `CellPos` carry Z. RA1 sets it to 0. The cost is one extra `i32` per position — negligible.
-3. **System pipeline is data, not code.** The game module returns its system list; the engine executes it. No hardcoded `harvester_system()` call in engine core.
-4. **Render through `Renderable` trait.** Sprites and voxels implement the same trait. The renderer doesn't know what it's drawing.
-5. **Format loaders are pluggable.** `ra-formats` provides parsers; the game module tells the asset pipeline which ones to use.
-6. **`PlayerOrder` is extensible.** Use an enum with a `Custom(GameSpecificOrder)` variant, or make orders generic over the game module.
+2. **Position is always 3D.** `WorldPos` carries Z. RA1 sets it to 0. The cost is one extra `i32` per position — negligible. `CellPos` is a grid-game-module convenience type, not an engine-core requirement.
+3. **Pathfinding and spatial queries are behind traits.** `Pathfinder` and `SpatialIndex` — like `NetworkModel`. Grid implementations are the default; the engine core never calls grid-specific functions directly.
+4. **System pipeline is data, not code.** The game module returns its system list; the engine executes it. No hardcoded `harvester_system()` call in engine core.
+5. **Render through `Renderable` trait.** Sprites and voxels implement the same trait. The renderer doesn't know what it's drawing.
+6. **Format loaders are pluggable.** `ra-formats` provides parsers; the game module tells the asset pipeline which ones to use.
+7. **`PlayerOrder` is extensible.** Use an enum with a `Custom(GameSpecificOrder)` variant, or make orders generic over the game module.
