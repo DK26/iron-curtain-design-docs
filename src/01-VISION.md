@@ -7,7 +7,7 @@ Build a Rust-native RTS engine that:
 - Reimagines internals with modern architecture (not a port)
 - Explores different tradeoffs: performance, modding depth, portability, and multiplayer architecture
 - Provides OpenRA mod compatibility as the zero-cost migration path
-- Is **game-agnostic at the engine layer** — Red Alert is the first game module; RA2, Tiberian Dawn, and original games are future modules on the same engine (RA2 is a future community goal, not a scheduled deliverable)
+- Is **game-agnostic at the engine layer** — built for the C&C community but designed to power any classic RTS (D039). Ships with Red Alert (default) and Tiberian Dawn as built-in game modules; RA2, Tiberian Sun, and community-created games are future modules on the same engine (RA2 is a future community goal, not a scheduled deliverable)
 
 ## Why This Deserves to Exist
 
@@ -222,7 +222,7 @@ These are the projects we actively study. Each serves a different purpose — do
 - **Exact gameplay values.** Damage tables, weapon ranges, unit speeds, fire rates, armor multipliers. This is the canonical source for "how Red Alert actually plays." When OpenRA and EA source disagree on a value, **EA source wins for our classic preset.**
 - **Order processing.** The `OutList`/`DoList` pattern maps directly to our `PlayerOrder → TickOrders → apply_tick()` architecture.
 - **Integer math patterns.** Original RA uses integer math throughout for determinism — validates our fixed-point approach.
-- **AI behavior.** How the original skirmish AI makes decisions, builds bases, attacks. Reference for `ra-ai`.
+- **AI behavior.** How the original skirmish AI makes decisions, builds bases, attacks. Reference for `ic-ai`.
 
 **Caution:** The codebase is 1990s C++ — tangled, global state everywhere, no tests. Extract knowledge, don't port patterns.
 

@@ -112,7 +112,7 @@ Every major design decision, with rationale and alternatives considered. Referen
 - Enables future models: rollback, client-server, cross-engine adapters
 - Players could choose model in lobby
 
-**Key invariant:** `ra-sim` has zero imports from `ra-net`. They only share `ra-protocol`.
+**Key invariant:** `ic-sim` has zero imports from `ic-net`. They only share `ic-protocol`.
 
 ---
 
@@ -256,14 +256,14 @@ See `10-PERFORMANCE.md` for full details, targets, and implementation patterns.
 
 ## D016: LLM-Generated Missions and Campaigns
 
-**Decision:** Provide an optional LLM-powered mission generation system (Phase 7) via the `ra-llm` crate. Players bring their own LLM provider (BYOLLM) — the engine never ships or requires one. Every game feature works fully without an LLM configured.
+**Decision:** Provide an optional LLM-powered mission generation system (Phase 7) via the `ic-llm` crate. Players bring their own LLM provider (BYOLLM) — the engine never ships or requires one. Every game feature works fully without an LLM configured.
 
 **Rationale:**
 - Transforms Red Alert from finite content to infinite content — for players who opt in
 - Generated output is standard YAML + Lua — fully editable, shareable, learnable
 - No other RTS (Red Alert or otherwise) offers this capability
 - LLM quality is sufficient for terrain layout, objective design, AI behavior scripting
-- **Strictly optional:** `ra-llm` crate is optional, game works without it. No feature — campaigns, skirmish, multiplayer, modding, analytics — depends on LLM availability. The LLM enhances the experience; it never gates it
+- **Strictly optional:** `ic-llm` crate is optional, game works without it. No feature — campaigns, skirmish, multiplayer, modding, analytics — depends on LLM availability. The LLM enhances the experience; it never gates it
 
 **Scope:**
 - Phase 7: single mission generation (terrain, objectives, enemy composition, triggers, briefing)
@@ -280,7 +280,7 @@ See `10-PERFORMANCE.md` for full details, targets, and implementation patterns.
 - Player data for personalization comes from local SQLite queries (read-only) — no data leaves the device unless the user's LLM provider is cloud-based (BYOLLM architecture)
 
 **Bring-Your-Own-LLM (BYOLLM) architecture:**
-- `ra-llm` defines a `LlmProvider` trait — any backend that accepts a prompt and returns structured text
+- `ic-llm` defines a `LlmProvider` trait — any backend that accepts a prompt and returns structured text
 - Built-in providers: OpenAI-compatible API, local Ollama/llama.cpp, Anthropic API
 - Users configure their provider in settings (API key, endpoint, model name)
 - The engine never ships or requires a specific model — the user chooses
@@ -312,14 +312,104 @@ See `10-PERFORMANCE.md` for full details, targets, and implementation patterns.
 
 ## D018: Multi-Game Extensibility (Game Modules)
 
-**Decision:** Design the engine as a game-agnostic RTS framework. Red Alert is the first "game module"; RA2, Tiberian Dawn, and original games should be addable as additional modules without modifying core engine code.
+**Decision:** Design the engine as a game-agnostic RTS framework that ships with multiple built-in game modules. Red Alert is the default module; Tiberian Dawn ships alongside it. RA2, Tiberian Sun, Dune 2000, and original games should be addable as additional modules without modifying core engine code. The engine is also capable of powering non-C&C classic RTS games (see D039).
 
 **Rationale:**
-- OpenRA already proves this works — runs TD, RA, and D2K on one engine via different trait/component sets
+- OpenRA already proves multi-game works — runs TD, RA, and D2K on one engine via different trait/component sets
 - The ECS architecture naturally supports this (composable components, pluggable systems)
 - Prevents RA1 assumptions from hardening into architectural constraints that require rewrites later
 - Broadens the project's audience and contributor base
 - RA2 is the most-requested extension — community interest is proven (Chrono Divide exists)
+- Shipping RA + TD from the start (like OpenRA) proves the game-agnostic design is real, not aspirational
+
+**The `GameModule` trait:**
+
+Every game module implements `GameModule`, which bundles everything the engine needs to run that game:
+
+```rust
+pub trait GameModule: Send + Sync + 'static {
+    /// Human-readable name ("Red Alert", "Tiberian Dawn")
+    fn name(&self) -> &str;
+
+    /// Register ECS components, systems, and system ordering
+    fn register_systems(&self, app: &mut App);
+
+    /// Provide the module's Pathfinder implementation
+    fn pathfinder(&self) -> Box<dyn Pathfinder>;
+
+    /// Provide the module's SpatialIndex implementation
+    fn spatial_index(&self) -> Box<dyn SpatialIndex>;
+
+    /// Provide the module's render plugin (sprite, voxel, 3D, etc.)
+    fn render_plugin(&self) -> Box<dyn RenderPlugin>;
+
+    /// Provide the module's UI layout (sidebar style, build queue, etc.)
+    fn ui_layout(&self) -> UiLayout;
+
+    /// Provide format loaders for this module's asset types
+    fn format_loaders(&self) -> Vec<Box<dyn FormatLoader>>;
+
+    /// List available balance presets (D019)
+    fn balance_presets(&self) -> Vec<BalancePreset>;
+
+    /// List available experience profiles (D019 + D032 + D033)
+    fn experience_profiles(&self) -> Vec<ExperienceProfile>;
+
+    /// Default experience profile name
+    fn default_profile(&self) -> &str;
+}
+```
+
+**Game module capability matrix:**
+
+| Capability              | RA1 (ships Phase 2) | TD (ships Phase 3-4) | Generals-class (future) | Non-C&C (community) |
+| ----------------------- | ------------------- | -------------------- | ----------------------- | ------------------- |
+| Pathfinding             | Grid flowfields     | Grid flowfields      | Navmesh                 | Module-provided     |
+| Spatial index           | Spatial hash        | Spatial hash         | BVH/R-tree              | Module-provided     |
+| Rendering               | Isometric sprites   | Isometric sprites    | 3D meshes               | Module-provided     |
+| Camera                  | Isometric fixed     | Isometric fixed      | Free 3D                 | Module-provided     |
+| Terrain                 | Grid cells          | Grid cells           | Heightmap               | Module-provided     |
+| Format loading          | .mix/.shp/.pal      | .mix/.shp/.pal       | .big/.w3d               | Module-provided     |
+| Networking              | Shared (ic-net)     | Shared (ic-net)      | Shared (ic-net)         | Shared (ic-net)     |
+| Modding (YAML/Lua/WASM) | Shared (ic-script)  | Shared (ic-script)   | Shared (ic-script)      | Shared (ic-script)  |
+| Workshop                | Shared (D030)       | Shared (D030)        | Shared (D030)           | Shared (D030)       |
+| Replays & saves         | Shared (ic-sim)     | Shared (ic-sim)      | Shared (ic-sim)         | Shared (ic-sim)     |
+| Competitive systems     | Shared              | Shared               | Shared                  | Shared              |
+
+The pattern: game-specific rendering, pathfinding, and spatial queries; shared networking, modding, workshop, replays, saves, and competitive infrastructure.
+
+**Experience profiles (composing D019 + D032 + D033):**
+
+An experience profile bundles a balance preset, UI theme, and QoL settings into a named configuration:
+
+```yaml
+profiles:
+  classic-ra:
+    display_name: "Classic Red Alert"
+    game_module: red_alert
+    balance: classic        # D019 — EA source values
+    theme: classic          # D032 — DOS/Win95 aesthetic
+    qol: vanilla            # D033 — no QoL additions
+    description: "Original Red Alert experience, warts and all"
+
+  openra-ra:
+    display_name: "OpenRA Red Alert"
+    game_module: red_alert
+    balance: openra         # D019 — OpenRA competitive balance
+    theme: modern           # D032 — modern UI
+    qol: openra             # D033 — OpenRA QoL features
+    description: "OpenRA-style experience on the Iron Curtain engine"
+
+  iron-curtain-ra:
+    display_name: "Iron Curtain Red Alert"
+    game_module: red_alert
+    balance: classic        # D019 — EA source values
+    theme: modern           # D032 — modern UI
+    qol: iron_curtain       # D033 — IC's recommended QoL
+    description: "Recommended — classic balance with modern QoL"
+```
+
+Profiles are selectable in the lobby. Players can customize individual settings or pick a preset. Competitive modes lock the profile for fairness.
 
 **Concrete changes (baked in from Phase 0):**
 1. `WorldPos` carries a Z coordinate from day one (RA1 sets z=0). `CellPos` is a game-module convenience for grid-based games, not an engine-core type.
@@ -328,16 +418,17 @@ See `10-PERFORMANCE.md` for full details, targets, and implementation patterns.
 4. Renderer uses a `Renderable` trait — sprite and voxel backends implement it equally
 5. Pathfinding uses a `Pathfinder` trait — grid flowfields are the RA1 impl; navmesh could slot in without touching sim
 6. Spatial queries use a `SpatialIndex` trait — spatial hash is the RA1 impl; BVH/R-tree could slot in without touching combat/targeting
-7. `GameModule` trait bundles component registration, system pipeline, pathfinder, spatial index, format loaders, and render backends
+7. `GameModule` trait bundles component registration, system pipeline, pathfinder, spatial index, format loaders, render backends, and experience profiles
 8. `PlayerOrder` is extensible to game-specific commands
+9. Engine crates use `ic-*` naming (not `ra-*`) to reflect game-agnostic identity (see D039). Exception: `ra-formats` stays because it reads C&C-family file formats specifically.
 
 **What this does NOT mean:**
-- We don't build RA2 support now. Red Alert is the sole focus until it ships.
-- We don't add speculative abstractions. Only the eight concrete changes above.
-- We don't rename crates from `ra-*` — the project identity is Red Alert. Game modules extend it.
+- We don't build RA2 support now. Red Alert + Tiberian Dawn are the focus through Phase 3-4.
+- We don't add speculative abstractions. Only the nine concrete changes above.
+- Non-C&C game modules are an architectural capability, not a deliverable (see D039).
 
 **Scope boundary — current targets vs. architectural openness:**
-First-party game module development targets the isometric C&C family: Red Alert, RA2, Tiberian Sun, Tiberian Dawn, Dune 2000. These share the isometric camera, grid-based terrain, sprite/voxel rendering, and `.mix` format lineage. We build only grid-based pathfinding and isometric rendering today.
+First-party game module development targets the C&C family: Red Alert (default, ships Phase 2), Tiberian Dawn (ships Phase 3-4 stretch goal). RA2, Tiberian Sun, and Dune 2000 are future community goals sharing the isometric camera, grid-based terrain, sprite/voxel rendering, and `.mix` format lineage.
 
 **3D titles (Generals, C&C3, RA3) are not current targets** but the architecture deliberately avoids closing doors. With pathfinding (`Pathfinder` trait), spatial queries (`SpatialIndex` trait), rendering (`Renderable` trait), camera (`ScreenToWorld` trait), and format loading (`FormatRegistry`) all behind pluggable abstractions, a Generals-class game module would provide its own implementations of these traits while reusing the sim core, networking, modding infrastructure, workshop, competitive systems, replays, and save games. The traits exist from day one — the cost is near-zero, and the benefit is that neither we nor the community need to fork the engine to explore continuous-space games in the future.
 
@@ -345,9 +436,9 @@ See `02-ARCHITECTURE.md` § "Architectural Openness: Beyond Isometric" for the f
 
 However, **3D rendering mods for isometric-family games are explicitly supported.** A "3D Red Alert" Tier 3 mod can replace sprites with GLTF meshes and the isometric camera with a free 3D camera — without changing the sim, networking, or pathfinding. Bevy's built-in 3D pipeline makes this feasible. Cross-view multiplayer (2D vs 3D players in the same game) works because the sim is view-agnostic. See `02-ARCHITECTURE.md` § "3D Rendering as a Mod".
 
-**Phase:** Baked into architecture from Phase 0. RA2 module is a potential Phase 8+ project.
+**Phase:** Architecture baked in from Phase 0. RA1 module ships Phase 2. TD module targets Phase 3-4 as a stretch goal. RA2 module is a potential Phase 8+ community project.
 
-> **Expectation management:** The community’s most-requested feature is RA2 support. The architecture deliberately supports it (game-agnostic traits, extensible ECS, pluggable pathfinding), but **RA2 is a future community goal, not a scheduled deliverable.** No timeline, staffing, or exit criteria exist for any game module beyond RA1. When the community reads “game-agnostic,” they should understand: the architecture won’t block RA2, but nobody is building it yet.
+> **Expectation management:** The community's most-requested feature is RA2 support. The architecture deliberately supports it (game-agnostic traits, extensible ECS, pluggable pathfinding), but **RA2 is a future community goal, not a scheduled deliverable.** No timeline, staffing, or exit criteria exist for any game module beyond RA1 and TD. When the community reads "game-agnostic," they should understand: the architecture won't block RA2, but nobody is building it yet. TD ships alongside RA1 to prove the multi-game design works — not because two games are twice as fun, but because an engine that only runs one game hasn't proven it's game-agnostic.
 
 ---
 
@@ -600,12 +691,15 @@ ic mod update-engine       # bump engine version
 
 **IC extensions (additions, not replacements):**
 
-| Global     | Purpose                         |
-| ---------- | ------------------------------- |
-| `Campaign` | Branching campaign state (D021) |
-| `Weather`  | Dynamic weather control (D022)  |
-| `Workshop` | Mod metadata queries            |
-| `LLM`      | LLM integration hooks (Phase 7) |
+| Global     | Purpose                           |
+| ---------- | --------------------------------- |
+| `Campaign` | Branching campaign state (D021)   |
+| `Weather`  | Dynamic weather control (D022)    |
+| `Layer`    | Runtime layer activation/deaction |
+| `Region`   | Named region queries              |
+| `Var`      | Mission/campaign variable access  |
+| `Workshop` | Mod metadata queries              |
+| `LLM`      | LLM integration hooks (Phase 7)   |
 
 **Actor properties also match:** Each actor reference exposes properties matching OpenRA's property groups (`.Health`, `.Location`, `.Owner`, `.Move()`, `.Attack()`, `.Stop()`, `.Guard()`, `.Deploy()`, etc.) with identical semantics.
 
@@ -707,7 +801,7 @@ ic mod update-engine       # bump engine version
 - No technical reason to rename these — they describe the same concepts
 - Where IC needs additional values (e.g., `Hover`, `Amphibious`), they extend the enum without conflicting
 
-**Phase:** Phase 2 (when enum types are formally defined in `ra-sim`).
+**Phase:** Phase 2 (when enum types are formally defined in `ic-sim`).
 
 ---
 
@@ -759,7 +853,7 @@ ic mod update-engine       # bump engine version
 | **Shield System**        | CA, RA2 force shields, Scrin                | Absorb-before-health, recharge timer, depletion                                                                                                                                                                                                                  |
 | **Upgrade System**       | CA, C&C3 game module                        | Per-unit tech research via building, condition grants                                                                                                                                                                                                            |
 | **Delayed Weapons**      | CA (radiation, poison), RA2 (terror drones) | Timer-attached effects on targets                                                                                                                                                                                                                                |
-| **Dual Asset Rendering** | Remastered recreation, HD mod packs         | Superseded by the Resource Pack system (`04-MODDING.md` § "Resource Packs") which generalizes this to N asset tiers, not just two. Phase 2 scope: `ra-render` supports runtime-switchable asset source per entity; Resource Pack manifests resolve at load time. |
+| **Dual Asset Rendering** | Remastered recreation, HD mod packs         | Superseded by the Resource Pack system (`04-MODDING.md` § "Resource Packs") which generalizes this to N asset tiers, not just two. Phase 2 scope: `ic-render` supports runtime-switchable asset source per entity; Resource Pack manifests resolve at load time. |
 
 **Rationale:**
 - These aren't CA-specific — they're needed for RA2 (the likely second game module). Building them in Phase 2 means they're available when RA2 development starts.
@@ -777,7 +871,7 @@ ic mod update-engine       # bump engine version
 | Tier 2 (Lua)   | ~15%        | ~10%       |
 | Tier 3 (WASM)  | ~15%        | ~5%        |
 
-**Phase:** Phase 2 (sim-side components and dual asset rendering in `ra-render`).
+**Phase:** Phase 2 (sim-side components and dual asset rendering in `ic-render`).
 
 ---
 
@@ -982,7 +1076,7 @@ mod:
 
 ### LLM-Driven Resource Discovery
 
-`ra-llm` can search the Workshop programmatically and incorporate discovered resources into generated content:
+`ic-llm` can search the Workshop programmatically and incorporate discovered resources into generated content:
 
 ```
 Pipeline:
@@ -1352,7 +1446,7 @@ Standard open-source code of conduct (Contributor Covenant or similar) applies t
 - The game engine already has rich internal state (per-tick `state_hash()`, snapshots, system execution times) but no structured way to export it for analysis
 - Replay files capture *what happened* but not *why* — telemetry captures the engine's decision-making process (pathfinding time, order validation outcomes, combat resolution details) that replays miss
 - Behavioral analysis (V12 anti-cheat) already collects APM, reaction times, and input entropy on the relay — OTEL is the natural export format for this data
-- AI/LLM development needs training data: game telemetry (unit movements, build orders, engagement outcomes) is exactly the training corpus for `ra-ai` and `ra-llm`
+- AI/LLM development needs training data: game telemetry (unit movements, build orders, engagement outcomes) is exactly the training corpus for `ic-ai` and `ic-llm`
 - Bevy already integrates with Rust's `tracing` crate — OTEL export is a natural extension, not a foreign addition
 - Desync debugging needs cross-client correlation — distributed tracing (trace IDs) lets you follow an order from input → network → sim → render across multiple clients and the relay server
 - A single instrumentation approach (OTEL) avoids the mess of ad-hoc logging, custom metrics files, separate debug protocols, and incompatible formats
@@ -1480,8 +1574,8 @@ The gameplay event stream is the foundation for AI development:
 
 | Consumer              | Data Source                        | Purpose                                                          |
 | --------------------- | ---------------------------------- | ---------------------------------------------------------------- |
-| `ra-ai` (skirmish AI) | Gameplay events from human games   | Learn build orders, engagement timing, micro patterns            |
-| `ra-llm` (missions)   | Gameplay events + enriched replays | Learn what makes missions fun (engagement density, pacing, flow) |
+| `ic-ai` (skirmish AI) | Gameplay events from human games   | Learn build orders, engagement timing, micro patterns            |
+| `ic-llm` (missions)   | Gameplay events + enriched replays | Learn what makes missions fun (engagement density, pacing, flow) |
 | Behavioral analysis   | Relay-side player profiles         | APM, reaction time, input entropy → suspicion scoring (V12)      |
 | Balance analysis      | Aggregated match outcomes          | Win rates by faction/map/preset → balance tuning                 |
 | Adaptive difficulty   | Per-player gameplay patterns       | Build speed, APM, unit composition → difficulty calibration      |
@@ -1669,7 +1763,7 @@ The game module provides a `default_theme()` in its `GameModule` trait implement
 
 **Integration with existing UI architecture:**
 
-The theme system layers on top of `ra-ui`'s existing responsive layout profiles (D002, `02-ARCHITECTURE.md`):
+The theme system layers on top of `ic-ui`'s existing responsive layout profiles (D002, `02-ARCHITECTURE.md`):
 - **Layout profiles** handle *where* UI elements go (sidebar vs bottom bar, phone vs desktop) — driven by `ScreenClass`
 - **Themes** handle *how* UI elements look (colors, chrome sprites, fonts, animations) — driven by player preference
 - Orthogonal concerns. A player on mobile gets the Phone layout profile + their chosen theme. A player on desktop gets the Desktop layout profile + their chosen theme.
@@ -1694,7 +1788,7 @@ The theme system layers on top of `ra-ui`'s existing responsive layout profiles 
 - CSS-style theming (web-engine approach) — overengineered for a game; YAML is simpler and Bevy-native
 - Theme as a full WASM mod — overkill; theming is data, not behavior; Tier 1 YAML is sufficient
 
-**Phase:** Phase 3 (Game Chrome). Theme system is part of the `ra-ui` crate. Built-in themes ship with the engine. Community themes available in Phase 6a (Workshop).
+**Phase:** Phase 3 (Game Chrome). Theme system is part of the `ic-ui` crate. Built-in themes ship with the engine. Community themes available in Phase 6a (Workshop).
 
 ---
 
@@ -1960,7 +2054,7 @@ Critical for multiplayer: some toggles change game rules, others are purely cosm
 
 | Area                | Why not                                                                                                                                                |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **`ra-sim`**        | No I/O in the sim. Ever. Invariant #1.                                                                                                                 |
+| **`ic-sim`**        | No I/O in the sim. Ever. Invariant #1.                                                                                                                 |
 | **Tracking server** | Truly ephemeral data — game listings with TTL. In-memory is correct.                                                                                   |
 | **Hot paths**       | No DB queries per tick. All SQLite access is at load time, between games, or on UI/background threads.                                                 |
 | **Save game data**  | Save files are serde-serialized sim snapshots loaded as a whole unit. No partial queries needed. SQLite indexes their *metadata*, not their *content*. |
@@ -1998,17 +2092,17 @@ SQLite isn't just infrastructure — it's a UX pillar. Multiple crates read the 
 
 | Consumer                    | Crate    | What it reads                                                                          | What it produces                                                                                                  | Required?                                                 |
 | --------------------------- | -------- | -------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
-| **Player-facing analytics** | `ra-ui`  | `gameplay_events`, `matches`, `match_players`, `campaign_missions`, `roster_snapshots` | Post-game stats screen, career stats page, campaign dashboard with roster/veterancy graphs, mod balance dashboard | Always on                                                 |
-| **Adaptive AI**             | `ra-ai`  | `matches`, `match_players`, `gameplay_events`                                          | Difficulty adjustment, build order variety, counter-strategy selection based on player tendencies                 | Always on                                                 |
-| **LLM personalization**     | `ra-llm` | `matches`, `gameplay_events`, `campaign_missions`, `roster_snapshots`                  | Personalized missions, adaptive briefings, post-match commentary, coaching suggestions, rivalry narratives        | **Optional** — requires BYOLLM provider configured (D016) |
+| **Player-facing analytics** | `ic-ui`  | `gameplay_events`, `matches`, `match_players`, `campaign_missions`, `roster_snapshots` | Post-game stats screen, career stats page, campaign dashboard with roster/veterancy graphs, mod balance dashboard | Always on                                                 |
+| **Adaptive AI**             | `ic-ai`  | `matches`, `match_players`, `gameplay_events`                                          | Difficulty adjustment, build order variety, counter-strategy selection based on player tendencies                 | Always on                                                 |
+| **LLM personalization**     | `ic-llm` | `matches`, `gameplay_events`, `campaign_missions`, `roster_snapshots`                  | Personalized missions, adaptive briefings, post-match commentary, coaching suggestions, rivalry narratives        | **Optional** — requires BYOLLM provider configured (D016) |
 
 Player analytics and adaptive AI are always available. LLM personalization activates only when the player has configured an LLM provider — the game is fully functional without it.
 
-All consumers are read-only. The sim writes nothing (invariant #1) — `gameplay_events` are recorded by a Bevy observer system outside `ra-sim`, and `matches`/`campaign_missions` are written at session boundaries.
+All consumers are read-only. The sim writes nothing (invariant #1) — `gameplay_events` are recorded by a Bevy observer system outside `ic-sim`, and `matches`/`campaign_missions` are written at session boundaries.
 
-### Player-Facing Analytics (`ra-ui`)
+### Player-Facing Analytics (`ic-ui`)
 
-No other RTS surfaces your own match data this way. SQLite makes it trivial — queries run on a background thread, results drive a lightweight chart component in `ra-ui` (Bevy 2D: line, bar, pie, heatmap, stacked area).
+No other RTS surfaces your own match data this way. SQLite makes it trivial — queries run on a background thread, results drive a lightweight chart component in `ic-ui` (Bevy 2D: line, bar, pie, heatmap, stacked area).
 
 **Post-game stats screen** (after every match):
 - Unit production timeline (stacked area: units built per minute by type)
@@ -2038,9 +2132,9 @@ No other RTS surfaces your own match data this way. SQLite makes it trivial — 
 - `ic mod stats` CLI command reads the same SQLite database
 - All data: `SELECT ... FROM gameplay_events WHERE mod_id = ?`
 
-### LLM Personalization (`ra-llm`) — Optional, BYOLLM
+### LLM Personalization (`ic-llm`) — Optional, BYOLLM
 
-When a player has configured an LLM provider (see BYOLLM in D016), `ra-llm` reads the local SQLite database (read-only) and injects player context into generation prompts. This is entirely optional — every game feature works without it. No data leaves the device unless the user's chosen LLM provider is cloud-based.
+When a player has configured an LLM provider (see BYOLLM in D016), `ic-llm` reads the local SQLite database (read-only) and injects player context into generation prompts. This is entirely optional — every game feature works without it. No data leaves the device unless the user's chosen LLM provider is cloud-based.
 
 **Personalized mission generation:**
 - "You've been playing Soviet heavy armor for 12 games. Here's a mission that forces infantry-first tactics."
@@ -2066,9 +2160,9 @@ When a player has configured an LLM provider (see BYOLLM in D016), `ra-llm` read
 - Track frequent opponents from `matches` table: "You're 3-7 against PlayerX. They favor Allied air rushes — here's a counter-strategy mission."
 - Generate rivalry-themed campaign missions featuring opponent tendencies.
 
-### Adaptive AI (`ra-ai`)
+### Adaptive AI (`ic-ai`)
 
-`ra-ai` reads the player's match history to calibrate skirmish and campaign AI behavior. No learning during the match — all adaptation happens between games by querying SQLite.
+`ic-ai` reads the player's match history to calibrate skirmish and campaign AI behavior. No learning during the match — all adaptation happens between games by querying SQLite.
 
 - **Difficulty scaling:** AI selects from difficulty presets based on player win rate over recent N games. Avoids both stomps and frustration.
 - **Build order variety:** AI avoids repeating the same strategy the player has already beaten. Queries `gameplay_events` for AI build patterns the player countered successfully.
@@ -2077,7 +2171,7 @@ When a player has configured an LLM provider (see BYOLLM in D016), `ra-llm` read
 
 This is designer-authored adaptation (the AI author sets the rules for how history influences behavior), not machine learning. The SQLite queries are simple aggregates run at mission load time.
 
-**Fallback:** When no match history is available (first launch, empty database, WASM/headless builds without SQLite), `ra-ai` falls back to default difficulty presets and random strategy selection. All SQLite reads are behind an `Option<impl AiHistorySource>` — the AI is fully functional without it, just not personalized.
+**Fallback:** When no match history is available (first launch, empty database, WASM/headless builds without SQLite), `ic-ai` falls back to default difficulty presets and random strategy selection. All SQLite reads are behind an `Option<impl AiHistorySource>` — the AI is fully functional without it, just not personalized.
 
 ### Client-Side Schema (Key Tables)
 
@@ -2205,9 +2299,9 @@ Eden Editor (2016) evolved these principles: 3D placement, undo/redo, 154 pre-bu
 
 ### Architecture
 
-The scenario editor is a Bevy plugin in the `ra-editor` crate that reuses the game's rendering and simulation systems. It depends on `ra-render` (isometric viewport), `ra-sim` (preview playback), `ra-ui` (shared UI components like panels and attribute editors), and `ra-protocol` (order types for preview). It is NOT a separate process — it runs in the same Bevy `App` with additional editor-only systems and UI. The `ra-editor` crate is optional — headless sim, dedicated servers, and AI training builds exclude it entirely.
+The scenario editor is a Bevy plugin in the `ic-editor` crate that reuses the game's rendering and simulation systems. It depends on `ic-render` (isometric viewport), `ic-sim` (preview playback), `ic-ui` (shared UI components like panels and attribute editors), and `ic-protocol` (order types for preview). It is NOT a separate process — it runs in the same Bevy `App` with additional editor-only systems and UI. The `ic-editor` crate is optional — headless sim, dedicated servers, and AI training builds exclude it entirely.
 
-**Preview communication:** When the user hits "Preview," the editor serializes the current scenario to an in-memory map, spawns a `LocalNetwork` (from `ra-net`), and starts the sim. Editor-generated inputs (e.g., placing a debug unit mid-preview) are submitted as `PlayerOrder`s through `ra-protocol` — the sim never knows it's being driven by an editor. This reuses the same `GameLoop<LocalNetwork, InputSource>` path as single-player, ensuring preview behavior is identical to actual gameplay. Exiting preview restores the editor state from the pre-preview snapshot.
+**Preview communication:** When the user hits "Preview," the editor serializes the current scenario to an in-memory map, spawns a `LocalNetwork` (from `ic-net`), and starts the sim. Editor-generated inputs (e.g., placing a debug unit mid-preview) are submitted as `PlayerOrder`s through `ic-protocol` — the sim never knows it's being driven by an editor. This reuses the same `GameLoop<LocalNetwork, InputSource>` path as single-player, ensuring preview behavior is identical to actual gameplay. Exiting preview restores the editor state from the pre-preview snapshot.
 
 ```
 ┌─────────────────────────────────────────────────┐
@@ -2243,10 +2337,10 @@ The scenario editor is a Bevy plugin in the `ra-editor` crate that reuses the ga
 │  │  Graph · State · Intermissions · Dialogue │   │
 │  └──────────────────────────────────────────┘   │
 │                                                  │
-│  Crate: ra-editor                                │
-│  Uses:  ra-render (isometric view)               │
-│         ra-sim   (preview playback)              │
-│         ra-ui    (shared panels, attributes)     │
+│  Crate: ic-editor                                │
+│  Uses:  ic-render (isometric view)               │
+│         ic-sim   (preview playback)              │
+│         ic-ui    (shared panels, attributes)     │
 └─────────────────────────────────────────────────┘
 ```
 
@@ -2457,7 +2551,7 @@ OFP's trigger system adapted for RTS gameplay:
 | **Trigger Type**     | None / Victory / Defeat / Reveal Area / Spawn Wave / Play Audio / Weather Change / Reinforcements / Objective Update |
 | **On Activation**    | Advanced: Lua script                                                                                                 |
 | **On Deactivation**  | Advanced: Lua script (repeatable triggers only)                                                                      |
-| **Effects**          | Play music track / Play sound / Show message / Camera flash / Screen shake                                           |
+| **Effects**          | Play music / Play sound / Play video / Show message / Camera flash / Screen shake / Enter cinematic mode             |
 
 **RTS-specific trigger conditions:**
 
@@ -2483,34 +2577,41 @@ Modules are IC's equivalent of Eden Editor's 154 built-in modules — complex ga
 
 **Built-in module library (initial set):**
 
-| Category        | Module            | Parameters                                    | Logic                                                                                   |
-| --------------- | ----------------- | --------------------------------------------- | --------------------------------------------------------------------------------------- |
-| **Spawning**    | Wave Spawner      | waves[], interval, escalation, entry_points[] | Spawns enemy units in configurable waves                                                |
-| **Spawning**    | Reinforcements    | units[], entry_point, trigger, delay          | Sends units from map edge on trigger                                                    |
-| **Spawning**    | Probability Group | units[], probability 0–100%                   | Group exists only if random roll passes (visual wrapper around Probability of Presence) |
-| **AI Behavior** | Patrol Route      | waypoints[], alert_radius, response           | Units cycle waypoints, engage if threat detected                                        |
-| **AI Behavior** | Guard Position    | position, radius, priority                    | Units defend location; peel to attack nearby threats (OFP Guard/Guarded By pattern)     |
-| **AI Behavior** | Hunt and Destroy  | area, unit_types[], aggression                | AI actively searches for and engages enemies in area                                    |
-| **AI Behavior** | Harvest Zone      | area, harvesters, refinery                    | AI harvests resources in designated zone                                                |
-| **Objectives**  | Destroy Target    | target, description, optional                 | Player must destroy specific building/unit                                              |
-| **Objectives**  | Capture Building  | building, description, optional               | Player must engineer-capture building                                                   |
-| **Objectives**  | Defend Position   | area, duration, description                   | Player must keep faction presence in area for N ticks                                   |
-| **Objectives**  | Timed Objective   | target, time_limit, failure_consequence       | Objective with countdown timer                                                          |
-| **Objectives**  | Escort Convoy     | convoy_units[], route, description            | Protect moving units along a path                                                       |
-| **Events**      | Reveal Map Area   | area, trigger, delay                          | Removes shroud from an area                                                             |
-| **Events**      | Play Briefing     | text, audio_ref, portrait                     | Shows briefing panel with text and audio                                                |
-| **Events**      | Camera Pan        | from, to, duration, trigger                   | Cinematic camera movement on trigger                                                    |
-| **Events**      | Weather Change    | type, intensity, transition_time, trigger     | Changes weather on trigger activation                                                   |
-| **Events**      | Dialogue          | lines[], trigger                              | In-game dialogue sequence                                                               |
-| **Flow**        | Mission Timer     | duration, visible, warning_threshold          | Global countdown affecting mission end                                                  |
-| **Flow**        | Checkpoint        | trigger, save_state                           | Auto-save when trigger fires                                                            |
-| **Flow**        | Branch            | condition, true_path, false_path              | Campaign branching point (D021)                                                         |
-| **Flow**        | Difficulty Gate   | min_difficulty, entities[]                    | Entities only exist above threshold difficulty                                          |
-| **Effects**     | Explosion         | position, size, trigger                       | Cosmetic explosion on trigger                                                           |
-| **Effects**     | Sound Emitter     | sound_ref, trigger, loop                      | Play sound effect from position                                                         |
-| **Effects**     | Music Trigger     | track, trigger, fade_time                     | Change music track on trigger activation                                                |
-| **Multiplayer** | Spawn Point       | faction, position                             | Player starting location in MP scenarios                                                |
-| **Multiplayer** | Crate Drop        | position, trigger, contents                   | Random powerup/crate on trigger                                                         |
+| Category        | Module             | Parameters                                    | Logic                                                                                   |
+| --------------- | ------------------ | --------------------------------------------- | --------------------------------------------------------------------------------------- |
+| **Spawning**    | Wave Spawner       | waves[], interval, escalation, entry_points[] | Spawns enemy units in configurable waves                                                |
+| **Spawning**    | Reinforcements     | units[], entry_point, trigger, delay          | Sends units from map edge on trigger                                                    |
+| **Spawning**    | Probability Group  | units[], probability 0–100%                   | Group exists only if random roll passes (visual wrapper around Probability of Presence) |
+| **AI Behavior** | Patrol Route       | waypoints[], alert_radius, response           | Units cycle waypoints, engage if threat detected                                        |
+| **AI Behavior** | Guard Position     | position, radius, priority                    | Units defend location; peel to attack nearby threats (OFP Guard/Guarded By pattern)     |
+| **AI Behavior** | Hunt and Destroy   | area, unit_types[], aggression                | AI actively searches for and engages enemies in area                                    |
+| **AI Behavior** | Harvest Zone       | area, harvesters, refinery                    | AI harvests resources in designated zone                                                |
+| **Objectives**  | Destroy Target     | target, description, optional                 | Player must destroy specific building/unit                                              |
+| **Objectives**  | Capture Building   | building, description, optional               | Player must engineer-capture building                                                   |
+| **Objectives**  | Defend Position    | area, duration, description                   | Player must keep faction presence in area for N ticks                                   |
+| **Objectives**  | Timed Objective    | target, time_limit, failure_consequence       | Objective with countdown timer                                                          |
+| **Objectives**  | Escort Convoy      | convoy_units[], route, description            | Protect moving units along a path                                                       |
+| **Events**      | Reveal Map Area    | area, trigger, delay                          | Removes shroud from an area                                                             |
+| **Events**      | Play Briefing      | text, audio_ref, portrait                     | Shows briefing panel with text and audio                                                |
+| **Events**      | Camera Pan         | from, to, duration, trigger                   | Cinematic camera movement on trigger                                                    |
+| **Events**      | Weather Change     | type, intensity, transition_time, trigger     | Changes weather on trigger activation                                                   |
+| **Events**      | Dialogue           | lines[], trigger                              | In-game dialogue sequence                                                               |
+| **Flow**        | Mission Timer      | duration, visible, warning_threshold          | Global countdown affecting mission end                                                  |
+| **Flow**        | Checkpoint         | trigger, save_state                           | Auto-save when trigger fires                                                            |
+| **Flow**        | Branch             | condition, true_path, false_path              | Campaign branching point (D021)                                                         |
+| **Flow**        | Difficulty Gate    | min_difficulty, entities[]                    | Entities only exist above threshold difficulty                                          |
+| **Effects**     | Explosion          | position, size, trigger                       | Cosmetic explosion on trigger                                                           |
+| **Effects**     | Sound Emitter      | sound_ref, trigger, loop, 3d                  | Play sound effect — positional (3D) or global                                           |
+| **Effects**     | Music Trigger      | track, trigger, fade_time                     | Change music track on trigger activation                                                |
+| **Media**       | Video Playback     | video_ref, trigger, display_mode, skippable   | Play video — fullscreen, radar_comm, or picture_in_picture (see 04-MODDING.md)          |
+| **Media**       | Cinematic Sequence | steps[], trigger, skippable                   | Chain camera pans + dialogue + music + video + letterbox into a scripted sequence       |
+| **Media**       | Ambient Sound Zone | region, sound_ref, volume, falloff            | Looping positional audio tied to a named region (forest, river, factory hum)            |
+| **Media**       | Music Playlist     | tracks[], mode, trigger                       | Set active playlist — sequential, shuffle, or dynamic (combat/ambient/tension)          |
+| **Media**       | Radar Comm         | portrait, audio_ref, text, duration, trigger  | RA2-style comm overlay in radar panel — portrait + voice + subtitle (no video required) |
+| **Media**       | EVA Notification   | event_type, text, audio_ref, trigger          | Play EVA-style notification with audio + text banner                                    |
+| **Media**       | Letterbox Mode     | trigger, duration, enter_time, exit_time      | Toggle cinematic letterbox bars — hides HUD, enters cinematic aspect ratio              |
+| **Multiplayer** | Spawn Point        | faction, position                             | Player starting location in MP scenarios                                                |
+| **Multiplayer** | Crate Drop         | position, trigger, contents                   | Random powerup/crate on trigger                                                         |
 
 Modules connect to triggers and other entities via **visual connection lines** — same as OFP's synchronization system. A "Reinforcements" module connected to a trigger means the reinforcements arrive when the trigger fires. No scripting required.
 
@@ -2562,6 +2663,233 @@ Organizational folders for managing complex scenarios:
 - **Lock toggle** — prevent accidental edits to finalized layers
 - **Runtime show/hide** — Lua can show/hide entire layers at runtime: `Layer.activate("Phase2_Reinforcements")` / `Layer.deactivate(...)`. Activating a layer spawns all entities in it as a batch; deactivating despawns them. These are **sim operations** (deterministic, included in snapshots and replays), not editor operations — the Lua API name uses `Layer`, not `Editor`, to make the boundary clear. Internally, each entity has a `layer: Option<String>` field; activation toggles a per-layer `active` flag that the spawn system reads. Entities in inactive layers do not exist in the sim — they are serialized in the scenario file but not instantiated until activation. **Deactivation is destructive:** calling `Layer.deactivate()` despawns all entities in the layer — any runtime state (damage taken, position changes, veterancy gained) is lost. Re-activating the layer spawns fresh copies from the scenario template. This is intentional: layers model "reinforcement waves" and "phase transitions," not pausable unit groups. For scenarios that need to preserve unit state across activation cycles, use Lua variables or campaign state (D021) to snapshot and restore specific values
 
+### Media & Cinematics
+
+Original Red Alert's campaign identity was defined as much by its media as its gameplay — FMV briefings before missions, the radar panel switching to a video feed during gameplay, Hell March driving the combat tempo, EVA voice lines as constant tactical feedback. A campaign editor that can't orchestrate media is a campaign editor that can't recreate what made C&C campaigns feel like C&C campaigns.
+
+The modding layer (`04-MODDING.md`) defines the primitives: `video_playback` scene templates with display modes (`fullscreen`, `radar_comm`, `picture_in_picture`), `scripted_scene` templates, and the `Media` Lua global. The scenario editor surfaces all of these as **visual modules** — no Lua required for standard use, Lua available for advanced control.
+
+#### Video Playback
+
+The **Video Playback** module plays video files (`.vqa`, `.mp4`, `.webm`) at a designer-specified trigger point. Three display modes (from `04-MODDING.md`):
+
+| Display Mode         | Behavior                                                                          | Inspiration                     |
+| -------------------- | --------------------------------------------------------------------------------- | ------------------------------- |
+| `fullscreen`         | Pauses gameplay, fills screen, letterboxed. Classic FMV briefing.                 | RA1 mission briefings           |
+| `radar_comm`         | Video replaces the radar/minimap panel. Game continues. Sidebar stays functional. | RA2 EVA / commander video calls |
+| `picture_in_picture` | Small floating video overlay in a corner. Game continues. Dismissible.            | Modern RTS cinematics           |
+
+**Module properties in the editor:**
+
+| Property         | Type                  | Description                                                       |
+| ---------------- | --------------------- | ----------------------------------------------------------------- |
+| **Video**        | file picker           | Video file reference (from mission assets or Workshop dependency) |
+| **Display mode** | dropdown              | `fullscreen` / `radar_comm` / `picture_in_picture`                |
+| **Trigger**      | connection            | When to play — connected to a trigger, module, or "mission start" |
+| **Skippable**    | checkbox              | Whether the player can press Escape to skip                       |
+| **Subtitle**     | text (optional)       | Subtitle text shown during playback (accessibility)               |
+| **On Complete**  | connection (optional) | Trigger or module to activate when the video finishes             |
+
+**Radar Comm** deserves special emphasis — it's the feature that makes in-mission storytelling possible without interrupting gameplay. A commander calls in during a battle, their face appears in the radar panel, they deliver a line, and the radar returns. The designer connects a Video Playback (mode: `radar_comm`) to a trigger, and that's it. No scripting, no timeline editor, no separate cinematic tool.
+
+For missions without custom video, the **Radar Comm** module (separate from Video Playback) provides the same radar-panel takeover using a static portrait + audio + subtitle text — the RA2 communication experience without requiring video production.
+
+#### Cinematic Sequences
+
+Individual modules (Camera Pan, Video Playback, Dialogue, Music Trigger) handle single media events. A **Cinematic Sequence** chains them into a scripted multi-step sequence — the editor equivalent of a cutscene director.
+
+**Sequence step types:**
+
+| Step Type      | Parameters                                   | What It Does                                             |
+| -------------- | -------------------------------------------- | -------------------------------------------------------- |
+| `camera_pan`   | from, to, duration, easing                   | Smooth camera movement between positions                 |
+| `camera_shake` | intensity, duration                          | Screen shake (explosion, impact)                         |
+| `dialogue`     | speaker, portrait, text, audio_ref, duration | Character speech bubble / subtitle overlay               |
+| `play_video`   | video_ref, display_mode                      | Video playback (any display mode)                        |
+| `play_music`   | track, fade_in                               | Music change with crossfade                              |
+| `play_sound`   | sound_ref, position (optional)               | Sound effect — positional or global                      |
+| `wait`         | duration                                     | Pause between steps (in game ticks or seconds)           |
+| `spawn_units`  | units[], position, faction                   | Dramatic unit reveal (reinforcements arriving on-camera) |
+| `destroy`      | target                                       | Scripted destruction (building collapses, bridge blows)  |
+| `weather`      | type, intensity, transition_time             | Weather change synchronized with the sequence            |
+| `letterbox`    | enable/disable, transition_time              | Toggle cinematic letterbox bars                          |
+| `set_variable` | name, value                                  | Set a mission or campaign variable during the sequence   |
+| `lua`          | script                                       | Advanced: arbitrary Lua for anything not covered above   |
+
+**Cinematic Sequence module properties:**
+
+| Property        | Type                  | Description                                                   |
+| --------------- | --------------------- | ------------------------------------------------------------- |
+| **Steps**       | ordered list          | Sequence of steps (drag-to-reorder in the editor)             |
+| **Trigger**     | connection            | When to start the sequence                                    |
+| **Skippable**   | checkbox              | Whether the player can skip the entire sequence               |
+| **Pause sim**   | checkbox              | Whether gameplay pauses during the sequence (default: yes)    |
+| **Letterbox**   | checkbox              | Auto-enter letterbox mode when sequence starts (default: yes) |
+| **On Complete** | connection (optional) | What fires when the sequence finishes                         |
+
+**Visual editing:** Steps are shown as a vertical timeline in the module's expanded properties panel. Each step has a colored icon by type. Drag steps to reorder. Click a camera_pan step to see from/to positions highlighted on the map. Click "Preview from step" to test a subsequence without playing the whole thing.
+
+**Example — mission intro cinematic:**
+
+```
+Cinematic Sequence: "Mission 3 Intro"
+  Trigger: mission_start
+  Skippable: yes
+  Pause sim: yes
+
+  Steps:
+  1. [letterbox]   enable, 0.5s transition
+  2. [camera_pan]  from: player_base → to: enemy_fortress, 3s, ease_in_out
+  3. [dialogue]    Stavros: "The enemy has fortified the river crossing."
+  4. [play_sound]  artillery_distant.wav (global)
+  5. [camera_shake] intensity: 0.3, duration: 0.5s
+  6. [camera_pan]  to: bridge_crossing, 2s
+  7. [dialogue]    Tanya: "I see a weak point in their eastern wall."
+  8. [play_music]  "hell_march_v2", fade_in: 2s
+  9. [letterbox]   disable, 0.5s transition
+```
+
+This replaces what would be 40+ lines of Lua with a visual drag-and-drop sequence. The designer sees the whole flow, reorders steps, previews specific moments, and never touches code.
+
+#### Dynamic Music
+
+`ic-audio` supports dynamic music states (combat/ambient/tension) that respond to game state (see `13-PHILOSOPHY.md` — Klepacki's game-tempo philosophy). The editor exposes this through two mechanisms:
+
+**1. Music Trigger module** — simple track swap on trigger activation. Already in the module table. Good for scripted moments ("play Hell March when the tanks roll out").
+
+**2. Music Playlist module** — manages an active playlist with playback modes:
+
+| Mode         | Behavior                                                                                |
+| ------------ | --------------------------------------------------------------------------------------- |
+| `sequential` | Play tracks in order, loop                                                              |
+| `shuffle`    | Random order, no immediate repeats                                                      |
+| `dynamic`    | Engine selects track based on game state — `combat` / `ambient` / `tension` / `victory` |
+
+**Dynamic mode** is the key feature. The designer tags tracks by mood:
+
+```yaml
+music_playlist:
+  combat:
+    - hell_march
+    - grinder
+    - drill
+  ambient:
+    - fogger
+    - trenches
+    - mud
+  tension:
+    - radio_2
+    - face_the_enemy
+  victory:
+    - credits
+```
+
+The engine monitors game state (active combat, unit losses, base threat, objective progress) and crossfades between mood categories automatically. No triggers required — the music responds to what's happening. The designer curates the playlist; the engine handles transitions.
+
+**Crossfade control:** Music Trigger and Music Playlist modules both support `fade_time` — the duration of the crossfade between the current track and the new one. Default: 2 seconds. Set to 0 for a hard cut (dramatic moments).
+
+#### Ambient Sound Zones
+
+**Ambient Sound Zone** modules tie looping environmental audio to named regions. Walk units near a river — hear water. Move through a forest — hear birds and wind. Approach a factory — hear industrial machinery.
+
+| Property    | Type          | Description                                                           |
+| ----------- | ------------- | --------------------------------------------------------------------- |
+| **Region**  | region picker | Named region this sound zone covers                                   |
+| **Sound**   | file picker   | Looping audio file                                                    |
+| **Volume**  | slider 0–100% | Base volume at the center of the region                               |
+| **Falloff** | slider        | How quickly sound fades at region edges (sharp → gradual)             |
+| **Active**  | checkbox      | Whether the zone starts active (can be toggled by triggers/Lua)       |
+| **Layer**   | text          | Optional layer assignment — zone activates/deactivates with its layer |
+
+Ambient Sound Zones are **render-side only** (`ic-audio`) — they have zero sim impact and are not deterministic. They exist purely for atmosphere. The sound is spatialized: the camera's position determines what the player hears and at what volume.
+
+Multiple overlapping zones blend naturally. A bridge over a river in a forest plays water + birds + wind, with each source fading based on camera proximity to its region.
+
+#### EVA Notification System
+
+EVA voice lines are how C&C communicates game events to the player — "Construction complete," "Unit lost," "Enemy approaching." The editor exposes EVA as a module for custom notifications:
+
+| Property       | Type        | Description                                          |
+| -------------- | ----------- | ---------------------------------------------------- |
+| **Event type** | dropdown    | `custom` / `warning` / `info` / `critical`           |
+| **Text**       | text        | Notification text shown in the message area          |
+| **Audio**      | file picker | Voice line audio file                                |
+| **Trigger**    | connection  | When to fire the notification                        |
+| **Cooldown**   | slider      | Minimum time before this notification can fire again |
+| **Priority**   | dropdown    | `low` / `normal` / `high` / `critical`               |
+
+Priority determines queuing behavior — critical notifications interrupt lower-priority ones; low-priority notifications wait. This prevents EVA spam during intense battles while ensuring critical alerts always play.
+
+**Built-in EVA events** (game module provides defaults for standard events: unit lost, building destroyed, harvester under attack, insufficient funds, etc.). Custom EVA modules are for mission-specific notifications — "The bridge has been rigged with explosives," "Reinforcements are en route."
+
+#### Letterbox / Cinematic Mode
+
+The **Letterbox Mode** module toggles cinematic presentation:
+
+- **Letterbox bars** — black bars at top and bottom of screen, creating a widescreen aspect ratio
+- **HUD hidden** — sidebar, minimap, resource bar, unit selection all hidden
+- **Input restricted** — player cannot issue orders (optional — some sequences allow camera panning)
+- **Transition time** — bars slide in/out smoothly (configurable)
+
+Letterbox mode is automatically entered by Cinematic Sequences when `letterbox: true` (the default). It can also be triggered independently — a Letterbox Mode module connected to a trigger enters cinematic mode for dramatic moments without a full sequence (e.g., a dramatic camera pan to a nuclear explosion, then back to gameplay).
+
+#### Media in Campaigns
+
+All media modules work within the campaign editor's intermission system:
+
+- **Fullscreen video** before missions (briefing FMVs)
+- **Music Playlist** per campaign node (each mission can have its own playlist, or inherit from the campaign default)
+- **Dialogue with audio** in intermission screens — character portraits with voice-over
+- **Ambient sound** in intermission screens (command tent ambiance, war room hum)
+
+The campaign node properties (briefing, debriefing) support media references:
+
+| Property           | Type             | Description                                         |
+| ------------------ | ---------------- | --------------------------------------------------- |
+| **Briefing video** | file picker      | Optional FMV played before the mission (fullscreen) |
+| **Briefing audio** | file picker      | Voice-over for text briefing (if no video)          |
+| **Briefing music** | track picker     | Music playing during the briefing screen            |
+| **Debrief audio**  | file picker (×N) | Per-outcome voice-over for debrief screens          |
+| **Debrief video**  | file picker (×N) | Per-outcome FMV (optional)                          |
+
+This means a campaign creator can build the full original RA experience — FMV briefing → mission with in-game radar comms → debrief with per-outcome results — entirely through the visual editor.
+
+#### Lua Media API (Advanced)
+
+All media modules map to Lua functions for advanced scripting. The `Media` global (OpenRA-compatible, D024) provides the baseline; IC extensions add richer control:
+
+```lua
+-- OpenRA-compatible (work identically)
+Media.PlaySpeech("eva_building_captured")    -- EVA notification
+Media.PlaySound("explosion_large")           -- Sound effect
+Media.PlayMusic("hell_march")                -- Music track
+Media.DisplayMessage("Bridge destroyed!", "warning")  -- Text message
+
+-- IC extensions (additive)
+Media.PlayVideo("briefing_03.vqa", "fullscreen", { skippable = true })
+Media.PlayVideo("commander_call.mp4", "radar_comm")
+Media.PlayVideo("heli_arrives.webm", "picture_in_picture")
+
+Media.SetMusicPlaylist({ "hell_march", "grinder" }, "shuffle")
+Media.SetMusicMode("dynamic")    -- switch to dynamic mood-based selection
+Media.CrossfadeTo("fogger", 3.0) -- manual crossfade with duration
+
+Media.SetAmbientZone("forest_region", "birds_wind.ogg", { volume = 0.7 })
+Media.SetAmbientZone("river_region", "water_flow.ogg", { volume = 0.5 })
+
+-- Cinematic sequence from Lua (for procedural cutscenes)
+local seq = Media.CreateSequence({ skippable = true, pause_sim = true })
+seq:AddStep("letterbox", { enable = true, transition = 0.5 })
+seq:AddStep("camera_pan", { to = bridge_pos, duration = 3.0 })
+seq:AddStep("dialogue", { speaker = "Tanya", text = "I see them.", audio = "tanya_03.wav" })
+seq:AddStep("play_sound", { ref = "artillery.wav" })
+seq:AddStep("camera_shake", { intensity = 0.4, duration = 0.5 })
+seq:AddStep("letterbox", { enable = false, transition = 0.5 })
+seq:Play()
+```
+
+The visual modules and Lua API are interchangeable — a Cinematic Sequence created in the editor generates the same data as one built in Lua. Advanced users can start with the visual editor and extend with Lua; Lua-first users get the same capabilities without the GUI.
+
 ### Preview / Test
 
 - **Preview button** — starts the sim from current editor state. Play the mission, then return to editor. No compilation, no export, no separate process.
@@ -2594,6 +2922,13 @@ Inspired by OFP's Easy/Advanced toggle:
 | Inline Lua scripts on entities  | —           | ✓             |
 | External script files panel     | —           | ✓             |
 | Trigger folders & flow graph    | —           | ✓             |
+| Media modules (basic)           | ✓           | ✓             |
+| Video playback                  | ✓           | ✓             |
+| Music trigger / playlist        | ✓           | ✓             |
+| Cinematic sequences             | —           | ✓             |
+| Ambient sound zones             | —           | ✓             |
+| Letterbox / cinematic mode      | —           | ✓             |
+| Lua Media API                   | —           | ✓             |
 | Intermission screens            | —           | ✓             |
 | Dialogue editor                 | —           | ✓             |
 | Campaign state dashboard        | —           | ✓             |
@@ -3139,7 +3474,7 @@ The editor's "accessibility through layered complexity" principle applies to dis
 
 **Phase:** Colorblind modes, UI scaling, and keyboard navigation ship with Phase 6a. High contrast mode and motor accessibility refinements ship in Phase 6b–7.
 
-> **Note:** The accessibility features above cover the **editor** UI. **Game-level accessibility** — colorblind faction colors, minimap palettes, resource differentiation, screen reader support for menus, subtitle options for EVA/briefings, and remappable controls — is a separate concern that applies to `ra-render` and `ra-ui`, not `ra-editor`. Game accessibility ships in Phase 7 (see `08-ROADMAP.md`).
+> **Note:** The accessibility features above cover the **editor** UI. **Game-level accessibility** — colorblind faction colors, minimap palettes, resource differentiation, screen reader support for menus, subtitle options for EVA/briefings, and remappable controls — is a separate concern that applies to `ic-render` and `ic-ui`, not `ic-editor`. Game accessibility ships in Phase 7 (see `08-ROADMAP.md`).
 
 ### Alternatives Considered
 
@@ -3148,6 +3483,41 @@ The editor's "accessibility through layered complexity" principle applies to dis
 3. **Node-based visual scripting (like Unreal Blueprints):** Too complex for the casual audience. Modules + triggers cover the sweet spot. Advanced users write Lua directly. A node editor is a potential Phase 7+ community contribution.
 
 **Phase:** Core scenario editor (terrain + entities + triggers + waypoints + modules + compositions + preview + autosave + controller input + accessibility) ships in **Phase 6a** alongside the modding SDK and full Workshop. Campaign editor (graph, state dashboard, intermissions, dialogue, named characters), game mode templates, multiplayer/co-op scenario tools, and Game Master mode ship in **Phase 6b**. Editor onboarding ("Coming From" profiles, keybinding presets, migration cheat sheets, partial import) and touch input ship in **Phase 7**. The campaign editor's graph, state dashboard, and intermission screens build on D021's campaign system (Phase 4) — the sim-side campaign engine must exist before the visual editor can drive it.
+
+---
+
+## D039: Engine Scope — General-Purpose Classic RTS Platform
+
+**Decision:** Iron Curtain is a general-purpose classic RTS engine. It ships with built-in C&C game modules (Red Alert, Tiberian Dawn) as its primary content, but at the architectural level, the engine's design does not prevent building any classic RTS — from C&C to Age of Empires to StarCraft to Supreme Commander to original games.
+
+**The framing:** Built for C&C, open to anything. C&C games and the OpenRA community remain the primary audience, the roadmap, and the compatibility target. What changes is how we think about the underlying engine: nothing in the engine core should assume a specific resource model, base building model, camera system, or UI layout. These are all game module concerns.
+
+**What this means concretely:**
+1. **Red Alert and Tiberian Dawn are built-in mods** — they ship with the engine, like OpenRA bundles RA/TD/D2K. The engine launches into RA1 by default. Other game modules are selectable from a mod menu
+2. **Crate naming reflects engine identity** — engine crates use `ic-*` (Iron Curtain), not `ra-*`. The exception is `ra-formats` which genuinely reads C&C/Red Alert file formats. If someone builds an AoE game module, they'd write their own format reader
+3. **`GameModule` (D018) becomes the central abstraction** — the trait defines everything that differs between RTS games: resource model, building model, camera, pathfinding implementation, UI layout, tech progression, population model
+4. **OpenRA experience as a composable profile** — D019 (balance) + D032 (themes) + D033 (QoL) combine into "experience profiles." "OpenRA" is a profile: OpenRA balance values + Modern theme + OpenRA QoL conventions. "Classic RA" is another profile. Each is a valid interpretation of the same game module
+5. **The C&C variety IS the architectural stress test** — across the franchise (TD, RA1, TS, RA2, Generals, C&C3, RA3, C&C4, Renegade), C&C games already span harvester/supply/streaming/zero-resource economies, sidebar/dozer/crawler building, 2D/3D cameras, grid/navmesh pathing, FPS/RTS hybrids. If the engine supports every C&C game, it inherently supports most classic RTS patterns
+
+**What this does NOT mean:**
+- We don't dilute the C&C focus. RA1 is the default module, TD ships alongside it. The roadmap doesn't change
+- We don't build generic RTS features that no C&C game needs. Non-C&C capability is an architectural property, not a deliverable
+- We don't de-prioritize OpenRA community compatibility. D023–D027 are still critical
+- We don't build format readers for non-C&C games. That's community work on top of the engine
+
+**Why "any classic RTS" and not "strictly C&C":**
+- The C&C franchise already spans such diverse mechanics that supporting it fully means supporting most classic RTS patterns anyway
+- Artificial limitations on non-C&C use would require extra code to enforce — it's harder to close doors than to leave them open
+- A community member building "StarCraft in IC" exercises and validates the same `GameModule` API that a community member building "RA2 in IC" uses. Both make the engine more robust
+- Westwood's philosophy was engine-first: the same engine technology powered vastly different games. IC follows this spirit
+- Cancelled C&C games (Tiberium FPS, Generals 2, C&C Arena) and fan concepts exist in the space between "strictly C&C" and "any RTS" — the community should be free to explore them
+
+**Alternatives considered:**
+- C&C-only scope (rejected — artificially limits what the community can create, while the architecture already supports broader use)
+- "Any game" scope (rejected — too broad, dilutes C&C identity. Classic RTS is the right frame)
+- No scope declaration (rejected — ambiguity about what game modules are welcome leads to confusion)
+
+**Phase:** Baked into architecture from Phase 0 (via D018 and Invariant #9). This decision formalizes what D018 already implied and extends it.
 
 ---
 

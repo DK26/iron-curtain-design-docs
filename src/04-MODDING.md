@@ -149,7 +149,7 @@ struct UnitDef {
 }
 
 /// LLM-readable metadata for any game resource.
-/// Consumed by ra-llm (mission generation), ra-ai (skirmish AI),
+/// Consumed by ic-llm (mission generation), ic-ai (skirmish AI),
 /// and workshop search (semantic matching).
 #[derive(Deserialize, Serialize)]
 struct LlmMeta {
@@ -282,12 +282,15 @@ Iron Curtain's Lua API is a **strict superset** of OpenRA's 16 global objects. A
 
 **IC-exclusive extensions (additive, no conflicts):**
 
-| Global     | Purpose                         |
-| ---------- | ------------------------------- |
-| `Campaign` | Branching campaign state (D021) |
-| `Weather`  | Dynamic weather control (D022)  |
-| `Workshop` | Mod metadata queries            |
-| `LLM`      | LLM integration hooks (Phase 7) |
+| Global     | Purpose                           |
+| ---------- | --------------------------------- |
+| `Campaign` | Branching campaign state (D021)   |
+| `Weather`  | Dynamic weather control (D022)    |
+| `Layer`    | Runtime layer activation/deaction |
+| `Region`   | Named region queries              |
+| `Var`      | Mission/campaign variable access  |
+| `Workshop` | Mod metadata queries              |
+| `LLM`      | LLM integration hooks (Phase 7)   |
 
 Each actor reference exposes properties matching its components (`.Health`, `.Location`, `.Owner`, `.Move()`, `.Attack()`, `.Stop()`, `.Guard()`, `.Deploy()`, etc.) — identical to OpenRA's actor property groups.
 
@@ -716,7 +719,7 @@ The LLM can use this in generated missions: a briefing video at mission start (`
 
 **`weather` scene template:**
 
-Weather effects are GPU particle systems rendered by `ra-render`, with optional gameplay modifiers applied by `ra-sim`.
+Weather effects are GPU particle systems rendered by `ic-render`, with optional gameplay modifiers applied by `ic-sim`.
 
 | Type        | Visual Effect                                                    | Optional Sim Effect (if `sim_effects: true`)                   |
 | ----------- | ---------------------------------------------------------------- | -------------------------------------------------------------- |
@@ -728,8 +731,8 @@ Weather effects are GPU particle systems rendered by `ra-render`, with optional 
 | `storm`     | Rain + lightning flashes + screen shake + thunder audio          | Same as rain + random lightning strikes (cosmetic or damaging) |
 
 **Key design principle:** Weather is split into two layers:
-- **Render layer** (`ra-render`): Always active. GPU particles, shaders, post-FX, ambient audio changes. Pure cosmetic, zero sim impact. Particle density scales with `RenderSettings` for lower-end devices.
-- **Sim layer** (`ra-sim`): Optional, controlled by `sim_effects` parameter. When enabled, weather modifies visibility ranges, movement speeds, and damage — deterministically, so multiplayer stays in sync. When disabled, weather is purely cosmetic eye candy.
+- **Render layer** (`ic-render`): Always active. GPU particles, shaders, post-FX, ambient audio changes. Pure cosmetic, zero sim impact. Particle density scales with `RenderSettings` for lower-end devices.
+- **Sim layer** (`ic-sim`): Optional, controlled by `sim_effects` parameter. When enabled, weather modifies visibility ranges, movement speeds, and damage — deterministically, so multiplayer stays in sync. When disabled, weather is purely cosmetic eye candy.
 
 Weather can be set per-map (in map YAML), triggered mid-mission by Lua scripts, or composed via the `weather` scene template. An LLM generating a "blizzard defense" mission sets `type: blizzard, sim_effects: true` and gets both the visual atmosphere and the gameplay tension.
 
@@ -739,7 +742,7 @@ The base weather system above covers static, per-mission weather. The **dynamic 
 
 #### Weather State Machine
 
-Weather transitions are modeled as a state machine running inside `ra-sim`. The machine is deterministic — same schedule + same tick = identical weather on every client.
+Weather transitions are modeled as a state machine running inside `ic-sim`. The machine is deterministic — same schedule + same tick = identical weather on every client.
 
 ```
      ┌──────────┐      ┌───────────┐      ┌──────────┐
@@ -772,7 +775,7 @@ Weather transitions are modeled as a state machine running inside `ra-sim`. The 
 Each weather type has an **intensity** (fixed-point `0..1024`) that ramps up during transitions and down during clearing. The sim tracks this as a `WeatherState` resource:
 
 ```rust
-/// ra-sim: deterministic weather state
+/// ic-sim: deterministic weather state
 pub struct WeatherState {
     pub current: WeatherType,
     pub intensity: FixedPoint,       // 0 = clear, 1024 = full
@@ -877,7 +880,7 @@ print(w.surface.snow_depth)  -- per-map average
 When `sim_effects` is enabled, the sim maintains a per-cell `TerrainSurfaceGrid` — a compact grid tracking how weather has physically altered the terrain. This is **deterministic** and affects gameplay.
 
 ```rust
-/// ra-sim: per-cell surface condition
+/// ic-sim: per-cell surface condition
 pub struct SurfaceCondition {
     pub snow_depth: FixedPoint,   // 0 = bare ground, 1024 = deep snow
     pub wetness: FixedPoint,      // 0 = dry, 1024 = waterlogged
@@ -918,7 +921,7 @@ These modifiers stack with the weather-type modifiers from the base weather tabl
 
 #### Terrain Texture Effects (Render Layer)
 
-`ra-render` reads the sim's `TerrainSurfaceGrid` and blends terrain visuals accordingly. This is **purely cosmetic** — it has no effect on the sim and runs at whatever quality the device supports.
+`ic-render` reads the sim's `TerrainSurfaceGrid` and blends terrain visuals accordingly. This is **purely cosmetic** — it has no effect on the sim and runs at whatever quality the device supports.
 
 Three rendering strategies, selectable via `RenderSettings`:
 
@@ -1555,11 +1558,11 @@ adaptive:
       enemy_count_multiplier: 1.3
 ```
 
-This is not AI-adaptive difficulty (that's D016/`ra-llm`). This is **designer-authored conditional logic** expressed in YAML — the campaign reacts to the player's cumulative performance without any LLM involvement.
+This is not AI-adaptive difficulty (that's D016/`ic-llm`). This is **designer-authored conditional logic** expressed in YAML — the campaign reacts to the player's cumulative performance without any LLM involvement.
 
 ### LLM Campaign Generation
 
-The LLM (`ra-llm`) can generate entire campaign graphs, not just individual missions:
+The LLM (`ic-llm`) can generate entire campaign graphs, not just individual missions:
 
 ```
 User: "Create a 5-mission Soviet campaign where you invade Alaska.
@@ -1806,7 +1809,7 @@ llm:
 
 ### LLM-Driven Resource Discovery (D030)
 
-The `ra-llm` crate can search the Workshop programmatically and incorporate discovered resources into generated content:
+The `ic-llm` crate can search the Workshop programmatically and incorporate discovered resources into generated content:
 
 **Discovery pipeline:**
 
@@ -2025,7 +2028,7 @@ pub struct ResourcePackage {
 }
 
 /// LLM-readable metadata for workshop resources.
-/// Enables intelligent browsing, selection, and composition by ra-llm.
+/// Enables intelligent browsing, selection, and composition by ic-llm.
 pub struct LlmResourceMeta {
     pub summary: String,              // one-line: "A 4-player desert skirmish map with limited ore"
     pub purpose: String,              // when/why to use this: "Best for competitive 2v2 with scarce resources"
@@ -2277,8 +2280,8 @@ The `llm:` metadata block bridges this gap. It gives LLMs the strategic and tact
 
 | Consumer                          | How It Uses `llm:` Metadata                                                                                                                                                      |
 | --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **`ra-llm` (mission generation)** | Selects appropriate units for scenarios. "A hard mission" → picks units with `role: siege` and high counters. "A stealth mission" → picks units with `role: scout, infiltrator`. |
-| **`ra-ai` (skirmish AI)**         | Reads `counters`/`countered_by` for build decisions. Knows to build anti-air when enemy has `role: air`. Reads `tactical_notes` for positioning hints.                           |
+| **`ic-llm` (mission generation)** | Selects appropriate units for scenarios. "A hard mission" → picks units with `role: siege` and high counters. "A stealth mission" → picks units with `role: scout, infiltrator`. |
+| **`ic-ai` (skirmish AI)**         | Reads `counters`/`countered_by` for build decisions. Knows to build anti-air when enemy has `role: air`. Reads `tactical_notes` for positioning hints.                           |
 | **Workshop search**               | Semantic search: "a map for beginners" matches `difficulty: beginner-friendly`. "Something for a tank rush" matches `gameplay_tags: ["open_terrain", "abundant_resources"]`.     |
 | **Future in-game AI advisor**     | "What should I build?" → reads enemy composition's `countered_by`, suggests units with matching `role`.                                                                          |
 | **Mod compatibility analysis**    | Detects when a mod changes a unit's `role` or `counters` in ways that affect balance.                                                                                            |

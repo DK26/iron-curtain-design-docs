@@ -265,7 +265,7 @@ pub fn via_heuristic(chunk: &TerrainChunk, lossy_compression: bool) -> Self {
 }
 ```
 
-**Iron Curtain relevance:** IC's replay files and save games (`Serialize`/`Deserialize` on all `ra-sim` types) would benefit from similar multi-layer compression: fast LZ4 for real-time network traffic, higher-ratio Deflate for on-disk replays. The threshold-based heuristic (compress only if > 32 bytes) avoids compression overhead on small messages like player orders.
+**Iron Curtain relevance:** IC's replay files and save games (`Serialize`/`Deserialize` on all `ic-sim` types) would benefit from similar multi-layer compression: fast LZ4 for real-time network traffic, higher-ratio Deflate for on-disk replays. The threshold-based heuristic (compress only if > 32 bytes) avoids compression overhead on small messages like player orders.
 
 ---
 
@@ -421,7 +421,7 @@ Each visual/audio effect has a `predictability` tag. The `prediction_input` syst
 - Enemy's gunshot: `NEVER` predicted → waits for server confirmation
 - Explosion from client's grenade: `ONLY_BY` → predicted only for the thrower
 
-**Iron Curtain relevance:** IC's lockstep means all clients see the same state simultaneously, so prediction filtering isn't needed for gameplay. But for audio/visual effects in the render layer (`ra-render`, `ra-audio`), this pattern enables:
+**Iron Curtain relevance:** IC's lockstep means all clients see the same state simultaneously, so prediction filtering isn't needed for gameplay. But for audio/visual effects in the render layer (`ic-render`, `ic-audio`), this pattern enables:
 - Playing weapon fire sounds immediately on input for the local player (before the next tick confirms it)
 - Deferring effects that depend on combat resolution (hit/miss)
 - Speculative UI feedback (build queue click → immediate visual response, confirmation next tick)
@@ -527,7 +527,7 @@ When a client detects desync, it can request a full arena resync. The server rat
 
 From Hypersomnia's bug database: a desync was caused by a shared RNG being used for both gameplay movement pathfinding and decorative particle systems. The fix: separate RNG instances for deterministic and cosmetic systems.
 
-**Iron Curtain relevance:** This validates IC's design of keeping simulation (`ra-sim`) completely separate from rendering (`ra-render`). Any RNG in `ra-sim` must be deterministic and serialized; `ra-render` can use its own non-deterministic RNG for particles, UI animations, etc.
+**Iron Curtain relevance:** This validates IC's design of keeping simulation (`ic-sim`) completely separate from rendering (`ic-render`). Any RNG in `ic-sim` must be deterministic and serialized; `ic-render` can use its own non-deterministic RNG for particles, UI animations, etc.
 
 ---
 
@@ -567,7 +567,7 @@ struct sync_functions: action_functions {
 };
 ```
 
-This hierarchy enforces a critical invariant: `state_functions` has NO networking awareness. `action_functions` only knows about action parsing. Only `sync_functions` deals with network synchronization. This clean layering exactly maps to IC's `ra-sim` → `ra-protocol` → `ra-net` boundary.
+This hierarchy enforces a critical invariant: `state_functions` has NO networking awareness. `action_functions` only knows about action parsing. Only `sync_functions` deals with network synchronization. This clean layering exactly maps to IC's `ic-sim` → `ic-protocol` → `ic-net` boundary.
 
 ### Sync State
 
@@ -1110,7 +1110,7 @@ class IEngineAntibot {
 
 The antibot system is a dynamically-loaded module with a stable ABI (`ANTIBOT_ABI_VERSION`). The engine feeds behavioral events through these hooks; the module's logic is closed-source to prevent circumvention.
 
-**Iron Curtain relevance:** IC has decided against kernel-level anti-cheat (AGENTS.md security model), favoring architectural defenses. DDNet's approach offers a middle ground: an **optional behavioral analysis plugin** loaded at the relay server. The hooks (`OnDirectInput`, `OnCharacterTick`) map to IC's concept of "relay-side behavioral analysis (APM patterns, reaction times, input entropy)." The key insight: define the hook interface in `ra-protocol` or the relay crate, let the implementation be swappable.
+**Iron Curtain relevance:** IC has decided against kernel-level anti-cheat (AGENTS.md security model), favoring architectural defenses. DDNet's approach offers a middle ground: an **optional behavioral analysis plugin** loaded at the relay server. The hooks (`OnDirectInput`, `OnCharacterTick`) map to IC's concept of "relay-side behavioral analysis (APM patterns, reaction times, input entropy)." The key insight: define the hook interface in `ic-protocol` or the relay crate, let the implementation be swappable.
 
 ---
 
@@ -1181,7 +1181,7 @@ Define an `IAntibot` trait in IC's relay server with hooks for: `on_player_input
 
 ### 6. Separate RNG for Cosmetic Systems (from Hypersomnia)
 
-Hypersomnia's desync bug (shared RNG between sim and particles) validates IC's `ra-sim`/`ra-render` separation. Ensure `ra-sim`'s RNG is never read by `ra-render`. Any "random" visual effect (particle spread, idle animations) must use its own RNG seeded independently.
+Hypersomnia's desync bug (shared RNG between sim and particles) validates IC's `ic-sim`/`ic-render` separation. Ensure `ic-sim`'s RNG is never read by `ic-render`. Any "random" visual effect (particle spread, idle animations) must use its own RNG seeded independently.
 
 ### 7. Input Timing Feedback (from DDraceNetwork)
 

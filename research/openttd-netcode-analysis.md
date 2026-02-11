@@ -589,7 +589,7 @@ Commands marked `CommandFlag::Offline` (like `CmdMoneyCheat`) are only executabl
 
 Every command runs twice: first as a test-run (no side effects), then as execution (applied to game state). This is designed to catch insufficient funds, invalid placement, etc. before committing. A critical invariant is that the test-run must not modify game state — violations cause desyncs (OpenTTD's desync cause #4).
 
-**Iron Curtain relevance:** IC's order validation inside `ra-sim` (D012) follows the same principle. OpenTTD's command flag system (`Server`, `Spectator`, `Offline`, `ClientID` replacement) maps well to IC's relay server validation. The command type classification for pause behavior is worth adopting for IC's lobby/in-game settings. The test-then-execute pattern validates IC's own plan for deterministic validation — critically, IC must ensure `validate_order()` is a pure function with no side effects.
+**Iron Curtain relevance:** IC's order validation inside `ic-sim` (D012) follows the same principle. OpenTTD's command flag system (`Server`, `Spectator`, `Offline`, `ClientID` replacement) maps well to IC's relay server validation. The command type classification for pause behavior is worth adopting for IC's lobby/in-game settings. The test-then-execute pattern validates IC's own plan for deterministic validation — critically, IC must ensure `validate_order()` is a pure function with no side effects.
 
 ---
 
@@ -985,7 +985,7 @@ The same save/load system is used for network map transfer — when a client joi
 1. **Version-gated fields** — IC should plan for this from the start. Every serialized field should include a version tag so future IC versions can load older saves.
 2. **Chunk-based format** — Maps naturally to ECS: each component type is a "chunk." This allows IC to add new component types without breaking old save files.
 3. **Pointer fixup** — IC's ECS entities are already index-based (Bevy `Entity` is essentially a generational index), so this is simpler for IC than for OpenTTD's raw pointer model.
-4. **Network reuse** — Using the same snapshot format for both saves and network joins eliminates a whole class of bugs. IC should ensure `Serialize`/`Deserialize` on `ra-sim` types serves both purposes.
+4. **Network reuse** — Using the same snapshot format for both saves and network joins eliminates a whole class of bugs. IC should ensure `Serialize`/`Deserialize` on `ic-sim` types serves both purposes.
 
 ---
 
@@ -1078,7 +1078,7 @@ OpenTTD uses **Blake2b** hashing for file integrity validation, particularly for
 
 ### 1. Multi-Level Debug Infrastructure (Priority: High)
 
-Implement OpenTTD-style debug levels for `ra-sim`:
+Implement OpenTTD-style debug levels for `ic-sim`:
 - **Level 0:** No debug overhead (production)
 - **Level 1:** Log all orders to a structured file (equivalent to `commands-out.log`)
 - **Level 2:** Run cache/derived-state validation every tick
@@ -1114,7 +1114,7 @@ Adopt OpenTTD's `dmp_cmds_XXXXXXXX_YYYYYYYY.sav` naming convention (seed + date)
 
 ### 7. Version-Gated Snapshot Fields (Priority: Low, but plan early)
 
-Design IC's `Serialize`/`Deserialize` implementations with version-gated fields from the start. Every serialized component should carry a version tag so that IC v2 can load IC v1 saves. This is much harder to retrofit than to include from the beginning. Consider a `#[since(version = N)]` attribute macro for `ra-sim` components.
+Design IC's `Serialize`/`Deserialize` implementations with version-gated fields from the start. Every serialized component should carry a version tag so that IC v2 can load IC v1 saves. This is much harder to retrofit than to include from the beginning. Consider a `#[since(version = N)]` attribute macro for `ic-sim` components.
 
 ### 8. Command Test-Run Purity Enforcement (Priority: High)
 

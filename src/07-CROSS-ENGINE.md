@@ -144,7 +144,7 @@ let game = GameLoop::new(sim, renderer, adapted);
 
 Costs almost nothing today, enables everything later:
 
-1. **`OrderCodec` trait** in `ra-protocol` — orders are wire-format-agnostic from day one
+1. **`OrderCodec` trait** in `ic-protocol` — orders are wire-format-agnostic from day one
 2. **`CoordTransform`** in `ra-formats` — coordinate systems are explicit, not implicit
 3. **`Simulation::snapshot()`/`restore()`/`apply_correction()`** — sim is correctable from outside
 4. **`ProtocolAdapter` slot** in `NetworkModel` trait — network layer is wrappable

@@ -364,7 +364,7 @@ A typical 2012 laptop has an **Intel HD 4000** (Ivy Bridge). This GPU supports O
 
 ### Render Quality Tiers
 
-`ra-render` queries device capabilities at startup via wgpu's adapter limits and selects a render tier stored in the `RenderSettings` resource. All tiers produce an identical, playable game — they differ only in visual richness.
+`ic-render` queries device capabilities at startup via wgpu's adapter limits and selects a render tier stored in the `RenderSettings` resource. All tiers produce an identical, playable game — they differ only in visual richness.
 
 | Tier | Name         | Target Hardware                              | GPU Particles | Post-FX       | Weather Visuals       | Dynamic Lighting          | Texture Limits |
 | ---- | ------------ | -------------------------------------------- | ------------- | ------------- | --------------------- | ------------------------- | -------------- |
@@ -376,7 +376,7 @@ A typical 2012 laptop has an **Intel HD 4000** (Ivy Bridge). This GPU supports O
 **Tier selection is automatic but overridable.** Detected at startup from `wgpu::Adapter::limits()` and `wgpu::Adapter::features()`. Players can force a lower tier in settings. Mods can ship tier-specific assets.
 
 ```rust
-/// ra-render: runtime render configuration
+/// ic-render: runtime render configuration
 pub struct RenderSettings {
     pub tier: RenderTier,           // Auto-detected or user-forced
     pub fps_cap: u32,               // 30, 60, 144, 240, uncapped

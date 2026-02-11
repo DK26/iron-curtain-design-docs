@@ -218,7 +218,7 @@ These principles focus on how Westwood approached game design specifically — t
 
 Klepacki didn't receive a brief that said "write military rock." He was given *freedom to explore* — thrash metal, electronic, ambient, "even rollerskate music." The result was one of the most distinctive game soundtracks ever made. By Red Alert, there was "a feeling of honing in on style, so it was more refined from that point forward." Style emerged from experimentation, not from a spec.
 
-**IC Application:** Audio design (Phase 3, `ra-audio`) should follow the same pattern. Start broad, experiment with how different audio styles feel against the gameplay, then refine. The modding tier system (D003/D004/D005) extends this philosophy to the community — modders should be able to experiment with every aspect of the game, not just units and balance.
+**IC Application:** Audio design (Phase 3, `ic-audio`) should follow the same pattern. Start broad, experiment with how different audio styles feel against the gameplay, then refine. The modding tier system (D003/D004/D005) extends this philosophy to the community — modders should be able to experiment with every aspect of the game, not just units and balance.
 
 ### Write Good Work First, Adapt It Later
 
@@ -276,7 +276,7 @@ This is the strongest statement on team culture from any Westwood developer. Tec
 
 Westwood didn't treat each game as an isolated project. They built a shared code library across Dune 2, Kyrandia, and Eye of the Beholder — three completely different genres (RTS, adventure, RPG) running on shared infrastructure. This is remarkably forward-thinking for the early 1990s.
 
-**IC Application:** IC's engine-first architecture (D018) is the direct descendant of this approach. The engine core is game-agnostic. RA1 is the first game module, but TD, RA2, and original games share the same engine. The crate structure (`ra-sim`, `ra-render`, `ra-net`, etc.) is the modern equivalent of the Westwood Library.
+**IC Application:** IC's engine-first architecture (D018, D039) is the direct descendant of this approach. The engine core is game-agnostic. RA1 and TD ship as built-in game modules; RA2 and original games are future community goals on the same engine. The crate structure (`ic-sim`, `ic-render`, `ic-net`, etc.) is the modern equivalent of the Westwood Library.
 
 ### Scope Kills — Know When You've Bitten Off Too Much
 
@@ -316,7 +316,7 @@ The principle goes beyond input latency. It's about *perceived acknowledgment*. 
 
 Castle tied this directly to the context-sensitive cursor design. The cursor itself is feedback: hovering over an enemy shows an attack cursor, hovering over terrain shows a move cursor. The player sees the game's understanding of their intent *before* they click. This pre-click feedback reduces errors and makes the interface feel intelligent.
 
-**IC Application:** The `InputSource` trait (Invariant #10) and `ra-ui` cursor system must implement immediate visual and audio feedback for all player actions. During Phase 3 (Game Chrome), feedback responsiveness should be a review criterion as important as functional correctness. Unit voice acknowledgment, cursor changes, and build queue feedback are not polish — they're core UX.
+**IC Application:** The `InputSource` trait (Invariant #10) and `ic-ui` cursor system must implement immediate visual and audio feedback for all player actions. During Phase 3 (Game Chrome), feedback responsiveness should be a review criterion as important as functional correctness. Unit voice acknowledgment, cursor changes, and build queue feedback are not polish — they're core UX.
 
 ### Visual Clarity and Readability
 
@@ -324,7 +324,7 @@ Castle described a concrete design test: you should be able to look at a screens
 
 The principle drove specific decisions: strong faction color coding, distinctive unit silhouettes at combat zoom levels, clear resource field visuals, and health bar readability. Aesthetic appeal was secondary to gameplay readability. A beautiful screenshot that requires study to parse has failed the test.
 
-**IC Application:** This is a render-side principle with sim-side implications. The `Renderable` trait implementations in `ra-render` must prioritize readability across all quality tiers — even the lowest LOD/GPU fallback path must produce readable gameplay. Modding guidelines should include silhouette and color-contrast requirements for custom unit sprites. D032 (UI themes) must preserve readability regardless of aesthetic choices.
+**IC Application:** This is a render-side principle with sim-side implications. The `Renderable` trait implementations in `ic-render` must prioritize readability across all quality tiers — even the lowest LOD/GPU fallback path must produce readable gameplay. Modding guidelines should include silhouette and color-contrast requirements for custom unit sprites. D032 (UI themes) must preserve readability regardless of aesthetic choices.
 
 ### The Context-Sensitive Cursor and Sidebar Philosophy
 
@@ -374,7 +374,7 @@ The checklist for "juice":
 - **Weight:** Do heavy units *feel* heavy? Do light units feel fast and nimble?
 - **Screen communication:** Does the camera communicate force? (Subtle shake on heavy impacts, flash on detonations)
 
-**IC Application:** All "juice" lives in `ra-render` and `ra-audio`, never in `ra-sim`. The sim tracks what happened (unit destroyed, building collapsed, debris spawned). The render and audio systems make it *feel good*. Game-feel parameters (explosion intensity, shake magnitude, debris count) should be YAML-configurable so modders can tune the feel without code changes.
+**IC Application:** All "juice" lives in `ic-render` and `ic-audio`, never in `ic-sim`. The sim tracks what happened (unit destroyed, building collapsed, debris spawned). The render and audio systems make it *feel good*. Game-feel parameters (explosion intensity, shake magnitude, debris count) should be YAML-configurable so modders can tune the feel without code changes.
 
 ### Audio as Gameplay Driver
 
@@ -382,7 +382,7 @@ Klepacki's philosophy extended beyond "write good music" to a gameplay-coupling 
 
 This extends to unit responses: each unit's voice should reflect its personality and role. A Commando's bravado communicates "use me aggressively." A Rifle Infantry's professional acknowledgment communicates "I'm expendable but reliable." Audio is characterization and tactical information, not decoration.
 
-**IC Application:** `ra-audio` should support dynamic music states (combat/build-up/tension/victory) that transition based on game state. Unit voice design is a modding concern (YAML-defined per unit type), but the engine must support the infrastructure: voice priority queuing, distance-based culling that never culls critical acknowledgment sounds, and multiple voice line pools per unit type for variety.
+**IC Application:** `ic-audio` should support dynamic music states (combat/build-up/tension/victory) that transition based on game state. Unit voice design is a modding concern (YAML-defined per unit type), but the engine must support the infrastructure: voice priority queuing, distance-based culling that never culls critical acknowledgment sounds, and multiple voice line pools per unit type for variety.
 
 ### The Damage Matrix — Counter-Play by Design
 
@@ -419,7 +419,7 @@ The original C&C engine uses integer arithmetic exclusively for game logic. No f
 
 **Evidence:** The GPL source code confirms integer math throughout. Coordinates, damage calculations, movement — all integer. The Remastered Collection preserved this, running the original integer sim as a DLL called from the C# client.
 
-**IC Application:** D009 (fixed-point math, no floats in sim). This is the same decision for the same reason, 30 years later. Our `i32`/`i64` fixed-point math in `ra-sim` directly follows what Westwood proved works.
+**IC Application:** D009 (fixed-point math, no floats in sim). This is the same decision for the same reason, 30 years later. Our `i32`/`i64` fixed-point math in `ic-sim` directly follows what Westwood proved works.
 
 ### OutList / DoList Order Pattern
 
@@ -431,7 +431,7 @@ This cleanly separates "what the player wants" from "what the simulation does." 
 
 **Evidence:** Clearly visible in the EA source code. The Generals/Zero Hour codebase evolved this into a more sophisticated version with adaptive run-ahead and frame readiness states.
 
-**IC Application:** Our `PlayerOrder → TickOrders → apply_tick()` pipeline is the same pattern with different names. `ra-protocol` defines the order types, `ra-net` handles the OutList ↔ DoList exchange, `ra-sim` only sees the equivalent of DoList. The crate boundary (`ra-sim` never imports `ra-net`) enforces what Westwood achieved through discipline.
+**IC Application:** Our `PlayerOrder → TickOrders → apply_tick()` pipeline is the same pattern with different names. `ic-protocol` defines the order types, `ic-net` handles the OutList ↔ DoList exchange, `ic-sim` only sees the equivalent of DoList. The crate boundary (`ic-sim` never imports `ic-net`) enforces what Westwood achieved through discipline.
 
 ### Layered Architecture That Survives Decades
 
@@ -481,7 +481,7 @@ Bostic identified the root cause of Westwood's decline: EA's corporate pressure 
 
 Westwood's dependence on the Dune license almost constrained the RTS genre into a single IP. It was the *loss* of that license that forced C&C's creation.
 
-**IC Lesson:** IC is engine-first, not game-first. D018 (multi-game extensibility) means RA1 is the first game module, not the only one. The engine doesn't depend on any single IP. If RA1 were somehow made impossible, the engine would still work for TD, RA2, or entirely original games. No single dependency should be existential.
+**IC Lesson:** IC is engine-first, not game-first. D018 (multi-game extensibility) and D039 (engine scope) mean RA1 and TD ship as built-in game modules, with the engine open to any classic RTS. The engine doesn't depend on any single IP. If RA1 were somehow made impossible, the engine would still work for TD, RA2, or entirely original games. No single dependency should be existential.
 
 ### The Recompilation Barrier
 

@@ -1,13 +1,13 @@
 # ⚡ Iron Curtain
 
 
-### A modern, open-source Command & Conquer engine built in Rust.
+### A modern, open-source RTS engine built in Rust — starting with Command & Conquer.
 
-*Red Alert first. The rest of the C&C family to follow.*
+*Red Alert first. Tiberian Dawn alongside it. The rest of the C&C family to follow.*
 
 ---
 
-Iron Curtain is an open-source RTS engine for Command & Conquer games — starting with Red Alert, with Tiberian Dawn, Red Alert 2, Tiberian Sun, and original games as future game modules on the same engine. Not a port of OpenRA and not a remaster — a clean-sheet engine built in Rust on top of Bevy, designed to load existing OpenRA mods, maps, and assets while targeting performance, modding power, and platform reach that neither OpenRA nor the Remastered Collection can offer.
+Iron Curtain is an open-source RTS engine built for the C&C community but designed to power any classic RTS. Starting with Red Alert and Tiberian Dawn as built-in game modules, with Red Alert 2, Tiberian Sun, and community-created games as future modules on the same engine. Not a port of OpenRA and not a remaster — a clean-sheet engine built in Rust on top of Bevy, designed to load existing OpenRA mods, maps, and assets while targeting performance, modding power, and platform reach that neither OpenRA nor the Remastered Collection can offer.
 
 The engine core is game-agnostic. Pathfinding, spatial queries, rendering, and format loading are all behind pluggable traits — each game module provides its own implementations while sharing the simulation core, networking, modding infrastructure, workshop, competitive systems, replays, and save games.
 
@@ -77,9 +77,9 @@ No C# required. No recompilation. WASM mods will run at near-native speed in a s
 
 **Bevy-powered.** Modern ECS architecture with automatic system scheduling, parallel queries, asset hot-reloading, and a massive ecosystem of plugins.
 
-**Multi-game engine.** The engine core is game-agnostic. Red Alert is the first game module; Tiberian Dawn, RA2, Tiberian Sun, and original games are future modules on the same engine via a `GameModule` trait. Pathfinding (`Pathfinder` trait), spatial queries (`SpatialIndex` trait), rendering (`Renderable` trait), and camera (`ScreenToWorld` trait) are all pluggable — the architecture deliberately avoids closing doors on any C&C title, including 3D games like Generals.
+**Multi-game engine.** The engine core is game-agnostic. Red Alert is the default game module; Tiberian Dawn ships alongside it. RA2, Tiberian Sun, and community-created games are future modules on the same engine via a `GameModule` trait. Pathfinding (`Pathfinder` trait), spatial queries (`SpatialIndex` trait), rendering (`Renderable` trait), and camera (`ScreenToWorld` trait) are all pluggable — the architecture deliberately avoids closing doors on any classic RTS, including 3D games like Generals.
 
-**Every crate designed to be useful standalone.** `ra-formats` will parse C&C file formats. `ra-protocol` will define the order system. `ra-sim` will run headless for AI training or automated testing. Use what you need.
+**Every crate designed to be useful standalone.** `ra-formats` will parse C&C file formats. `ic-protocol` will define the order system. `ic-sim` will run headless for AI training or automated testing. Use what you need.
 
 ## Comparison (Design Targets vs. Existing Options)
 
@@ -183,10 +183,10 @@ These are **modding possibilities enabled by the engine's architecture**, not de
 
 ```
 ┌──────────────────────────────────────────────────────────────────────┐
-│                       Iron Curtain (ra-game)                         │
+│                       Iron Curtain (ic-game)                         │
 │                                                                      │
 │  ┌──────────┐  ┌──────────┐  ┌───────────┐  ┌──────────┐             │
-│  │ra-formats│  │ ra-sim   │  │ra-protocol│  │  ra-net  │             │
+│  │ra-formats│  │  ic-sim  │  │ic-protocol│  │  ic-net  │             │
 │  │          │  │          │  │           │  │          │             │
 │  │.mix .shp │  │Determin- │  │PlayerOrder│  │Pluggable │             │
 │  │.pal YAML │  │istic ECS │  │Timestamped│  │NetworkMod│             │
@@ -195,7 +195,7 @@ These are **modding possibilities enabled by the engine's architecture**, not de
 │  └──────────┘  └──────────┘  └───────────┘  │Rollback  │             │
 │                                             └──────────┘             │
 │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐              │
-│  │ra-render │  │  ra-ui   │  │ ra-audio │  │ra-script │              │
+│  │ic-render │  │  ic-ui   │  │ ic-audio │  │ic-script │              │
 │  │          │  │          │  │          │  │          │              │
 │  │Bevy 2D   │  │Sidebar   │  │.aud play │  │Lua+WASM  │              │
 │  │Isometric │  │Minimap   │  │EVA, music│  │Sandboxed │              │
@@ -203,13 +203,13 @@ These are **modding possibilities enabled by the engine's architecture**, not de
 │  │PostFX    │  │          │  │          │  │          │              │
 │  └──────────┘  └──────────┘  └──────────┘  └──────────┘              │
 │                                                                      │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐                              │
-│  │  ra-ai   │  │  ra-llm  │  │ra-editor │                              │
-│  │          │  │          │  │          │                              │
-│  │Skirmish  │  │Mission   │  │Scenario  │                              │
-│  │Campaign  │  │Generate  │  │Campaign  │                              │
-│  │Scripted  │  │Adaptive  │  │GameMaster│                              │
-│  └──────────┘  └──────────┘  └──────────┘                              │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐                            │
+│  │  ic-ai   │  │  ic-llm  │  │ic-editor │                            │
+│  │          │  │          │  │          │                            │
+│  │Skirmish  │  │Mission   │  │Scenario  │                            │
+│  │Campaign  │  │Generate  │  │Campaign  │                            │
+│  │Scripted  │  │Adaptive  │  │GameMaster│                            │
+│  └──────────┘  └──────────┘  └──────────┘                            │
 │                                                                      │
 │  ┌──────────────────────────────────────────────────────────────────┐│
 │  │                  Bevy Engine (ECS + wgpu)                        ││
@@ -218,7 +218,7 @@ These are **modding possibilities enabled by the engine's architecture**, not de
 └──────────────────────────────────────────────────────────────────────┘
 ```
 
-**Key architectural property:** `ra-sim` and `ra-net` never import from each other. They communicate only through `ra-protocol`, the shared boundary. The simulation is pure — it takes orders, produces state. It has no idea whether it's running single-player, networked, in a browser, headless for testing, or feeding an AI trainer.
+**Key architectural property:** `ic-sim` and `ic-net` never import from each other. They communicate only through `ic-protocol`, the shared boundary. The simulation is pure — it takes orders, produces state. It has no idea whether it's running single-player, networked, in a browser, headless for testing, or feeding an AI trainer.
 
 ## Resource Compatibility (Design Goal)
 
@@ -276,7 +276,7 @@ See the [design documents](https://dk26.github.io/iron-curtain-design-docs/) for
 | [06-SECURITY](https://dk26.github.io/iron-curtain-design-docs/06-SECURITY.html)               | Threat model and mitigations                          |
 | [07-CROSS-ENGINE](https://dk26.github.io/iron-curtain-design-docs/07-CROSS-ENGINE.html)       | OpenRA interop strategy                               |
 | [08-ROADMAP](https://dk26.github.io/iron-curtain-design-docs/08-ROADMAP.html)                 | 36-month development plan                             |
-| [09-DECISIONS](https://dk26.github.io/iron-curtain-design-docs/09-DECISIONS.html)             | Decision log with rationale (33 decisions)            |
+| [09-DECISIONS](https://dk26.github.io/iron-curtain-design-docs/09-DECISIONS.html)             | Decision log with rationale (39 decisions)            |
 | [10-PERFORMANCE](https://dk26.github.io/iron-curtain-design-docs/10-PERFORMANCE.html)         | Efficiency-first performance philosophy               |
 | [11-OPENRA-FEATURES](https://dk26.github.io/iron-curtain-design-docs/11-OPENRA-FEATURES.html) | OpenRA feature catalog and gap analysis               |
 | [12-MOD-MIGRATION](https://dk26.github.io/iron-curtain-design-docs/12-MOD-MIGRATION.html)     | Mod migration case studies                            |

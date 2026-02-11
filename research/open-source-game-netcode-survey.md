@@ -63,7 +63,7 @@ After analyzing ~10 open-source game codebases, several cross-cutting patterns e
 | Pattern                     | Applicable?         | Notes                                                                                                                                                                                     |
 | --------------------------- | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Block-level sync debugger   | **Yes, high value** | IC's per-tick hash detects *that* a desync occurred; Spring's block debugger finds *where*. Consider a `SyncDebugger` component that can request specific ECS component state from peers. |
-| Synced/unsynced code guards | **Yes, medium**     | IC relies on crate boundaries (`ra-sim` vs `ra-render`). Consider adding runtime `#[synced]` / `#[unsynced]` system attributes in Bevy for extra safety.                                  |
+| Synced/unsynced code guards | **Yes, medium**     | IC relies on crate boundaries (`ic-sim` vs `ic-render`). Consider adding runtime `#[synced]` / `#[unsynced]` system attributes in Bevy for extra safety.                                  |
 | Democracy vs dictatorship   | **Low priority**    | IC's relay server is the natural authority. Could be useful for P2P fallback mode.                                                                                                        |
 | Network test mode           | **Yes**             | IC has `NetworkSimConfig` but Spring's corruption injection is more thorough.                                                                                                             |
 
@@ -296,7 +296,7 @@ enum predictability_info { ALWAYS, NEVER, ONLY_BY(entity_id) };
 | ------------------------------- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
 | Dual arena architecture         | **Yes, for Rollback mode** | IC's `RollbackNetwork` should maintain two `Simulation` instances. The GGRS integration in Bones/Jumpy does this via `World::clone()`.     |
 | Three-tier predictability       | **Yes, high value**        | IC should classify every system/effect as `ALWAYS`/`NEVER`/`ONLY_BY(owner)` predictable. Critical for clean rollback.                      |
-| Separate RNG for cosmetics      | **Yes, critical**          | IC must split `ra-sim` RNG from `ra-render` RNG. Cosmetic effects (particles, sound timing) must NOT consume simulation RNG.               |
+| Separate RNG for cosmetics      | **Yes, critical**          | IC must split `ic-sim` RNG from `ic-render` RNG. Cosmetic effects (particles, sound timing) must NOT consume simulation RNG.               |
 | Interpolation preservation      | **Yes**                    | IC must save/restore visual interpolation state during rollback to avoid jarring snaps.                                                    |
 | `confirm_local_character_death` | **Medium**                 | In an RTS context, this translates to "don't play unit death animation until server confirms." Reduces visual glitches from misprediction. |
 
@@ -514,13 +514,13 @@ This prevents embarrassing mispredictions (e.g., predicting an enemy unit death 
 
 **Found in:** Hypersomnia (documented bug + fix)
 
-IC must ensure that `ra-render` effects (particle spread, sound variation, animation jitter) use a separate RNG stream from `ra-sim`'s deterministic RNG. If they share an RNG, rollback resimulation will produce different cosmetic effects, causing visual glitches even when the simulation is correct.
+IC must ensure that `ic-render` effects (particle spread, sound variation, animation jitter) use a separate RNG stream from `ic-sim`'s deterministic RNG. If they share an RNG, rollback resimulation will produce different cosmetic effects, causing visual glitches even when the simulation is correct.
 
 ```rust
-// In ra-sim
+// In ic-sim
 pub struct SimRng(/* deterministic LCG */);
 
-// In ra-render (NOT synced, NOT rolled back)
+// In ic-render (NOT synced, NOT rolled back)
 pub struct CosmeticRng(/* any fast RNG */);
 ```
 
@@ -559,7 +559,7 @@ Build a development-only debug overlay showing:
 
 **Found in:** Bones/GGRS (`socket.increment_match_id()`)
 
-When a match restarts on the same connection (rematch), stale in-flight messages from the previous match can corrupt the new session. IC's `ra-protocol` should include a `match_id: u32` in every message, incremented on rematch. The relay server and clients should silently drop messages with stale `match_id`.
+When a match restarts on the same connection (rematch), stale in-flight messages from the previous match can corrupt the new session. IC's `ic-protocol` should include a `match_id: u32` in every message, incremented on rematch. The relay server and clients should silently drop messages with stale `match_id`.
 
 ---
 

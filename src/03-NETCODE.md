@@ -14,7 +14,7 @@ Key influences:
 
 ## The Protocol
 
-All protocol types live in the `ra-protocol` crate — the ONLY shared dependency between sim and net:
+All protocol types live in the `ic-protocol` crate — the ONLY shared dependency between sim and net:
 
 ```rust
 #[derive(Clone, Serialize, Deserialize, Hash)]
@@ -38,7 +38,7 @@ pub struct TimestampedOrder {
 // NOTE: sub_tick_time is an integer (microseconds offset from tick start).
 // At 15 ticks/sec the tick window is ~66,667µs — u32 is more than sufficient.
 // Integer ordering avoids any platform-dependent float comparison behavior
-// and keeps ra-protocol free of floating-point types entirely.
+// and keeps ic-protocol free of floating-point types entirely.
 
 pub struct TickOrders {
     pub tick: u64,
@@ -319,7 +319,7 @@ The relay server sends keepalive messages to the reconnecting client during down
 The render layer provides **instant visual feedback** on player input, before the order is confirmed by the network:
 
 ```rust
-// ra-render: immediate visual response to click
+// ic-render: immediate visual response to click
 fn on_move_order_issued(click_pos: WorldPos, selected_units: &[Entity]) {
     // Show move marker immediately
     spawn_move_marker(click_pos);
@@ -589,7 +589,7 @@ Player browses public game listings, picks one, client connects directly to the 
 A tracking server (also called master server) lets players discover and publish games. It is NOT a relay — no game data flows through it. It's a directory.
 
 ```rust
-/// Tracking server API — implemented by ra-net, consumed by ra-ui
+/// Tracking server API — implemented by ic-net, consumed by ic-ui
 pub trait TrackingServer: Send + Sync {
     /// Host publishes their game to the directory
     fn publish(&self, listing: &GameListing) -> Result<ListingId>;
@@ -798,7 +798,7 @@ The relay server is the heavier service (per-game session state, UDP forwarding)
 
 ### Backend Language
 
-The tracking and relay servers are standalone Rust binaries (not Bevy — no ECS needed). They share `ra-protocol` for order serialization. The relay server implements the relay-side of `RelayLockstepNetwork`. Both are simple enough to be developed in Phase 5 alongside the multiplayer client code.
+The tracking and relay servers are standalone Rust binaries (not Bevy — no ECS needed). They share `ic-protocol` for order serialization. The relay server implements the relay-side of `RelayLockstepNetwork`. Both are simple enough to be developed in Phase 5 alongside the multiplayer client code.
 
 ### Failure Modes
 

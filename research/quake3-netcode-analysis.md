@@ -835,7 +835,7 @@ DDraceNetwork and other analyzed games use simpler timestamp-based sync. Q3's mu
 
 3. **Static Huffman coding layer.** Profile real IC network/replay data to build an optimal byte frequency table. Apply Huffman coding on top of delta-encoded data. Use separate frequency tables for different data streams (orders vs. snapshots vs. desync dumps).
 
-4. **Packet delay simulation (`cl_packetdelay` / `sv_packetdelay` equivalent).** Essential for testing lockstep behavior under simulated latency. Implement in `ra-net` as a configurable delay queue in the `NetworkModel` trait implementations.
+4. **Packet delay simulation (`cl_packetdelay` / `sv_packetdelay` equivalent).** Essential for testing lockstep behavior under simulated latency. Implement in `ic-net` as a configurable delay queue in the `NetworkModel` trait implementations.
 
 ### Medium Priority
 
@@ -843,7 +843,7 @@ DDraceNetwork and other analyzed games use simpler timestamp-based sync. Q3's mu
 
 6. **Dual-cursor sorted merge for entity diffing.** Use for desync debugging — when two clients produce different state hashes, sort their entity lists by ID and walk them with the dual-cursor algorithm to identify exactly which entities differ and in which fields.
 
-7. **Lagometer-style network diagnostic.** Build a real-time visual display for lockstep health: tick timing, order receive timing, latency to each player, hash match confirmations. Render as an overlay widget in `ra-ui`.
+7. **Lagometer-style network diagnostic.** Build a real-time visual display for lockstep health: tick timing, order receive timing, latency to each player, hash match confirmations. Render as an overlay widget in `ic-ui`.
 
 8. **Checksum chain for mod file validation.** When connecting to a multiplayer game, exchange PK3/YAML file checksums with a random per-session feed XOR'd into the chain. Prevents clients from running modified rule files in ranked games.
 

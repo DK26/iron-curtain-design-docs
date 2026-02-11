@@ -18,7 +18,7 @@
 | Rendering   | `bevy_render` + `wgpu` | Custom isometric sprite passes; 3D pipeline available to modders |
 | ECS         | `bevy_ecs`             | Archetypes, system scheduling, change detection                  |
 | Asset I/O   | `bevy_asset`           | Hot-reloading, platform-agnostic (WASM/mobile-safe)              |
-| Audio       | `bevy_audio`           | Platform-routed; `ra-audio` wraps for .aud/.ogg/EVA              |
+| Audio       | `bevy_audio`           | Platform-routed; `ic-audio` wraps for .aud/.ogg/EVA              |
 | Dev tools   | `egui` via `bevy_egui` | Immediate-mode debug overlays                                    |
 | Scripting   | `mlua` (Bevy resource) | Lua embedding, integrated as non-send resource                   |
 | Mod runtime | `wasmtime` / `wasmer`  | WASM sandboxed execution (Bevy system, not Bevy plugin)          |
@@ -274,7 +274,7 @@ The engine must not create obstacles for any platform. Desktop is the primary de
 
 1. **Input is abstracted behind a trait.** `InputSource` produces `PlayerOrder`s — it knows nothing about mice, keyboards, touchscreens, or gamepads. The game loop consumes orders, not raw input events. Each platform provides its own `InputSource` implementation.
 
-2. **UI layout is responsive.** No hardcoded pixel positions. The sidebar, minimap, and build queue use constraint-based layout that adapts to screen size and aspect ratio. Mobile/tablet may use a completely different layout (bottom bar instead of sidebar). `ra-ui` provides layout *profiles*, not a single fixed layout.
+2. **UI layout is responsive.** No hardcoded pixel positions. The sidebar, minimap, and build queue use constraint-based layout that adapts to screen size and aspect ratio. Mobile/tablet may use a completely different layout (bottom bar instead of sidebar). `ic-ui` provides layout *profiles*, not a single fixed layout.
 
 3. **Click-to-world is abstracted behind a trait.** Isometric screen→world (desktop), touch→world (mobile), and raycast→world (3D mod) all implement the same `ScreenToWorld` trait, producing a `WorldPos`. Grid-based game modules convert to `CellPos` as needed. No isometric math or grid assumption hardcoded in the game loop.
 
@@ -327,7 +327,7 @@ pub enum ScreenClass {
 }
 ```
 
-`ra-ui` reads `InputCapabilities` to choose the appropriate layout profile. The sim never sees any of this.
+`ic-ui` reads `InputCapabilities` to choose the appropriate layout profile. The sim never sees any of this.
 
 ## UI Theme System (D032)
 
@@ -404,27 +404,28 @@ See `09-DECISIONS.md` § D033 for the full toggle catalog, YAML schema, and sim/
 ## Crate Dependency Graph
 
 ```
-ra-protocol  (shared types: PlayerOrder, TimestampedOrder)
+ic-protocol  (shared types: PlayerOrder, TimestampedOrder)
     ↑
-    ├── ra-sim      (depends on: ra-protocol, ra-formats)
-    ├── ra-net      (depends on: ra-protocol)
+    ├── ic-sim      (depends on: ic-protocol, ra-formats)
+    ├── ic-net      (depends on: ic-protocol)
     ├── ra-formats  (standalone — .mix, .shp, .pal, YAML)
-    ├── ra-render   (depends on: ra-sim for reading state)
-    ├── ra-ui       (depends on: ra-sim, ra-render; reads SQLite for player analytics — D034)
-    ├── ra-audio    (depends on: ra-formats)
-    ├── ra-script   (depends on: ra-sim, ra-protocol)
-    ├── ra-ai       (depends on: ra-sim, ra-protocol; reads SQLite for adaptive difficulty — D034)
-    ├── ra-llm      (depends on: ra-sim, ra-script, ra-protocol; reads SQLite for personalization — D034)
-    └── ra-game     (depends on: everything above)
+    ├── ic-render   (depends on: ic-sim for reading state)
+    ├── ic-ui       (depends on: ic-sim, ic-render; reads SQLite for player analytics — D034)
+    ├── ic-audio    (depends on: ra-formats)
+    ├── ic-script   (depends on: ic-sim, ic-protocol)
+    ├── ic-ai       (depends on: ic-sim, ic-protocol; reads SQLite for adaptive difficulty — D034)
+    ├── ic-llm      (depends on: ic-sim, ic-script, ic-protocol; reads SQLite for personalization — D034)
+    ├── ic-editor   (depends on: ic-render, ic-sim, ic-ui, ic-protocol; optional — D038)
+    └── ic-game     (depends on: everything above)
 ```
 
-**Critical boundary:** `ra-sim` never imports from `ra-net`. `ra-net` never imports from `ra-sim`. They only share `ra-protocol`.
+**Critical boundary:** `ic-sim` never imports from `ic-net`. `ic-net` never imports from `ic-sim`. They only share `ic-protocol`.
 
-**Storage boundary:** `ra-sim` never reads or writes SQLite (invariant #1). Three crates are read-only consumers of the client-side SQLite database: `ra-ui` (post-game stats, career page, campaign dashboard), `ra-llm` (personalized missions, adaptive briefings, coaching), `ra-ai` (difficulty scaling, counter-strategy selection). Gameplay events are written by a Bevy observer system in `ra-game`, outside the deterministic sim. See D034 in `09-DECISIONS.md`.
+**Storage boundary:** `ic-sim` never reads or writes SQLite (invariant #1). Three crates are read-only consumers of the client-side SQLite database: `ic-ui` (post-game stats, career page, campaign dashboard), `ic-llm` (personalized missions, adaptive briefings, coaching), `ic-ai` (difficulty scaling, counter-strategy selection). Gameplay events are written by a Bevy observer system in `ic-game`, outside the deterministic sim. See D034 in `09-DECISIONS.md`.
 
 ## Multi-Game Extensibility (Game Modules)
 
-The engine is designed as a **game-agnostic RTS framework** with Red Alert as the first game module. The same engine should be able to run RA2, Tiberian Dawn, Dune 2000, or an original game as a different game module — like OpenRA runs TD, RA, and D2K on one engine.
+The engine is designed as a **game-agnostic RTS framework** (D039) that ships with Red Alert (default) and Tiberian Dawn as built-in game modules. The same engine can run RA2, Dune 2000, or an original game as additional game modules — like OpenRA runs TD, RA, and D2K on one engine.
 
 ### Game Module Concept
 
@@ -568,7 +569,7 @@ This is a **Tier 3 (WASM) mod** — it replaces a rendering backend, which is to
 
 ### Design Rules for Multi-Game Safety
 
-1. **No game-specific enums in engine core.** Don't put `enum ResourceType { Ore, Gems }` in `ra-sim`. Resource types come from YAML rules / game module registration.
+1. **No game-specific enums in engine core.** Don't put `enum ResourceType { Ore, Gems }` in `ic-sim`. Resource types come from YAML rules / game module registration.
 2. **Position is always 3D.** `WorldPos` carries Z. RA1 sets it to 0. The cost is one extra `i32` per position — negligible. `CellPos` is a grid-game-module convenience type, not an engine-core requirement.
 3. **Pathfinding and spatial queries are behind traits.** `Pathfinder` and `SpatialIndex` — like `NetworkModel`. Grid implementations are the default; the engine core never calls grid-specific functions directly.
 4. **System pipeline is data, not code.** The game module returns its system list; the engine executes it. No hardcoded `harvester_system()` call in engine core.

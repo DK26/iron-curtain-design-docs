@@ -30,7 +30,7 @@ Phase 0 (Foundation)
 - Extensive tests against known-good OpenRA data
 
 ### Key Architecture Work
-- Define `PlayerOrder` enum in `ra-protocol` crate
+- Define `PlayerOrder` enum in `ic-protocol` crate
 - Define `OrderCodec` trait (for future cross-engine compatibility)
 - Define `CoordTransform` (coordinate system translation)
 - Study OpenRA architecture: Game loop, World/Actor/Trait hierarchy, OrderManager, mod manifest system
@@ -66,7 +66,7 @@ Open source `ra-formats` early. Useful standalone, builds credibility and commun
 - Optional visual showcase: basic post-processing (bloom, color grading) and shader prototypes (chrono-shift shimmer, tesla coil glow) to demonstrate modding possibilities
 
 ### Key Architecture Work
-- Bevy plugin structure: `ra-render` as a Bevy plugin reading from sim state
+- Bevy plugin structure: `ic-render` as a Bevy plugin reading from sim state
 - Interpolation between sim ticks for smooth animation at arbitrary FPS
 - HD asset pipeline: support high-res sprites alongside classic 8-bit assets
 
@@ -86,7 +86,7 @@ Open source `ra-formats` early. Useful standalone, builds credibility and commun
 > **Gap acknowledgment:** The ECS component model currently documents ~9 core components (Health, Mobile, Attackable, Armament, Building, Buildable, Harvester, Selectable, LlmMeta). The gap analysis in `11-OPENRA-FEATURES.md` identifies **~30+ additional gameplay systems** that are prerequisites for a playable Red Alert: power, building placement, transport, capture, stealth/cloak, infantry sub-cells, crates, mines, crush, guard/patrol, deploy/transform, garrison, production queue, veterancy, docking, radar, GPS, chronoshift, iron curtain, paratroopers, naval, bridge, tunnels, and more. These systems need design and implementation during Phase 2. The gap count is a feature of honest planning, not a sign of incompleteness — the `11-OPENRA-FEATURES.md` priority assessment (P0/P1/P2/P3) provides the triage order.
 
 ### Deliverables
-- ECS-based simulation layer (`ra-sim`)
+- ECS-based simulation layer (`ic-sim`)
 - Components mirroring OpenRA traits: Mobile, Health, Attackable, Armament, Building, Buildable, Harvester
 - **Canonical enum names matching OpenRA (D027):** Locomotor (`Foot`, `Wheeled`, `Tracked`, `Float`, `Fly`), Armor (`None`, `Light`, `Medium`, `Heavy`, `Wood`, `Concrete`), Target types, Damage states, Stances
 - **Condition system (D028):** `Conditions` component, `GrantConditionOn*` YAML traits, `requires:`/`disabled_by:` on any component field
@@ -101,7 +101,7 @@ Open source `ra-formats` early. Useful standalone, builds credibility and commun
 - Sim snapshot/restore for save games and future rollback
 
 ### Key Architecture Work
-- **Sim/network boundary enforced:** `ra-sim` has zero imports from `ra-net`
+- **Sim/network boundary enforced:** `ic-sim` has zero imports from `ic-net`
 - **`NetworkModel` trait defined and proven** with at least `LocalNetwork` implementation
 - **System execution order documented and fixed**
 - **State hashing for desync detection**
@@ -148,7 +148,7 @@ Units moving, shooting, dying — headless sim + rendered. Record replay file. P
 - Feels like Red Alert to someone who's played it before
 
 **Stretch goals (target Phase 3, can slip to early Phase 4 without blocking):**
-- **Chart component in `ra-ui`:** Lightweight Bevy 2D chart renderer (line, bar, pie, heatmap, stacked area) for post-game and career screens
+- **Chart component in `ic-ui`:** Lightweight Bevy 2D chart renderer (line, bar, pie, heatmap, stacked area) for post-game and career screens
 - **Post-game stats screen (D034):** Unit production timeline, resource curves, combat heatmap, APM graph, head-to-head comparison — all from SQLite `gameplay_events`
 - **Career stats page (D034):** Win rate by faction/map/opponent, rating history graph, session history with replay links — from SQLite `matches` + `match_players`
 - **Achievement infrastructure (D036):** SQLite achievement tables, engine-defined campaign/exploration achievements, Lua trigger API for mod-defined achievements, Steam achievement sync for Steam builds
@@ -171,7 +171,7 @@ Units moving, shooting, dying — headless sim + rendered. Record replay file. P
 - **Campaign select and mission map UI:** visualize campaign graph, show current position, replay completed missions
 - **Adaptive difficulty via campaign state:** designer-authored conditional bonuses/penalties based on cumulative performance
 - **Campaign dashboard (D034):** Roster composition graphs per mission, veterancy progression for named units, campaign path visualization, performance trends — from SQLite `campaign_missions` + `roster_snapshots`
-- **`ra-ai` reads player history (D034):** Skirmish AI queries SQLite `matches` + `gameplay_events` for difficulty scaling, build order variety, and counter-strategy selection between games
+- **`ic-ai` reads player history (D034):** Skirmish AI queries SQLite `matches` + `gameplay_events` for difficulty scaling, build order variety, and counter-strategy selection between games
 - **FMV cutscene playback** between missions (original `.vqa` briefings and victory/defeat sequences)
 - **Full Allied and Soviet campaigns** for Red Alert, playable start to finish
 
@@ -313,7 +313,7 @@ Units moving, shooting, dying — headless sim + rendered. Record replay file. P
 
 All LLM features require the player to configure their own LLM provider. The game is fully functional without one.
 
-- `ra-llm` crate: optional LLM integration for mission generation
+- `ic-llm` crate: optional LLM integration for mission generation
 - In-game mission generator UI: describe scenario → playable mission
 - Generated output: standard YAML map + Lua trigger scripts + briefing text
 - Difficulty scaling: same scenario at different challenge levels
@@ -321,7 +321,7 @@ All LLM features require the player to configure their own LLM provider. The gam
 - Campaign generation: connected multi-mission storylines (experimental)
 - Adaptive difficulty: AI observes playstyle, generates targeted challenges (experimental)
 - **LLM-driven Workshop resource discovery (D030):** When LLM provider is configured, LLM can search Workshop by `llm_meta` tags, evaluate fitness, auto-pull resources as dependencies for generated content; license-aware filtering
-- **LLM player-aware generation (D034):** When LLM provider is configured, `ra-llm` reads local SQLite for player context — faction preferences, unit usage patterns, win/loss streaks, campaign roster state; generates personalized missions, adaptive briefings, post-match commentary, coaching suggestions, rivalry narratives
+- **LLM player-aware generation (D034):** When LLM provider is configured, `ic-llm` reads local SQLite for player context — faction preferences, unit usage patterns, win/loss streaks, campaign roster state; generates personalized missions, adaptive briefings, post-match commentary, coaching suggestions, rivalry narratives
 - **AI training data pipeline (D031):** gameplay event stream → OTEL collector → Parquet/Arrow columnar format → ML training; build order learning, engagement patterns, balance analysis from aggregated match telemetry
 
 ### Deliverables — Visual Modding Infrastructure (Bevy Rendering)

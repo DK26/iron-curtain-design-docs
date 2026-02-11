@@ -90,7 +90,7 @@ Also includes subdirectories: `Air/`, `Attack/`, `BotModules/`, `Conditions/`, `
 | `ArcLaserZap`  | 5KB    | Curved laser visual                   |
 | Others (8)     | Varies | RadBeam, TeslaZapCA, KKNDLaser, etc.  |
 
-Custom projectiles are primarily **render code** — visual effects for weapon impacts. In IC, these map to shader effects and particle systems in `ra-render`, not simulation code.
+Custom projectiles are primarily **render code** — visual effects for weapon impacts. In IC, these map to shader effects and particle systems in `ic-render`, not simulation code.
 
 #### Custom Activities (24 files in `Activities/`)
 
@@ -129,9 +129,9 @@ In IC, activities map to ECS system behaviors, triggered by conditions or orders
 | **Custom traits → YAML conditions** | Low          | Deploy mechanics, upgrade toggles, transform states map to IC's condition system (D028)                                           |
 | **Custom traits → WASM**            | Significant  | ~20 truly novel traits need WASM rewrite: Berserkable, Warpable, KeepsDistance, Attachable system, custom ability targeting       |
 | **Custom warheads**                 | Low          | Many become built-in warhead pipeline extensions (D028); novel ones (WarpDamage, TintedCells) need WASM                           |
-| **Custom projectiles**              | Moderate     | These are primarily render code; rewrite as `ra-render` shader effects and particle systems                                       |
+| **Custom projectiles**              | Moderate     | These are primarily render code; rewrite as `ic-render` shader effects and particle systems                                       |
 | **Custom UI widgets**               | Moderate     | CA has custom widgets; these need Bevy UI reimplementation                                                                        |
-| **Bot modules**                     | Low-Moderate | Map to `ra-ai` crate's bot system                                                                                                 |
+| **Bot modules**                     | Low-Moderate | Map to `ic-ai` crate's bot system                                                                                                 |
 
 #### Migration Tier Breakdown
 
@@ -277,7 +277,7 @@ e1:
 
 #### 4K Native Rendering
 
-Bevy + wgpu handle arbitrary resolutions natively. The isometric renderer in `ra-render` would:
+Bevy + wgpu handle arbitrary resolutions natively. The isometric renderer in `ic-render` would:
 
 - Detect native display resolution via Bevy's window system
 - Classify into `ScreenClass` (our responsive UI system from invariant #10)
@@ -310,14 +310,14 @@ fn camera_zoom(
 
 #### Modern UI / Sidebar
 
-- IC's `ra-ui` crate uses Bevy UI — not locked to OpenRA's widget system
+- IC's `ic-ui` crate uses Bevy UI — not locked to OpenRA's widget system
 - The Remastered sidebar layout is our explicit UX reference (AGENTS.md: "EA Remastered Collection — UI/UX gold standard. Cleanest, least cluttered C&C interface.")
 - Rally points, attack-move, queued production are standard Phase 3 deliverables
 - A `remastered` UI theme could coexist with a `classic` theme — switchable in settings
 
 #### Remastered Audio
 
-IC's `ra-audio` crate supports:
+IC's `ic-audio` crate supports:
 - Classic `.aud` format (loaded natively per invariant #8)
 - Modern audio formats (WAV, OGG, FLAC) via Bevy's audio plugin
 - Jukebox mode is a UI feature — trivial playlist management
