@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-04ba01c6.js";
+            window.path_to_searchindex_js = "searchindex-0fa94a75.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-a85074c4.js"></script>
@@ -188,7 +188,7 @@
 <li>Reimagines internals with modern architecture (not a port)</li>
 <li>Explores different tradeoffs: performance, modding depth, portability, and multiplayer architecture</li>
 <li>Provides OpenRA mod compatibility as the zero-cost migration path</li>
-<li>Is <strong>game-agnostic at the engine layer</strong> — Red Alert is the first game module; RA2, Tiberian Dawn, and original games are future modules on the same engine (RA2 is a future community goal, not a scheduled deliverable)</li>
+<li>Is <strong>game-agnostic at the engine layer</strong> — built for the C&amp;C community but designed to power any classic RTS (D039). Ships with Red Alert (default) and Tiberian Dawn as built-in game modules; RA2, Tiberian Sun, and community-created games are future modules on the same engine (RA2 is a future community goal, not a scheduled deliverable)</li>
 </ul>
 <h2 id="why-this-deserves-to-exist"><a class="header" href="#why-this-deserves-to-exist">Why This Deserves to Exist</a></h2>
 <h3 id="capabilities-beyond-openra-and-the-remastered-collection"><a class="header" href="#capabilities-beyond-openra-and-the-remastered-collection">Capabilities Beyond OpenRA and the Remastered Collection</a></h3>
@@ -406,7 +406,7 @@
 <li><strong>Exact gameplay values.</strong> Damage tables, weapon ranges, unit speeds, fire rates, armor multipliers. This is the canonical source for “how Red Alert actually plays.” When OpenRA and EA source disagree on a value, <strong>EA source wins for our classic preset.</strong></li>
 <li><strong>Order processing.</strong> The <code>OutList</code>/<code>DoList</code> pattern maps directly to our <code>PlayerOrder → TickOrders → apply_tick()</code> architecture.</li>
 <li><strong>Integer math patterns.</strong> Original RA uses integer math throughout for determinism — validates our fixed-point approach.</li>
-<li><strong>AI behavior.</strong> How the original skirmish AI makes decisions, builds bases, attacks. Reference for <code>ra-ai</code>.</li>
+<li><strong>AI behavior.</strong> How the original skirmish AI makes decisions, builds bases, attacks. Reference for <code>ic-ai</code>.</li>
 </ul>
 <p><strong>Caution:</strong> The codebase is 1990s C++ — tangled, global state everywhere, no tests. Extract knowledge, don’t port patterns.</p>
 <h3 id="ea-remastered-collection--httpsgithubcomelectronicartscnc_remastered_collection"><a class="header" href="#ea-remastered-collection--httpsgithubcomelectronicartscnc_remastered_collection">EA Remastered Collection — https://github.com/electronicarts/CnC_Remastered_Collection</a></h3>

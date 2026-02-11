@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-04ba01c6.js";
+            window.path_to_searchindex_js = "searchindex-0fa94a75.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-a85074c4.js"></script>
@@ -300,7 +300,7 @@ let game = GameLoop::new(sim, renderer, adapted);
 <h2 id="what-to-build-now-phase-0-to-keep-the-door-open"><a class="header" href="#what-to-build-now-phase-0-to-keep-the-door-open">What to Build Now (Phase 0) to Keep the Door Open</a></h2>
 <p>Costs almost nothing today, enables everything later:</p>
 <ol>
-<li><strong><code>OrderCodec</code> trait</strong> in <code>ra-protocol</code> — orders are wire-format-agnostic from day one</li>
+<li><strong><code>OrderCodec</code> trait</strong> in <code>ic-protocol</code> — orders are wire-format-agnostic from day one</li>
 <li><strong><code>CoordTransform</code></strong> in <code>ra-formats</code> — coordinate systems are explicit, not implicit</li>
 <li><strong><code>Simulation::snapshot()</code>/<code>restore()</code>/<code>apply_correction()</code></strong> — sim is correctable from outside</li>
 <li><strong><code>ProtocolAdapter</code> slot</strong> in <code>NetworkModel</code> trait — network layer is wrappable</li>

@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-04ba01c6.js";
+            window.path_to_searchindex_js = "searchindex-0fa94a75.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-a85074c4.js"></script>
@@ -181,7 +181,7 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="iron-curtain--design-documentation"><a class="header" href="#iron-curtain--design-documentation">Iron Curtain — Design Documentation</a></h1>
-<h2 id="project-rust-native-red-alert-rts-engine"><a class="header" href="#project-rust-native-red-alert-rts-engine">Project: Rust-Native Red Alert RTS Engine</a></h2>
+<h2 id="project-rust-native-rts-engine"><a class="header" href="#project-rust-native-rts-engine">Project: Rust-Native RTS Engine</a></h2>
 <p><strong>Status:</strong> Pre-development (design phase)<br><strong>Date:</strong> 2026-02-06<br><strong>Codename:</strong> Iron Curtain<br><strong>Author:</strong> David Krasnitsky</p>
 <h2 id="what-this-is"><a class="header" href="#what-this-is">What This Is</a></h2>
 <p>A Rust-native RTS engine that supports OpenRA resource formats (<code>.mix</code>, <code>.shp</code>, <code>.pal</code>, YAML rules) and reimagines internals with modern architecture. Not a clone or port — a complementary project offering different tradeoffs (performance, modding, portability) with full OpenRA mod compatibility as the zero-cost migration path. OpenRA is an excellent project; IC explores what a clean-sheet Rust design can offer the same community.</p>
@@ -212,7 +212,7 @@
 <p>These are non-negotiable across the entire project:</p>
 <ol>
 <li><strong>Simulation is pure and deterministic.</strong> No I/O, no floats, no network awareness. Takes orders, produces state. Period.</li>
-<li><strong>Network model is pluggable via trait.</strong> <code>GameLoop&lt;N: NetworkModel, I: InputSource&gt;</code> is generic over both network model and input source. The sim has zero imports from <code>ra-net</code>. They share only <code>ra-protocol</code>. Swapping lockstep for rollback touches zero sim code.</li>
+<li><strong>Network model is pluggable via trait.</strong> <code>GameLoop&lt;N: NetworkModel, I: InputSource&gt;</code> is generic over both network model and input source. The sim has zero imports from <code>ic-net</code>. They share only <code>ic-protocol</code>. Swapping lockstep for rollback touches zero sim code.</li>
 <li><strong>Modding is tiered.</strong> YAML (data) → Lua (scripting) → WASM (power). Each tier is optional and sandboxed.</li>
 <li><strong>Bevy as framework.</strong> ECS scheduling, rendering, asset pipeline, audio — Bevy handles infrastructure so we focus on game logic. Custom render passes and SIMD only where profiling justifies it.</li>
 <li><strong>Efficiency-first performance.</strong> Better algorithms, cache-friendly ECS, zero-allocation hot paths, simulation LOD, amortized work — THEN multi-core as a bonus layer. A 2-core laptop must run 500 units smoothly.</li>
@@ -224,17 +224,18 @@
 </ol>
 <h2 id="crate-structure-overview"><a class="header" href="#crate-structure-overview">Crate Structure Overview</a></h2>
 <pre><code>iron-curtain/
-├── ra-formats     # .mix, .shp, .pal, YAML parsing, MiniYAML converter
-├── ra-sim         # Deterministic simulation (Bevy FixedUpdate systems)
-├── ra-protocol    # PlayerOrder, TimestampedOrder, OrderCodec trait
-├── ra-net         # NetworkModel trait + implementations (Bevy plugins)
-├── ra-render      # Isometric rendering, shaders, post-FX (Bevy plugin)
-├── ra-ui          # Game chrome: sidebar, minimap, build queue (Bevy UI)
-├── ra-audio       # .aud playback, EVA, music (Bevy audio plugin)
-├── ra-script      # Lua + WASM mod runtimes
-├── ra-ai          # Skirmish AI, mission scripting
-├── ra-llm         # LLM mission/campaign generation, adaptive difficulty
-└── ra-game        # Top-level Bevy App, ties all plugins together
+├── ra-formats     # .mix, .shp, .pal, YAML parsing, MiniYAML converter (C&amp;C-specific, keeps ra- prefix)
+├── ic-protocol    # PlayerOrder, TimestampedOrder, OrderCodec trait (SHARED boundary)
+├── ic-sim         # Deterministic simulation (Bevy FixedUpdate systems)
+├── ic-net         # NetworkModel trait + implementations (Bevy plugins)
+├── ic-render      # Isometric rendering, shaders, post-FX (Bevy plugin)
+├── ic-ui          # Game chrome: sidebar, minimap, build queue (Bevy UI)
+├── ic-editor      # In-engine scenario/campaign editor, Game Master mode (D038, Bevy plugin)
+├── ic-audio       # .aud playback, EVA, music (Bevy audio plugin)
+├── ic-script      # Lua + WASM mod runtimes
+├── ic-ai          # Skirmish AI, mission scripting
+├── ic-llm         # LLM mission/campaign generation, adaptive difficulty
+└── ic-game        # Top-level Bevy App, ties all plugins together
 </code></pre>
 
                     </main>

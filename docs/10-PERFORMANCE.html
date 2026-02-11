@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-04ba01c6.js";
+            window.path_to_searchindex_js = "searchindex-0fa94a75.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-a85074c4.js"></script>
@@ -517,7 +517,7 @@ fn movement_system(mut query: Query&lt;(&amp;mut Position, &amp;Velocity)&gt;) {
 </div>
 <p><strong>Key insight:</strong> The “2012 laptop” target is achievable for the <strong>simulation</strong> (500 units, &lt; 40ms tick) because the sim is pure CPU. The <strong>rendering</strong> must degrade gracefully — reduced visual effects, not broken gameplay.</p>
 <h3 id="render-quality-tiers"><a class="header" href="#render-quality-tiers">Render Quality Tiers</a></h3>
-<p><code>ra-render</code> queries device capabilities at startup via wgpu’s adapter limits and selects a render tier stored in the <code>RenderSettings</code> resource. All tiers produce an identical, playable game — they differ only in visual richness.</p>
+<p><code>ic-render</code> queries device capabilities at startup via wgpu’s adapter limits and selects a render tier stored in the <code>RenderSettings</code> resource. All tiers produce an identical, playable game — they differ only in visual richness.</p>
 <div class="table-wrapper">
 <table>
 <thead>
@@ -534,7 +534,7 @@ fn movement_system(mut query: Query&lt;(&amp;mut Position, &amp;Velocity)&gt;) {
 <p><strong>Tier selection is automatic but overridable.</strong> Detected at startup from <code>wgpu::Adapter::limits()</code> and <code>wgpu::Adapter::features()</code>. Players can force a lower tier in settings. Mods can ship tier-specific assets.</p>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
-</span>/// ra-render: runtime render configuration
+</span>/// ic-render: runtime render configuration
 pub struct RenderSettings {
     pub tier: RenderTier,           // Auto-detected or user-forced
     pub fps_cap: u32,               // 30, 60, 144, 240, uncapped

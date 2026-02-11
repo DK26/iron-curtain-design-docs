@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-04ba01c6.js";
+            window.path_to_searchindex_js = "searchindex-0fa94a75.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-a85074c4.js"></script>
@@ -208,7 +208,7 @@
 </ul>
 <h3 id="key-architecture-work"><a class="header" href="#key-architecture-work">Key Architecture Work</a></h3>
 <ul>
-<li>Define <code>PlayerOrder</code> enum in <code>ra-protocol</code> crate</li>
+<li>Define <code>PlayerOrder</code> enum in <code>ic-protocol</code> crate</li>
 <li>Define <code>OrderCodec</code> trait (for future cross-engine compatibility)</li>
 <li>Define <code>CoordTransform</code> (coordinate system translation)</li>
 <li>Study OpenRA architecture: Game loop, World/Actor/Trait hierarchy, OrderManager, mod manifest system</li>
@@ -245,7 +245,7 @@
 </ul>
 <h3 id="key-architecture-work-1"><a class="header" href="#key-architecture-work-1">Key Architecture Work</a></h3>
 <ul>
-<li>Bevy plugin structure: <code>ra-render</code> as a Bevy plugin reading from sim state</li>
+<li>Bevy plugin structure: <code>ic-render</code> as a Bevy plugin reading from sim state</li>
 <li>Interpolation between sim ticks for smooth animation at arbitrary FPS</li>
 <li>HD asset pipeline: support high-res sprites alongside classic 8-bit assets</li>
 </ul>
@@ -265,7 +265,7 @@
 </blockquote>
 <h3 id="deliverables-2"><a class="header" href="#deliverables-2">Deliverables</a></h3>
 <ul>
-<li>ECS-based simulation layer (<code>ra-sim</code>)</li>
+<li>ECS-based simulation layer (<code>ic-sim</code>)</li>
 <li>Components mirroring OpenRA traits: Mobile, Health, Attackable, Armament, Building, Buildable, Harvester</li>
 <li><strong>Canonical enum names matching OpenRA (D027):</strong> Locomotor (<code>Foot</code>, <code>Wheeled</code>, <code>Tracked</code>, <code>Float</code>, <code>Fly</code>), Armor (<code>None</code>, <code>Light</code>, <code>Medium</code>, <code>Heavy</code>, <code>Wood</code>, <code>Concrete</code>), Target types, Damage states, Stances</li>
 <li><strong>Condition system (D028):</strong> <code>Conditions</code> component, <code>GrantConditionOn*</code> YAML traits, <code>requires:</code>/<code>disabled_by:</code> on any component field</li>
@@ -281,7 +281,7 @@
 </ul>
 <h3 id="key-architecture-work-2"><a class="header" href="#key-architecture-work-2">Key Architecture Work</a></h3>
 <ul>
-<li><strong>Sim/network boundary enforced:</strong> <code>ra-sim</code> has zero imports from <code>ra-net</code></li>
+<li><strong>Sim/network boundary enforced:</strong> <code>ic-sim</code> has zero imports from <code>ic-net</code></li>
 <li><strong><code>NetworkModel</code> trait defined and proven</strong> with at least <code>LocalNetwork</code> implementation</li>
 <li><strong>System execution order documented and fixed</strong></li>
 <li><strong>State hashing for desync detection</strong></li>
@@ -333,7 +333,7 @@
 </ul>
 <p><strong>Stretch goals (target Phase 3, can slip to early Phase 4 without blocking):</strong></p>
 <ul>
-<li><strong>Chart component in <code>ra-ui</code>:</strong> Lightweight Bevy 2D chart renderer (line, bar, pie, heatmap, stacked area) for post-game and career screens</li>
+<li><strong>Chart component in <code>ic-ui</code>:</strong> Lightweight Bevy 2D chart renderer (line, bar, pie, heatmap, stacked area) for post-game and career screens</li>
 <li><strong>Post-game stats screen (D034):</strong> Unit production timeline, resource curves, combat heatmap, APM graph, head-to-head comparison — all from SQLite <code>gameplay_events</code></li>
 <li><strong>Career stats page (D034):</strong> Win rate by faction/map/opponent, rating history graph, session history with replay links — from SQLite <code>matches</code> + <code>match_players</code></li>
 <li><strong>Achievement infrastructure (D036):</strong> SQLite achievement tables, engine-defined campaign/exploration achievements, Lua trigger API for mod-defined achievements, Steam achievement sync for Steam builds</li>
@@ -356,7 +356,7 @@
 <li><strong>Campaign select and mission map UI:</strong> visualize campaign graph, show current position, replay completed missions</li>
 <li><strong>Adaptive difficulty via campaign state:</strong> designer-authored conditional bonuses/penalties based on cumulative performance</li>
 <li><strong>Campaign dashboard (D034):</strong> Roster composition graphs per mission, veterancy progression for named units, campaign path visualization, performance trends — from SQLite <code>campaign_missions</code> + <code>roster_snapshots</code></li>
-<li><strong><code>ra-ai</code> reads player history (D034):</strong> Skirmish AI queries SQLite <code>matches</code> + <code>gameplay_events</code> for difficulty scaling, build order variety, and counter-strategy selection between games</li>
+<li><strong><code>ic-ai</code> reads player history (D034):</strong> Skirmish AI queries SQLite <code>matches</code> + <code>gameplay_events</code> for difficulty scaling, build order variety, and counter-strategy selection between games</li>
 <li><strong>FMV cutscene playback</strong> between missions (original <code>.vqa</code> briefings and victory/defeat sequences)</li>
 <li><strong>Full Allied and Soviet campaigns</strong> for Red Alert, playable start to finish</li>
 </ul>
@@ -502,7 +502,7 @@
 <h3 id="deliverables--ai-content-generation-optional--byollm"><a class="header" href="#deliverables--ai-content-generation-optional--byollm">Deliverables — AI Content Generation (Optional — BYOLLM)</a></h3>
 <p>All LLM features require the player to configure their own LLM provider. The game is fully functional without one.</p>
 <ul>
-<li><code>ra-llm</code> crate: optional LLM integration for mission generation</li>
+<li><code>ic-llm</code> crate: optional LLM integration for mission generation</li>
 <li>In-game mission generator UI: describe scenario → playable mission</li>
 <li>Generated output: standard YAML map + Lua trigger scripts + briefing text</li>
 <li>Difficulty scaling: same scenario at different challenge levels</li>
@@ -510,7 +510,7 @@
 <li>Campaign generation: connected multi-mission storylines (experimental)</li>
 <li>Adaptive difficulty: AI observes playstyle, generates targeted challenges (experimental)</li>
 <li><strong>LLM-driven Workshop resource discovery (D030):</strong> When LLM provider is configured, LLM can search Workshop by <code>llm_meta</code> tags, evaluate fitness, auto-pull resources as dependencies for generated content; license-aware filtering</li>
-<li><strong>LLM player-aware generation (D034):</strong> When LLM provider is configured, <code>ra-llm</code> reads local SQLite for player context — faction preferences, unit usage patterns, win/loss streaks, campaign roster state; generates personalized missions, adaptive briefings, post-match commentary, coaching suggestions, rivalry narratives</li>
+<li><strong>LLM player-aware generation (D034):</strong> When LLM provider is configured, <code>ic-llm</code> reads local SQLite for player context — faction preferences, unit usage patterns, win/loss streaks, campaign roster state; generates personalized missions, adaptive briefings, post-match commentary, coaching suggestions, rivalry narratives</li>
 <li><strong>AI training data pipeline (D031):</strong> gameplay event stream → OTEL collector → Parquet/Arrow columnar format → ML training; build order learning, engagement patterns, balance analysis from aggregated match telemetry</li>
 </ul>
 <h3 id="deliverables--visual-modding-infrastructure-bevy-rendering"><a class="header" href="#deliverables--visual-modding-infrastructure-bevy-rendering">Deliverables — Visual Modding Infrastructure (Bevy Rendering)</a></h3>

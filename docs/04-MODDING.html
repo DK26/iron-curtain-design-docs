@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-04ba01c6.js";
+            window.path_to_searchindex_js = "searchindex-0fa94a75.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-a85074c4.js"></script>
@@ -308,7 +308,7 @@ struct UnitDef {
 }
 
 /// LLM-readable metadata for any game resource.
-/// Consumed by ra-llm (mission generation), ra-ai (skirmish AI),
+/// Consumed by ic-llm (mission generation), ic-ai (skirmish AI),
 /// and workshop search (semantic matching).
 #[derive(Deserialize, Serialize)]
 struct LlmMeta {
@@ -440,6 +440,9 @@ ic mod import /path/to/openra-mod/ --output ./my-ic-mod/
 <tbody>
 <tr><td><code>Campaign</code></td><td>Branching campaign state (D021)</td></tr>
 <tr><td><code>Weather</code></td><td>Dynamic weather control (D022)</td></tr>
+<tr><td><code>Layer</code></td><td>Runtime layer activation/deaction</td></tr>
+<tr><td><code>Region</code></td><td>Named region queries</td></tr>
+<tr><td><code>Var</code></td><td>Mission/campaign variable access</td></tr>
 <tr><td><code>Workshop</code></td><td>Mod metadata queries</td></tr>
 <tr><td><code>LLM</code></td><td>LLM integration hooks (Phase 7)</td></tr>
 </tbody>
@@ -828,7 +831,7 @@ Campaign Graph    — branching mission graph with persistent state (not a linea
 <p><code>radar_comm</code> is how RA2 handles in-mission conversations — the radar panel temporarily switches to a video feed of a character addressing the player, then returns to the minimap when the clip ends. The sidebar stays functional (build queues, power bar still visible). This creates narrative immersion without interrupting gameplay.</p>
 <p>The LLM can use this in generated missions: a briefing video at mission start (<code>fullscreen</code>), a commander calling in mid-mission when a trigger fires (<code>radar_comm</code>), and a small notification video when reinforcements arrive (<code>picture_in_picture</code>).</p>
 <p><strong><code>weather</code> scene template:</strong></p>
-<p>Weather effects are GPU particle systems rendered by <code>ra-render</code>, with optional gameplay modifiers applied by <code>ra-sim</code>.</p>
+<p>Weather effects are GPU particle systems rendered by <code>ic-render</code>, with optional gameplay modifiers applied by <code>ic-sim</code>.</p>
 <div class="table-wrapper">
 <table>
 <thead>
@@ -846,14 +849,14 @@ Campaign Graph    — branching mission graph with persistent state (not a linea
 </div>
 <p><strong>Key design principle:</strong> Weather is split into two layers:</p>
 <ul>
-<li><strong>Render layer</strong> (<code>ra-render</code>): Always active. GPU particles, shaders, post-FX, ambient audio changes. Pure cosmetic, zero sim impact. Particle density scales with <code>RenderSettings</code> for lower-end devices.</li>
-<li><strong>Sim layer</strong> (<code>ra-sim</code>): Optional, controlled by <code>sim_effects</code> parameter. When enabled, weather modifies visibility ranges, movement speeds, and damage — deterministically, so multiplayer stays in sync. When disabled, weather is purely cosmetic eye candy.</li>
+<li><strong>Render layer</strong> (<code>ic-render</code>): Always active. GPU particles, shaders, post-FX, ambient audio changes. Pure cosmetic, zero sim impact. Particle density scales with <code>RenderSettings</code> for lower-end devices.</li>
+<li><strong>Sim layer</strong> (<code>ic-sim</code>): Optional, controlled by <code>sim_effects</code> parameter. When enabled, weather modifies visibility ranges, movement speeds, and damage — deterministically, so multiplayer stays in sync. When disabled, weather is purely cosmetic eye candy.</li>
 </ul>
 <p>Weather can be set per-map (in map YAML), triggered mid-mission by Lua scripts, or composed via the <code>weather</code> scene template. An LLM generating a “blizzard defense” mission sets <code>type: blizzard, sim_effects: true</code> and gets both the visual atmosphere and the gameplay tension.</p>
 <h3 id="dynamic-weather-system-d022"><a class="header" href="#dynamic-weather-system-d022">Dynamic Weather System (D022)</a></h3>
 <p>The base weather system above covers static, per-mission weather. The <strong>dynamic weather system</strong> extends it with real-time weather transitions and terrain texture effects during gameplay — snow accumulates on the ground, rain darkens and wets surfaces, sunshine dries everything out.</p>
 <h4 id="weather-state-machine"><a class="header" href="#weather-state-machine">Weather State Machine</a></h4>
-<p>Weather transitions are modeled as a state machine running inside <code>ra-sim</code>. The machine is deterministic — same schedule + same tick = identical weather on every client.</p>
+<p>Weather transitions are modeled as a state machine running inside <code>ic-sim</code>. The machine is deterministic — same schedule + same tick = identical weather on every client.</p>
 <pre><code>     ┌──────────┐      ┌───────────┐      ┌──────────┐
      │  Sunny   │─────▶│ Overcast  │─────▶│   Rain   │
      └──────────┘      └───────────┘      └──────────┘
@@ -883,7 +886,7 @@ Campaign Graph    — branching mission graph with persistent state (not a linea
 <p>Each weather type has an <strong>intensity</strong> (fixed-point <code>0..1024</code>) that ramps up during transitions and down during clearing. The sim tracks this as a <code>WeatherState</code> resource:</p>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
-</span>/// ra-sim: deterministic weather state
+</span>/// ic-sim: deterministic weather state
 pub struct WeatherState {
     pub current: WeatherType,
     pub intensity: FixedPoint,       // 0 = clear, 1024 = full
@@ -980,7 +983,7 @@ print(w.surface.snow_depth)  -- per-map average
 <p>When <code>sim_effects</code> is enabled, the sim maintains a per-cell <code>TerrainSurfaceGrid</code> — a compact grid tracking how weather has physically altered the terrain. This is <strong>deterministic</strong> and affects gameplay.</p>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
-</span>/// ra-sim: per-cell surface condition
+</span>/// ic-sim: per-cell surface condition
 pub struct SurfaceCondition {
     pub snow_depth: FixedPoint,   // 0 = bare ground, 1024 = deep snow
     pub wetness: FixedPoint,      // 0 = dry, 1024 = waterlogged
@@ -1027,7 +1030,7 @@ pub struct TerrainSurfaceGrid {
 <p>These modifiers stack with the weather-type modifiers from the base weather table. A blizzard over deep snow is brutal.</p>
 <p><strong>Snapshot compatibility:</strong> <code>TerrainSurfaceGrid</code> derives <code>Serialize, Deserialize</code> — surface state is captured in save games and snapshots per D010 (snapshottable sim state).</p>
 <h4 id="terrain-texture-effects-render-layer"><a class="header" href="#terrain-texture-effects-render-layer">Terrain Texture Effects (Render Layer)</a></h4>
-<p><code>ra-render</code> reads the sim’s <code>TerrainSurfaceGrid</code> and blends terrain visuals accordingly. This is <strong>purely cosmetic</strong> — it has no effect on the sim and runs at whatever quality the device supports.</p>
+<p><code>ic-render</code> reads the sim’s <code>TerrainSurfaceGrid</code> and blends terrain visuals accordingly. This is <strong>purely cosmetic</strong> — it has no effect on the sim and runs at whatever quality the device supports.</p>
 <p>Three rendering strategies, selectable via <code>RenderSettings</code>:</p>
 <div class="table-wrapper">
 <table>
@@ -1625,9 +1628,9 @@ adaptive:
     high_roster:               # &gt; 20 surviving units
       enemy_count_multiplier: 1.3
 </code></pre>
-<p>This is not AI-adaptive difficulty (that’s D016/<code>ra-llm</code>). This is <strong>designer-authored conditional logic</strong> expressed in YAML — the campaign reacts to the player’s cumulative performance without any LLM involvement.</p>
+<p>This is not AI-adaptive difficulty (that’s D016/<code>ic-llm</code>). This is <strong>designer-authored conditional logic</strong> expressed in YAML — the campaign reacts to the player’s cumulative performance without any LLM involvement.</p>
 <h3 id="llm-campaign-generation"><a class="header" href="#llm-campaign-generation">LLM Campaign Generation</a></h3>
-<p>The LLM (<code>ra-llm</code>) can generate entire campaign graphs, not just individual missions:</p>
+<p>The LLM (<code>ic-llm</code>) can generate entire campaign graphs, not just individual missions:</p>
 <pre><code>User: "Create a 5-mission Soviet campaign where you invade Alaska.
        The player should be able to lose a mission and keep going
        with consequences. Units should carry over between missions."
@@ -1849,7 +1852,7 @@ llm:
   composition_hints: "Pairs well with Soviet faction voice lines for immersive briefings"
 </code></pre>
 <h3 id="llm-driven-resource-discovery-d030"><a class="header" href="#llm-driven-resource-discovery-d030">LLM-Driven Resource Discovery (D030)</a></h3>
-<p>The <code>ra-llm</code> crate can search the Workshop programmatically and incorporate discovered resources into generated content:</p>
+<p>The <code>ic-llm</code> crate can search the Workshop programmatically and incorporate discovered resources into generated content:</p>
 <p><strong>Discovery pipeline:</strong></p>
 <pre><code>  ┌─────────────────────────────────────────────────────────────────┐
   │ LLM generates mission concept                                  │
@@ -2044,7 +2047,7 @@ pub struct ResourcePackage {
 }
 
 /// LLM-readable metadata for workshop resources.
-/// Enables intelligent browsing, selection, and composition by ra-llm.
+/// Enables intelligent browsing, selection, and composition by ic-llm.
 pub struct LlmResourceMeta {
     pub summary: String,              // one-line: "A 4-player desert skirmish map with limited ore"
     pub purpose: String,              // when/why to use this: "Best for competitive 2v2 with scarce resources"
@@ -2276,8 +2279,8 @@ llm:
 <tr><th>Consumer</th><th>How It Uses <code>llm:</code> Metadata</th></tr>
 </thead>
 <tbody>
-<tr><td><strong><code>ra-llm</code> (mission generation)</strong></td><td>Selects appropriate units for scenarios. “A hard mission” → picks units with <code>role: siege</code> and high counters. “A stealth mission” → picks units with <code>role: scout, infiltrator</code>.</td></tr>
-<tr><td><strong><code>ra-ai</code> (skirmish AI)</strong></td><td>Reads <code>counters</code>/<code>countered_by</code> for build decisions. Knows to build anti-air when enemy has <code>role: air</code>. Reads <code>tactical_notes</code> for positioning hints.</td></tr>
+<tr><td><strong><code>ic-llm</code> (mission generation)</strong></td><td>Selects appropriate units for scenarios. “A hard mission” → picks units with <code>role: siege</code> and high counters. “A stealth mission” → picks units with <code>role: scout, infiltrator</code>.</td></tr>
+<tr><td><strong><code>ic-ai</code> (skirmish AI)</strong></td><td>Reads <code>counters</code>/<code>countered_by</code> for build decisions. Knows to build anti-air when enemy has <code>role: air</code>. Reads <code>tactical_notes</code> for positioning hints.</td></tr>
 <tr><td><strong>Workshop search</strong></td><td>Semantic search: “a map for beginners” matches <code>difficulty: beginner-friendly</code>. “Something for a tank rush” matches <code>gameplay_tags: ["open_terrain", "abundant_resources"]</code>.</td></tr>
 <tr><td><strong>Future in-game AI advisor</strong></td><td>“What should I build?” → reads enemy composition’s <code>countered_by</code>, suggests units with matching <code>role</code>.</td></tr>
 <tr><td><strong>Mod compatibility analysis</strong></td><td>Detects when a mod changes a unit’s <code>role</code> or <code>counters</code> in ways that affect balance.</td></tr>

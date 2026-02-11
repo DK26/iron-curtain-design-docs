@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-04ba01c6.js";
+            window.path_to_searchindex_js = "searchindex-0fa94a75.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-a85074c4.js"></script>
@@ -193,7 +193,7 @@
 <li><strong>Bryant &amp; Saiedian (2021)</strong> — state saturation taxonomy, traffic class segregation</li>
 </ul>
 <h2 id="the-protocol"><a class="header" href="#the-protocol">The Protocol</a></h2>
-<p>All protocol types live in the <code>ra-protocol</code> crate — the ONLY shared dependency between sim and net:</p>
+<p>All protocol types live in the <code>ic-protocol</code> crate — the ONLY shared dependency between sim and net:</p>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>#[derive(Clone, Serialize, Deserialize, Hash)]
@@ -217,7 +217,7 @@ pub struct TimestampedOrder {
 // NOTE: sub_tick_time is an integer (microseconds offset from tick start).
 // At 15 ticks/sec the tick window is ~66,667µs — u32 is more than sufficient.
 // Integer ordering avoids any platform-dependent float comparison behavior
-// and keeps ra-protocol free of floating-point types entirely.
+// and keeps ic-protocol free of floating-point types entirely.
 
 pub struct TickOrders {
     pub tick: u64,
@@ -444,7 +444,7 @@ fn validate_order_checked(&amp;mut self, player: PlayerId, order: &amp;PlayerOrd
 <p>The render layer provides <strong>instant visual feedback</strong> on player input, before the order is confirmed by the network:</p>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
-</span>// ra-render: immediate visual response to click
+</span>// ic-render: immediate visual response to click
 fn on_move_order_issued(click_pos: WorldPos, selected_units: &amp;[Entity]) {
     // Show move marker immediately
     spawn_move_marker(click_pos);
@@ -665,7 +665,7 @@ pub struct NetworkSimConfig {
 <p>A tracking server (also called master server) lets players discover and publish games. It is NOT a relay — no game data flows through it. It’s a directory.</p>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
-</span>/// Tracking server API — implemented by ra-net, consumed by ra-ui
+</span>/// Tracking server API — implemented by ic-net, consumed by ic-ui
 pub trait TrackingServer: Send + Sync {
     /// Host publishes their game to the directory
     fn publish(&amp;self, listing: &amp;GameListing) -&gt; Result&lt;ListingId&gt;;
@@ -854,7 +854,7 @@ relay:
 </div>
 <p>The relay server is the heavier service (per-game session state, UDP forwarding) but still tiny — each game session is a few KB of buffered orders. A single pod handles ~100 concurrent games easily.</p>
 <h3 id="backend-language"><a class="header" href="#backend-language">Backend Language</a></h3>
-<p>The tracking and relay servers are standalone Rust binaries (not Bevy — no ECS needed). They share <code>ra-protocol</code> for order serialization. The relay server implements the relay-side of <code>RelayLockstepNetwork</code>. Both are simple enough to be developed in Phase 5 alongside the multiplayer client code.</p>
+<p>The tracking and relay servers are standalone Rust binaries (not Bevy — no ECS needed). They share <code>ic-protocol</code> for order serialization. The relay server implements the relay-side of <code>RelayLockstepNetwork</code>. Both are simple enough to be developed in Phase 5 alongside the multiplayer client code.</p>
 <h3 id="failure-modes"><a class="header" href="#failure-modes">Failure Modes</a></h3>
 <div class="table-wrapper">
 <table>

@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-04ba01c6.js";
+            window.path_to_searchindex_js = "searchindex-0fa94a75.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-a85074c4.js"></script>
@@ -284,7 +284,7 @@
 </tbody>
 </table>
 </div>
-<p>Custom projectiles are primarily <strong>render code</strong> — visual effects for weapon impacts. In IC, these map to shader effects and particle systems in <code>ra-render</code>, not simulation code.</p>
+<p>Custom projectiles are primarily <strong>render code</strong> — visual effects for weapon impacts. In IC, these map to shader effects and particle systems in <code>ic-render</code>, not simulation code.</p>
 <h4 id="custom-activities-24-files-in-activities"><a class="header" href="#custom-activities-24-files-in-activities">Custom Activities (24 files in <code>Activities/</code>)</a></h4>
 <p>Activities are unit behaviors — the “verbs” that units perform:</p>
 <ul>
@@ -328,9 +328,9 @@
 <tr><td><strong>Custom traits → YAML conditions</strong></td><td>Low</td><td>Deploy mechanics, upgrade toggles, transform states map to IC’s condition system (D028)</td></tr>
 <tr><td><strong>Custom traits → WASM</strong></td><td>Significant</td><td>~20 truly novel traits need WASM rewrite: Berserkable, Warpable, KeepsDistance, Attachable system, custom ability targeting</td></tr>
 <tr><td><strong>Custom warheads</strong></td><td>Low</td><td>Many become built-in warhead pipeline extensions (D028); novel ones (WarpDamage, TintedCells) need WASM</td></tr>
-<tr><td><strong>Custom projectiles</strong></td><td>Moderate</td><td>These are primarily render code; rewrite as <code>ra-render</code> shader effects and particle systems</td></tr>
+<tr><td><strong>Custom projectiles</strong></td><td>Moderate</td><td>These are primarily render code; rewrite as <code>ic-render</code> shader effects and particle systems</td></tr>
 <tr><td><strong>Custom UI widgets</strong></td><td>Moderate</td><td>CA has custom widgets; these need Bevy UI reimplementation</td></tr>
-<tr><td><strong>Bot modules</strong></td><td>Low-Moderate</td><td>Map to <code>ra-ai</code> crate’s bot system</td></tr>
+<tr><td><strong>Bot modules</strong></td><td>Low-Moderate</td><td>Map to <code>ic-ai</code> crate’s bot system</td></tr>
 </tbody>
 </table>
 </div>
@@ -462,7 +462,7 @@ e1:
       hd: infantry/e1_shadow_hd.png
 </code></pre>
 <h4 id="4k-native-rendering"><a class="header" href="#4k-native-rendering">4K Native Rendering</a></h4>
-<p>Bevy + wgpu handle arbitrary resolutions natively. The isometric renderer in <code>ra-render</code> would:</p>
+<p>Bevy + wgpu handle arbitrary resolutions natively. The isometric renderer in <code>ic-render</code> would:</p>
 <ul>
 <li>Detect native display resolution via Bevy’s window system</li>
 <li>Classify into <code>ScreenClass</code> (our responsive UI system from invariant #10)</li>
@@ -499,13 +499,13 @@ e1:
 <span class="boring">}</span></code></pre>
 <h4 id="modern-ui--sidebar"><a class="header" href="#modern-ui--sidebar">Modern UI / Sidebar</a></h4>
 <ul>
-<li>IC’s <code>ra-ui</code> crate uses Bevy UI — not locked to OpenRA’s widget system</li>
+<li>IC’s <code>ic-ui</code> crate uses Bevy UI — not locked to OpenRA’s widget system</li>
 <li>The Remastered sidebar layout is our explicit UX reference (AGENTS.md: “EA Remastered Collection — UI/UX gold standard. Cleanest, least cluttered C&amp;C interface.”)</li>
 <li>Rally points, attack-move, queued production are standard Phase 3 deliverables</li>
 <li>A <code>remastered</code> UI theme could coexist with a <code>classic</code> theme — switchable in settings</li>
 </ul>
 <h4 id="remastered-audio"><a class="header" href="#remastered-audio">Remastered Audio</a></h4>
-<p>IC’s <code>ra-audio</code> crate supports:</p>
+<p>IC’s <code>ic-audio</code> crate supports:</p>
 <ul>
 <li>Classic <code>.aud</code> format (loaded natively per invariant #8)</li>
 <li>Modern audio formats (WAV, OGG, FLAC) via Bevy’s audio plugin</li>

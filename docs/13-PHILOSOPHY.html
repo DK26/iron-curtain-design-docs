@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-04ba01c6.js";
+            window.path_to_searchindex_js = "searchindex-0fa94a75.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-a85074c4.js"></script>
@@ -241,7 +241,7 @@ Competitors like Warcraft used unit caps for balance and performance. Westwood r
 <p>— Joe Bostic on the C&amp;C Remastered codebase, 25 years after the original</p>
 </blockquote>
 <p>This is the single most validated engineering principle in C&amp;C’s history. Westwood’s 1995 sim layer survived a complete platform change in 2020 because it was pure — no rendering, no networking, no I/O in the game logic. The Remastered Collection runs the original C++ sim as a headless DLL called from C#.</p>
-<p><strong>Rule:</strong> The sim is the part that survives decades. Keep it pure. <code>ra-sim</code> has zero imports from <code>ra-net</code> or <code>ra-render</code>. This is Invariant #1 and #2 — violations are bugs, not trade-offs.</p>
+<p><strong>Rule:</strong> The sim is the part that survives decades. Keep it pure. <code>ic-sim</code> has zero imports from <code>ic-net</code> or <code>ic-render</code>. This is Invariant #1 and #2 — violations are bugs, not trade-offs.</p>
 <p><strong>Where this applies:</strong></p>
 <ul>
 <li>Crate boundary enforcement in <a href="02-ARCHITECTURE.html">02-ARCHITECTURE.md</a> § crate structure</li>
@@ -323,9 +323,9 @@ Competitors like Warcraft used unit caps for balance and performance. Westwood r
 <p><strong>Rule:</strong> Every player action must produce audible and visible feedback within one second. Unit selection → voice line. Order issued → animation change. Build started → sound cue. If a system doesn’t have feedback, it needs feedback before it needs features.</p>
 <p><strong>Where this applies:</strong></p>
 <ul>
-<li>Unit voice and animation responses in <code>ra-render</code> and <code>ra-audio</code> (Phase 3)</li>
-<li>Build queue feedback in <code>ra-ui</code> (Phase 3)</li>
-<li>Input handling in <code>ra-game</code> — cursor changes, click acknowledgment</li>
+<li>Unit voice and animation responses in <code>ic-render</code> and <code>ic-audio</code> (Phase 3)</li>
+<li>Build queue feedback in <code>ic-ui</code> (Phase 3)</li>
+<li>Input handling in <code>ic-game</code> — cursor changes, click acknowledgment</li>
 </ul>
 <h3 id="12-visual-clarity--the-one-second-screenshot"><a class="header" href="#12-visual-clarity--the-one-second-screenshot">12. Visual Clarity — The One-Second Screenshot</a></h3>
 <p>You should be able to look at a screenshot for one second and know: who is winning, what units are on screen, and where the resources are. This was a core Westwood design test. If the screen is confusing, it doesn’t matter how deep the strategy is — the player has lost contact with their toy soldiers.</p>
@@ -343,7 +343,7 @@ Competitors like Warcraft used unit caps for balance and performance. Westwood r
 <p><strong>Where this applies:</strong></p>
 <ul>
 <li>Input system design via <code>InputSource</code> trait (Invariant #10)</li>
-<li>UI layout in <code>ra-ui</code> — sidebar vs bottom-bar is a theme choice (D032), but all layouts should follow “build without losing the battlefield”</li>
+<li>UI layout in <code>ic-ui</code> — sidebar vs bottom-bar is a theme choice (D032), but all layouts should follow “build without losing the battlefield”</li>
 <li>Mod SDK UX (D020) — <code>ic mod install</code> should be trivially simple</li>
 </ul>
 <h3 id="14-asymmetric-faction-identity"><a class="header" href="#14-asymmetric-faction-identity">14. Asymmetric Faction Identity</a></h3>
@@ -378,17 +378,17 @@ Competitors like Warcraft used unit caps for balance and performance. Westwood r
 <p><strong>Rule:</strong> “Juice” goes into the render and audio layers, not the sim. The sim tracks damage, death, and debris spawning deterministically. The renderer and audio system make it <em>feel good</em>. When a system works correctly but doesn’t feel satisfying, the problem is almost always missing juice, not missing mechanics.</p>
 <p><strong>Where this applies:</strong></p>
 <ul>
-<li>Rendering effects in <code>ra-render</code> — destruction animations, particle effects, screen shake (all render-side, never sim-side)</li>
-<li>Audio feedback in <code>ra-audio</code> — weapon-specific impact sounds, explosion scaling</li>
+<li>Rendering effects in <code>ic-render</code> — destruction animations, particle effects, screen shake (all render-side, never sim-side)</li>
+<li>Audio feedback in <code>ic-audio</code> — weapon-specific impact sounds, explosion scaling</li>
 <li>Modding: effects should be YAML-configurable (explosion type, debris count, screen shake intensity) so modders can tune game feel without code</li>
 </ul>
 <h3 id="17-audio-drives-tempo"><a class="header" href="#17-audio-drives-tempo">17. Audio Drives Tempo</a></h3>
 <p>Frank Klepacki’s philosophy extended beyond “write good music” to a specific insight about gameplay coupling: the music should match the tempo of the game. High-energy industrial metal and techno during combat keeps the player’s actions-per-minute high. Ambient tension during build-up phases lets the player think. “Hell March” isn’t just a good track — it’s a gameplay accelerator.</p>
 <p>This extends to unit responses. Each unit’s voice should reflect its personality and role — the bravado of a Commando, the professionalism of a Tank, the nervousness of a Conscript. Audio is characterization, not decoration.</p>
-<p><strong>Rule:</strong> Audio design (Phase 3) should be tested against gameplay tempo, not in isolation. Does the music make the player want to act? Do unit voices reinforce the fantasy? The <code>ra-audio</code> system should support dynamic music states (combat/exploration/tension) that respond to game state, not just random playlist shuffling.</p>
+<p><strong>Rule:</strong> Audio design (Phase 3) should be tested against gameplay tempo, not in isolation. Does the music make the player want to act? Do unit voices reinforce the fantasy? The <code>ic-audio</code> system should support dynamic music states (combat/exploration/tension) that respond to game state, not just random playlist shuffling.</p>
 <p><strong>Where this applies:</strong></p>
 <ul>
-<li>Dynamic music system in <code>ra-audio</code> (Phase 3)</li>
+<li>Dynamic music system in <code>ic-audio</code> (Phase 3)</li>
 <li>Unit voice design guidelines for modders</li>
 <li>Audio LOD — critical feedback sounds (unit acknowledgment, attack alerts) must never be culled, even under heavy audio load</li>
 </ul>
@@ -398,7 +398,7 @@ Competitors like Warcraft used unit caps for balance and performance. Westwood r
 <p><strong>Rule:</strong> The damage pipeline (D028) should make the versus table moddable, inspectable, and central to balance work. The table is YAML data, not code. Balance presets (D019) may use different versus tables. The mod SDK should include tools to visualize the counter-play graph.</p>
 <p><strong>Where this applies:</strong></p>
 <ul>
-<li>Damage pipeline and versus tables in <code>ra-sim</code> (D028, Phase 2 hard requirement)</li>
+<li>Damage pipeline and versus tables in <code>ic-sim</code> (D028, Phase 2 hard requirement)</li>
 <li>Balance preset definitions (D019)</li>
 <li>Modding documentation — versus table editing should be a first tutorial, not an advanced topic</li>
 </ul>
@@ -409,11 +409,11 @@ Competitors like Warcraft used unit caps for balance and performance. Westwood r
 <p>Westwood used integer arithmetic exclusively for game logic. Not because floats were slow in 1995 — because deterministic multiplayer requires bitwise-identical results across all clients. The EA GPL source confirms this. The Remastered Collection preserved it. OpenRA continued it.</p>
 <p><strong>This is settled engineering.</strong> D009 / Invariant #1. Don’t revisit it.</p>
 <h3 id="the-outlist--dolist-order-pattern"><a class="header" href="#the-outlist--dolist-order-pattern">The OutList / DoList Order Pattern</a></h3>
-<p>The original engine separates “what the player wants” (OutList) from “what the simulation executes” (DoList). Network code touches both. Simulation code only reads DoList. IC’s <code>PlayerOrder → TickOrders → apply_tick()</code> pipeline is the same pattern. The crate boundary (<code>ra-sim</code> never imports <code>ra-net</code>) enforces at the compiler level what Westwood achieved through discipline. See <a href="03-NETCODE.html">03-NETCODE.md</a>.</p>
+<p>The original engine separates “what the player wants” (OutList) from “what the simulation executes” (DoList). Network code touches both. Simulation code only reads DoList. IC’s <code>PlayerOrder → TickOrders → apply_tick()</code> pipeline is the same pattern. The crate boundary (<code>ic-sim</code> never imports <code>ic-net</code>) enforces at the compiler level what Westwood achieved through discipline. See <a href="03-NETCODE.html">03-NETCODE.md</a>.</p>
 <h3 id="composition-over-inheritance"><a class="header" href="#composition-over-inheritance">Composition Over Inheritance</a></h3>
 <p>OpenRA’s trait system assembles units from composable behaviors in YAML. IC’s Bevy ECS does the same with components. Both are direct descendants of Westwood’s INI-driven data approach. The architecture is compatible at the conceptual level (D023 maps trait names to component names), even though the implementations are completely different. See <a href="04-MODDING.html">04-MODDING.md</a> and <a href="11-OPENRA-FEATURES.html">11-OPENRA-FEATURES.md</a>.</p>
 <h3 id="design-for-extraction"><a class="header" href="#design-for-extraction">Design for Extraction</a></h3>
-<p>The Remastered team extracted Westwood’s 1995 sim as a callable DLL. Design every IC system so it could be extracted, replaced, or wrapped. This is why <code>ra-sim</code> is a library, not an application — and why <code>ra-protocol</code> exists as the shared boundary between sim and network.</p>
+<p>The Remastered team extracted Westwood’s 1995 sim as a callable DLL. Design every IC system so it could be extracted, replaced, or wrapped. This is why <code>ic-sim</code> is a library, not an application — and why <code>ic-protocol</code> exists as the shared boundary between sim and network.</p>
 <h3 id="layered-pathfinding-heuristics"><a class="header" href="#layered-pathfinding-heuristics">Layered Pathfinding Heuristics</a></h3>
 <p>Louis Castle described specific heuristics for avoiding “Artificial Idiocy” in high-unit-count movement:</p>
 <ol>
