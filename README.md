@@ -67,7 +67,7 @@ No C# required. No recompilation. WASM mods will run at near-native speed in a s
 
 **Workshop with dependency management.** A federated resource registry (inspired by crates.io and Artifactory) where any asset type — maps, sprites, music, balance patches, total conversions — can be published individually with semver dependencies and SHA-256 integrity checks. Community-hosted mirrors supported. No single point of failure.
 
-**Scenario editor.** Create, test, and publish maps and missions without leaving the game — OFP/Eden-inspired in-engine editor (D038) with terrain painting, unit placement, visual triggers, waypoints, drag-and-drop logic modules, reusable compositions, Probability of Presence for replayability, Simple/Advanced mode, and a Zeus-inspired Game Master mode for live scenario manipulation.
+**Scenario editor.** Create, test, and publish maps and missions without leaving the game — Operation Flashpoint / Arma 3 Eden-inspired in-engine editor (D038) with terrain painting, unit placement, visual triggers, waypoints, drag-and-drop logic modules, reusable compositions, Probability of Presence for replayability, Simple/Advanced mode, and a Zeus-inspired Game Master mode for live scenario manipulation.
 
 ### 🏗️ For Developers
 
@@ -203,13 +203,13 @@ These are **modding possibilities enabled by the engine's architecture**, not de
 │  │PostFX    │  │          │  │          │  │          │              │
 │  └──────────┘  └──────────┘  └──────────┘  └──────────┘              │
 │                                                                      │
-│  ┌──────────┐  ┌──────────┐                                          │
-│  │  ra-ai   │  │  ra-llm  │                                          │
-│  │          │  │          │                                          │
-│  │Skirmish  │  │Mission   │                                          │
-│  │Campaign  │  │Generate  │                                          │
-│  │Scripted  │  │Adaptive  │                                          │
-│  └──────────┘  └──────────┘                                          │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐                              │
+│  │  ra-ai   │  │  ra-llm  │  │ra-editor │                              │
+│  │          │  │          │  │          │                              │
+│  │Skirmish  │  │Mission   │  │Scenario  │                              │
+│  │Campaign  │  │Generate  │  │Campaign  │                              │
+│  │Scripted  │  │Adaptive  │  │GameMaster│                              │
+│  └──────────┘  └──────────┘  └──────────┘                              │
 │                                                                      │
 │  ┌──────────────────────────────────────────────────────────────────┐│
 │  │                  Bevy Engine (ECS + wgpu)                        ││

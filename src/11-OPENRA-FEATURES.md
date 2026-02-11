@@ -2024,7 +2024,7 @@ Each actor reference exposes properties matching its components (`.Health`, `.Lo
 
 **OpenRA:** `ClassicMapGenerator` (38KB) — procedural map generation with terrain types, resource placement, spawn points.
 
-**Iron Curtain status:** Not explicitly designed, though LLM-generated missions (Phase 7) may cover this. The in-engine scenario editor (D038) should include generation tools.
+**Iron Curtain status:** Not explicitly designed as a standalone system, though multiple D038 features partially address this: game mode templates provide pre-configured map layouts, compositions provide reusable building blocks that could be randomly assembled, and the Probability of Presence system creates per-entity randomization. LLM-generated missions (Phase 7) provide full procedural generation when a provider is configured. A dedicated procedural map generator (terrain + resource placement + spawn balancing) is a natural Phase 7 addition to the scenario editor.
 
 ---
 
@@ -2239,7 +2239,7 @@ These gaps need to be designed *before or during* Phase 2 since they're core sim
 26. **Mine system** — Tactical gameplay
 27. **Demolition/C4** — Engineer ability
 
-### Phase 6 Additions (Modding — Months 26–32)
+### Phase 6a/6b Additions (Modding & Ecosystem — Months 26–32)
 
 28. **Debug/developer tools** — Modder essential
 29. **Encyclopedia** — Discoverability

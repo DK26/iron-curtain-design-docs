@@ -9,8 +9,9 @@ Phase 0 (Foundation)
             ├→ Phase 3 (Game Chrome)
             │    └→ Phase 4 (AI & Single Player)
             │         └→ Phase 5 (Multiplayer)
-            │              └→ Phase 6 (Modding & Ecosystem)
-            │                   └→ Phase 7 (LLM Missions + Polish)
+            │              └→ Phase 6a (Core Modding + Scenario Editor + Full Workshop)
+            │                   └→ Phase 6b (Campaign Editor + Game Modes)
+            │                        └→ Phase 7 (LLM Missions + Ecosystem + Polish)
             └→ [Test infrastructure, CI, headless sim tests]
 ```
 
@@ -182,8 +183,8 @@ Units moving, shooting, dying — headless sim + rendered. Record replay file. P
 - Unit carryover system: 5 modes (`none`, `surviving`, `extracted`, `selected`, `custom`)
 - Veterancy persistence across missions
 - Mission select UI with campaign graph visualization and difficulty indicators
-- **`ic` CLI prototype:** `ic mod init`, `ic mod check`, `ic mod run` — early tooling for Lua script development (full SDK in Phase 6)
-- **Minimal Workshop (D030 early delivery):** Central IC Workshop server + `ic mod publish` + `ic mod install` + basic in-game browser + auto-download on lobby join. Simple HTTP REST API, SQLite-backed. No federation, no replication, no promotion channels yet — those are Phase 6
+- **`ic` CLI prototype:** `ic mod init`, `ic mod check`, `ic mod run` — early tooling for Lua script development (full SDK in Phase 6a)
+- **Minimal Workshop (D030 early delivery):** Central IC Workshop server + `ic mod publish` + `ic mod install` + basic in-game browser + auto-download on lobby join. Simple HTTP REST API, SQLite-backed. No federation, no replication, no promotion channels yet — those are Phase 6a
 
 ### Exit Criteria
 - Can play through **all** Allied and Soviet campaign missions start to finish
@@ -231,17 +232,15 @@ Units moving, shooting, dying — headless sim + rendered. Record replay file. P
 - Ranked 1v1 queue functional with ratings, placement, and leaderboard
 - Spectator can watch a live game with broadcast delay
 
-## Phase 6: Modding & Ecosystem (Months 26–32)
+## Phase 6a: Core Modding & Scenario Editor (Months 26–30)
 
-**Goal:** This is where you win long-term.
+**Goal:** Ship the modding SDK, core scenario editor, and full Workshop — the three pillars that enable community content creation.
 
-> **Phased Workshop delivery (D030):** A minimal Workshop (central server + `ic mod publish` + `ic mod install` + in-game browser + auto-download on lobby join) should ship during Phase 4–5 alongside the `ic` CLI. Phase 6 adds the full Artifactory-level features: federation, community servers, replication, promotion channels, CI/CD token scoping, creator reputation, DMCA process. This avoids holding Workshop infrastructure hostage until month 26.
+> **Phased Workshop delivery (D030):** A minimal Workshop (central server + `ic mod publish` + `ic mod install` + in-game browser + auto-download on lobby join) should ship during Phase 4–5 alongside the `ic` CLI. Phase 6a adds the full Artifactory-level features: federation, community servers, replication, promotion channels, CI/CD token scoping, creator reputation, DMCA process. This avoids holding Workshop infrastructure hostage until month 26.
 
-### Deliverables
+### Deliverables — Modding SDK
 - Full OpenRA YAML rule compatibility (existing mods load)
 - WASM mod scripting with full capability system
-- **In-engine scenario editor (D038):** OFP/Eden-inspired visual editor for maps AND mission logic — terrain painting, unit placement, triggers (area-based with countdown/timeout timers and min/mid/max randomization), waypoints, pre-built modules (wave spawner, patrol route, guard position, reinforcements, objectives, weather change, etc.), visual connection lines between triggers/modules/waypoints, Probability of Presence per entity for replayability, compositions (reusable prefabs), layers with lock/visibility, Simple/Advanced mode toggle, preview/test button, direct Workshop publishing
-- **Game Master mode (D038):** Zeus-inspired real-time scenario manipulation during live gameplay — one player controls enemy faction strategy, places reinforcements, triggers events, adjusts difficulty; uses editor UI on a live sim; budget system prevents flooding
 - Asset hot-reloading for mod development
 - Mod manager + workshop-style distribution
 - Tera templating for YAML generation (nice-to-have)
@@ -249,24 +248,28 @@ Units moving, shooting, dying — headless sim + rendered. Record replay file. P
 - **Mod templates:** `data-mod`, `scripted-mod`, `total-conversion`, `map-pack`, `asset-pack` via `ic mod init`
 - **`mod.yaml` manifest** with typed schema, semver engine version pinning, dependency declarations
 - **VS Code extension** for mod development: YAML schema validation, Lua LSP, `ic` integration
+
+### Deliverables — Scenario Editor (D038 Core)
+- **In-engine scenario editor (D038):** OFP/Eden-inspired visual editor for maps AND mission logic — terrain painting, unit placement, triggers (area-based with countdown/timeout timers and min/mid/max randomization), waypoints, pre-built modules (wave spawner, patrol route, guard position, reinforcements, objectives, weather change, etc.), visual connection lines between triggers/modules/waypoints, Probability of Presence per entity for replayability, compositions (reusable prefabs), layers with lock/visibility, Simple/Advanced mode toggle, preview/test button, autosave with crash recovery, undo/redo, direct Workshop publishing
+- Controller input mapping for core editing workflows (Steam Deck compatible)
+- Accessibility: colorblind palette, UI scaling, full keyboard navigation
+
+### Deliverables — Full Workshop (D030)
 - **Workshop resource registry (D030):** Federated multi-source workshop server with crates.io-style dependency resolution; backed by embedded SQLite with FTS5 search (D034)
 - **Dependency management CLI:** `ic mod resolve/install/update/tree/lock/audit` — full dependency lifecycle
 - **License enforcement:** Every published resource requires SPDX license; `ic mod audit` checks dependency tree compatibility
 - **Individual resource publishing:** Music, sprites, textures, voice lines, cutscenes, palettes, UI themes — all publishable as independent versioned resources
 - **Lockfile system:** `ic.lock` for reproducible dependency resolution across machines
-- **Mod balance dashboard (D034):** Unit win-rate contribution, cost-efficiency scatter plots, engagement outcome distributions from SQLite `gameplay_events`; `ic mod stats` CLI reads same database
 - **Steam Workshop integration (D030):** Optional distribution channel — subscribe via Steam, auto-sync, IC Workshop remains primary; no Steam lock-in
 - **In-game Workshop browser (D030):** Search, filter by category/game-module/rating, preview screenshots, one-click subscribe, dependency auto-resolution
 - **Auto-download on lobby join (D030):** CS:GO-style automatic mod/map download when joining a game that requires content the player doesn't have; progress UI with cancel option
 - **Creator reputation system (D030):** Trust scores from download counts, ratings, curation endorsements; tiered badges (New/Trusted/Verified/Featured); influences search ranking
 - **Content moderation & DMCA/takedown policy (D030):** Community reporting, automated scanning for known-bad content, 72-hour response window, due process with appeal path; Workshop moderator tooling
 - **Creator tipping & sponsorship (D035):** Optional tip links in resource metadata (Ko-fi/Patreon/GitHub Sponsors); IC never processes payments; no mandatory paywalls on mods
-- **Achievement packs (D036):** Mod-defined achievements via YAML + Lua triggers, publishable as Workshop resources; achievement browser in game UI
-- **Community governance tooling (D037):** Workshop moderator dashboard, community representative election system, game module steward roles
 
 ### Exit Criteria
 - Someone ports an existing OpenRA mod (Tiberian Dawn, Dune 2000) and it runs
-- In-engine scenario editor is more capable than OpenRA's standalone map editor: supports terrain painting, unit placement, triggers with timers, waypoints, modules, compositions, and Workshop publishing
+- In-engine scenario editor supports terrain painting, unit placement, triggers with timers, waypoints, modules, compositions, undo/redo, autosave, and Workshop publishing
 - A mod can declare 3+ Workshop resource dependencies and `ic mod install` resolves, downloads, and caches them correctly
 - `ic mod audit` correctly identifies license incompatibilities in a dependency tree
 - An individual resource (e.g., a music track) can be published to and pulled from the Workshop independently
@@ -274,11 +277,37 @@ Units moving, shooting, dying — headless sim + rendered. Record replay file. P
 - Joining a lobby with required mods triggers auto-download with progress UI
 - Creator reputation badges display correctly on resource listings
 - DMCA/takedown process handles a test case end-to-end within 72 hours
+
+## Phase 6b: Campaign Editor & Game Modes (Months 30–34)
+
+**Goal:** Extend the scenario editor into a full campaign authoring platform, ship game mode templates, and multiplayer scenario tools. These all build on Phase 6a's editor and Workshop foundations.
+
+### Deliverables — Campaign Editor (D038)
+- **Visual campaign graph editor:** missions as nodes, outcomes as directed edges, weighted/conditional paths, mission pools
+- **Persistent state dashboard:** roster flow visualization, story flag cross-references, campaign variable scoping
+- **Intermission screen editor:** briefing, roster management, base screen, shop/armory, dialogue, world map, debrief+stats, custom layout
+- **Dialogue editor:** branching trees with conditions, effects, variable substitution, per-character portraits
+- **Named characters:** persistent identity across missions, traits, inventory, must-survive flags
+- **Campaign inventory:** persistent items with category, quantity, assignability to characters
+- **Campaign testing tools:** graph validation, jump-to-mission, path coverage visualization, state inspector
+
+### Deliverables — Game Mode Templates & Multiplayer Scenario Tools (D038)
+- **8 core game mode templates:** Skirmish, Survival/Horde, King of the Hill, Regicide, Free for All, Co-op Survival, Sandbox, Base Defense
+- **Multiplayer scenario tools:** player slot configuration, per-player objectives/triggers/briefings, co-op mission modes (allied factions, shared command, split objectives, asymmetric), multi-slot preview with AI standin, slot switching, lobby preview
+- **Co-op campaign properties:** shared roster draft/split/claim, drop-in/drop-out, solo fallback configuration
+- **Game Master mode (D038):** Zeus-inspired real-time scenario manipulation during live gameplay — one player controls enemy faction strategy, places reinforcements, triggers events, adjusts difficulty; uses editor UI on a live sim; budget system prevents flooding
+- **Achievement packs (D036):** Mod-defined achievements via YAML + Lua triggers, publishable as Workshop resources; achievement browser in game UI
+
+### Exit Criteria
+- Campaign editor can create a branching 5+ mission campaign with persistent roster, story flags, and intermission screens
+- At least 3 game mode templates produce playable matches out-of-the-box
+- A 2-player co-op mission works with per-player objectives, AI fallback for unfilled slots, and drop-in/drop-out
+- Game Master mode allows one player to direct enemy forces in real-time with budget constraints
 - At least one mod-defined achievement pack loads and triggers correctly
 
-## Phase 7: AI Content & Polish (Months 32–36+)
+## Phase 7: AI Content, Ecosystem & Polish (Months 34–36+)
 
-**Goal:** Optional LLM-generated missions (BYOLLM), visual modding infrastructure, and feature parity.
+**Goal:** Optional LLM-generated missions (BYOLLM), visual modding infrastructure, ecosystem polish, and feature parity.
 
 ### Deliverables — AI Content Generation (Optional — BYOLLM)
 
@@ -306,11 +335,16 @@ These are optional visual enhancements that ship as engine capabilities for modd
 - Shader effect library: chrono-shift, iron curtain, gap generator, nuke flash
 - Cinematic replay camera with smooth interpolation
 
-### Deliverables — Platform & Ecosystem
+### Deliverables — Ecosystem Polish (deferred from Phase 6b)
+- **Mod balance dashboard (D034):** Unit win-rate contribution, cost-efficiency scatter plots, engagement outcome distributions from SQLite `gameplay_events`; `ic mod stats` CLI reads same database
+- **Community governance tooling (D037):** Workshop moderator dashboard, community representative election system, game module steward roles
+- **Editor onboarding:** "Coming From" profiles (OFP/AoE2/StarCraft/WC3), keybinding presets, terminology Rosetta Stone, interactive migration cheat sheets, partial scenario import from other editors
+- **Game accessibility:** colorblind faction/minimap/resource palettes, screen reader support for menus, remappable controls, subtitle options for EVA/briefings
+
+### Deliverables — Platform
 - Feature parity checklist vs OpenRA
 - Web build via WASM (play in browser)
 - Mobile touch controls
-- Accessibility features
 - Community infrastructure: website, mod registry, matchmaking server
 
 ### Exit Criteria
@@ -318,3 +352,5 @@ These are optional visual enhancements that ship as engine capabilities for modd
 - When an LLM provider is configured, the mission generator produces varied, fun, playable missions
 - Browser version is playable
 - At least one total conversion mod exists on the platform
+- A veteran editor from AoE2, OFP, or StarCraft backgrounds reports feeling productive within 30 minutes (user testing)
+- Game is playable by a colorblind user without information loss

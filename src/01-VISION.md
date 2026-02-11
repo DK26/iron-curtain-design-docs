@@ -69,7 +69,7 @@ OpenRA is a mature, actively maintained project with 18 years of community inves
 | Runtime       | C# / .NET (mature, productive)           | Rust — no GC, predictable perf, WASM target                         |
 | Threading     | Single-threaded game loop (verified)     | Parallel systems via ECS                                            |
 | Modding       | Powerful but requires C# for deep mods   | YAML + Lua + WASM (no compile step)                                 |
-| Map editor    | Separate tool, recently improved         | In-engine scenario editor with mission logic (D038, Phase 6)        |
+| Map editor    | Separate tool, recently improved         | In-engine scenario editor with mission logic (D038, Phase 6a/6b)    |
 | Multiplayer   | 135+ desync issues tracked               | Snapshottable sim designed for desync pinpointing                   |
 | Competitive   | Community ladders via CnCNet             | Integrated ranked matchmaking, tournament mode                      |
 | Portability   | Desktop (Windows, macOS, Linux)          | Desktop + WASM (browser) + mobile                                   |

@@ -509,7 +509,7 @@ medium_tank:
 
 See `02-ARCHITECTURE.md` § "3D Rendering as a Mod" for the full architectural rationale.
 
-## Tera Templating (Phase 6)
+## Tera Templating (Phase 6a)
 
 ### Tera as the Template Engine
 
