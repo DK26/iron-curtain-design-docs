@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-54ce139c.js";
+            window.path_to_searchindex_js = "searchindex-04ba01c6.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-a85074c4.js"></script>
@@ -371,8 +371,8 @@
 <p><strong>Performance:</strong> identical to hardcoding. Rust traits monomorphize — the trait call compiles to a direct function call when there’s one implementation. Zero overhead.</p>
 <p><strong>What we build now:</strong> Only grid flowfields and spatial hash. The traits exist from day one; alternative implementations are future work (by us or by the community).</p>
 <hr>
-<h2 id="d014-templating--tera-in-phase-6-nice-to-have"><a class="header" href="#d014-templating--tera-in-phase-6-nice-to-have">D014: Templating — Tera in Phase 6 (Nice-to-Have)</a></h2>
-<p><strong>Decision:</strong> Add Tera template engine for YAML/Lua generation. Phase 6. Not foundational.</p>
+<h2 id="d014-templating--tera-in-phase-6a-nice-to-have"><a class="header" href="#d014-templating--tera-in-phase-6a-nice-to-have">D014: Templating — Tera in Phase 6a (Nice-to-Have)</a></h2>
+<p><strong>Decision:</strong> Add Tera template engine for YAML/Lua generation. Phase 6a. Not foundational.</p>
 <p><strong>Rationale:</strong></p>
 <ul>
 <li>Eliminates copy-paste for faction variants, bulk unit generation</li>
@@ -591,7 +591,7 @@ ic mod update-engine       # bump engine version
 <li>In-engine mod editor only (rejected — power users want filesystem access and version control)</li>
 <li>No SDK, just documentation (rejected — OpenRA proves that a template project dramatically lowers the barrier)</li>
 </ul>
-<p><strong>Phase:</strong> Phase 6 (Modding &amp; Ecosystem). CLI prototype in Phase 4 (for Lua scripting development).</p>
+<p><strong>Phase:</strong> Phase 6a (Core Modding + Scenario Editor). CLI prototype in Phase 4 (for Lua scripting development).</p>
 <hr>
 <h3 id="d021--branching-campaign-system-with-persistent-state"><a class="header" href="#d021--branching-campaign-system-with-persistent-state">D021 — Branching Campaign System with Persistent State</a></h3>
 <p><strong>Decision:</strong> Campaigns are directed graphs of missions with named outcomes, branching paths, persistent unit rosters, and continuous flow — not linear sequences with binary win/lose. Failure doesn’t end the campaign; it branches to a different path. Unit state, equipment, and story flags persist across missions.</p>
@@ -644,7 +644,7 @@ ic mod update-engine       # bump engine version
 <li>Only branching on win/lose (rejected — named outcomes are trivially more expressive with no added complexity)</li>
 <li>No unit persistence (rejected — OFP: Resistance proves this is the feature that creates campaign investment)</li>
 </ul>
-<p><strong>Phase:</strong> Phase 4 (AI &amp; Single Player). Campaign graph engine and Lua Campaign API are core Phase 4 deliverables. The visual Campaign Editor in D038 (Phase 6) builds on this system — D021 provides the sim-side engine, D038 provides the visual authoring tools.</p>
+<p><strong>Phase:</strong> Phase 4 (AI &amp; Single Player). Campaign graph engine and Lua Campaign API are core Phase 4 deliverables. The visual Campaign Editor in D038 (Phase 6b) builds on this system — D021 provides the sim-side engine, D038 provides the visual authoring tools.</p>
 <hr>
 <h3 id="d022--dynamic-weather-with-terrain-surface-effects"><a class="header" href="#d022--dynamic-weather-with-terrain-surface-effects">D022 — Dynamic Weather with Terrain Surface Effects</a></h3>
 <p><strong>Decision:</strong> Weather transitions dynamically during gameplay via a deterministic state machine, and terrain textures visually respond to weather — snow accumulates on the ground, rain darkens/wets surfaces, sunshine dries them out. Terrain surface state optionally affects gameplay (movement penalties on snow/ice/mud).</p>
@@ -717,7 +717,7 @@ ic mod update-engine       # bump engine version
 <li>Adopt OpenRA’s names wholesale (rejected — some OpenRA names are poorly chosen or C#-specific; IC benefits from cleaner naming)</li>
 <li>Converter handles everything (rejected — modders still need to re-learn names for new content; aliases let them use familiar names forever)</li>
 </ul>
-<p><strong>Phase:</strong> Phase 0 (alias registry built alongside <code>ra-formats</code> YAML parser). Phase 6 (deprecation warnings configurable in <code>mod.yaml</code>).</p>
+<p><strong>Phase:</strong> Phase 0 (alias registry built alongside <code>ra-formats</code> YAML parser). Phase 6a (deprecation warnings configurable in <code>mod.yaml</code>).</p>
 <hr>
 <h3 id="d024--lua-api-superset-of-openra"><a class="header" href="#d024--lua-api-superset-of-openra">D024 — Lua API Superset of OpenRA</a></h3>
 <p><strong>Decision:</strong> Iron Curtain’s Lua scripting API is a strict superset of OpenRA’s 16 global objects. Same function names, same parameter signatures, same return types. OpenRA Lua missions run unmodified. IC then extends with additional functionality.</p>
@@ -830,7 +830,7 @@ ic mod update-engine       # bump engine version
 <li>Only support IC mod format (rejected — makes evaluation impossible without migration effort)</li>
 <li>Full C# trait loading via .NET interop (rejected — violates D001/D002, reintroduces the problems Rust solves)</li>
 </ul>
-<p><strong>Phase:</strong> Phase 0 (manifest parsing) + Phase 6 (full <code>ic mod import</code> workflow).</p>
+<p><strong>Phase:</strong> Phase 0 (manifest parsing) + Phase 6a (full <code>ic mod import</code> workflow).</p>
 <hr>
 <h3 id="d027--canonical-enum-compatibility-with-openra"><a class="header" href="#d027--canonical-enum-compatibility-with-openra">D027 — Canonical Enum Compatibility with OpenRA</a></h3>
 <p><strong>Decision:</strong> Use OpenRA’s canonical enum names for locomotor types, armor types, target types, damage states, and other enumerated values — or accept both OpenRA and IC-native names via the alias system (D023).</p>
@@ -924,7 +924,7 @@ ic mod update-engine       # bump engine version
 <p><strong>Rationale:</strong></p>
 <ul>
 <li>These aren’t CA-specific — they’re needed for RA2 (the likely second game module). Building them in Phase 2 means they’re available when RA2 development starts.</li>
-<li>CA can migrate to IC the moment the engine is playable, rather than waiting for Phase 6</li>
+<li>CA can migrate to IC the moment the engine is playable, rather than waiting for Phase 6a</li>
 <li>Without these as built-in components, CA modders would need to write WASM for basic mechanics like mind control — unacceptable for adoption</li>
 <li>The seven systems cover ~60% of CA’s custom C# code — collapsing the WASM tier from ~15% to ~5% of migration effort</li>
 <li>Each system is independently useful and well-scoped (2-5 days engineering each)</li>
@@ -967,7 +967,7 @@ ic mod update-engine       # bump engine version
 </thead>
 <tbody>
 <tr><td>Phase 4–5</td><td><strong>Minimal viable Workshop:</strong> Central IC server + <code>ic mod publish</code> + <code>ic mod install</code> + in-game browser + auto-download on lobby join</td><td>Medium</td></tr>
-<tr><td>Phase 6</td><td><strong>Full Workshop:</strong> Federation, community servers, replication, promotion channels, CI/CD token scoping, creator reputation, DMCA process, Steam Workshop as optional source</td><td>High</td></tr>
+<tr><td>Phase 6a</td><td><strong>Full Workshop:</strong> Federation, community servers, replication, promotion channels, CI/CD token scoping, creator reputation, DMCA process, Steam Workshop as optional source</td><td>High</td></tr>
 <tr><td>Phase 7+</td><td><strong>Advanced:</strong> LLM-driven discovery, premium hosting tiers</td><td>Low priority</td></tr>
 </tbody>
 </table>
@@ -1257,7 +1257,7 @@ workshop:
 <li>Resources with <code>LicenseRef-Custom</code> must provide a URL to full license text</li>
 </ul>
 <p><strong>Rationale (from ArmA research):</strong> ArmA’s private mod ecosystem exists specifically because the Workshop can’t protect creators or manage IP claims. Disney, EA, and others actively DMCA ArmA Workshop content. Bohemia established an IP ban list but the community found it heavy-handed. IC’s approach: clear rules, due process, creator notification first — not immediate removal.</p>
-<p><strong>Phase:</strong> Minimal Workshop in Phase 4–5 (central server + publish + browse + auto-download); full Workshop (federation, Steam source, reputation, DMCA) in Phase 6; preparatory work in Phase 3 (manifest format finalized).</p>
+<p><strong>Phase:</strong> Minimal Workshop in Phase 4–5 (central server + publish + browse + auto-download); full Workshop (federation, Steam source, reputation, DMCA) in Phase 6a; preparatory work in Phase 3 (manifest format finalized).</p>
 <hr>
 <h2 id="d035-creator-recognition--attribution"><a class="header" href="#d035-creator-recognition--attribution">D035: Creator Recognition &amp; Attribution</a></h2>
 <p><strong>Decision:</strong> The Workshop supports <strong>voluntary creator recognition</strong> through tipping/sponsorship links and reputation badges. Monetization is never mandatory — all Workshop resources are freely downloadable. Creators can optionally accept tips and link sponsorship profiles.</p>
@@ -1328,7 +1328,7 @@ mod:
 <li>No monetization at all (unsustainable for infrastructure; undervalues creators)</li>
 <li>EA premium content pathway (licensing conflicts with open-source, gives EA control the community should own)</li>
 </ul>
-<p><strong>Phase:</strong> Phase 6 (integrated with Workshop infrastructure), with creator profile schema defined in Phase 3.</p>
+<p><strong>Phase:</strong> Phase 6a (integrated with Workshop infrastructure), with creator profile schema defined in Phase 3.</p>
 <hr>
 <h2 id="d036-achievement-system"><a class="header" href="#d036-achievement-system">D036: Achievement System</a></h2>
 <p><strong>Decision:</strong> IC includes a <strong>per-game-module achievement system</strong> with built-in and mod-defined achievements, stored locally in SQLite (D034), with optional Workshop sync for community-created achievement packs.</p>
@@ -1409,7 +1409,7 @@ achievements:
 <li>No achievement system (misses engagement opportunity, feels incomplete vs modern RTS competitors)</li>
 <li>Blockchain-verified achievements (needless complexity, community hostility toward crypto/blockchain in games)</li>
 </ul>
-<p><strong>Phase:</strong> Phase 3 (built-in achievement infrastructure + campaign achievements), Phase 6 (mod-defined achievements via Workshop).</p>
+<p><strong>Phase:</strong> Phase 3 (built-in achievement infrastructure + campaign achievements), Phase 6b (mod-defined achievements via Workshop).</p>
 <hr>
 <h2 id="d037-community-governance--platform-stewardship"><a class="header" href="#d037-community-governance--platform-stewardship">D037: Community Governance &amp; Platform Stewardship</a></h2>
 <p><strong>Decision:</strong> IC’s community infrastructure (Workshop, tracking servers, competitive systems) operates under a <strong>transparent governance model</strong> with community representation, clear policies, and distributed authority.</p>
@@ -1468,7 +1468,7 @@ achievements:
 <li>Corporate governance (inappropriate for an open-source community project)</li>
 <li>No formal governance (works early, creates problems at scale — better to define structure before it’s needed)</li>
 </ul>
-<p><strong>Phase:</strong> Phase 0 (code of conduct, contribution guidelines), Phase 5 (competitive committee), Phase 6 (Workshop moderators, community representatives).</p>
+<p><strong>Phase:</strong> Phase 0 (code of conduct, contribution guidelines), Phase 5 (competitive committee), Phase 7 (Workshop moderators, community representatives).</p>
 <blockquote>
 <p><strong>Phasing note:</strong> This governance model is aspirational — it describes where the project aims to be at scale, not what launches on day one. At project start, governance is BDFL (maintainer) + trusted contributors, which is appropriate for a project with zero users. Formal elections, committees, and community representatives should not be implemented until there is an active community of 50+ regular contributors. The governance structure documented here is a roadmap, not a launch requirement. Premature formalization risks creating bureaucracy before there are people to govern.</p>
 </blockquote>
@@ -1805,7 +1805,7 @@ theme:
 <li>CSS-style theming (web-engine approach) — overengineered for a game; YAML is simpler and Bevy-native</li>
 <li>Theme as a full WASM mod — overkill; theming is data, not behavior; Tier 1 YAML is sufficient</li>
 </ul>
-<p><strong>Phase:</strong> Phase 3 (Game Chrome). Theme system is part of the <code>ra-ui</code> crate. Built-in themes ship with the engine. Community themes available in Phase 6 (workshop).</p>
+<p><strong>Phase:</strong> Phase 3 (Game Chrome). Theme system is part of the <code>ra-ui</code> crate. Built-in themes ship with the engine. Community themes available in Phase 6a (Workshop).</p>
 <hr>
 <h2 id="d033-toggleable-qol--gameplay-behavior-presets"><a class="header" href="#d033-toggleable-qol--gameplay-behavior-presets">D033: Toggleable QoL &amp; Gameplay Behavior Presets</a></h2>
 <p><strong>Decision:</strong> Every UX and gameplay behavior improvement added by OpenRA or the Remastered Collection over vanilla Red Alert is individually toggleable. Built-in presets group these toggles into coherent experience profiles. Players can pick a preset and then customize any individual toggle. In multiplayer lobbies, sim-affecting toggles are shared settings; client-only toggles are per-player.</p>
@@ -2166,7 +2166,7 @@ qol:
 <li>Performance trends: completion time, casualties, resource efficiency per mission</li>
 <li>All data: <code>SELECT ... FROM campaign_missions JOIN roster_snapshots ...</code></li>
 </ul>
-<p><strong>Mod balance dashboard</strong> (Phase 6, for mod developers):</p>
+<p><strong>Mod balance dashboard</strong> (Phase 7, for mod developers):</p>
 <ul>
 <li>Unit win-rate contribution, cost-efficiency scatter plots, engagement outcome distributions</li>
 <li>Compare across balance presets (D019) or mod versions</li>
@@ -2308,7 +2308,7 @@ pub trait WorkshopStorage: Send + Sync {
 /// wrapping a rusqlite::Connection (WAL mode, foreign keys on, journal_size_limit set).
 /// PostgreSQL implementations are optional, behind `#[cfg(feature = "postgres")]`.
 <span class="boring">}</span></code></pre>
-<p><strong>Phase:</strong> SQLite storage for relay and client lands in Phase 2 (replay catalog, save game index, gameplay event log). Workshop server storage lands in Phase 6 (D030). Matchmaking and tournament storage land in Phase 5 (competitive infrastructure). The <code>StorageBackend</code> trait is defined early but PostgreSQL implementation is deferred until scale requires it.</p>
+<p><strong>Phase:</strong> SQLite storage for relay and client lands in Phase 2 (replay catalog, save game index, gameplay event log). Workshop server storage lands in Phase 6a (D030). Matchmaking and tournament storage land in Phase 5 (competitive infrastructure). The <code>StorageBackend</code> trait is defined early but PostgreSQL implementation is deferred until scale requires it.</p>
 <hr>
 <h2 id="d038--in-engine-scenario-editor-ofpeden-inspired"><a class="header" href="#d038--in-engine-scenario-editor-ofpeden-inspired">D038 — In-Engine Scenario Editor (OFP/Eden-Inspired)</a></h2>
 <p><strong>Resolves:</strong> P005 (Map editor architecture)</p>
@@ -2323,7 +2323,8 @@ pub trait WorkshopStorage: Send + Sync {
 <p>Eden Editor (2016) evolved these principles: 3D placement, undo/redo, 154 pre-built modules (complex logic as drag-and-drop nodes), compositions (reusable prefabs), layers (organizational folders), and Steam Workshop publishing directly from the editor. Arma Reforger (2022) added budget systems, behavior trees for waypoints, controller support, and a real-time Game Master mode.</p>
 <p><strong>Iron Curtain applies these lessons to the RTS genre.</strong> An RTS scenario editor has different needs than a military sim — isometric view instead of first-person, base-building and resource placement instead of terrain sculpting, wave-based encounters instead of patrol routes. But the underlying principles are identical: layered complexity, emergent behavior from simple rules, and zero barrier between editing and playing.</p>
 <h3 id="architecture"><a class="header" href="#architecture">Architecture</a></h3>
-<p>The scenario editor is a Bevy plugin (<code>ra-ui</code> crate, editor module) that reuses the game’s rendering and simulation systems. It is NOT a separate process — it runs in the same Bevy <code>App</code> with additional editor-only systems and UI.</p>
+<p>The scenario editor is a Bevy plugin in the <code>ra-editor</code> crate that reuses the game’s rendering and simulation systems. It depends on <code>ra-render</code> (isometric viewport), <code>ra-sim</code> (preview playback), <code>ra-ui</code> (shared UI components like panels and attribute editors), and <code>ra-protocol</code> (order types for preview). It is NOT a separate process — it runs in the same Bevy <code>App</code> with additional editor-only systems and UI. The <code>ra-editor</code> crate is optional — headless sim, dedicated servers, and AI training builds exclude it entirely.</p>
+<p><strong>Preview communication:</strong> When the user hits “Preview,” the editor serializes the current scenario to an in-memory map, spawns a <code>LocalNetwork</code> (from <code>ra-net</code>), and starts the sim. Editor-generated inputs (e.g., placing a debug unit mid-preview) are submitted as <code>PlayerOrder</code>s through <code>ra-protocol</code> — the sim never knows it’s being driven by an editor. This reuses the same <code>GameLoop&lt;LocalNetwork, InputSource&gt;</code> path as single-player, ensuring preview behavior is identical to actual gameplay. Exiting preview restores the editor state from the pre-preview snapshot.</p>
 <pre><code>┌─────────────────────────────────────────────────┐
 │                 Scenario Editor                  │
 │                                                  │
@@ -2357,9 +2358,10 @@ pub trait WorkshopStorage: Send + Sync {
 │  │  Graph · State · Intermissions · Dialogue │   │
 │  └──────────────────────────────────────────┘   │
 │                                                  │
-│  Uses: ra-render (isometric view)                │
-│        ra-sim   (preview playback)               │
-│        ra-ui    (panels, attributes)             │
+│  Crate: ra-editor                                │
+│  Uses:  ra-render (isometric view)               │
+│         ra-sim   (preview playback)              │
+│         ra-ui    (shared panels, attributes)     │
 └─────────────────────────────────────────────────┘
 </code></pre>
 <h3 id="editing-modes"><a class="header" href="#editing-modes">Editing Modes</a></h3>
@@ -2539,6 +2541,15 @@ Mission init script    — special file that runs once at mission start
 <li>Undo history survives save/load within a session</li>
 <li><strong>Ctrl+Z / Ctrl+Y</strong> (desktop), equivalent bindings on controller</li>
 </ul>
+<h3 id="autosave--crash-recovery"><a class="header" href="#autosave--crash-recovery">Autosave &amp; Crash Recovery</a></h3>
+<p>OFP’s editor had no undo and no autosave — one misclick or crash could destroy hours of work. IC ships with both from day one.</p>
+<ul>
+<li><strong>Autosave</strong> — configurable interval (default: every 5 minutes). Writes to a rotating set of 3 autosave slots so a corrupted save doesn’t overwrite the only backup</li>
+<li><strong>Pre-preview save</strong> — the editor automatically saves a snapshot before entering preview mode. If the game crashes during preview, the editor state is preserved</li>
+<li><strong>Recovery on launch</strong> — if the editor detects an unclean shutdown (crash), it offers to restore from the most recent autosave: “The editor was not closed properly. Restore from autosave (2 minutes ago)? [Restore] [Discard]”</li>
+<li><strong>Undo history persistence</strong> — the undo stack is included in autosaves. Restoring from autosave also restores the ability to undo recent changes</li>
+<li><strong>Manual save is always available</strong> — Ctrl+S saves to the scenario file. Autosave supplements manual save, never replaces it</li>
+</ul>
 <h3 id="trigger-system-rts-adapted"><a class="header" href="#trigger-system-rts-adapted">Trigger System (RTS-Adapted)</a></h3>
 <p>OFP’s trigger system adapted for RTS gameplay:</p>
 <div class="table-wrapper">
@@ -2666,7 +2677,7 @@ Campaign         — branching multi-mission graph with persistent state, interm
 <li>Group entities by purpose: “Phase 1 — Base Defense”, “Phase 2 — Counterattack”, “Enemy Patrols”, “Civilian Traffic”</li>
 <li><strong>Visibility toggle</strong> — hide layers in the editor without affecting runtime (essential when a mission has 500+ entities)</li>
 <li><strong>Lock toggle</strong> — prevent accidental edits to finalized layers</li>
-<li><strong>Runtime show/hide</strong> — Lua can show/hide entire layers at runtime: <code>Editor.show_layer("Phase2_Reinforcements")</code> — all entities in the layer spawn simultaneously</li>
+<li><strong>Runtime show/hide</strong> — Lua can show/hide entire layers at runtime: <code>Layer.activate("Phase2_Reinforcements")</code> / <code>Layer.deactivate(...)</code>. Activating a layer spawns all entities in it as a batch; deactivating despawns them. These are <strong>sim operations</strong> (deterministic, included in snapshots and replays), not editor operations — the Lua API name uses <code>Layer</code>, not <code>Editor</code>, to make the boundary clear. Internally, each entity has a <code>layer: Option&lt;String&gt;</code> field; activation toggles a per-layer <code>active</code> flag that the spawn system reads. Entities in inactive layers do not exist in the sim — they are serialized in the scenario file but not instantiated until activation. <strong>Deactivation is destructive:</strong> calling <code>Layer.deactivate()</code> despawns all entities in the layer — any runtime state (damage taken, position changes, veterancy gained) is lost. Re-activating the layer spawns fresh copies from the scenario template. This is intentional: layers model “reinforcement waves” and “phase transitions,” not pausable unit groups. For scenarios that need to preserve unit state across activation cycles, use Lua variables or campaign state (D021) to snapshot and restore specific values</li>
 </ul>
 <h3 id="preview--test"><a class="header" href="#preview--test">Preview / Test</a></h3>
 <ul>
@@ -2994,7 +3005,7 @@ transitions:
 <li>Pause sim for dramatic reveals (if all players agree)</li>
 </ul>
 <p><strong>Not included at launch:</strong> Player control of individual units (RTS is about armies, not individual soldiers). The GM operates at the strategic level — directing groups, managing resources, triggering events.</p>
-<p><strong>Phase:</strong> Game Master mode is a Phase 6–7 deliverable. It reuses 90% of the scenario editor’s systems — the main new work is the real-time overlay UI and budget/permission system.</p>
+<p><strong>Phase:</strong> Game Master mode is a Phase 6b deliverable. It reuses 90% of the scenario editor’s systems — the main new work is the real-time overlay UI and budget/permission system.</p>
 <h3 id="publishing"><a class="header" href="#publishing">Publishing</a></h3>
 <p>Scenarios created in the editor export as standard IC mission format (YAML map + Lua scripts + assets). They can be:</p>
 <ul>
@@ -3131,7 +3142,7 @@ transitions:
 </table>
 </div>
 <p><strong>Templates are starting points, not constraints.</strong> Open a template, add your own triggers/modules/Lua, publish to Workshop. Templates save 30–60 minutes of boilerplate setup and ensure the core game mode logic is correct.</p>
-<p><strong>Phasing:</strong> Not all 17 templates ship simultaneously. <strong>Phase 6 core set</strong> (8 templates): Skirmish, Survival/Horde, King of the Hill, Regicide, Free for All, Co-op Survival, Sandbox, Base Defense — these cover the most common community needs and validate the template system. <strong>Phase 7 / community-contributed</strong> (9 templates): Treaty, Nomad, Empire Wars, Assassination, Tower Defense, Tug of War, Capture the Flag, Diplomacy, Sudden Death — these are well-defined patterns that the community can build and publish via Workshop before (or instead of) first-party implementation. Scope to what you have (Principle #6); don’t ship 17 mediocre templates when 8 excellent ones plus a thriving Workshop library serves players better.</p>
+<p><strong>Phasing:</strong> Not all 17 templates ship simultaneously. <strong>Phase 6b core set</strong> (8 templates): Skirmish, Survival/Horde, King of the Hill, Regicide, Free for All, Co-op Survival, Sandbox, Base Defense — these cover the most common community needs and validate the template system. <strong>Phase 7 / community-contributed</strong> (9 templates): Treaty, Nomad, Empire Wars, Assassination, Tower Defense, Tug of War, Capture the Flag, Diplomacy, Sudden Death — these are well-defined patterns that the community can build and publish via Workshop before (or instead of) first-party implementation. Scope to what you have (Principle #6); don’t ship 17 mediocre templates when 8 excellent ones plus a thriving Workshop library serves players better.</p>
 <p><strong>Custom game mode templates:</strong> Modders can create new templates and publish them to Workshop (D030). A “Zombie Survival” template, a “MOBA Lanes” template, a “RPG Quest Hub” template — the community extends the library indefinitely. Templates use the same composition + module + trigger format as everything else.</p>
 <p><strong>Templates + Co-op:</strong> Several templates have natural co-op variants. Co-op Survival is explicit, but most templates work with 2+ players if the designer adds co-op spawn points and per-player objectives.</p>
 <h3 id="editor-onboarding-for-veterans"><a class="header" href="#editor-onboarding-for-veterans">Editor Onboarding for Veterans</a></h3>
@@ -3201,13 +3212,48 @@ WC3 Style    — Ctrl+T trigger editor, Ctrl+B triggers browser
 </ul>
 <p>Import is always <strong>best-effort</strong> with clear reporting: “Imported 47 of 52 triggers. 5 triggers used features without IC equivalents — see import log.” Better to import 90% and fix 10% than to recreate 100% from scratch.</p>
 <p><strong>The 30-minute goal:</strong> A veteran editor from ANY background should feel productive within 30 minutes. Not expert — productive. They recognize familiar concepts wearing new names, their muscle memory partially transfers via keybinding presets, and the migration cheat sheet fills the gaps. The learning curve is a gentle slope, not a cliff.</p>
+<h3 id="controller--steam-deck-support"><a class="header" href="#controller--steam-deck-support">Controller &amp; Steam Deck Support</a></h3>
+<p>Steam Deck is a target platform (Invariant #10), so the editor must be usable without mouse+keyboard — but it doesn’t need to be <em>equally</em> powerful. The approach: full functionality on mouse+keyboard, comfortable core workflows on controller.</p>
+<ul>
+<li><strong>Controller input mapping:</strong> Left stick for cursor movement (with adjustable acceleration), right stick for camera pan/zoom. D-pad cycles editing modes. Face buttons: place (A), delete (B), properties panel (X), context menu (Y). Triggers: undo (LT), redo (RT). Bumpers: cycle selected entity type</li>
+<li><strong>Radial menus</strong> — controller-optimized selection wheels for entity types, trigger types, and module categories (replacing mouse-dependent dropdowns)</li>
+<li><strong>Snap-to-grid</strong> — always active on controller (optional on mouse) to compensate for lower cursor precision</li>
+<li><strong>Touch input (Steam Deck / mobile):</strong> Tap to place, pinch to zoom, two-finger drag to pan. Long press for properties panel. Touch works as a complement to controller, not a replacement for mouse</li>
+<li><strong>Scope:</strong> Core editing (terrain, entity placement, triggers, waypoints, modules, preview) is controller-compatible at launch. Advanced features (inline Lua editing, campaign graph wiring, dialogue tree authoring) require keyboard and are flagged in the UI: “Connect a keyboard for this feature.” This is the same trade-off Eden Editor made — and Steam Deck has a built-in keyboard for occasional text entry</li>
+</ul>
+<p><strong>Phase:</strong> Controller input for the editor ships with Phase 6a. Touch input is Phase 7.</p>
+<h3 id="accessibility"><a class="header" href="#accessibility">Accessibility</a></h3>
+<p>The editor’s “accessibility through layered complexity” principle applies to disability access, not just skill tiers. These features ensure the editor is usable by the widest possible audience.</p>
+<p><strong>Visual accessibility:</strong></p>
+<ul>
+<li><strong>Colorblind modes</strong> — all color-coded elements (trigger folders, layer colors, region colors, connection lines, complexity meter) use a palette designed for deuteranopia, protanopia, and tritanopia. In addition to color, elements use distinct <strong>shapes and patterns</strong> (dashed vs solid lines, different node shapes) so color is never the only differentiator</li>
+<li><strong>High contrast mode</strong> — editor UI switches to high-contrast theme with stronger borders and larger text. Toggle in editor settings</li>
+<li><strong>Scalable UI</strong> — all editor panels respect the game’s global UI scale setting (50%–200%). Editor-specific elements (attribute labels, trigger text, node labels) scale independently if needed</li>
+<li><strong>Zoom and magnification</strong> — the isometric viewport supports arbitrary zoom levels. Combined with UI scaling, users with low vision can work at comfortable magnification</li>
+</ul>
+<p><strong>Motor accessibility:</strong></p>
+<ul>
+<li><strong>Full keyboard navigation</strong> — every editor operation is reachable via keyboard. Tab cycles panels, arrow keys navigate within panels, Enter confirms, Escape cancels. No operation requires mouse-only gestures</li>
+<li><strong>Adjustable click timing</strong> — double-click speed and drag thresholds are configurable for users with reduced dexterity</li>
+<li><strong>Sticky modes</strong> — editing modes (terrain, entity, trigger) stay active until explicitly switched, rather than requiring held modifier keys</li>
+</ul>
+<p><strong>Cognitive accessibility:</strong></p>
+<ul>
+<li><strong>Simple/Advanced mode</strong> (already designed) is the primary cognitive accessibility feature — it reduces the number of visible options from 30+ to ~10</li>
+<li><strong>Consistent layout</strong> — panels don’t rearrange based on context. The attributes panel is always on the right, the mode selector always on the left. Predictable layout reduces cognitive load</li>
+<li><strong>Tooltips with examples</strong> — every field in the attributes panel has a tooltip with a concrete example, not just a description. “Probability of Presence: 75” → tooltip: “75% chance this unit exists when the mission starts. Example: set to 50 for a coin-flip ambush.”</li>
+</ul>
+<p><strong>Phase:</strong> Colorblind modes, UI scaling, and keyboard navigation ship with Phase 6a. High contrast mode and motor accessibility refinements ship in Phase 6b–7.</p>
+<blockquote>
+<p><strong>Note:</strong> The accessibility features above cover the <strong>editor</strong> UI. <strong>Game-level accessibility</strong> — colorblind faction colors, minimap palettes, resource differentiation, screen reader support for menus, subtitle options for EVA/briefings, and remappable controls — is a separate concern that applies to <code>ra-render</code> and <code>ra-ui</code>, not <code>ra-editor</code>. Game accessibility ships in Phase 7 (see <code>08-ROADMAP.md</code>).</p>
+</blockquote>
 <h3 id="alternatives-considered"><a class="header" href="#alternatives-considered">Alternatives Considered</a></h3>
 <ol>
 <li><strong>Standalone tool (like OpenRA):</strong> Rejected. Separate process means no live preview, no reuse of rendering/sim code, higher maintenance burden, worse UX. OFP’s editor succeeded precisely because it was in-game.</li>
 <li><strong>Text-only editing (YAML + Lua):</strong> Already supported for power users and LLM generation. The visual editor is the accessibility layer on top of the same data format.</li>
 <li><strong>Node-based visual scripting (like Unreal Blueprints):</strong> Too complex for the casual audience. Modules + triggers cover the sweet spot. Advanced users write Lua directly. A node editor is a potential Phase 7+ community contribution.</li>
 </ol>
-<p><strong>Phase:</strong> Core scenario editor (terrain + entities + triggers + waypoints + modules + preview) ships in Phase 6. Campaign editor, compositions, game mode templates, multiplayer/co-op scenario tools, and Workshop publishing ship alongside. Game Master mode ships in Phase 6–7. The campaign editor’s graph, state dashboard, and intermission screens build on D021’s campaign system (Phase 4) — the sim-side campaign engine must exist before the visual editor can drive it.</p>
+<p><strong>Phase:</strong> Core scenario editor (terrain + entities + triggers + waypoints + modules + compositions + preview + autosave + controller input + accessibility) ships in <strong>Phase 6a</strong> alongside the modding SDK and full Workshop. Campaign editor (graph, state dashboard, intermissions, dialogue, named characters), game mode templates, multiplayer/co-op scenario tools, and Game Master mode ship in <strong>Phase 6b</strong>. Editor onboarding (“Coming From” profiles, keybinding presets, migration cheat sheets, partial import) and touch input ship in <strong>Phase 7</strong>. The campaign editor’s graph, state dashboard, and intermission screens build on D021’s campaign system (Phase 4) — the sim-side campaign engine must exist before the visual editor can drive it.</p>
 <hr>
 <h2 id="pending-decisions"><a class="header" href="#pending-decisions">PENDING DECISIONS</a></h2>
 <div class="table-wrapper">

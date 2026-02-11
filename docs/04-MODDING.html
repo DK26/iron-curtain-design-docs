@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-54ce139c.js";
+            window.path_to_searchindex_js = "searchindex-04ba01c6.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-a85074c4.js"></script>
@@ -639,7 +639,7 @@ medium_tank:
 </code></pre>
 <p><strong>Cross-view multiplayer is a natural consequence.</strong> Since the mod only changes rendering, a player using the 3D mod can play against a player using classic isometric sprites. The sim produces identical state; each client just draws it differently. Replays are viewable in either mode.</p>
 <p>See <code>02-ARCHITECTURE.md</code> § “3D Rendering as a Mod” for the full architectural rationale.</p>
-<h2 id="tera-templating-phase-6"><a class="header" href="#tera-templating-phase-6">Tera Templating (Phase 6)</a></h2>
+<h2 id="tera-templating-phase-6a"><a class="header" href="#tera-templating-phase-6a">Tera Templating (Phase 6a)</a></h2>
 <h3 id="tera-as-the-template-engine"><a class="header" href="#tera-as-the-template-engine">Tera as the Template Engine</a></h3>
 <p>Tera is a Rust-native Jinja2-compatible template engine. <strong>All first-party IC content uses it</strong> — the default Red Alert campaign, built-in resource packs, and balance presets are all Tera-templated. This means the system is proven by the content that ships with the engine, not just an abstract capability.</p>
 <p>For <strong>third-party content creators, Tera is entirely optional.</strong> Plain YAML is always valid and is the recommended starting point. Most community mods, resource packs, and maps work fine without any templating at all. Tera is there when you need it — not forced on you.</p>
