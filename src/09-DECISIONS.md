@@ -2505,6 +2505,18 @@ The scenario editor lives in the `ic-editor` crate and ships as part of the **IC
 | **Scripts**     | Browse and edit external `.lua` files referenced by inline scripts    | OFP mission folder `.sqs`/`.sqf` files |
 | **Campaign**    | Visual campaign graph — mission ordering, branching, persistent state | N/A (no RTS editor has this)           |
 
+### Entity Palette UX
+
+The Entities mode panel provides the primary browse/select interface for all placeable objects. Inspired by Garry's Mod's spawn menu (`Q` menu) — the gold standard for navigating massive asset libraries — the palette includes:
+
+- **Search-as-you-type** across all entities (units, structures, props, modules, compositions) — filters the tree in real time
+- **Favorites list** — star frequently-used items; persisted per-user in SQLite (D034). A dedicated Favorites tab at the top of the palette
+- **Recently placed** — shows the last 20 entities placed this session, most recent first. One click to re-select
+- **Per-category browsing** with collapsible subcategories (faction → unit type → specific unit). Categories are game-module-defined via YAML
+- **Thumbnail previews** — small sprite/icon preview next to each entry. Hovering shows a larger preview with stats summary
+
+The same palette UX applies to the Compositions Library panel, the Module selector, and the Trigger type picker — search/favorites/recents are universal navigation patterns across all editor panels.
+
 ### Entity Attributes Panel
 
 Every placed entity has a GUI properties panel (no code required). This replaces OFP's "Init" field for most use cases while keeping advanced scripting available.
@@ -2793,10 +2805,12 @@ Campaign         — branching multi-mission graph with persistent state, interm
 
 **Workflow:**
 1. Place entities, arrange them, connect triggers/modules
-2. Select all → "Save as Composition" → name, category, description
-3. Composition appears in the Compositions Library panel
+2. Select all → "Save as Composition" → name, category, description, tags, thumbnail
+3. Composition appears in the Compositions Library panel (searchable, with favorites — same palette UX as the entity panel)
 4. Drag composition onto any map to place a pre-built cluster
 5. Publish to Workshop (D030) — community compositions become shared building blocks
+
+**Compositions are individually publishable.** Unlike scenarios (which are complete missions), a single composition can be published as a standalone Workshop resource — a "Soviet Base (Large)" layout, a "Scripted Ambush" encounter template, a "Tournament Start" formation. Other designers browse and install individual compositions, just as Garry's Mod's Advanced Duplicator lets players share and browse individual contraptions independently of full maps. Composition metadata (name, description, thumbnail, tags, author, dependencies) enables a browsable composition library within the Workshop, not just a flat file list.
 
 This completes the content creation pipeline: compositions are the visual-editor equivalent of scene templates (04-MODDING.md). Scene templates are YAML/Lua for programmatic use and LLM generation. Compositions are the same concept for visual editing. They share the same underlying data format — a composition saved in the editor can be loaded as a scene template by Lua/LLM, and vice versa.
 
@@ -3376,6 +3390,8 @@ A real-time scenario manipulation mode where one player (the Game Master) contro
 
 **Not included at launch:** Player control of individual units (RTS is about armies, not individual soldiers). The GM operates at the strategic level — directing groups, managing resources, triggering events.
 
+**Per-player undo:** In multiplayer editing contexts (and Game Master mode specifically), undo is scoped per-actor. The GM's undo reverts only GM actions, not player orders or other players' actions. This follows Garry's Mod's per-player undo model — in a shared session, pressing undo reverts YOUR last action, not the last global action. For the single-player editor, undo is global (only one actor).
+
 **Phase:** Game Master mode is a Phase 6b deliverable. It reuses 90% of the scenario editor's systems — the main new work is the real-time overlay UI and budget/permission system.
 
 ### Publishing
@@ -3531,6 +3547,7 @@ The scenario editor design draws from:
 - **Divinity: Original Sin 2 (2017):** Co-op campaign with persistent state, per-player dialogue choices that affect the shared story. Game Master mode with real-time scenario manipulation. Proved co-op campaign RPG works — and that the tooling for CREATING co-op content matters as much as the runtime support.
 - **Doom community editors (1994–present):** Open data formats enable 30+ years of community tools. The WAD format's openness is why Doom modding exists — validates IC's YAML-based scenario format.
 - **OpenRA map editor:** Terrain painting, resource placement, actor placement — standalone tool. IC improves by integrating a full creative toolchain in the SDK (scenario editor + asset studio + campaign editor)
+- **Garry's Mod (2006–present):** Spawn menu UX (search/favorites/recents for large asset libraries) directly inspired IC's Entity Palette. Duplication system (save/share/browse entity groups) validates IC's Compositions. Per-player undo in multiplayer sessions informed IC's Game Master undo scoping. Community-built tools (Wire Mod, Expression 2) that became indistinguishable from first-party tools proved that a clean tool API matters more than shipping every tool yourself — directly inspired IC's Workshop-distributed editor plugins. Sandbox mode as the default creative environment validated IC's Sandbox template as the editor's default preview mode. Cautionary lesson: unrestricted Lua access enabled the Glue Library incident (malicious addon update) — reinforces IC's sandboxed Lua model (D004) and Workshop supply chain defenses (D030, `06-SECURITY.md` § Vulnerability 18)
 
 ### Multiplayer & Co-op Scenario Tools
 
@@ -3635,7 +3652,32 @@ Almost every popular RTS game mode can be built with IC's existing module system
 
 **Custom game mode templates:** Modders can create new templates and publish them to Workshop (D030). A "Zombie Survival" template, a "MOBA Lanes" template, a "RPG Quest Hub" template — the community extends the library indefinitely. Templates use the same composition + module + trigger format as everything else.
 
+**Community tools > first-party completeness.** Garry's Mod shipped ~25 built-in tools; the community built hundreds more that matched or exceeded first-party quality — because the tool API was clean enough that addon authors could. The same philosophy applies here: ship 8 excellent templates, make the authoring format so clean that community templates are indistinguishable from built-in ones, and let Workshop do the rest. The limiting factor should be community imagination, not API complexity.
+
+**Sandbox as default preview.** The Sandbox template (unlimited resources, no enemies, no victory condition) doubles as the default environment when the editor's Preview button is pressed without a specific scenario loaded. This follows Garry's Mod's lesson: sandbox mode is how people **learn the tools** before making real content. A zero-pressure environment where every entity and module can be tested without mission constraints.
+
 **Templates + Co-op:** Several templates have natural co-op variants. Co-op Survival is explicit, but most templates work with 2+ players if the designer adds co-op spawn points and per-player objectives.
+
+### Workshop-Distributed Editor Plugins
+
+Garry's Mod's most powerful pattern: community-created tools appear alongside built-in tools in the same menu. The community doesn't just create content — they **extend the creation tools themselves.** Wire Mod and Expression 2 are the canonical examples: community-built systems that became essential editor infrastructure, indistinguishable from first-party tools.
+
+IC supports this explicitly. Workshop-published packages can contain:
+
+| Plugin Type             | What It Adds                                                            | Example                                                     |
+| ----------------------- | ----------------------------------------------------------------------- | ----------------------------------------------------------- |
+| **Custom modules**      | New entries in the Modules panel (YAML definition + Lua implementation) | "Convoy System" module — defines waypoints + spawn + escort |
+| **Custom triggers**     | New trigger condition/action types                                      | "Music trigger" — plays specific track on activation        |
+| **Compositions**        | Pre-built reusable entity groups (see Compositions section)             | "Tournament 1v1 Start" — balanced spawn with resources      |
+| **Game mode templates** | Complete game mode setups (see Game Mode Templates section)             | "MOBA Lanes" — 3-lane auto-spawner with towers and heroes   |
+| **Editor tools**        | New editing tools and panels (Lua-based UI extensions, Phase 7)         | "Formation Arranger" — visual grid formation editor tool    |
+| **Terrain brushes**     | Custom terrain painting presets                                         | "River Painter" — places water + bank tiles + bridge snaps  |
+
+All plugin types use the tiered modding system (invariant #3): YAML for data definitions, Lua for logic, WASM for complex tools. Plugins are sandboxed — an editor plugin cannot access the filesystem, network, or sim internals beyond the editor's public API. They install via Workshop like any other resource and appear in the editor's palettes automatically.
+
+This aligns with philosophy principle #19 ("Build for surprise — expose primitives, not just parameterized behaviors"): the module/trigger/composition system is powerful enough that community extensions can create things the engine developers never imagined.
+
+**Phase:** Custom modules and compositions are publishable from Phase 6a (they use the existing YAML + Lua format). Custom editor tools (Lua-based UI extensions) are a Phase 7 capability that depends on the editor's Lua plugin API.
 
 ### Editor Onboarding for Veterans
 
