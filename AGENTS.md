@@ -265,6 +265,7 @@ When you need deeper detail, read the specific design doc:
 | OpenRA feature catalog (~700 traits), gap analysis, migration mapping                             | `src/11-OPENRA-FEATURES.md` |
 | Combined Arms mod migration, Remastered recreation feasibility                                    | `src/12-MOD-MIGRATION.md`   |
 | Development philosophy, design review principles, lessons from C&C creators and OpenRA            | `src/13-PHILOSOPHY.md`      |
+| Development methodology, stages from research to release, context-bounded work units, agent rules | `src/14-METHODOLOGY.md`     |
 
 ## Working With This Codebase
 
