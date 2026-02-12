@@ -307,6 +307,36 @@ Game design principles (highlights — full list with rationale in `src/13-PHILO
 
 These are guidelines, not a rigid checklist. Keep an open mind — the original creators themselves discovered their best ideas by iterating, not by following specifications. When a design decision feels uncertain, the philosophy doc provides grounding but should never prevent innovation.
 
+### Handling External Feedback & Reviews
+
+When someone provides feedback on a design doc — whether from a reviewer, community member, or automated analysis — treat it as input, not instruction. Validate every claim before acting on it.
+
+**Process:**
+
+1. **Verify the factual claim.** Read the text being criticized. Is the reviewer's characterization accurate? If they say "the no-LLM path can't do X," check whether the text actually claims it can. Don't fix things that aren't broken.
+2. **Evaluate against project architecture.** Does the suggested fix respect crate boundaries, invariants, and the patterns documented in this file? A fix that introduces a hard dependency between crates that should be decoupled is worse than the original problem.
+3. **Assess scope fit.** Is this feedback about *this* section, or does it belong in a different design doc / decision? Don't fix D031 problems inside D038 text. Flag cross-cutting concerns but fix them where they live.
+4. **Push back when the fix is imprecise.** If the reviewer's suggested change is directionally correct but too broad, too narrow, or technically wrong, apply the *intent* with better precision. Document what you changed and why it differs from the suggestion.
+5. **Accept, adapt, or defer — and be explicit about which.**
+   - **Accept:** The feedback is correct and the fix is straightforward. Apply it.
+   - **Adapt:** The feedback identifies a real problem but the suggested fix isn't right. Fix the problem differently and explain why.
+   - **Defer:** The feedback is valid but belongs to a different phase, doc, or scope. Acknowledge it without making changes.
+6. **Classify severity honestly.** Not all feedback is equal. A factual inaccuracy (text claims something the system can't do) is higher priority than a tone preference. An architectural violation (missing crate boundary) is higher priority than a wording nitpick.
+
+**What to watch for:**
+
+- **"This can't do what the text claims"** — highest priority. If the no-LLM path is described as generating human-readable names but has no semantic understanding to do so, that's a factual error. Fix it immediately.
+- **"This silently promises something it doesn't cover"** — add explicit scope boundaries. State what the initial implementation targets and what's deferred. Never let silence imply completeness.
+- **"The tone is too salesy / too vague / too dramatic"** — legitimate in a design doc. Design docs are technical artifacts, not marketing. Direct statements beat italicized rhetoric.
+- **"The crate boundary is unclear"** — always worth fixing. Every cross-crate interaction should name the trait, which crate defines it, which implements it, and which wires them together (usually `ic-game`).
+- **"This detail is Phase 7, leave it vague"** — acceptable. Don't over-design features that are 30+ months out. A placeholder sentence is fine.
+
+**What NOT to do:**
+
+- Don't accept all feedback uncritically. Reviewers can be wrong, imprecise, or optimizing for concerns that don't apply to this project.
+- Don't reject feedback defensively. If three people flag the same paragraph, the paragraph has a problem even if no individual critique is perfectly worded.
+- Don't make changes without reading the current text first. External edits may have occurred between review and fix.
+
 ### Known Duplication to Fix
 - Performance details appear in both `src/09-DECISIONS.md` (D015) and `src/10-PERFORMANCE.md` — the latter is canonical
 
