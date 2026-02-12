@@ -153,7 +153,7 @@ Phase 7  (Months 34-36) → LLM Missions + Ecosystem + Polish: mission generator
 ## Simulation Architecture
 
 - **Deterministic tick:** `Simulation::apply_tick(&mut self, orders: &TickOrders)` — pure function
-- **System order (fixed per game module, documented):** RA1 default: apply_orders → production → harvesting → movement → combat → death → triggers → fog. Other game modules register their own pipeline.
+- **System order (fixed per game module, documented):** RA1 default (21 systems): apply_orders → power → production → harvesting → docking → support_powers → movement → crush → mines → combat → projectiles → capture → cloak → conditions → veterancy → death → crates → transform → triggers → notifications → fog. Other game modules register their own pipeline.
 - **Pathfinding and spatial queries are trait-abstracted:** `Pathfinder` trait (grid flowfields for RA1, navmesh for future modules) and `SpatialIndex` trait (spatial hash for RA1, BVH for future modules). Engine core calls traits, never grid-specific functions.
 - **State hashing:** `state_hash()` every tick for desync detection
 - **Snapshots:** `snapshot()` / `restore()` for save games, replays, rollback, desync debugging
@@ -173,9 +173,9 @@ Phase 7  (Months 34-36) → LLM Missions + Ecosystem + Polish: mission generator
 | Harvester    | `Harvester { capacity, resource }`  | Gathers ore                                      |
 | *(any)*      | `LlmMeta { summary, role, … }`      | LLM-readable context (optional on all resources) |
 
-These are the **RA1 game module's** default components. Other game modules (RA2, TD) register additional components — the ECS is open for extension.
+These are the **RA1 game module's** core components. The full RA1 module registers ~50 additional components — see `02-ARCHITECTURE.md` § "Extended Gameplay Systems (RA1 Module)" for complete definitions including power, transport, capture, stealth, infantry mechanics, veterancy, death, docking, crush, mines, crates, guard, transform, support powers, building mechanics, notifications, cursors, hotkeys, faction, encyclopedia, localization, and more. Other game modules (RA2, TD) register their own additional components — the ECS is open for extension.
 
-> **Gap acknowledgment:** The 9 components above are the documented core. The gap analysis in `src/11-OPENRA-FEATURES.md` identifies **~30+ additional gameplay systems** needed for a playable Red Alert (power, transport, capture, stealth, crates, mines, crush, guard, deploy, veterancy, etc.). These are tracked as undesigned gaps with priority tiers (P0–P3). See `src/11-OPENRA-FEATURES.md` § "Recommended Action Plan" for the triage order.
+> **Design status:** All ~30 gameplay systems identified in the gap analysis (`src/11-OPENRA-FEATURES.md`) are now designed with full component definitions, Rust struct signatures, YAML examples, and system logic descriptions. See the Priority Assessment tables in `src/11-OPENRA-FEATURES.md` for implementation order. The mapping table in that file shows every OpenRA trait's IC equivalent.
 
 ## Network Models
 
@@ -213,6 +213,7 @@ Iron Curtain **ships** one netcode: relay-assisted deterministic lockstep with s
 - **Match result fraud:** `CertifiedMatchResult` signed by relay server. Only signed results update rankings.
 - **Replay tampering:** Ed25519-signed hash chain.
 - **WASM mods:** Capability-based API. No `get_all_units()` — only `get_visible_units()`. No filesystem/network access by default.
+- **Workshop supply chain:** Defense-in-depth against compromised mod updates (fractureiser lesson). Build provenance, update anomaly detection, 2FA for publishers, scoped API tokens, `ic.lock` pinning, security advisory system. See `src/06-SECURITY.md` § Vulnerability 18.
 
 ## Competitive Infrastructure
 
@@ -291,6 +292,7 @@ All design and code review should be guided by — but not limited to — the de
 
 Key review principles drawn from the original creators:
 
+0. **"Is this the game the community actually wants?"** — The community wants to play Red Alert — the real thing, not a diminished version — forever, on anything, with anyone, and to make it their own. Every design decision, every architecture choice, every feature proposal must answer this question first. If it doesn't serve a playable game that real people want to play, it needs strong justification. See `src/01-VISION.md` § "What Makes People Actually Switch".
 1. **"Does this make the toy soldiers come alive?"** (Bostic) — Every feature should serve the core fantasy. If it doesn't, it needs strong justification.
 2. **Fun beats documentation** (Bostic) — If something plays well but contradicts the design doc, update the doc. If it's in the doc but plays poorly, cut it.
 3. **Separate simulation from I/O** (EA source code) — The sim is the part that survives decades. Keep it pure. Rendering and networking are replaceable.
@@ -307,6 +309,10 @@ Game design principles (highlights — full list with rationale in `src/13-PHILO
 12. **Visual clarity** (Castle) — One-second screenshot test: who's winning, what's on screen, where are the resources? Readability beats aesthetics.
 14. **Asymmetric faction identity** (Westwood) — Factions must feel like different games, not stat reskins. Balance through counter-play, not stat parity.
 15. **The core loop: Extract → Build → Amass → Crush** (Westwood/EA) — Every game feature should serve one of these steps. Features that bypass the loop need strong justification.
+
+Modding ecosystem principles (from industry lessons — see `src/13-PHILOSOPHY.md` and `src/04-MODDING.md`):
+
+19. **Build for surprise** (WC3/DotA lesson) — The modding system should be powerful enough that modders can create things the engine developers never imagined. Expose primitives, not just parameterized behaviors. If the API can only produce "variations on what shipped," it's too narrow.
 
 These are guidelines, not a rigid checklist. Keep an open mind — the original creators themselves discovered their best ideas by iterating, not by following specifications. When a design decision feels uncertain, the philosophy doc provides grounding but should never prevent innovation.
 

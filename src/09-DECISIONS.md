@@ -1757,6 +1757,25 @@ Like OpenRA's signature feature — a real game map with scripted AI battles run
 - **Shellmaps are regular maps** tagged with `visibility: shellmap` in YAML. The engine loads them with a scripted AI that stages dramatic battles. Mods automatically get their own shellmaps.
 - **Orbiting/panning camera.** Shellmaps can define camera paths — slow pan across a battlefield, orbiting around a base, or fixed view.
 
+**Shellmap AI design:** Shellmaps use a dedicated AI profile (`shellmap_ai` in `ic-ai`) optimized for visual drama, not competitive play:
+
+```yaml
+# ai/shellmap.yaml
+shellmap_ai:
+  personality:
+    name: "Shellmap Director"
+    aggression: 40               # builds up before attacking
+    attack_threshold: 5000       # large armies before engaging
+    micro_level: basic
+    tech_preference: balanced    # diverse unit mix for visual variety
+    dramatic_mode: true          # avoids cheese, prefers spectacle
+    max_tick_budget_us: 2000     # 2ms max — shellmap is background
+    unit_variety_bonus: 0.5      # AI prefers building different unit types
+    no_early_rush: true          # let both sides build up
+```
+
+The `dramatic_mode` flag tells the AI to prioritize visually interesting behavior: large mixed-army clashes over efficient rush strategies, diverse unit compositions over optimal builds, and sustained back-and-forth engagements over quick victories. The AI's tick budget is capped at 2ms to avoid impacting menu UI responsiveness. Shellmap AI is the same `ic-ai` system used for skirmish — just a different personality profile.
+
 **Per-game-module default themes:**
 
 Each game module registers its own default theme that matches its aesthetic:

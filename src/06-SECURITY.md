@@ -693,6 +693,57 @@ impl RelayServer {
 
 > **Academic reference:** Bryant, B.D. & Saiedian, H. (2021). *An evaluation of videogame network architecture performance and security.* Computer Networks, 192, 108128. DOI: [10.1016/j.comnet.2021.108128](https://doi.org/10.1016/j.comnet.2021.108128). Companion: Bryant, B.D. & Saiedian, H. (2021). *A State Saturation Attack against Massively Multiplayer Online Videogames.* ICISSP 2021.
 
+## Vulnerability 18: Workshop Supply Chain Compromise
+
+### The Problem
+
+A trusted mod author's account is compromised (or goes rogue), and a malicious update is pushed to a widely-depended-upon Workshop resource. Thousands of players auto-update and receive the compromised package.
+
+**Precedent:** The Minecraft **fractureiser** incident (June 2023). A malware campaign compromised CurseForge and Bukkit accounts, injecting a multi-stage downloader into popular mods. The malware stole browser credentials, Discord tokens, and cryptocurrency wallets. It propagated through the dependency chain — mods depending on compromised libraries inherited the payload. The incident affected millions of potential downloads before detection. CurseForge had SHA-256 checksums and author verification, but neither helped because the attacker *was* the authenticated author pushing a "legitimate" update.
+
+IC's WASM sandbox (Vulnerability 5) prevents runtime exploits — a malicious WASM mod cannot access the filesystem or network without explicit capabilities. But the supply chain threat is broader than WASM: YAML rules can reference malicious asset URLs, Lua scripts execute with access to the Lua sandbox surface, and even non-code resources (sprites, audio) could exploit parser vulnerabilities.
+
+### Mitigation: Defense-in-Depth Supply Chain Security
+
+**Layer 1 — Reproducible builds and build provenance:**
+
+- Workshop server records build metadata: source repository URL, commit hash, build environment, and builder identity.
+- `ic mod publish --provenance` attaches a signed build attestation (inspired by SLSA/Sigstore). Consumers can verify that the published artifact was built from a specific commit in a public repository.
+- Provenance is encouraged, not required — solo modders without CI/CD can still publish directly. But provenance-verified resources get a visible badge in the Workshop browser.
+
+**Layer 2 — Update anomaly detection (Workshop server-side):**
+
+- **Size delta alerts:** If a mod update changes package size by >50%, flag for review before making it available as `release`. Small balance tweaks don't triple in size.
+- **New capability requests:** If a WASM module's declared capabilities change between versions (e.g., suddenly requests `network: AllowList`), flag for moderator review.
+- **Dependency injection:** If an update adds new transitive dependencies that didn't exist before, flag. This was fractureiser's propagation vector.
+- **Rapid-fire updates:** Multiple publishes within minutes to the same resource trigger rate limiting and moderator notification.
+
+**Layer 3 — Author identity and account security:**
+
+- **Two-factor authentication** required for Workshop publishing accounts (TOTP or WebAuthn).
+- **Scoped API tokens** (D030) — CI/CD tokens can publish but not change account settings or transfer namespace ownership. A compromised CI token cannot escalate to full account control.
+- **Namespace transfer requires manual moderator approval** — prevents silent account takeover.
+- **Verified author badge** — linked GitHub/GitLab identity provides a second factor of trust. If a Workshop account is compromised but the linked Git identity is not, the community has a signal.
+
+**Layer 4 — Client-side verification:**
+
+- `ic.lock` pins exact versions AND SHA-256 checksums. `ic mod install` refuses mismatches. A supply chain attacker who replaces a package on the server cannot affect users who have already locked their dependencies.
+- **Update review mode:** `ic mod update --review` shows a diff of what changed in each dependency before applying updates. Human review of changes before accepting is the last line of defense.
+- **Rollback:** `ic mod rollback [resource] [version]` instantly reverts a dependency to a known-good version.
+
+**Layer 5 — Incident response:**
+
+- Workshop moderators can **yank** a specific version (remove from download but not from existing `ic.lock` files — users who already have it keep it, new installs get the previous version).
+- **Security advisory system:** Workshop server can push advisories for specific resource versions. `ic mod audit` checks for advisories. The in-game mod manager displays warnings for affected resources.
+- Community-hosted Workshop servers replicate advisories from the official server (opt-in).
+
+**What this does NOT include:**
+- Bytecode analysis or static analysis of WASM modules — too complex, too many false positives, and the capability sandbox is the real defense.
+- Mandatory code review for all updates — doesn't scale. Anomaly detection targets the high-risk cases.
+- Blocking updates entirely — that fragments the ecosystem. The goal is detection and fast response, not prevention of all possible attacks.
+
+**Phase:** Basic SHA-256 verification and scoped tokens ship with initial Workshop (Phase 4–5). Anomaly detection and provenance attestation in Phase 6a. Security advisory system in Phase 6a. 2FA requirement for publishing accounts from Phase 5 onward.
+
 ## Competitive Integrity Summary
 
 Iron Curtain's anti-cheat is **architectural, not bolted on.** Every defense emerges from design decisions made for other reasons:
@@ -714,6 +765,7 @@ Iron Curtain's anti-cheat is **architectural, not bolted on.** Every defense eme
 | Version mismatch    | Protocol handshake                                | Lobby system                                |
 | WASM mod abuse      | Capability-based sandbox                          | Modding architecture (D005)                 |
 | Desync exploit      | Server-side only analysis                         | Security by design                          |
+| Supply chain attack | Anomaly detection + provenance + 2FA + lockfile   | Workshop security (D030)                    |
 
 **No kernel-level anti-cheat.** Open-source, cross-platform, no ring-0 drivers. We accept that lockstep RTS will always have a maphack risk in P2P/relay modes — the fog-authoritative server is the real answer for high-stakes play.
 

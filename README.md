@@ -35,6 +35,23 @@ Red Alert defined the RTS genre in 1996. Three decades later, there are two ways
 
 Iron Curtain asks: *what if we kept everything OpenRA got right — the community, the mods, the maps, the cross-platform spirit — and rebuilt the engine with today's best tools?*
 
+## Problems We Solve
+
+These are the most commonly reported frustrations from the C&C community — sourced from OpenRA's issue tracker, competitive player feedback, modder forums, and the Remastered Collection's reception. Each one has a specific architectural answer.
+
+| Problem                                                                                                                                                          | Our Answer                                                                                                                   |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| **Desyncs** — 135+ issues in OpenRA's tracker; sync buffer only 7 frames deep; root cause often undiagnosable                                                    | Per-tick state hashing pinpoints exact tick and entity of divergence; fixed-point math eliminates cross-platform float drift |
+| **Random performance drops** — GC pauses, micro-stutters even at low unit counts; a stutter during a crucial micro moment loses games                            | Rust: zero garbage collector, zero per-tick allocation (invariant), cache-friendly ECS layout                                |
+| **Deep modding requires C#** — total conversions need .NET toolchain, IDE, engine recompilation; high barrier limits modder pool                                 | YAML → Lua → WASM tiers — no recompilation ever; WASM accepts any language (Rust, C, Go, AssemblyScript)                     |
+| **Campaigns incomplete** across all supported games — TD partially playable, Dune 2000 only 1 of 3 campaigns; no mission continuity, exit to menu between levels | All campaigns fully playable as a shipping requirement; branching paths with persistent units and veterancy (D021)           |
+| **No competitive infrastructure** — no ranked matchmaking, no automated anti-cheat, no signed replays; competitive scene relies on community workarounds         | Glicko-2 ranked matchmaking, relay-certified match results, signed tamper-proof replays, tournament mode                     |
+| **Platform limitations** — Remastered: Windows/Xbox only; OpenRA: desktop only                                                                                   | Windows, macOS, Linux, Steam Deck, browser (WASM), mobile — all planned targets                                              |
+| **No mod distribution** — mods shared via forum posts and manual file copying; no discovery, no dependency management                                            | Workshop with in-game browser, auto-download on lobby join (CS:GO-style), semver dependencies, SHA-256 integrity             |
+| **MiniYAML has no tooling** — custom format, no IDE support, no schema validation, no linting                                                                    | Standard YAML with `serde_yaml`; JSON Schema validation; IDE autocompletion works out of the box                             |
+| **Balance debates split the community** — competitive rebalancing became permanent; no way to play with classic EA values                                        | Switchable presets: classic, OpenRA, Remastered — a lobby setting, not a mod (D019)                                          |
+| **No hot-reload** — changing mod values requires game restart (YAML) or engine recompile (C#)                                                                    | YAML + Lua hot-reload during development; change a value, see it in-game immediately                                         |
+
 ## Design Goals
 
 ### 🎮 For Players

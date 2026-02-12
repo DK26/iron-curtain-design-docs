@@ -9,6 +9,68 @@ Build a Rust-native RTS engine that:
 - Provides OpenRA mod compatibility as the zero-cost migration path
 - Is **game-agnostic at the engine layer** — built for the C&C community but designed to power any classic RTS (D039). Ships with Red Alert (default) and Tiberian Dawn as built-in game modules; RA2, Tiberian Sun, and community-created games are future modules on the same engine (RA2 is a future community goal, not a scheduled deliverable)
 
+## Community Pain Points We Address
+
+These are the most frequently reported frustrations from the C&C community — sourced from OpenRA's issue tracker (135+ desync issues alone), competitive player feedback (15+ RAGL seasons), modder forums, and the Remastered Collection's reception. Every architectural decision in this document traces back to at least one of these. This section exists so that anyone reading this document for the first time understands *why* the engine is designed the way it is.
+
+### Critical — For Players
+
+**1. Desyncs ruin multiplayer games.**
+OpenRA has 135+ desync issues in its tracker. The sync report buffer is only 7 frames deep — when a desync occurs mid-game, diagnosis is often impossible. Players lose their game with no explanation. This is the single most-complained-about multiplayer issue.
+→ *IC answer:* Per-tick state hashing follows the Spring Engine's `SyncDebugger` approach — binary search identifies the exact tick and entity that diverged. Fixed-point math (no floats in sim — invariant #1) eliminates the most common source of cross-platform non-determinism. See [03-NETCODE.md](03-NETCODE.md) for the full desync diagnosis design.
+
+**2. Random performance drops.**
+Even at low unit counts, something "feels off" — micro-stutters from garbage collection pauses, unpredictable frame timing. In competitive play, a stutter during a crucial micro moment loses games. C#/.NET's garbage collector is non-deterministic in timing.
+→ *IC answer:* Rust has no garbage collector. Zero per-tick allocation is an invariant (not a goal — a rule). The efficiency pyramid (see [10-PERFORMANCE.md](10-PERFORMANCE.md)) prioritizes better algorithms and cache layout before reaching for threads. Target: 500-unit battles smooth on a 2-core 2012 laptop.
+
+**3. Campaigns are systematically incomplete.**
+OpenRA's multiplayer-first culture has left single-player campaigns unfinished across multiple supported games: Dune 2000 has only 1 of 3 campaigns playable, TD campaigns are also incomplete, and there's no automatic mission progression — players exit to menu between missions.
+→ *IC answer:* Campaign completeness is a first-class exit criterion for every shipped game module. Branching campaign graphs with persistent unit rosters, veterancy, and equipment carry-over (D021) go beyond completion to innovation. Continuous flow: briefing → mission → debrief → next mission, no menu breaks.
+
+**4. No competitive infrastructure.**
+No ranked matchmaking, no automated anti-cheat, no signed replays. The competitive scene relies entirely on community-run CnCNet ladders and trust-based result reporting.
+→ *IC answer:* Glicko-2 ranked matchmaking, relay-certified match results (signed by the relay server — fraud-proof), Ed25519-signed tamper-proof replays, tournament mode with configurable broadcast delay. See [01-VISION.md § Competitive Play](#competitive-play) and [06-SECURITY.md](06-SECURITY.md).
+
+**5. Balance debates fractured the community.**
+OpenRA's competitive rebalancing made iconic units feel less powerful — Tanya, MiGs, V2 rockets, Tesla coils all nerfed for tournament fairness. This was a valid competitive choice, but it became the *only* option. Players who preferred the original feel had no path forward. The community split over whether the game should feel like Red Alert or like a balanced esport.
+→ *IC answer:* Switchable balance presets (D019) — classic EA values (default), OpenRA balance, Remastered balance, custom — are a lobby setting, not a total conversion. Choose your experience. No one's preference invalidates anyone else's.
+
+**6. Platform reach is limited.**
+The Remastered Collection is Windows/Xbox only. OpenRA covers Windows, macOS, and Linux but not browser or mobile. There's no way to play on a phone, in a browser, or on a Steam Deck without workarounds.
+→ *IC answer:* Designed for Windows, macOS, Linux, Steam Deck, browser (WASM), and mobile from day one. Platform-agnostic architecture (invariant #10) — input abstracted behind traits, responsive UI, no raw filesystem access.
+
+### Critical — For Modders
+
+**7. Deep modding requires C#.**
+OpenRA's YAML system covers ~80% of modding, but anything beyond value tweaks — new mechanics, total conversions, custom AI — requires writing C# against a large codebase with a .NET build toolchain. This limits the modder pool to people comfortable with enterprise software development.
+→ *IC answer:* Three tiers — YAML (data, 80% of mods), Lua (scripting, missions and abilities), WASM (engine-level, total conversions) — no recompilation ever (invariant #3). WASM accepts any language. The modding barrier drops from "learn C# and .NET" to "edit a YAML file."
+
+**8. MiniYAML has no tooling.**
+OpenRA's custom data format has no IDE support, no schema validation, no linting, no standard parsing libraries. Every editor is a plain text editor. Typos and structural errors are discovered at runtime.
+→ *IC answer:* Standard YAML with `serde_yaml` (D003). JSON Schema for validation. IDE autocompletion and error highlighting work out of the box with any YAML-aware editor.
+
+**9. No mod distribution system.**
+Mods are shared via forum posts and manual file copying. There's no in-game browser, no dependency management, no integrity verification, no one-click install.
+→ *IC answer:* Workshop registry (D030) with in-game browser, auto-download on lobby join (CS:GO-style), semver dependencies, SHA-256 integrity, federated mirrors, Steam Workshop as optional source.
+
+**10. No hot-reload.**
+Changing a YAML value requires restarting the game. Changing C# code requires recompiling the engine. Iteration speed for mod development is slow.
+→ *IC answer:* YAML + Lua hot-reload during development. Change a value, see it in-game immediately. WASM mods reload without game restart.
+
+### Important — Structural
+
+**11. Single-threaded performance ceiling.**
+OpenRA's game loop is single-threaded (verified from source). There's a hard ceiling on how many units can be simulated per tick, regardless of how many CPU cores are available.
+→ *IC answer:* Bevy's ECS scheduling enables parallel systems where profiling justifies it. But per the efficiency pyramid (D015), algorithmic improvements and cache layout come first — threading is the last optimization, not the first.
+
+**12. Scenario editor is terrain-only.**
+OpenRA's map editor handles terrain and actor placement but not mission logic — triggers, objectives, AI behavior, and scripting must be done in separate files by hand.
+→ *IC answer:* The IC SDK (D038+D040) ships a full creative toolchain: visual trigger editor, drag-and-drop logic modules, campaign graph editor, Game Master mode, asset studio. Inspired by OFP/Arma 3 Eden — not just a map painter, a mission design environment.
+
+---
+
+> These pain points are not criticisms of OpenRA — they're structural consequences of technology choices made 18 years ago. OpenRA is a remarkable achievement. Iron Curtain exists because we believe the community deserves the next step.
+
 ## Why This Deserves to Exist
 
 ### Capabilities Beyond OpenRA and the Remastered Collection

@@ -234,6 +234,55 @@ Sections like `Rules`, `Sequences`, `Weapons`, `Maps`, `Voices`, `Music` are map
 | JSON   | Reject  | Too verbose, no comments, miserable for hand-editing |
 | YAML   | Accept  | Human-readable, universal tooling, serde integration |
 
+### Mod Load Order & Conflict Resolution
+
+When multiple mods modify the same game data, deterministic load order and explicit conflict handling are essential. Bethesda taught the modding world this lesson: Skyrim's 200+ mod setups are only viable because community tools (LOOT, xEdit, Bashed Patches) compensate for Bethesda's vague native load order. IC builds deterministic conflict resolution into the engine from day one — no third-party tools required.
+
+**Load order rules:**
+
+1. **Engine defaults** load first (built-in RA1/TD rules).
+2. **Balance preset** (D019) overlays next.
+3. **Mods** load in dependency-graph order — if mod A depends on mod B, B loads first.
+4. **Mods with no dependency relationship** between them load in lexicographic order by mod ID. Deterministic tiebreaker — no ambiguity.
+5. **Within a mod**, files load in directory order, then alphabetical within each directory.
+
+**Multiplayer enforcement:** In multiplayer, the lobby enforces identical mod sets, versions, and load order across all clients before the game starts (see `03-NETCODE.md` § `GameListing.required_mods`). The deterministic load order is sufficient *because* divergent mod configurations are rejected at join time — there is no scenario where two clients resolve the same mods differently.
+
+**Conflict behavior (same YAML key modified by two mods):**
+
+| Scenario                                                          | Behavior                                                    | Rationale                                |
+| ----------------------------------------------------------------- | ----------------------------------------------------------- | ---------------------------------------- |
+| Two mods set different values for the same field on the same unit | Last-wins (later in load order) + warning in `ic mod check` | Modders need to know about the collision |
+| Mod adds a new field to a unit also modified by another mod       | Merge — both additions survive                              | Non-conflicting additions are safe       |
+| Mod deletes a field that another mod modifies                     | Delete wins + warning                                       | Explicit deletion is intentional         |
+| Two mods define the same new unit ID                              | Error — refuses to load                                     | Ambiguous identity is never acceptable   |
+
+**Tooling:**
+
+- `ic mod check-conflicts [mod1] [mod2] ...` — reports all field-level conflicts between a set of mods before launch. Shows which mod "wins" each conflict and why.
+- `ic mod load-order [mod1] [mod2] ...` — prints the resolved load order with dependency graph visualization.
+- In-game mod manager shows conflict warnings with "which mod wins" detail when enabling mods.
+
+**Conflict override file (optional):**
+
+For advanced setups, a `conflicts.yaml` file in the **game's user configuration directory** (next to `settings.yaml`) lets the player explicitly resolve conflicts in their personal setup. This is a per-user file — it is not distributed with mods or modpacks, and it is not synced in multiplayer. Players who want to share their conflict resolutions can distribute the file manually or include it in a modpack manifest (the `modpack.conflicts` field serves the same purpose for published modpacks):
+
+```yaml
+# conflicts.yaml — explicit conflict resolution
+overrides:
+  - unit: heavy_tank
+    field: health.max
+    use_mod: "alice/tank-rebalance"     # force this mod's value
+    reason: "Prefer Alice's balance for heavy tanks"
+  - unit: rifle_infantry
+    field: buildable.cost
+    use_mod: "bob/economy-overhaul"
+```
+
+This is the manual equivalent of Bethesda's Bashed Patches — but declarative, version-controlled, and shareable.
+
+**Phase:** Load order engine support in Phase 2 (part of YAML rule loading). Conflict detection CLI in Phase 4 (with `ic` CLI). In-game mod manager in Phase 6a.
+
 ## Tier 2: Lua Scripting
 
 ### Decision: Lua over Python
@@ -282,15 +331,16 @@ Iron Curtain's Lua API is a **strict superset** of OpenRA's 16 global objects. A
 
 **IC-exclusive extensions (additive, no conflicts):**
 
-| Global     | Purpose                           |
-| ---------- | --------------------------------- |
-| `Campaign` | Branching campaign state (D021)   |
-| `Weather`  | Dynamic weather control (D022)    |
-| `Layer`    | Runtime layer activation/deaction |
-| `Region`   | Named region queries              |
-| `Var`      | Mission/campaign variable access  |
-| `Workshop` | Mod metadata queries              |
-| `LLM`      | LLM integration hooks (Phase 7)   |
+| Global        | Purpose                              |
+| ------------- | ------------------------------------ |
+| `Campaign`    | Branching campaign state (D021)      |
+| `Weather`     | Dynamic weather control (D022)       |
+| `Layer`       | Runtime layer activation/deaction    |
+| `Region`      | Named region queries                 |
+| `Var`         | Mission/campaign variable access     |
+| `Workshop`    | Mod metadata queries                 |
+| `LLM`         | LLM integration hooks (Phase 7)      |
+| `Achievement` | Achievement trigger/query API (D036) |
 
 Each actor reference exposes properties matching its components (`.Health`, `.Location`, `.Owner`, `.Move()`, `.Attack()`, `.Stop()`, `.Guard()`, `.Deploy()`, etc.) — identical to OpenRA's actor property groups.
 
@@ -452,6 +502,152 @@ impl Default for WasmExecutionLimits {
 **Why this matters for multiplayer:** In deterministic lockstep, all clients run the same mods. A mod that consumes excessive CPU causes tick overruns on slower machines, triggering adaptive run-ahead increases for everyone. A mod that spawns hundreds of entities per tick inflates state size and network traffic. The execution limits prevent a single mod from degrading the experience — and because the limits are deterministic (same fuel budget, same cutoff point), all clients agree on when a mod is throttled.
 
 **Mod authors can request higher limits** via their mod manifest. The lobby displays requested limits and players can accept or reject. Tournament/ranked play enforces stricter defaults.
+
+### WASM Rendering API Surface
+
+Tier 3 WASM mods that replace the visual presentation (e.g., a 3D render mod) need a well-defined rendering API surface. These are the WASM host functions exposed for render mods — they are the *only* way a WASM mod can draw to the screen.
+
+```rust
+// === Render Host API (ic_render_* namespace) ===
+// Available only to mods with ModCapabilities.render = true
+
+/// Register a custom Renderable implementation for an actor type.
+#[wasm_host_fn] fn ic_render_register(actor_type: &str, renderable_id: u32);
+
+/// Draw a sprite at a world position (default renderer).
+#[wasm_host_fn] fn ic_render_draw_sprite(
+    sprite_id: u32, frame: u32, position: WorldPos, facing: u8, palette: u32
+);
+
+/// Draw a 3D mesh at a world position (Bevy 3D pipeline).
+#[wasm_host_fn] fn ic_render_draw_mesh(
+    mesh_handle: u32, position: WorldPos, rotation: [i32; 4], scale: [i32; 3]
+);
+
+/// Draw a line (debug overlays, targeting lines).
+#[wasm_host_fn] fn ic_render_draw_line(
+    start: WorldPos, end: WorldPos, color: u32, width: f32
+);
+
+/// Play a skeletal animation on a mesh entity.
+#[wasm_host_fn] fn ic_render_play_animation(
+    mesh_handle: u32, animation_name: &str, speed: f32, looping: bool
+);
+
+/// Set camera position and mode.
+#[wasm_host_fn] fn ic_render_set_camera(
+    position: WorldPos, mode: CameraMode, fov: Option<f32>
+);
+
+/// Screen-to-world conversion (for input mapping).
+#[wasm_host_fn] fn ic_render_screen_to_world(
+    screen_x: f32, screen_y: f32
+) -> Option<WorldPos>;
+
+/// Load an asset (sprite sheet, mesh, texture) by path.
+/// Returns a handle ID for use in draw calls.
+#[wasm_host_fn] fn ic_render_load_asset(path: &str) -> Option<u32>;
+
+/// Spawn a particle effect at a position.
+#[wasm_host_fn] fn ic_render_spawn_particles(
+    effect_id: u32, position: WorldPos, duration: u32
+);
+
+pub enum CameraMode {
+    Isometric,          // fixed angle, zoom only
+    FreeLook,           // full 3D rotation
+    Orbital { target: WorldPos },  // orbit a point
+}
+```
+
+**Render mod registration:** A render mod implements the `Renderable` and `ScreenToWorld` traits (see `02-ARCHITECTURE.md` § "3D Rendering as a Mod"). It registers via `ic_render_register()` for each actor type it handles. Unregistered actor types fall through to the default sprite renderer. This allows **partial** render overrides — a mod can replace tank rendering with 3D meshes while leaving infantry as sprites.
+
+**Security:** Render host functions are gated by `ModCapabilities.render`. A gameplay mod (AI, scripting) cannot access `ic_render_*` functions. Render mods cannot access `ic_host_issue_order()` — they draw, they don't command. These capabilities are declared in the mod manifest and verified at load time.
+
+### Mod Testing Framework
+
+`ic mod test` is referenced throughout this document but needs a concrete assertion API and test runner design.
+
+#### Test File Structure
+
+```yaml
+# tests/my_mod_tests.yaml
+tests:
+  - name: "Tank costs 800 credits"
+    setup:
+      map: test_maps/flat_8x8.oramap
+      players: [{ faction: allies, credits: 10000 }]
+    actions:
+      - build: { actor: medium_tank, player: 0 }
+      - wait_ticks: 500
+    assertions:
+      - entity_exists: { type: medium_tank, owner: 0 }
+      - player_credits: { player: 0, less_than: 9300 }
+
+  - name: "Tesla coil requires power"
+    setup:
+      map: test_maps/flat_8x8.oramap
+      players: [{ faction: soviet, credits: 10000 }]
+      buildings: [{ type: tesla_coil, player: 0, pos: [4, 4] }]
+    actions:
+      - destroy: { type: power_plant, player: 0 }
+      - wait_ticks: 30
+    assertions:
+      - condition_active: { entity_type: tesla_coil, condition: "disabled" }
+```
+
+#### Lua Test API
+
+For more complex test scenarios, Lua scripts can use test assertion functions:
+
+```lua
+-- tests/combat_test.lua
+function TestTankDamage()
+    local tank = Actor.Create("medium_tank", { Owner = Player.GetPlayer(0), Location = CellPos(4, 4) })
+    local target = Actor.Create("light_tank", { Owner = Player.GetPlayer(1), Location = CellPos(5, 4) })
+
+    -- Force attack
+    tank.Attack(target)
+    Trigger.AfterDelay(100, function()
+        Test.Assert(target.Health < target.MaxHealth, "Target should take damage")
+        Test.AssertRange(target.Health, 100, 350, "Damage should be in expected range")
+        Test.Pass("Tank combat works correctly")
+    end)
+end
+
+-- Test API globals (available only in test mode)
+-- Test.Assert(condition, message)
+-- Test.AssertEqual(actual, expected, message)
+-- Test.AssertRange(value, min, max, message)
+-- Test.AssertNear(actual, expected, tolerance, message)
+-- Test.Pass(message)
+-- Test.Fail(message)
+-- Test.Log(message)
+```
+
+#### Test Runner (`ic mod test`)
+
+```
+$ ic mod test
+Running 12 tests from tests/*.yaml and tests/*.lua...
+  ✓ Tank costs 800 credits (0.3s)
+  ✓ Tesla coil requires power (0.2s)
+  ✓ Tank combat works correctly (0.8s)
+  ✗ Harvester delivery rate (expected 100, got 0) (1.2s)
+  ...
+Results: 11 passed, 1 failed (2.5s total)
+```
+
+**Features:**
+- `ic mod test` — run all tests in `tests/` directory
+- `ic mod test --filter "combat"` — run matching tests
+- `ic mod test --headless` — no rendering (CI/CD mode, used by modpack validation)
+- `ic mod test --verbose` — show per-tick sim state for failing tests
+- `ic mod test --coverage` — report which YAML rules are exercised by tests
+
+**Headless mode:** The engine initializes `ic-sim` without `ic-render` or `ic-audio`. Orders are injected programmatically. This is the same `LocalNetwork` model used for automated testing of the engine itself. Tests run at maximum speed (no frame rate limit).
+
+**Phase:** Basic test runner (YAML assertions) in Phase 4. Lua test API in Phase 4. Coverage reporting in Phase 6a.
 
 ### 3D Rendering Mods (Tier 3 Showcase)
 
@@ -1891,6 +2087,62 @@ The in-game browser queries the virtual repository (all configured sources merge
 - **Collections:** Curated bundles ("Best Soviet mods", "Tournament map pool Season 5")
 - **Creator profiles:** Author page showing all published resources, reputation score, tip links (D035)
 
+### Modpacks as First-Class Workshop Resources (D030)
+
+A **modpack** is a Workshop resource that bundles a curated set of mods with pinned versions, load order, and configuration — published as a single installable artifact. This is the lesson from Minecraft's CurseForge and Modrinth: modpacks solve the three hardest problems in modding ecosystems — discovery ("what mods should I use?"), compatibility ("do these mods work together?"), and onboarding ("how do I install all of this?").
+
+```yaml
+# mod.yaml for a modpack
+mod:
+  id: alice/red-apocalypse-pack
+  title: "Red Apocalypse Complete Experience"
+  version: "2.1.0"
+  authors: ["alice"]
+  description: "A curated collection of 12 mods for an enhanced RA1 experience"
+  license: "CC0-1.0"
+  category: Modpack                    # distinct category from Mod
+
+engine:
+  version: "^0.5.0"
+  game_module: "ra1"
+
+# Modpack-specific: list of mods with pinned versions and load order
+modpack:
+  mods:
+    - id: "bob/hd-sprites"
+      version: "=2.1.0"               # exact pin — tested with this version
+    - id: "carol/economy-overhaul"
+      version: "=1.4.2"
+    - id: "dave/ai-improvements"
+      version: "=3.0.1"
+    - id: "alice/tank-rebalance"
+      version: "=1.1.0"
+  
+  # Explicit conflict resolutions (if any)
+  conflicts:
+    - unit: heavy_tank
+      field: health.max
+      use_mod: "alice/tank-rebalance"
+  
+  # Configuration overrides applied after all mods load
+  config:
+    balance_preset: classic
+    qol_preset: iron_curtain
+```
+
+**Why modpacks matter:**
+- **For players:** One-click install of a tested, working mod combination. No manual dependency chasing, no version mismatch debugging.
+- **For modpack curators:** A creative role that doesn't require writing any mod code. Curators test combinations, resolve conflicts, and publish a known-good experience.
+- **For mod authors:** Inclusion in popular modpacks drives discovery and downloads. Modpacks reference mods by Workshop ID — the original mod author keeps full credit and control.
+
+**Modpack lifecycle:**
+- `ic mod init modpack` — scaffolds a modpack manifest
+- `ic mod check` — validates all mods in the pack are compatible (version resolution, conflict detection)
+- `ic mod test --headless` — loads all mods in sequence, runs smoke tests
+- `ic mod publish` — publishes the modpack to Workshop. Installing the modpack auto-installs all referenced mods.
+
+**Phase:** Modpack support in Phase 6a (alongside full Workshop registry).
+
 ### Auto-Download on Lobby Join (D030)
 
 When a player joins a multiplayer lobby, the client checks `GameListing.required_mods` (see `03-NETCODE.md` § `GameListing`) against the local cache. Missing resources trigger automatic download:
@@ -2338,3 +2590,69 @@ This metadata is indexed by the workshop server for semantic search. When an LLM
 3. **Tags use a controlled vocabulary.** `role`, `strengths`, `weaknesses`, `counters`, and `gameplay_tags` draw from a published tag dictionary (extensible by mods). This prevents tag drift where the same concept has five spellings.
 4. **`tactical_notes` is free-text.** This is the field where nuance lives. "Build 5+ to be cost-effective" or "Position behind walls for maximum effectiveness" — advice that can't be captured in tags.
 5. **Metadata is part of the YAML spec, not a sidecar.** It lives in the same file as the resource definition. No separate metadata files to lose or desync.
+
+## Mod API Stability & Compatibility
+
+The mod-facing API — YAML schema, Lua globals, WASM host functions — is a **stability surface** distinct from engine internals. Engine crates can refactor freely between releases; the mod API changes only with explicit versioning and migration support. This section documents how IC avoids the Minecraft anti-pattern (community fragmenting across incompatible versions) and follows the Factorio model (stable API, deprecation warnings, migration scripts).
+
+**Lesson from Minecraft:** Forge and Fabric have no stable API contract. Every Minecraft update breaks most mods, fragmenting the community into version silos. Popular mods take months to update. Players are forced to choose between new game content and their mod setup. This is the single biggest friction in Minecraft modding.
+
+**Lesson from Factorio:** Wube publishes a versioned mod API with explicit stability guarantees. Breaking changes are announced releases in advance, include migration scripts, and come with deprecation warnings that fire during `mod check`. Result: 5,000+ mods on the portal, most updated within days of a new game version.
+
+**Lesson from Stardew Valley:** SMAPI (Stardew Modding API) acts as an adapter layer between the game and mods. When the game updates, SMAPI absorbs the breaking changes — mods written against SMAPI's stable surface continue to work even when Stardew's internals change. A single community-maintained compatibility layer protects thousands of mods.
+
+### Stability Tiers
+
+| Surface                                                                  | Stability Guarantee         | Breaking Change Policy                                                                                                                                          |
+| ------------------------------------------------------------------------ | --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **YAML schema** (unit fields, weapon fields, structure fields)           | Stable within major version | Fields can be added (non-breaking). Renaming or removing a field requires a deprecation cycle: old name works for 2 minor versions with a warning, then errors. |
+| **Lua API globals** (D024, 16 OpenRA-compatible globals + IC extensions) | Stable within major version | New globals can be added. Existing globals never change signature. Deprecated globals emit warnings for 2 minor versions.                                       |
+| **WASM host functions** (`ic_host_*` API)                                | Stable within major version | New host functions can be added. Existing function signatures never change. Deprecated functions continue to work with warnings.                                |
+| **OpenRA aliases** (D023 vocabulary layer)                               | Permanent                   | Aliases are never removed — they can only accumulate. An alias that worked in IC 0.3 works in IC 5.0.                                                           |
+| **Engine internals** (Bevy systems, component layouts, crate APIs)       | No guarantee                | Can change freely between any versions. Mods never depend on these directly.                                                                                    |
+
+### Migration Support
+
+When a breaking change is unavoidable (major version bump):
+
+- **`ic mod migrate`** — CLI command that auto-updates mod YAML/Lua to the new schema. Handles field renames, deprecated API replacements, and schema restructuring. Inspired by `rustfix` and Factorio's migration scripts.
+- **Deprecation warnings in `ic mod check`** — flag usage of deprecated fields, globals, or host functions before they become errors. Shows the replacement.
+- **Changelog with migration guide** — every release that touches the mod API surface includes a "For Modders" section with before/after examples.
+
+### Versioned Mod API (Independent of Engine Version)
+
+The mod API version is declared separately from the engine version:
+
+```yaml
+# mod.yaml
+engine:
+  version: "^0.5.0"          # engine version (can change rapidly)
+  mod_api: "^1.0"            # mod API version (changes slowly)
+```
+
+A mod targeting `mod_api: "^1.0"` works on any engine version that supports mod API 1.x. The engine can ship 0.5.0 through 0.9.0 without breaking mod API 1.0 compatibility. This decoupling means engine development velocity doesn't fragment the mod ecosystem.
+
+### Compatibility Adapter Layer
+
+Internally, the engine maintains an adapter between the mod API surface and engine internals — structurally similar to Stardew's SMAPI:
+
+```
+  Mod code (YAML / Lua / WASM)
+        │
+        ▼
+  ┌─────────────────────────┐
+  │  Mod API Surface        │  ← versioned, stable
+  │  (schema, globals, host │
+  │   functions)            │
+  ├─────────────────────────┤
+  │  Compatibility Adapter  │  ← translates stable API → current internals
+  │  (ic-script crate)      │
+  ├─────────────────────────┤
+  │  Engine Internals       │  ← free to change
+  │  (Bevy ECS, systems)    │
+  └─────────────────────────┘
+```
+
+When engine internals change, the adapter is updated — mods don't notice. This is the same pattern that makes OpenRA's trait aliases (D023) work: the public YAML surface is stable, the internal component routing can change.
+
+**Phase:** Mod API versioning and `ic mod migrate` in Phase 4 (alongside Lua/WASM runtime). Compatibility adapter formalized in Phase 6a (when mod ecosystem is large enough to matter). Deprecation warnings from Phase 2 onward (YAML schema stability starts early).

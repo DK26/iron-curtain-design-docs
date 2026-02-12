@@ -280,6 +280,26 @@ The design principle isn't "add more damage types." It's: every viable strategy 
 - Balance preset definitions (D019)
 - Modding documentation — versus table editing should be a first tutorial, not an advanced topic
 
+### 19. Build for Surprise — Powerful Enough to Transcend
+
+The greatest validation of a modding system isn't a balance tweak or an HD texture pack — it's when modders create something the engine developers never imagined. Warcraft III's World Editor was designed for custom RTS maps. Modders built Defense of the Ancients (DotA), which spawned the entire MOBA genre — a genre Blizzard didn't envision and couldn't have designed top-down. Doom's WAD system was designed for custom levels. Modders built total conversions that influenced decades of first-person design. Half-Life's SDK was designed for single-player mods. Counter-Strike became one of the most-played multiplayer games in history.
+
+The pattern: **expressive modding tools produce emergent creativity that transcends the original game's genre.** This doesn't happen by accident. It requires the modding system to be powerful enough that the set of possible creations includes things the developers cannot enumerate in advance. A modding system that only supports "variations on what we shipped" cannot produce genre-defining surprises.
+
+IC's tiered modding architecture (D003/D004/D005) is explicitly designed with this in mind:
+- **YAML** (Tier 1) handles the 80% case — balance mods, cosmetics, new units within existing mechanics. These are variations.
+- **Lua** (Tier 2) enables new game logic — triggers, abilities, AI behaviors, mission mechanics that don't exist in the base game.
+- **WASM** (Tier 3) enables new *systems* — entirely new mechanics, game modes, even new genres running on the IC engine. A WASM module could implement a tower defense mode, a turn-based layer, a card game phase between battles, or something nobody has imagined.
+- **Game modules** (D018) go further — a community-created game module can register its own system pipeline, pathfinder, spatial index, and renderer. At this level, IC is a platform, not a game.
+
+**Rule:** When evaluating modding API design decisions, ask: "Does this make it possible for modders to build something we can't predict?" If an API only supports parameterizing existing behavior, it's too narrow. If it exposes enough primitives that novel combinations are possible, it's on the right track. The WC3 World Editor didn't have a "create MOBA" button — it had flexible trigger scripting, custom UI, and unit ability composition. The emergent genre was an unplanned consequence of expressive tools.
+
+**Where this applies:**
+- WASM host API design — expose primitives, not just parameterized behaviors
+- Lua API extensions beyond OpenRA's 16 globals — IC's superset should enable new game logic patterns
+- Game module trait design (D018) — `GameModule` should be flexible enough for non-RTS game types
+- Workshop discovery (D030) — total conversions and genre experiments deserve first-class visibility, not burial under "Maps" and "Balance Mods"
+
 ---
 
 ## Engineering Methods
@@ -384,21 +404,24 @@ IC studies OpenRA not to copy it, but to learn from 18 years of open-source RTS 
 When reviewing a PR or design proposal, check it against these principles — **but don't use them as a rigid gate.** The original creators discovered their best ideas by breaking their own rules. The principles provide grounding when a decision feels uncertain. They should never prevent innovation.
 
 Key questions to ask during review:
+0. **Is this the game the community actually wants?** The community wants to play Red Alert — the real thing, not a diminished version — forever, on anything, with anyone, and to make it their own. Does this feature, system, or decision bring that game closer to existing? If it's architecture that doesn't serve a playable game, it needs strong justification.
 1. Does this serve the core fantasy, or is it infrastructure for infrastructure's sake?
 2. Does this keep the sim pure, or does it leak I/O into game logic?
 3. Could a modder change this value without recompiling? Should they be able to?
 4. Is this scoped appropriately for the current phase?
 5. If this is a compromise, is it explicitly labeled and reversible?
 6. How does this affect the community — players, modders, server hosts, contributors? Does it address a known pain point or create a new one?
+7. If this touches the modding API, does it expose primitives that enable novel creations, or only parameterize existing behavior?
 
 ### For Feature Proposals
 
 When proposing a new feature:
-1. State which principle(s) it serves
-2. Cross-reference the relevant design docs ([02-ARCHITECTURE.md](02-ARCHITECTURE.md), [08-ROADMAP.md](08-ROADMAP.md), etc.)
-3. If it conflicts with a principle, acknowledge the trade-off — don't pretend the conflict doesn't exist
-4. Check [09-DECISIONS.md](09-DECISIONS.md) — has this already been decided?
-5. Consider community impact — does this address a known pain point? Does it create friction for existing workflows? Check [01-VISION.md](01-VISION.md) and [11-OPENRA-FEATURES.md](11-OPENRA-FEATURES.md) for documented community needs
+1. **Does this bring the game closer to existing?** The most important feature is a playable game. If this proposal doesn't serve that, it must justify why it's worth the time.
+2. State which principle(s) it serves
+3. Cross-reference the relevant design docs ([02-ARCHITECTURE.md](02-ARCHITECTURE.md), [08-ROADMAP.md](08-ROADMAP.md), etc.)
+4. If it conflicts with a principle, acknowledge the trade-off — don't pretend the conflict doesn't exist
+5. Check [09-DECISIONS.md](09-DECISIONS.md) — has this already been decided?
+6. Consider community impact — does this address a known pain point? Does it create friction for existing workflows? Check [01-VISION.md](01-VISION.md) and [11-OPENRA-FEATURES.md](11-OPENRA-FEATURES.md) for documented community needs
 
 ### For LLM Agents
 
