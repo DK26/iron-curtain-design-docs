@@ -937,6 +937,7 @@ Resources aren't limited to mod-sized packages. Granularity is flexible:
 | QoL Presets        | Gameplay behavior toggle set (D033) — sim-affecting + client-only toggles        |
 | Experience Profile | Combined balance + theme + QoL preset (D019+D032+D033) — one-click experience    |
 | Resource Packs     | Switchable asset layer for any category — see `04-MODDING.md` § "Resource Packs" |
+| Script Libraries   | Reusable Lua modules, utility functions, AI behavior scripts, trigger templates  |
 | Full Mods          | Traditional mod (may depend on individual resources)                             |
 
 A published resource is just a `ResourcePackage` with the appropriate `ResourceCategory`. The existing `asset-pack` template and `ic mod publish` flow handle this natively — no separate command needed.
@@ -1060,6 +1061,46 @@ The `ic` CLI is designed for CI/CD pipelines — every command works headless (n
 - **Scheduled compatibility checks:** Cron-triggered CI re-publishes against latest engine version to catch regressions
 
 Works with GitHub Actions, GitLab CI, Gitea Actions, or any CI system — the CLI is a single static binary. See `04-MODDING.md` § "Continuous Deployment for Workshop Authors" for the full workflow including a GitHub Actions example.
+
+### Script Libraries & Sharing
+
+**Lesson from ArmA/OFP:** ArmA's modding ecosystem thrives partly because the community developed shared script libraries (CBA — Community Base Addons, ACE3's interaction framework, ACRE radio system) that became foundational infrastructure. Mods built on shared libraries instead of reimplementing common patterns. IC makes this a first-class Workshop category.
+
+A Script Library is a Workshop resource containing reusable Lua modules that other mods can depend on:
+
+```yaml
+# mod.yaml for a script library resource
+mod:
+  name: "rts-ai-behaviors"
+  category: script-library
+  version: "1.0.0"
+  license: "MIT"
+  description: "Reusable AI behavior patterns for mission scripting"
+  exports:
+    - "patrol_routes"        # Lua module names available to dependents
+    - "guard_behaviors"
+    - "retreat_logic"
+```
+
+Dependent mods declare the library as a dependency and import its modules:
+
+```lua
+-- In a mission script that depends on rts-ai-behaviors
+local patrol = require("rts-ai-behaviors.patrol_routes")
+local guard  = require("rts-ai-behaviors.guard_behaviors")
+
+patrol.create_route(unit, waypoints, { loop = true, pause_time = 30 })
+guard.assign_area(squad, Region.Get("base_perimeter"))
+```
+
+**Key design points:**
+- Script libraries are Workshop resources with the `script-library` category — they use the same dependency, versioning (semver), and resolution system as any other resource (see Dependency Declaration above)
+- `require()` in the Lua sandbox resolves to installed Workshop dependencies, not filesystem paths — maintaining sandbox security
+- Libraries are versioned independently — a library author can release 2.0 without breaking mods pinned to `^1.0`
+- `ic mod check` validates that all `require()` calls in a mod resolve to declared dependencies
+- Script libraries encourage specialization: AI behavior experts publish behavior libraries, UI specialists publish UI helper libraries, campaign designers share narrative utilities
+
+This turns the Lua tier from "every mod reimplements common patterns" into a composable ecosystem — the same shift that made npm/crates.io transformative for their respective communities.
 
 ### License System
 
@@ -1419,6 +1460,66 @@ The governance model explicitly supports community independence:
 - Federation (D030) means community servers are peers, not subordinates to the official infrastructure
 - If the official project becomes inactive, the community has all the tools, source code, and infrastructure to continue independently
 - Community-hosted servers set their own moderation policies (within the framework of clear minimum standards for federated discovery)
+
+### Community Groups
+
+**Lesson from ArmA/OFP:** The ArmA community's longevity (25+ years) owes much to its clan/unit culture — persistent groups with shared mod lists, server configurations, and identity. IC supports this natively rather than leaving it to Discord servers and spreadsheets.
+
+Community groups are lightweight persistent entities in the Workshop/tracking infrastructure:
+
+| Feature                | Description                                                                                              |
+| ---------------------- | -------------------------------------------------------------------------------------------------------- |
+| **Group identity**     | Name, tag, icon, description — displayed in lobby and in-game alongside player names                     |
+| **Shared mod list**    | Group-curated list of Workshop resources. Members click "Sync" to install the group's mod configuration. |
+| **Shared server list** | Preferred relay/tracking servers. Members auto-connect to the group's servers.                           |
+| **Group achievements** | Community achievements (D036) scoped to group activities — "Play 50 matches with your group"             |
+| **Private lobbies**    | Group members can create password-free lobbies visible only to other members                             |
+
+Groups are **not** competitive clans (no group rankings, no group matchmaking). They are social infrastructure — a way for communities of players to share configurations and find each other. Competitive team features (team ratings, team matchmaking) are separate and independent.
+
+**Storage:** Group metadata stored in SQLite (D034) on the tracking/Workshop server. Groups are federated — a group created on a community tracking server is visible to members who have that server in their `settings.yaml` sources list. No central authority over group creation.
+
+**Phase:** Phase 5 (alongside multiplayer infrastructure). Minimal viable implementation: group identity + shared mod list + private lobbies. Group achievements and server lists in Phase 6a.
+
+### Community Knowledge Base
+
+**Lesson from ArmA/OFP:** ArmA's community wiki (Community Wiki — formerly BI Wiki) is one of the most comprehensive game modding references ever assembled, entirely community-maintained. OpenRA has scattered documentation across GitHub wiki pages, the OpenRA book, mod docs, and third-party tutorials — no single authoritative reference.
+
+IC ships a structured knowledge base alongside the Workshop:
+
+- **Engine wiki** — community-editable documentation for engine features, YAML schema reference, Lua API reference, WASM host functions. Seeded with auto-generated content from the typed schema (every YAML field and Lua global gets a stub page).
+- **Modding tutorials** — structured guides from "first YAML change" through "WASM total conversion." Community members can submit and edit tutorials.
+- **Map-making guides** — scenario editor documentation with annotated examples.
+- **Community cookbook** — recipe-style pages: "How to add a new unit type," "How to create a branching campaign," "How to publish a resource pack." Short, copy-pasteable, maintained by the community.
+
+**Implementation:** The knowledge base is a static site (mdbook or similar) with source in a public git repository. Community contributions via pull requests — same workflow as code contributions. Auto-generated API reference pages are rebuilt on each engine release. The in-game help system links to knowledge base pages contextually (e.g., the scenario editor's trigger panel links to the triggers documentation).
+
+**Not a forum.** The knowledge base is reference documentation, not discussion. Community discussion happens on whatever platforms the community chooses (Discord, forums, etc.). IC provides infrastructure for shared knowledge, not social interaction beyond Community Groups.
+
+**Phase:** Phase 4 (auto-generated API reference from Lua/YAML schema). Phase 6a (community-editable tutorials, cookbook). Seeded by the project maintainer during development — the design docs themselves are the initial knowledge base.
+
+### Creator Content Program
+
+**Lesson from ArmA/OFP:** Bohemia Interactive's Creator DLC program (launched 2019) showed that a structured quality ladder — from hobbyist to featured to commercially published — works when the criteria are transparent and the community governs curation. The program produced professional-quality content (Global Mobilization, S.O.G. Prairie Fire, CSLA Iron Curtain) while keeping the free modding ecosystem healthy.
+
+IC adapts this concept within D035's voluntary framework (no mandatory paywalls, no IC platform fee):
+
+| Tier            | Criteria                                                                                  | Recognition                                                                                        |
+| --------------- | ----------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| **Published**   | Meets Workshop minimum standards (valid metadata, license declared, no malware)           | Listed in Workshop, available for search and dependency                                            |
+| **Reviewed**    | Passes community review (2+ moderator approvals for quality, completeness, documentation) | "Reviewed" badge on Workshop page, eligible for "Staff Picks" featured section                     |
+| **Featured**    | Selected by Workshop moderators or competitive committee for exceptional quality          | Promoted in Workshop "Featured" section, highlighted in in-game browser, included in starter packs |
+| **Spotlighted** | Seasonal showcase — community-voted "best of" for maps, mods, campaigns, and assets       | Front-page placement, social media promotion, creator interview/spotlight                          |
+
+**Key differences from Bohemia's Creator DLC:**
+- **No paid tier at launch.** All tiers are free. D035's future `paid` pricing model is available if the community evolves toward it, but the quality ladder operates independently of monetization.
+- **Community curation, not publisher curation.** Workshop moderators and the competitive committee (both community roles) make tier decisions, not the project maintainer.
+- **Transparent criteria.** Published criteria for each tier — creators know exactly what's needed to reach "Reviewed" or "Featured" status.
+- **No exclusive distribution.** Featured content is Workshop content — it can be forked, depended on, and mirrored. No lock-in.
+
+The Creator Content Program is a recognition and quality signal system, not a gatekeeping mechanism. The Workshop remains open to all — tiers help players find high-quality content, not restrict who can publish.
+
+**Phase:** Phase 6a (integrated with Workshop moderator role from D037 governance structure). "Published" tier is automatic from Workshop launch (Phase 4–5). "Reviewed" and "Featured" require active moderators.
 
 ### Code of Conduct
 

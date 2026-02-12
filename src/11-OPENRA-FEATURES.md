@@ -2042,7 +2042,7 @@ Each actor reference exposes properties matching its components (`.Health`, `.Lo
 | 13  | **Veterancy system**              | ✅ DESIGNED | `GainsExperience` / `GivesExperience` + condition promotions     |
 | 14  | **Docking system**                | ✅ DESIGNED | `DockClient` / `DockHost` components                             |
 | 15  | **Transform / Deploy**            | ✅ DESIGNED | `Transforms` component                                           |
-| 16  | **Power System**                  | ✅ DESIGNED | `Power` component + `PowerState` resource                        |
+| 16  | **Power System**                  | ✅ DESIGNED | `Power` component + `PowerManager` resource                      |
 
 ### P2 — MEDIUM (Important for full experience)
 
@@ -2139,7 +2139,7 @@ For modders migrating from OpenRA, this table shows where each familiar trait ma
 | `Cargo` / `Passenger`                     | `Cargo { max_weight, slots }` / `Passenger { weight }`        | ✅      |
 | `Capturable` / `Captures`                 | `Capturable { threshold }` / `Captures { types }`             | ✅      |
 | `Cloak` / `DetectCloaked`                 | `Cloak { cloak_type, delay }` / `DetectCloaked { types }`     | ✅      |
-| `Power` / `PowerManager`                  | `Power { amount }` / `PowerState` resource                    | ✅      |
+| `Power` / `PowerManager`                  | `Power { provides, consumes }` / `PowerManager` resource      | ✅      |
 | `SupportPower*`                           | `SupportPower { charge_ticks, ready_sound, effect }`          | ✅      |
 | `GainsExperience` / `GivesExperience`     | `GainsExperience { levels }` / `GivesExperience { amount }`   | ✅      |
 | `Locomotor`                               | `locomotor` field in `Mobile`                                 | ✅      |
@@ -2151,7 +2151,7 @@ For modders migrating from OpenRA, this table shows where each familiar trait ma
 | `Crushable` / `AutoCrusher`               | `Crushable { crush_class }` / `Crusher { crush_classes }`     | ✅      |
 | `Transforms`                              | `Transforms { into, delay, facing, condition }`               | ✅      |
 | `Sellable`                                | `Sellable` marker + sell order                                | ✅      |
-| `RepairableBuilding`                      | `Repairable { cost_per_tick, rate }` component                | ✅      |
+| `RepairableBuilding`                      | `Repairable { repair_rate, repair_cost_per_hp }` component    | ✅      |
 | `RallyPoint`                              | `RallyPoint { position }` component                           | ✅      |
 | `PrimaryBuilding`                         | `PrimaryBuilding` marker component                            | ✅      |
 | `Gate`                                    | `Gate { open_ticks, close_delay }` component                  | ✅      |
@@ -2179,7 +2179,7 @@ These gaps need to be designed *before or during* Phase 2 since they're core sim
 1. **Condition system** — ✅ DESIGNED (D028) — Phase 2 exit criterion
 2. **Multiplier system** — ✅ DESIGNED (D028) — Phase 2 exit criterion
 3. **Full damage pipeline** — ✅ DESIGNED (D028) — Phase 2 exit criterion (Projectile → Warhead → Armor table → Modifiers → Health)
-4. **Power system** — ✅ DESIGNED — `Power` component + `PowerState` resource
+4. **Power system** — ✅ DESIGNED — `Power` component + `PowerManager` resource
 5. **Building mechanics** — ✅ DESIGNED — `BuildArea`, `PrimaryBuilding`, `RallyPoint`, `Exit`, `Sellable`, `Repairable`, `Gate`, `LineBuild`
 6. **Transport/Cargo** — ✅ DESIGNED — `Cargo` / `Passenger` components
 7. **Capture** — ✅ DESIGNED — `Capturable` / `Captures` components

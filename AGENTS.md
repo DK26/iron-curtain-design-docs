@@ -265,6 +265,10 @@ When you need deeper detail, read the specific design doc:
 
 ## Working With This Codebase
 
+### Version Control
+- **Never run `git commit`, `git push`, or any command that creates or modifies commits.** A commit is the maintainer's signature that the changes are correct. Only the maintainer can make that determination. Agents edit files; the maintainer reviews, commits, and pushes.
+- You may run read-only git commands (`git status`, `git diff`, `git log`, etc.) to understand the current state of the repository.
+
 ### mdbook
 - **Never run `mdbook build`, `mdbook serve`, or any mdbook command.** The book is built manually by the maintainer when ready. Only edit the markdown source files in `src/`.
 - **When linking to design docs from public-facing files (README, etc.), use the hosted mdbook URL:** `https://dk26.github.io/iron-curtain-design-docs/`. Link to `.html` pages (e.g., `01-VISION.html`), not the raw `src/*.md` source files.

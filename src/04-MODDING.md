@@ -2601,6 +2601,8 @@ The mod-facing API — YAML schema, Lua globals, WASM host functions — is a **
 
 **Lesson from Stardew Valley:** SMAPI (Stardew Modding API) acts as an adapter layer between the game and mods. When the game updates, SMAPI absorbs the breaking changes — mods written against SMAPI's stable surface continue to work even when Stardew's internals change. A single community-maintained compatibility layer protects thousands of mods.
 
+**Lesson from ArmA/OFP:** Bohemia Interactive's SQF scripting language has remained backwards-compatible across 25+ years of releases (OFP → ArmA → ArmA 2 → ArmA 3). Scripts written for Operation Flashpoint in 2001 still execute in ArmA 3 (2013+). This extraordinary stability is a primary reason the ArmA modding community survived multiple engine generations — modders invest in learning an API only when they trust it won't be discarded. Conversely, ArmA's lack of a formal deprecation process meant obsolete commands accumulated indefinitely. IC applies both lessons: backwards compatibility within major versions (the ArmA principle) combined with explicit deprecation cycles (the Factorio principle) so the API stays clean without breaking existing work.
+
 ### Stability Tiers
 
 | Surface                                                                  | Stability Guarantee         | Breaking Change Policy                                                                                                                                          |
