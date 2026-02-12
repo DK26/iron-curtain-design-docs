@@ -184,6 +184,53 @@ Order is fixed *per game module* and documented. Changing it changes gameplay an
 
 A different game module (e.g., RA2) can insert additional systems (garrison, mind control, prism forwarding) at defined points. The engine runs whatever systems the active game module registers, in the order it specifies. The engine itself doesn't know which game is running — it just executes the registered system pipeline deterministically.
 
+### FogProvider Trait (D041)
+
+`fog_system()` delegates visibility computation to a `FogProvider` trait — like `Pathfinder` for pathfinding. Different game modules need different fog algorithms: radius-based (RA1), elevation line-of-sight (RA2/TS), or no fog (sandbox).
+
+```rust
+/// Game modules implement this to define how visibility is computed.
+pub trait FogProvider: Send + Sync {
+    /// Recompute visibility for a player.
+    fn update_visibility(
+        &mut self,
+        player: PlayerId,
+        sight_sources: &[(WorldPos, SimCoord)],  // (position, sight_range) pairs
+        terrain: &TerrainData,
+    );
+
+    /// Is this position currently visible to this player?
+    fn is_visible(&self, player: PlayerId, pos: WorldPos) -> bool;
+
+    /// Has this player ever seen this position? (shroud vs fog distinction)
+    fn is_explored(&self, player: PlayerId, pos: WorldPos) -> bool;
+
+    /// All entity IDs visible to this player (for AI view filtering, render culling).
+    fn visible_entities(&self, player: PlayerId) -> &[EntityId];
+}
+```
+
+RA1 registers `RadiusFogProvider` (circle-based, fast, matches original RA). RA2/TS would register `ElevationFogProvider` (raycasts against terrain heightmap). The future fog-authoritative `NetworkModel` reuses the same trait on the server side to determine which entities to send per client. See D041 in `09-DECISIONS.md` for full rationale.
+
+### OrderValidator Trait (D041)
+
+The engine enforces that ALL orders pass validation before `apply_orders()` executes them. This formalizes D012's anti-cheat guarantee — game modules cannot accidentally skip validation:
+
+```rust
+/// Game modules implement this to define legal orders. The engine calls
+/// validate() for every order, every tick — before the module's systems run.
+pub trait OrderValidator: Send + Sync {
+    fn validate(
+        &self,
+        player: PlayerId,
+        order: &PlayerOrder,
+        state: &SimReadView,
+    ) -> OrderValidity;
+}
+```
+
+RA1 registers `StandardOrderValidator` (ownership, affordability, prerequisites, placement, rate limits). See D041 in `09-DECISIONS.md` for full design and `GameModule` trait integration.
+
 ## Extended Gameplay Systems (RA1 Module)
 
 The 9 core components above cover the skeleton. A playable Red Alert requires ~50 components and ~20 systems. This section designs every gameplay system identified in `11-OPENRA-FEATURES.md` § gap analysis, organized by functional domain.
@@ -303,6 +350,41 @@ weapons:
           concrete: 30
         falloff: [100, 50, 25, 0]
 ```
+
+### DamageResolver Trait (D041)
+
+The damage pipeline above describes the RA1 resolution algorithm. The *data* (warheads, versus tables, modifiers) is YAML-configurable, but the *resolution order* — what happens between warhead impact and health reduction — varies between game modules. RA2 needs shield-first resolution; Generals-class games need sub-object targeting. The `DamageResolver` trait abstracts this step:
+
+```rust
+/// Game modules implement this to define damage resolution order.
+/// Called by projectile_system() after hit detection and before health reduction.
+pub trait DamageResolver: Send + Sync {
+    fn resolve_damage(
+        &self,
+        warhead: &WarheadDef,
+        target: &DamageTarget,
+        modifiers: &StatModifiers,
+        distance_from_impact: SimCoord,
+    ) -> DamageResult;
+}
+
+pub struct DamageTarget {
+    pub entity: EntityId,
+    pub armor_type: ArmorType,
+    pub current_health: i32,
+    pub shield: Option<ShieldState>,
+    pub conditions: Conditions,
+}
+
+pub struct DamageResult {
+    pub health_damage: i32,
+    pub shield_damage: i32,
+    pub conditions_applied: Vec<(ConditionId, u32)>,
+    pub overkill: i32,
+}
+```
+
+RA1 registers `StandardDamageResolver` (Versus table → falloff → multiplier stack → health). RA2 would register `ShieldFirstDamageResolver`. See D041 in `09-DECISIONS.md` for full rationale and alternative implementations.
 
 ### Support Powers / Superweapons
 
@@ -1107,15 +1189,20 @@ pub trait SpatialIndex: Send + Sync {
 
 This is the same philosophy as `WorldPos.z` — costs near-zero now, prevents rewrites later:
 
-| Abstraction    | Costs Now                       | Saves Later                                              |
-| -------------- | ------------------------------- | -------------------------------------------------------- |
-| `WorldPos.z`   | One extra `i32` per position    | RA2/TS elevation works without restructuring coordinates |
-| `NetworkModel` | One trait + `LocalNetwork` impl | Multiplayer netcode slots in without touching sim        |
-| `InputSource`  | One trait + mouse/keyboard impl | Touch/gamepad slot in without touching game loop         |
-| `Pathfinder`   | One trait + grid flowfield impl | Navmesh pathfinding slots in without touching sim        |
-| `SpatialIndex` | One trait + spatial hash impl   | BVH/R-tree slots in without touching combat/targeting    |
+| Abstraction       | Costs Now                              | Saves Later                                                |
+| ----------------- | -------------------------------------- | ---------------------------------------------------------- |
+| `WorldPos.z`      | One extra `i32` per position           | RA2/TS elevation works without restructuring coordinates   |
+| `NetworkModel`    | One trait + `LocalNetwork` impl        | Multiplayer netcode slots in without touching sim          |
+| `InputSource`     | One trait + mouse/keyboard impl        | Touch/gamepad slot in without touching game loop           |
+| `Pathfinder`      | One trait + grid flowfield impl        | Navmesh pathfinding slots in without touching sim          |
+| `SpatialIndex`    | One trait + spatial hash impl          | BVH/R-tree slots in without touching combat/targeting      |
+| `FogProvider`     | One trait + radius fog impl            | Elevation fog, fog-authoritative server slot in            |
+| `DamageResolver`  | One trait + standard pipeline impl     | Shield-first/sub-object damage models slot in              |
+| `AiStrategy`      | One trait + personality-driven AI impl | Neural/planning/custom AI slots in without forking ic-ai   |
+| `RankingProvider` | One trait + Glicko-2 impl              | Community servers choose their own rating algorithm        |
+| `OrderValidator`  | One trait + standard validation impl   | Engine enforces validation; modules can't skip it silently |
 
-The RA1 game module registers `GridFlowfieldPathfinder` and `GridSpatialHash`. A future continuous-space game module registers `NavmeshPathfinder` and `BvhSpatialIndex`. The sim core calls the trait — it never knows which one is running.
+The RA1 game module registers `GridFlowfieldPathfinder` and `GridSpatialHash`. A future continuous-space game module registers `NavmeshPathfinder` and `BvhSpatialIndex`. The sim core calls the trait — it never knows which one is running. The same principle applies to fog, damage, AI, ranking, and validation — see D041 in `09-DECISIONS.md` for the full trait definitions and rationale.
 
 ## Platform Portability
 
@@ -1363,7 +1450,36 @@ shellmap_ai:
     max_tick_budget_us: 2000   # 2ms max per AI tick (shellmap is background)
 ```
 
-**Lua/WASM AI mods:** Community can implement custom AI via Lua (Tier 2) or WASM (Tier 3). Custom AI registers as an `AiPersonality` and is selectable in the lobby. The engine provides `ic-ai`'s built-in AI as the default; mods can replace or extend it.
+**Lua/WASM AI mods:** Community can implement custom AI via Lua (Tier 2) or WASM (Tier 3). Custom AI implements the `AiStrategy` trait (D041) and is selectable in the lobby. The engine provides `ic-ai`'s built-in `PersonalityDrivenAi` as the default; mods can replace or extend it.
+
+**AiStrategy Trait (D041):**
+
+`AiPersonality` tunes parameters within a fixed decision algorithm. For modders who want to replace the algorithm entirely (neural net, GOAP planner, MCTS, scripted state machine), the `AiStrategy` trait abstracts the decision-making:
+
+```rust
+/// Game modules and mods implement this for AI opponents.
+/// Default: PersonalityDrivenAi (behavior trees driven by AiPersonality YAML).
+pub trait AiStrategy: Send + Sync {
+    /// Called once per AI player per tick. Reads fog-filtered state, emits orders.
+    fn decide(
+        &mut self,
+        player: PlayerId,
+        view: &FogFilteredView,
+        tick: u64,
+    ) -> Vec<PlayerOrder>;
+
+    /// Human-readable name for lobby display.
+    fn name(&self) -> &str;
+
+    /// Difficulty tier for UI categorization.
+    fn difficulty(&self) -> AiDifficulty;
+
+    /// Per-tick compute budget hint (microseconds). None = no limit.
+    fn tick_budget_hint(&self) -> Option<u64>;
+}
+```
+
+`FogFilteredView` ensures AI honesty — the AI sees only what its units see, just like a human player. Campaign scripts can grant omniscience via conditions. AI strategies are selectable in the lobby: "IC Default (Normal)", "Workshop: Neural Net v2.1", etc. See D041 in `09-DECISIONS.md` for full rationale.
 
 **Phase:** Basic skirmish AI (Easy/Normal) in Phase 4. Hard/Brutal + adaptive difficulty in Phase 5-6a.
 
@@ -1442,6 +1558,15 @@ pub trait GameModule {
     /// Provide the spatial index implementation (spatial hash, BVH, etc.).
     fn spatial_index(&self) -> Box<dyn SpatialIndex>;
 
+    /// Provide the fog of war implementation (radius, elevation LOS, etc.).
+    fn fog_provider(&self) -> Box<dyn FogProvider>;
+
+    /// Provide the damage resolution algorithm (standard, shield-first, etc.).
+    fn damage_resolver(&self) -> Box<dyn DamageResolver>;
+
+    /// Provide order validation logic (D041 — engine enforces this before apply_orders).
+    fn order_validator(&self) -> Box<dyn OrderValidator>;
+
     /// Register format loaders (e.g., .vxl for RA2, .shp for RA1).
     fn register_format_loaders(&self, registry: &mut FormatRegistry);
 
@@ -1460,6 +1585,9 @@ pub trait GameModule {
 | **Sim core**    | `Simulation`, `apply_tick()`, `snapshot()`, state hashing, order validation pipeline | Components, systems, rules, resource types                                   |
 | **Positions**   | `WorldPos { x, y, z }`                                                               | `CellPos` (grid-based modules), coordinate mapping, z usage                  |
 | **Pathfinding** | `Pathfinder` trait, `SpatialIndex` trait                                             | Grid flowfields (RA1), navmesh (future), spatial hash vs BVH                 |
+| **Fog of war**  | `FogProvider` trait                                                                  | Radius fog (RA1), elevation LOS (RA2/TS), no fog (sandbox)                   |
+| **Damage**      | `DamageResolver` trait                                                               | Standard pipeline (RA1), shield-first (RA2), sub-object (Generals)           |
+| **Validation**  | `OrderValidator` trait (engine-enforced)                                             | Per-module validation rules (ownership, affordability, placement, etc.)      |
 | **Networking**  | `NetworkModel` trait, relay server, lockstep, replays                                | `PlayerOrder` variants (game-specific commands)                              |
 | **Rendering**   | Camera, sprite batching, UI framework; post-FX pipeline available to modders         | Sprite renderer (RA1), voxel renderer (RA2), mesh renderer (3D mod/future)   |
 | **Modding**     | YAML loader, Lua runtime, WASM sandbox, workshop                                     | Rule schemas, API surface exposed to scripts                                 |
@@ -1499,6 +1627,10 @@ C&C Generals and later 3D titles (C&C3, RA3) are **not current targets** — we 
 | Coordinates        | No (`WorldPos`)    | N/A — universal               | Nothing. `WorldPos` works for any spatial model.                    |
 | Pathfinding        | Implementation     | Yes (`Pathfinder` trait)      | A `NavmeshPathfinder` impl. Zero sim changes.                       |
 | Spatial queries    | Implementation     | Yes (`SpatialIndex` trait)    | A `BvhSpatialIndex` impl. Zero combat/targeting changes.            |
+| Fog of war         | Implementation     | Yes (`FogProvider` trait)     | An `ElevationFogProvider` impl. Zero sim changes.                   |
+| Damage resolution  | Implementation     | Yes (`DamageResolver` trait)  | A `SubObjectDamageResolver` impl. Zero projectile changes.          |
+| Order validation   | Implementation     | Yes (`OrderValidator` trait)  | Module-specific rules. Engine still enforces the contract.          |
+| AI strategy        | Implementation     | Yes (`AiStrategy` trait)      | Module-specific AI. Same lobby selection UI.                        |
 | Rendering          | Implementation     | Yes (`Renderable` trait)      | A mesh renderer impl. Already documented ("3D Rendering as a Mod"). |
 | Camera             | Implementation     | Yes (`ScreenToWorld` trait)   | A perspective camera impl. Already documented.                      |
 | Input              | No (`InputSource`) | Yes                           | Nothing. Orders are orders.                                         |
@@ -1506,9 +1638,9 @@ C&C Generals and later 3D titles (C&C3, RA3) are **not current targets** — we 
 | Format loaders     | Implementation     | Yes (`FormatRegistry`)        | New parsers for `.big`, `.w3d`, etc. Additive.                      |
 | Building placement | Data-driven        | N/A — YAML rules + components | Different components (no `RequiresBuildableArea`). YAML change.     |
 
-The key insight: the engine core (`Simulation`, `apply_tick()`, `GameLoop`, `NetworkModel`, `Pathfinder`, `SpatialIndex`) is spatial-model-agnostic. Grid-based pathfinding is a *game module implementation*, not an engine assumption — the same way `LocalNetwork` is a network implementation, not the only possible one.
+The key insight: the engine core (`Simulation`, `apply_tick()`, `GameLoop`, `NetworkModel`, `Pathfinder`, `SpatialIndex`, `FogProvider`, `DamageResolver`, `OrderValidator`) is spatial-model-agnostic. Grid-based pathfinding is a *game module implementation*, not an engine assumption — the same way `LocalNetwork` is a network implementation, not the only possible one.
 
-A Generals-class game module would provide its own `Pathfinder` (navmesh), `SpatialIndex` (BVH), `Renderable` (mesh), and format loaders — while reusing the sim core, networking, modding infrastructure, workshop, competitive infrastructure, and all the systems that don't care about spatial representation (production, veterancy, fog of war logic, order validation, replays, save games).
+A Generals-class game module would provide its own `Pathfinder` (navmesh), `SpatialIndex` (BVH), `FogProvider` (elevation LOS), `DamageResolver` (sub-object targeting), `AiStrategy` (custom AI), `Renderable` (mesh), and format loaders — while reusing the sim core, networking, modding infrastructure, workshop, competitive infrastructure, and all shared systems (production, veterancy, replays, save games). See D041 in `09-DECISIONS.md` for the full trait-abstraction strategy.
 
 This is not a current development target. We build only the grid implementations. But the trait seams exist from day one, so the door stays open — for us or for the community.
 
@@ -1572,3 +1704,5 @@ This is a **Tier 3 (WASM) mod** — it replaces a rendering backend, which is to
 5. **Render through `Renderable` trait.** Sprites and voxels implement the same trait. The renderer doesn't know what it's drawing.
 6. **Format loaders are pluggable.** `ra-formats` provides parsers; the game module tells the asset pipeline which ones to use.
 7. **`PlayerOrder` is extensible.** Use an enum with a `Custom(GameSpecificOrder)` variant, or make orders generic over the game module.
+8. **Fog, damage, and validation are behind traits (D041).** `FogProvider`, `DamageResolver`, and `OrderValidator` — each game module supplies its own implementation. The engine core calls trait methods, never game-specific fog/damage/validation logic directly.
+9. **AI strategy is behind a trait (D041).** `AiStrategy` lets each game module (or difficulty preset) supply different decision-making logic. The engine schedules AI ticks; the strategy decides what to do.
