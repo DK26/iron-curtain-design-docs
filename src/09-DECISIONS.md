@@ -268,6 +268,7 @@ See `10-PERFORMANCE.md` for full details, targets, and implementation patterns.
 **Scope:**
 - Phase 7: single mission generation (terrain, objectives, enemy composition, triggers, briefing)
 - Phase 7: player-aware generation — LLM reads local SQLite (D034) for faction history, unit preferences, win rates, campaign roster state; injects player context into prompts for personalized missions, adaptive briefings, post-match commentary, coaching suggestions, and rivalry narratives
+- Phase 7: replay-to-scenario narrative generation — LLM reads gameplay event logs from replays to generate briefings, objectives, dialogue, and story context for scenarios extracted from real matches (see D038 § Replay-to-Scenario Pipeline)
 - Future: multi-mission campaigns, adaptive difficulty, cooperative scenario design
 
 > **Positioning note:** LLM features are a quiet power-user capability, not a project headline. The primary single-player story is the hand-authored branching campaign system (D021), which requires no LLM and is genuinely excellent on its own merits. LLM generation is for players who want more content — it should never appear before D021 in marketing or documentation ordering. The word “AI” in gaming contexts attracts immediate hostility from a significant audience segment regardless of implementation quality. Lead with campaigns, reveal LLM as “also, modders and power users can use AI tools if they want.”
@@ -1572,14 +1573,16 @@ This is the "game engine equivalent of a Kubernetes dashboard" — operators of 
 
 The gameplay event stream is the foundation for AI development:
 
-| Consumer              | Data Source                        | Purpose                                                          |
-| --------------------- | ---------------------------------- | ---------------------------------------------------------------- |
-| `ic-ai` (skirmish AI) | Gameplay events from human games   | Learn build orders, engagement timing, micro patterns            |
-| `ic-llm` (missions)   | Gameplay events + enriched replays | Learn what makes missions fun (engagement density, pacing, flow) |
-| Behavioral analysis   | Relay-side player profiles         | APM, reaction time, input entropy → suspicion scoring (V12)      |
-| Balance analysis      | Aggregated match outcomes          | Win rates by faction/map/preset → balance tuning                 |
-| Adaptive difficulty   | Per-player gameplay patterns       | Build speed, APM, unit composition → difficulty calibration      |
-| Community analytics   | Workshop + match metadata          | Popular resources, play patterns, mod adoption → recommendations |
+| Consumer                      | Data Source                        | Purpose                                                                   |
+| ----------------------------- | ---------------------------------- | ------------------------------------------------------------------------- |
+| `ic-ai` (skirmish AI)         | Gameplay events from human games   | Learn build orders, engagement timing, micro patterns                     |
+| `ic-llm` (missions)           | Gameplay events + enriched replays | Learn what makes missions fun (engagement density, pacing, flow)          |
+| `ic-editor` (replay→scenario) | Replay event log (SQLite)          | Direct extraction of waypoints, combat zones, build timelines into editor |
+| `ic-llm` (replay→scenario)    | Replay event log + context         | Generate narrative, briefings, dialogue for replay-to-scenario pipeline   |
+| Behavioral analysis           | Relay-side player profiles         | APM, reaction time, input entropy → suspicion scoring (V12)               |
+| Balance analysis              | Aggregated match outcomes          | Win rates by faction/map/preset → balance tuning                          |
+| Adaptive difficulty           | Per-player gameplay patterns       | Build speed, APM, unit composition → difficulty calibration               |
+| Community analytics           | Workshop + match metadata          | Popular resources, play patterns, mod adoption → recommendations          |
 
 **Privacy:** Gameplay events are associated with anonymized player IDs (hashed). No PII in telemetry. Players opt in to telemetry export (default: local-only for debugging). Tournament/ranked play may require telemetry for anti-cheat and certified results. See `06-SECURITY.md`.
 
@@ -3241,6 +3244,130 @@ Scenarios created in the editor export as standard IC mission format (YAML map +
 - Used in campaigns (D021) — or created directly in the Campaign Editor
 - Assembled into full campaigns and published as campaign packs
 - Loaded by the LLM for remixing (D016)
+
+### Replay-to-Scenario Pipeline
+
+Replays are the richest source of gameplay data in any RTS — every order, every battle, every building placement, every dramatic moment. IC already stores replays as deterministic order streams and enriches them with structured gameplay events (D031) in SQLite (D034). The Replay-to-Scenario pipeline turns that data into editable scenarios.
+
+Replays already contain what's hardest to design from scratch: pacing, escalation, and dramatic turning points. The pipeline extracts that structure into an editable scenario skeleton — a designer adds narrative and polish on top.
+
+#### Two Modes: Direct Extraction and LLM Generation
+
+**Direct extraction (no LLM required):** Deterministic, mechanical conversion of replay data into editor entities. This always works, even without an LLM configured.
+
+| Extracted Element        | Source Data                                                | Editor Result                                                                                                                                                                                                |
+| ------------------------ | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Map & terrain**        | Replay's initial map state                                 | Full terrain imported — tiles, resources, cliffs, water                                                                                                                                                      |
+| **Starting positions**   | Initial unit/building placements per player                | Entities placed with correct faction, position, facing                                                                                                                                                       |
+| **Movement paths**       | `OrderIssued` (move orders) over time                      | Waypoints along actual routes taken — patrol paths, attack routes, retreat lines                                                                                                                             |
+| **Build order timeline** | `BuildingPlaced` events with tick timestamps               | Building entities with `timer_elapsed` triggers matching the original timing                                                                                                                                 |
+| **Combat hotspots**      | Clusters of `CombatEngagement` events in spatial proximity | Named regions at cluster centroids — "Combat Zone 1 (2400, 1800)," "Combat Zone 2 (800, 3200)." The LLM path (below) upgrades these to human-readable names like "Bridge Assault" using map feature context. |
+| **Unit composition**     | `UnitCreated` events per faction per time window           | Wave Spawner modules mimicking the original army buildup timing                                                                                                                                              |
+| **Key moments**          | Spikes in event density (kills/sec, orders/sec)            | Trigger markers at dramatic moments — editor highlights them in the timeline                                                                                                                                 |
+| **Resource flow**        | `HarvestDelivered` events                                  | Resource deposits and harvester assignments matching the original economy                                                                                                                                    |
+
+The result: a scenario skeleton with correct terrain, unit placements, waypoints tracing the actual battle flow, and trigger points at dramatic moments. It's mechanically accurate but has no story — no briefing, no objectives, no dialogue. A designer opens it in the editor and adds narrative on top.
+
+**LLM-powered generation (D016, requires LLM configured):** The LLM reads the gameplay event log and generates the narrative layer that direct extraction can't provide.
+
+| Generated Element     | LLM Input                                             | LLM Output                                                                                  |
+| --------------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| **Mission briefing**  | Event timeline summary, factions, map name, outcome   | "Commander, intelligence reports enemy armor massing at the river crossing..."              |
+| **Objectives**        | Key events + outcome                                  | Primary: "Destroy the enemy base." Secondary: "Capture the tech center before it's razed."  |
+| **Dialogue**          | Combat events, faction interactions, dramatic moments | In-mission dialogue triggered at key moments — characters react to what originally happened |
+| **Difficulty curve**  | Event density over time, casualty rates               | Wave timing and composition tuned to recreate the original difficulty arc                   |
+| **Story context**     | Faction composition, map geography, battle outcome    | Narrative framing that makes the mechanical events feel like a story                        |
+| **Named characters**  | High-performing units (most kills, longest survival)  | Surviving units promoted to named characters with generated backstories                     |
+| **Alternative paths** | What-if analysis of critical moments                  | Branch points: "What if the bridge assault failed?" → generates alternate mission variant   |
+
+The LLM output is standard YAML + Lua — the same format as hand-crafted missions. Everything is editable in the editor. The LLM is a starting point, not a black box.
+
+#### Workflow
+
+```
+┌─────────────┐     ┌──────────────────┐     ┌────────────────────┐     ┌──────────────┐
+│   Replay    │────→│  Event Log       │────→│  Replay-to-Scenario │────→│   Scenario   │
+│   Browser   │     │  (SQLite, D034)  │     │  Pipeline           │     │   Editor     │
+└─────────────┘     └──────────────────┘     │                     │     └──────────────┘
+                                             │  Direct extraction  │
+                                             │  + LLM (optional)   │
+                                             └────────────────────┘
+```
+
+1. **Browse replays** — open the replay browser, select a replay (or multiple — a tournament series, a campaign run)
+2. **"Create Scenario from Replay"** — button in the replay browser context menu
+3. **Import settings dialog:**
+
+| Setting                | Options                                                    | Default              |
+| ---------------------- | ---------------------------------------------------------- | -------------------- |
+| **Perspective**        | Player 1's view / Player 2's view / Observer (full map)    | Player 1             |
+| **Time range**         | Full replay / Custom range (tick start – tick end)         | Full replay          |
+| **Extract waypoints**  | All movement / Combat movement only / Key maneuvers only   | Key maneuvers only   |
+| **Combat zones**       | Mark all engagements / Major battles only (threshold)      | Major battles only   |
+| **Generate narrative** | Yes (requires LLM) / No (direct extraction only)           | Yes if LLM available |
+| **Difficulty**         | Match original / Easier / Harder / Let LLM tune            | Match original       |
+| **Playable as**        | Player 1's faction / Player 2's faction / New player vs AI | New player vs AI     |
+
+4. **Pipeline runs** — extraction is instant (SQL queries on the event log); LLM generation takes seconds to minutes depending on the provider
+5. **Open in editor** — the scenario opens with all extracted/generated content. Everything is editable. The designer adds, removes, or modifies anything before publishing.
+
+#### Perspective Conversion
+
+The key design challenge: a replay is a symmetric record (both sides played). A scenario is asymmetric (the player is one side, the AI is the other). The pipeline handles this conversion:
+
+- **"Playable as Player 1"** — Player 1's units become the player's starting forces. Player 2's units, movements, and build order become AI-controlled entities with waypoints and triggers mimicking the replay behavior.
+- **"Playable as Player 2"** — reversed.
+- **"New player vs AI"** — the player starts fresh. The AI follows a behavior pattern extracted from the better-performing replay side. The LLM (if available) adjusts difficulty so the mission is winnable but challenging.
+- **"Observer (full map)"** — both sides are AI-controlled, recreating the entire battle as a spectacle. Useful for "historical battle" recreations of famous tournament matches.
+
+Initial implementation targets 1v1 replays — perspective conversion maps cleanly to "one player side, one AI side." 2v2 team games work by merging each team's orders into a single AI side. FFA and larger multiplayer replays require per-faction AI assignment and are deferred to a future iteration. Observer mode is player-count-agnostic (all sides are AI-controlled regardless of player count).
+
+#### AI Behavior Extraction
+
+The pipeline converts a player's replay orders into AI modules that approximate the original behavior at the strategic level. The mapping is deterministic — no LLM required.
+
+| Replay Order Type         | AI Module Generated  | Example                                                                         |
+| ------------------------- | -------------------- | ------------------------------------------------------------------------------- |
+| Move orders               | Patrol waypoints     | Unit moved A→B→C → patrol route with 3 waypoints                                |
+| Attack-move orders        | Attack-move zones    | Attack-move toward (2400, 1800) → attack-move zone centered on that area        |
+| Build orders (structures) | Timed build queue    | Barracks at tick 300, War Factory at tick 600 → build triggers at those offsets |
+| Unit production orders    | Wave Spawner timing  | 5 tanks produced ticks 800–1000 → Wave Spawner with matching composition        |
+| Harvest orders            | Harvester assignment | 3 harvesters assigned to ore field → harvester waypoints to that resource       |
+
+This isn't "perfectly replicate a human player" — it's "create an AI that does roughly the same thing in roughly the same order." The Probability of Presence system (per-entity randomization) can be applied on top, so replaying the scenario doesn't produce an identical experience every time.
+
+**Crate boundary:** The extraction logic lives in `ic-ai` behind a `ReplayBehaviorExtractor` trait. `ic-editor` calls this trait to generate AI modules from replay data. `ic-game` wires the concrete implementation. This keeps `ic-editor` decoupled from AI internals — the same pattern as sim/net separation.
+
+#### Use Cases
+
+- **"That was an incredible game — let others experience it"** — import your best multiplayer match, add briefing and objectives, publish as a community mission
+- **Tournament highlight missions** — import famous tournament replays, let players play from either side. "Can you do better than the champion?"
+- **Training scenarios** — import a skilled player's replay, the new player faces an AI that follows the skilled player's build order and attack patterns
+- **Campaign from history** — import a series of replays from a ladder season or clan war, LLM generates connecting narrative → instant campaign
+- **Modder stress test** — import a replay with 1000+ units to create a performance benchmark scenario
+- **Content creation** — streamers import viewer-submitted replays and remix them into challenge missions live
+
+#### Batch Import: Replay Series → Campaign
+
+Multiple replays can be imported as a connected campaign:
+
+1. Select multiple replays (e.g., a best-of-5 tournament series)
+2. Pipeline extracts each as a separate mission
+3. LLM (if available) generates connecting narrative: briefings that reference previous missions, persistent characters who survive across matches, escalating stakes
+4. Campaign graph auto-generated: linear (match order) or branching (win/loss → different next mission)
+5. Open in Campaign Editor for refinement
+
+This is the fastest path from "cool replays" to "playable campaign" — and it's entirely powered by existing systems (D016 + D021 + D031 + D034 + D038).
+
+#### What This Does NOT Do
+
+- **Perfectly reproduce a human player's micro** — AI modules approximate human behavior at the strategic level. Precise micro (target switching, spell timing, retreat feints) is not captured. The goal is "similar army, similar timing, similar aggression," not "frame-perfect recreation."
+- **Work on corrupted or truncated replays** — the pipeline requires a complete event log. Partial replays produce partial scenarios (with warnings).
+- **Replace mission design** — direct extraction produces a mechanical skeleton, not a polished mission. The LLM adds narrative, but a human designer's touch is what makes it feel crafted. The pipeline reduces the work from "start from scratch" to "edit and polish."
+
+**Crate boundary for LLM integration:** `ic-editor` defines a `NarrativeGenerator` trait (input: replay event summary → output: briefing, objectives, dialogue YAML). `ic-llm` implements it. `ic-game` wires the implementation at startup — if no LLM provider is configured, the trait is backed by a no-op that skips narrative generation. `ic-editor` never imports `ic-llm` directly. This mirrors the sim/net separation: the editor knows it *can* request narrative, but has zero knowledge of how it's generated.
+
+**Phase:** Direct extraction ships with the scenario editor in **Phase 6a** (it's just SQL queries + editor import — no new system needed). LLM-powered narrative generation ships in **Phase 7** (requires `ic-llm`). Batch campaign import is a **Phase 7** feature built on D021's campaign graph.
 
 ### Reference Material
 
