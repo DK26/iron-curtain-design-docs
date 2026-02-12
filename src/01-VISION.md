@@ -56,33 +56,33 @@ Because the engine builds on Bevy's rendering stack (which includes a full 2D an
 
 These are **modding possibilities enabled by the engine's architecture**, not development goals for the base game. The base game ships with the classic isometric aesthetic. Visual enhancements are content that modders and the community build on top.
 
-**In-Engine Scenario Editor (D038)**
+**Scenario Editor & Asset Studio (D038 + D040)**
 
-OpenRA's map editor is a standalone terrain/actor tool. Our editor runs inside the game and goes further — not just terrain/unit placement, but full mission logic: visual triggers with countdown/timeout timers, waypoints, drag-and-drop modules (wave spawner, patrol route, guard position, reinforcements, objectives), compositions (reusable prefabs), Probability of Presence per entity for replayability, layers, and a Game Master mode for live scenario manipulation. Inspired by Operation Flashpoint's mission editor and Arma 3's Eden Editor.
+OpenRA's map editor is a standalone terrain/actor tool. The IC SDK ships a full creative toolchain as a separate application from the game — not just terrain/unit placement, but full mission logic: visual triggers with countdown/timeout timers, waypoints, drag-and-drop modules (wave spawner, patrol route, guard position, reinforcements, objectives), compositions (reusable prefabs), Probability of Presence per entity for replayability, layers, and a Game Master mode for live scenario manipulation. The SDK also includes an asset studio (D040) for browsing, editing, and generating game resources — sprites, palettes, terrain, chrome/UI themes — with optional LLM-assisted generation for non-artists. Inspired by Operation Flashpoint's mission editor, Arma 3's Eden Editor, and Bethesda's Creation Kit.
 
 ### Architectural Differences from OpenRA
 
 OpenRA is a mature, actively maintained project with 18 years of community investment. These are genuine architectural differences, not criticisms:
 
-| Area          | OpenRA                                   | Iron Curtain                                                        |
-| ------------- | ---------------------------------------- | ------------------------------------------------------------------- |
-| Runtime       | C# / .NET (mature, productive)           | Rust — no GC, predictable perf, WASM target                         |
-| Threading     | Single-threaded game loop (verified)     | Parallel systems via ECS                                            |
-| Modding       | Powerful but requires C# for deep mods   | YAML + Lua + WASM (no compile step)                                 |
-| Map editor    | Separate tool, recently improved         | In-engine scenario editor with mission logic (D038, Phase 6a/6b)    |
-| Multiplayer   | 135+ desync issues tracked               | Snapshottable sim designed for desync pinpointing                   |
-| Competitive   | Community ladders via CnCNet             | Integrated ranked matchmaking, tournament mode                      |
-| Portability   | Desktop (Windows, macOS, Linux)          | Desktop + WASM (browser) + mobile                                   |
-| Maturity      | 18 years, battle-tested, large community | Clean-sheet modern design, unproven                                 |
-| Campaigns     | Some incomplete (TD, Dune 2000)          | Branching campaigns with persistent state (D021)                    |
-| Mission flow  | Manual mission selection between levels  | Continuous flow: briefing → mission → debrief → next                |
-| Asset quality | Cannot fix original palette/sprite flaws | Bevy post-FX: palette correction, color grading, optional upscaling |
+| Area          | OpenRA                                   | Iron Curtain                                                                   |
+| ------------- | ---------------------------------------- | ------------------------------------------------------------------------------ |
+| Runtime       | C# / .NET (mature, productive)           | Rust — no GC, predictable perf, WASM target                                    |
+| Threading     | Single-threaded game loop (verified)     | Parallel systems via ECS                                                       |
+| Modding       | Powerful but requires C# for deep mods   | YAML + Lua + WASM (no compile step)                                            |
+| Map editor    | Separate tool, recently improved         | SDK scenario editor with mission logic + asset studio (D038+D040, Phase 6a/6b) |
+| Multiplayer   | 135+ desync issues tracked               | Snapshottable sim designed for desync pinpointing                              |
+| Competitive   | Community ladders via CnCNet             | Integrated ranked matchmaking, tournament mode                                 |
+| Portability   | Desktop (Windows, macOS, Linux)          | Desktop + WASM (browser) + mobile                                              |
+| Maturity      | 18 years, battle-tested, large community | Clean-sheet modern design, unproven                                            |
+| Campaigns     | Some incomplete (TD, Dune 2000)          | Branching campaigns with persistent state (D021)                               |
+| Mission flow  | Manual mission selection between levels  | Continuous flow: briefing → mission → debrief → next                           |
+| Asset quality | Cannot fix original palette/sprite flaws | Bevy post-FX: palette correction, color grading, optional upscaling            |
 
 ### What Makes People Actually Switch
 
 1. **Better performance** — visible: bigger maps, more units, no stutters
 2. **Campaigns that flow** — branching paths, persistent units, no menu between missions, failure continues the story
-3. **Better modding** — WASM scripting, in-engine editor, hot reload
+3. **Better modding** — WASM scripting, SDK with scenario editor & asset studio, hot reload
 4. **Competitive infrastructure** — ranked matchmaking, anti-cheat, tournaments, signed replays — OpenRA has none of this
 5. **Player analytics** — post-game stats, career page, campaign dashboard with roster graphs — your match history is queryable data, not a forgotten replay folder
 6. **Better multiplayer** — desync debugging, smoother netcode, relay server

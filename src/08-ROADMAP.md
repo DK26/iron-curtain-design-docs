@@ -250,7 +250,7 @@ Units moving, shooting, dying — headless sim + rendered. Record replay file. P
 - **VS Code extension** for mod development: YAML schema validation, Lua LSP, `ic` integration
 
 ### Deliverables — Scenario Editor (D038 Core)
-- **In-engine scenario editor (D038):** OFP/Eden-inspired visual editor for maps AND mission logic — terrain painting, unit placement, triggers (area-based with countdown/timeout timers and min/mid/max randomization), waypoints, pre-built modules (wave spawner, patrol route, guard position, reinforcements, objectives, weather change, etc.), visual connection lines between triggers/modules/waypoints, Probability of Presence per entity for replayability, compositions (reusable prefabs), layers with lock/visibility, Simple/Advanced mode toggle, preview/test button, autosave with crash recovery, undo/redo, direct Workshop publishing
+- **SDK scenario editor (D038):** OFP/Eden-inspired visual editor for maps AND mission logic — ships as part of the IC SDK (separate application from the game — D040). Terrain painting, unit placement, triggers (area-based with countdown/timeout timers and min/mid/max randomization), waypoints, pre-built modules (wave spawner, patrol route, guard position, reinforcements, objectives, weather change, etc.), visual connection lines between triggers/modules/waypoints, Probability of Presence per entity for replayability, compositions (reusable prefabs), layers with lock/visibility, Simple/Advanced mode toggle, Test button (launches ic-game with scenario), autosave with crash recovery, undo/redo, direct Workshop publishing
 - Controller input mapping for core editing workflows (Steam Deck compatible)
 - Accessibility: colorblind palette, UI scaling, full keyboard navigation
 
@@ -269,7 +269,7 @@ Units moving, shooting, dying — headless sim + rendered. Record replay file. P
 
 ### Exit Criteria
 - Someone ports an existing OpenRA mod (Tiberian Dawn, Dune 2000) and it runs
-- In-engine scenario editor supports terrain painting, unit placement, triggers with timers, waypoints, modules, compositions, undo/redo, autosave, and Workshop publishing
+- SDK scenario editor supports terrain painting, unit placement, triggers with timers, waypoints, modules, compositions, undo/redo, autosave, and Workshop publishing
 - A mod can declare 3+ Workshop resource dependencies and `ic mod install` resolves, downloads, and caches them correctly
 - `ic mod audit` correctly identifies license incompatibilities in a dependency tree
 - An individual resource (e.g., a music track) can be published to and pulled from the Workshop independently

@@ -415,11 +415,11 @@ ic-protocol  (shared types: PlayerOrder, TimestampedOrder)
     ├── ic-script   (depends on: ic-sim, ic-protocol)
     ├── ic-ai       (depends on: ic-sim, ic-protocol; reads SQLite for adaptive difficulty — D034)
     ├── ic-llm      (depends on: ic-sim, ic-script, ic-protocol; reads SQLite for personalization — D034)
-    ├── ic-editor   (depends on: ic-render, ic-sim, ic-ui, ic-protocol; optional — D038)
-    └── ic-game     (depends on: everything above)
+    ├── ic-editor   (depends on: ic-render, ic-sim, ic-ui, ic-protocol, ra-formats; SDK binary — D038+D040)
+    └── ic-game     (depends on: everything above EXCEPT ic-editor)
 ```
 
-**Critical boundary:** `ic-sim` never imports from `ic-net`. `ic-net` never imports from `ic-sim`. They only share `ic-protocol`.
+**Critical boundary:** `ic-sim` never imports from `ic-net`. `ic-net` never imports from `ic-sim`. They only share `ic-protocol`. `ic-game` never imports from `ic-editor` — the game and SDK are separate binaries that share library crates.
 
 **Storage boundary:** `ic-sim` never reads or writes SQLite (invariant #1). Three crates are read-only consumers of the client-side SQLite database: `ic-ui` (post-game stats, career page, campaign dashboard), `ic-llm` (personalized missions, adaptive briefings, coaching), `ic-ai` (difficulty scaling, counter-strategy selection). Gameplay events are written by a Bevy observer system in `ic-game`, outside the deterministic sim. See D034 in `09-DECISIONS.md`.
 

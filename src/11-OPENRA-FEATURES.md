@@ -1925,11 +1925,11 @@ Each actor reference exposes properties matching its components (`.Health`, `.Lo
 
 ---
 
-## 30. Map Editor ✅ RESOLVED (D038)
+## 30. Map Editor ✅ RESOLVED (D038 + D040)
 
 **OpenRA:** Full in-engine map editor with actor placement, terrain painting, resource placement, tile editing, undo/redo, script cell triggers, marker layers, road/path tiling tool.
 
-**Iron Curtain status:** Resolved as D038 — in-engine scenario editor (OFP/Eden-inspired). Goes beyond OpenRA's map editor to include full mission logic editing: triggers with countdown/timeout timers and min/mid/max randomization, waypoints, pre-built modules (wave spawner, patrol route, guard position, reinforcements, objectives), visual connection lines, Probability of Presence per entity for replayability, compositions (reusable prefabs), layers, Simple/Advanced mode toggle, preview/test button, Game Master mode, Workshop publishing. See `09-DECISIONS.md` § D038 for full design.
+**Iron Curtain status:** Resolved as D038+D040 — SDK scenario editor & asset studio (OFP/Eden-inspired). Ships as part of the IC SDK (separate application from the game). Goes beyond OpenRA's map editor to include full mission logic editing: triggers with countdown/timeout timers and min/mid/max randomization, waypoints, pre-built modules (wave spawner, patrol route, guard position, reinforcements, objectives), visual connection lines, Probability of Presence per entity for replayability, compositions (reusable prefabs), layers, Simple/Advanced mode toggle, Test button, Game Master mode, Workshop publishing. The asset studio (D040) adds visual browsing, editing, and generation of game assets (sprites, palettes, terrain, chrome). See `09-DECISIONS.md` § D038 and § D040 for full design.
 
 ---
 

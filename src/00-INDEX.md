@@ -54,10 +54,10 @@ iron-curtain/
 ├── ic-net         # NetworkModel trait + implementations (Bevy plugins)
 ├── ic-render      # Isometric rendering, shaders, post-FX (Bevy plugin)
 ├── ic-ui          # Game chrome: sidebar, minimap, build queue (Bevy UI)
-├── ic-editor      # In-engine scenario/campaign editor, Game Master mode (D038, Bevy plugin)
+├── ic-editor      # SDK: scenario editor, asset studio, campaign editor, Game Master mode (D038+D040, Bevy app)
 ├── ic-audio       # .aud playback, EVA, music (Bevy audio plugin)
 ├── ic-script      # Lua + WASM mod runtimes
 ├── ic-ai          # Skirmish AI, mission scripting
-├── ic-llm         # LLM mission/campaign generation, adaptive difficulty
-└── ic-game        # Top-level Bevy App, ties all plugins together
+├── ic-llm         # LLM mission/campaign generation, asset generation, adaptive difficulty
+└── ic-game        # Top-level Bevy App, ties all game plugins together (NO editor code)
 ```

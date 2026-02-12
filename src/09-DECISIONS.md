@@ -477,9 +477,9 @@ However, **3D rendering mods for isometric-family games are explicitly supported
 
 ---
 
-### D020 — Mod SDK with `ic` CLI Tool
+### D020 — Mod SDK & Creative Toolchain
 
-**Decision:** Ship a Mod SDK as a `cargo-generate` template + an `ic` CLI tool, inspired by (and improving on) the [OpenRA Mod SDK](https://github.com/OpenRA/OpenRAModSDK).
+**Decision:** Ship a Mod SDK comprising two components: (1) the `ic` CLI tool for headless mod workflow (init, check, test, build, publish), and (2) the **IC SDK application** — a visual creative toolchain with the scenario editor (D038), asset studio (D040), campaign editor, and Game Master mode. The SDK is a separate application from the game — players never see it (see D040 § SDK Architecture).
 
 **Context:** The OpenRA Mod SDK is a template repository modders fork. It bundles shell scripts (`fetch-engine.sh`, `launch-game.sh`, `utility.sh`), a `Makefile`/`make.cmd` build system, and a `packaging/` directory with per-platform installer scripts. The approach works — it's the standard way to create OpenRA mods. But it has significant friction: requires .NET SDK, custom C# DLLs for anything beyond data changes, MiniYAML with no validation tooling, GPL contamination on mod code, and no distribution system beyond manual file sharing.
 
@@ -519,6 +519,8 @@ ic mod publish             # workshop upload
 ic mod watch               # hot-reload dev mode
 ic mod lint                # convention + llm: metadata checks
 ic mod update-engine       # bump engine version
+ic sdk                     # launch the visual SDK application (scenario editor, asset studio, campaign editor)
+ic sdk open [project]      # launch SDK with a specific mod/scenario
 ```
 
 **Mod templates (built-in):**
@@ -2282,11 +2284,11 @@ pub trait WorkshopStorage: Send + Sync {
 
 ---
 
-## D038 — In-Engine Scenario Editor (OFP/Eden-Inspired)
+## D038 — Scenario Editor (OFP/Eden-Inspired, SDK)
 
 **Resolves:** P005 (Map editor architecture)
 
-**Decision:** In-engine scenario editor — not just a map/terrain painter, but a full visual mission authoring tool inspired by Operation Flashpoint's mission editor (2001) and Arma 3's Eden Editor (2016). Runs inside the game with live isometric preview. Combines terrain editing (tiles, resources, cliffs) with scenario logic editing (unit placement, triggers, waypoints, modules). Two complexity tiers: Simple mode (accessible) and Advanced mode (full power).
+**Decision:** Visual scenario editor — not just a map/terrain painter, but a full mission authoring tool inspired by Operation Flashpoint's mission editor (2001) and Arma 3's Eden Editor (2016). Ships as part of the **IC SDK** (separate application from the game — see D040 § SDK Architecture). Live isometric preview via shared Bevy crates. Combines terrain editing (tiles, resources, cliffs) with scenario logic editing (unit placement, triggers, waypoints, modules). Two complexity tiers: Simple mode (accessible) and Advanced mode (full power).
 
 **Rationale:**
 
@@ -2294,7 +2296,7 @@ The OFP mission editor is one of the most successful content creation tools in g
 
 1. **Accessibility through layered complexity.** Easy mode hides advanced fields. A beginner places units and waypoints in minutes. An advanced user adds triggers, conditions, probability of presence, and scripting. Same data, different UI.
 2. **Emergent behavior from simple building blocks.** Guard + Guarded By creates dynamic multi-group defense behavior from pure placement — zero scripting. Synchronization lines coordinate multi-group operations. Triggers with countdown/timeout timers and min/mid/max randomization create unpredictable encounters.
-3. **The editor IS the game.** Not a separate tool, not a different application. You're inside the engine, placing things on the actual map, hitting "Preview" to test instantly. This collapses the create→test→iterate loop to seconds.
+3. **Instant preview collapses the edit→test loop.** Place things on the actual map, hit "Test" to launch the game with your scenario loaded. Hot-reload keeps the loop tight — edit in the SDK, changes appear in the running game within seconds.
 
 Eden Editor (2016) evolved these principles: 3D placement, undo/redo, 154 pre-built modules (complex logic as drag-and-drop nodes), compositions (reusable prefabs), layers (organizational folders), and Steam Workshop publishing directly from the editor. Arma Reforger (2022) added budget systems, behavior trees for waypoints, controller support, and a real-time Game Master mode.
 
@@ -2302,9 +2304,9 @@ Eden Editor (2016) evolved these principles: 3D placement, undo/redo, 154 pre-bu
 
 ### Architecture
 
-The scenario editor is a Bevy plugin in the `ic-editor` crate that reuses the game's rendering and simulation systems. It depends on `ic-render` (isometric viewport), `ic-sim` (preview playback), `ic-ui` (shared UI components like panels and attribute editors), and `ic-protocol` (order types for preview). It is NOT a separate process — it runs in the same Bevy `App` with additional editor-only systems and UI. The `ic-editor` crate is optional — headless sim, dedicated servers, and AI training builds exclude it entirely.
+The scenario editor lives in the `ic-editor` crate and ships as part of the **IC SDK** — a separate Bevy application from the game (see D040 § SDK Architecture for the full separation rationale). It reuses the game's rendering and simulation crates: `ic-render` (isometric viewport), `ic-sim` (preview playback), `ic-ui` (shared UI components like panels and attribute editors), and `ic-protocol` (order types for preview). `ic-game` does NOT depend on `ic-editor` — the game binary has zero editor code. The SDK binary (`ic-sdk`) bundles the scenario editor, asset studio (D040), campaign editor, and Game Master mode in a single application with a tab-based workspace.
 
-**Preview communication:** When the user hits "Preview," the editor serializes the current scenario to an in-memory map, spawns a `LocalNetwork` (from `ic-net`), and starts the sim. Editor-generated inputs (e.g., placing a debug unit mid-preview) are submitted as `PlayerOrder`s through `ic-protocol` — the sim never knows it's being driven by an editor. This reuses the same `GameLoop<LocalNetwork, InputSource>` path as single-player, ensuring preview behavior is identical to actual gameplay. Exiting preview restores the editor state from the pre-preview snapshot.
+**Test/preview communication:** When the user hits "Test," the SDK serializes the current scenario and launches `ic-game` with it loaded, using a `LocalNetwork` (from `ic-net`). The game runs the scenario identically to normal gameplay — the sim never knows it was launched from the SDK. For quick in-SDK preview (without launching the full game), the SDK can also run `ic-sim` internally with a lightweight preview viewport. Editor-generated inputs (e.g., placing a debug unit mid-preview) are submitted as `PlayerOrder`s through `ic-protocol`. The hot-reload bridge watches for file changes and pushes updates to the running game test session.
 
 ```
 ┌─────────────────────────────────────────────────┐
@@ -3387,7 +3389,7 @@ The scenario editor design draws from:
 - **Far Cry 2 Map Editor (2008):** Terrain sculpting separated from mission logic. Proves environment creation and scenario scripting can be independent workflows.
 - **Divinity: Original Sin 2 (2017):** Co-op campaign with persistent state, per-player dialogue choices that affect the shared story. Game Master mode with real-time scenario manipulation. Proved co-op campaign RPG works — and that the tooling for CREATING co-op content matters as much as the runtime support.
 - **Doom community editors (1994–present):** Open data formats enable 30+ years of community tools. The WAD format's openness is why Doom modding exists — validates IC's YAML-based scenario format.
-- **OpenRA map editor:** Terrain painting, resource placement, actor placement — but standalone tool (we improve by being in-engine)
+- **OpenRA map editor:** Terrain painting, resource placement, actor placement — standalone tool. IC improves by integrating a full creative toolchain in the SDK (scenario editor + asset studio + campaign editor)
 
 ### Multiplayer & Co-op Scenario Tools
 
@@ -3605,11 +3607,187 @@ The editor's "accessibility through layered complexity" principle applies to dis
 
 ### Alternatives Considered
 
-1. **Standalone tool (like OpenRA):** Rejected. Separate process means no live preview, no reuse of rendering/sim code, higher maintenance burden, worse UX. OFP's editor succeeded precisely because it was in-game.
+1. **In-game editor (original design, revised by D040):** The original D038 design embedded the editor inside the game binary. Revised to SDK-separate architecture — players shouldn't see creator tools. The SDK still reuses the same Bevy rendering and sim crates, so there's no loss of live preview capability. See D040 § SDK Architecture for the full rationale.
 2. **Text-only editing (YAML + Lua):** Already supported for power users and LLM generation. The visual editor is the accessibility layer on top of the same data format.
 3. **Node-based visual scripting (like Unreal Blueprints):** Too complex for the casual audience. Modules + triggers cover the sweet spot. Advanced users write Lua directly. A node editor is a potential Phase 7+ community contribution.
 
 **Phase:** Core scenario editor (terrain + entities + triggers + waypoints + modules + compositions + preview + autosave + controller input + accessibility) ships in **Phase 6a** alongside the modding SDK and full Workshop. Campaign editor (graph, state dashboard, intermissions, dialogue, named characters), game mode templates, multiplayer/co-op scenario tools, and Game Master mode ship in **Phase 6b**. Editor onboarding ("Coming From" profiles, keybinding presets, migration cheat sheets, partial import) and touch input ship in **Phase 7**. The campaign editor's graph, state dashboard, and intermission screens build on D021's campaign system (Phase 4) — the sim-side campaign engine must exist before the visual editor can drive it.
+
+---
+
+## D040: Asset Studio — Visual Resource Editor & Agentic Generation
+
+**Decision:** Ship an Asset Studio as part of the IC SDK — a visual tool for browsing, viewing, editing, and generating game resources (sprites, palettes, terrain tiles, UI chrome, 3D models). Optionally agentic: modders can describe what they want and an LLM generates or modifies assets, with in-context preview and iterative refinement. The Asset Studio is a tab/mode within the SDK application alongside the scenario editor (D038) — separate from the game binary.
+
+**Context:** The current design covers the full lifecycle *around* assets — parsing (ra-formats), runtime loading (Bevy pipeline), in-game use (ic-render), mission editing (D038), and distribution (D030 Workshop) — but nothing for the creative work of making or modifying assets. A modder who wants to create a new unit sprite, adjust a palette, or redesign menu chrome has zero tooling in our chain. They use external tools (Photoshop, GIMP, Aseprite) and manually convert. The community's most-used asset tool is XCC Mixer (a 20-year-old Windows utility for browsing .mix archives). We can do better.
+
+Bevy does not fill this gap. Bevy's asset system handles loading and hot-reloading at runtime. The in-development Bevy Editor is a scene/entity inspector, not an art tool. No Bevy ecosystem crate provides C&C-format-aware asset editing.
+
+**What this is NOT:** A Photoshop competitor. The Asset Studio does not provide pixel-level painting or 3D modeling. Artists use professional external tools for that. The Asset Studio handles the last mile: making assets game-ready, previewing them in context, and bridging the gap between "I have a PNG" and "it works as a unit in the game."
+
+### SDK Architecture — Editor/Game Separation
+
+**The IC SDK is a separate application from the game.** Normal players never see editor UI. Creators download the SDK alongside the game (or as part of the `ic` CLI toolchain). This follows the industry standard: Bethesda's Creation Kit, Valve's Hammer/Source SDK, Epic's Unreal Editor, Blizzard's StarEdit/World Editor (bundled but launches separately).
+
+```
+┌──────────────────────────────┐     ┌──────────────────────────────┐
+│         IC Game              │     │          IC SDK              │
+│  (ic-game binary)            │     │  (ic-sdk binary)             │
+│                              │     │                              │
+│  • Play skirmish/campaign    │     │  ┌────────────────────────┐  │
+│  • Online multiplayer        │     │  │   Scenario Editor      │  │
+│  • Browse/install mods       │     │  │   (D038)               │  │
+│  • Watch replays             │     │  ├────────────────────────┤  │
+│  • Settings & profiles       │     │  │   Asset Studio         │  │
+│                              │     │  │   (D040)               │  │
+│  No editor UI.               │     │  ├────────────────────────┤  │
+│  No asset tools.             │     │  │   Campaign Editor      │  │
+│  Clean player experience.    │     │  │   (D038/D021)          │  │
+│                              │     │  ├────────────────────────┤  │
+│                              │     │  │   Game Master Mode     │  │
+│                              │     │  │   (D038)               │  │
+│                              │     │  └────────────────────────┘  │
+│                              │     │                              │
+│                              │     │  Shares: ic-render, ic-sim,  │
+│                              │     │  ic-ui, ic-protocol,         │
+│                              │     │  ra-formats                  │
+└──────────────────────────────┘     └──────────────────────────────┘
+         ▲                                      │
+         │         ic mod run / Test button      │
+         └───────────────────────────────────────┘
+```
+
+**Why separate binaries instead of in-game editor:**
+- **Players aren't overwhelmed.** A player launches the game and sees: Play, Multiplayer, Replays, Settings. No "Editor" menu item they'll never use.
+- **SDK can be complex without apology.** The SDK UI can have dense panels, multi-tab layouts, technical property editors. It's for creators — they expect professional tools.
+- **Smaller game binary.** All editor systems, asset processing code, LLM integration, and creator UI are excluded from the game build. Players download less.
+- **Industry convention.** Players expect an SDK. "Download the Creation Kit" is understood. "Open the in-game editor" confuses casual players who accidentally click it.
+
+**Why this still works for fast iteration:**
+- **"Test" button in SDK** launches `ic-game` with the current scenario/asset loaded. One click, instant playtest. Same `LocalNetwork` path as before — the preview is real gameplay.
+- **Hot-reload bridge.** While the game is running from a Test launch, the SDK watches for file changes. Edit a YAML file, save → game hot-reloads. Edit a sprite, save → game picks up the new asset. The iteration loop is seconds, not minutes.
+- **Shared Bevy crates.** The SDK reuses `ic-render` for its preview viewports, `ic-sim` for gameplay preview, `ic-ui` for shared components. It's the same rendering and simulation — just in a different window with different chrome.
+
+**Crate boundary:** `ic-editor` contains all SDK functionality (scenario editor, asset studio, campaign editor, Game Master mode). It depends on `ic-render`, `ic-sim`, `ic-ui`, `ic-protocol`, `ra-formats`, and optionally `ic-llm` (via traits). `ic-game` does NOT depend on `ic-editor`. Both `ic-game` and `ic-editor` are separate binary targets in the workspace — they share library crates but produce independent executables.
+
+**Game Master mode exception:** Game Master mode requires real-time manipulation of a live game session. The SDK connects to a running game as a special client — the Game Master's SDK sends `PlayerOrder`s through `ic-protocol` to the game's `NetworkModel`, same as any other player. The game doesn't know it's being controlled by an SDK — it receives orders. The Game Master's SDK renders its own view (top-down strategic overview, budget panel, entity palette) but the game session runs in `ic-game`. Open questions deferred to Phase 6b design: how matchmaking/lobby handles GM slots (dedicated GM slot vs. spectator-with-controls), whether GM can join mid-match, and how GM presence is communicated to players.
+
+### Three Layers
+
+#### Layer 1 — Asset Browser & Viewer
+
+Browse, search, and preview every asset the engine can load. This is the XCC Mixer replacement — but integrated into a modern Bevy-based UI with live preview.
+
+| Capability              | Description                                                                                                                                        |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Archive browser**     | Browse .mix archive contents, see file list, extract individual files or bulk export                                                               |
+| **Sprite viewer**       | View .shp sprites with palette applied, animate frame sequences, scrub through frames, zoom                                                        |
+| **Palette viewer**      | View .pal palettes as color grids, compare palettes side-by-side, see palette applied to any sprite                                                |
+| **Terrain tile viewer** | Preview .tmp terrain tiles in grid layout, see how tiles connect                                                                                   |
+| **Audio player**        | Play .aud files directly, waveform visualization                                                                                                   |
+| **Video player**        | Play .vqa cutscenes, frame-by-frame scrub                                                                                                          |
+| **Chrome previewer**    | View UI theme sprite sheets (D032) with 9-slice visualization, see button states                                                                   |
+| **3D model viewer**     | Preview GLTF/GLB models (and .vxl voxel models for future RA2 module) with rotation, lighting                                                      |
+| **Asset search**        | Full-text search across all loaded assets — by filename, type, archive, tags                                                                       |
+| **In-context preview**  | "Preview as unit" — see this sprite on an actual map tile. "Preview as building" — see footprint. "Preview as chrome" — see in actual menu layout. |
+| **Dependency graph**    | Which assets reference this one? What does this mod override? Visual dependency tree.                                                              |
+
+**Format support by game module:**
+
+| Game          | Archive       | Sprites             | Models            | Palettes    | Audio          | Video      | Source                                   |
+| ------------- | ------------- | ------------------- | ----------------- | ----------- | -------------- | ---------- | ---------------------------------------- |
+| RA1 / TD      | .mix          | .shp                | —                 | .pal        | .aud           | .vqa       | EA GPL release — fully open              |
+| RA2 / TS      | .mix          | .shp, .vxl (voxels) | .hva (voxel anim) | .pal        | .aud           | .bik       | Community-documented (XCC, Ares, Phobos) |
+| Generals / ZH | .big          | —                   | .w3d (3D meshes)  | —           | —              | .bik       | EA GPL release — fully open              |
+| OpenRA        | .oramap (ZIP) | .png                | —                 | .pal        | .wav/.ogg      | —          | Open source                              |
+| IC native     | —             | .png, sprite sheets | .glb/.gltf        | .pal, .yaml | .wav/.ogg/.mp3 | .mp4/.webm | Our format                               |
+
+**Minimal reverse engineering required.** RA1/TD and Generals/ZH are fully open-sourced by EA (GPL). RA2/TS formats are not open-sourced but have been community-documented for 20+ years — .vxl, .hva, .csf are thoroughly understood by the XCC, Ares, and Phobos projects. The `FormatRegistry` trait (D018) already anticipates per-module format loaders.
+
+#### Layer 2 — Asset Editor
+
+Scoped asset editing operations. Not pixel painting — structured operations on game asset types.
+
+| Tool                        | What It Does                                                                                                                       | Example                                                                                                   |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| **Palette editor**          | Remap colors, adjust faction-color ranges, create palette variants, shift hue/saturation/brightness per range                      | "Make a winter palette from temperate" — shift greens to whites                                           |
+| **Sprite sheet organizer**  | Reorder frames, adjust animation timing, add/remove frames, composite sprite layers, set hotpoints/offsets                         | Import 8 PNG frames → assemble into .shp-compatible sprite sheet with correct facing rotations            |
+| **Chrome / theme designer** | Visual editor for D032 UI themes — drag 9-slice panels, position elements, see result live in actual menu mockup                   | Design a new sidebar layout: drag resource bar, build queue, minimap into position. Live preview updates. |
+| **Terrain tile editor**     | Create terrain tile sets — assign connectivity rules, transition tiles, cliff edges. Preview tiling on a test map.                 | Paint a new snow terrain set: assign which tiles connect to which edges                                   |
+| **Import pipeline**         | Convert standard formats to game-ready assets: PNG → palette-quantized .shp, GLTF → game model with LODs, font → bitmap font sheet | Drag in a 32-bit PNG → auto-quantize to .pal, preview dithering options, export as .shp                   |
+| **Batch operations**        | Apply operations across multiple assets: bulk palette remap, bulk resize, bulk re-export                                           | "Remap all Soviet unit sprites to use the Tiberium Sun palette"                                           |
+| **Diff / compare**          | Side-by-side comparison of two versions of an asset — sprite diff, palette diff, before/after                                      | Compare original RA1 sprite with your modified version, pixel-diff highlighted                            |
+
+**Design rule:** Every operation the Asset Studio performs produces standard output formats. Palette edits produce .pal files. Sprite operations produce .shp or sprite sheet PNGs. Chrome editing produces YAML + sprite sheet PNGs. No proprietary intermediate format — the output is always mod-ready.
+
+#### Layer 3 — Agentic Asset Generation (D016 Extension, Phase 7)
+
+LLM-powered asset creation for modders who have ideas but not art skills. Same BYOLLM pattern as D016 — user brings their own provider (DALL-E, Stable Diffusion, Midjourney API, local model), `ic-llm` routes the request.
+
+| Capability             | How It Works                                                                      | Example                                                                                                                                                               |
+| ---------------------- | --------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Sprite generation**  | Describe unit → LLM generates sprite sheet → preview on map → iterate             | "Soviet heavy tank, double barrel, darker than the Mammoth Tank" → generates 8-facing sprite sheet → preview as unit on map → "make the turret bigger" → re-generates |
+| **Palette generation** | Describe mood/theme → LLM generates palette → preview applied to existing sprites | "Volcanic wasteland palette — reds, oranges, dark stone" → generates .pal → preview on temperate map sprites                                                          |
+| **Chrome generation**  | Describe UI style → LLM generates theme elements → preview in actual menu         | "Brutalist concrete UI theme, sharp corners, red accents" → generates chrome sprite sheet → preview in sidebar                                                        |
+| **Terrain generation** | Describe biome → LLM generates tile set → preview tiling                          | "Frozen tundra with ice cracks and snow drifts" → generates terrain tiles with connectivity → preview on test map                                                     |
+| **Asset variation**    | Take existing asset + describe change → LLM produces variant                      | "Take this Allied Barracks and make a Nod version — darker, angular, with a scorpion emblem"                                                                          |
+| **Style transfer**     | Apply visual style across asset set                                               | "Make all these units look hand-drawn like Advance Wars"                                                                                                              |
+
+**Workflow:**
+1. Describe what you want (text prompt + optional reference image)
+2. LLM generates candidate(s) — multiple options when possible
+3. Preview in-context (on map, in menu, as unit) — not just a floating image, but in the actual game rendering
+4. Iterate: refine prompt, adjust, regenerate
+5. Post-process: palette quantize, frame extract, format convert
+6. Export as mod-ready asset → ready for Workshop publish
+
+**Crate boundary:** `ic-editor` defines an `AssetGenerator` trait (input: text description + format constraints + optional reference → output: generated image data). `ic-llm` implements it by routing to the configured provider. `ic-game` wires them at startup in the SDK binary. Same pattern as `NarrativeGenerator` for the replay-to-scenario pipeline. The SDK works without an LLM — Layers 1 and 2 are fully functional. Layer 3 activates when a provider is configured.
+
+**What the LLM does NOT replace:**
+- Professional art. LLM-generated sprites are good enough for prototyping, playtesting, and small mods. Professional pixel art for a polished release still benefits from a human artist.
+- Format knowledge. The LLM generates images. The Asset Studio handles palette quantization, frame extraction, sprite sheet assembly, and format conversion. The LLM doesn't need to know about .shp internals.
+- Quality judgment. The modder decides if the result is good enough. The Asset Studio shows it in context so the judgment is informed.
+
+### Menu / Chrome Design Workflow
+
+UI themes (D032) are YAML + sprite sheets. Currently there's no visual editor — modders hand-edit coordinates and pixel offsets. The Asset Studio's chrome designer closes this gap:
+
+1. **Load a base theme** (Classic, Remastered, Modern, or any workshop theme)
+2. **Visual element editor** — see the 9-slice panels, button states, scrollbar tracks as overlays on the sprite sheet. Drag edges to resize. Click to select.
+3. **Layout preview** — split view: sprite sheet on left, live menu mockup on right. Every edit updates the mockup instantly.
+4. **Element properties** — per-element: padding, margins, color tint, opacity, font assignment, animation (hover/press states)
+5. **Full menu preview** — "Preview as: Main Menu / Sidebar / Build Queue / Lobby / Settings" — switch between all game screens to see the theme in each context
+6. **Export** — produces `theme.yaml` + sprite sheet PNG, ready for `ic mod publish`
+7. **Agentic mode** — describe desired changes: "make the sidebar narrower with a brushed metal look" → LLM modifies the sprite sheet + adjusts YAML layout → preview → iterate
+
+### Cross-Game Asset Bridge
+
+The Asset Studio understands multiple C&C format families and can convert between them:
+
+| Conversion             | Direction     | Use Case                                                   | Phase  |
+| ---------------------- | ------------- | ---------------------------------------------------------- | ------ |
+| .shp (RA1) → .png      | Export        | Extract classic sprites for editing in external tools      | 6a     |
+| .png → .shp + .pal     | Import        | Turn modern art into classic-compatible format             | 6a     |
+| .vxl (RA2) → .glb      | Export        | Convert RA2 voxel models to standard 3D format for editing | Future |
+| .glb → game model      | Import        | Import artist-created 3D models for future 3D game modules | Future |
+| .w3d (Generals) → .glb | Export        | Convert Generals models for viewing and editing            | Future |
+| Theme YAML ↔ visual    | Bidirectional | Edit themes visually or as YAML — changes sync both ways   | 6a     |
+
+**ra-formats write support:** Currently `ra-formats` is read-only (parse .mix, .shp, .pal). The Asset Studio requires write support — generating .shp from frames, writing .pal files, optionally packing .mix archives. This is an additive extension to `ra-formats` (no redesign of existing parsers), but non-trivial engineering: .shp writing requires correct header generation, frame offset tables, and optional LCW/RLE compression; .mix packing requires building the file index and hash table. Budget accordingly in Phase 6a.
+
+### Alternatives Considered
+
+1. **Rely on external tools entirely** (Photoshop, Aseprite, XCC Mixer) — Rejected. Forces modders to learn multiple disconnected tools with no in-context preview. The "last mile" problem (PNG → game-ready .shp with correct palette, offsets, and facing rotations) is where most modders give up.
+2. **Build a full art suite** (pixel editor, 3D modeler) — Rejected. Scope explosion. Aseprite and Blender exist. We handle the game-specific parts they can't.
+3. **In-game asset tools** — Rejected. Same reasoning as the overall SDK separation: players shouldn't see asset editing tools. The SDK is for creators.
+4. **Web-based editor** — Deferred. A browser-based asset viewer/editor is a compelling Phase 7+ goal (especially for the WASM target), but the primary tool ships as a native Bevy application in the SDK.
+
+### Phase
+
+- **Phase 0:** `ra-formats` delivers CLI asset inspection (dump/inspect/validate) — the text-mode precursor.
+- **Phase 6a:** Asset Studio ships as part of the SDK alongside the scenario editor. Layer 1 (browser/viewer) and Layer 2 (editor) are the deliverables. Chrome designer ships alongside the UI theme system (D032).
+- **Phase 7:** Layer 3 (agentic generation via `ic-llm`). Same phase as LLM text generation (D016).
+- **Future:** .vxl/.hva write support (for RA2 module), .w3d viewing (for Generals module), browser-based viewer.
 
 ---
 
@@ -3656,7 +3834,7 @@ The editor's "accessibility through layered complexity" principle applies to dis
 | P002 | Fixed-point scale (256? 1024? match OpenRA's 1024?)                                   | Phase 2 start       |
 | P003 | Audio library choice + music integration design (see note below)                      | Phase 3 start       |
 | P004 | Lobby/matchmaking protocol specifics                                                  | Phase 5 start       |
-| P005 | ~~Map editor architecture~~ — RESOLVED: In-engine scenario editor (D038)              | Resolved            |
+| P005 | ~~Map editor architecture~~ — RESOLVED: Scenario editor in SDK (D038+D040)            | Resolved            |
 | P006 | License choice (see tension analysis below)                                           | Phase 0 start       |
 | P007 | ~~Workshop: single source vs multi-source~~ — RESOLVED: Federated multi-source (D030) | Resolved            |
 
