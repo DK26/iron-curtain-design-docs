@@ -392,9 +392,9 @@ pub trait GameModule: Send + Sync + 'static {
 
 The pattern: game-specific rendering, pathfinding, spatial queries, fog, damage resolution, AI strategy, and validation; shared networking, modding, workshop, replays, saves, and competitive infrastructure.
 
-**Experience profiles (composing D019 + D032 + D033):**
+**Experience profiles (composing D019 + D032 + D033 + D043 + D045):**
 
-An experience profile bundles a balance preset, UI theme, and QoL settings into a named configuration:
+An experience profile bundles a balance preset, UI theme, QoL settings, AI behavior, and pathfinding feel into a named configuration:
 
 ```yaml
 profiles:
@@ -404,6 +404,8 @@ profiles:
     balance: classic        # D019 — EA source values
     theme: classic          # D032 — DOS/Win95 aesthetic
     qol: vanilla            # D033 — no QoL additions
+    ai_preset: classic-ra   # D043 — original RA AI behavior
+    pathfinding: classic-ra # D045 — original RA movement feel
     description: "Original Red Alert experience, warts and all"
 
   openra-ra:
@@ -412,6 +414,8 @@ profiles:
     balance: openra         # D019 — OpenRA competitive balance
     theme: modern           # D032 — modern UI
     qol: openra             # D033 — OpenRA QoL features
+    ai_preset: openra       # D043 — OpenRA skirmish AI behavior
+    pathfinding: openra     # D045 — OpenRA movement feel
     description: "OpenRA-style experience on the Iron Curtain engine"
 
   iron-curtain-ra:
@@ -420,7 +424,9 @@ profiles:
     balance: classic        # D019 — EA source values
     theme: modern           # D032 — modern UI
     qol: iron_curtain       # D033 — IC's recommended QoL
-    description: "Recommended — classic balance with modern QoL"
+    ai_preset: ic-default   # D043 — research-informed AI
+    pathfinding: ic-default # D045 — modern flowfield movement
+    description: "Recommended — classic balance with modern QoL and enhanced AI"
 ```
 
 Profiles are selectable in the lobby. Players can customize individual settings or pick a preset. Competitive modes lock the profile for fairness.
@@ -4530,6 +4536,706 @@ Two new rows for the D034 consumer table:
 | Integrate training into scenario editor only             | Too much friction for casual training. The editor is for content creation; training is a play mode. Different UX goals.                                                                                        |
 
 **Phase:** Profile building infrastructure ships in **Phase 4** (available for single-player training against AI tendencies). Opponent profile building and "Train Against" flow ship in **Phase 5** (requires multiplayer match data). LLM coaching loop ships in **Phase 7** (optional BYOLLM). The `training_sessions` table and progress tracking ship alongside the training UI in Phase 4–5.
+
+---
+
+## D043: AI Behavior Presets — Classic, OpenRA, and IC Default
+
+**Status:** Accepted
+**Scope:** `ic-ai`, `ic-sim` (read-only), game module configuration
+**Phase:** Phase 4 (ships with AI & Single Player)
+
+### The Problem
+
+D019 gives players switchable *balance* presets (Classic RA vs. OpenRA vs. Remastered values). D041 provides the `AiStrategy` trait for pluggable AI algorithms. But neither addresses a parallel concern: AI *behavioral* style. Original Red Alert AI, OpenRA AI, and a research-informed IC AI all make fundamentally different decisions given the same balance values. A player who selects "Classic RA" balance expects an AI that *plays like Classic RA* — predictable build orders, minimal micro, base-walk expansion, no focus-fire — not an advanced AI that happens to use 1996 damage tables.
+
+### Decision
+
+Ship **AI behavior presets** as first-class configurations alongside balance presets (D019). Each preset defines how the AI plays — its decision-making style, micro level, strategic patterns, and quirks — independent of which balance values or pathfinding behavior are active.
+
+### Built-In Presets
+
+| Preset         | Behavior Description                                                                                                                                                   | Source                                  |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
+| **Classic RA** | Mimics original RA AI quirks: predictable build queues, base-walk expansion, minimal unit micro, no focus-fire, doesn't scout, doesn't adapt to player strategy        | EA Red Alert source code analysis       |
+| **OpenRA**     | Matches OpenRA skirmish AI: better micro, uses attack-move, scouts, adapts build to counter player's army composition, respects fog of war properly                    | OpenRA AI implementation analysis       |
+| **IC Default** | Research-informed enhanced AI: flowfield-aware group tactics, proper formation movement, multi-prong attacks, economic harassment, tech-switching, adaptive aggression | Open-source RTS AI research (see below) |
+
+### IC Default AI — Research Foundation
+
+The IC Default preset draws from published research and open-source implementations across the RTS genre:
+
+- **0 A.D.** — economic AI with resource balancing heuristics, expansion timing models
+- **Spring Engine (BAR/Zero-K)** — group micro, terrain-aware positioning, retreat mechanics, formation movement
+- **Wargus (Stratagus)** — Warcraft II AI with build-order scripting and adaptive counter-play
+- **OpenRA** — the strongest open-source C&C AI; baseline for improvement
+- **MicroRTS / AIIDE competitions** — academic RTS AI research: MCTS-based planning, influence maps, potential fields for tactical positioning
+- **StarCraft: Brood War AI competitions (SSCAIT, AIIDE)** — decades of research on build-order optimization, scouting, harassment timing
+
+The IC Default AI is not a simple difficulty bump — it's a qualitatively different decision process. Where Classic RA groups all units and attack-moves to the enemy base, IC Default maintains map control, denies expansions, and probes for weaknesses before committing.
+
+### Configuration Model
+
+AI presets are YAML-driven, paralleling balance presets:
+
+```yaml
+# ai/presets/classic-ra.yaml
+ai_preset:
+  name: "Classic Red Alert"
+  description: "Faithful recreation of original RA AI behavior"
+  strategy: personality-driven     # AiStrategy implementation to use
+  personality:
+    aggression: 0.6
+    tech_priority: rush
+    micro_level: none              # no individual unit control
+    scout_frequency: never
+    build_order: scripted          # fixed build queues per faction
+    expansion_style: base_walk     # builds structures adjacent to existing base
+    focus_fire: false
+    retreat_behavior: never        # units fight to the death
+    adaptation: none               # doesn't change strategy based on opponent
+    group_tactics: blob            # all units in one control group
+
+# ai/presets/ic-default.yaml
+ai_preset:
+  name: "IC Default"
+  description: "Research-informed AI with modern RTS intelligence"
+  strategy: personality-driven
+  personality:
+    aggression: 0.5
+    tech_priority: balanced
+    micro_level: moderate          # focus-fire, kiting ranged units, retreat wounded
+    scout_frequency: periodic      # sends scouts every 60-90 seconds
+    build_order: adaptive          # adjusts build based on scouting information
+    expansion_style: strategic     # expands to control resource nodes
+    focus_fire: true
+    retreat_behavior: wounded      # retreats units below 30% HP
+    adaptation: reactive           # counters observed army composition
+    group_tactics: multi_prong     # splits forces for flanking/harassment
+    influence_maps: true           # uses influence maps for threat assessment
+    harassment: true               # sends small squads to attack economy
+```
+
+### Relationship to Existing Decisions
+
+- **D019 (balance presets):** Orthogonal. Balance defines *what units can do*; AI presets define *how the AI uses them*. A player can combine any balance preset with any AI preset. "Classic RA balance + IC Default AI" is valid and interesting.
+- **D041 (`AiStrategy` trait):** AI presets are configurations for the default `PersonalityDrivenAi` strategy. The trait allows entirely different AI algorithms (neural net, GOAP planner); presets are parameter sets within one algorithm. Both coexist — presets for built-in AI, traits for custom AI.
+- **D042 (`StyleDrivenAi`):** Player behavioral profiles are a fourth source of AI behavior (alongside Classic/OpenRA/IC Default presets). No conflict — `StyleDrivenAi` implements `AiStrategy` independently of presets.
+- **D033 (QoL toggles / experience profiles):** AI preset selection integrates naturally into experience profiles. The "Classic Red Alert" experience profile bundles classic balance + classic AI + classic theme.
+
+### Experience Profile Integration
+
+```yaml
+profiles:
+  classic-ra:
+    balance: classic
+    ai_preset: classic-ra          # NEW — AI behavior preset
+    pathfinding: classic-ra        # D045 — original RA movement feel
+    theme: classic
+    qol: vanilla
+
+  openra-ra:
+    balance: openra
+    ai_preset: openra
+    pathfinding: openra            # D045 — OpenRA movement feel
+    theme: modern
+    qol: openra
+
+  iron-curtain-ra:
+    balance: classic
+    ai_preset: ic-default          # NEW — enhanced AI
+    pathfinding: ic-default        # D045 — modern flowfield movement
+    theme: modern
+    qol: iron_curtain
+```
+
+### Lobby Integration
+
+AI preset is selectable per AI player slot in the lobby, independent of game-wide balance preset:
+
+```
+Player 1: [Human]           Faction: Soviet
+Player 2: [AI] IC Default (Hard)    Faction: Allied
+Player 3: [AI] Classic RA (Normal)  Faction: Allied
+Player 4: [AI] OpenRA (Brutal)      Faction: Soviet
+
+Balance Preset: Classic RA
+```
+
+This allows mixed AI playstyles in the same game – useful for testing, fun for variety, and educational for understanding how different AI approaches handle the same scenario.
+
+### Community AI Presets
+
+Modders can create custom AI presets as Workshop resources (D030):
+
+- YAML preset files defining `personality` parameters for `PersonalityDrivenAi`
+- Full `AiStrategy` implementations via WASM Tier 3 mods (D041)
+- AI tournament brackets: community members compete by submitting AI presets, tournament server runs automated matches
+
+### Alternatives Considered
+
+- AI difficulty only, no style presets (rejected — difficulty is orthogonal to style; a "Hard Classic RA" AI should be hard but still play like original RA, not like a modern AI turned up)
+- One "best" AI only (rejected — the community is split like they are on balance; offer choice)
+- Lua-only AI scripting (rejected — too slow for tick-level decisions; Lua is for mission triggers, WASM for full AI replacement)
+
+---
+
+## D044: LLM-Enhanced AI — Orchestrator and Experimental LLM Player
+
+**Status:** Accepted
+**Scope:** `ic-llm`, `ic-ai`, `ic-sim` (read-only)
+**Phase:** LLM Orchestrator: Phase 7. LLM Player: Experimental, no scheduled phase.
+
+### The Problem
+
+D016 provides LLM integration for mission generation. D042 provides LLM coaching between games. But neither addresses LLM involvement *during* gameplay — using an LLM to influence or directly control AI decisions in real-time. Two distinct use cases exist:
+
+1. **Enhancing existing AI** — an LLM advisor that reads game state and nudges a conventional AI toward better strategic decisions, without replacing the tick-level execution
+2. **Full LLM control** — an experimental mode where an LLM makes every decision, exploring whether modern language models can play RTS games competently
+
+### Decision
+
+Define two new `AiStrategy` implementations (D041) for LLM-integrated gameplay:
+
+### 1. LLM Orchestrator (`LlmOrchestratorAi`)
+
+Wraps any existing `AiStrategy` implementation (D041) and periodically consults an LLM for high-level strategic guidance. The inner AI handles tick-level execution; the LLM provides strategic direction.
+
+```rust
+/// Wraps an existing AiStrategy with LLM strategic oversight.
+/// The inner AI makes tick-level decisions; the LLM provides
+/// periodic strategic guidance that the inner AI incorporates.
+pub struct LlmOrchestratorAi {
+    inner: Box<dyn AiStrategy>,         // the AI that actually issues orders
+    provider: Box<dyn LlmProvider>,     // D016 BYOLLM
+    consultation_interval: u64,         // ticks between LLM consultations
+    last_consultation: u64,
+    current_plan: Option<StrategicPlan>,
+}
+```
+
+**How it works:**
+
+```
+Every N ticks (configurable, default ~300 = ~10 seconds at 30 tick/s):
+  1. Serialize visible game state into a structured prompt:
+     - Own base layout, army composition, resource levels
+     - Known enemy positions, army composition estimate
+     - Current strategic plan (if any)
+     - Gameplay event log since last consultation
+  2. Send prompt to LlmProvider (D016)
+  3. LLM returns a StrategicPlan:
+     - Priority targets (e.g., "attack enemy expansion at north")
+     - Build focus (e.g., "switch to anti-air production")
+     - Economic guidance (e.g., "expand to second ore field")
+     - Risk assessment (e.g., "enemy likely to push soon, fortify choke")
+  4. Inject StrategicPlan into inner AI's decision context
+  5. Inner AI incorporates plan into its normal tick-level decisions
+
+Between consultations:
+  - Inner AI runs normally, using the last StrategicPlan as guidance
+  - Tick-level micro, build queue management, unit control all handled by inner AI
+  - No LLM latency in the hot path
+```
+
+**Key design points:**
+- **No latency impact on gameplay.** LLM consultation is async — fires off a request, continues with the previous plan until the response arrives. If the LLM is slow (or unavailable), the inner AI plays normally.
+- **BYOLLM (D016).** Same provider system — users configure their own model. Local models (Ollama) give lowest latency; cloud APIs work but add ~1-3s round-trip per consultation.
+- **Determinism maintained.** In multiplayer, the LLM runs on exactly one machine (the AI slot owner's client). The resulting `StrategicPlan` is submitted as an order through the `NetworkModel` — the same path as human player orders. Other clients never run the LLM; they receive and apply the same plan at the same deterministic tick boundary. In singleplayer, determinism is trivially preserved (orders are recorded in the replay, not LLM calls).
+- **Inner AI is any `AiStrategy`.** Orchestrator wraps IC Default, Classic RA, or even a `StyleDrivenAi` (D042). The LLM adds strategic thinking on top of whatever execution style is underneath.
+- **Observable.** The current `StrategicPlan` is displayed in a debug overlay (developer/spectator mode), letting players see the LLM's "thinking."
+- **Prompt engineering is in YAML.** Prompt templates are mod-data, not hardcoded. Modders can customize LLM prompts for different game modules or scenarios.
+
+```yaml
+# llm/prompts/orchestrator.yaml
+orchestrator:
+  system_prompt: |
+    You are a strategic advisor for a Red Alert AI player.
+    Analyze the game state and provide high-level strategic guidance.
+    Do NOT issue specific unit orders — your AI subordinate handles execution.
+    Focus on: what to build, where to expand, when to attack, what threats to prepare for.
+  response_format:
+    type: structured
+    schema: StrategicPlan
+  consultation_interval_ticks: 300
+  max_tokens: 500
+```
+
+### 2. LLM Player (`LlmPlayerAi`) — Experimental
+
+A fully LLM-driven player where the language model makes every decision. No inner AI — the LLM receives game state and emits player orders directly.
+
+```rust
+/// Experimental: LLM makes all decisions directly.
+/// Every N ticks, the LLM receives game state and returns orders.
+/// Performance and quality depend entirely on the LLM model and latency.
+pub struct LlmPlayerAi {
+    provider: Box<dyn LlmProvider>,
+    decision_interval: u64,           // ticks between LLM decisions
+    pending_orders: Vec<PlayerOrder>, // buffered orders from last LLM response
+    order_cursor: usize,              // index into pending_orders for drip-feeding
+}
+```
+
+**How it works:**
+- Every N ticks, serialize full visible game state → send to LLM → receive a batch of `PlayerOrder` values
+- Between decisions, drip-feed buffered orders to the sim (one or few per tick)
+- If the LLM response is slow, the player idles (no orders until response arrives)
+
+**Why this is experimental:**
+- **Latency.** Even local LLMs take 100-500ms per response. A 30 tick/s sim expects decisions every 33ms. The LLM Player will always be slower than a conventional AI.
+- **Quality ceiling.** Current LLMs struggle with spatial reasoning and precise micro. The LLM Player will likely lose to even Easy conventional AI in direct combat efficiency.
+- **Cost.** Cloud LLMs charge per token. A full game might generate thousands of consultations. Local models are free but slower.
+- **The value is educational and entertaining**, not competitive. Watching an LLM try to play Red Alert — making mistakes, forming unexpected strategies, explaining its reasoning — is intrinsically interesting. Community streaming of "GPT vs. Claude playing Red Alert" is a content opportunity.
+
+**Design constraints:**
+- **Never the default.** LLM Player is clearly labeled "Experimental" in the lobby.
+- **Not allowed in ranked.** LLM AI modes are excluded from competitive matchmaking.
+- **Observable.** The LLM's reasoning text is capturable as a spectator overlay, enabling commentary-style viewing.
+- **Same BYOLLM infrastructure.** Uses `LlmProvider` trait (D016), same configuration, same provider options.
+- **Determinism:** The LLM runs on one machine (the AI slot owner's client) and submits orders through the `NetworkModel`, just like human input. All clients apply the same orders at the same deterministic tick boundaries. The LLM itself is non-deterministic (different responses per run), but that non-determinism is resolved before orders enter the sim — the sim only sees deterministic order streams. Replays record orders (not LLM calls), so replay playback is fully deterministic.
+
+### Crate Boundaries
+
+| Component                     | Crate    | Reason                                               |
+| ----------------------------- | -------- | ---------------------------------------------------- |
+| `LlmOrchestratorAi` struct    | `ic-ai`  | AI strategy implementation                           |
+| `LlmPlayerAi` struct          | `ic-ai`  | AI strategy implementation                           |
+| `StrategicPlan` type          | `ic-ai`  | AI-internal data structure                           |
+| `LlmProvider` trait           | `ic-llm` | Existing D016 infrastructure                         |
+| Prompt templates (YAML)       | mod data | Game-module-specific, moddable                       |
+| Game state serializer for LLM | `ic-ai`  | Reads sim state (read-only), formats for LLM prompts |
+| Debug overlay (plan viewer)   | `ic-ui`  | Spectator/dev UI for observing LLM reasoning         |
+
+### Alternatives Considered
+
+- LLM replaces inner AI entirely in orchestrator mode (rejected — latency makes tick-level LLM control impractical; hybrid is better)
+- LLM operates between games only (rejected — D042 already covers between-game coaching; real-time guidance is the new capability)
+- No LLM Player mode (rejected — the experimental mode has minimal implementation cost and high community interest/entertainment value)
+- LLM in the sim crate (rejected — violates BYOLLM optionality; `ic-ai` imports `ic-llm` optionally, `ic-sim` never imports either)
+
+---
+
+## D045: Pathfinding Behavior Presets — Movement Feel
+
+**Status:** Accepted
+**Scope:** `ic-sim`, game module configuration
+**Phase:** Phase 2 (ships with simulation)
+
+### The Problem
+
+D013 provides the `Pathfinder` trait for pluggable pathfinding *algorithms* (grid flowfields vs. navmesh). D019 provides switchable *balance* values. But movement *feel* — how units navigate, group, avoid each other, and handle congestion — varies dramatically between Classic RA, OpenRA, and what modern pathfinding research enables. This is partially balance (unit speed values) but mostly *behavioral*: how the pathfinder handles collisions, how units merge into formations, how traffic jams resolve, and how responsive movement commands feel.
+
+### Decision
+
+Ship **pathfinding behavior presets** as configurable parameters within a `Pathfinder` implementation, selectable alongside balance presets (D019) and AI presets (D043).
+
+### Built-In Presets
+
+| Preset         | Movement Feel                                                                                                                                                           | Source                               |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
+| **Classic RA** | Unit-level A*-like pathing, units block each other, congestion causes jams, no formation movement, units take wide detours around obstacles                             | EA Red Alert source code analysis    |
+| **OpenRA**     | Improved cell-based pathing, basic crush/push logic, units attempt to flow around blockages, locomotor-based speed modifiers, no formal formations                      | OpenRA pathfinding implementation    |
+| **IC Default** | Flowfield-based group movement, units flow around obstacles naturally, formation-aware movement, congestion handling via pressure diffusion, responsive repath on block | Open-source RTS research (see below) |
+
+### IC Default Pathfinding — Research Foundation
+
+The IC Default preset synthesizes pathfinding approaches from across the open-source RTS ecosystem:
+
+- **Spring Engine (BAR/Zero-K)** — unit push/slide mechanics, formation movement, terrain cost awareness
+- **0 A.D.** — short-range pathfinding with long-range hierarchical planning, unit clearance handling for different unit sizes
+- **OpenDungeons / Warzone 2100** — hierarchical pathfinding, waypoint systems
+- **Supreme Commander (GPG research papers)** — flowfield pathfinding for mass unit movement, the gold standard for RTS group pathing
+- **Planetary Annihilation** — flowfield improvements, dynamic obstacle avoidance
+- **Academic research** — continuum crowds (Treuille et al.), flow tiles (Brewer & Sturtevant), potential fields for local avoidance
+
+### Configuration Model
+
+Pathfinding presets are YAML-driven parameters applied to the `Pathfinder` implementation:
+
+```yaml
+# pathfinding/presets/classic-ra.yaml
+pathfinding_preset:
+  name: "Classic Red Alert"
+  description: "Movement feel matching the original game"
+  collision_handling: blocking       # units block each other (original behavior)
+  repath_on_block: false             # units wait, don't repath (original behavior)
+  formation_movement: false          # no formation support
+  push_mechanics: none               # units cannot push/slide past each other
+  congestion_resolution: wait        # units queue behind blocking unit
+  path_smoothing: none               # jagged grid-aligned movement
+  diagonal_movement: true            # original RA allowed diagonal
+  repath_frequency: low              # infrequent repathing (original was frame-limited)
+
+# pathfinding/presets/ic-default.yaml
+pathfinding_preset:
+  name: "IC Default"
+  description: "Modern flowfield movement with responsive feel"
+  collision_handling: flow           # units flow around obstacles
+  repath_on_block: true              # immediately seek alternate path
+  formation_movement: true           # groups move in formation
+  push_mechanics: gentle             # units nudge each other to resolve congestion
+  congestion_resolution: pressure    # pressure diffusion spreads units out naturally
+  path_smoothing: funnel             # smooth paths via funnel algorithm
+  diagonal_movement: true
+  repath_frequency: adaptive         # repath when obstacle changes, not on timer
+  influence_avoidance: true          # avoid areas with high enemy threat
+  unit_flow_width: auto              # automatically widen formation for narrow passages
+```
+
+### Sim-Affecting Nature
+
+Pathfinding presets are **sim-affecting** — they change how the deterministic simulation resolves movement. Like balance presets (D019):
+
+- All players in a multiplayer game must use the same pathfinding preset (enforced by lobby, validated by sim)
+- Preset selection is part of the game configuration hash for desync detection
+- Replays record the active pathfinding preset
+
+### Experience Profile Integration
+
+```yaml
+profiles:
+  classic-ra:
+    balance: classic
+    ai_preset: classic-ra
+    pathfinding: classic-ra          # NEW — movement feel
+    theme: classic
+    qol: vanilla
+
+  openra-ra:
+    balance: openra
+    ai_preset: openra
+    pathfinding: openra              # NEW — OpenRA movement feel
+    theme: modern
+    qol: openra
+
+  iron-curtain-ra:
+    balance: classic
+    ai_preset: ic-default
+    pathfinding: ic-default          # NEW — modern movement
+    theme: modern
+    qol: iron_curtain
+```
+
+### Relationship to Existing Decisions
+
+- **D013 (`Pathfinder` trait):** Presets are *parameters within* a pathfinder implementation, not separate implementations. `GridFlowfieldPathfinder` accepts a `PathfindingPreset` config struct that controls its behavior. The trait boundary separates algorithms (flowfield vs. navmesh); presets separate behaviors within one algorithm.
+- **D019 (balance presets):** Parallel concept. Balance = what units can do. Pathfinding = how they get there.
+- **D043 (AI presets):** Orthogonal. AI decides where to send units; pathfinding decides how they move.
+- **D033 (QoL toggles):** Some pathfinding behaviors might be classified as QoL (path smoothing, repath responsiveness). Presets bundle them for consistency; individual toggles remain available in D033 for fine-tuning.
+
+### Alternatives Considered
+
+- One "best" pathfinding only (rejected — Classic RA movement feel is part of the nostalgia; forcing modern pathing on purists would alienate them)
+- Pathfinding differences handled by balance presets (rejected — movement behavior is fundamentally different from numeric values; a separate concept deserves a separate preset)
+- Separate `Pathfinder` implementations per preset (rejected — wasteful; the algorithm is the same, only parameters change)
+
+---
+
+## D046: Community Platform — Premium Content & Comprehensive Platform Integration
+
+**Status:** Accepted
+**Scope:** `ic-game`, `ic-ui`, Workshop infrastructure, platform SDK integration
+**Phase:** Platform integration: Phase 5. Premium content framework: Phase 6a+.
+
+### Context
+
+D030 designs the Workshop resource registry including Steam Workshop as a source type. D035 designs voluntary creator tipping with explicit rejection of mandatory paid content. D036 designs the achievement system including Steam achievement sync. These decisions remain valid — D046 extends them in two directions that were previously out of scope:
+
+1. **Premium content from official publishers** — allowing companies like EA to offer premium content (e.g., Remastered-quality art packs, soundtrack packs) through the Workshop, with proper licensing and revenue
+2. **Comprehensive platform integration** — going beyond "Steam Workshop as a source" to full Steam platform compatibility (and other platforms: GOG, Epic, etc.)
+
+### Decision
+
+Extend the Workshop and platform layer to support *optional paid content from verified publishers* alongside the existing free ecosystem, and provide comprehensive platform service integration beyond just Workshop.
+
+### Premium Content Framework
+
+**Who can sell:** Only **verified publishers** — entities that have passed identity verification and (for copyrighted IP) provided proof of rights. This is NOT a general marketplace where any modder can charge money. The tipping model (D035) remains the primary creator recognition system.
+
+**Use cases:**
+- EA publishes Remastered Collection art assets (high-resolution sprites, remastered audio) as a premium resource pack. Players who own the Remastered Collection on Steam get it bundled; others can purchase separately.
+- Professional content studios publish high-quality campaign packs, voice acting, or soundtrack packs.
+- Tournament organizers sell premium cosmetic packs for event fundraising.
+
+**What premium content CANNOT be:**
+- **Gameplay-affecting.** No paid units, weapons, factions, or balance-changing content. Premium content is cosmetic or supplementary: art packs, soundtrack packs, voice packs, campaign packs (story content, not gameplay advantages).
+- **Required for multiplayer.** No player can be excluded from a game because they don't own a premium pack. If a premium art pack is active, non-owners see the default sprites — never a "buy to play" gate.
+- **Exclusive to one platform.** Premium content purchased through any platform is accessible from all platforms (subject to platform holder agreements).
+
+```yaml
+# Workshop resource metadata extension for premium content
+resource:
+  name: "Remastered Art Pack"
+  publisher:
+    name: "Electronic Arts"
+    verified: true
+    publisher_id: "ea-official"
+  pricing:
+    model: premium                    # free | tip | premium
+    price_usd: "4.99"                # publisher sets price
+    bundled_with:                     # auto-granted if player owns:
+      - platform: steam
+        app_id: 1213210              # C&C Remastered Collection
+    revenue_split:
+      platform_store: 30             # Steam/GOG/Epic standard store cut (from gross)
+      ic_project: 10                 # IC Workshop hosting fee (from gross)
+      publisher: 60                  # remainder to publisher
+  content_type: cosmetic             # cosmetic | supplementary | campaign
+  requires_base_game: true
+  multiplayer_fallback: default      # non-owners see default assets
+```
+
+### Comprehensive Platform Integration
+
+Beyond Workshop, IC integrates with platform services holistically:
+
+| Platform Service       | Steam                                | GOG Galaxy                  | Epic                      | Standalone                     |
+| ---------------------- | ------------------------------------ | --------------------------- | ------------------------- | ------------------------------ |
+| **Achievements**       | Full sync (D036)                     | GOG achievement sync        | Epic achievement sync     | IC-only achievements (SQLite)  |
+| **Friends & Presence** | Steam friends list, rich presence    | GOG friends, presence       | Epic friends, presence    | IC account friends (future)    |
+| **Overlay**            | Steam overlay (shift+tab)            | GOG overlay                 | Epic overlay              | None                           |
+| **Matchmaking invite** | Steam invite → lobby join            | GOG invite → lobby join     | Epic invite → lobby join  | Join code / direct IP          |
+| **Cloud saves**        | Steam Cloud for save games           | GOG Cloud for save games    | Epic Cloud for save games | Local saves (export/import)    |
+| **Workshop**           | Steam Workshop as source (D030)      | GOG Workshop (if supported) | N/A                       | IC Workshop (always available) |
+| **DRM**                | **None.** IC is DRM-free always.     | DRM-free                    | DRM-free                  | DRM-free                       |
+| **Premium purchases**  | Steam Commerce                       | GOG store                   | Epic store                | IC direct purchase (future)    |
+| **Leaderboards**       | Steam leaderboards + IC leaderboards | IC leaderboards             | IC leaderboards           | IC leaderboards                |
+| **Multiplayer**        | IC netcode (all platforms together)  | IC netcode                  | IC netcode                | IC netcode                     |
+
+**Critical principle: All platforms play together.** IC's multiplayer is platform-agnostic (IC relay servers, D007). A Steam player, a GOG player, and a standalone player can all join the same lobby. Platform services (friends, invites, overlay) are convenience features — never multiplayer gates.
+
+### Platform Abstraction Layer
+
+The `PlatformServices` trait is defined in `ic-ui` (where platform-aware UI — friends list, invite buttons, achievement popups — lives). Concrete implementations (`SteamPlatform`, `GogPlatform`, `StandalonePlatform`) live in `ic-game` and are injected as a Bevy resource at startup. `ic-ui` accesses the trait via `Res<dyn PlatformServices>`.
+
+```rust
+/// Engine-side abstraction over platform services.
+/// Defined in ic-ui; implementations in ic-game, injected as Bevy resource.
+pub trait PlatformServices: Send + Sync {
+    /// Sync an achievement unlock to the platform
+    fn unlock_achievement(&self, id: &str) -> Result<(), PlatformError>;
+
+    /// Set rich presence status
+    fn set_presence(&self, status: &str, details: &PresenceDetails) -> Result<(), PlatformError>;
+
+    /// Get friends list (for invite UI)
+    fn friends_list(&self) -> Result<Vec<PlatformFriend>, PlatformError>;
+
+    /// Invite a friend to the current lobby
+    fn invite_friend(&self, friend: &PlatformFriend) -> Result<(), PlatformError>;
+
+    /// Upload save to cloud storage
+    fn cloud_save(&self, slot: &str, data: &[u8]) -> Result<(), PlatformError>;
+
+    /// Download save from cloud storage
+    fn cloud_load(&self, slot: &str) -> Result<Vec<u8>, PlatformError>;
+
+    /// Platform display name
+    fn platform_name(&self) -> &str;
+}
+```
+
+Implementations: `SteamPlatform` (via Steamworks SDK), `GogPlatform` (via GOG Galaxy SDK), `StandalonePlatform` (no-op or IC-native services).
+
+### Monetization Model for Backend Services
+
+D035 established that IC infrastructure has real hosting costs. D046 formalizes the backend monetization model:
+
+| Revenue Source                   | Description                                                                           | D035 Alignment          |
+| -------------------------------- | ------------------------------------------------------------------------------------- | ----------------------- |
+| **Community donations**          | Open Collective, GitHub Sponsors — existing model                                     | ✓ unchanged             |
+| **Premium relay tier**           | Optional paid tier: priority queue, larger replay archive, custom clan pages          | ✓ D035                  |
+| **Verified publisher fees**      | Publishers pay a listing fee + revenue share for premium Workshop content             | NEW — extends D035      |
+| **Sponsored featured slots**     | Workshop featured section for promoted resources                                      | ✓ D035                  |
+| **Platform store revenue share** | Steam/GOG/Epic take their standard cut on premium purchases made through their stores | NEW — platform standard |
+
+**Free tier is always fully functional.** Premium content is cosmetic/supplementary. Backend monetization sustainably funds relay servers, tracking servers, and Workshop infrastructure without gating gameplay.
+
+### Relationship to Existing Decisions
+
+- **D030 (Workshop):** D046 extends D030's schema with `pricing.model: premium` and `publisher.verified: true`. The Workshop architecture (federated, multi-source) supports premium content as another resource type.
+- **D035 (Creator recognition):** D046 does NOT replace tipping. Individual modders use tips (D035). Verified publishers use premium pricing (D046). Both coexist — a modder can publish free mods with tip links AND work for a publisher that sells premium packs.
+- **D036 (Achievements):** D046 formalizes the multi-platform achievement sync that D036 mentioned briefly ("Steam achievements sync for Steam builds").
+- **D037 (Governance):** Premium content moderation, verified publisher approval, and revenue-related disputes fall under community governance (D037).
+
+### Alternatives Considered
+
+- No premium content ever (rejected — leaves money on the table for both the project and legitimate IP holders like EA; the Remastered art pack use case is too valuable)
+- Open marketplace for all creators (rejected — Skyrim paid mods disaster; tips-only for individual creators, premium only for verified publishers)
+- Platform-exclusive content (rejected — violates cross-platform play principle)
+- IC processes all payments directly (rejected — regulatory burden, payment processing complexity; delegate to platform stores and existing payment processors)
+
+---
+
+## D047: LLM Configuration Manager — Provider Management & Community Sharing
+
+**Status:** Accepted
+**Scope:** `ic-ui`, `ic-llm`, `ic-game`
+**Phase:** Phase 7 (ships with LLM features)
+
+### The Problem
+
+D016 established the BYOLLM architecture: users configure an `LlmProvider` (endpoint, API key, model name) in settings. But as LLM features expand across the engine — mission generation (D016), coaching (D042), AI orchestrator (D044), asset generation (D040) — managing provider configurations becomes non-trivial. Users may want:
+
+- Multiple providers configured simultaneously (local Ollama for AI orchestrator speed, cloud API for high-quality mission generation)
+- Task-specific routing (use a cheap model for real-time AI, expensive model for campaign generation)
+- Sharing working configurations with the community (without sharing API keys)
+- Discovering which models work well for which IC features
+- An achievement for configuring and using LLM features (engagement incentive)
+
+### Decision
+
+Provide a dedicated **LLM Manager** UI screen and a community-shareable configuration format for LLM provider setups.
+
+### LLM Manager UI
+
+Accessible from Settings → LLM Providers:
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  LLM Providers                                          │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│  [+] Add Provider                                       │
+│                                                         │
+│  ┌─ Local Ollama (llama3.2) ──────── ✓ Active ───────┐ │
+│  │  Endpoint: http://localhost:11434                   │ │
+│  │  Model: llama3.2:8b                                │ │
+│  │  Assigned to: AI Orchestrator, Quick coaching       │ │
+│  │  Avg latency: 340ms  │  Status: ● Connected        │ │
+│  │  [Test] [Edit] [Remove]                            │ │
+│  └────────────────────────────────────────────────────┘ │
+│                                                         │
+│  ┌─ OpenAI API (GPT-4o) ───────── ✓ Active ──────────┐ │
+│  │  Endpoint: https://api.openai.com/v1               │ │
+│  │  Model: gpt-4o                                     │ │
+│  │  Assigned to: Mission generation, Campaign briefings│ │
+│  │  Avg latency: 1.2s   │  Status: ● Connected        │ │
+│  │  [Test] [Edit] [Remove]                            │ │
+│  └────────────────────────────────────────────────────┘ │
+│                                                         │
+│  ┌─ Anthropic API (Claude) ────── ○ Inactive ─────────┐ │
+│  │  Endpoint: https://api.anthropic.com/v1            │ │
+│  │  Model: claude-sonnet-4-20250514                          │ │
+│  │  Assigned to: (none)                               │ │
+│  │  [Test] [Edit] [Remove] [Activate]                 │ │
+│  └────────────────────────────────────────────────────┘ │
+│                                                         │
+│  Task Routing:                                          │
+│  ┌──────────────────────┬──────────────────────────┐    │
+│  │ Task                 │ Provider                 │    │
+│  ├──────────────────────┼──────────────────────────┤    │
+│  │ AI Orchestrator      │ Local Ollama (fast)      │    │
+│  │ Mission Generation   │ OpenAI API (quality)     │    │
+│  │ Campaign Briefings   │ OpenAI API (quality)     │    │
+│  │ Post-Match Coaching  │ Local Ollama (fast)      │    │
+│  │ Asset Generation     │ OpenAI API (quality)     │    │
+│  └──────────────────────┴──────────────────────────┘    │
+│                                                         │
+│  [Export Config] [Import Config] [Browse Community]      │
+└─────────────────────────────────────────────────────────┘
+```
+
+### Community-Shareable Configurations
+
+LLM configurations can be exported (without API keys) and shared via the Workshop (D030):
+
+```yaml
+# Exported LLM configuration (shareable)
+llm_config:
+  name: "Budget-Friendly RA Setup"
+  author: "PlayerName"
+  description: "Ollama for real-time features, free API tier for generation"
+  version: 1
+  providers:
+    - name: "Local Ollama"
+      type: ollama
+      endpoint: "http://localhost:11434"
+      model: "llama3.2:8b"
+      # NO api_key — never exported
+    - name: "Cloud Provider"
+      type: openai-compatible
+      # endpoint intentionally omitted — user fills in their own
+      model: "gpt-4o-mini"
+      notes: "Works well with OpenAI or any compatible API"
+  routing:
+    ai_orchestrator: "Local Ollama"
+    mission_generation: "Cloud Provider"
+    coaching: "Local Ollama"
+    campaign_briefings: "Cloud Provider"
+    asset_generation: "Cloud Provider"
+  performance_notes: |
+    Tested on RTX 3060 + Ryzen 5600X.
+    Ollama latency ~300ms for orchestrator (acceptable).
+    GPT-4o-mini at ~$0.02 per mission generation.
+  compatibility:
+    ic_version: ">=0.5.0"
+    tested_models:
+      - "llama3.2:8b"
+      - "mistral:7b"
+      - "gpt-4o-mini"
+      - "gpt-4o"
+```
+
+**Security:** API keys are **never** included in exported configurations. The export contains provider types, model names, and routing — the user fills in their own credentials after importing.
+
+### Workshop Integration
+
+LLM configurations are a Workshop resource type (D030):
+
+- **Category:** "LLM Configurations" in the Workshop browser
+- **Ratings and reviews:** Community rates configurations by reliability, cost, quality
+- **Tagging:** `budget`, `high-quality`, `local-only`, `fast`, `creative`, `coaching`
+- **Compatibility tracking:** Configurations specify which IC version and features they've been tested with
+
+### Achievement Integration (D036)
+
+LLM configuration is an achievement milestone — encouraging discovery and adoption:
+
+| Achievement               | Trigger                                           | Category    |
+| ------------------------- | ------------------------------------------------- | ----------- |
+| "Intelligence Officer"    | Configure your first LLM provider                 | Community   |
+| "Strategic Command"       | Win a game with LLM Orchestrator AI active        | Exploration |
+| "Artificial Intelligence" | Play 10 games with any LLM-enhanced AI mode       | Exploration |
+| "The Sharing Protocol"    | Publish an LLM configuration to the Workshop      | Community   |
+| "Commanding General"      | Use task routing with 2+ providers simultaneously | Exploration |
+
+### Storage (D034)
+
+```sql
+CREATE TABLE llm_providers (
+    id          INTEGER PRIMARY KEY,
+    name        TEXT NOT NULL,
+    type        TEXT NOT NULL,           -- 'ollama', 'openai', 'anthropic', 'custom'
+    endpoint    TEXT,
+    model       TEXT NOT NULL,
+    api_key     TEXT,                    -- encrypted at rest
+    is_active   INTEGER NOT NULL DEFAULT 1,
+    created_at  TEXT NOT NULL,
+    last_tested TEXT
+);
+
+CREATE TABLE llm_task_routing (
+    task_name   TEXT PRIMARY KEY,        -- 'ai_orchestrator', 'mission_generation', etc.
+    provider_id INTEGER REFERENCES llm_providers(id)
+);
+```
+
+### Relationship to Existing Decisions
+
+- **D016 (BYOLLM):** D047 is the UI and management layer for D016's `LlmProvider` trait. D016 defined the trait and provider types; D047 provides the user experience for configuring them.
+- **D036 (Achievements):** LLM-related achievements encourage exploration of optional features without making them required.
+- **D030 (Workshop):** LLM configurations become another shareable resource type.
+- **D034 (SQLite):** Provider configurations stored locally, encrypted API keys.
+- **D044 (LLM AI):** The task routing table directly determines which provider the orchestrator and LLM player use.
+
+### Alternatives Considered
+
+- Settings-only configuration, no dedicated UI (rejected — multiple providers with task routing is too complex for a settings page)
+- No community sharing (rejected — LLM configuration is a significant friction point; community knowledge sharing reduces the barrier)
+- Include API keys in exports (rejected — obvious security risk; never export secrets)
+- Centralized LLM service run by IC project (rejected — conflicts with BYOLLM principle; users control their own data and costs)
 
 ---
 

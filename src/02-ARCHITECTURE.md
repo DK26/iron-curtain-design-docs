@@ -1335,9 +1335,9 @@ Toggles are categorized as **sim-affecting** (production rules, unit commands �
 
 ### Experience Profiles
 
-D019 (balance), D032 (theme), and D033 (behavior) are three independent axes that compose into **experience profiles**. Selecting "Vanilla RA" sets all three to classic in one click. Selecting "Iron Curtain" sets classic balance + modern theme + best QoL. After selecting a profile, any individual setting can still be overridden.
+D019 (balance), D032 (theme), D033 (behavior), D043 (AI behavior), and D045 (pathfinding feel) are five independent axes that compose into **experience profiles**. Selecting "Vanilla RA" sets all five to classic in one click. Selecting "Iron Curtain" sets classic balance + modern theme + best QoL + enhanced AI + modern movement. After selecting a profile, any individual setting can still be overridden.
 
-See `09-DECISIONS.md` § D033 for the full toggle catalog, YAML schema, and sim/client split details.
+See `09-DECISIONS.md` § D033 for the full toggle catalog, YAML schema, and sim/client split details. See D043 for AI behavior presets and D045 for pathfinding behavior presets.
 
 ## Crate Dependency Graph
 
