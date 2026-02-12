@@ -172,6 +172,7 @@ Units moving, shooting, dying — headless sim + rendered. Record replay file. P
 - **Adaptive difficulty via campaign state:** designer-authored conditional bonuses/penalties based on cumulative performance
 - **Campaign dashboard (D034):** Roster composition graphs per mission, veterancy progression for named units, campaign path visualization, performance trends — from SQLite `campaign_missions` + `roster_snapshots`
 - **`ic-ai` reads player history (D034):** Skirmish AI queries SQLite `matches` + `gameplay_events` for difficulty scaling, build order variety, and counter-strategy selection between games
+- **Player style profile building (D042):** `ic-ai` aggregates `gameplay_events` into `PlayerStyleProfile` per player; `StyleDrivenAi` (AiStrategy impl) mimics a specific player's tendencies in skirmish; "Challenge My Weakness" training mode targets the local player's weakest matchups; `player_profiles` + `training_sessions` SQLite tables; progress tracking across training sessions
 - **FMV cutscene playback** between missions (original `.vqa` briefings and victory/defeat sequences)
 - **Full Allied and Soviet campaigns** for Red Alert, playable start to finish
 
@@ -210,6 +211,7 @@ Units moving, shooting, dying — headless sim + rendered. Record replay file. P
 - **Tournament mode:** bracket API, relay-certified `CertifiedMatchResult`, server-side replay archive
 - **Competitive map pool:** curated per-season, community-nominated
 - **Anti-cheat:** relay-side behavioral analysis (APM, reaction time, pattern entropy), suspicion scoring, community reports
+- **"Train Against" opponent mode (D042):** With multiplayer match data, players can select any opponent from match history → pick a map → instantly play against `StyleDrivenAi` loaded with that opponent's aggregated behavioral profile; no scenario editor required
 - **Competitive governance (D037):** Competitive committee formation, seasonal map pool curation process, community representative elections
 - **Competitive achievements (D036):** Ranked placement, league promotion, season finish, tournament participation achievements
 
@@ -322,6 +324,7 @@ All LLM features require the player to configure their own LLM provider. The gam
 - Adaptive difficulty: AI observes playstyle, generates targeted challenges (experimental)
 - **LLM-driven Workshop resource discovery (D030):** When LLM provider is configured, LLM can search Workshop by `llm_meta` tags, evaluate fitness, auto-pull resources as dependencies for generated content; license-aware filtering
 - **LLM player-aware generation (D034):** When LLM provider is configured, `ic-llm` reads local SQLite for player context — faction preferences, unit usage patterns, win/loss streaks, campaign roster state; generates personalized missions, adaptive briefings, post-match commentary, coaching suggestions, rivalry narratives
+- **LLM coaching loop (D042):** When LLM provider is configured, `ic-llm` reads `training_sessions` + `player_profiles` for structured training plans ("Week 1: expansion timing"), post-session natural language coaching, multi-session arc tracking, and contextual tips during weakness review; builds on Phase 4–5 rule-based training system
 - **AI training data pipeline (D031):** gameplay event stream → OTEL collector → Parquet/Arrow columnar format → ML training; build order learning, engagement patterns, balance analysis from aggregated match telemetry
 
 ### Deliverables — Visual Modding Infrastructure (Bevy Rendering)
