@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-669b8e99.js";
+            window.path_to_searchindex_js = "searchindex-179c1579.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-678cb19b.js"></script>
@@ -1036,6 +1036,7 @@ pub struct TickSignature {
 }
 <span class="boring">}</span></code></pre>
 <p>The signature chain is a linked hash chain — each signature includes the hash of the previous signature. Tampering with any tick invalidates all subsequent signatures. Only relay-hosted games produce signed replays. Unsigned replays are fully functional for playback — signatures add trust, not capability.</p>
+<p><strong>Selective tick verification via Merkle paths:</strong> When the sim uses Merkle tree state hashing (see <code>03-NETCODE.md</code> § Merkle Tree State Hashing), each <code>TickSignature</code> can include the Merkle root rather than a flat hash. This enables <strong>selective verification</strong>: a tournament official can verify that tick 5,000 is authentic without replaying ticks 1–4,999 — just by checking the Merkle path from the tick’s root to the signature chain. The signature chain itself forms a hash chain (each entry includes the previous entry’s hash), so verifying any single tick also proves the integrity of the chain up to that point. This is the same principle as SPV (Simplified Payment Verification) in Bitcoin — prove a specific item belongs to a signed set without downloading the full set. Useful for dispute resolution (“did this specific moment really happen?”) without replaying or transmitting the entire match.</p>
 <h3 id="playback"><a class="header" href="#playback">Playback</a></h3>
 <p><code>ReplayPlayback</code> implements the <code>NetworkModel</code> trait. It reads the tick order stream and feeds orders to the sim as if they came from the network:</p>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]

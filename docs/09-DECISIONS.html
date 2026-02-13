@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-669b8e99.js";
+            window.path_to_searchindex_js = "searchindex-179c1579.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-678cb19b.js"></script>
@@ -7318,6 +7318,13 @@ The server computed the rating. The server signs its own computation.
 </span>pub enum AchievementPolicy {
     /// Sign any achievement reported by the client (casual community).
     TrustClient,
+    /// Sign immediately, but any player can submit a fraud proof
+    /// (replay segment) to challenge. If the challenge verifies,
+    /// the achievement SCR is revoked via sequence-based revocation.
+    /// Inspired by Optimistic Rollup fraud proofs (Optimism, Arbitrum).
+    OptimisticWithChallenge {
+        challenge_window_hours: u32,  // default: 72
+    },
     /// Sign only achievements backed by a CertifiedMatchResult
     /// or relay attestation (competitive community).
     RequireRelayAttestation,
@@ -7326,7 +7333,9 @@ The server computed the rating. The server signs its own computation.
     RequireReplayVerification,
 }
 <span class="boring">}</span></code></pre>
-<p>Most communities will use <code>RequireRelayAttestation</code> for multiplayer achievements and <code>TrustClient</code> for single-player achievements. The achievement SCR includes a <code>verification_level</code> field so viewers know how the achievement was validated.</p>
+<p><strong><code>OptimisticWithChallenge</code> explained:</strong> This policy borrows the core insight from Optimistic Rollups (Optimism, Arbitrum) in the Web3 ecosystem: execute optimistically (assume valid), and only do expensive verification if someone challenges. The server signs the achievement SCR immediately — same speed as <code>TrustClient</code>. But a challenge window opens (default 72 hours, configurable) during which any player who was in the same match can submit a <strong>fraud proof</strong>: a replay segment showing the achievement condition wasn’t met. The community server fast-forwards the replay (deterministic sim — Invariant #1) to verify the challenge. If the challenge is valid, the achievement SCR is revoked via the existing sequence-based revocation mechanism. If no challenge arrives within the window, the achievement is final.</p>
+<p>In practice, most achievements are legitimate, so the challenge rate is near zero — the expensive replay verification almost never runs. This gives the speed of <code>TrustClient</code> with the security guarantees of <code>RequireReplayVerification</code>. The pattern works because IC’s deterministic sim means any disputed claim can be objectively verified from the replay — there’s no ambiguity about what happened.</p>
+<p>Most communities will use <code>RequireRelayAttestation</code> for multiplayer achievements and <code>TrustClient</code> or <code>OptimisticWithChallenge</code> for single-player achievements. The achievement SCR includes a <code>verification_level</code> field so viewers know how the achievement was validated. SCRs issued under <code>OptimisticWithChallenge</code> carry a <code>verification_level: "optimistic"</code> tag that upgrades to <code>"verified"</code> after the challenge window closes without dispute.</p>
 <p><strong>Player registration — identity binding and Sybil resistance:</strong></p>
 <p>When a player first connects to a community, the community server must decide: should I register this person? What stops one person from creating 100 accounts to game the rating system?</p>
 <p>Registration is the one area where the community server does NOT have a relay to vouch for the data. The player is presenting themselves for the first time. The server’s defenses are layered:</p>
@@ -7921,18 +7930,74 @@ CREATE TABLE key_rotations (
 <li>Use case: player caught cheating → server issues revocation for all their records below a new sequence → player’s cached credentials become unverifiable → they must re-authenticate, and the server can refuse.</li>
 </ul>
 <p>Revocations are distinct from key rotations. Revocations invalidate a specific player’s credentials. Key rotations replace the community’s signing key. Both use signed records; they solve different problems.</p>
+<h4 id="social-recovery-optional-for-large-communities"><a class="header" href="#social-recovery-optional-for-large-communities">Social Recovery (Optional, for Large Communities)</a></h4>
+<p>The two-key system has one remaining single point of failure: the RK itself. If the sole operator loses the RK private key (hardware failure, lost USB drive) AND the SK is also compromised, the community is dead. For small clan servers this is acceptable — the operator is one person who backs up their key. For large communities (1,000+ members, years of match history), the stakes are higher.</p>
+<p><strong>Social recovery</strong> eliminates this single point by distributing the RK across multiple trusted people using <strong>Shamir’s Secret Sharing</strong> (SSS). Instead of one person holding the RK, the community designates N <strong>recovery guardians</strong> — trusted community members who each hold a shard. A threshold of K shards (e.g., 3 of 5) is required to reconstruct the RK and sign an emergency rotation.</p>
+<p>This pattern comes from Ethereum’s account abstraction ecosystem (ERC-4337, Argent wallet, Vitalik Buterin’s 2021 social recovery proposal), adapted for IC’s community key model. The Web3 ecosystem spent years refining social recovery UX because key loss destroyed real value — IC benefits from those lessons without needing a blockchain.</p>
+<p><strong>Setup:</strong></p>
+<pre><code>$ ic community setup-social-recovery --guardians 5 --threshold 3
+
+  Social Recovery Setup
+  ─────────────────────
+  Your Recovery Key will be split into 5 shards.
+  Any 3 shards can reconstruct it.
+
+  Enter guardian identities (player keys or community member names):
+    Guardian 1: alice   (player_key: 3f7a2b91...)
+    Guardian 2: bob     (player_key: 9c4d17e3...)
+    Guardian 3: carol   (player_key: a1b2c3d4...)
+    Guardian 4: dave    (player_key: e5f6a7b8...)
+    Guardian 5: eve     (player_key: 12345678...)
+
+  Generating shards...
+  Each guardian will receive their shard encrypted to their player key.
+  Shards are transmitted via the community server's secure channel.
+
+  ⚠️  Store the guardian list securely. You need 3 of these 5 people
+     to recover your community if the Recovery Key is lost.
+
+  [Confirm and distribute shards]
+</code></pre>
+<p><strong>How it works:</strong></p>
+<ol>
+<li>The RK private key is split into N shards using Shamir’s Secret Sharing over the Ed25519 scalar field.</li>
+<li>Each shard is encrypted to the guardian’s player public key (X25519 key agreement + AEAD) and transmitted.</li>
+<li>Guardians store their shard locally (in their player credential SQLite, encrypted at rest).</li>
+<li>The operator’s server stores only the guardian list (public keys + shard indices) — never the shards themselves.</li>
+<li>To perform emergency rotation, K guardians each decrypt and submit their shard to a recovery coordinator (can be the operator’s new server, or any guardian). The coordinator reconstructs the RK, signs the rotation record, and discards the reconstructed key.</li>
+<li>After recovery, new shards should be generated (the old shards reconstructed the old RK; a fresh <code>setup-social-recovery</code> generates shards for a new RK).</li>
+</ol>
+<p><strong>Guardian management:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Operation</th><th>Command</th></tr>
+</thead>
+<tbody>
+<tr><td>Set up social recovery</td><td><code>ic community setup-social-recovery --guardians N --threshold K</code></td></tr>
+<tr><td>Replace a guardian</td><td><code>ic community replace-guardian &lt;old&gt; &lt;new&gt; --recovery-key &lt;rk&gt;</code> (requires RK to re-shard)</td></tr>
+<tr><td>Check guardian status</td><td><code>ic community guardian-status</code> (pings guardians, verifies they still hold valid shards)</td></tr>
+<tr><td>Initiate recovery</td><td><code>ic community social-recover</code> (collects K shards, reconstructs RK, rotates SK)</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Guardian liveness:</strong> <code>ic community guardian-status</code> periodically checks (opt-in, configurable interval) whether guardians are still reachable and their shards are intact (guardians sign a challenge with their player key; possession of the shard is verified via a zero-knowledge proof of shard validity, not by revealing the shard). If a guardian is unreachable for 90+ days, the operator is warned: “Guardian dave has been unreachable for 94 days. Consider replacing them.”</p>
+<p><strong>Why not just use N independent RKs?</strong> With N independent RKs, any single compromise recovers the full key — the security level degrades as N increases. With Shamir’s threshold scheme, compromising K-1 guardians reveals <em>zero information</em> about the RK. This is information-theoretically secure, not just computationally secure.</p>
+<p><strong>Rust crate:</strong> <code>sharks</code> (Shamir’s Secret Sharing, permissively licensed, well-audited). Alternatively <code>vsss-rs</code> (Verifiable Secret Sharing — adds the property that each guardian can verify their shard is valid without learning the secret, preventing a malicious dealer from distributing fake shards).</p>
+<p><strong>Phase:</strong> Social recovery is optional and ships in Phase 6a. The two-key system (Phase 5) works without it. Communities that want social recovery enable it as an upgrade — it doesn’t change any existing key management flows, just adds a recovery path.</p>
 <h4 id="summary-failure-mode-comparison"><a class="header" href="#summary-failure-mode-comparison">Summary: Failure Mode Comparison</a></h4>
 <div class="table-wrapper">
 <table>
 <thead>
-<tr><th>Scenario</th><th>Single-Key System</th><th>IC Two-Key System</th></tr>
+<tr><th>Scenario</th><th>Single-Key System</th><th>IC Two-Key System</th><th>IC Two-Key + Social Recovery</th></tr>
 </thead>
 <tbody>
-<tr><td>SK lost, operator has no backup</td><td>Community dead. All credentials permanently unverifiable. Players start over.</td><td>Operator uses RK to rotate to new SK. Community survives. All existing SCRs remain valid.</td></tr>
-<tr><td>SK stolen</td><td>Attacker can forge credentials AND operator can’t prove legitimacy (both hold same key). Community dead.</td><td>Operator uses RK to revoke stolen SK, rotate to new SK. Attacker locked out. Community recovers.</td></tr>
-<tr><td>SK stolen + operator doesn’t notice for weeks</td><td>Unlimited forgery window. No recovery.</td><td>SCR <code>expires_at</code> limits forgery to 7-day windows. RK-signed rotation locks out attacker retroactively.</td></tr>
-<tr><td>Both SK and RK lost</td><td>—</td><td>Community dead. But this requires losing both an online server key AND an offline backup. Extraordinary negligence.</td></tr>
-<tr><td>RK stolen (but SK is fine)</td><td>—</td><td>No immediate impact — RK isn’t used for day-to-day operations. Operator should regenerate RK immediately: <code>ic community regenerate-recovery-key</code>.</td></tr>
+<tr><td>SK lost, operator has no backup</td><td>Community dead. All credentials permanently unverifiable. Players start over.</td><td>Operator uses RK to rotate to new SK. Community survives. All existing SCRs remain valid.</td><td>Same as two-key.</td></tr>
+<tr><td>SK stolen</td><td>Attacker can forge credentials AND operator can’t prove legitimacy (both hold same key). Community dead.</td><td>Operator uses RK to revoke stolen SK, rotate to new SK. Attacker locked out. Community recovers.</td><td>Same as two-key.</td></tr>
+<tr><td>SK stolen + operator doesn’t notice for weeks</td><td>Unlimited forgery window. No recovery.</td><td>SCR <code>expires_at</code> limits forgery to 7-day windows. RK-signed rotation locks out attacker retroactively.</td><td>Same as two-key.</td></tr>
+<tr><td>Both SK and RK lost</td><td>—</td><td>Community dead. But this requires losing both an online server key AND an offline backup. Extraordinary negligence.</td><td><strong>K guardians reconstruct RK → rotate SK. Community survives.</strong> This is the upgrade.</td></tr>
+<tr><td>Operator disappears (burnout, health, life)</td><td>Community dead.</td><td>Community dead (unless operator shared RK with a trusted successor).</td><td><strong>K guardians reconstruct RK → transfer operations to new operator. Community survives.</strong></td></tr>
+<tr><td>RK stolen (but SK is fine)</td><td>—</td><td>No immediate impact — RK isn’t used for day-to-day operations. Operator should regenerate RK immediately: <code>ic community regenerate-recovery-key</code>.</td><td>Same as two-key — but after regeneration, resharding is recommended.</td></tr>
 </tbody>
 </table>
 </div>
@@ -7944,6 +8009,18 @@ CREATE TABLE key_rotations (
 <li>“I achieved ‘Iron Curtain’ achievement on Official IC” — provable by presenting the signed achievement SCR.</li>
 <li>A tournament community can require “minimum 50 rated matches on any community with verifiable SCRs” as an entry requirement.</li>
 </ul>
+<p><strong>Cross-domain credential principle:</strong> Cross-community credential presentation is architecturally a “bridge” — data signed in Domain A is presented in Domain B. The most expensive lessons in Web3 were bridge hacks (Ronin $625M, Wormhole $325M, Nomad $190M), all caused by trusting cross-domain data without sufficient validation at the boundary. IC’s design is already better than most Web3 bridges (each verifier independently checks Ed25519 signatures locally, no intermediary trusted), but the following principle should be explicit:</p>
+<blockquote>
+<p><strong>Cross-domain credentials are read-only.</strong> Community Y can <em>display</em> and <em>verify</em> credentials signed by Community X, but must never <em>update its own state</em> based on them without independent re-verification. If Community Y grants a privilege based on Community X membership (e.g., “skip probation if you have 100+ matches on Official IC”), it must re-verify the SCR at the moment the privilege is exercised — not cache the check from an earlier session. Stale cached trust checks are the root cause of bridge exploits: the external state changed (key rotated, credential revoked), but the receiving domain still trusted its cached approval.</p>
+</blockquote>
+<p>In practice, this means:</p>
+<ul>
+<li>Trust requirements (D053 <code>TrustRequirement</code>) re-verify SCRs on every room join, not once per session.</li>
+<li>Matchmaking checks re-verify rating SCRs before each match, not at queue entry.</li>
+<li>Tournament entry requirements re-verify all credential conditions at match start, not at registration.</li>
+<li>The <code>expires_at</code> field on SCRs (default 7 days for ratings) provides a natural staleness bound, but point-of-use re-verification catches revocations within the validity window.</li>
+</ul>
+<p>This costs one Ed25519 signature check (~65μs) per verification — negligible even at thousands of verifications per second.</p>
 <p><strong>Leaderboards:</strong></p>
 <ul>
 <li>Each community maintains its own leaderboard, compiled from the rating SCRs it has issued.</li>
