@@ -2833,7 +2833,7 @@ When a player joins a multiplayer lobby, the client checks `GameListing.required
 5. **Install:** Place in local cache, update dependency graph
 6. **Ready:** Player joins game with all required content
 
-Players can cancel at any time. Auto-download respects bandwidth limits configured in settings. Resources downloaded this way persist in the local cache for future sessions.
+Players can cancel at any time. Auto-download respects bandwidth limits configured in settings. Resources downloaded this way are tagged as **transient** — they remain in the local cache and are fully functional, but are subject to auto-cleanup after a configurable period of non-use (default: 30 days). After the session, a non-intrusive toast offers the player the choice to pin (keep forever), let auto-clean run its course, or remove immediately. Frequently-used transient resources (3+ sessions) are automatically promoted to pinned. See `09-DECISIONS.md` § D030 "Local Resource Management" for the full lifecycle, storage budget, and cleanup UX.
 
 ### Creator Reputation System (D030)
 

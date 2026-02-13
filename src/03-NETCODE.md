@@ -188,6 +188,16 @@ Why this is better than a flat cap: normal play (5-10 orders/tick) never touches
 
 **Half-open connection defense** (from Minetest): New UDP connections to the relay are marked half-open. The relay inhibits retransmission and ping responses until the client proves liveness by using its assigned session ID in a valid packet. This prevents the relay from being usable as a UDP amplification reflector — critical for any internet-facing server.
 
+**Relay connection limits:** In addition to per-player order rate control, the relay enforces connection-level limits to prevent resource exhaustion (see `06-SECURITY.md` § Vulnerability 24):
+
+- **Max total connections per relay instance:** configurable, default 1000. Returns 503 when at capacity.
+- **Max connections per IP:** configurable, default 5. Prevents single-source connection flooding.
+- **New connection rate per IP:** max 10/sec (token bucket). Prevents rapid reconnection spam.
+- **Memory budget per connection:** bounded; torn down if exceeded.
+- **Idle timeout:** 60 seconds for unauthenticated, 5 minutes for authenticated.
+
+These limits complement the order-level defenses — rate control handles abuse from established connections, connection limits prevent exhaustion of server resources before a game even starts.
+
 ### Frame Data Resilience (from C&C Generals)
 
 UDP is unreliable — packets can arrive corrupted, duplicated, reordered, or not at all. Inspired by C&C Generals' `FrameDataManager` (see `research/generals-zero-hour-netcode-analysis.md`), our frame data handling uses a three-state readiness model rather than a simple ready/waiting binary:

@@ -64,69 +64,71 @@ iron-curtain/
 
 These are settled. Don't re-litigate unless the user explicitly wants to revisit one. Full rationale for each is in `src/09-DECISIONS.md`.
 
-| ID | Decision | Short Rationale |
-| --- | --- | --- |
-| D001 | Rust | No GC, memory safety, WASM target, no competition in Rust RTS space |
-| D002 | Bevy (revised from "No Bevy") | ECS is our architecture; saves 2-4 months; plugin system fits pluggable networking |
-| D003 | Real YAML, not MiniYAML | `serde_yaml` typed deserialization; standard tooling; no custom parser |
-| D004 | Lua for scripting (not Python) | Tiny runtime, deterministic, sandboxable, industry standard |
-| D005 | WASM for power mods | Near-native perf, perfectly sandboxed, deterministic, polyglot |
-| D006 | Pluggable networking via trait | Clean sim/net boundary, testable with `LocalNetwork` |
-| D007 | Relay server as default multiplayer | Blocks lag switches, sub-tick ordering, NAT traversal, signed replays |
-| D008 | Sub-tick timestamps on orders | CS2-inspired; fairer edge cases; trivial to implement |
-| D009 | Fixed-point math, no floats in sim | Required for deterministic lockstep; original RA used integer math |
-| D010 | Snapshottable sim state | Save games, replays, desync debugging, rollback, automated testing |
-| D011 | Cross-engine = community layer, not sim layer | Bit-identical sim is impractical; shared browser/maps/mods is achievable |
-| D012 | Order validation inside sim | Deterministic validation = all clients agree on rejections; validation IS anti-cheat |
-| D013 | Pathfinding via `Pathfinder` trait | Trait-abstracted; `IcPathfinder` (JPS + flowfield + ORCA-lite) is RA1 impl |
-| D014 | Tera templating (Phase 6a, nice-to-have) | Eliminates copy-paste for faction variants; load-time only; optional |
-| D015 | Efficiency-first, not thread-first | Algorithm → cache → LOD → amortize → zero-alloc → THEN parallelism |
-| D016 | LLM-generated missions (Phase 7, optional) | BYOLLM; output is standard YAML+Lua; game fully functional without LLM |
-| D017 | Bevy rendering pipeline | Classic isometric base; post-FX available as modding infrastructure |
-| D018 | Multi-game extensibility (game modules) | `GameModule` trait bundles systems, pathfinder, spatial index, fog, etc. |
-| D019 | Switchable balance presets | Classic RA vs OpenRA vs Remastered; YAML rule sets selectable in lobby |
-| D020 | Mod SDK & Creative Toolchain | `ic` CLI + IC SDK application; separate binary from the game |
-| D021 | Branching campaigns with persistent state | Campaign graph, named outcomes, unit roster carry over; OFP-inspired |
-| D022 | Dynamic weather with terrain effects | Weather state machine + per-cell terrain surface state; deterministic |
-| D023 | OpenRA vocabulary compatibility layer | Accept OpenRA trait names as YAML aliases; zero migration friction |
-| D024 | Lua API superset of OpenRA | OpenRA's 16 globals + IC extensions; OpenRA Lua missions run unmodified |
-| D025 | Runtime MiniYAML loading | Auto-converts in memory; `miniyaml2yaml` CLI optional |
-| D026 | OpenRA mod manifest compatibility | Parse `mod.yaml`; `ic mod import` for migration |
-| D027 | Canonical enum compatibility | Match OpenRA locomotor/armor/target/stance enum names exactly |
-| D028 | Condition & multiplier systems | Phase 2 hard exit criteria, not deferred |
-| D029 | Cross-game component library | 7 first-party systems (mind control, carriers, teleport, shields, etc.); Phase 2 target |
-| D030 | Workshop resource registry & deps | Federated multi-source repository; semver deps; AI consent; phased delivery Phase 4-5+ |
-| D031 | Observability & telemetry (OTEL) | Zero-cost when disabled; gameplay event stream; Grafana dashboards |
-| D032 | Switchable UI themes | YAML-driven; Classic/Remastered/Modern presets; community themes via Workshop |
-| D033 | Toggleable QoL & behavior presets | Every QoL individually toggleable; experience profiles combine D019+D032+D033+D043+D045+D048 |
-| D034 | SQLite as embedded storage | `rusqlite` for all persistent state; no external DB; FTS5; WAL; WASM-compatible |
-| D035 | Creator recognition — voluntary tipping | Optional tip links; IC never processes payments; no mandatory paywalls |
-| D036 | Achievement system | Per-game-module in SQLite; mod-defined via YAML + Lua; Steam sync |
-| D037 | Community governance | RFC process; self-hosting independence; community-elected representatives |
-| D038 | Scenario editor (OFP/Eden-inspired, SDK) | Visual editor for maps + mission logic; `ic-editor` crate |
-| D039 | Engine scope — general-purpose RTS | `ic-*` naming; ships RA1+TD; C&C remains primary focus |
-| D040 | Asset Studio | Visual asset browser/editor in IC SDK; format-aware via ra-formats |
-| D041 | Trait-abstracted subsystem strategy | 5 more traits: AiStrategy, FogProvider, DamageResolver, RankingProvider, OrderValidator |
-| D042 | Player behavioral profiles & training | PlayerStyleProfile from event logs; StyleDrivenAi; privacy-first local replays only |
-| D043 | AI behavior presets | Priority-based managers; two-axis difficulty; modder-providable via WASM Workshop |
-| D044 | LLM-enhanced AI | LlmOrchestratorAi wraps existing AI; LlmPlayerAi experimental; not ranked |
-| D045 | Pathfinding behavior presets | Switchable Pathfinder impls (Remasters/OpenRA/IC); modder-providable via WASM |
-| D046 | Community platform — premium content | Verified publishers sell cosmetics only; PlatformServices trait; DRM-free |
-| D047 | LLM Configuration Manager | Multi-provider UI with task routing; community-shareable configs |
-| D048 | Switchable render modes | Bundles backend + camera + resource pack; F1 cycles; cross-view multiplayer |
-| D049 | Workshop asset formats & P2P | Bevy-native canonical; BitTorrent/WebTorrent for large packages; git-hosted index Phase 0-3 |
-| D050 | Workshop as cross-project library | Standalone Rust library; zero engine dependency; C FFI for non-Rust |
-| D051 | GPL v3 with modding exception | GPL v3 §7 explicit exception; mods NOT derivative works; same precedent as Linux kernel |
+| ID   | Decision                                      | Short Rationale                                                                                                                                                        |
+| ---- | --------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| D001 | Rust                                          | No GC, memory safety, WASM target, no competition in Rust RTS space                                                                                                    |
+| D002 | Bevy (revised from "No Bevy")                 | ECS is our architecture; saves 2-4 months; plugin system fits pluggable networking                                                                                     |
+| D003 | Real YAML, not MiniYAML                       | `serde_yaml` typed deserialization; standard tooling; no custom parser                                                                                                 |
+| D004 | Lua for scripting (not Python)                | Tiny runtime, deterministic, sandboxable, industry standard                                                                                                            |
+| D005 | WASM for power mods                           | Near-native perf, perfectly sandboxed, deterministic, polyglot                                                                                                         |
+| D006 | Pluggable networking via trait                | Clean sim/net boundary, testable with `LocalNetwork`                                                                                                                   |
+| D007 | Relay server as default multiplayer           | Blocks lag switches, sub-tick ordering, NAT traversal, signed replays                                                                                                  |
+| D008 | Sub-tick timestamps on orders                 | CS2-inspired; fairer edge cases; trivial to implement                                                                                                                  |
+| D009 | Fixed-point math, no floats in sim            | Required for deterministic lockstep; original RA used integer math                                                                                                     |
+| D010 | Snapshottable sim state                       | Save games, replays, desync debugging, rollback, automated testing                                                                                                     |
+| D011 | Cross-engine = community layer, not sim layer | Bit-identical sim is impractical; shared browser/maps/mods is achievable                                                                                               |
+| D012 | Order validation inside sim                   | Deterministic validation = all clients agree on rejections; validation IS anti-cheat                                                                                   |
+| D013 | Pathfinding via `Pathfinder` trait            | Trait-abstracted; `IcPathfinder` (JPS + flowfield + ORCA-lite) is RA1 impl                                                                                             |
+| D014 | Tera templating (Phase 6a, nice-to-have)      | Eliminates copy-paste for faction variants; load-time only; optional                                                                                                   |
+| D015 | Efficiency-first, not thread-first            | Algorithm → cache → LOD → amortize → zero-alloc → THEN parallelism                                                                                                     |
+| D016 | LLM-generated missions (Phase 7, optional)    | BYOLLM; output is standard YAML+Lua; game fully functional without LLM                                                                                                 |
+| D017 | Bevy rendering pipeline                       | Classic isometric base; post-FX available as modding infrastructure                                                                                                    |
+| D018 | Multi-game extensibility (game modules)       | `GameModule` trait bundles systems, pathfinder, spatial index, fog, etc.                                                                                               |
+| D019 | Switchable balance presets                    | Classic RA vs OpenRA vs Remastered; YAML rule sets selectable in lobby                                                                                                 |
+| D020 | Mod SDK & Creative Toolchain                  | `ic` CLI + IC SDK application; separate binary from the game                                                                                                           |
+| D021 | Branching campaigns with persistent state     | Campaign graph, named outcomes, unit roster carry over; OFP-inspired                                                                                                   |
+| D022 | Dynamic weather with terrain effects          | Weather state machine + per-cell terrain surface state; deterministic                                                                                                  |
+| D023 | OpenRA vocabulary compatibility layer         | Accept OpenRA trait names as YAML aliases; zero migration friction                                                                                                     |
+| D024 | Lua API superset of OpenRA                    | OpenRA's 16 globals + IC extensions; OpenRA Lua missions run unmodified                                                                                                |
+| D025 | Runtime MiniYAML loading                      | Auto-converts in memory; `miniyaml2yaml` CLI optional                                                                                                                  |
+| D026 | OpenRA mod manifest compatibility             | Parse `mod.yaml`; `ic mod import` for migration                                                                                                                        |
+| D027 | Canonical enum compatibility                  | Match OpenRA locomotor/armor/target/stance enum names exactly                                                                                                          |
+| D028 | Condition & multiplier systems                | Phase 2 hard exit criteria, not deferred                                                                                                                               |
+| D029 | Cross-game component library                  | 7 first-party systems (mind control, carriers, teleport, shields, etc.); Phase 2 target                                                                                |
+| D030 | Workshop resource registry & deps             | Federated multi-source repository; semver deps; AI consent; phased delivery Phase 4-5+                                                                                 |
+| D031 | Observability & telemetry (OTEL)              | Zero-cost when disabled; gameplay event stream; Grafana dashboards                                                                                                     |
+| D032 | Switchable UI themes                          | YAML-driven; Classic/Remastered/Modern presets; community themes via Workshop                                                                                          |
+| D033 | Toggleable QoL & behavior presets             | Every QoL individually toggleable; experience profiles combine D019+D032+D033+D043+D045+D048                                                                           |
+| D034 | SQLite as embedded storage                    | `rusqlite` for all persistent state; no external DB; FTS5; WAL; WASM-compatible                                                                                        |
+| D035 | Creator recognition — voluntary tipping       | Optional tip links; IC never processes payments; no mandatory paywalls                                                                                                 |
+| D036 | Achievement system                            | Per-game-module in SQLite; mod-defined via YAML + Lua; Steam sync                                                                                                      |
+| D037 | Community governance                          | RFC process; self-hosting independence; community-elected representatives                                                                                              |
+| D038 | Scenario editor (OFP/Eden-inspired, SDK)      | Visual editor for maps + mission logic; `ic-editor` crate                                                                                                              |
+| D039 | Engine scope — general-purpose RTS            | `ic-*` naming; ships RA1+TD; C&C remains primary focus                                                                                                                 |
+| D040 | Asset Studio                                  | Visual asset browser/editor in IC SDK; format-aware via ra-formats                                                                                                     |
+| D041 | Trait-abstracted subsystem strategy           | 5 more traits: AiStrategy, FogProvider, DamageResolver, RankingProvider, OrderValidator                                                                                |
+| D042 | Player behavioral profiles & training         | PlayerStyleProfile from event logs; StyleDrivenAi; privacy-first local replays only                                                                                    |
+| D043 | AI behavior presets                           | Priority-based managers; two-axis difficulty; modder-providable via WASM Workshop                                                                                      |
+| D044 | LLM-enhanced AI                               | LlmOrchestratorAi wraps existing AI; LlmPlayerAi experimental; not ranked                                                                                              |
+| D045 | Pathfinding behavior presets                  | Switchable Pathfinder impls (Remasters/OpenRA/IC); modder-providable via WASM                                                                                          |
+| D046 | Community platform — premium content          | Verified publishers sell cosmetics only; PlatformServices trait; DRM-free                                                                                              |
+| D047 | LLM Configuration Manager                     | Multi-provider UI with task routing; community-shareable configs                                                                                                       |
+| D048 | Switchable render modes                       | Bundles backend + camera + resource pack; F1 cycles; cross-view multiplayer                                                                                            |
+| D049 | Workshop asset formats & P2P                  | Bevy-native canonical; BitTorrent/WebTorrent for large packages; git-hosted index Phase 0-3                                                                            |
+| D050 | Workshop as cross-project library             | Standalone Rust library; zero engine dependency; C FFI for non-Rust                                                                                                    |
+| D051 | GPL v3 with modding exception                 | GPL v3 §7 explicit exception; mods NOT derivative works; same precedent as Linux kernel                                                                                |
+| D052 | Community servers & signed credentials        | Federated community servers (relay+ranking+matchmaking); local SQLite credential files; Ed25519 signed records (not JWT)                                               |
+| D053 | Player Profile system                         | Identity expression, achievement showcase, verified statistics, friends list, community memberships; all reputation data SCR-backed (D052); local-first SQLite storage |
 
 ## Pending Decisions
 
-| ID | Topic | Needs Resolution By |
-| --- | --- | --- |
-| P002 | Fixed-point scale (256? 1024? match OpenRA's 1024?) | Phase 2 start |
-| P003 | Audio library choice + music integration design (see `09-DECISIONS.md`) | Phase 3 start |
-| P004 | Lobby/matchmaking protocol specifics | Phase 5 start |
-| ~~P005~~ | ~~Map editor architecture~~ — RESOLVED: Scenario editor in SDK (D038+D040) | Resolved |
-| ~~P006~~ | ~~License choice~~ — RESOLVED: GPL v3 with modding exception (D051) | Resolved |
+| ID       | Topic                                                                                                                               | Needs Resolution By |
+| -------- | ----------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
+| P002     | Fixed-point scale (256? 1024? match OpenRA's 1024?)                                                                                 | Phase 2 start       |
+| P003     | Audio library choice + music integration design (see `09-DECISIONS.md`)                                                             | Phase 3 start       |
+| P004     | Lobby/matchmaking protocol specifics — PARTIALLY RESOLVED: architecture + lobby protocol defined (D052), wire format details remain | Phase 5 start       |
+| ~~P005~~ | ~~Map editor architecture~~ — RESOLVED: Scenario editor in SDK (D038+D040)                                                          | Resolved            |
+| ~~P006~~ | ~~License choice~~ — RESOLVED: GPL v3 with modding exception (D051)                                                                 | Resolved            |
 
 ## Development Roadmap (36 Months)
 
@@ -146,22 +148,22 @@ Phase 7  (Months 34-36) → LLM Missions + Ecosystem + Polish: mission generator
 
 When you need deeper detail, read the specific design doc:
 
-| Topic | Read |
-| --- | --- |
-| Goals, competitive landscape, why this exists | `src/01-VISION.md` |
-| Crate structure, ECS, sim/render split, game loop, UI themes | `src/02-ARCHITECTURE.md` |
-| NetworkModel trait, relay server, CS2 sub-tick, lockstep, adaptive run-ahead | `src/03-NETCODE.md` |
-| YAML rules, Lua scripting, WASM modules, sandboxing, LLM metadata, Mod SDK | `src/04-MODDING.md` |
-| File formats, EA source code insights, coordinate systems | `src/05-FORMATS.md` |
-| Threat model, maphack, order validation, replay signing, protocol hardening | `src/06-SECURITY.md` |
-| Cross-engine play, OrderCodec, SimReconciler, ProtocolAdapter | `src/07-CROSS-ENGINE.md` |
-| 36-month phased roadmap with exit criteria | `src/08-ROADMAP.md` |
-| Full decision log with rationale and alternatives | `src/09-DECISIONS.md` |
-| Efficiency pyramid, profiling, performance targets, benchmarks | `src/10-PERFORMANCE.md` |
-| OpenRA feature catalog (~700 traits), gap analysis, migration mapping | `src/11-OPENRA-FEATURES.md` |
-| Combined Arms mod migration, Remastered recreation feasibility | `src/12-MOD-MIGRATION.md` |
-| Development philosophy, design review principles, C&C creator lessons | `src/13-PHILOSOPHY.md` |
-| Development methodology, context-bounded work units, research rigor | `src/14-METHODOLOGY.md` |
+| Topic                                                                        | Read                        |
+| ---------------------------------------------------------------------------- | --------------------------- |
+| Goals, competitive landscape, why this exists                                | `src/01-VISION.md`          |
+| Crate structure, ECS, sim/render split, game loop, UI themes                 | `src/02-ARCHITECTURE.md`    |
+| NetworkModel trait, relay server, CS2 sub-tick, lockstep, adaptive run-ahead | `src/03-NETCODE.md`         |
+| YAML rules, Lua scripting, WASM modules, sandboxing, LLM metadata, Mod SDK   | `src/04-MODDING.md`         |
+| File formats, EA source code insights, coordinate systems                    | `src/05-FORMATS.md`         |
+| Threat model, maphack, order validation, replay signing, protocol hardening  | `src/06-SECURITY.md`        |
+| Cross-engine play, OrderCodec, SimReconciler, ProtocolAdapter                | `src/07-CROSS-ENGINE.md`    |
+| 36-month phased roadmap with exit criteria                                   | `src/08-ROADMAP.md`         |
+| Full decision log with rationale and alternatives                            | `src/09-DECISIONS.md`       |
+| Efficiency pyramid, profiling, performance targets, benchmarks               | `src/10-PERFORMANCE.md`     |
+| OpenRA feature catalog (~700 traits), gap analysis, migration mapping        | `src/11-OPENRA-FEATURES.md` |
+| Combined Arms mod migration, Remastered recreation feasibility               | `src/12-MOD-MIGRATION.md`   |
+| Development philosophy, design review principles, C&C creator lessons        | `src/13-PHILOSOPHY.md`      |
+| Development methodology, context-bounded work units, research rigor          | `src/14-METHODOLOGY.md`     |
 
 ## Legal Protections
 

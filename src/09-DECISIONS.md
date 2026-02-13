@@ -16,9 +16,25 @@ Every major design decision, with rationale and alternatives considered. Referen
 - Modern tooling (cargo, crates.io, clippy, miri)
 - No competition in Rust RTS space — wide open field
 
+**Why not a high-level language (C#, Python, Java)?**
+
+The goal is to extract maximum performance from the hardware. A game engine is one of the few domains where you genuinely need every cycle — the original Red Alert was written in C and ran close to the metal, and IC should too. High-level languages with garbage collectors, runtime overhead, and opaque memory layouts leave performance on the table. Rust gives the same hardware access as C without the footguns.
+
+**Why not C/C++?**
+
+Beyond the well-known safety and tooling arguments: **C++ is a liability in the age of LLM-assisted development.** This project is built with agentic LLMs as a core part of the development workflow. With Rust, LLM-generated code that compiles is overwhelmingly *correct* — the borrow checker, type system, and ownership model catch entire categories of bugs at compile time. The compiler is a safety net that makes LLM output trustworthy. With C++, LLM-generated code that compiles can still contain use-after-free, data races, undefined behavior, and subtle memory corruption — bugs that are dangerous precisely because they're silent. The errors are cryptic, the debugging is painful, and the risk compounds as the codebase grows. Rust's compiler turns the LLM from a risk into a superpower: you can develop faster and bolder because the guardrails are structural, not optional.
+
+This isn't a temporary advantage. LLM-assisted development is the future of programming. Choosing a language where the compiler verifies LLM output — rather than one where you must manually audit every line for memory safety — is a strategic bet that compounds over the lifetime of the project.
+
+**Why Rust is the right moment for a C&C engine:**
+
+Rust is replacing C and C++ across the industry. It's in the Linux kernel, Android, Windows, Chromium, and every major cloud provider's infrastructure. The ecosystem is maturing rapidly — crates.io has 150K+ crates, Bevy is the most actively developed open-source game engine in any language, and the community is growing faster than any systems language since C++ itself. Serious new infrastructure projects increasingly start in Rust rather than C++.
+
+This creates a unique opportunity for a C&C engine renewal. The original games were written in C. OpenRA chose C# — a reasonable choice in 2007, but one that traded hardware performance for developer productivity. Rust didn't exist as a viable option then. It does now. A Rust-native engine can match C's performance, exceed C#'s safety, leverage Rust's excellent concurrency model to use all available CPU cores, and tap into a modern ecosystem (Bevy, wgpu, serde, tokio) that simply has no C++ equivalent at the same quality level. The timing is right: Rust is mature enough to build on, young enough that the RTS space is wide open, and the C&C community deserves an engine built with the best tools available today.
+
 **Alternatives considered:**
-- C++ (manual memory management, no safety guarantees, build system pain)
-- C# (would just be another OpenRA — no differentiation)
+- C++ (manual memory management, no safety guarantees, build system pain, dangerous with LLM-assisted workflows — silent bugs where Rust would catch them at compile time)
+- C# (would just be another OpenRA — no differentiation, GC pauses in hot paths, gives up hardware-level performance)
 - Zig (too immature ecosystem for this scope)
 
 ---
@@ -1030,6 +1046,46 @@ Every published resource includes cryptographic checksums for integrity verifica
 - Protects against: corrupted downloads, CDN tampering, mirror drift
 - Workshop server computes checksums on upload; clients verify on download. Trust but verify.
 
+### Manifest Integrity & Confusion Prevention
+
+The canonical package manifest is **inside the `.icpkg` archive** (`manifest.yaml`). The git-index entry and Workshop server metadata are derived summaries — never independent sources of truth. See `06-SECURITY.md` § Vulnerability 20 for the full threat analysis (inspired by the 2023 npm manifest confusion affecting 800+ packages).
+
+- **`manifest_hash` field:** Every index entry includes `manifest_hash: SHA-256(manifest.yaml)` — the hash of the manifest file itself, separate from the full-package hash. Clients verify this independently.
+- **CI validation (git-index phase):** PR validation CI downloads the `.icpkg`, extracts `manifest.yaml`, computes its hash, and verifies against the declared `manifest_hash`. Mismatch → PR rejected.
+- **Client verification:** `ic mod install` verifies the extracted `manifest.yaml` matches the index's `manifest_hash` before processing mod content. Mismatch → abort.
+
+### Version Immutability
+
+Once version X.Y.Z is published, its content **cannot** be modified or overwritten. The SHA-256 hash recorded at publish time is permanent.
+
+- **Yanking ≠ deletion:** Yanked versions are hidden from new `ic mod install` searches but remain downloadable for existing `ic.lock` files that reference them.
+- **Git-index enforcement:** CI rejects PRs that modify fields in existing version manifest files. Only additions of new version files are accepted.
+- **Registry enforcement (Phase 4+):** Workshop server API rejects publish requests for existing version numbers with HTTP 409 Conflict. No override flag.
+
+### Typosquat & Name Confusion Prevention
+
+Publisher-scoped naming (`publisher/package`) is the structural defense — see `06-SECURITY.md` § Vulnerability 19. Additional measures:
+
+- **Name similarity checking at publish time:** Levenshtein distance + common substitution patterns checked against existing packages. Edit distance ≤ 2 from an existing popular package → flagged for manual review.
+- **Disambiguation in mod manager:** When multiple similar names exist, the search UI shows a notice with download counts and publisher reputation.
+
+### Reputation System Integrity
+
+The Workshop reputation system (download count, average rating, dependency count, publish consistency, community reports) includes anti-gaming measures:
+
+- **Rate-limited reviews:** One review per account per package. Accounts must be >7 days old with at least one game session to leave reviews.
+- **Download deduplication:** Counts unique authenticated users, not raw download events. Anonymous downloads deduplicated by IP with a time window.
+- **Sockpuppet detection:** Burst of positive reviews from newly created accounts → flagged for moderator review. Review weight is proportional to reviewer account age and activity.
+- **Source repo verification (optional):** If a package links to a source repository, the publisher can verify push access to earn a "verified source" badge.
+
+### Abandoned Package Policy
+
+A published package is considered **abandoned** after 18+ months of inactivity AND no response to 3 maintainer contact attempts over 90 days.
+
+- **Archive-first default:** Abandoned packages are archived (still installable, marked "unmaintained" with a banner) rather than transferred.
+- **Transfer process:** Community can nominate a new maintainer. Requires moderator approval + 30-day public notice period. Original author can reclaim within 6 months.
+- **Published version immutability survives transfer.** New maintainer can publish new versions but cannot modify existing ones.
+
 ### Promotion & Maturity Channels
 
 Resources can be published to maturity channels, allowing staged releases:
@@ -1065,7 +1121,7 @@ Community Workshop servers can replicate from the official server (pull replicat
 Cargo-inspired version solving:
 
 - **Semver ranges:** `^1.2` (>=1.2.0, <2.0.0), `~1.2` (>=1.2.0, <1.3.0), `>=1.0, <3.0`, exact `=1.2.3`
-- **Lockfile:** `ic.lock` records exact resolved versions + SHA-256 checksums for reproducible installs
+- **Lockfile:** `ic.lock` records exact resolved versions + SHA-256 checksums for reproducible installs. In multi-source configurations, also records the **source identifier** per dependency (`source:publisher/package@version`) to prevent dependency confusion across federated sources (see `06-SECURITY.md` § Vulnerability 22).
 - **Transitive resolution:** If mod A depends on resource B which depends on resource C, all three are resolved
 - **Conflict detection:** Two dependencies requiring incompatible versions of the same resource → error with resolution suggestions
 - **Deduplication:** Same resource pulled by multiple dependents is stored once in local cache
@@ -1079,10 +1135,172 @@ ic mod install         # download all dependencies to local cache
 ic mod update          # update deps to latest compatible versions (respects semver)
 ic mod tree            # display dependency tree (like `cargo tree`)
 ic mod lock            # regenerate ic.lock from current mod.yaml
-ic mod audit           # check dependency licenses for compatibility
+ic mod audit           # check dependency licenses for compatibility + source confusion detection
+ic mod list             # list all local resources (state, size, last used, source)
+ic mod remove <pkg>     # remove resource from disk (dependency-aware, prompts for cascade)
+ic mod deactivate <pkg> # keep on disk but don't load (quick toggle without re-download)
+ic mod activate <pkg>   # re-enable a deactivated resource
+ic mod pin <pkg>        # mark as "keep" — exempt from auto-cleanup
+ic mod unpin <pkg>      # allow auto-cleanup (returns to transient state)
+ic mod clean            # remove all expired transient resources
+ic mod clean --dry-run  # show what would be cleaned without removing anything
+ic mod status           # disk usage summary: total, by category, by state, largest resources
 ```
 
 These extend the existing `ic` CLI (D020), not replace it. `ic mod publish` already exists — it now also uploads dependency metadata and validates license presence.
+
+### Local Resource Management
+
+Without active management, a player's disk fills with resources from lobby auto-downloads, one-off map packs, and abandoned mods. IC treats this as a first-class design problem — not an afterthought.
+
+**Resource lifecycle states:**
+
+Every local resource is in exactly one of these states:
+
+| State           | On disk? | Loaded by game? | Auto-cleanup eligible?                  | How to enter                                                                |
+| --------------- | -------- | --------------- | --------------------------------------- | --------------------------------------------------------------------------- |
+| **Pinned**      | Yes      | Yes             | No — stays until explicitly removed     | `ic mod install`, "Install" in Workshop UI, `ic mod pin`, or auto-promotion |
+| **Transient**   | Yes      | Yes             | Yes — after TTL expires                 | Lobby auto-download, transitive dependency of a transient resource          |
+| **Deactivated** | Yes      | No              | No — explicit state, player decides     | `ic mod deactivate` or toggle in UI                                         |
+| **Expiring**    | Yes      | Yes             | Yes — in grace period, deletion pending | Transient resource unused for `transient_ttl_days`                          |
+| **Removed**     | No       | No              | N/A                                     | `ic mod remove`, auto-cleanup, or player confirmation                       |
+
+**Pinned vs. Transient — the core distinction:**
+
+- **Pinned** resources are things the player explicitly chose: they clicked "Install," ran `ic mod install`, or marked a resource as "Keep." Pinned resources stay on disk forever until the player explicitly removes them. This is the default state for deliberate installations.
+- **Transient** resources arrived automatically — lobby auto-downloads, dependencies pulled transitively by other transient resources. They're fully functional (loaded, playable, seedable) but have a time-to-live. After `transient_ttl_days` without being used in a game session (default: 30 days), they enter the **Expiring** state.
+
+This distinction means a player who joins a modded lobby once doesn't accumulate permanent disk debt. The resources work for that session and stick around for a month in case the player returns to similar lobbies — then quietly clean up.
+
+**Auto-promotion:** If a transient resource is used in 3+ separate game sessions, it's automatically promoted to Pinned. A non-intrusive notification tells the player: "Kept alice/hd-sprites — you've used it in 5 matches." This preserves content the player clearly enjoys without requiring manual action.
+
+**Deactivation:**
+
+Deactivated resources stay on disk but aren't loaded by the game. Use cases:
+- Temporarily disable a heavy mod without losing it (and having to re-download 500 MB later)
+- Keep content available for quick re-activation (one click, no network)
+- Deactivated resources are still available as P2P seeds (configurable via `seed_deactivated` setting) since they're already integrity-verified
+
+Dependency-aware: deactivating a resource that others depend on offers: "bob/tank-skins depends on this. Deactivate both? [Both / Just this one / Cancel]". Deactivating "just this one" means dependents that reference it will show a missing-dependency warning in the mod manager.
+
+**Dependency-aware removal:**
+
+`ic mod remove alice/hd-sprites` checks the reverse dependency graph:
+- If nothing depends on it → remove immediately.
+- If bob/tank-skins depends on it → prompt: "bob/tank-skins depends on alice/hd-sprites. Remove both? [Yes / No / Remove only alice/hd-sprites and deactivate bob/tank-skins]"
+- `ic mod remove alice/hd-sprites --cascade` → removes the resource and all resources that become orphaned as a result (no explicit dependents left).
+- Orphan detection: after any removal, scan for resources with zero dependents and zero explicit install (not pinned by the player). These are cleanup candidates.
+
+**Storage budget and auto-cleanup:**
+
+```yaml
+# settings.yaml
+workshop:
+  cache_dir: "~/.ic/cache"
+  storage:
+    budget_gb: 10                   # max transient cache before auto-cleanup (0 = unlimited)
+    transient_ttl_days: 30          # days of non-use before transient resources expire
+    cleanup_prompt: "weekly"        # never | after-session | weekly | monthly
+    low_disk_warning_gb: 5          # warn when OS free space drops below this
+    seed_deactivated: false         # P2P seed deactivated (but verified) resources
+```
+
+- `budget_gb` applies to **transient** resources only. Pinned and deactivated resources don't count against the auto-cleanup budget (but are shown in disk usage summaries).
+- When transient cache exceeds `budget_gb`, the oldest (by last-used timestamp) transient resources are cleaned first — LRU eviction.
+- At 80% of budget, the content manager shows a gentle notice: "Workshop cache is 8.1 / 10 GB. [Clean up now] [Adjust budget]"
+- On low system disk space (below `low_disk_warning_gb`), cleanup suggestions become more prominent and include deactivated resources as candidates.
+
+**Post-session cleanup prompt:**
+
+After a game session that auto-downloaded resources, a non-intrusive toast appears:
+
+```
+ Downloaded 2 new resources for this match (47 MB).
+  alice/hd-sprites@2.0    38 MB
+  bob/desert-map@1.1       9 MB
+ [Pin (keep forever)]  [They'll auto-clean in 30 days]  [Remove now]
+```
+
+The default (clicking away or ignoring the toast) is "transient" — resources stay for 30 days then auto-clean. The player only needs to act if they want to explicitly keep or immediately remove. This is the low-friction path: do nothing = reasonable default.
+
+**Periodic cleanup prompt (configurable):**
+
+Based on `cleanup_prompt` setting:
+- `after-session`: prompt after every session that used transient resources
+- `weekly` (default): once per week if there are expiring transient resources
+- `monthly`: once per month
+- `never`: fully manual — player uses `ic mod clean` or the content manager
+
+The prompt shows total reclaimable space and a one-click "Clean all expired" button:
+
+```
+ Workshop cleanup: 3 resources unused for 30+ days (1.2 GB)
+  [Clean all]  [Review individually]  [Remind me later]
+```
+
+**In-game Local Content Manager:**
+
+Accessible from the Workshop tab → "My Content" (or a dedicated top-level menu item). This is the player's disk management dashboard:
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│  My Content                                        Storage: 6.2 GB │
+│  ┌──────────────────────────────────────────────────────────────┐ │
+│  │ Pinned: 4.1 GB (12 resources)                               │ │
+│  │ Transient: 1.8 GB (23 resources, 5 expiring soon)           │ │
+│  │ Deactivated: 0.3 GB (2 resources)                           │ │
+│  │ Budget: 1.8 / 10 GB transient    [Clean expired: 340 MB]    │ │
+│  └──────────────────────────────────────────────────────────────┘ │
+├──────────────────────────────────────────────────────────────────┤
+│  Filter: [All ▾]  [Any category ▾]  Sort: [Size ▾]  [Search…]  │
+├────────────────────┬──────┬───────┬───────────┬────────┬────────┤
+│ Resource           │ Size │ State │ Last Used │ Source │ Action │
+├────────────────────┼──────┼───────┼───────────┼────────┼────────┤
+│ alice/hd-sprites   │ 38MB │ 📌    │ 2 days ago│ Manual │ [···]  │
+│ bob/desert-map     │  9MB │ ⏳    │ 28 days   │ Lobby  │ [···]  │
+│ core/ra-balance    │  1MB │ 📌    │ today     │ Manual │ [···]  │
+│ dave/retro-sounds  │ 52MB │ 💤    │ 3 months  │ Manual │ [···]  │
+│ eve/snow-map       │  4MB │ ⏳⚠   │ 32 days   │ Lobby  │ [···]  │
+└────────────────────┴──────┴───────┴───────────┴────────┴────────┘
+│  📌 = Pinned  ⏳ = Transient  💤 = Deactivated  ⚠ = Expiring    │
+│  [Select all]  [Bulk: Pin | Deactivate | Remove]                │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+The `[···]` action menu per resource:
+- **Pin / Unpin** — toggle between pinned and transient
+- **Deactivate / Activate** — toggle loading without removing
+- **Remove** — delete from disk (dependency-aware prompt)
+- **View in Workshop** — open the Workshop page for this resource
+- **Show dependents** — what local resources depend on this one
+- **Show dependencies** — what this resource requires
+- **Open folder** — reveal the resource's cache directory in the file manager
+
+**Bulk operations:** Select multiple resources → Pin all, Deactivate all, Remove all. "Select all transient" and "Select all expiring" shortcuts for quick cleanup.
+
+**"What's using my disk?" view:** A treemap or bar chart showing disk usage by category (Maps, Mods, Resource Packs, Script Libraries) with the largest individual resources highlighted. Helps players identify space hogs quickly. Accessible from the storage summary at the top of the content manager.
+
+**Group operations:**
+
+- **Pin with dependencies:** `ic mod pin alice/total-conversion --with-deps` pins the resource AND all its transitive dependencies. Ensures the entire dependency tree is protected from auto-cleanup.
+- **Remove with orphans:** `ic mod remove alice/total-conversion --cascade` removes the resource and any dependencies that become orphaned (no other pinned or transient resource needs them).
+- **Modpack-aware:** Pinning a modpack (D030 § Modpacks) pins all resources in the modpack. Removing a modpack removes all resources that were only needed by that modpack.
+
+**How resources from different sources interact:**
+
+| Source                             | Default state             | Auto-cleanup?   |
+| ---------------------------------- | ------------------------- | --------------- |
+| `ic mod install` (explicit)        | Pinned                    | No              |
+| Workshop UI "Install" button       | Pinned                    | No              |
+| Lobby auto-download                | Transient                 | Yes (after TTL) |
+| Dependency of a pinned resource    | Pinned (inherited)        | No              |
+| Dependency of a transient resource | Transient (inherited)     | Yes             |
+| `ic workshop import-bundle`        | Pinned                    | No              |
+| Steam Workshop subscription        | Pinned (managed by Steam) | Steam handles   |
+
+**Edge case — mixed dependency state:** If resource C is a dependency of both pinned resource A and transient resource B: C is treated as pinned (strongest state wins). If A is later removed, C reverts to transient (inheriting from B). The state is always computed from the dependency graph, not stored independently for shared deps.
+
+**Phase:** Resource states (pinned/transient) and `ic mod remove/deactivate/clean/status` ship in Phase 4–5 with the Workshop. Storage budget and auto-cleanup prompts in Phase 5. In-game content manager UI in Phase 5–6a.
 
 ### Continuous Deployment
 
@@ -1257,7 +1475,9 @@ When a player joins a multiplayer lobby, the game automatically resolves and dow
 5. **Rejection option:** Player can decline to download and leave the lobby instead.
 6. **Size warning:** Downloads exceeding a configurable threshold (default 100MB) prompt confirmation before proceeding.
 
-This matches CS:GO/CS2's pattern where community maps download automatically when joining a server — zero friction for players. It also solves ArmA Reforger's most-cited community complaint about mod management friction. P2P delivery means lobby auto-download is fast (peers in the same lobby are direct seeds) and free (no CDN cost per join).
+This matches CS:GO/CS2's pattern where community maps download automatically when joining a server — zero friction for players. It also solves ArmA Reforger's most-cited community complaint about mod management friction. P2P delivery means lobby auto-download is fast (peers in the same lobby are direct seeds) and free (no CDN cost per join). See D052 § "In-Lobby P2P Resource Sharing" for the full lobby protocol: room discovery, host-as-tracker, security model, and verification flow.
+
+**Local resource lifecycle:** Resources downloaded this way are tagged as **transient** (not pinned). They remain fully functional but are subject to auto-cleanup after `transient_ttl_days` (default 30 days) of non-use. After the session, a non-intrusive toast offers: "[Pin (keep forever)] [They'll auto-clean in 30 days] [Remove now]". Frequently-used transient resources (3+ sessions) are automatically promoted to pinned. See D030 § "Local Resource Management" for the full lifecycle, storage budget, and cleanup UX.
 
 ### Creator Reputation System
 
@@ -6332,7 +6552,9 @@ ZIP was chosen over tar.gz because: random access to individual files (no full d
 4. **Seed:** Players who have downloaded a package automatically seed it to others (opt-out in settings). The more popular a resource, the faster it downloads — the opposite of CDN economics where popularity means higher cost.
 5. **Verify:** SHA-256 checksum validation on the complete package, regardless of download method. BitTorrent's built-in piece-level hashing provides additional integrity during transfer.
 
-**WebTorrent for browser builds (WASM):** Standard BitTorrent uses TCP/UDP, which browsers can't access. [WebTorrent](https://webtorrent.io/) extends the BitTorrent protocol over WebRTC, enabling browser-to-browser P2P. The Workshop server includes a WebTorrent tracker endpoint. Desktop clients and browser clients can interoperate — desktop seeds serve browser peers and vice versa through hybrid WebSocket/WebRTC bridges.
+**WebTorrent for browser builds (WASM):** Standard BitTorrent uses TCP/UDP, which browsers can't access. [WebTorrent](https://webtorrent.io/) extends the BitTorrent protocol over WebRTC, enabling browser-to-browser P2P. The Workshop server includes a WebTorrent tracker endpoint. Desktop clients and browser clients can interoperate — desktop seeds serve browser peers and vice versa through hybrid WebSocket/WebRTC bridges. **HTTP fallback is mandatory:** if WebTorrent signaling fails (signaling server down, WebRTC blocked), the client must fall back to direct HTTP download without user intervention. Multiple signaling servers are maintained for redundancy. Signaling servers only facilitate WebRTC negotiation — they never see package content, so even a compromised signaling server cannot serve tampered data (SHA-256 verification catches that).
+
+**Tracker authentication & token rotation:** P2P tracker access uses per-session tokens tied to client authentication (Workshop credentials or anonymous session token), not static URL secrets. Tokens rotate every release cycle. Even unauthorized peers joining a swarm cannot serve corrupt data (SHA-256 + piece hashing), but token rotation limits unauthorized swarm observation and bandwidth waste. See `06-SECURITY.md` for the broader security model.
 
 **Transport strategy by package size:**
 
@@ -6344,7 +6566,7 @@ ZIP was chosen over tar.gz because: random access to individual files (no full d
 
 Thresholds are configurable in `settings.yaml`. Players on connections where BitTorrent is throttled or blocked can force HTTP-only mode.
 
-**Auto-download on lobby join (D030 interaction):** When joining a lobby with missing resources, the client first attempts P2P download (likely fast, since other players in the lobby are already seeding). If the lobby timer is short or P2P is slow, falls back to HTTP. The lobby UI shows download progress with source indicators (P2P/HTTP).
+**Auto-download on lobby join (D030 interaction):** When joining a lobby with missing resources, the client first attempts P2P download (likely fast, since other players in the lobby are already seeding). If the lobby timer is short or P2P is slow, falls back to HTTP. The lobby UI shows download progress with source indicators (P2P/HTTP). See D052 § "In-Lobby P2P Resource Sharing" for the detailed lobby protocol, including host-as-tracker, verification against Workshop index, and security constraints.
 
 **Gaming industry precedent:**
 - **Blizzard (WoW, StarCraft 2, Diablo 3):** Used a custom P2P downloader ("Blizzard Downloader", later integrated into Battle.net) for game patches and updates from 2004–2016. Saved millions in CDN costs for multi-GB patches distributed to millions of players.
@@ -6403,7 +6625,7 @@ The Workshop doesn't rely solely on player altruism for seeding:
 
 The Workshop's P2P engine is informed by production experience from Uber Kraken (Apache 2.0, 6.6k★) and Dragonfly (Apache 2.0, CNCF Graduated). Kraken distributes 1M+ container images/day across 15K+ hosts using a custom BitTorrent-inspired protocol; Dragonfly uses centralized evaluator-based scheduling at Alibaba scale. IC adapts Kraken's connection management and Dragonfly's scoring insights for internet-scale game mod distribution. See `research/p2p-federated-registry-analysis.md` for full architectural analyses of both systems.
 
-> **Cross-pollination with IC netcode.** The Workshop P2P engine and IC's netcode infrastructure (relay server, tracking server — `03-NETCODE.md`) share deep structural parallels: federation, heartbeat/TTL, rate control, connection state machines, observability, deployment model. Patterns flow both directions — netcode's three-layer rate control and token-based liveness improve Workshop; Workshop's EWMA scoring and multi-dimensional peer evaluation improve relay server quality tracking. A full cross-pollination analysis (including shared infrastructure opportunities: unified server binary, federation library, auth/identity layer) is in `research/p2p-federated-registry-analysis.md` § "Netcode ↔ Workshop Cross-Pollination."
+> **Cross-pollination with IC netcode and community infrastructure.** The Workshop P2P engine and IC's netcode infrastructure (relay server, tracking server — `03-NETCODE.md`) share deep structural parallels: federation, heartbeat/TTL, rate control, connection state machines, observability, deployment model. Patterns flow both directions — netcode's three-layer rate control and token-based liveness improve Workshop; Workshop's EWMA scoring and multi-dimensional peer evaluation improve relay server quality tracking. A full cross-pollination analysis (including shared infrastructure opportunities: unified server binary, federation library, auth/identity layer) is in `research/p2p-federated-registry-analysis.md` § "Netcode ↔ Workshop Cross-Pollination." Additional cross-pollination with D052/D053 (community servers, player profiles, trust-based filtering) is catalogued in D052 § "Cross-Pollination" — highlights include: two-key architecture for index signing and publisher identity, trust-based source filtering, server-side validation as a shared invariant, and trust-verified peer selection scoring.
 
 *Peer selection policy (tracker-side):* The tracker returns a sorted peer list on each announce response. The sorting policy is **pluggable** — inspired by Kraken's `assignmentPolicy` interface pattern. IC's default policy prioritizes:
 
@@ -6445,6 +6667,7 @@ pending ──connect──► active ──timeout/error──► blacklisted
 
 - `MaxConnectionsPerPackage: 8` (lower than Kraken's 10 — residential connections have less bandwidth to share)
 - Blacklisting: peers that produce zero useful throughput over 30 seconds are temporarily blacklisted (5-minute cooldown). Catches both dead peers and ISP-throttled connections.
+- *Sybil resistance:* Maximum 3 peers per /24 subnet in a single swarm. Prefer peers from diverse autonomous systems (ASNs) when possible. Sybil attacks can waste bandwidth but cannot serve corrupt data (SHA-256 integrity), so the risk ceiling is low.
 - *Statistical degradation detection (Phase 5+):* Inspired by Dragonfly's `IsBadParent` algorithm — track per-peer piece transfer times. Peers whose last transfer exceeds `max(3 × mean, 2 × p95)` of observed transfer times are demoted in scoring (not hard-blacklisted — they may recover). For sparse data (< 50 samples per peer), fall back to the simpler "20× mean" ratio check. Hard blacklist remains only for zero-throughput (complete failure). This catches degrading peers before they fail completely.
 - Connections have TTL — idle connections are closed after 60 seconds to free resources.
 
@@ -6593,6 +6816,16 @@ workshop:
 3. GitHub Actions validates manifest format, checks SHA-256 against the download URL, verifies metadata
 4. Maintainers review and merge → package is discoverable to all players on next index fetch
 5. When the full Workshop server ships (Phase 4-5), published packages migrate automatically — the manifest format is the same
+
+**Git-index security hardening** (see `06-SECURITY.md` § Vulnerabilities 20–21 and `research/workshop-registry-vulnerability-analysis.md` for full threat analysis):
+
+- **Path-scoped PR validation:** CI rejects PRs that modify files outside the submitter's package directory. A PR adding `packages/alice/tanks/1.0.0.yaml` may ONLY modify files under `packages/alice/`. Modification of other paths → automatic CI failure.
+- **CODEOWNERS:** Maps `packages/alice/** @alice-github`. GitHub enforces that only the package owner can approve changes to their manifests.
+- **`manifest_hash` verification:** CI downloads the `.icpkg`, extracts `manifest.yaml`, computes its SHA-256, and verifies it matches the `manifest_hash` field in the index entry. Prevents manifest confusion (registry entry diverging from package contents).
+- **Consolidated `index.yaml` is CI-generated:** Deterministically rebuilt from per-package manifests — never hand-edited. Any contributor can reproduce locally to verify integrity.
+- **Index signing (Phase 3–4):** CI signs the consolidated `index.yaml` with an Ed25519 key stored outside GitHub. Clients verify the signature. Repository compromise without the signing key produces unsigned (rejected) indexes. Uses the **two-key architecture** from D052 (§ Key Lifecycle): the CI-held key is the Signing Key (SK); a Recovery Key (RK), held offline by ≥2 maintainers, enables key rotation on compromise without breaking client trust chains. See D052 § "Cross-Pollination" for the full rationale.
+- **Actions pinned to commit SHAs:** All GitHub Actions referenced by SHA, not by mutable tag. Minimal `GITHUB_TOKEN` permissions. No secrets in the PR validation pipeline.
+- **Branch protection on main:** Require signed commits, no force-push, require PR reviews, no single-person merge. Repository must have ≥3 maintainers.
 
 **Automated publish via `ic` CLI (same UX as Phase 5+):**
 
@@ -6821,15 +7054,15 @@ D050 is an architectural principle, not a deliverable with its own phase. It sha
 
 ---
 
-| ID   | Topic                                                                                 | Needs Resolution By |
-| ---- | ------------------------------------------------------------------------------------- | ------------------- |
-| P001 | ~~ECS crate choice~~ — RESOLVED: Bevy's built-in ECS                                  | Resolved            |
-| P002 | Fixed-point scale (256? 1024? match OpenRA's 1024?)                                   | Phase 2 start       |
-| P003 | Audio library choice + music integration design (see note below)                      | Phase 3 start       |
-| P004 | Lobby/matchmaking protocol specifics                                                  | Phase 5 start       |
-| P005 | ~~Map editor architecture~~ — RESOLVED: Scenario editor in SDK (D038+D040)            | Resolved            |
-| P006 | ~~License choice~~ — RESOLVED: GPL v3 with modding exception (D051)                   | Resolved            |
-| P007 | ~~Workshop: single source vs multi-source~~ — RESOLVED: Federated multi-source (D030) | Resolved            |
+| ID   | Topic                                                                                                                               | Needs Resolution By |
+| ---- | ----------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
+| P001 | ~~ECS crate choice~~ — RESOLVED: Bevy's built-in ECS                                                                                | Resolved            |
+| P002 | Fixed-point scale (256? 1024? match OpenRA's 1024?)                                                                                 | Phase 2 start       |
+| P003 | Audio library choice + music integration design (see note below)                                                                    | Phase 3 start       |
+| P004 | Lobby/matchmaking protocol specifics — PARTIALLY RESOLVED: architecture + lobby protocol defined (D052), wire format details remain | Phase 5 start       |
+| P005 | ~~Map editor architecture~~ — RESOLVED: Scenario editor in SDK (D038+D040)                                                          | Resolved            |
+| P006 | ~~License choice~~ — RESOLVED: GPL v3 with modding exception (D051)                                                                 | Resolved            |
+| P007 | ~~Workshop: single source vs multi-source~~ — RESOLVED: Federated multi-source (D030)                                               | Resolved            |
 
 ### P003 — Audio System Design Notes
 
@@ -6912,3 +7145,1712 @@ This exception uses GPL v3 § 7's "additional permissions" mechanism — the sam
 ### Phase
 
 Resolved. The LICENSE file ships with the GPL v3 text plus the modding exception header from Phase 0 onward.
+
+## D052: Community Servers with Portable Signed Credentials
+
+**Decision:** Multiplayer ranking, matchmaking, and competitive history are managed through **Community Servers** — self-hostable services that federate like Workshop sources (D030/D050). Player skill data is stored **locally** in a per-community SQLite credential file, with each record individually signed by the community server using Ed25519. The player presents the credential file when joining games; the server verifies its signature without needing to look up a central database. This is architecturally equivalent to JWT-style portable tokens, but uses a purpose-built binary format (**Signed Credential Records**, SCR) that eliminates the entire class of JWT vulnerabilities.
+
+**Rationale:**
+
+- **Server-side storage is expensive and fragile.** A traditional ranking server must store every player's rating, match history, and achievements — growing linearly with player count. A Community Server that only issues signed credentials can serve thousands of players from a $5/month VPS because it stores almost nothing. Player data lives on the player's machine (in SQLite, per D034).
+- **Federation is already the architecture.** D030/D050 proved that federated sources work for the Workshop. The same model works for multiplayer: players join communities like they subscribe to Workshop sources. Multiple communities coexist — an "Official IC" community, a clan community, a tournament community, a local LAN community. Each tracks its own independent rankings.
+- **Local-first matches the privacy design.** D042 already stores player behavioral profiles locally. D034 uses SQLite for all persistent state. Keeping credential files local is the natural extension — players own their data, carry it between machines, and decide who sees it.
+- **The relay server already certifies match results.** D007's relay architecture produces `CertifiedMatchResult` (relay-signed match outcomes). The community server receives these, computes rating updates, and signs new credential records. The trust chain is: relay certifies the match happened → community server certifies the rating change.
+- **Self-hosting is a core principle.** Any community can run its own server with its own ranking rules, its own matchmaking criteria, and its own competitive identity. The official IC community is just one of many, not a privileged singleton.
+
+### What Is a Community Server?
+
+A Community Server is a unified service endpoint that provides any combination of:
+
+| Capability                | Description                                     | Existing Design                                 |
+| ------------------------- | ----------------------------------------------- | ----------------------------------------------- |
+| **Workshop source**       | Hosts and distributes mods                      | D030 federation, D050 library                   |
+| **Game relay**            | Hosts multiplayer game sessions                 | D007 relay server                               |
+| **Ranking authority**     | Tracks player ratings, signs credential records | D041 `RankingProvider` trait, **this decision** |
+| **Matchmaking service**   | Matches players by skill, manages lobbies       | P004 (partially resolved by this decision)      |
+| **Achievement authority** | Signs achievement unlock records                | D036 achievement system                         |
+
+Operators enable/disable each capability independently. A small clan community might run only relay + ranking. A large competitive community runs everything. The official IC community runs all five. The `ic-server` binary (see D049 § "Netcode ↔ Workshop Cross-Pollination") bundles all capabilities into a single process with feature flags.
+
+### Signed Credential Records (SCR) — Not JWT
+
+Every player interaction with a community produces a **Signed Credential Record**: a compact binary blob signed by the community server's Ed25519 private key. These records are stored in the player's local SQLite credential file and presented to servers for verification.
+
+**Why not JWT?**
+
+JWT (RFC 7519) is the obvious choice for portable signed credentials, but it carries a decade of known vulnerabilities that IC deliberately avoids:
+
+| JWT Vulnerability                   | How It Works                                                                              | IC's SCR Design                                                                                                                            |
+| ----------------------------------- | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Algorithm confusion (CVE-2015-9235) | `alg` header tricks verifier into using wrong algorithm (e.g., RS256 key as HS256 secret) | **No algorithm field.** Always Ed25519. Hardcoded in verifier, not read from token.                                                        |
+| `alg: none` bypass                  | JWT spec allows unsigned tokens; broken implementations accept them                       | **No algorithm negotiation.** Signature always required, always Ed25519.                                                                   |
+| JWKS injection / `jku` redirect     | Attacker injects keys via URL-based key discovery endpoints                               | **No URL-based key discovery.** Community public key stored locally at join time. Key rotation uses signed rotation records.               |
+| Token replay                        | JWT has no built-in replay protection                                                     | **Monotonic sequence number** per player per record type. Old sequences rejected.                                                          |
+| No revocation                       | JWT valid until expiry; requires external blacklists                                      | **Sequence-based revocation.** "Revoke all sequences before N" = one integer per player. Tiny revocation list, not a full token blacklist. |
+| Payload bloat                       | Base64(JSON) is verbose. Large payloads inflate HTTP headers.                             | **Binary format.** No base64, no JSON. Typical record: ~200 bytes.                                                                         |
+| Signature stripping                 | Dot-separated `header.payload.signature` is trivially separable                           | **Opaque binary blob.** Signature embedded at fixed offset after payload.                                                                  |
+| JSON parsing ambiguity              | Duplicate keys, unicode escapes, number precision vary across parsers                     | **Not JSON.** Deterministic binary serialization. Zero parsing ambiguity.                                                                  |
+| Cross-service confusion             | JWT from Service A accepted by Service B                                                  | **Community key fingerprint embedded.** Record signed by Community A verifiably differs from Community B.                                  |
+| Weak key / HMAC secrets             | HS256 with short secrets is brute-forceable                                               | **Ed25519 only.** Asymmetric, 128-bit security level. No shared secrets.                                                                   |
+
+**SCR binary format:**
+
+```
+┌─────────────────────────────────────────────────────┐
+│  version          1 byte     (0x01)                 │
+│  record_type      1 byte     (rating|match|ach|rev|keyrot) │
+│  community_key    32 bytes   (Ed25519 public key)   │
+│  player_key       32 bytes   (Ed25519 public key)   │
+│  sequence         8 bytes    (u64 LE, monotonic)    │
+│  issued_at        8 bytes    (i64 LE, Unix seconds) │
+│  expires_at       8 bytes    (i64 LE, Unix seconds) │
+│  payload_len      4 bytes    (u32 LE)               │
+│  payload          variable   (record-type-specific)  │
+│  signature        64 bytes   (Ed25519)              │
+├─────────────────────────────────────────────────────┤
+│  Total: 158 + payload_len bytes                     │
+│  Signature covers: all bytes before signature       │
+└─────────────────────────────────────────────────────┘
+```
+
+- **`version`** — format version for forward compatibility. Start at 1. Version changes require reissuance.
+- **`record_type`** — `0x01` = rating snapshot, `0x02` = match result, `0x03` = achievement, `0x04` = revocation, `0x05` = key rotation.
+- **`community_key`** — the community server's Ed25519 public key. Binds the record to exactly one community. Verification uses this key.
+- **`player_key`** — the player's Ed25519 public key. This IS the player's identity within the community.
+- **`sequence`** — monotonic per-player counter. Each new record increments it. Revocation is "reject all sequences below N." This replaces JWT's lack of revocation with an O(1) check.
+- **`issued_at` / `expires_at`** — timestamps. Expired records require a server sync to refresh. Default expiry: 7 days for rating records, never for match/achievement records.
+- **`payload`** — record-type-specific binary data (see below).
+- **`signature`** — Ed25519 signature over all preceding bytes. Community server's private key never leaves the server.
+
+### Community Credential Store (SQLite)
+
+Each community a player belongs to gets a separate SQLite file in the player's data directory:
+
+```
+<data_dir>/communities/
+  ├── official-ic.db          # Official community
+  ├── clan-wolfpack.db        # Clan community
+  └── tournament-2026.db      # Tournament community
+```
+
+**Schema:**
+
+```sql
+-- Community identity (one row)
+CREATE TABLE community_info (
+    community_key   BLOB NOT NULL,     -- Current SK Ed25519 public key (32 bytes)
+    recovery_key    BLOB NOT NULL,     -- RK Ed25519 public key (32 bytes) — cached at join
+    community_name  TEXT NOT NULL,
+    server_url      TEXT NOT NULL,      -- Community server endpoint
+    key_fingerprint TEXT NOT NULL,      -- hex(SHA-256(community_key)[0..8])
+    rk_fingerprint  TEXT NOT NULL,      -- hex(SHA-256(recovery_key)[0..8])
+    sk_rotated_at   INTEGER,           -- when current SK was activated (null = original)
+    joined_at       INTEGER NOT NULL,   -- Unix timestamp
+    last_sync       INTEGER NOT NULL    -- Last successful server contact
+);
+
+-- Key rotation history (for audit trail and chain verification)
+CREATE TABLE key_rotations (
+    sequence        INTEGER PRIMARY KEY,
+    old_key         BLOB NOT NULL,     -- retired SK public key
+    new_key         BLOB NOT NULL,     -- replacement SK public key
+    signed_by       TEXT NOT NULL,     -- 'signing_key' or 'recovery_key'
+    reason          TEXT NOT NULL,     -- 'scheduled', 'migration', 'compromise', 'precautionary'
+    effective_at    INTEGER NOT NULL,  -- Unix timestamp
+    grace_until     INTEGER NOT NULL,  -- old key accepted until this time
+    rotation_record BLOB NOT NULL      -- full signed rotation record bytes
+);
+
+-- Player identity within this community (one row)
+CREATE TABLE player_info (
+    player_key      BLOB NOT NULL,     -- Ed25519 public key (32 bytes)
+    display_name    TEXT,
+    avatar_hash     TEXT,              -- SHA-256 of avatar image (for cache / fetch)
+    bio             TEXT,              -- short self-description (max 500 chars)
+    title           TEXT,              -- earned/selected title (e.g., "Iron Commander")
+    registered_at   INTEGER NOT NULL
+);
+
+-- Current ratings (latest signed snapshot per rating type)
+CREATE TABLE ratings (
+    game_module     TEXT NOT NULL,      -- 'ra', 'td', etc.
+    rating_type     TEXT NOT NULL,      -- algorithm_id() from RankingProvider
+    rating          INTEGER NOT NULL,   -- Fixed-point (e.g., 1500000 = 1500.000)
+    deviation       INTEGER NOT NULL,   -- Glicko-2 RD, fixed-point
+    volatility      INTEGER NOT NULL,   -- Glicko-2 σ, fixed-point
+    games_played    INTEGER NOT NULL,
+    sequence        INTEGER NOT NULL,
+    scr_blob        BLOB NOT NULL,      -- Full signed SCR
+    PRIMARY KEY (game_module, rating_type)
+);
+
+-- Match history (append-only, each row individually signed)
+CREATE TABLE matches (
+    match_id        BLOB PRIMARY KEY,   -- SHA-256 of match data
+    sequence        INTEGER NOT NULL,
+    played_at       INTEGER NOT NULL,
+    game_module     TEXT NOT NULL,
+    map_name        TEXT,
+    duration_ticks  INTEGER,
+    result          TEXT NOT NULL,       -- 'win', 'loss', 'draw', 'disconnect'
+    rating_before   INTEGER,
+    rating_after    INTEGER,
+    opponents       BLOB,               -- Serialized: [{key, name, rating}]
+    scr_blob        BLOB NOT NULL       -- Full signed SCR
+);
+
+-- Achievements (each individually signed)
+CREATE TABLE achievements (
+    achievement_id  TEXT NOT NULL,
+    game_module     TEXT NOT NULL,
+    unlocked_at     INTEGER NOT NULL,
+    match_id        BLOB,               -- Which match triggered it (nullable)
+    sequence        INTEGER NOT NULL,
+    scr_blob        BLOB NOT NULL,
+    PRIMARY KEY (achievement_id, game_module)
+);
+
+-- Revocation records (tiny — one per record type at most)
+CREATE TABLE revocations (
+    record_type         INTEGER NOT NULL,
+    min_valid_sequence  INTEGER NOT NULL,
+    scr_blob            BLOB NOT NULL,
+    PRIMARY KEY (record_type)
+);
+
+-- Indexes for common queries
+CREATE INDEX idx_matches_played_at ON matches(played_at DESC);
+CREATE INDEX idx_matches_module ON matches(game_module);
+```
+
+**What the Community Server stores vs. what the player stores:**
+
+| Data                     | Player's SQLite      | Community Server                           |
+| ------------------------ | -------------------- | ------------------------------------------ |
+| Player public key        | Yes                  | Yes (registered members list)              |
+| Current rating           | Yes (signed SCR)     | Optionally cached for matchmaking          |
+| Full match history       | Yes (signed SCRs)    | No — only recent results queue for signing |
+| Achievements             | Yes (signed SCRs)    | No                                         |
+| Revocation list          | Yes (signed SCRs)    | Yes (one integer per player per type)      |
+| Opponent profiles (D042) | Yes (local analysis) | No                                         |
+| Replay files             | Yes (local)          | No                                         |
+
+The community server's persistent storage is approximately: `(player_count × 32 bytes key) + (player_count × 8 bytes revocation)` = ~40 bytes per player. A community of 10,000 players needs ~400KB of server storage. The matchmaking cache adds more, but it's volatile (RAM only, rebuilt from player connections).
+
+### Verification Flow
+
+When a player joins a community game:
+
+```
+┌──────────┐                              ┌──────────────────┐
+│  Player  │  1. Connect + present        │  Community       │
+│          │     latest rating SCR  ────► │  Server          │
+│          │                              │                  │
+│          │  2. Verify:                  │  • Ed25519 sig ✓ │
+│          │     - signature valid?       │  • sequence ≥    │
+│          │     - community_key = ours?  │    min_valid? ✓  │
+│          │     - not expired?           │  • not expired ✓ │
+│          │     - sequence ≥ min_valid?  │                  │
+│          │                              │                  │
+│          │  3. Accept into matchmaking  │  Place in pool   │
+│          │     with verified rating ◄── │  at rating 1500  │
+│          │                              │                  │
+│          │  ... match plays out ...     │  Relay hosts game │
+│          │                              │                  │
+│          │  4. Match ends, relay        │  CertifiedMatch  │
+│          │     certifies result   ────► │  Result received │
+│          │                              │                  │
+│          │  5. Server computes rating   │  RankingProvider  │
+│          │     update, signs new SCRs   │  .update_ratings()│
+│          │                              │                  │
+│          │  6. Receive signed SCRs ◄──  │  New rating SCR  │
+│          │     Store in local SQLite    │  + match SCR     │
+└──────────┘                              └──────────────────┘
+```
+
+**Verification is O(1):** One Ed25519 signature check (fast — ~15,000 verifications/sec on modern hardware), one integer comparison (sequence ≥ min_valid), one timestamp comparison (expires_at > now). No database lookup required for the common case.
+
+**Expired credentials:** If a player's rating SCR has expired (default 7 days since last server sync), the server reissues a fresh SCR after verifying the player's identity (challenge-response with the player's Ed25519 private key). This prevents indefinitely using stale ratings.
+
+**New player flow:** First connection to a community → server generates initial rating SCR (Glicko-2 default: 1500 ± 350) → player stores it locally. No pre-existing data needed.
+
+**Offline play:** Local games and LAN matches can proceed without a community server. Results are unsigned. When the player reconnects, unsigned match data can optionally be submitted for retroactive signing (server decides whether to honor it — tournament communities may reject unsigned results).
+
+### Server-Side Validation: What the Community Server Signs and Why
+
+A critical question: why should a community server sign anything? What prevents a player from feeding the server fake data and getting a signed credential for a match they didn't play or a rating they didn't earn?
+
+**The answer: the community server never signs data it didn't produce or verify itself.** A player cannot walk up to the server with a claim ("I'm 1800 rated") and get it signed. Every signed credential is the server's own output — computed from inputs it trusts. This is analogous to a university signing a diploma: the university doesn't sign because the student claims they graduated. It signs because it has records of every class the student passed.
+
+Here is the full trust chain for every type of signed credential:
+
+**Rating SCRs — the server computes the rating, not the player:**
+
+```
+Player claims nothing about their rating. The flow is:
+
+1. Two players connect to the relay for a match.
+2. The relay (D007) forwards all orders between players (lockstep).
+3. The match ends. Both clients report the outcome to the relay.
+   - The relay requires BOTH clients to agree on the outcome
+     (winner, loser, draw, disconnection). If they disagree,
+     the relay flags the match as disputed and does not certify it.
+   - For additional integrity, the relay can optionally run a headless
+     sim (same deterministic code — Invariant #1) to independently
+     verify the outcome. This is expensive but available for ranked
+     matches on well-resourced servers.
+4. The relay produces a CertifiedMatchResult:
+   - Signed by the relay's own key
+   - Contains: player keys, game module, map, duration,
+     outcome (who won), order hashes, desync status
+5. The community server receives the CertifiedMatchResult.
+   - Verifies the relay signature (the community server trusts its
+     own relay — they're the same process in the bundled deployment,
+     or the operator explicitly configures which relay keys to trust).
+6. The community server feeds the CertifiedMatchResult into
+   RankingProvider::update_ratings() (D041).
+7. The RankingProvider computes new Glicko-2 ratings from the
+   match outcome + previous ratings.
+8. The community server signs the new rating as an SCR.
+9. The signed SCR is returned to both players.
+
+At no point does the player provide rating data to the server.
+The server computed the rating. The server signs its own computation.
+```
+
+**Match SCRs — the relay certifies the match happened:**
+
+The community server signs a match record SCR containing the match metadata (players, map, outcome, duration). This data comes from the `CertifiedMatchResult` which the relay produced. The server doesn't trust the player's claim about the match — it trusts the relay's attestation, because the relay was the network intermediary that observed every order in real time.
+
+**Achievement SCRs — verification depends on context:**
+
+Achievements are more nuanced because they can be earned in different contexts:
+
+| Context | How the server validates | Trust level |
+| --- | --- | --- |
+| **Multiplayer match** | Achievement condition cross-referenced with `CertifiedMatchResult` data. E.g., "Win 50 matches" — server counts its own signed match SCRs for this player. "Win under 5 minutes" — server checks match duration from the relay's certified result. | **High** — server validates against its own records |
+| **Multiplayer in-game** | Relay attests that the achievement trigger fired during a live match (the trigger is part of the deterministic sim, so the relay can verify by running headless). Alternatively, both clients attest the trigger fired (same as match outcome consensus). | **High** — relay-attested or consensus-verified |
+| **Single-player (online)** | Player submits a replay file. Community server can fast-forward the replay (deterministic sim) to verify the achievement condition was met. Expensive but possible. | **Medium** — replay-verified, but replay submission is voluntary |
+| **Single-player (offline)** | Player claims the achievement with no server involvement. When reconnecting, the claim can be submitted with the replay for retroactive verification. Community policy decides whether to accept: casual communities may accept on trust, competitive communities may require replay proof. | **Low** — self-reported unless replay-backed |
+
+The community server's policy for achievement signing is configurable per community:
+
+```rust
+pub enum AchievementPolicy {
+    /// Sign any achievement reported by the client (casual community).
+    TrustClient,
+    /// Sign only achievements backed by a CertifiedMatchResult
+    /// or relay attestation (competitive community).
+    RequireRelayAttestation,
+    /// Sign only if a replay is submitted and server-side verification
+    /// confirms the achievement condition (strictest, most expensive).
+    RequireReplayVerification,
+}
+```
+
+Most communities will use `RequireRelayAttestation` for multiplayer achievements and `TrustClient` for single-player achievements. The achievement SCR includes a `verification_level` field so viewers know how the achievement was validated.
+
+**Player registration — identity binding and Sybil resistance:**
+
+When a player first connects to a community, the community server must decide: should I register this person? What stops one person from creating 100 accounts to game the rating system?
+
+Registration is the one area where the community server does NOT have a relay to vouch for the data. The player is presenting themselves for the first time. The server's defenses are layered:
+
+**Layer 1 — Cryptographic identity (always):**
+
+The player presents their Ed25519 public key. The server challenges them to sign a nonce, proving they hold the private key. This establishes *key ownership*, not *personhood*. One person can generate infinite keypairs.
+
+**Layer 2 — Rate limiting (always):**
+
+The server rate-limits new registrations by IP address (e.g., max 3 new accounts per IP per day). This slows mass account creation without requiring any identity verification.
+
+**Layer 3 — Reputation bootstrapping (always):**
+
+New accounts start at the default rating (Glicko-2: 1500 ± 350) with zero match history. The high deviation (± 350) means the system is uncertain about their skill — it will adjust rapidly over the first ~20 matches. A smurf creating a new account to grief low-rated players will be rated out of the low bracket within a few matches.
+
+Fresh accounts carry no weight in the trust system (D053): they have no signed credentials, no community memberships, no achievement history. The "Verified only" lobby filter (D053 trust-based filtering) excludes players without established credential history — exactly the accounts a Sybil attacker would create.
+
+**Layer 4 — Platform binding (optional, configurable per community):**
+
+Community servers can require linking a platform account (Steam, GOG, etc.) at registration. This provides real Sybil resistance — Steam accounts have purchase history, play time, and cost money. The community server doesn't verify the platform directly (it's not a Steam partner). Instead, it asks the player's IC client to provide a platform-signed attestation of account ownership (e.g., a Steam Auth Session Ticket). The server verifies the ticket against the platform's public API.
+
+```rust
+pub enum RegistrationPolicy {
+    /// Anyone with a valid keypair can register. Lowest friction.
+    Open,
+    /// Require a valid platform account (Steam, GOG, etc.).
+    RequirePlatform(Vec<PlatformId>),
+    /// Require a vouching invite from an existing member.
+    RequireInvite,
+    /// Require solving a challenge (CAPTCHA, email verification, etc.).
+    RequireChallenge(ChallengeType),
+    /// Combination: e.g., platform OR invite.
+    AnyOf(Vec<RegistrationPolicy>),
+}
+```
+
+**Layer 5 — Community-specific policies (optional):**
+
+| Policy | Description | Use case |
+| --- | --- | --- |
+| **Email verification** | Player provides email, server sends confirmation link. One account per email. | Medium-security communities |
+| **Invite-only** | Existing members generate invite codes. New players must have a code. | Clan servers, private communities |
+| **Vouching** | An existing member in good standing (e.g., 100+ matches, no bans) vouches for the new player. If the new player cheats, the voucher's reputation is penalized too. | Competitive leagues |
+| **Probation period** | New accounts are marked "probationary" for their first N matches (e.g., 10). Probationary players can't play ranked, can't join "Verified only" rooms, and their achievements aren't signed until probation ends. | Balances accessibility with fraud prevention |
+
+These policies are **per-community**. The Official IC Community might use `RequirePlatform(Steam) + Probation(10 matches)`. A clan server uses `RequireInvite`. A casual LAN community uses `Open`. IC doesn't impose a single registration policy — it provides the building blocks and lets community operators assemble the policy that fits their community's threat model.
+
+**Summary — what the server validates before signing each SCR type:**
+
+| SCR Type | Server validates... | Trust anchor |
+| --- | --- | --- |
+| Rating | Computed by the server itself from relay-certified match results | Server's own computation |
+| Match result | Relay-signed `CertifiedMatchResult` (both clients agreed on outcome) | Relay attestation |
+| Achievement (MP) | Cross-referenced with match data or relay attestation | Relay + server records |
+| Achievement (SP) | Replay verification (if required by community policy) | Replay determinism |
+| Membership | Registration policy (platform binding, invite, challenge, etc.) | Community policy |
+
+The community server is **not** a rubber stamp. It is a **validation authority** that only signs credentials it can independently verify or that it computed itself. The player never provides the data that gets signed — the data comes from the relay, the ranking algorithm, or the community's own registration policy.
+
+### Matchmaking Design
+
+The community server's matchmaking uses verified ratings from presented SCRs:
+
+```rust
+/// Matchmaking pool entry — one per connected player seeking a game.
+pub struct MatchmakingEntry {
+    pub player_key: Ed25519PublicKey,
+    pub verified_rating: PlayerRating,    // From verified SCR
+    pub game_module: GameModuleId,        // What game they want to play
+    pub preferences: MatchPreferences,    // Map pool, team size, etc.
+    pub queue_time: Instant,              // When they started searching
+}
+
+/// Server-side matchmaking loop (simplified).
+fn matchmaking_tick(pool: &mut Vec<MatchmakingEntry>, provider: &dyn RankingProvider) {
+    // Sort by queue time (longest-waiting first)
+    pool.sort_by_key(|e| e.queue_time);
+    
+    for candidate_pair in pool.windows(2) {
+        let quality = provider.match_quality(
+            &[candidate_pair[0].verified_rating],
+            &[candidate_pair[1].verified_rating],
+        );
+        
+        if quality.fairness > FAIRNESS_THRESHOLD || queue_time_exceeded(candidate_pair) {
+            // Accept match — create lobby
+            create_lobby(candidate_pair);
+        }
+    }
+}
+```
+
+**Matchmaking widens over time:** Initial search window is tight (±100 rating). After 30 seconds, widens to ±200. After 60 seconds, ±400. After 120 seconds, accepts any match. This prevents indefinite queues for players at rating extremes.
+
+**Team games:** For 2v2+ matchmaking, the server balances team average ratings. Each player's SCR is individually verified. Team rating = average of individual Glicko-2 ratings.
+
+### Lobby & Room Discovery
+
+Matchmaking (above) handles competitive/ranked play. But most RTS games are casual — "join my friend's game," "let's play a LAN match," "come watch my stream and play." These need a room-based lobby with low-friction discovery. IC provides five discovery tiers, from zero-infrastructure to full game browser. Every tier works on every platform (desktop, browser, mobile — Invariant #10).
+
+**Tier 0 — Direct Connect (IP:port)**
+
+Always available, zero external dependency. Type an IP address and port, connect. Works on LAN, works over internet with port forwarding. This is the escape hatch — if every server is down, two players with IP addresses can still play.
+
+```
+ic play connect 192.168.1.42:7400
+```
+
+For P2P lockstep (no relay), the host IS the connection target. For relay-hosted games, this is the relay's address. No discovery mechanism needed — you already know where to go.
+
+**Tier 1 — Room Codes (Among Us pattern, decentralized)**
+
+When a host creates a room on any relay or community server, the server assigns a short alphanumeric code. Share it verbally, paste it in Discord, text it to a friend.
+
+```
+Room code: TKR-4N7
+```
+
+**Code format:**
+- 6 characters from an unambiguous set: `23456789ABCDEFGHJKMNPQRSTUVWXYZ` (30 chars, excludes 0/O, 1/I/L)
+- Displayed as `XXX-XXX` for readability
+- 30^6 ≈ 729 million combinations — more than enough
+- Case-insensitive input (the UI uppercases automatically)
+- Codes are ephemeral — exist only in server memory, expire when the room closes + 5-minute grace
+
+**Resolution:** Player enters the code in-game. The client queries all configured community servers in parallel (typically 1–3 HTTP requests). Whichever server recognizes the code responds with connection info (relay address + room ID + required resources). No central "code directory" — every community server manages its own code namespace. Collision across communities is fine because clients verify the code against the responding server.
+
+```
+ic play join TKR-4N7
+```
+
+**Why Among Us-style codes?** Among Us popularized this pattern because it works for exactly the scenario IC targets: you're in a voice call, someone says "join TKR-4N7," everyone types it in 3 seconds. No URLs, no IP addresses, no friend lists. The friction is nearly zero. For an RTS with 2–8 players, this is the sweet spot.
+
+**Tier 2 — QR Code**
+
+The host's client generates a QR code that encodes a deep link URI:
+
+```
+ironcurtain://join/community.example.com/TKR-4N7
+```
+
+Scanning the QR code opens the IC client (or the browser version on mobile) and auto-joins the room. Perfect for:
+
+- **LAN parties:** Display QR on the host's screen. Everyone scans with their phone/tablet to join via browser client.
+- **Couch co-op:** Scan from a phone to open the WASM browser client on a second device.
+- **Streaming:** Overlay QR on stream → viewers scan to join or spectate.
+- **In-person events / tournaments:** Print QR on table tents.
+
+The QR code is regenerated if the room code changes (e.g., room migrates to a different relay). The deep link URI scheme (`ironcurtain://`) is registered on desktop; on platforms without scheme registration, the QR can encode an HTTPS URL (`https://play.ironcurtain.gg/join/TKR-4N7`) that redirects to the client or browser version.
+
+**Tier 3 — Game Browser**
+
+Community servers publish their active rooms to a room listing API. The in-game browser aggregates listings from all configured communities — the same federation model as Workshop source aggregation.
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Game Browser                                    [Refresh]  │
+├──────────────┬──────┬─────────┬────────┬──────┬─────────────┤
+│ Room Name    │ Host │ Players │ Map    │ Ping │ Mods        │
+├──────────────┼──────┼─────────┼────────┼──────┼─────────────┤
+│ Casual 1v1   │ cmdr │ 1/2     │ Arena  │ 23ms │ none        │
+│ HD Mod Game  │ alice│ 3/4     │ Europe │ 45ms │ hd-pack 2.1 │
+│ Newbies Only │ bob  │ 2/6     │ Desert │ 67ms │ none        │
+└──────────────┴──────┴─────────┴────────┴──────┴─────────────┘
+```
+
+Filter by: game module (RA/TD), map, player count, ping, mods required, community, password protected. Sort by any column. Auto-refresh on configurable interval.
+
+This is the traditional server browser experience (OpenRA has this, Quake had this, every classic RTS had this). It coexists with room codes — a room visible in the browser also has a room code.
+
+**Tier 4 — Matchmaking Queue (D052)**
+
+Already designed above. Player enters a queue; community server matches by rating. This creates rooms automatically — the player never sees a room code or browser.
+
+**Tier 5 — Deep Links / Invites**
+
+The `ironcurtain://join/...` URI scheme works as a clickable link anywhere that supports URI schemes:
+
+- Discord: paste `ironcurtain://join/official.ironcurtain.gg/TKR-4N7` → click to join
+- Browser: HTTPS fallback URL redirects to client or opens browser WASM version
+- Steam: Steam rich presence integration → "Join Game" button on friend's profile
+- In-game friends list (if implemented): one-click invite sends a deep link
+
+**Discovery summary:**
+
+| Tier | Mechanism      | Requires Server?          | Best For                       | Friction             |
+| ---- | -------------- | ------------------------- | ------------------------------ | -------------------- |
+| 0    | Direct IP:port | No                        | LAN, development, fallback     | High (must know IP)  |
+| 1    | Room codes     | Yes (any relay/community) | Friends, voice chat, casual    | Very low (6 chars)   |
+| 2    | QR code        | Yes (same as room code)   | LAN parties, streaming, mobile | Near zero (scan)     |
+| 3    | Game browser   | Yes (community servers)   | Finding public games           | Low (browse + click) |
+| 4    | Matchmaking    | Yes (community server)    | Competitive/ranked             | Zero (press "Play")  |
+| 5    | Deep links     | Yes (same as room code)   | Discord, web, social           | Near zero (click)    |
+
+Tiers 0–2 work with a single self-hosted relay (a $5 VPS or even localhost). No official infrastructure required. Tiers 3–4 require community servers. Tier 5 requires URI scheme registration (desktop) or an HTTPS redirect service (browser).
+
+### Lobby Communication
+
+Once players are in a room, they need to communicate — coordinate strategy before the game, socialize, discuss map picks, or just talk. IC provides text chat, voice chat, and visible player identity in every lobby.
+
+**Text Chat**
+
+All lobby text messages are routed through the relay server (or host in P2P mode) — the same path as game orders. This keeps the trust model consistent: the relay timestamps and sequences messages, making chat moderation actions deterministic and auditable.
+
+```rust
+/// Lobby chat message — part of the room protocol, not the sim protocol.
+/// Routed through the relay alongside PlayerOrders but on a separate
+/// logical channel (not processed by ic-sim).
+pub struct LobbyMessage {
+    pub sender: PlayerId,
+    pub channel: ChatChannel,
+    pub content: String,         // UTF-8, max 500 bytes
+    pub timestamp: u64,          // relay-assigned, not client-claimed
+}
+
+pub enum ChatChannel {
+    All,                         // Everyone in the room sees it
+    Team(TeamId),                // Team-only (pre-game team selection)
+    Whisper(PlayerId),           // Private message to one player
+    System,                      // Join/leave/kick notifications (server-generated)
+}
+```
+
+**Chat features:**
+
+- **Rate limiting:** Max 5 messages per 3 seconds per player. Prevents spam flooding.
+- **Message length:** Max 500 bytes UTF-8. Long enough for tactical callouts, short enough to prevent wall-of-text abuse.
+- **Host moderation:** Room host can mute individual players (host sends a `MutePlayer` command; relay enforces). Muted players' messages are silently dropped by the relay — other clients never receive them.
+- **Persistent for room lifetime:** Chat history is available to newly joining players (last 50 messages). When the room closes, chat is discarded — no server-side chat logging.
+- **In-game chat:** During gameplay, the same chat system operates. `All` channel becomes `Spectator` for observers. `Team` channel carries strategic communication. A configurable `AllChat` toggle (default: disabled in ranked) controls whether opponents can see your messages during a match.
+- **Links and formatting:** URLs are clickable (opens external browser). No rich text — plain text only. This prevents injection attacks and keeps the UI simple.
+- **Emoji:** Standard Unicode emoji are rendered natively. No custom emoji system — keep it simple.
+- **Block list:** Players can block others locally. Blocked players' messages are filtered client-side (not server-enforced — the relay doesn't need to know your block list). Block persists across sessions in local SQLite (D034).
+
+**In-game chat UI:**
+
+```
+┌──────────────────────────────────────────────┐
+│ [All] [Team]                          [Hide] │
+├──────────────────────────────────────────────┤
+│ [SYS] alice joined the room                  │
+│ [cmdr] gg ready when you are                 │
+│ [alice] let's go desert map?                 │
+│ [bob] 👍                                      │
+│                                              │
+├──────────────────────────────────────────────┤
+│ [Type message...]                    [Send]  │
+└──────────────────────────────────────────────┘
+```
+
+The chat panel is collapsible (hotkey: Enter to open, Escape to close — standard RTS convention). During gameplay, it overlays transparently so it doesn't obscure the battlefield.
+
+**Voice Chat**
+
+IC includes built-in voice communication using WebRTC peer-to-peer audio. Voice data never touches the sim — it's a purely transport-layer feature with zero determinism impact.
+
+**Architecture:**
+
+```
+┌────────┐  WebRTC audio  ┌────────┐
+│Player A│◄──────────────►│Player B│
+│        │                │        │
+│        │  WebRTC audio  │        │
+│        │◄──────────────►│Player C│
+└────────┘                └────────┘
+     ▲                         ▲
+     │    Signaling only       │
+     └────── Relay Server ─────┘
+```
+
+- **Peer-to-peer audio:** Voice data flows directly between players via WebRTC (Opus codec, ~32 kbps per stream). The relay server handles only signaling (ICE candidate exchange, session negotiation) — it never processes audio data. This keeps relay costs minimal.
+- **TURN fallback:** For players behind strict NATs where P2P fails, the relay server can act as a TURN relay for voice. This adds bandwidth cost but ensures voice always works. Community server operators can disable TURN to save bandwidth.
+- **Push-to-talk (default):** RTS players need both hands on mouse/keyboard during games. Push-to-talk avoids accidental transmission of keyboard clatter, breathing, and background noise. Default keybind: `V`. Voice activation mode available in settings for players who prefer it.
+- **Per-player volume:** Each player's voice volume is adjustable independently (right-click their name in the player list → volume slider). Mute individual players with one click.
+- **Voice channels:** Mirror text chat channels — All, Team. During gameplay, voice defaults to Team-only to prevent leaking strategy to opponents. Spectators have their own voice channel.
+- **Codec:** Opus (standard WebRTC codec). 32 kbps mono is sufficient for clear voice in a game context. Total bandwidth for a full 8-player lobby: ~224 kbps (7 incoming streams × 32 kbps) — negligible compared to game traffic.
+- **Browser (WASM) support:** WebRTC is native to browsers, so voice chat works in the WASM build without additional libraries. Desktop builds use `webrtc-rs` or platform-native WebRTC bindings.
+
+**Voice UI indicators:**
+
+```
+┌────────────────────────┐
+│ Players:               │
+│  🔊 cmdr (host)   1800 │  ← speaking indicator
+│  🔇 alice         1650 │  ← muted by self
+│  🎤 bob           1520 │  ← has mic, not speaking
+│  📵 carol         ---- │  ← voice disabled
+└────────────────────────┘
+```
+
+Speaking indicators appear next to player names in the lobby and during gameplay (small icon on the player's color bar in the sidebar). This lets players see who's talking at a glance.
+
+**Privacy and safety:**
+
+- Voice is opt-in. Players can disable voice entirely in settings. The client never activates the microphone without explicit user action (push-to-talk press or voice activation toggle).
+- No voice recording by the relay or community server. Voice streams are ephemeral.
+- Abusive voice users can be muted by any player (locally) or by the host (server-enforced kick from voice channel).
+- Ranked/competitive rooms can enforce "no voice" or "team-voice-only" policies.
+
+**When external voice is better:** IC's built-in voice is designed for casual lobbies, LAN parties, and pickup games where players don't have a pre-existing Discord/TeamSpeak. Competitive teams will continue using external voice (lower latency, better quality, persistent channels). IC doesn't try to replace Discord — it provides a frictionless default for when Discord isn't set up.
+
+**Player Identity in Lobby**
+
+Every player in a lobby is visible with their profile identity — not just a text name. The lobby player list shows:
+
+- **Avatar:** Small profile image (32×32 in list, 64×64 on hover/click). Sourced from the player's profile (see D053).
+- **Display name:** The player's chosen name. If the player has a community-verified identity (D052 SCR), a small badge appears next to the name indicating which community verified them.
+- **Rating badge:** If the room is on a community server, the player's verified rating for the relevant game module is shown (from their presented SCR). Unranked players show "—".
+- **Presence indicators:** Microphone status, ready state, download progress (if syncing resources).
+
+Clicking a player's name in the lobby opens a **profile card** — a compact view of their player profile (D053) showing avatar, bio, recent achievements, win rate, and community memberships. This lets players gauge each other before a match without leaving the lobby.
+
+**Updated lobby UI with communication:**
+
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│  Room: TKR-4N7  —  Map: Desert Arena  —  RA1 Classic Balance       │
+├──────────────────────────────────┬───────────────────────────────────┤
+│  Players                         │  Chat [All ▾]                    │
+│  ┌──┐ 🔊 cmdr (host)   ⭐ 1800  │  [SYS] Room created              │
+│  │🎖│ Ready                      │  [cmdr] hey all, gg              │
+│  └──┘                            │  [alice] glhf!                   │
+│  ┌──┐ 🎤 alice         ⭐ 1650  │  [SYS] bob joined                │
+│  │👤│ Ready                      │  [bob] yo what map?              │
+│  └──┘                            │  [cmdr] desert arena, classic    │
+│  ┌──┐ 🎤 bob           ⭐ 1520  │  [bob] 👍                         │
+│  │👤│ ⬇️ Syncing 67%             │                                  │
+│  └──┘                            │                                  │
+│  ┌──┐ 📵 carol          ----    │                                  │
+│  │👤│ Connecting...              ├───────────────────────────────────┤
+│  └──┘                            │ [Type message...]        [Send]  │
+├──────────────────────────────────┴───────────────────────────────────┤
+│  Mods: alice/hd-sprites@2.0, bob/desert-map@1.1                     │
+│  [Settings]  [Invite]  [Start Game] (waiting for all players)       │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+The left panel shows players with avatars (small square icons), voice status, community rating badges, and ready state. The right panel is the chat. The layout adapts to screen size (D032 responsive UI) — on narrow screens, chat slides below the player list.
+
+**Phase:** Text chat ships with lobby implementation (Phase 5). Voice chat Phase 5–6a. Profile images in lobby require D053 (Player Profile, Phase 3–5).
+
+### In-Lobby P2P Resource Sharing
+
+When a player joins a room that requires resources (mods, maps, resource packs) they don't have locally, the lobby becomes a P2P swarm for those resources. The relay server (or host in P2P mode) acts as the tracker. This is the existing D049 P2P protocol scoped to a single lobby's resource list.
+
+**Flow:**
+
+```
+Host creates room
+  → declares required: [alice/hd-sprites@2.0, bob/desert-map@1.1]
+  → host seeds both resources
+
+Player joins room
+  → receives resource list with SHA-256 from Workshop index
+  → checks local cache: has alice/hd-sprites@2.0 ✓, missing bob/desert-map@1.1 ✗
+
+  → Step 1: Verify resource exists in a known Workshop source
+    Client fetches manifest for bob/desert-map@1.1 from Workshop index
+    (git-index HTTP fetch or Workshop server API)
+    Gets: SHA-256, manifest_hash, size, dependencies
+    If resource NOT in any configured Workshop source → REFUSE download
+    (prevents arbitrary file transfer — Workshop index is the trust anchor)
+
+  → Step 2: Join lobby resource swarm
+    Relay/host announces available peers for bob/desert-map@1.1
+    Download via BitTorrent protocol from:
+      Priority 1: Other lobby players who already have it (lowest latency)
+      Priority 2: Workshop P2P swarm (general seeders)
+      Priority 3: Workshop HTTP fallback (CDN/GitHub Releases)
+
+  → Step 3: Verify
+    SHA-256 of downloaded .icpkg matches Workshop index manifest ✓
+    manifest_hash of internal manifest.yaml matches index ✓
+    (Same verification chain as regular Workshop install — see V20)
+
+  → Step 4: Report ready
+    Client signals lobby: "all resources verified, ready to play"
+
+All players ready → countdown → game starts
+```
+
+**Lobby UI during resource sync:**
+
+```
+┌────────────────────────────────────────────────┐
+│  Room: TKR-4N7  —  Waiting for players...      │
+├────────────────────────────────────────────────┤
+│  ✅ cmdr (host)     Ready                       │
+│  ✅ alice           Ready                        │
+│  ⬇️ bob             Downloading 2/3 resources   │
+│     └─ bob/desert-map@1.1  [████░░░░] 67%  P2P │
+│     └─ alice/hd-dialog@1.0 [██████░░] 82%  P2P │
+│  ⏳ carol           Connecting...                │
+├────────────────────────────────────────────────┤
+│  Required: alice/hd-sprites@2.0, bob/desert-    │
+│  map@1.1, alice/hd-dialog@1.0                   │
+│  [Start Game]  (waiting for all players)        │
+└────────────────────────────────────────────────┘
+```
+
+**The host-as-tracker model:**
+
+For relay-hosted games (the default), the relay IS the tracker — it already manages all connections in the room. It maintains an in-memory peer table: which players have which resources. When a new player joins and needs resources, the relay tells them which peers can seed. This is trivial — a `HashMap<ResourceId, Vec<PeerId>>` that lives only as long as the room exists.
+
+For P2P games (no relay, LAN): the host's game client runs a minimal tracker. Same data structure, same protocol, just embedded in the game client instead of a separate relay process. The host was already acting as the game's connection coordinator — adding resource tracking is marginal.
+
+**Security model — preventing malicious content transfer:**
+
+The critical constraint: **only Workshop-published resources can be shared in a lobby.** The lobby declares resources by their Workshop identity (`publisher/package@version`), not by arbitrary file paths. The security chain:
+
+1. **Workshop index is the trust anchor.** Every resource has a SHA-256 and `manifest_hash` recorded in a Workshop index (git-index with signed commits or Workshop server API). The client must be able to look up the resource in a known Workshop source before downloading.
+2. **Content verification is mandatory.** After download, the client verifies SHA-256 (full package) and `manifest_hash` (internal manifest) against the Workshop index — not against the host's claim. Even if every other player in the lobby is malicious, a single honest Workshop index protects the downloading player.
+3. **Unknown resources are refused.** If a room requires `evil/malware@1.0` and that doesn't exist in any Workshop source the player has configured, the client refuses to download and warns: "Resource not found in any configured Workshop source. Add the community's Workshop source or leave the lobby."
+4. **No arbitrary file transfer.** The P2P protocol only transfers `.icpkg` archives that match Workshop-published checksums. There is no mechanism for peers to push arbitrary files — the protocol is pull-only and content-addressed.
+5. **Mod sandbox limits blast radius.** Even a resource that passes all integrity checks is still subject to WASM capability sandbox (D005), Lua execution limits (D004), and YAML schema validation (D003). A malicious mod that sneaks past Workshop review can at most affect gameplay within its declared capabilities.
+6. **Post-install scanning (Phase 6a+).** When a resource is auto-downloaded in a lobby, the client checks for Workshop security advisories (V18) before loading it. If the resource version has a known advisory → warn the player before proceeding.
+
+**What about custom maps not on the Workshop?**
+
+For early phases (before Workshop exists) or for truly private content: the host can share a map file by embedding it in the room's initial payload (small maps are <1MB). The receiving client:
+- Must explicitly accept ("Host wants to share a custom map not published on Workshop. Accept? [Yes/No]")
+- The file is verified for format validity (must parse as a valid IC map) but has no Workshop-grade integrity chain
+- These maps are quarantined (loaded but not added to the player's Workshop cache)
+- This is the "developer/testing" escape hatch — not the normal flow
+
+This escape hatch is disabled by default in competitive/ranked rooms (community servers can enforce "Workshop-only" policies).
+
+**Bandwidth and timing:**
+
+The lobby applies D049's `lobby-urgent` priority tier — auto-downloads preempt background Workshop activity and get full available bandwidth. Combined with the lobby swarm (host + ready players all seeding), typical resource downloads complete in seconds for common mods (<50MB). The download timer can be configured per-community: tournament servers might set a 60-second download window, casual rooms wait indefinitely.
+
+If a player's download is too slow (configurable threshold, e.g., 5 minutes), the lobby UI offers: "Download taking too long. [Keep waiting] [Download in background and spectate] [Leave lobby]".
+
+**Local resource lifecycle:** Resources downloaded via lobby P2P are tagged as **transient** (not pinned). They remain fully functional but auto-clean after `transient_ttl_days` (default 30 days) of non-use. After the session, a post-match toast offers: "[Pin] [Auto-clean in 30 days] [Remove now]". Frequently-used lobby resources (3+ sessions) are automatically promoted to pinned. See D030 § "Local Resource Management" for the full lifecycle.
+
+Default: **Glicko-2** (already specified in D041 as `Glicko2Provider`).
+
+Why Glicko-2 over alternatives:
+- **Rating deviation** naturally models uncertainty. New players have wide confidence intervals (RD ~350); experienced players have narrow ones (RD ~50). Matchmaking can use RD to avoid matching a highly uncertain new player against a stable veteran.
+- **Inactivity decay:** RD increases over time without play. A player who hasn't played in months is correctly modeled as "uncertain" — their first few games back will move their rating significantly, then stabilize.
+- **Open and unpatented.** TrueSkill (Microsoft) and TrueSkill 2 are patented. Glicko-2 is published freely by Mark Glickman.
+- **Lichess uses it.** Proven at scale in a competitive community with similar dynamics (skill-based 1v1 with occasional team play).
+- **RankingProvider trait (D041)** makes this swappable. Communities that want Elo, or a league/tier system, or a custom algorithm, implement the trait.
+
+**Rating storage in SCR payload** (record_type = 0x01, rating snapshot):
+
+```
+rating payload:
+  game_module_len   1 byte
+  game_module       variable (UTF-8)
+  algorithm_id_len  1 byte
+  algorithm_id      variable (UTF-8, e.g., "glicko2")
+  rating            8 bytes (i64 LE, fixed-point × 1000)
+  deviation         8 bytes (i64 LE, fixed-point × 1000)
+  volatility        8 bytes (i64 LE, fixed-point × 1000000)
+  games_played      4 bytes (u32 LE)
+  wins              4 bytes (u32 LE)
+  losses            4 bytes (u32 LE)
+  draws             4 bytes (u32 LE)
+  streak_current    2 bytes (i16 LE, positive = win streak)
+  rank_position     4 bytes (u32 LE, 0 = unranked)
+  percentile        2 bytes (u16 LE, 0-1000 = 0.0%-100.0%)
+```
+
+### Key Lifecycle
+
+#### Key Identification
+
+Every Ed25519 public key — player or community — has a **key fingerprint** for human reference:
+
+```
+Fingerprint = SHA-256(public_key)[0..8], displayed as 16 hex chars
+Example:     3f7a2b91e4d08c56
+```
+
+The fingerprint is a display convenience. Internally, the full 32-byte public key is the canonical identifier (stored in SCRs, credential tables, etc.). Fingerprints appear in the UI for key verification dialogs, rotation notices, and trust management screens.
+
+Why 8 bytes (64 bits) instead of GPG-style 4-byte short IDs? GPG short key IDs (32 bits) famously suffered birthday-attack collisions — an attacker could generate a key with the same 4-byte fingerprint in minutes. 8 bytes requires ~2^32 key generations to find a collision — far beyond practical for the hobbyist community operators IC targets. For cryptographic operations, the full 32-byte key is always used; the fingerprint is only for human eyeball verification.
+
+#### Player Keys
+
+- Generated on first community join. Ed25519 keypair stored encrypted (AEAD with user passphrase) in the player's local config.
+- The same keypair CAN be reused across communities (simpler) or the player CAN generate per-community keypairs (more private). Player's choice in settings.
+- Key recovery: if the player loses their keypair, they can re-register with the community (new key = new player with fresh rating). This is intentional — key loss resets reputation, preventing key selling.
+- **Key export:** `ic player export-key --encrypted` exports the keypair as an encrypted file (AEAD, user passphrase). This is the player's backup. The UI nags once ("Back up your player key? You'll need it if you switch computers.") and never again.
+
+#### Community Keys: Two-Key Architecture
+
+Every community server has **two** Ed25519 keypairs, inspired by DNSSEC's Zone Signing Key (ZSK) / Key Signing Key (KSK) pattern:
+
+| Key | Purpose | Storage | Usage Frequency |
+| --- | --- | --- | --- |
+| **Signing Key (SK)** | Signs all day-to-day SCRs (ratings, matches, achievements) | On the server, encrypted at rest | Every match result, every rating update |
+| **Recovery Key (RK)** | Signs key rotation records and emergency revocations only | **Offline** — operator saves it, never stored on the server | Rare: only for key rotation or compromise recovery |
+
+**Why two keys?** A single-key system has a catastrophic failure mode: if the key is lost, the community dies (no way to rotate to a new key). If the key is stolen, the attacker can forge credentials *and* the operator can't prove they're the real owner (both parties have the same key). The two-key pattern solves both:
+- **Key loss:** Operator uses the RK (stored offline) to sign a rotation to a new SK. Community survives.
+- **Key theft:** Operator uses the RK to revoke the compromised SK and rotate to a new one. Attacker has the SK but not the RK, so they can't forge rotation records. Community recovers.
+- **Both lost:** Nuclear option — community is dead, players re-register. But losing both requires extraordinary negligence (the RK was specifically generated for offline backup).
+
+This is the same pattern used by DNSSEC (ZSK + KSK), hardware security modules (operational key + root key), cryptocurrency validators (signing key + withdrawal key), and Certificate Authorities (intermediate + root certificates).
+
+**Key generation flow:**
+
+```
+$ ic community init --name "Clan Wolfpack" --url "https://wolfpack.example.com"
+
+  Generating community Signing Key (SK)...
+  SK fingerprint: 3f7a2b91e4d08c56
+  SK stored encrypted at: /etc/ironcurtain/server/signing-key.enc
+
+  Generating community Recovery Key (RK)...
+  RK fingerprint: 9c4d17e3f28a6b05
+
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  SAVE YOUR RECOVERY KEY NOW                                 ║
+  ║                                                             ║
+  ║  This key will NOT be stored on the server.                 ║
+  ║  You need it to recover if your signing key is lost or      ║
+  ║  stolen. Without it, a lost key means your community dies.  ║
+  ║                                                             ║
+  ║  Recovery Key (base64):                                     ║
+  ║  rk-ed25519:MC4CAQAwBQYDK2VwBCIEIGXu5Mw8N3...             ║
+  ║                                                             ║
+  ║  Options:                                                   ║
+  ║    1. Copy to clipboard                                     ║
+  ║    2. Save to encrypted file                                ║
+  ║    3. Display QR code (for paper backup)                    ║
+  ║                                                             ║
+  ║  Store it in a password manager, a safe, or a USB drive     ║
+  ║  in a drawer. Treat it like a master password.              ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  [1/2/3/I saved it, continue]: 
+```
+
+The RK private key is shown exactly once during `ic community init`. The server stores only the RK's *public* key (so clients can verify rotation records signed by the RK). The RK private key is never written to disk by the server.
+
+**Key backup and retrieval:**
+
+| Operation | Command | What It Does |
+| --- | --- | --- |
+| Export SK (encrypted) | `ic community export-signing-key` | Exports the SK private key in an encrypted file (AEAD, operator passphrase). For backup or server migration. |
+| Import SK | `ic community import-signing-key <file>` | Restores the SK from an encrypted export. For server migration or disaster recovery. |
+| Rotate SK (voluntary) | `ic community rotate-signing-key` | Generates a new SK, signs a rotation record with the old SK: "old_SK → new_SK". Graceful, no disruption. |
+| Emergency rotation (SK lost/stolen) | `ic community emergency-rotate --recovery-key <rk>` | Generates a new SK, signs a rotation record with the RK: "RK revokes old_SK, authorizes new_SK". The only operation that uses the RK. |
+| Regenerate RK | `ic community regenerate-recovery-key --recovery-key <old_rk>` | Generates a new RK, signs a rotation record: "old_RK → new_RK". The old RK authorizes the new one. |
+
+#### Key Rotation (Voluntary)
+
+Good security hygiene is to rotate signing keys periodically — not because Ed25519 keys weaken over time, but to limit the blast radius of an undetected compromise. IC makes voluntary rotation seamless:
+
+1. Operator runs `ic community rotate-signing-key`.
+2. Server generates a new SK keypair.
+3. Server signs a **key rotation record** with the OLD SK:
+
+```rust
+pub struct KeyRotationRecord {
+    pub record_type: u8,          // 0x05 = key rotation
+    pub old_key: [u8; 32],        // SK being retired
+    pub new_key: [u8; 32],        // replacement SK
+    pub signed_by: KeyRole,       // SK (voluntary) or RK (emergency)
+    pub reason: RotationReason,
+    pub effective_at: i64,        // Unix timestamp
+    pub old_key_valid_until: i64, // grace period end (default: +30 days)
+    pub signature: [u8; 64],      // signed by old_key or recovery_key
+}
+
+pub enum KeyRole {
+    SigningKey,    // voluntary rotation — signed by old SK
+    RecoveryKey,   // emergency rotation — signed by RK
+}
+
+pub enum RotationReason {
+    Scheduled,         // periodic rotation (good hygiene)
+    ServerMigration,   // moving to new hardware
+    Compromise,        // SK compromised, emergency revocation
+    PrecautionaryRevoke, // SK might be compromised, revoking as precaution
+}
+```
+
+4. Server starts signing new SCRs with the new SK immediately.
+5. Clients encountering the rotation record verify it (against the old SK for voluntary rotation, or against the RK for emergency rotation).
+6. Clients update their stored community key.
+7. **Grace period (30 days default):** During the grace period, clients accept SCRs signed by EITHER the old or new SK. This handles players who cached credentials signed by the old key and haven't synced yet.
+8. After the grace period, only the new SK is accepted.
+
+#### Key Compromise Recovery
+
+If a community operator discovers (or suspects) their SK has been compromised:
+
+1. **Immediate response:** Run `ic community emergency-rotate --recovery-key <rk>`.
+2. Server generates a new SK.
+3. Server signs an **emergency rotation record** with the **Recovery Key**:
+   - `signed_by: RecoveryKey`
+   - `reason: Compromise` (or `PrecautionaryRevoke`)
+   - `old_key_valid_until: now` (no grace period for compromised keys — immediate revocation)
+4. Clients encountering this record verify it against the RK public key (cached since community join).
+5. **Compromise window SCRs:** SCRs issued between the compromise and the rotation are potentially forged. The rotation record includes the `effective_at` timestamp. Clients can flag SCRs signed by the old key after this timestamp as "potentially compromised" (⚠️ in the UI). SCRs signed before the compromise window remain valid — the key was legitimate when they were issued.
+6. **Attacker is locked out:** The attacker has the old SK but not the RK. They cannot forge rotation records, so clients who receive the legitimate RK-signed rotation will reject the attacker's old-SK-signed SCRs going forward.
+
+**What about third-party compromise reports?** ("Someone told me community X's key was stolen.")
+
+IC does **not** support third-party key revocation. Only the RK holder can revoke an SK. This is the same model as PGP — only the key owner can issue a revocation certificate. If you suspect a community's key is compromised but they haven't rotated:
+- Remove them from your trusted communities list (D053). This is your defense.
+- Contact the community operator out-of-band (Discord, email, their website) to alert them.
+- The community appears as ⚠️ Untrusted in profiles of players who removed them.
+
+Central revocation authorities (CRLs, OCSP) require central infrastructure — exactly what IC's federated model avoids. The tradeoff is that compromise propagation depends on the operator's responsiveness. This is acceptable: IC communities are run by the same people who already manage Discord servers, game servers, and community websites. They're reachable.
+
+#### Key Expiry Policy
+
+**Community keys (SK and RK) do NOT expire.** This is an explicit design choice.
+
+Arguments for expiry (and why they don't apply):
+
+| Argument | Counterpoint |
+| --- | --- |
+| "Limits damage from silent compromise" | SCRs already have per-record `expires_at` (7 days default for ratings). A silently compromised key can only forge SCRs that expire in a week. Voluntary key rotation provides the same benefit without forced expiry. |
+| "Forces rotation hygiene" | IC's community operators are hobbyists running $5 VPSes. Forced expiry creates an operational burden that causes more harm (communities dying from forgotten renewal) than good. Let rotation be voluntary. |
+| "TLS certs expire" | TLS operates in a CA trust model with automated renewal (ACME/Let's Encrypt). IC has no CA and no automated renewal infrastructure. The analogy doesn't hold. |
+| "What if the operator disappears?" | SCR `expires_at` handles this naturally. If the server goes offline, rating SCRs expire within 7 days and become un-refreshable. The community dies gracefully — players' old match/achievement SCRs (which have `expires_at: never`) remain verifiable, but ratings go stale. No key expiry needed. |
+
+The correct analogy is SSH host keys (never expire, TOFU model) and PGP keys (no forced expiry, voluntary rotation or revocation), not TLS certificates.
+
+**However, IC nudges operators toward good hygiene:**
+- The server logs a warning if the SK hasn't been rotated in 12 months: "Consider rotating your signing key. Run `ic community rotate-signing-key`." This is a reminder, not an enforcement.
+- The client shows a subtle indicator if a community's SK is older than 24 months: small 🕐 icon next to the community name. This is informational, not blocking.
+
+#### Client-Side Key Storage
+
+When a player joins a community, the client receives and caches both public keys:
+
+```sql
+-- In the community credential store (community_info table)
+CREATE TABLE community_info (
+    community_key       BLOB NOT NULL,     -- Current SK public key (32 bytes)
+    recovery_key        BLOB NOT NULL,     -- RK public key (32 bytes) — cached at join
+    community_name      TEXT NOT NULL,
+    server_url          TEXT NOT NULL,
+    key_fingerprint     TEXT NOT NULL,     -- hex(SHA-256(community_key)[0..8])
+    rk_fingerprint      TEXT NOT NULL,     -- hex(SHA-256(recovery_key)[0..8])
+    sk_rotated_at       INTEGER,           -- when current SK was activated
+    joined_at           INTEGER NOT NULL,
+    last_sync           INTEGER NOT NULL
+);
+
+-- Key rotation history (for audit trail)
+CREATE TABLE key_rotations (
+    sequence        INTEGER PRIMARY KEY,
+    old_key         BLOB NOT NULL,         -- retired SK public key
+    new_key         BLOB NOT NULL,         -- replacement SK public key
+    signed_by       TEXT NOT NULL,         -- 'signing_key' or 'recovery_key'
+    reason          TEXT NOT NULL,
+    effective_at    INTEGER NOT NULL,
+    grace_until     INTEGER NOT NULL,      -- old key accepted until this time
+    rotation_record BLOB NOT NULL          -- full signed rotation record bytes
+);
+```
+
+The `key_rotations` table provides an audit trail: the client can verify the entire chain of key rotations from the original key (cached at join time) to the current key. This means even if a client was offline for months and missed several rotations, they can verify the chain: "original_SK → SK2 (signed by original_SK) → SK3 (signed by SK2) → current_SK (signed by SK3)." If any link in the chain breaks, the client alerts the user.
+
+#### Revocation (Player-Level)
+
+- The community server signs a revocation record: `(record_type, min_valid_sequence, signature)`.
+- Clients encountering a revocation update their local `revocations` table.
+- Verification checks: `scr.sequence >= revocations[scr.record_type].min_valid_sequence`.
+- Use case: player caught cheating → server issues revocation for all their records below a new sequence → player's cached credentials become unverifiable → they must re-authenticate, and the server can refuse.
+
+Revocations are distinct from key rotations. Revocations invalidate a specific player's credentials. Key rotations replace the community's signing key. Both use signed records; they solve different problems.
+
+#### Summary: Failure Mode Comparison
+
+| Scenario | Single-Key System | IC Two-Key System |
+| --- | --- | --- |
+| SK lost, operator has no backup | Community dead. All credentials permanently unverifiable. Players start over. | Operator uses RK to rotate to new SK. Community survives. All existing SCRs remain valid. |
+| SK stolen | Attacker can forge credentials AND operator can't prove legitimacy (both hold same key). Community dead. | Operator uses RK to revoke stolen SK, rotate to new SK. Attacker locked out. Community recovers. |
+| SK stolen + operator doesn't notice for weeks | Unlimited forgery window. No recovery. | SCR `expires_at` limits forgery to 7-day windows. RK-signed rotation locks out attacker retroactively. |
+| Both SK and RK lost | — | Community dead. But this requires losing both an online server key AND an offline backup. Extraordinary negligence. |
+| RK stolen (but SK is fine) | — | No immediate impact — RK isn't used for day-to-day operations. Operator should regenerate RK immediately: `ic community regenerate-recovery-key`. |
+
+### Cross-Community Interoperability
+
+Communities are independent ranking domains — a 1500 rating on "Official IC" means nothing on "Clan Wolfpack." This is intentional: different communities can run different game modules, balance presets (D019), and matchmaking rules.
+
+**However, portable proofs are useful:**
+- "I have 500+ matches on the official community" — provable by presenting signed match SCRs.
+- "I achieved 'Iron Curtain' achievement on Official IC" — provable by presenting the signed achievement SCR.
+- A tournament community can require "minimum 50 rated matches on any community with verifiable SCRs" as an entry requirement.
+
+**Leaderboards:**
+- Each community maintains its own leaderboard, compiled from the rating SCRs it has issued.
+- The community server caches current ratings (in RAM or SQLite) for leaderboard display.
+- Players can view their own full match history locally (from their SQLite credential file) without server involvement.
+
+### Community Server Operational Requirements
+
+| Metric                                              | Estimate                                                                            |
+| --------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| Storage per player                                  | ~40 bytes persistent (key + revocation). ~200 bytes cached (rating for matchmaking) |
+| Storage for 10,000 players                          | ~2.3 MB                                                                             |
+| RAM for matchmaking (1,000 concurrent)              | ~200 KB                                                                             |
+| CPU per match result signing                        | ~1ms (Ed25519 sign is ~60μs; rest is rating computation)                            |
+| Bandwidth per match result                          | ~500 bytes (2 SCRs returned: rating + match)                                        |
+| Monthly VPS cost (small community, <1000 players)   | $5–10                                                                               |
+| Monthly VPS cost (large community, 10,000+ players) | $20–50                                                                              |
+
+This is cheaper than any centralized ranking service. Operating a community is within reach of a single motivated community member — the same people who already run OpenRA servers and Discord bots.
+
+### Relationship to Existing Decisions
+
+- **D007 (Relay server):** The relay produces `CertifiedMatchResult` — the input to rating computation. A Community Server bundles relay + ranking in one process.
+- **D030/D050 (Workshop federation):** Community Servers federate like Workshop sources. `settings.yaml` lists communities the same way it lists Workshop sources.
+- **D034 (SQLite):** The credential file IS SQLite. The community server's small state IS SQLite.
+- **D036 (Achievements):** Achievement records are SCRs stored in the credential file. The community server is the signing authority.
+- **D041 (RankingProvider trait):** Matchmaking uses `RankingProvider` implementations. Community operators choose their algorithm.
+- **D042 (Player profiles):** Behavioral profiles remain local-only (D042). The credential file holds signed competitive data (ratings, matches, achievements). They complement each other: D042 = private local analytics, D052 = portable signed reputation.
+- **P004 (Lobby/matchmaking):** This decision partially resolves P004. Room discovery (5 tiers), lobby P2P resource sharing, and matchmaking are now designed. The remaining Phase 5 work is wire format specifics (message framing, serialization, state machine transitions).
+
+### Alternatives Considered
+
+- **Centralized ranking database** (rejected — expensive to host, single point of failure, doesn't match IC's federation model, violates local-first privacy principle)
+- **JWT for credentials** (rejected — algorithm confusion attacks, `alg: none` bypass, JSON parsing ambiguity, no built-in replay protection, no built-in revocation. See comparison table above)
+- **Blockchain/DLT for rankings** (rejected — massively overcomplicated for this use case, environmental concerns, no benefit over Ed25519 signed records)
+- **Web-of-trust (players sign each other's match results)** (rejected — Sybil attacks trivially game this; a trusted community server as signing authority is simpler and more resistant)
+- **PASETO (Platform-Agnostic Security Tokens)** (considered — fixes many JWT flaws, mandates modern algorithms. Rejected because: still JSON-based, still has header/payload/footer structure that invites parsing issues, and IC's binary SCR format is more compact and purpose-built. PASETO is good; SCR is better for this niche.)
+
+### Phase
+
+Community Server infrastructure ships in **Phase 5** (Multiplayer & Competitive, Months 20–26). The SCR format and credential SQLite schema are defined early (Phase 2) to support local testing with mock community servers.
+
+- **Phase 2:** SCR format crate, local credential store, mock community server for testing.
+- **Phase 5:** Full community server (relay + ranking + matchmaking + achievement signing). `ic community join/leave/status` CLI commands. In-game community browser.
+- **Phase 6a:** Federation between communities. Community discovery. Cross-community credential presentation. Community reputation.
+
+### Cross-Pollination: Lessons Flowing Between D052/D053, Workshop, and Netcode
+
+The work on community servers, trust chains, and player profiles produced patterns that strengthen Workshop and netcode designs — and vice versa. This section catalogues the cross-system lessons beyond the four shared infrastructure opportunities already documented in D049 (unified `ic-server` binary, federation library, auth/identity layer, EWMA scoring).
+
+#### D052/D053 → Workshop (D030/D049/D050)
+
+**1. Two-key architecture for Workshop index signing.**
+
+The Workshop's git-index security (D049) plans a single Ed25519 key for signing `index.yaml`. That's the same single-point-of-failure the two-key architecture (§ Key Lifecycle above) was designed to eliminate. CI pipeline compromise is one of the most common supply-chain attack vectors (SolarWinds, Codecov, ua-parser-js). The SK+RK pattern maps directly:
+
+- **Index Signing Key (SK):** Held by CI, used to sign every `index.yaml` build. Rotated periodically or on compromise.
+- **Index Recovery Key (RK):** Held offline by ≥2 project maintainers (threshold signing or independent copies). Used solely to sign a `KeyRotationRecord` that re-anchors trust to a new SK.
+
+If CI is compromised, the attacker gets SK but not RK. Maintainers rotate via RK — clients that verify the rotation chain continue trusting the index. Without two-key, CI compromise means either (a) the attacker signs malicious indexes indefinitely, or (b) the project mints a new key and every client must manually re-trust it. The rotation chain avoids both.
+
+**2. Publisher two-key identity.**
+
+Individual mod publishers currently authenticate via GitHub account (Phase 0–3) or Workshop server credentials (Phase 4+). If alice's account is compromised, her packages can be poisoned. The two-key pattern extends to publishers:
+
+- **Publisher Signing Key (SK):** Used to sign each `.icpkg` manifest on publish. Stored on the publisher's development machine.
+- **Publisher Recovery Key (RK):** Generated at first publish. Stored offline (e.g., USB key, password manager). Used only to rotate the SK if compromised.
+
+Clients that cache alice's public key can verify her packages remain authentic through key rotations. The `KeyRotationRecord` struct from D052 is reusable — same format, same verification logic, different context. This also enables package pinning: `ic mod pin alice/tanks --key <fingerprint>` refuses installs signed by any other key, even if alice's Workshop account is hijacked.
+
+**3. Trust-based Workshop source filtering.**
+
+D053's `TrustRequirement` model (None / AnyCommunityVerified / SpecificCommunities) maps to Workshop sources. Currently, `settings.yaml` implicitly trusts all configured sources equally. Applying D053's trust tiers:
+
+- **Trusted source:** `ic mod install` proceeds silently.
+- **Known source:** Install proceeds with an informational note.
+- **Unknown source:** `ic mod install` warns and requires `--allow-untrusted` flag (or interactive confirmation).
+
+This is the same UX pattern as the game browser trust badges — ✅/⚠️/❌ — applied to the `ic` CLI and in-game mod browser. When a dependency chain pulls a package from an untrusted source, the solver surfaces this clearly before proceeding.
+
+**4. Server-side validation principle as shared invariant.**
+
+D052's explicit principle — "never sign data you didn't produce or verify" — should be a shared invariant across all IC server components. For the Workshop server, this means:
+
+- Never accept a publish without verifying: SHA-256 matches, manifest is valid YAML, version doesn't already exist, publisher key matches the namespace, no path traversal in file entries.
+- Never sign a package listing without recomputing checksums from the stored `.icpkg`.
+- Workshop server attestation: a `CertifiedPublishResult` (analogous to the relay's `CertifiedMatchResult`) signed by the server, proving the publish was validated. Stored in the publisher's local credential file — portable proof that "this package was accepted by Workshop server X at time T."
+
+**5. Registration policies → Workshop publisher policies.**
+
+D052's `RegistrationPolicy` enum (Open / RequirePlatform / RequireInvite / RequireChallenge / AnyOf) maps to Workshop publisher onboarding. A community-hosted Workshop server can configure who may publish:
+
+- `Open` — anyone can publish (appropriate for experimental/testing servers)
+- `RequirePlatform` — must have a linked Steam/platform account
+- `RequireInvite` — existing publisher must vouch (prevents spam/typosquat floods)
+
+This is already implicit in the git-index phase (GitHub account = identity), but should be explicit in the Workshop server design for Phase 4+.
+
+#### D052/D053 → Netcode (D007/D003)
+
+**6. Relay server two-key pattern.**
+
+Relay servers produce signed `CertifiedMatchResult` records — the trust anchor for all competitive data. If a relay's signing key leaks, all match results are forgeable. Same SK+RK solution: relay operators generate a signing key (used by the running relay binary) and a recovery key (stored offline). On compromise, the operator rotates via RK without invalidating the community's entire match history.
+
+Currently D052 says a community server "trusts its own relay" — but this trust should be cryptographically verifiable: the community server knows the relay's public key (registered in `community_info`), and the `CertifiedMatchResult` carries the relay's signature. Key rotation propagates through the same `KeyRotationRecord` chain.
+
+**7. Trust-verified P2P peer selection.**
+
+D049's P2P peer scoring selects peers by capacity, locality, seed status, and lobby context. D053's trust model adds a fifth dimension: when downloading mods from lobby peers, prefer peers with verified profiles from trusted communities. A verified player is less likely to serve malicious content (Sybil nodes have no community history). The scoring formula gains an optional trust component:
+
+```
+PeerScore = Capacity(0.35) + Locality(0.25) + SeedStatus(0.2) + Trust(0.1) + LobbyContext(0.1)
+```
+
+Trust scoring: verified by a trusted community = 1.0, verified by any community = 0.5, unverified = 0. This is opt-in — communities that don't care about trust verification keep the original 4-factor formula.
+
+#### Workshop/Netcode → D052/D053
+
+**8. Profile fetch rate control.**
+
+Netcode uses three-layer rate control (per-connection, per-IP, global). Profile fetching in lobbies is susceptible to the same abuse patterns — a malicious client could spam profile requests to exhaust server bandwidth or enumerate player data. The same rate-control architecture applies: per-IP rate limits on profile fetch requests, exponential backoff on repeated fetches of the same profile, and a TTL cache that makes duplicate requests a local cache hit.
+
+**9. Content integrity hashing for composite profiles.**
+
+The Workshop uses SHA-256 checksums plus `manifest_hash` for double verification. When a player assembles their composite profile (identity + SCRs from multiple communities), the assembled profile can include a composite hash — enabling cache invalidation without re-fetching every individual SCR. When a profile is requested, the server returns the composite hash first; if it matches the cached version, no further transfer is needed. This is the same "content-addressed fetch" pattern the Workshop uses for `.icpkg` files.
+
+**10. EWMA scoring for community member standing.**
+
+The Workshop's EWMA (Exponentially Weighted Moving Average) peer scoring — already identified as shared infrastructure in D049 — has a concrete consumer in D052/D053: community member standing. A community server can track per-member quality signals (connection stability, disconnect rate, desync frequency, report count) using time-decaying EWMA scores. Recent behavior weighs more than ancient history. This feeds into matchmaking preferences (D052) and the profile's community standing display (D053) without requiring a separate scoring system.
+
+#### Shared pattern: key management as reusable infrastructure
+
+The two-key architecture now appears in three contexts: community servers, relay servers, and Workshop (index + publishers). This suggests extracting it as a shared `ic-crypto` module (or section of `ic-protocol`) that provides:
+
+- `SigningKeypair` + `RecoveryKeypair` generation
+- `KeyRotationRecord` creation and chain verification
+- Fingerprint computation and display formatting
+- Common serialization for the rotation chain
+
+All three consumers use Ed25519, the same rotation record format, and the same verification logic. The only difference is context (what the key signs). This is a Phase 2 deliverable — the crypto primitives must exist before community servers, relays, or Workshop servers use them.
+
+---
+
+## D053 — Player Profile System
+
+|                |                                                                                                                                         |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| **Status**     | Accepted                                                                                                                                |
+| **Driver**     | Players need a persistent identity, social presence, and reputation display across lobbies, game browser, and community participation   |
+| **Depends on** | D034 (SQLite), D036 (Achievements), D042 (Behavioral Profiles), D046 (Premium Content), D050 (Workshop), D052 (Community Servers & SCR) |
+
+### Problem
+
+Players in multiplayer games are more than a text name. They need to express their identity, showcase achievements, verify reputation, and build social connections. Without a proper profile system, lobbies feel anonymous and impersonal — players can't distinguish veterans from newcomers, can't build persistent friendships, and can't verify who they're playing against. Every major gaming platform (Steam, Xbox Live, PlayStation Network, Battle.net, Riot Games, Discord) has learned this: **profiles are the social foundation of a gaming community.**
+
+IC has a unique advantage: the Signed Credential Record (SCR) system from D052 means player reputation data (ratings, match counts, achievements) is **cryptographically verified and portable**. No other game has unforgeable, cross-community reputation badges. D053 builds the user-facing system that displays and manages this identity.
+
+### Design Principles
+
+Drawn from analysis of Steam, Xbox Live, PSN, Riot Games, Blizzard Battle.net, Discord, and OpenRA:
+
+1. **Identity expression without vanity bloat.** Players should personalize their presence (avatar, name, bio) but the system shouldn't become a cosmetic storefront that distracts from gameplay. Keep it clean and functional.
+2. **Reputation is earned, not claimed.** Ratings, achievements, and match counts come from signed SCRs — not self-reported. If a player claims to be 1800-rated, their profile proves (or disproves) it.
+3. **Privacy by default.** Every profile field has visibility controls. Players choose exactly what they share and with whom. Local behavioral data (D042) is never exposed in profiles.
+4. **Portable across communities.** A player's profile works on any community server they join. Community-specific data (ratings, achievements) is signed by that community. Cross-community viewing shows aggregated identity with per-community verification badges.
+5. **Offline-first.** The profile is stored locally in SQLite (D034). Community-signed data is cached in the local credential store (D052). No server connection needed to view your own profile. Others' profiles are fetched and cached on first encounter.
+6. **Platform-integrated where possible.** On Steam, friends lists and presence come from Steam's API via `PlatformServices`. On standalone builds, IC provides its own social graph backed by community servers. Both paths converge at the same profile UI.
+
+### Profile Structure
+
+A player profile contains these sections, each with its own visibility controls:
+
+**1. Identity Core**
+
+| Field         | Description                                                             | Source                                    | Max Size                |
+| ------------- | ----------------------------------------------------------------------- | ----------------------------------------- | ----------------------- |
+| Display Name  | Primary visible name                                                    | Player-set, locally stored                | 32 chars                |
+| Avatar        | Profile image                                                           | Pre-built gallery or custom upload        | 128×128 PNG, max 64 KB  |
+| Banner        | Profile background image                                                | Pre-built gallery or custom upload        | 600×200 PNG, max 128 KB |
+| Bio           | Short self-description                                                  | Player-written                            | 500 chars               |
+| Player Title  | Earned or selected title (e.g., "Iron Commander", "Mammoth Enthusiast") | Achievement reward or community grant     | 48 chars                |
+| Faction Crest | Preferred faction emblem (displayed on profile card)                    | Player-selected from game module factions | Enum per game module    |
+
+**Display names** are not globally unique. Uniqueness is per-community (the community server enforces its own name policy). In a lobby, players are identified by `display_name + community_badge` or `display_name + player_key_prefix` when no community is shared. This matches how Discord handles names post-2023 (display names are cosmetic, uniqueness is contextual).
+
+**Avatar system:**
+
+- **Pre-built gallery:** Ships with ~60 avatars extracted from C&C unit portraits, faction emblems, and structure icons (using game assets the player already owns — loaded by `ra-formats`, not distributed by IC). Each game module contributes its own set.
+- **Custom upload:** Players can set any 128×128 PNG image (max 64 KB) as their avatar. The image is stored in the local profile. When joining a lobby, only the SHA-256 hash is transmitted (32 bytes). Other clients fetch the actual image on demand from the player (via the relay, same channel as P2P resource sharing from D052). Fetched avatars are cached locally.
+- **Content moderation:** Custom avatars are not moderated by IC (no central server to moderate). Community servers can optionally enforce "gallery-only avatars" as a room policy. Players can report abusive avatars to community moderators via the same mechanism used for reporting cheaters (D052 revocation).
+- **Hash-based deduplication:** Two players using the same custom avatar send the same hash. The image is fetched once and shared from cache. This also means pre-built gallery avatars never need network transfer — both clients have them locally.
+
+```rust
+pub struct PlayerAvatar {
+    pub source: AvatarSource,
+    pub hash: [u8; 32],          // SHA-256 of the PNG data
+}
+
+pub enum AvatarSource {
+    Gallery { module: GameModuleId, index: u16 },  // Pre-built
+    Custom,                                          // Player-uploaded PNG
+}
+```
+
+**2. Achievement Showcase**
+
+Players can **pin up to 6 achievements** to their profile from their D036 achievement collection. Pinned achievements appear prominently on the profile card and in lobby hover tooltips.
+
+```
+┌──────────────────────────────────────────────────────┐
+│ ★ Achievements (3 pinned / 47 total)                 │
+│  🏆 Iron Curtain           Survived 100 Ion Cannons  │
+│  🎖️ Desert Fox             Win 50 Desert maps        │
+│  ⚡ Blitz Commander         Win under 5 minutes       │
+│                                                      │
+│  [View All Achievements →]                           │
+└──────────────────────────────────────────────────────┘
+```
+
+- Pinned achievements are verified: each has a backing SCR from the relevant community. Viewers can inspect the credential (signed by community X, earned on date Y).
+- Achievement rarity is shown when viewing the full achievement list: "Earned by 12% of players on this community."
+- Mod-defined achievements (D036) appear in the profile just like built-in ones — they're all SCRs.
+
+**3. Statistics Card**
+
+A summary of the player's competitive record, sourced from verified SCRs (D052). Statistics are **per-community, per-game-module** — a player might be 1800 in RA1 on Official IC but 1400 in TD on Clan Wolfpack.
+
+```
+┌──────────────────────────────────────────────────────┐
+│ 📊 Statistics — Official IC Community (RA1)          │
+│                                                      │
+│  Rating:    1823 ± 45 (Glicko-2)     Peak: 1891     │
+│  Matches:   342 played  |  W: 198  L: 131  D: 13    │
+│  Win Rate:  57.9%                                    │
+│  Streak:    W4 (current)  |  Best: W11               │
+│  Playtime:  ~412 hours                               │
+│  Faction:   67% Soviet  |  28% Allied  |  5% Random  │
+│                                                      │
+│  [Match History →]  [Rating Graph →]                 │
+│  [Switch Community ▾]  [Switch Game Module ▾]        │
+└──────────────────────────────────────────────────────┘
+```
+
+- **Rating graph:** Visual chart showing rating over time (last 50 matches). Rendered client-side from match SCR timestamps and rating deltas.
+- **Faction distribution:** Calculated from match SCRs. Displayed as a simple bar or pie.
+- **Playtime:** Estimated from match durations in local match history. Approximate — not a verified claim.
+- **Win streak:** Current and best, calculated client-side from match SCRs.
+- All numbers come from signed credential records. If a player presents a 1800 rating badge, the viewer's client cryptographically verifies it against the community's public key. **Fake ratings are mathematically impossible.**
+- **Verification badge:** Each stat line shows which community signed it and whether the viewer's client successfully verified the signature. A ✅ means "signature valid, community key recognized." A ⚠️ means "signature valid, but community key not in your trusted list." A ❌ means "signature verification failed — possible tampering." This is visible in the detailed stats view, not the compact tooltip (to avoid visual clutter).
+- **Inspect credential:** Any SCR-backed number in the profile is clickable. Clicking opens a verification detail panel showing: signing community name + public key fingerprint, SCR sequence number, signature timestamp, raw signed payload (hex-encoded), and verification result. This is the blockchain-style "prove it" button — except it's just Ed25519 signatures, no blockchain needed.
+
+**4. Match History**
+
+Scrollable list of recent matches, each showing:
+
+| Field                     | Source                                |
+| ------------------------- | ------------------------------------- |
+| Date & time               | Match SCR timestamp                   |
+| Map name                  | Match SCR metadata                    |
+| Players                   | Match SCR participant list            |
+| Result (Win/Loss/Draw)    | Match SCR outcome                     |
+| Rating change (+/- delta) | Computed from consecutive rating SCRs |
+| Replay link               | Local replay file if available        |
+
+Match history is stored locally (from the player's credential SQLite file). Community servers do not host full match histories — they only issue rating/match SCRs. This is consistent with the local-first principle.
+
+**5. Friends & Social**
+
+IC supports two complementary friend systems:
+
+- **Platform friends (Steam, GOG, etc.):** Retrieved via `PlatformServices::friends_list()`. These are the player's existing social graph — no IC-specific action needed. Platform friends appear in the in-game friends list automatically. Presence information (online, in-game, in-lobby) is synced bidirectionally with the platform.
+- **IC friends (community-based):** Players can add friends within a community by mutual friend request. Stored in the local credential file as a bidirectional relationship. Friend list is per-community (friend on Official IC ≠ friend on Clan Wolfpack), but the UI merges all community friends into one unified list with community labels.
+
+```rust
+/// Stored in local SQLite — not a signed credential.
+/// Friendships are social bookmarks, not reputation data.
+pub struct FriendEntry {
+    pub player_key: [u8; 32],
+    pub display_name: String,         // cached, may be stale
+    pub community: CommunityId,       // where the friendship was made
+    pub added_at: u64,
+    pub notes: Option<String>,        // private label (e.g., "met in tournament")
+}
+```
+
+**Friends list UI:**
+
+```
+┌──────────────────────────────────────────────────────┐
+│ 👥 Friends (8 online / 23 total)                     │
+│                                                      │
+│  🟢 alice          In Lobby — Desert Arena    [Join] │
+│  🟢 cmdrzod        In Game — RA1 1v1          [Spec] │
+│  🟡 bob            Away (15m)                        │
+│  🟢 carol          Online — Main Menu         [Inv]  │
+│  ─── Offline ───                                     │
+│  ⚫ dave           Last seen: 2 days ago             │
+│  ⚫ eve            Last seen: 1 week ago             │
+│                                                      │
+│  [Add Friend]  [Pending (2)]  [Blocked (1)]          │
+└──────────────────────────────────────────────────────┘
+```
+
+- **Presence states:** Online, In Game, In Lobby, Away, Invisible, Offline. Synced through the community server (lightweight heartbeat), or through `PlatformServices::set_presence()` on Steam/GOG/etc.
+- **Join/Spectate/Invite:** One-click actions from the friends list. "Join" puts you in their lobby. "Spec" joins as spectator if the match is in progress and allows it. "Invite" sends a lobby invite.
+- **Friend requests:** Mutual-consent only. Player A sends request, Player B accepts or declines. No one-sided "following" (this prevents stalking).
+- **Block list:** Blocked players are hidden from the friends list, their chat messages are filtered client-side (see Lobby Communication in D052), and they cannot send friend requests. Blocks are local-only — the blocked player is not notified.
+- **Notes:** Private per-friend notes visible only to you. Useful for remembering context ("great teammate", "met at tournament").
+
+**6. Community Memberships**
+
+Players can be members of multiple communities (D052). The profile displays which communities they belong to, with verification badges:
+
+```
+┌──────────────────────────────────────────────────────┐
+│ 🏛️ Communities                                       │
+│                                                      │
+│  ✅ Official IC Community     Member since 2027-01   │
+│     Rating: 1823 (RA1)  |  342 matches               │
+│  ✅ Clan Wolfpack             Member since 2027-03   │
+│     Rating: 1456 (TD)   |  87 matches                │
+│  ✅ RA Competitive League     Member since 2027-06   │
+│     Tournament rank: #12                              │
+│                                                      │
+│  [Join Community...]                                 │
+└──────────────────────────────────────────────────────┘
+```
+
+Each community membership is backed by a signed credential — the ✅ badge means the viewer's client verified the SCR signature against the community's public key. This is IC's differentiator: **community memberships are cryptographically proven, not self-claimed.** When viewing another player's profile, you can see exactly which communities vouch for them and their verified standing in each.
+
+**Signed Profile Summary ("proof sheet")**
+
+When viewing another player's full profile, a **Verification Summary** panel shows every community that has signed data for this player, what they've signed, and whether the signatures check out:
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│ 🔒 Profile Verification Summary                                 │
+│                                                                  │
+│  Community                Signed Data             Status         │
+│  ─────────────────────────────────────────────────────────       │
+│  Official IC Community    Rating (1823, RA1)      ✅ Verified    │
+│                           342 matches             ✅ Verified    │
+│                           23 achievements         ✅ Verified    │
+│                           Member since 2027-01    ✅ Verified    │
+│  Clan Wolfpack            Rating (1456, TD)       ✅ Verified    │
+│                           87 matches              ✅ Verified    │
+│                           Member since 2027-03    ✅ Verified    │
+│  RA Competitive League    Tournament rank #12     ⚠️ Untrusted   │
+│                           Member since 2027-06    ⚠️ Untrusted   │
+│                                                                  │
+│  ✅ = Signature verified, community in your trust list           │
+│  ⚠️ = Signature valid, community NOT in your trust list          │
+│  ❌ = Signature verification failed (possible tampering)         │
+│                                                                  │
+│  [Manage Trusted Communities...]                                 │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+This panel answers the question: **"Can I trust what this player's profile claims?"** The answer is always cryptographically grounded — not trust-me-bro, not server-side-only, but locally verified Ed25519 signatures against community public keys the viewer explicitly trusts.
+
+**How verification works (viewer-side flow):**
+
+1. Player B presents profile data to Player A.
+2. Each SCR-backed field includes the raw SCR (payload + signature + community public key).
+3. Player A's client verifies: `Ed25519::verify(community_public_key, payload, signature)`.
+4. Player A's client checks: is `community_public_key` in my `trusted_communities` table?
+5. If yes → ✅ Verified. If signature valid but community not trusted → ⚠️ Untrusted. If signature invalid → ❌ Failed.
+6. All unsigned fields (bio, avatar, display name) are displayed as player-claimed — no verification badge.
+
+This means **every number in the Statistics Card and every badge in Community Memberships is independently verifiable by any viewer** without contacting any server. The verification is offline-capable — if a player has the community's public key cached, they can verify another player's profile on a plane with no internet.
+
+**7. Workshop Creator Profile**
+
+For players who publish mods, maps, or assets to the Workshop (D030/D050), the profile shows a creator section:
+
+```
+┌──────────────────────────────────────────────────────┐
+│ 🔧 Workshop Creator                                  │
+│                                                      │
+│  Published: 12 resources  |  Total downloads: 8,420  │
+│  ★ Featured: alice/hd-sprites (4,200 downloads)      │
+│  Latest: alice/desert-nights (uploaded 3 days ago)   │
+│                                                      │
+│  [View All Publications →]                           │
+└──────────────────────────────────────────────────────┘
+```
+
+This section appears only for players who have published at least one Workshop resource. Download counts and publication metadata come from the Workshop registry index (D030). Creator tips (D035) link from here.
+
+**8. Custom Profile Elements**
+
+Optional fields that add personality without cluttering the default view:
+
+| Element          | Description                                   | Source                             |
+| ---------------- | --------------------------------------------- | ---------------------------------- |
+| Favorite Quote   | One-liner (e.g., "Kirov reporting!")          | Player-written, 100 chars max      |
+| Favorite Unit    | Displayed with unit portrait from game assets | Player-selected per game module    |
+| Replay Highlight | Link to one pinned replay                     | Local replay file                  |
+| Social Links     | External URLs (Twitch, YouTube, etc.)         | Player-set, max 3 links            |
+| Country Flag     | Optional nationality display                  | Player-selected from ISO 3166 list |
+
+These fields are optional and hidden by default. Players who want a minimal profile show only the identity core and statistics. Players who want a rich social presence can fill in everything.
+
+### Profile Viewing Contexts
+
+The profile appears in different contexts with different levels of detail:
+
+| Context                              | What's shown                                                                                |
+| ------------------------------------ | ------------------------------------------------------------------------------------------- |
+| **Lobby player list**                | Avatar (32×32), display name, rating badge, voice status, ready state                       |
+| **Lobby hover tooltip**              | Avatar (64×64), display name, bio (first line), top 3 pinned achievements, rating, win rate |
+| **Profile card** (click player name) | Full profile: all sections respecting the viewed player's privacy settings                  |
+| **Game browser** (room list)         | Host avatar + name, host rating badge                                                       |
+| **In-game sidebar**                  | Player color, display name, faction crest                                                   |
+| **Post-game scoreboard**             | Avatar, display name, rating change (+/-), match stats                                      |
+| **Friends list**                     | Avatar, display name, presence state, community label                                       |
+
+### Privacy Controls
+
+Every profile section has a visibility setting:
+
+| Visibility Level | Who can see it                                                      |
+| ---------------- | ------------------------------------------------------------------- |
+| **Public**       | Anyone who encounters your profile (lobby, game browser, post-game) |
+| **Friends**      | Only players on your friends list                                   |
+| **Community**    | Only players who share at least one community membership with you   |
+| **Private**      | Only you                                                            |
+
+Defaults:
+
+| Section                   | Default Visibility                      |
+| ------------------------- | --------------------------------------- |
+| Display Name              | Public                                  |
+| Avatar                    | Public                                  |
+| Bio                       | Public                                  |
+| Player Title              | Public                                  |
+| Faction Crest             | Public                                  |
+| Achievement Showcase      | Public                                  |
+| Statistics Card           | Public                                  |
+| Match History             | Friends                                 |
+| Friends List              | Friends                                 |
+| Community Memberships     | Public                                  |
+| Workshop Creator          | Public                                  |
+| Custom Elements           | Friends                                 |
+| Behavioral Profile (D042) | **Private (immutable — never exposed)** |
+
+The behavioral profile from D042 (`PlayerStyleProfile`) is **categorically excluded** from the player profile. It's local analytics data for AI training and self-improvement — not social data. This is a hard privacy boundary.
+
+### Profile Storage
+
+Local profile data is stored in the player's SQLite database (D034):
+
+```sql
+-- Core profile (locally authoritative)
+CREATE TABLE profile (
+    player_key      BLOB PRIMARY KEY,  -- own Ed25519 public key
+    display_name    TEXT NOT NULL,
+    bio             TEXT,
+    title           TEXT,
+    country_code    TEXT,              -- ISO 3166 alpha-2, nullable
+    favorite_quote  TEXT,
+    favorite_unit   TEXT,              -- "module:unit_id" format
+    created_at      INTEGER NOT NULL,
+    updated_at      INTEGER NOT NULL
+);
+
+-- Avatar and banner images (stored as blobs)
+CREATE TABLE profile_images (
+    image_hash      TEXT PRIMARY KEY,  -- SHA-256 hex
+    image_type      TEXT NOT NULL,     -- 'avatar' or 'banner'
+    image_data      BLOB NOT NULL,     -- PNG bytes
+    width           INTEGER NOT NULL,
+    height          INTEGER NOT NULL
+);
+
+-- Profile references (avatar, banner, highlight replay)
+CREATE TABLE profile_refs (
+    ref_type        TEXT PRIMARY KEY,  -- 'avatar', 'banner', 'highlight_replay'
+    ref_value       TEXT NOT NULL      -- image_hash, or replay file path
+);
+
+-- Pinned achievements (up to 6)
+CREATE TABLE pinned_achievements (
+    slot            INTEGER PRIMARY KEY CHECK (slot BETWEEN 1 AND 6),
+    achievement_id  TEXT NOT NULL,     -- references achievements table (D036)
+    community_id    BLOB,             -- which community signed it (nullable for local)
+    pinned_at       INTEGER NOT NULL
+);
+
+-- Friends list
+CREATE TABLE friends (
+    player_key      BLOB NOT NULL,
+    community_id    BLOB NOT NULL,     -- community where friendship was established
+    display_name    TEXT,              -- cached name (may be stale)
+    notes           TEXT,
+    added_at        INTEGER NOT NULL,
+    PRIMARY KEY (player_key, community_id)
+);
+
+-- Block list
+CREATE TABLE blocked_players (
+    player_key      BLOB PRIMARY KEY,
+    reason          TEXT,
+    blocked_at      INTEGER NOT NULL
+);
+
+-- Privacy settings
+CREATE TABLE privacy_settings (
+    section         TEXT PRIMARY KEY,  -- 'bio', 'stats', 'match_history', etc.
+    visibility      TEXT NOT NULL      -- 'public', 'friends', 'community', 'private'
+);
+
+-- Social links (max 3)
+CREATE TABLE social_links (
+    slot            INTEGER PRIMARY KEY CHECK (slot BETWEEN 1 AND 3),
+    label           TEXT NOT NULL,     -- 'Twitch', 'YouTube', custom
+    url             TEXT NOT NULL
+);
+
+-- Cached profiles of other players (fetched on encounter)
+CREATE TABLE cached_profiles (
+    player_key      BLOB PRIMARY KEY,
+    display_name    TEXT,
+    avatar_hash     TEXT,
+    bio             TEXT,
+    title           TEXT,
+    last_seen       INTEGER,          -- timestamp of last encounter
+    fetched_at      INTEGER NOT NULL
+);
+
+-- Trusted communities (for profile verification and matchmaking filtering)
+CREATE TABLE trusted_communities (
+    community_key   BLOB PRIMARY KEY,  -- Ed25519 public key of the community
+    community_name  TEXT,              -- cached display name
+    community_url   TEXT,              -- cached URL
+    auto_trusted    INTEGER NOT NULL DEFAULT 0,  -- 1 if trusted because you're a member
+    trusted_at      INTEGER NOT NULL
+);
+
+-- Cached community public keys (learned from encounters, not yet trusted)
+CREATE TABLE known_communities (
+    community_key   BLOB PRIMARY KEY,
+    community_name  TEXT,
+    community_url   TEXT,
+    first_seen      INTEGER NOT NULL,  -- when we first encountered this key
+    last_seen       INTEGER NOT NULL
+);
+```
+
+**Cache eviction:** Cached profiles of other players are evicted LRU after 1000 entries or 30 days since last encounter. Avatar images in `profile_images` are evicted if they're not referenced by own profile or any cached profile.
+
+### Profile Synchronization
+
+Profiles are **not centrally hosted**. Each player owns their profile data locally. When a player enters a lobby or is viewed by another player, profile data is exchanged peer-to-peer (via the relay, same as resource sharing in D052).
+
+**Flow when Player A views Player B's profile:**
+
+1. Player A's client checks `cached_profiles` for Player B's key.
+2. If cache miss or stale (>24 hours), request profile from Player B via relay.
+3. Player B's client responds with profile data (respecting B's privacy settings — only fields visible to A's access level are included).
+4. Player A's client verifies any SCR-backed fields (ratings, achievements, community memberships) against known community public keys.
+5. Player A's client caches the profile.
+6. If Player B's avatar hash is unknown, Player A requests the avatar image. Cached locally after fetch.
+
+**Bandwidth:** A full profile response is ~2 KB (excluding avatar image). Avatar image is max 64 KB, fetched once and cached. For a typical lobby of 8 players, initial profile loading is ~16 KB text + up to 512 KB avatars — negligible, and avatars are fetched only once per unique player.
+
+### Trusted Communities & Trust-Based Filtering
+
+Players can configure a list of **trusted communities** — the communities whose signed credentials they consider authoritative. This is the trust anchor for everything in the profile system.
+
+**Configuration:**
+
+```yaml
+# settings.yaml — communities section
+communities:
+  joined:
+    - name: "Official IC Community"
+      url: "https://official.ironcurtain.gg"
+      public_key: "ed25519:abc123..."  # cached on first join
+    - name: "Clan Wolfpack"
+      url: "https://wolfpack.example.com"
+      public_key: "ed25519:def456..."
+  
+  trusted:
+    # Communities whose signed credentials you trust for profile verification
+    # and matchmaking filtering. You don't need to be a member to trust a community.
+    - "ed25519:abc123..."   # Official IC Community
+    - "ed25519:def456..."   # Clan Wolfpack
+    - "ed25519:789ghi..."   # EU Competitive League (not a member, but trust their ratings)
+```
+
+Joined communities are automatically trusted (you trust the community you chose to join). Players can also trust communities they haven't joined — e.g., "I'm not a member of the EU Competitive League, but I trust their ratings as legitimate." Trust is granted by public key, so it survives community renames and URL changes.
+
+**Trust levels displayed in profiles:**
+
+When viewing another player's profile, stats from trusted vs. untrusted communities are visually distinct:
+
+| Badge | Meaning | Display |
+| --- | --- | --- |
+| ✅ | Signature valid + community in your trust list | Full color, prominent |
+| ⚠️ | Signature valid + community NOT in your trust list | Dimmed, italic, "Untrusted community" tooltip |
+| ❌ | Signature verification failed | Red, strikethrough, "Verification failed" warning |
+| — | No signed data (player-claimed) | Gray, no badge |
+
+This lets players immediately distinguish between "1800 rated on a community I trust" and "1800 rated on some random community I've never heard of." The profile doesn't hide untrusted data — it shows it clearly labeled so the viewer can make their own judgment.
+
+**Trust-based matchmaking and lobby filtering:**
+
+Players can require that opponents have verified credentials from their trusted communities. This is configured per-queue and per-room:
+
+```rust
+/// Matchmaking preferences — sent to the community server when queuing.
+pub struct MatchmakingPreferences {
+    pub game_module: GameModuleId,
+    pub rating_range: Option<(i32, i32)>,             // min/max rating
+    pub require_trusted_profile: TrustRequirement,     // NEW
+}
+
+pub enum TrustRequirement {
+    /// Match with anyone — no credential check. Default for casual.
+    None,
+    /// Opponent must have a verified profile from any community
+    /// the matchmaking server itself trusts (server-side check).
+    AnyCommunityVerified,
+    /// Opponent must have a verified profile from at least one of
+    /// these specific communities (by public key). Client sends
+    /// the list; server filters accordingly.
+    SpecificCommunities(Vec<CommunityPublicKey>),
+}
+```
+
+**How it works in practice:**
+
+- **Casual play (default):** `TrustRequirement::None`. Anyone can join. Profile badges appear but aren't gatekeeping. Maximum player pool, minimum friction.
+- **"Verified only" mode:** `TrustRequirement::AnyCommunityVerified`. The matchmaking server checks that the opponent has at least one valid SCR from a community the *server* trusts. This filters out completely anonymous players without requiring specific community membership. Good for semi-competitive play.
+- **"Trusted community" mode:** `TrustRequirement::SpecificCommunities([official_ic_key, wolfpack_key])`. The server matches you only with players who have valid SCRs from at least one of those specific communities. This is the strongest filter — effectively "I only play with people vouched for by communities I trust."
+
+**Room-level trust requirements:**
+
+Room hosts can set a trust requirement when creating a room:
+
+```
+┌──────────────────────────────────────────────────────┐
+│ Room Settings                                        │
+│                                                      │
+│  Trust Requirement: [Verified Only ▾]                │
+│    ○ Anyone can join (no verification)               │
+│    ● Verified profile required                       │
+│    ○ Specific communities only:                      │
+│      ☑ Official IC Community                         │
+│      ☑ Clan Wolfpack                                 │
+│      ☐ EU Competitive League                         │
+│                                                      │
+│  [Create Room]                                       │
+└──────────────────────────────────────────────────────┘
+```
+
+When a player tries to join a room with a trust requirement they don't meet, they see a clear rejection: "This room requires a verified profile from: Official IC Community or Clan Wolfpack. [Join Official IC Community...] [Join Clan Wolfpack...]"
+
+**Game browser filtering:**
+
+The game browser (Tier 3 in D052) gains a trust filter column:
+
+```
+┌──────────────────────────────────────────────────────────────────────────┐
+│  Game Browser                                              [Refresh]   │
+├──────────┬──────┬─────────┬────────┬──────┬───────────────┬─────────────┤
+│ Room     │ Host │ Players │ Map    │ Ping │ Trust         │ Mods        │
+├──────────┼──────┼─────────┼────────┼──────┼───────────────┼─────────────┤
+│ Ranked   │ cmdr │ 1/2     │ Arena  │ 23ms │ ✅ Official   │ none        │
+│ HD Game  │ alice│ 3/4     │ Europe │ 45ms │ ⚠️ Any verified│ hd-pack 2.1 │
+│ Open     │ bob  │ 2/6     │ Desert │ 67ms │ 🔓 Anyone     │ none        │
+└──────────┴──────┴─────────┴────────┴──────┴───────────────┴─────────────┘
+│  Filter: [☑ Show only rooms I can join]  [☑ Show trusted communities]   │
+```
+
+The `Show only rooms I can join` filter hides rooms whose trust requirements you don't meet — so you don't see rooms you'll be rejected from. The `Show trusted communities` filter shows only rooms hosted on communities in your trust list.
+
+**Why this matters:**
+
+This solves the smurf/alt-account problem that plagues every competitive game. A player can't create a fresh anonymous account and grief ranked lobbies — the room requires verified credentials from a trusted community, which means they need a real history of matches. It also solves the fake-rating problem: you can't claim to be 1800 unless a community you trust has signed an SCR proving it.
+
+But it's **not authoritarian**. Players who want casual, open, unverified games can play freely. Trust requirements are opt-in per-room and per-matchmaking-queue. The default is open. The tools are there for communities that want stronger verification — they're not forced on anyone.
+
+**Anti-abuse considerations:**
+
+- **Community collusion:** A bad actor could create a community, sign fake credentials, and present them. But no one else would trust that community's key. Trust is explicitly granted by each player. This is a feature, not a bug — it's exactly how PGP/GPG web-of-trust works, minus the key-signing parties.
+- **Community ban evasion:** If a player is banned from a community (D052 revocation), their SCRs from that community become unverifiable. They can't present banned credentials. They'd need to join a different community and rebuild reputation from scratch.
+- **Privacy:** The trust requirement reveals which communities a player is a member of (since they must present SCRs). Players uncomfortable with this can stick to `TrustRequirement::None` rooms. The privacy controls from D053 still apply — you choose which community memberships are visible on your profile, but if a room *requires* membership proof, you must present it to join.
+
+### Relationship to Existing Decisions
+
+- **D034 (SQLite):** Profile storage is SQLite. Cached profiles, friends, block lists — all local SQLite tables.
+- **D036 (Achievements):** Pinned achievements on the profile reference D036 achievement records. Achievement verification uses D052 SCRs.
+- **D042 (Behavioral Profiles):** Categorically separate. D042 is local AI training data. D053 is social-facing identity. They never merge. This is a hard privacy boundary.
+- **D046 (Premium Content):** Cosmetic purchases (if any) are displayed in the profile (e.g., custom profile borders, title unlocks). But the core profile is always free and full-featured.
+- **D050 (Workshop):** Workshop creator statistics feed the creator profile section.
+- **D052 (Community Servers & SCR):** The verification backbone. Every reputation claim in the profile (rating, achievements, community membership) is backed by a signed credential. D053 is the user-facing layer; D052 is the cryptographic foundation. Trusted Communities (D053) determine which SCR issuers the player considers authoritative — this feeds into profile display, lobby filtering, and matchmaking preferences.
+
+### Alternatives Considered
+
+- **Central profile server** (rejected — contradicts federation model, creates single point of failure, requires infrastructure IC doesn't want to operate)
+- **Blockchain-based identity** (rejected — massively overcomplicated, no user benefit over Ed25519 SCR, environmental concerns)
+- **Rich profile customization (themes, animations, music)** (deferred — too much scope for initial implementation. May be added as Workshop cosmetic packs in Phase 6+)
+- **Full social network features (posts, feeds, groups)** (rejected — out of scope. IC is a game, not a social network. Communities, friends, and profiles are sufficient. Players who want social features use Discord)
+- **Mandatory real name / identity verification** (rejected — privacy violation, hostile to the gaming community's norms, not IC's business)
+
+### Phase
+
+- **Phase 3:** Basic profile (display name, avatar, bio, local storage, lobby display). Friends list (platform-backed via `PlatformServices`).
+- **Phase 5:** Community-backed profiles (SCR-verified ratings, achievements, memberships). IC friends (community-based mutual friend requests). Presence system. Profile cards in lobby. Trusted communities configuration. Trust-based matchmaking filtering. Profile verification UI (signed proof sheet). Game browser trust filters.
+- **Phase 6a:** Workshop creator profiles. Full achievement showcase. Custom profile elements. Privacy controls UI. Profile viewing in game browser. Cross-community trust discovery.
