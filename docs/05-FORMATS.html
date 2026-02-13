@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-738ccda3.js";
+            window.path_to_searchindex_js = "searchindex-669b8e99.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-678cb19b.js"></script>
@@ -189,12 +189,12 @@
 <tr><th>Format</th><th>Purpose</th><th>Notes</th></tr>
 </thead>
 <tbody>
-<tr><td><code>.mix</code></td><td>Archive container</td><td>Flat archive, hash-based file lookup, no compression</td></tr>
-<tr><td><code>.shp</code></td><td>Sprite sheets</td><td>Frame-based, palette-indexed</td></tr>
-<tr><td><code>.tmp</code></td><td>Terrain tiles</td><td>Isometric tile data</td></tr>
-<tr><td><code>.pal</code></td><td>Color palettes</td><td>256-color palettes, multiple per scenario</td></tr>
-<tr><td><code>.aud</code></td><td>Audio</td><td>Westwood’s audio format, IMA ADPCM compressed</td></tr>
-<tr><td><code>.vqa</code></td><td>Video</td><td>Cutscenes (VQ vector quantization)</td></tr>
+<tr><td><code>.mix</code></td><td>Archive container</td><td>Flat archive with CRC-based filename hashing (rotate-left-1 + add), 6-byte <code>FileHeader</code> + sorted <code>SubBlock</code> index (12 bytes each). Extended format adds Blowfish encryption + SHA-1 digest. No per-file compression. See § MIX Archive Format for full struct definitions</td></tr>
+<tr><td><code>.shp</code></td><td>Sprite sheets</td><td>Frame-based, palette-indexed (256 colors). <code>ShapeBlock_Type</code> container with per-frame <code>Shape_Type</code> headers. LCW-compressed frame data (or uncompressed via <code>NOCOMP</code> flag). Supports compact 16-color mode, horizontal/vertical flip, scaling, fading, shadow, ghost, and predator draw modes</td></tr>
+<tr><td><code>.tmp</code></td><td>Terrain tiles</td><td>IFF-format icon sets — collections of 24×24 palette-indexed tiles. Chunks: ICON/SINF/SSET/TRNS/MAP/RPAL/RTBL. SSET data may be LCW-compressed. RA version adds <code>MapWidth</code>/<code>MapHeight</code>/<code>ColorMap</code> for land type lookup. TD and RA <code>IControl_Type</code> structs differ — see § TMP Terrain Tile Format</td></tr>
+<tr><td><code>.pal</code></td><td>Color palettes</td><td>Raw 768 bytes (256 × RGB), no header. Components in 6-bit VGA range (0–63), not 8-bit. Convert to 8-bit via left-shift by 2. Multiple palettes per scenario (temperate, snow, interior, etc.)</td></tr>
+<tr><td><code>.aud</code></td><td>Audio</td><td>Westwood IMA ADPCM compressed. 12-byte <code>AUDHeaderType</code>: sample rate (Hz), compressed/uncompressed sizes, flags (stereo/16-bit), compression ID. Codec uses dual 1424-entry lookup tables (<code>IndexTable</code>/<code>DiffTable</code>) for 4-bit-nibble decoding. Read + write: Asset Studio (D040) converts .aud ↔ .wav/.ogg so modders can extract original sounds for remixing and convert custom recordings to classic AUD format</td></tr>
+<tr><td><code>.vqa</code></td><td>Video</td><td>VQ vector quantization cutscenes. Chunk-based IFF structure (WVQA/VQHD/FINF/VQFR/VQFK). Codebook blocks (4×2 or 4×4 pixels), LCW-compressed frames, interleaved audio (PCM/Westwood ADPCM/IMA ADPCM). Read + write: Asset Studio (D040) converts .vqa ↔ .mp4/.webm for campaign creators</td></tr>
 </tbody>
 </table>
 </div>
@@ -212,15 +212,610 @@
 </tbody>
 </table>
 </div>
+<h3 id="canonical-asset-format-recommendations-d049"><a class="header" href="#canonical-asset-format-recommendations-d049">Canonical Asset Format Recommendations (D049)</a></h3>
+<p>New Workshop content should use <strong>Bevy-native modern formats</strong> by default. C&amp;C legacy formats are fully supported for backward compatibility but are not the recommended distribution format. The engine loads both families at runtime — no manual conversion is ever required.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Asset Type</th><th>Recommended (new content)</th><th>Legacy (existing)</th><th>Why Recommended</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Music</strong></td><td>OGG Vorbis (128–320kbps)</td><td>.aud (ra-formats)</td><td>Bevy default feature, stereo 44.1kHz, ~1.4MB/min. Open, patent-free, WASM-safe, security-audited by browser vendors</td></tr>
+<tr><td><strong>SFX</strong></td><td>WAV (16-bit PCM) or OGG</td><td>.aud (ra-formats)</td><td>WAV = zero decode latency for gameplay-critical sounds. OGG for larger ambient sounds</td></tr>
+<tr><td><strong>Voice</strong></td><td>OGG Vorbis (96–128kbps)</td><td>.aud (ra-formats)</td><td>Transparent quality for speech. 200+ EVA lines stay under 30MB</td></tr>
+<tr><td><strong>Sprites</strong></td><td>PNG (RGBA or indexed)</td><td>.shp+.pal (ra-formats)</td><td>Bevy-native via <code>image</code> crate. Lossless, universal tooling. Palette-indexed PNG preserves classic aesthetic</td></tr>
+<tr><td><strong>HD Textures</strong></td><td>KTX2 (BC7/ASTC GPU-compressed)</td><td>N/A</td><td>Zero-cost GPU upload, Bevy-native. <code>ic mod build</code> can batch-convert PNG→KTX2</td></tr>
+<tr><td><strong>Terrain</strong></td><td>PNG tiles</td><td>.tmp+.pal (ra-formats)</td><td>Same as sprites — theater tilesets are sprite sheets</td></tr>
+<tr><td><strong>Cutscenes</strong></td><td>WebM (VP9, 720p–1080p)</td><td>.vqa (ra-formats)</td><td>Open, royalty-free, browser-compatible (WASM), ~5MB/min at 720p</td></tr>
+<tr><td><strong>3D Models</strong></td><td>GLTF/GLB</td><td>N/A</td><td>Bevy’s native 3D format</td></tr>
+<tr><td><strong>Palettes</strong></td><td>.pal (768 bytes)</td><td>.pal (ra-formats)</td><td>Already tiny and universal in the C&amp;C community — no change needed</td></tr>
+<tr><td><strong>Maps</strong></td><td>IC YAML</td><td>.oramap (ZIP+MiniYAML)</td><td>Already designed (D025, D026)</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Why modern formats:</strong> (1) Bevy loads them natively — zero custom code, full hot-reload and async loading. (2) Security — OGG/PNG parsers are fuzz-tested and browser-audited; our custom .aud/.shp parsers are not. (3) Multi-game — non-C&amp;C game modules (D039) won’t use .shp or .aud. (4) Tooling — every editor exports PNG/OGG/WAV/WebM; nobody’s toolchain outputs .aud. (5) WASM — modern formats work in browser builds out of the box.</p>
+<p>The Asset Studio (D040) converts in both directions. See <code>09-DECISIONS.md</code> § D049 for full rationale, storage comparisons, and distribution strategy.</p>
 <h3 id="ra-formats-crate-goals"><a class="header" href="#ra-formats-crate-goals">ra-formats Crate Goals</a></h3>
 <ol>
 <li>Parse all above formats reliably</li>
 <li>Extensive tests against known-good OpenRA data</li>
 <li><code>miniyaml2yaml</code> converter tool</li>
 <li>CLI tool to dump/inspect/validate RA assets</li>
+<li><strong>Write support (Phase 6a):</strong> .shp generation from frames (LCW compression + frame offset tables), .pal writing (trivial — 768 bytes), .aud encoding (IMA ADPCM compression from PCM input), .vqa encoding (VQ codebook generation + frame differencing + audio interleaving), optional .mix packing (CRC hash table generation) — required by Asset Studio (D040). All encoders reference the EA GPL source code implementations directly (see § Binary Format Codec Reference)</li>
 <li>Useful as standalone crate (builds project credibility)</li>
-<li>Released open source early (Phase 0 deliverable)</li>
+<li>Released open source early (Phase 0 deliverable, read-only; write support added Phase 6a)</li>
 </ol>
+<h2 id="binary-format-codec-reference-ea-source-code"><a class="header" href="#binary-format-codec-reference-ea-source-code">Binary Format Codec Reference (EA Source Code)</a></h2>
+<blockquote>
+<p>All struct definitions in this section are taken verbatim from the GPL v3 EA source code repositories:</p>
+<ul>
+<li><a href="https://github.com/electronicarts/CnC_Remastered_Collection">CnC_Remastered_Collection</a> — primary source (REDALERT/ and TIBERIANDAWN/ directories)</li>
+<li><a href="https://github.com/electronicarts/CnC_Red_Alert">CnC_Red_Alert</a> — VQA/VQ video format definitions (VQ/ and WINVQ/ directories)</li>
+</ul>
+<p>These are the authoritative definitions for <code>ra-formats</code> crate implementation. Field names, sizes, and types must match exactly for binary compatibility.</p>
+</blockquote>
+<h3 id="mix-archive-format-mix"><a class="header" href="#mix-archive-format-mix">MIX Archive Format (.mix)</a></h3>
+<p><strong>Source:</strong> <code>REDALERT/MIXFILE.H</code>, <code>REDALERT/MIXFILE.CPP</code>, <code>REDALERT/CRC.H</code>, <code>REDALERT/CRC.CPP</code></p>
+<p>A MIX file is a flat archive. Files are identified by CRC hash of their filename — there is no filename table in the archive.</p>
+<h4 id="file-layout"><a class="header" href="#file-layout">File Layout</a></h4>
+<pre><code>[optional: 2-byte zero flag + 2-byte flags word]  // Extended format only
+[FileHeader]                                       // 6 bytes
+[SubBlock array]                                   // sorted by CRC for binary search
+[file data]                                        // concatenated file bodies
+</code></pre>
+<h4 id="structures"><a class="header" href="#structures">Structures</a></h4>
+<pre><code class="language-c">// Archive header (6 bytes)
+typedef struct {
+    short count;    // Number of files in the archive
+    long  size;     // Total size of all file data (bytes)
+} FileHeader;
+
+// Per-file index entry (12 bytes)
+struct SubBlock {
+    long CRC;       // CRC hash of uppercase filename
+    long Offset;    // Byte offset from start of data section
+    long Size;      // File size in bytes
+};
+</code></pre>
+<p><strong>Extended format detection:</strong> If the first <code>short</code> read is 0, the next <code>short</code> is a flags word:</p>
+<ul>
+<li>Bit <code>0x0001</code> — archive contains SHA-1 digest</li>
+<li>Bit <code>0x0002</code> — archive header is encrypted (Blowfish)</li>
+</ul>
+<p>When neither flag is set, the first <code>short</code> is the file count and the archive uses the basic format.</p>
+<h4 id="crc-filename-hashing-algorithm"><a class="header" href="#crc-filename-hashing-algorithm">CRC Filename Hashing Algorithm</a></h4>
+<pre><code class="language-c">// From CRC.H / CRC.CPP — CRCEngine
+// Accumulates bytes in a 4-byte staging buffer, then:
+//   CRC = _lrotl(CRC, 1) + *longptr;
+// (rotate CRC left 1 bit, add next 4 bytes as a long)
+//
+// Filenames are converted to UPPERCASE before hashing.
+// Partial final bytes (&lt; 4) are accumulated into the staging buffer
+// and the final partial long is added the same way.
+</code></pre>
+<p>The SubBlock array is sorted by CRC to enable binary search lookup at runtime.</p>
+<hr>
+<h3 id="shp-sprite-format-shp"><a class="header" href="#shp-sprite-format-shp">SHP Sprite Format (.shp)</a></h3>
+<p><strong>Source:</strong> <code>REDALERT/WIN32LIB/SHAPE.H</code>, <code>REDALERT/2KEYFRAM.CPP</code>, <code>TIBERIANDAWN/KEYFRAME.CPP</code></p>
+<p>SHP files contain one or more palette-indexed sprite frames. Individual frames are typically LCW-compressed.</p>
+<h4 id="shape-block-multi-frame-container"><a class="header" href="#shape-block-multi-frame-container">Shape Block (Multi-Frame Container)</a></h4>
+<pre><code class="language-c">// From SHAPE.H — container for multiple shapes
+typedef struct {
+    unsigned short NumShapes;   // Number of shapes in block
+    long           Offsets[];   // Variable-length array of offsets to each shape
+} ShapeBlock_Type;
+</code></pre>
+<h4 id="single-shape-header"><a class="header" href="#single-shape-header">Single Shape Header</a></h4>
+<pre><code class="language-c">// From SHAPE.H — header for one shape frame
+typedef struct {
+    unsigned short ShapeType;       // Shape type flags (see below)
+    unsigned char  Height;          // Height in scan lines
+    unsigned short Width;           // Width in bytes
+    unsigned char  OriginalHeight;  // Original (unscaled) height
+    unsigned short ShapeSize;       // Total size including header
+    unsigned short DataLength;      // Size of uncompressed data
+    unsigned char  Colortable[16];  // Color remap table (compact shapes only)
+} Shape_Type;
+</code></pre>
+<h4 id="keyframe-animation-header-multi-frame-shp"><a class="header" href="#keyframe-animation-header-multi-frame-shp">Keyframe Animation Header (Multi-Frame SHP)</a></h4>
+<pre><code class="language-c">// From 2KEYFRAM.CPP — header for keyframe animation files
+typedef struct {
+    unsigned short frames;              // Number of frames
+    unsigned short x;                   // X offset
+    unsigned short y;                   // Y offset
+    unsigned short width;               // Frame width
+    unsigned short height;              // Frame height
+    unsigned short largest_frame_size;  // Largest single frame (for buffer allocation)
+    unsigned short flags;               // Bit 0 = has embedded palette (768 bytes after offsets)
+} KeyFrameHeaderType;
+</code></pre>
+<p>When <code>flags &amp; 1</code>, a 768-byte palette (256 × RGB) follows immediately after the frame offset table. Retrieved via <code>Get_Build_Frame_Palette()</code>.</p>
+<h4 id="shape-type-flags-makeshape"><a class="header" href="#shape-type-flags-makeshape">Shape Type Flags (MAKESHAPE)</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Value</th><th>Name</th><th>Meaning</th></tr>
+</thead>
+<tbody>
+<tr><td><code>0x0000</code></td><td>NORMAL</td><td>Standard shape</td></tr>
+<tr><td><code>0x0001</code></td><td>COMPACT</td><td>Uses 16-color palette (Colortable)</td></tr>
+<tr><td><code>0x0002</code></td><td>NOCOMP</td><td>Uncompressed pixel data</td></tr>
+<tr><td><code>0x0004</code></td><td>VARIABLE</td><td>Variable-length color table (&lt;16)</td></tr>
+</tbody>
+</table>
+</div>
+<h4 id="drawing-flags-runtime"><a class="header" href="#drawing-flags-runtime">Drawing Flags (Runtime)</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Value</th><th>Name</th><th>Effect</th></tr>
+</thead>
+<tbody>
+<tr><td><code>0x0000</code></td><td>SHAPE_NORMAL</td><td>No transformation</td></tr>
+<tr><td><code>0x0001</code></td><td>SHAPE_HORZ_REV</td><td>Horizontal flip</td></tr>
+<tr><td><code>0x0002</code></td><td>SHAPE_VERT_REV</td><td>Vertical flip</td></tr>
+<tr><td><code>0x0004</code></td><td>SHAPE_SCALING</td><td>Apply scale factor</td></tr>
+<tr><td><code>0x0020</code></td><td>SHAPE_CENTER</td><td>Draw centered on coordinates</td></tr>
+<tr><td><code>0x0100</code></td><td>SHAPE_FADING</td><td>Apply fade/remap table</td></tr>
+<tr><td><code>0x0200</code></td><td>SHAPE_PREDATOR</td><td>Predator-style cloaking distortion</td></tr>
+<tr><td><code>0x0400</code></td><td>SHAPE_COMPACT</td><td>Shape uses compact color table</td></tr>
+<tr><td><code>0x1000</code></td><td>SHAPE_GHOST</td><td>Ghost/transparent rendering</td></tr>
+<tr><td><code>0x2000</code></td><td>SHAPE_SHADOW</td><td>Shadow rendering mode</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h3 id="lcw-compression"><a class="header" href="#lcw-compression">LCW Compression</a></h3>
+<p><strong>Source:</strong> <code>REDALERT/LCW.CPP</code>, <code>REDALERT/LCWUNCMP.CPP</code>, <code>REDALERT/WIN32LIB/IFF.H</code></p>
+<p>LCW (Lempel-Castle-Welch) is Westwood’s primary data compression algorithm, used for SHP frame data, VQA video chunks, icon set data, and other compressed resources.</p>
+<h4 id="compression-header-wrapper"><a class="header" href="#compression-header-wrapper">Compression Header Wrapper</a></h4>
+<pre><code class="language-c">// From IFF.H — optional header wrapping compressed data
+typedef struct {
+    char  Method;   // Compression method (see CompressionType)
+    char  pad;      // Padding byte
+    long  Size;     // Decompressed size
+    short Skip;     // Bytes to skip
+} CompHeaderType;
+
+typedef enum {
+    NOCOMPRESS  = 0,
+    LZW12       = 1,
+    LZW14       = 2,
+    HORIZONTAL  = 3,
+    LCW         = 4
+} CompressionType;
+</code></pre>
+<h4 id="lcw-command-opcodes"><a class="header" href="#lcw-command-opcodes">LCW Command Opcodes</a></h4>
+<p>LCW decompression processes a source stream and produces output by copying literals, referencing previous output (sliding window), or filling runs:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Byte Pattern</th><th>Name</th><th>Operation</th></tr>
+</thead>
+<tbody>
+<tr><td><code>0b0xxx_yyyy, yyyyyyyy</code></td><td>Short copy</td><td>Copy run of <code>x+3</code> bytes from <code>y</code> bytes back in output (relative)</td></tr>
+<tr><td><code>0b10xx_xxxx, n₁..nₓ₊₁</code></td><td>Medium literal</td><td>Copy next <code>x+1</code> bytes verbatim from source to output</td></tr>
+<tr><td><code>0b11xx_xxxx, w₁</code></td><td>Medium copy</td><td>Copy <code>x+3</code> bytes from absolute output offset <code>w₁</code></td></tr>
+<tr><td><code>0xFF, w₁, w₂</code></td><td>Long copy</td><td>Copy <code>w₁</code> bytes from absolute output offset <code>w₂</code></td></tr>
+<tr><td><code>0xFE, w₁, b₁</code></td><td>Long run</td><td>Fill <code>w₁</code> bytes with value <code>b₁</code></td></tr>
+<tr><td><code>0x80</code></td><td>End marker</td><td>End of compressed data</td></tr>
+</tbody>
+</table>
+</div>
+<p>Where <code>w₁</code>, <code>w₂</code> are little-endian 16-bit words and <code>b₁</code> is a single byte.</p>
+<p><strong>Key detail:</strong> Short copies use <em>relative</em> backward references (from current output position), while medium and long copies use <em>absolute</em> offsets from the start of the output buffer. This dual addressing is a distinctive feature of LCW.</p>
+<h4 id="iff-chunk-id-macro"><a class="header" href="#iff-chunk-id-macro">IFF Chunk ID Macro</a></h4>
+<pre><code class="language-c">// From IFF.H — used by MIX, icon set, and other IFF-based formats
+#define MAKE_ID(a,b,c,d) ((long)((long)d &lt;&lt; 24) | ((long)c &lt;&lt; 16) | ((long)b &lt;&lt; 8) | (long)(a))
+</code></pre>
+<hr>
+<h3 id="tmp-terrain-tile-format-tmp--icon-sets"><a class="header" href="#tmp-terrain-tile-format-tmp--icon-sets">TMP Terrain Tile Format (.tmp / Icon Sets)</a></h3>
+<p><strong>Source:</strong> <code>REDALERT/WIN32LIB/TILE.H</code>, <code>TIBERIANDAWN/WIN32LIB/TILE.H</code>, <code>*/WIN32LIB/ICONSET.CPP</code>, <code>*/WIN32LIB/STAMP.INC</code>, <code>REDALERT/COMPAT.H</code></p>
+<p>TMP files are <strong>IFF-format icon sets</strong> — collections of fixed-size tiles arranged in a grid. Each tile is a 24×24 pixel palette-indexed bitmap. The engine renders terrain by compositing these tiles onto the map.</p>
+<h4 id="on-disk-iff-chunk-structure"><a class="header" href="#on-disk-iff-chunk-structure">On-Disk IFF Chunk Structure</a></h4>
+<p>TMP files use Westwood’s IFF variant with these chunk identifiers:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Chunk ID</th><th>FourCC</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>ICON</code></td><td><code>MAKE_ID('I','C','O','N')</code></td><td>Form identifier (file magic — must be first)</td></tr>
+<tr><td><code>SINF</code></td><td><code>MAKE_ID('S','I','N','F')</code></td><td>Set info: icon dimensions and format</td></tr>
+<tr><td><code>SSET</code></td><td><code>MAKE_ID('S','S','E','T')</code></td><td>Icon pixel data (may be LCW-compressed)</td></tr>
+<tr><td><code>TRNS</code></td><td><code>MAKE_ID('T','R','N','S')</code></td><td>Per-icon transparency flags</td></tr>
+<tr><td><code>MAP </code></td><td><code>MAKE_ID('M','A','P',' ')</code></td><td>Icon mapping table (logical → physical)</td></tr>
+<tr><td><code>RPAL</code></td><td><code>MAKE_ID('R','P','A','L')</code></td><td>Icon palette</td></tr>
+<tr><td><code>RTBL</code></td><td><code>MAKE_ID('R','T','B','L')</code></td><td>Remap table</td></tr>
+</tbody>
+</table>
+</div>
+<h4 id="sinf-chunk-icon-dimensions"><a class="header" href="#sinf-chunk-icon-dimensions">SINF Chunk (Icon Dimensions)</a></h4>
+<pre><code class="language-c">// Local struct in Load_Icon_Set() — read from SINF chunk
+struct {
+    char Width;      // Width of one icon in bytes (pixels = Width &lt;&lt; 3)
+    char Height;     // Height of one icon in bytes (pixels = Height &lt;&lt; 3)
+    char Format;     // Graphic mode
+    char Bitplanes;  // Number of bitplanes per icon
+} sinf;
+
+// Standard RA value: Width=3, Height=3 → 24×24 pixels (3 &lt;&lt; 3 = 24)
+// Bytes per icon = ((Width&lt;&lt;3) * (Height&lt;&lt;3) * Bitplanes) &gt;&gt; 3
+// For 24×24 8-bit: (24 * 24 * 8) &gt;&gt; 3 = 576 bytes per icon
+</code></pre>
+<h4 id="in-memory-control-structure"><a class="header" href="#in-memory-control-structure">In-Memory Control Structure</a></h4>
+<p>The IFF chunks are loaded into a contiguous memory block with <code>IControl_Type</code> as the header. <strong>Two versions exist</strong> — Tiberian Dawn and Red Alert differ:</p>
+<pre><code class="language-c">// Tiberian Dawn version (TIBERIANDAWN/WIN32LIB/TILE.H)
+typedef struct {
+    short           Width;      // Width of icons (pixels)
+    short           Height;     // Height of icons (pixels)
+    short           Count;      // Number of (logical) icons in this set
+    short           Allocated;  // Was this iconset allocated? (runtime flag)
+    long            Size;       // Size of entire iconset memory block
+    unsigned char * Icons;      // Offset from buffer start to icon data
+    long            Palettes;   // Offset from buffer start to palette data
+    long            Remaps;     // Offset from buffer start to remap index data
+    long            TransFlag;  // Offset for transparency flag table
+    unsigned char * Map;        // Icon map offset (if present)
+} IControl_Type;
+// Note: Icons and Map are stored as raw pointers in TD
+
+// Red Alert version (REDALERT/WIN32LIB/TILE.H, REDALERT/COMPAT.H)
+typedef struct {
+    short Width;      // Width of icons (pixels)
+    short Height;     // Height of icons (pixels)
+    short Count;      // Number of (logical) icons in this set
+    short Allocated;  // Was this iconset allocated? (runtime flag)
+    short MapWidth;   // Width of map (in icons) — RA-only field
+    short MapHeight;  // Height of map (in icons) — RA-only field
+    long  Size;       // Size of entire iconset memory block
+    long  Icons;      // Offset from buffer start to icon data
+    long  Palettes;   // Offset from buffer start to palette data
+    long  Remaps;     // Offset from buffer start to remap index data
+    long  TransFlag;  // Offset for transparency flag table
+    long  ColorMap;   // Offset for color control value table — RA-only field
+    long  Map;        // Icon map offset (if present)
+} IControl_Type;
+// Note: RA version uses long offsets (not pointers) and adds MapWidth, MapHeight, ColorMap
+</code></pre>
+<p><strong>Constraint:</strong> “This structure MUST be a multiple of 16 bytes long” (per source comment in STAMP.INC and TILE.H).</p>
+<h4 id="how-the-map-array-works"><a class="header" href="#how-the-map-array-works">How the Map Array Works</a></h4>
+<p>The <code>Map</code> array maps logical grid positions to physical icon indices. Each byte represents one cell in the template grid (<code>MapWidth × MapHeight</code> in RA, or <code>Width × Height</code> in TD). A value of <code>0xFF</code> (<code>-1</code> signed) means the cell is empty/transparent — no tile is drawn there.</p>
+<pre><code class="language-c">// From CDATA.CPP — reading the icon map
+Mem_Copy(Get_Icon_Set_Map(Get_Image_Data()), map, Width * Height);
+for (index = 0; index &lt; Width * Height; index++) {
+    if (map[index] != 0xFF) {
+        // This cell has a visible tile — draw icon data at map[index]
+    }
+}
+</code></pre>
+<p>Icon pixel data is accessed as: <code>&amp;Icons[map[index] * (24 * 24)]</code> — each icon is 576 bytes of palette-indexed pixels.</p>
+<h4 id="color-control-map-ra-only"><a class="header" href="#color-control-map-ra-only">Color Control Map (RA only)</a></h4>
+<p>The <code>ColorMap</code> table provides per-icon land type information. Each byte maps to one of 16 terrain categories used by the game logic:</p>
+<pre><code class="language-c">// From CDATA.CPP — RA land type lookup
+static LandType _land[16] = {
+    LAND_CLEAR, LAND_CLEAR, LAND_CLEAR, LAND_CLEAR,  // 0-3
+    LAND_CLEAR, LAND_CLEAR, LAND_BEACH, LAND_CLEAR,  // 4-7
+    LAND_ROCK,  LAND_ROAD,  LAND_WATER, LAND_RIVER,  // 8-11
+    LAND_CLEAR, LAND_CLEAR, LAND_ROUGH, LAND_CLEAR,  // 12-15
+};
+return _land[control_map[icon_index]];
+</code></pre>
+<h4 id="iconsetclass-ra-only"><a class="header" href="#iconsetclass-ra-only">IconsetClass (RA Only)</a></h4>
+<p>Red Alert wraps <code>IControl_Type</code> in a C++ class with accessor methods:</p>
+<pre><code class="language-c">// From COMPAT.H
+class IconsetClass : protected IControl_Type {
+public:
+    int Map_Width()                  const { return MapWidth; }
+    int Map_Height()                 const { return MapHeight; }
+    int Icon_Count()                 const { return Count; }
+    int Pixel_Width()                const { return Width; }
+    int Pixel_Height()               const { return Height; }
+    int Total_Size()                 const { return Size; }
+    unsigned char const * Icon_Data()    const { return (unsigned char const *)this + Icons; }
+    unsigned char const * Map_Data()     const { return (unsigned char const *)this + Map; }
+    unsigned char const * Palette_Data() const { return (unsigned char const *)this + Palettes; }
+    unsigned char const * Remap_Data()   const { return (unsigned char const *)this + Remaps; }
+    unsigned char const * Trans_Data()   const { return (unsigned char const *)this + TransFlag; }
+    unsigned char * Control_Map()        { return (unsigned char *)this + ColorMap; }
+};
+</code></pre>
+<p>All offset fields are relative to the start of the <code>IControl_Type</code> structure itself — the data is a single contiguous allocation.</p>
+<hr>
+<h3 id="pal-palette-format-pal"><a class="header" href="#pal-palette-format-pal">PAL Palette Format (.pal)</a></h3>
+<p><strong>Source:</strong> <code>REDALERT/WIN32LIB/PALETTE.H</code>, <code>TIBERIANDAWN/WIN32LIB/LOADPAL.CPP</code>, <code>REDALERT/WIN32LIB/DrawMisc.cpp</code></p>
+<p>PAL files are the simplest format — a raw dump of 256 RGB color values with no header.</p>
+<h4 id="file-layout-1"><a class="header" href="#file-layout-1">File Layout</a></h4>
+<pre><code>768 bytes total = 256 entries × 3 bytes (R, G, B)
+</code></pre>
+<p>No magic number, no header, no footer. Just 768 bytes of color data.</p>
+<h4 id="constants"><a class="header" href="#constants">Constants</a></h4>
+<pre><code class="language-c">// From PALETTE.H
+#define RGB_BYTES      3
+#define PALETTE_SIZE   256
+#define PALETTE_BYTES  768   // PALETTE_SIZE * RGB_BYTES
+</code></pre>
+<h4 id="color-range-6-bit-vga-063"><a class="header" href="#color-range-6-bit-vga-063">Color Range: 6-bit VGA (0–63)</a></h4>
+<p>Each R, G, B component is in <strong>6-bit VGA range (0–63)</strong>, not 8-bit. This is because the original VGA hardware registers only accepted 6-bit color values.</p>
+<pre><code class="language-c">// From PALETTE.H
+typedef struct {
+    char red;
+    char green;
+    char blue;
+} RGB;   // Each field: 0–63 (6-bit)
+</code></pre>
+<h4 id="loading-and-conversion"><a class="header" href="#loading-and-conversion">Loading and Conversion</a></h4>
+<pre><code class="language-c">// From LOADPAL.CPP — loading is trivially simple
+void Load_Palette(char *palette_file_name, void *palette_pointer) {
+    Load_Data(palette_file_name, palette_pointer, 768);
+}
+
+// From DDRAW.CPP — converting 6-bit VGA to 8-bit for display
+void Set_DD_Palette(void *palette) {
+    for (int i = 0; i &lt; 768; i++) {
+        buffer[i] = palette[i] &lt;&lt; 2;  // 6-bit (0–63) → 8-bit (0–252)
+    }
+}
+
+// From WRITEPCX.CPP — PCX files use 8-bit, converted on read
+// Reading PCX palette:  value &gt;&gt;= 2;  (8-bit → 6-bit)
+// Writing PCX palette:  value &lt;&lt;= 2;  (6-bit → 8-bit)
+</code></pre>
+<p><strong>Implementation note for ra-formats:</strong> When loading <code>.pal</code> files, expose both the raw 6-bit values and a convenience method that returns 8-bit values (left-shift by 2). The 6-bit values are the canonical form — all palette operations in the original game work in 6-bit space.</p>
+<hr>
+<h3 id="aud-audio-format-aud"><a class="header" href="#aud-audio-format-aud">AUD Audio Format (.aud)</a></h3>
+<p><strong>Source:</strong> <code>REDALERT/WIN32LIB/AUDIO.H</code>, <code>REDALERT/ADPCM.CPP</code>, <code>REDALERT/ITABLE.CPP</code>, <code>REDALERT/DTABLE.CPP</code>, <code>REDALERT/WIN32LIB/SOSCOMP.H</code></p>
+<p>AUD files contain IMA ADPCM-compressed audio (Westwood’s variant). The file has a simple header followed by compressed audio chunks.</p>
+<h4 id="file-header"><a class="header" href="#file-header">File Header</a></h4>
+<pre><code class="language-c">// From AUDIO.H
+#pragma pack(push, 1)
+typedef struct {
+    unsigned short int Rate;        // Playback rate in Hz (e.g., 22050)
+    long               Size;        // Size of compressed data (bytes)
+    long               UncompSize;  // Size of uncompressed data (bytes)
+    unsigned char      Flags;       // Bit flags (see below)
+    unsigned char      Compression; // Compression algorithm ID
+} AUDHeaderType;
+#pragma pack(pop)
+</code></pre>
+<p><strong>Flags:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Bit</th><th>Name</th><th>Meaning</th></tr>
+</thead>
+<tbody>
+<tr><td><code>0x01</code></td><td><code>AUD_FLAG_STEREO</code></td><td>Stereo audio (two channels)</td></tr>
+<tr><td><code>0x02</code></td><td><code>AUD_FLAG_16BIT</code></td><td>16-bit samples (vs. 8-bit)</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Compression types</strong> (from <code>SOUNDINT.H</code>):</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Value</th><th>Name</th><th>Algorithm</th></tr>
+</thead>
+<tbody>
+<tr><td>0</td><td><code>SCOMP_NONE</code></td><td>No compression</td></tr>
+<tr><td>1</td><td><code>SCOMP_WESTWOOD</code></td><td>Westwood ADPCM (the standard for RA audio)</td></tr>
+<tr><td>33</td><td><code>SCOMP_SONARC</code></td><td>Sonarc compression</td></tr>
+<tr><td>99</td><td><code>SCOMP_SOS</code></td><td>SOS ADPCM</td></tr>
+</tbody>
+</table>
+</div>
+<h4 id="adpcm-codec-structure"><a class="header" href="#adpcm-codec-structure">ADPCM Codec Structure</a></h4>
+<pre><code class="language-c">// From SOSCOMP.H — codec state for ADPCM decompression
+typedef struct _tagCOMPRESS_INFO {
+    char *          lpSource;         // Source data pointer
+    char *          lpDest;           // Destination buffer pointer
+    unsigned long   dwCompSize;       // Compressed data size
+    unsigned long   dwUnCompSize;     // Uncompressed data size
+    unsigned long   dwSampleIndex;    // Current sample index (channel 1)
+    long            dwPredicted;      // Predicted sample value (channel 1)
+    long            dwDifference;     // Difference value (channel 1)
+    short           wCodeBuf;         // Code buffer (channel 1)
+    short           wCode;            // Current code (channel 1)
+    short           wStep;            // Step size (channel 1)
+    short           wIndex;           // Index into step table (channel 1)
+    // --- Stereo: second channel state ---
+    unsigned long   dwSampleIndex2;
+    long            dwPredicted2;
+    long            dwDifference2;
+    short           wCodeBuf2;
+    short           wCode2;
+    short           wStep2;
+    short           wIndex2;
+    // ---
+    short           wBitSize;         // Bits per sample (8 or 16)
+    short           wChannels;        // Number of channels (1=mono, 2=stereo)
+} _SOS_COMPRESS_INFO;
+
+// Chunk header for compressed audio blocks
+typedef struct _tagCOMPRESS_HEADER {
+    unsigned long dwType;             // Compression type identifier
+    unsigned long dwCompressedSize;   // Size of compressed data
+    unsigned long dwUnCompressedSize; // Size when decompressed
+    unsigned long dwSourceBitSize;    // Original bit depth
+    char          szName[16];         // Name string
+} _SOS_COMPRESS_HEADER;
+</code></pre>
+<h4 id="westwood-adpcm-decompression-algorithm"><a class="header" href="#westwood-adpcm-decompression-algorithm">Westwood ADPCM Decompression Algorithm</a></h4>
+<p>The algorithm processes each byte as two 4-bit nibbles (low nibble first, then high nibble). It uses pre-computed <code>IndexTable</code> and <code>DiffTable</code> lookup tables for decoding.</p>
+<pre><code class="language-c">// From ADPCM.CPP — core decompression loop (simplified)
+// 'code' is one byte of compressed data containing TWO samples
+//
+// For each byte:
+//   1. Process low nibble  (code &amp; 0x0F)
+//   2. Process high nibble (code &gt;&gt; 4)
+//
+// Per nibble:
+//   fastindex = (fastindex &amp; 0xFF00) | token;   // token = 4-bit nibble
+//   sample += DiffTable[fastindex];              // apply difference
+//   sample = clamp(sample, -32768, 32767);       // clamp to 16-bit range
+//   fastindex = IndexTable[fastindex];           // advance index
+//   output = (unsigned short)sample;             // write sample
+
+// The 'fastindex' combines the step index (high byte) and token (low byte)
+// into a single 16-bit lookup key: index = (step_index &lt;&lt; 4) | token
+</code></pre>
+<p><strong>Table structure:</strong> Both tables are indexed by <code>[step_index * 16 + token]</code> where <code>step_index</code> is 0–88 and <code>token</code> is 0–15, giving 1424 entries each.</p>
+<ul>
+<li><code>IndexTable[1424]</code> (<code>unsigned short</code>) — next step index after applying this token</li>
+<li><code>DiffTable[1424]</code> (<code>long</code>) — signed difference to add to the current sample</li>
+</ul>
+<p>The tables are pre-multiplied by 16 for performance (the index already includes the token offset). Full table values are in <code>ITABLE.CPP</code> and <code>DTABLE.CPP</code>.</p>
+<hr>
+<h3 id="vqa-video-format-vqa"><a class="header" href="#vqa-video-format-vqa">VQA Video Format (.vqa)</a></h3>
+<p><strong>Source:</strong> <code>VQ/INCLUDE/VQA32/VQAFILE.H</code> (CnC_Red_Alert repo), <code>REDALERT/WIN32LIB/IFF.H</code></p>
+<p>VQA (Vector Quantized Animation) files store cutscene videos using vector quantization — a codebook of small pixel blocks that are referenced by index to reconstruct each frame.</p>
+<h4 id="vqa-file-header"><a class="header" href="#vqa-file-header">VQA File Header</a></h4>
+<pre><code class="language-c">// From VQAFILE.H
+typedef struct _VQAHeader {
+    unsigned short Version;         // Format version
+    unsigned short Flags;           // Bit 0 = has audio, Bit 1 = has alt audio
+    unsigned short Frames;          // Total number of video frames
+    unsigned short ImageWidth;      // Image width in pixels
+    unsigned short ImageHeight;     // Image height in pixels
+    unsigned char  BlockWidth;      // Codebook block width (typically 4)
+    unsigned char  BlockHeight;     // Codebook block height (typically 2 or 4)
+    unsigned char  FPS;             // Frames per second (typically 15)
+    unsigned char  Groupsize;       // VQ codebook group size
+    unsigned short Num1Colors;      // Number of 1-color blocks(?)
+    unsigned short CBentries;       // Number of codebook entries
+    unsigned short Xpos;            // X display position
+    unsigned short Ypos;            // Y display position
+    unsigned short MaxFramesize;    // Largest frame size (for buffer allocation)
+    // Audio fields
+    unsigned short SampleRate;      // Audio sample rate (e.g., 22050)
+    unsigned char  Channels;        // Audio channels (1=mono, 2=stereo)
+    unsigned char  BitsPerSample;   // Audio bits per sample (8 or 16)
+    // Alternate audio stream
+    unsigned short AltSampleRate;
+    unsigned char  AltChannels;
+    unsigned char  AltBitsPerSample;
+    // Reserved
+    unsigned short FutureUse[5];
+} VQAHeader;
+</code></pre>
+<h4 id="vqa-chunk-types"><a class="header" href="#vqa-chunk-types">VQA Chunk Types</a></h4>
+<p>VQA files use a chunk-based IFF-like structure. Each chunk has a 4-byte ASCII identifier and a big-endian 4-byte size.</p>
+<p><strong>Top-level structure:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Chunk</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>WVQA</code></td><td>Form/container chunk (file magic)</td></tr>
+<tr><td><code>VQHD</code></td><td>VQA header (contains <code>VQAHeader</code> above)</td></tr>
+<tr><td><code>FINF</code></td><td>Frame info table — seek offsets for each frame</td></tr>
+<tr><td><code>VQFR</code></td><td>Video frame (delta frame)</td></tr>
+<tr><td><code>VQFK</code></td><td>Video keyframe</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Sub-chunks within frames:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Chunk</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>CBF0</code> / <code>CBFZ</code></td><td>Full codebook, uncompressed / LCW-compressed</td></tr>
+<tr><td><code>CBP0</code> / <code>CBPZ</code></td><td>Partial codebook (1/Groupsize of full), uncompressed / LCW-compressed</td></tr>
+<tr><td><code>VPT0</code> / <code>VPTZ</code></td><td>Vector pointers (frame block indices), uncompressed / LCW-compressed</td></tr>
+<tr><td><code>VPTK</code></td><td>Vector pointer keyframe</td></tr>
+<tr><td><code>VPTD</code></td><td>Vector pointer delta (differences from previous frame)</td></tr>
+<tr><td><code>VPTR</code> / <code>VPRZ</code></td><td>Vector pointer + run-skip-dump encoding</td></tr>
+<tr><td><code>CPL0</code> / <code>CPLZ</code></td><td>Palette (256 × RGB), uncompressed / LCW-compressed</td></tr>
+<tr><td><code>SND0</code></td><td>Audio — raw PCM</td></tr>
+<tr><td><code>SND1</code></td><td>Audio — Westwood “ZAP” ADPCM</td></tr>
+<tr><td><code>SND2</code></td><td>Audio — IMA ADPCM (same codec as AUD files)</td></tr>
+<tr><td><code>SNDZ</code></td><td>Audio — LCW-compressed</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Naming convention:</strong> Suffix <code>0</code> = uncompressed data. Suffix <code>Z</code> = LCW-compressed. Suffix <code>K</code> = keyframe. Suffix <code>D</code> = delta.</p>
+<h4 id="finf-frame-info-table"><a class="header" href="#finf-frame-info-table">FINF (Frame Info) Table</a></h4>
+<p>The <code>FINF</code> chunk contains a table of 4 bytes per frame encoding seek position and flags:</p>
+<pre><code class="language-c">// Bits 31–28: Frame flags
+//   Bit 31 (0x80000000): KEY   — keyframe (full codebook + vector pointers)
+//   Bit 30 (0x40000000): PAL   — frame includes palette change
+//   Bit 29 (0x20000000): SYNC  — audio sync point
+// Bits 27–0: File offset in WORDs (multiply by 2 for byte offset)
+</code></pre>
+<h4 id="vpc-codes-vector-pointer-compression"><a class="header" href="#vpc-codes-vector-pointer-compression">VPC Codes (Vector Pointer Compression)</a></h4>
+<pre><code class="language-c">// Run-skip-dump encoding opcodes for vector pointer data
+#define VPC_ONE_SINGLE      0xF000  // Single block, one value
+#define VPC_ONE_SEMITRANS   0xE000  // Semi-transparent block
+#define VPC_SHORT_DUMP      0xD000  // Short literal dump
+#define VPC_LONG_DUMP       0xC000  // Long literal dump
+#define VPC_SHORT_RUN       0xB000  // Short run of same value
+#define VPC_LONG_RUN        0xA000  // Long run of same value
+</code></pre>
+<hr>
+<h3 id="vq-static-image-format-vqa-still-frames"><a class="header" href="#vq-static-image-format-vqa-still-frames">VQ Static Image Format (.vqa still frames)</a></h3>
+<p><strong>Source:</strong> <code>WINVQ/INCLUDE/VQFILE.H</code>, <code>VQ/INCLUDE/VQ.H</code> (CnC_Red_Alert repo)</p>
+<p>Separate from VQA movies, the VQ format handles single static vector-quantized images.</p>
+<h4 id="vq-header-vqfileh-variant"><a class="header" href="#vq-header-vqfileh-variant">VQ Header (VQFILE.H variant)</a></h4>
+<pre><code class="language-c">// From VQFILE.H
+typedef struct _VQHeader {
+    unsigned short Version;
+    unsigned short Flags;
+    unsigned short ImageWidth;
+    unsigned short ImageHeight;
+    unsigned char  BlockType;     // Block encoding type
+    unsigned char  BlockWidth;
+    unsigned char  BlockHeight;
+    unsigned char  BlockDepth;    // Bits per pixel
+    unsigned short CBEntries;     // Codebook entries
+    unsigned char  VPtrType;      // Vector pointer encoding type
+    unsigned char  PalStart;      // First palette index used
+    unsigned short PalLength;     // Number of palette entries
+    unsigned char  PalDepth;      // Palette bit depth
+    unsigned char  ColorModel;    // Color model (see below)
+} VQHeader;
+</code></pre>
+<h4 id="vq-header-vqh-variant--40-bytes-for-vq-encoder"><a class="header" href="#vq-header-vqh-variant--40-bytes-for-vq-encoder">VQ Header (VQ.H variant — 40 bytes, for VQ encoder)</a></h4>
+<pre><code class="language-c">// From VQ.H
+typedef struct _VQHeader {
+    long           ImageSize;     // Total image size in bytes
+    unsigned short ImageWidth;
+    unsigned short ImageHeight;
+    unsigned char  BlockWidth;
+    unsigned char  BlockHeight;
+    unsigned char  BlockType;     // Block encoding type
+    unsigned char  PaletteRange;  // Palette range
+    unsigned short Num1Color;     // Number of 1-color blocks
+    unsigned short CodebookSize;  // Codebook entries
+    unsigned char  CodingFlag;    // Coding method flag
+    unsigned char  FrameDiffMethod; // Frame difference method
+    unsigned char  ForcedPalette; // Forced palette flag
+    unsigned char  F555Palette;   // Use 555 palette format
+    unsigned short VQVersion;     // VQ codec version
+} VQHeader;
+</code></pre>
+<h4 id="vq-chunk-ids"><a class="header" href="#vq-chunk-ids">VQ Chunk IDs</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Chunk</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>VQHR</code></td><td>VQ header</td></tr>
+<tr><td><code>VQCB</code></td><td>VQ codebook data</td></tr>
+<tr><td><code>VQCT</code></td><td>VQ color table (palette)</td></tr>
+<tr><td><code>VQVP</code></td><td>VQ vector pointers</td></tr>
+</tbody>
+</table>
+</div>
+<h4 id="color-models"><a class="header" href="#color-models">Color Models</a></h4>
+<pre><code class="language-c">#define VQCM_PALETTED  0   // Palette-indexed (standard RA/TD)
+#define VQCM_RGBTRUE   1   // RGB true color
+#define VQCM_YBRTRUE   2   // YBR (luminance-chrominance) true color
+</code></pre>
+<hr>
 <h2 id="insights-from-eas-original-source-code"><a class="header" href="#insights-from-eas-original-source-code">Insights from EA’s Original Source Code</a></h2>
 <p>Repository: https://github.com/electronicarts/CnC_Red_Alert (GPL v3, archived Feb 2025)</p>
 <h3 id="code-statistics"><a class="header" href="#code-statistics">Code Statistics</a></h3>
@@ -455,21 +1050,25 @@ pub struct TickSignature {
 <span class="boring">}</span></code></pre>
 <p><strong>Playback features:</strong> Variable speed (0.5x to 8x), pause, scrub to any tick (requires re-simulating from nearest snapshot or start). <code>SimSnapshot</code> can be taken at intervals during recording for fast seeking.</p>
 <h3 id="ra-formats-write-support"><a class="header" href="#ra-formats-write-support">ra-formats Write Support</a></h3>
-<p><code>ra-formats</code> currently focuses on reading C&amp;C file formats. Write support is needed for:</p>
+<p><code>ra-formats</code> currently focuses on reading C&amp;C file formats. Write support extends the crate for the Asset Studio (D040) and mod toolchain:</p>
 <div class="table-wrapper">
 <table>
 <thead>
-<tr><th>Format</th><th>Write Use Case</th><th>Priority</th></tr>
+<tr><th>Format</th><th>Write Use Case</th><th>Encoder Details</th><th>Priority</th></tr>
 </thead>
 <tbody>
-<tr><td><code>.oramap</code></td><td>SDK scenario editor exports</td><td>Phase 6a (D038)</td></tr>
-<tr><td><code>.mix</code></td><td>Mod packaging (optional — mods can ship loose files)</td><td>Phase 6a (nice-to-have)</td></tr>
-<tr><td>YAML</td><td>All IC-native content authoring</td><td>Phase 0 (serde_yaml — already available)</td></tr>
-<tr><td>MiniYAML</td><td><code>ic mod export --miniyaml</code> for OpenRA compat</td><td>Phase 6a (reverse of D025 converter)</td></tr>
+<tr><td><code>.shp</code></td><td>Generate sprites from PNG frames for OpenRA mod sharing</td><td><code>ShapeBlock_Type</code> + <code>Shape_Type</code> header generation, frame offset table, LCW compression (§ LCW)</td><td>Phase 6a (D040)</td></tr>
+<tr><td><code>.pal</code></td><td>Create/edit palettes, faction-color variants</td><td>Raw 768-byte write, 6-bit VGA range (trivial)</td><td>Phase 6a (D040)</td></tr>
+<tr><td><code>.aud</code></td><td>Convert .wav/.ogg recordings to classic Westwood audio format for mod compatibility</td><td><code>AUDHeaderType</code> generation, IMA ADPCM encoding via <code>IndexTable</code>/<code>DiffTable</code> (§ AUD Audio Format)</td><td>Phase 6a (D040)</td></tr>
+<tr><td><code>.vqa</code></td><td>Convert .mp4/.webm cutscenes to classic VQA format for retro feel</td><td><code>VQAHeader</code> generation, VQ codebook construction, frame differencing, audio interleaving (§ VQA)</td><td>Phase 6a (D040)</td></tr>
+<tr><td><code>.mix</code></td><td>Mod packaging (optional — mods can ship loose files)</td><td><code>FileHeader</code> + <code>SubBlock</code> index generation, CRC filename hashing (§ MIX Archive Format)</td><td>Phase 6a (nice-to-have)</td></tr>
+<tr><td><code>.oramap</code></td><td>SDK scenario editor exports</td><td>ZIP archive with map.yaml + terrain + actors</td><td>Phase 6a (D038)</td></tr>
+<tr><td>YAML</td><td>All IC-native content authoring</td><td><code>serde_yaml</code> — already available</td><td>Phase 0</td></tr>
+<tr><td>MiniYAML</td><td><code>ic mod export --miniyaml</code> for OpenRA compat</td><td>Reverse of D025 converter — IC YAML → MiniYAML with tab indentation</td><td>Phase 6a</td></tr>
 </tbody>
 </table>
 </div>
-<p>Write support for binary formats (<code>.shp</code>, <code>.pal</code>, <code>.tmp</code>) is lower priority — the Asset Studio (D040) may use modern formats internally and only export to legacy formats when needed for OpenRA mod sharing.</p>
+<p>All binary encoders reference the EA GPL source code implementations documented in § Binary Format Codec Reference. The source provides complete, authoritative struct definitions, compression algorithms, and lookup tables — no reverse engineering required.</p>
 
                     </main>
 

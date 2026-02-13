@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-738ccda3.js";
+            window.path_to_searchindex_js = "searchindex-669b8e99.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-678cb19b.js"></script>
@@ -710,6 +710,121 @@ Does NOT touch: ic-render, ic-net, ic-ui, ic-editor
 <p><strong>Research is a continuous discipline, not a phase</strong> (observed pattern). The project’s commit history shows research intensifying — not tapering — as design maturity enables more precise questions. New prior art analysis is never “too late” if it produces actionable refinements. Budget time for research throughout the project, not just at the start.</p>
 </li>
 </ol>
+<hr>
+<h2 id="research-rigor--ai-assisted-design"><a class="header" href="#research-rigor--ai-assisted-design">Research Rigor &amp; AI-Assisted Design</a></h2>
+<blockquote>
+<p>This project uses LLM agents as research assistants and writing tools within a human-directed methodology. This section documents the actual process — because “AI-assisted” is frequently misunderstood as “AI-generated,” and the difference matters.</p>
+</blockquote>
+<h3 id="the-misconception"><a class="header" href="#the-misconception">The Misconception</a></h3>
+<p>When people hear “built with AI assistance,” they often imagine: someone typed a few prompts, an LLM produced some text, and that text was shipped as-is. If that were the process, the result would be shallow, inconsistent, and full of hallucinated claims. It would read like marketing copy, not engineering documentation.</p>
+<p>That is not what happened here.</p>
+<h3 id="what-actually-happened"><a class="header" href="#what-actually-happened">What Actually Happened</a></h3>
+<p>Every design decision in this project followed a deliberate, multi-step process:</p>
+<ol>
+<li>
+<p><strong>The human identifies the question.</strong> Not the LLM. The questions come from domain expertise, community knowledge, and architectural reasoning. “How should the Workshop handle P2P distribution?” is a question born from years of experience with modding communities, not a prompt template.</p>
+</li>
+<li>
+<p><strong>Prior art is studied at the source code level.</strong> Not summarized from blog posts. When this project says “Generals uses adaptive run-ahead,” that claim was verified by reading the actual <code>FrameReadiness</code> enum in EA’s GPL-licensed C++ source. When it says “IPFS has a 9-year-unresolved bandwidth limiting issue,” the actual GitHub issue (#3065) was read, along with its 73 reactions and 67 comments. When it says “Minetest uses a LagPool for rate control,” the Minetest source was examined.</p>
+</li>
+<li>
+<p><strong>Findings are documented in structured research documents.</strong> Each research analysis follows a consistent format: overview, architecture analysis, lessons applicable to IC, comparison with IC’s approach, and source citations. These aren’t LLM summaries — they’re analytical documents where every claim traces to a specific codebase, issue, or commit.</p>
+</li>
+<li>
+<p><strong>Decisions are extracted with alternatives and rationale.</strong> Each of the 50 decisions in the decision log (D001–D050) records what was chosen, what alternatives were considered, and why. Many decisions evolved through multiple revision cycles as new research challenged initial assumptions.</p>
+</li>
+<li>
+<p><strong>Findings are propagated across all affected documents.</strong> A single research finding (e.g., “Stratagus confirms the manager hierarchy pattern for AI”) doesn’t just update one file — it’s traced through every document that references the topic: architecture, decisions, roadmap, modding, security, methodology. The cross-cutting propagation discipline documented in Stage 5 of this chapter isn’t theoretical — it’s how every research integration actually works.</p>
+</li>
+<li>
+<p><strong>The human reviews, verifies, and commits.</strong> The maintainer reads every change, verifies factual claims, checks cross-references, and decides what ships. The LLM agent never commits — it proposes, the human approves. A commit is a human judgment that the content is correct.</p>
+</li>
+</ol>
+<h3 id="the-evidence-by-the-numbers"><a class="header" href="#the-evidence-by-the-numbers">The Evidence: By the Numbers</a></h3>
+<p>The body of work speaks for itself:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Metric</th><th>Count</th></tr>
+</thead>
+<tbody>
+<tr><td>Design chapters</td><td>14 (Vision, Architecture, Netcode, Modding, Formats, Security, Cross-Engine, Roadmap, Decisions, Performance, OpenRA Features, Mod Migration, Philosophy, Methodology)</td></tr>
+<tr><td>Standalone research documents</td><td>19 (netcode analyses, AI surveys, pathfinding studies, security research, development philosophy, Workshop/P2P analysis)</td></tr>
+<tr><td>Total lines of structured documentation</td><td>~35,000</td></tr>
+<tr><td>Recorded design decisions (D001–D050)</td><td>50</td></tr>
+<tr><td>Pending decisions with analysis</td><td>6 (P001–P007, two resolved)</td></tr>
+<tr><td>Git commits (design iteration)</td><td>100+</td></tr>
+<tr><td>Open-source codebases studied at source level</td><td>8+ (EA Red Alert, EA Remastered, EA Generals, EA Tiberian Dawn, OpenRA, OpenRA Mod SDK, Stratagus/Stargus, Chrono Divide)</td></tr>
+<tr><td>Additional projects studied for specific patterns</td><td>12+ (Spring Engine, 0 A.D., MicroRTS, Veloren, Hypersomnia, OpenBW, DDNet, OpenTTD, Minetest, Lichess, Quake 3, Warzone 2100)</td></tr>
+<tr><td>Workshop/P2P platforms analyzed</td><td>13+ (npm, Cargo, NuGet, PyPI, Nexus Mods, CurseForge, mod.io, Steam Workshop, ModDB, GameBanana, Uber Kraken, Dragonfly, IPFS)</td></tr>
+<tr><td>OpenRA traits mapped in gap analysis</td><td>~700</td></tr>
+<tr><td>Original creator quotes compiled and sourced</td><td>50+ (from Bostic, Sperry, Castle, Klepacki, Long, Legg, and other Westwood/EA veterans)</td></tr>
+<tr><td>Cross-system pattern analyses</td><td>3 (netcode ↔ Workshop cross-pollination, AI extensibility across 7 codebases, pathfinding survey across 6 engines)</td></tr>
+</tbody>
+</table>
+</div>
+<p>This corpus wasn’t generated in a single session. It was built iteratively over 100+ commits, with each commit refining, cross-referencing, and sometimes revising previous work. The decision log shows decisions that evolved through multiple revisions — D002 (Bevy) was originally “No Bevy” before research changed the conclusion. D043 (AI presets) grew from a simple paragraph to a multi-page design as each new codebase study (Spring Engine, 0 A.D., MicroRTS, Stratagus) added validated evidence.</p>
+<h3 id="how-the-human-agent-relationship-works"><a class="header" href="#how-the-human-agent-relationship-works">How the Human-Agent Relationship Works</a></h3>
+<p>The roles are distinct:</p>
+<p><strong>The human (maintainer/architect) does:</strong></p>
+<ul>
+<li>Identifies which questions matter and in what order</li>
+<li>Decides which codebases and prior art to study</li>
+<li>Evaluates whether findings are accurate and relevant</li>
+<li>Makes every architectural decision — the LLM never decides</li>
+<li>Reviews all text for factual accuracy, tone, and consistency</li>
+<li>Commits changes only after verification</li>
+<li>Directs the overall vision and priorities</li>
+<li>Catches when the LLM is wrong, imprecise, or overconfident</li>
+</ul>
+<p><strong>The LLM agent does:</strong></p>
+<ul>
+<li>Reads source code and documentation at scale (an LLM can process a 10,000-line codebase faster than a human)</li>
+<li>Searches for patterns across multiple codebases simultaneously</li>
+<li>Drafts structured analysis documents following established formats</li>
+<li>Propagates changes across multiple files (mechanical but error-prone if done manually)</li>
+<li>Maintains consistent cross-references across 35,000+ lines of documentation</li>
+<li>Produces initial drafts that the human refines</li>
+</ul>
+<p><strong>What the LLM does NOT do:</strong></p>
+<ul>
+<li>Make architectural decisions</li>
+<li>Decide what to research next</li>
+<li>Ship anything without human review</li>
+<li>Determine project direction or priorities</li>
+<li>Evaluate whether a design is “good enough”</li>
+<li>Commit to the repository</li>
+</ul>
+<p>The relationship is closer to an architect working with a highly capable research assistant than to someone using a text generator. The assistant can read faster, search broader, and draft more consistently — but the architect decides what to build, evaluates the research, and signs off on every deliverable.</p>
+<h3 id="why-this-matters"><a class="header" href="#why-this-matters">Why This Matters</a></h3>
+<p>Three reasons:</p>
+<ol>
+<li>
+<p><strong>Quality.</strong> An LLM generating text without structured methodology produces plausible-sounding but shallow output. The same LLM operating within a rigorous process — where every claim is verified against source code, every decision has documented alternatives, and every cross-reference is maintained — produces documentation that matches or exceeds what a single human could produce in the same timeframe. The methodology is the quality control, not the model.</p>
+</li>
+<li>
+<p><strong>Accountability.</strong> Every claim in these design documents can be traced: which research document supports it, which source code was examined, which decision records the rationale. If a claim is wrong, the trail shows where the error entered. If a decision was revised, the log shows when and why. This auditability is a property of the process, not the tool.</p>
+</li>
+<li>
+<p><strong>Reproducibility.</strong> The Research-Design-Refine cycle documented in this chapter is a repeatable methodology. Another project could follow the same process — with or without an LLM — and produce similarly rigorous results. The LLM accelerates the process; it doesn’t define it. The methodology works without AI assistance — it just takes longer.</p>
+</li>
+</ol>
+<h3 id="what-weve-learned-about-ai-assisted-design"><a class="header" href="#what-weve-learned-about-ai-assisted-design">What We’ve Learned About AI-Assisted Design</a></h3>
+<p>Having used this methodology across 100+ iterations, some observations:</p>
+<ul>
+<li>
+<p><strong>The constraining documents matter more than the prompts.</strong> <code>AGENTS.md</code>, the architectural invariants, the crate boundaries, the “Mistakes to Never Repeat” list — these constrain what the LLM can produce. As the constraint set grows, the LLM’s output quality improves because there are fewer ways to be wrong. This is the compounding effect described in the Foreword.</p>
+</li>
+<li>
+<p><strong>Research compounds.</strong> Each research document makes subsequent research more productive. When studying Stratagus’s AI system, having already analyzed Spring Engine, 0 A.D., and MicroRTS meant the agent could immediately compare findings against three prior analyses. By the time the Workshop P2P research was done (Kraken → Dragonfly → IPFS, three deep-dives in sequence), the pattern recognition was sharp enough to identify cross-pollination with the netcode design — a connection that wouldn’t have been visible without the accumulated context.</p>
+</li>
+<li>
+<p><strong>The human’s domain expertise is irreplaceable.</strong> The LLM doesn’t know that C&amp;C LAN parties still happen. It doesn’t know that the OFP mission editor was the most empowering creative tool of its era. It doesn’t know that the feeling of tank treads crushing infantry is what makes Red Alert <em>Red Alert</em>. These intuitions direct the research and shape the decisions. The LLM is a tool; the vision is human.</p>
+</li>
+<li>
+<p><strong>Verification is non-negotiable.</strong> The “Mistakes to Never Repeat” section in <code>AGENTS.md</code> exists because the LLM got things wrong — sometimes confidently. It claimed “design documents are complete” when they weren’t. It used present tense for unbuilt features. It stated unverified performance numbers as fact. Each mistake was caught during review, corrected, and added to the constraint set so it wouldn’t recur. The methodology assumes the LLM will make errors and builds in verification at every step.</p>
+</li>
+</ul>
 
                     </main>
 

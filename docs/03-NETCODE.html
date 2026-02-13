@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-738ccda3.js";
+            window.path_to_searchindex_js = "searchindex-669b8e99.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-678cb19b.js"></script>
@@ -339,6 +339,15 @@ impl OrderBudget {
 <p><strong>Layer 2 — Bandwidth throttle.</strong> A token bucket rate limiter on raw bytes per client (from OpenTTD). <code>bytes_per_tick</code> adds tokens each tick, <code>bytes_per_tick_burst</code> caps the bucket. This catches oversized orders or rapid data that might pass the order-count budget but overwhelm bandwidth. Parameters are tuned so legitimate traffic never hits the limit.</p>
 <p><strong>Layer 3 — Hard ceiling.</strong> An absolute maximum of 256 orders per player per tick (defined in <code>ProtocolLimits</code>). This is the last resort — if somehow both budget and bandwidth checks fail, this hard cap prevents any single player from flooding the tick’s order list. See <code>06-SECURITY.md</code> § Vulnerability 15 for the full <code>ProtocolLimits</code> definition.</p>
 <p><strong>Half-open connection defense</strong> (from Minetest): New UDP connections to the relay are marked half-open. The relay inhibits retransmission and ping responses until the client proves liveness by using its assigned session ID in a valid packet. This prevents the relay from being usable as a UDP amplification reflector — critical for any internet-facing server.</p>
+<p><strong>Relay connection limits:</strong> In addition to per-player order rate control, the relay enforces connection-level limits to prevent resource exhaustion (see <code>06-SECURITY.md</code> § Vulnerability 24):</p>
+<ul>
+<li><strong>Max total connections per relay instance:</strong> configurable, default 1000. Returns 503 when at capacity.</li>
+<li><strong>Max connections per IP:</strong> configurable, default 5. Prevents single-source connection flooding.</li>
+<li><strong>New connection rate per IP:</strong> max 10/sec (token bucket). Prevents rapid reconnection spam.</li>
+<li><strong>Memory budget per connection:</strong> bounded; torn down if exceeded.</li>
+<li><strong>Idle timeout:</strong> 60 seconds for unauthenticated, 5 minutes for authenticated.</li>
+</ul>
+<p>These limits complement the order-level defenses — rate control handles abuse from established connections, connection limits prevent exhaustion of server resources before a game even starts.</p>
 <h3 id="frame-data-resilience-from-cc-generals"><a class="header" href="#frame-data-resilience-from-cc-generals">Frame Data Resilience (from C&amp;C Generals)</a></h3>
 <p>UDP is unreliable — packets can arrive corrupted, duplicated, reordered, or not at all. Inspired by C&amp;C Generals’ <code>FrameDataManager</code> (see <code>research/generals-zero-hour-netcode-analysis.md</code>), our frame data handling uses a three-state readiness model rather than a simple ready/waiting binary:</p>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
@@ -769,6 +778,9 @@ tracking_servers:
 <p><strong>Observable by default (D031).</strong> All servers emit structured telemetry via OpenTelemetry (OTEL): metrics (Prometheus-compatible), distributed traces (Jaeger/Zipkin), and structured logs (Loki/stdout). Every server exposes <code>/healthz</code>, <code>/readyz</code>, and <code>/metrics</code> endpoints. Self-hosters get pre-built Grafana dashboards for relay (active games, RTT, desync events), tracking (listings, heartbeats), and workshop (downloads, resolution times). Observability is optional but ships with the infrastructure — <code>docker-compose.observability.yaml</code> adds Grafana + Prometheus + Loki with one command.</p>
 </li>
 </ol>
+<blockquote>
+<p><strong>Shared with Workshop infrastructure.</strong> These 7 principles apply identically to the Workshop server (D030/D049). The tracking server, relay server, and Workshop server share deep structural parallels: federation, heartbeats, rate control, connection management, observability, community self-hosting. Several patterns transfer directly between the two systems — three-layer rate control from netcode to Workshop, EWMA peer scoring from Workshop research to relay player quality tracking, and shared infrastructure (unified server binary, federation library, auth/identity layer). See <code>research/p2p-federated-registry-analysis.md</code> § “Netcode ↔ Workshop Cross-Pollination” for the full analysis.</p>
+</blockquote>
 <h3 id="deployment-options"><a class="header" href="#deployment-options">Deployment Options</a></h3>
 <p><strong>Option 1: Just run the binary (simplest)</strong></p>
 <pre><code class="language-bash"># Download and run — no Docker, no cloud, no dependencies
