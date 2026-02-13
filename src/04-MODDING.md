@@ -459,6 +459,8 @@ pub struct ModCapabilities {
     pub read_visible_state: bool,
     // Can NEVER read fogged state (API doesn't exist)
     pub issue_orders: bool,           // For AI mods
+    pub render: bool,                 // For render mods (ic_render_* API)
+    pub pathfinding: bool,            // For pathfinder mods (ic_pathfind_* API)
     pub filesystem: FileAccess,       // Usually None
     pub network: NetworkAccess,       // Usually None
 }
@@ -563,6 +565,97 @@ pub enum CameraMode {
 **Render mod registration:** A render mod implements the `Renderable` and `ScreenToWorld` traits (see `02-ARCHITECTURE.md` § "3D Rendering as a Mod"). It registers via `ic_render_register()` for each actor type it handles. Unregistered actor types fall through to the default sprite renderer. This allows **partial** render overrides — a mod can replace tank rendering with 3D meshes while leaving infantry as sprites.
 
 **Security:** Render host functions are gated by `ModCapabilities.render`. A gameplay mod (AI, scripting) cannot access `ic_render_*` functions. Render mods cannot access `ic_host_issue_order()` — they draw, they don't command. These capabilities are declared in the mod manifest and verified at load time.
+
+### WASM Pathfinding API Surface
+
+Tier 3 WASM mods can provide custom `Pathfinder` trait implementations (D013, D045). This follows the same pattern as render mods — a well-defined host API surface, capability-gated, with the WASM module implementing the trait through exported functions that the engine calls.
+
+**Why modders want this:** Different games need different pathfinding. A Generals-style total conversion needs layered grid pathfinding with bridge and surface bitmask support. A naval mod needs flow-based routing. A tower defense mod needs waypoint pathfinding. The three built-in presets (Remastered, OpenRA, IC Default) cover the Red Alert family — community pathfinders cover everything else.
+
+```rust
+// === Pathfinding Host API (ic_pathfind_* namespace) ===
+// Available only to mods with ModCapabilities.pathfinding = true
+
+/// Register this WASM module as a Pathfinder implementation.
+/// Called once at load time. The engine calls the exported trait methods below.
+#[wasm_host_fn] fn ic_pathfind_register(pathfinder_id: &str);
+
+/// Query terrain passability at a position for a given locomotor.
+/// Pathfinder mods need to read terrain but not modify it.
+#[wasm_host_fn] fn ic_pathfind_get_terrain(pos: WorldPos) -> TerrainType;
+
+/// Query the terrain height at a position (for 3D-aware pathfinding).
+#[wasm_host_fn] fn ic_pathfind_get_height(pos: WorldPos) -> SimCoord;
+
+/// Query entities in a radius (for dynamic obstacle avoidance).
+/// Returns entity positions and radii — no gameplay data exposed.
+#[wasm_host_fn] fn ic_pathfind_query_obstacles(
+    center: WorldPos, radius: SimCoord
+) -> Vec<(WorldPos, SimCoord)>;
+
+/// Read the current map dimensions.
+#[wasm_host_fn] fn ic_pathfind_map_bounds() -> (WorldPos, WorldPos);
+
+/// Allocate scratch memory from the engine's pre-allocated pool.
+/// Pathfinding is hot-path — no per-tick heap allocation allowed.
+#[wasm_host_fn] fn ic_pathfind_scratch_alloc(bytes: u32) -> *mut u8;
+
+/// Return scratch memory to the pool.
+#[wasm_host_fn] fn ic_pathfind_scratch_free(ptr: *mut u8, bytes: u32);
+```
+
+**WASM-exported trait functions** (the engine *calls* these on the mod):
+
+```rust
+// Exported by the WASM pathfinder mod — these map to the Pathfinder trait
+
+/// Called by the engine when a unit requests a path.
+#[wasm_export] fn pathfinder_request_path(
+    origin: WorldPos, dest: WorldPos, locomotor: LocomotorType
+) -> PathId;
+
+/// Called by the engine to retrieve computed waypoints.
+#[wasm_export] fn pathfinder_get_path(id: PathId) -> Option<Vec<WorldPos>>;
+
+/// Called by the engine to check passability (e.g., building placement).
+#[wasm_export] fn pathfinder_is_passable(
+    pos: WorldPos, locomotor: LocomotorType
+) -> bool;
+
+/// Called by the engine when terrain changes (building placed/destroyed).
+#[wasm_export] fn pathfinder_invalidate_area(
+    center: WorldPos, radius: SimCoord
+);
+```
+
+**Example: Generals-style layered grid pathfinder as a WASM mod**
+
+The C&C Generals source code (GPL v3, `electronicarts/CnC_Generals_Zero_Hour`) uses a layered grid system with 10-unit cells, surface bitmasks, and bridge layers. A community mod can reimplement this as a WASM pathfinder — see `research/pathfinding-ic-default-design.md` § "C&C Generals / Zero Hour" for the `LayeredGridPathfinder` design sketch.
+
+```yaml
+# generals_pathfinder/mod.yaml
+mod:
+  name: "Generals Pathfinder"
+  type: pathfinder
+  pathfinder_id: layered-grid-generals
+  display_name: "Generals (Layered Grid)"
+  description: "Grid pathfinding with bridge layers and surface bitmasks, inspired by C&C Generals"
+  wasm_module: generals_pathfinder.wasm
+  capabilities:
+    pathfinding: true
+  config:
+    zone_block_size: 10
+    bridge_clearance: 10.0
+    surface_types: [ground, water, cliff, air, rubble]
+```
+
+**Security:** Pathfinding host functions are gated by `ModCapabilities.pathfinding`. A pathfinder mod can read terrain and obstacle positions but cannot issue orders, read gameplay state (health, resources, fog), or access render functions. This is a narrower capability than gameplay mods — pathfinders compute routes, nothing else.
+
+**Determinism:** WASM pathfinder mods execute in the deterministic sim context. They use the same `WasmExecutionLimits` fuel budget as other WASM mods. All clients run the same WASM binary (verified by SHA-256 hash in the lobby) with the same inputs, producing identical paths. If the fuel budget is exceeded mid-path-request, the path is truncated deterministically — all clients truncate at the same point.
+
+**Multiplayer sync:** Because pathfinding is sim-affecting, all players must use the same pathfinder. The lobby validates that all clients have the same pathfinder WASM module (hash + version). A modded pathfinder is treated identically to a built-in preset for sync purposes.
+
+**Phase:** WASM pathfinding API ships in Phase 6a alongside the mod testing framework and Workshop. Built-in pathfinder presets (D045) ship in Phase 2 as native Rust implementations.
 
 ### Mod Testing Framework
 
@@ -707,6 +800,77 @@ medium_tank:
 **Cross-view multiplayer is a natural consequence.** Since the mod only changes rendering, a player using the 3D mod can play against a player using classic isometric sprites. The sim produces identical state; each client just draws it differently. Replays are viewable in either mode.
 
 See `02-ARCHITECTURE.md` § "3D Rendering as a Mod" for the full architectural rationale.
+
+### Custom Pathfinding Mods (Tier 3 Showcase)
+
+The second major Tier 3 showcase: replacing how units navigate the battlefield. Just as 3D render mods replace the visual presentation, pathfinder mods replace the movement algorithm — while combat, building, harvesting, and everything else remain unchanged.
+
+**Why this matters:** The original C&C Generals uses a layered grid pathfinder with surface bitmasks and bridge layers — fundamentally different from Red Alert's approach. A Generals-clone mod needs Generals-style pathfinding. A naval mod needs flow routing. A tower defense mod needs waypoint constraint pathfinding. No single algorithm fits every RTS — the `Pathfinder` trait (D013) lets modders bring their own.
+
+**A pathfinder mod implements:**
+
+```rust
+// WASM mod: Generals-style layered grid pathfinder
+// (See research/pathfinding-ic-default-design.md § "C&C Generals / Zero Hour")
+struct LayeredGridPathfinder {
+    grid: Vec<CellLayer>,          // 10-unit cells with bridge layers
+    zones: ZoneMap,                // flood-fill reachability zones
+    surface_bitmask: SurfaceMask,  // ground | water | cliff | air | rubble
+}
+
+impl Pathfinder for LayeredGridPathfinder {
+    fn request_path(&mut self, origin: WorldPos, dest: WorldPos, locomotor: LocomotorType) -> PathId {
+        // 1. Check zone connectivity (instant reject if unreachable)
+        // 2. Surface bitmask check for locomotor compatibility
+        // 3. A* over layered grid (bridges are separate layers)
+        // 4. Path smoothing pass
+        // ...
+    }
+    fn get_path(&self, id: PathId) -> Option<&[WorldPos]> { /* ... */ }
+    fn is_passable(&self, pos: WorldPos, locomotor: LocomotorType) -> bool {
+        let cell = self.grid.cell_at(pos);
+        cell.surface_bitmask.allows(locomotor)
+    }
+    fn invalidate_area(&mut self, center: WorldPos, radius: SimCoord) {
+        // Rebuild affected zones, recalculate bridge connectivity
+    }
+}
+```
+
+**Mod manifest and config:**
+
+```yaml
+# generals_pathfinder/mod.yaml
+mod:
+  name: "Generals Pathfinder"
+  type: pathfinder
+  pathfinder_id: layered-grid-generals
+  display_name: "Generals (Layered Grid)"
+  version: "1.0.0"
+  capabilities:
+    pathfinding: true
+  config:
+    zone_block_size: 10
+    bridge_clearance: 10.0
+    surface_types: [ground, water, cliff, air, rubble]
+```
+
+**How other mods use it:**
+
+```yaml
+# desert_strike_mod/mod.yaml — a total conversion using the Generals pathfinder
+mod:
+  name: "Desert Strike"
+  pathfinder: layered-grid-generals
+  depends:
+    - community/generals-pathfinder@^1.0
+```
+
+**Multiplayer sync:** All players must use the same pathfinder — the WASM binary hash is validated in the lobby, same as any sim-affecting mod. If a player is missing the pathfinder mod, the engine auto-downloads it from the Workshop (CS:GO-style, per D030).
+
+**Performance contract:** Pathfinder mods share the same `WasmExecutionLimits` fuel budget as other WASM mods. The engine monitors per-tick pathfinding time. If a community pathfinder consistently exceeds the budget, the lobby warns players. The engine never falls back silently to a different pathfinder — determinism means all clients must agree on every path.
+
+**Phase:** WASM pathfinder mods in Phase 6a. The three built-in pathfinder presets (D045) ship as native Rust in Phase 2.
 
 ## Tera Templating (Phase 6a)
 

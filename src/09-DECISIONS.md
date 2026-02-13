@@ -214,9 +214,16 @@ Every major design decision, with rationale and alternatives considered. Referen
 - All sim systems call the traits, never grid-specific data structures
 - See `02-ARCHITECTURE.md` § "Pathfinding & Spatial Queries" for trait definitions
 
+**Modder-selectable and modder-provided:** The `Pathfinder` trait is open — not locked to first-party implementations. Modders can:
+1. **Select** any registered `Pathfinder` for their mod (e.g., a total conversion picks `IcPathfinder` for its smooth movement, or `RemastersPathfinder` for its retro feel)
+2. **Provide** their own `Pathfinder` implementation via a Tier 3 WASM module and distribute it through the Workshop (D030)
+3. **Use someone else's** community-created pathfinder — just declare it as a dependency in the mod manifest
+
+This follows the same pattern as render modes (D048): the engine ships built-in implementations, mods can add more, and players/modders pick what they want. A Generals-clone mod ships a `LayeredGridPathfinder`; a tower defense mod ships a waypoint pathfinder; a naval mod ships something flow-based. The trait doesn't care — `request_path()` returns waypoints regardless of how they were computed.
+
 **Performance:** identical to hardcoding. Rust traits monomorphize — the trait call compiles to a direct function call when there's one implementation. Zero overhead.
 
-**What we build first:** `IcPathfinder` and `GridSpatialHash`. The traits exist from day one. `RemastersPathfinder` and `OpenRaPathfinder` are Phase 2 deliverables (D045) — ported from their respective GPL codebases.
+**What we build first:** `IcPathfinder` and `GridSpatialHash`. The traits exist from day one. `RemastersPathfinder` and `OpenRaPathfinder` are Phase 2 deliverables (D045) — ported from their respective GPL codebases. Community pathfinders can be published to the Workshop from Phase 6a.
 
 ---
 
@@ -5030,13 +5037,72 @@ When the lobby loads this scenario, it auto-selects the required pathfinder and 
 
 This preserves original campaign missions. A mission designed around units jamming at a bridge works correctly because it ships with `required: classic-ra`. A modern community scenario can ship with `required: ic-default` to ensure smooth flowfield behavior.
 
+### Mod-Selectable and Mod-Provided Pathfinders
+
+The three built-in presets are the **first-party** `Pathfinder` implementations. They are not the only ones. The `Pathfinder` trait (D013) is explicitly open to community implementations.
+
+**Modder as consumer — selecting a pathfinder:**
+
+A mod's YAML manifest can declare which pathfinder it uses. The modder picks from any available implementation — first-party or community:
+
+```yaml
+# mod.yaml — total conversion mod that uses IC's modern pathfinding
+mod:
+  name: "Desert Strike"
+  pathfinder: ic-default            # Use IC's multi-layer hybrid
+  # Or: remastered, openra, layered-grid-generals, community/navmesh-pro, etc.
+```
+
+If the mod doesn't specify a pathfinder, it inherits whatever the player's experience profile selects. When specified, it overrides the experience profile's pathfinding axis — the same way `scenario.pathfinding.required` works (see "Scenario-Required Pathfinding" above), but at the mod level.
+
+**Modder as author — providing a pathfinder:**
+
+A Tier 3 WASM mod can implement the `Pathfinder` trait and register it as a new option:
+
+```rust
+// WASM mod: custom pathfinder (e.g., Generals-style layered grid)
+impl Pathfinder for LayeredGridPathfinder {
+    fn request_path(&mut self, origin: WorldPos, dest: WorldPos, locomotor: LocomotorType) -> PathId {
+        // Surface bitmask check, zone reachability, A* with bridge layers
+        // ...
+    }
+    fn get_path(&self, id: PathId) -> Option<&[WorldPos]> { /* ... */ }
+    fn is_passable(&self, pos: WorldPos, locomotor: LocomotorType) -> bool { /* ... */ }
+    fn invalidate_area(&mut self, center: WorldPos, radius: SimCoord) { /* ... */ }
+}
+```
+
+The mod registers its pathfinder in its manifest with a YAML config block (like the built-in presets):
+
+```yaml
+# mod.yaml — community pathfinder distributed via Workshop
+mod:
+  name: "Generals Pathfinder"
+  type: pathfinder                   # declares this mod provides a Pathfinder impl
+  pathfinder_id: layered-grid-generals
+  display_name: "Generals (Layered Grid)"
+  description: "Grid pathfinding with bridge layers and surface bitmasks, inspired by C&C Generals"
+  wasm_module: generals_pathfinder.wasm
+  config:
+    zone_block_size: 10
+    bridge_clearance: 10.0
+    surface_types: [ground, water, cliff, air, rubble]
+```
+
+Once installed, the community pathfinder appears alongside first-party presets in the lobby's Level 2 per-axis override ("Movement: Classic / OpenRA / Modern / Generals") and is selectable by other mods via `pathfinder: layered-grid-generals`.
+
+**Workshop distribution:** Community pathfinders are Workshop resources (D030) like any other mod. They can be rated, reviewed, and depended upon. A total conversion mod declares `depends: community/generals-pathfinder@^1.0` and the engine auto-downloads it on lobby join (same as CS:GO-style auto-download).
+
+**Sim-affecting implications:** Because pathfinding is deterministic and sim-affecting, all players in a multiplayer game must use the same pathfinder. A community pathfinder is synced like a first-party preset — the lobby validates that all clients have the same pathfinder WASM module (by SHA-256 hash), same config, same version.
+
 ### Relationship to Existing Decisions
 
-- **D013 (`Pathfinder` trait):** Each preset is a separate `Pathfinder` trait implementation. `RemastersPathfinder`, `OpenRaPathfinder`, and `IcPathfinder` are all registered by the RA1 game module. The trait boundary serves double duty: it separates algorithmic families (grid vs. navmesh for future game modules) AND behavioral families (Classic vs. Modern within a game module). This is the natural extension of D013's pluggable design.
-- **D018 (`GameModule` trait):** The RA1 game module ships all three pathfinder implementations. The lobby's experience profile selection determines which one the `GameModule` instantiates — `fn pathfinder()` returns whichever `Box<dyn Pathfinder>` the player selected, not all three. Other game modules (TD, RA2) ship their own sets.
-- **D019 (balance presets):** Parallel concept. Balance = what units can do. Pathfinding = how they get there. Both are sim-affecting and synced in multiplayer.
-- **D043 (AI presets):** Orthogonal. AI decides where to send units; pathfinding decides how they move. An AI preset + pathfinding preset combination determines overall movement behavior.
+- **D013 (`Pathfinder` trait):** Each preset is a separate `Pathfinder` trait implementation. `RemastersPathfinder`, `OpenRaPathfinder`, and `IcPathfinder` are all registered by the RA1 game module. Community mods add more via WASM. The trait boundary serves triple duty: it separates algorithmic families (grid vs. navmesh), behavioral families (Classic vs. Modern), AND first-party from community-provided implementations.
+- **D018 (`GameModule` trait):** The RA1 game module ships all three first-party pathfinder implementations. Community pathfinders are registered by the mod loader alongside them. The lobby's experience profile selection determines which one is active — `fn pathfinder()` returns whichever `Box<dyn Pathfinder>` was selected, whether first-party or community.
+- **D019 (balance presets):** Parallel concept. Balance = what units can do. Pathfinding = how they get there. Both are sim-affecting, synced in multiplayer, and open to community alternatives.
+- **D043 (AI presets):** Orthogonal. AI decides where to send units; pathfinding decides how they move. An AI preset + pathfinding preset combination determines overall movement behavior. Both are modder-selectable.
 - **D033 (QoL toggles):** Some implementation-specific parameters (harvester stuck fix, infantry scatter smoothing) could be classified as QoL. Presets bundle them for consistency; individual toggles in advanced settings allow fine-tuning.
+- **D048 (render modes):** Same modder-selectable pattern. Mods select or provide render modes; mods select or provide pathfinders. The trait-per-subsystem architecture means every pluggable system follows the same model.
 
 ### Alternatives Considered
 
