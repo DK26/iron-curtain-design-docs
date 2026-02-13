@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-0fa94a75.js";
+            window.path_to_searchindex_js = "searchindex-738ccda3.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-a85074c4.js"></script>
+        <script src="toc-678cb19b.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -190,6 +190,51 @@
 <li>Provides OpenRA mod compatibility as the zero-cost migration path</li>
 <li>Is <strong>game-agnostic at the engine layer</strong> — built for the C&amp;C community but designed to power any classic RTS (D039). Ships with Red Alert (default) and Tiberian Dawn as built-in game modules; RA2, Tiberian Sun, and community-created games are future modules on the same engine (RA2 is a future community goal, not a scheduled deliverable)</li>
 </ul>
+<h2 id="community-pain-points-we-address"><a class="header" href="#community-pain-points-we-address">Community Pain Points We Address</a></h2>
+<p>These are the most frequently reported frustrations from the C&amp;C community — sourced from OpenRA’s issue tracker (135+ desync issues alone), competitive player feedback (15+ RAGL seasons), modder forums, and the Remastered Collection’s reception. Every architectural decision in this document traces back to at least one of these. This section exists so that anyone reading this document for the first time understands <em>why</em> the engine is designed the way it is.</p>
+<h3 id="critical--for-players"><a class="header" href="#critical--for-players">Critical — For Players</a></h3>
+<p><strong>1. Desyncs ruin multiplayer games.</strong>
+OpenRA has 135+ desync issues in its tracker. The sync report buffer is only 7 frames deep — when a desync occurs mid-game, diagnosis is often impossible. Players lose their game with no explanation. This is the single most-complained-about multiplayer issue.
+→ <em>IC answer:</em> Per-tick state hashing follows the Spring Engine’s <code>SyncDebugger</code> approach — binary search identifies the exact tick and entity that diverged. Fixed-point math (no floats in sim — invariant #1) eliminates the most common source of cross-platform non-determinism. See <a href="03-NETCODE.html">03-NETCODE.md</a> for the full desync diagnosis design.</p>
+<p><strong>2. Random performance drops.</strong>
+Even at low unit counts, something “feels off” — micro-stutters from garbage collection pauses, unpredictable frame timing. In competitive play, a stutter during a crucial micro moment loses games. C#/.NET’s garbage collector is non-deterministic in timing.
+→ <em>IC answer:</em> Rust has no garbage collector. Zero per-tick allocation is an invariant (not a goal — a rule). The efficiency pyramid (see <a href="10-PERFORMANCE.html">10-PERFORMANCE.md</a>) prioritizes better algorithms and cache layout before reaching for threads. Target: 500-unit battles smooth on a 2-core 2012 laptop.</p>
+<p><strong>3. Campaigns are systematically incomplete.</strong>
+OpenRA’s multiplayer-first culture has left single-player campaigns unfinished across multiple supported games: Dune 2000 has only 1 of 3 campaigns playable, TD campaigns are also incomplete, and there’s no automatic mission progression — players exit to menu between missions.
+→ <em>IC answer:</em> Campaign completeness is a first-class exit criterion for every shipped game module. Branching campaign graphs with persistent unit rosters, veterancy, and equipment carry-over (D021) go beyond completion to innovation. Continuous flow: briefing → mission → debrief → next mission, no menu breaks.</p>
+<p><strong>4. No competitive infrastructure.</strong>
+No ranked matchmaking, no automated anti-cheat, no signed replays. The competitive scene relies entirely on community-run CnCNet ladders and trust-based result reporting.
+→ <em>IC answer:</em> Glicko-2 ranked matchmaking, relay-certified match results (signed by the relay server — fraud-proof), Ed25519-signed tamper-proof replays, tournament mode with configurable broadcast delay. See <a href="#competitive-play">01-VISION.md § Competitive Play</a> and <a href="06-SECURITY.html">06-SECURITY.md</a>.</p>
+<p><strong>5. Balance debates fractured the community.</strong>
+OpenRA’s competitive rebalancing made iconic units feel less powerful — Tanya, MiGs, V2 rockets, Tesla coils all nerfed for tournament fairness. This was a valid competitive choice, but it became the <em>only</em> option. Players who preferred the original feel had no path forward. The community split over whether the game should feel like Red Alert or like a balanced esport.
+→ <em>IC answer:</em> Switchable balance presets (D019) — classic EA values (default), OpenRA balance, Remastered balance, custom — are a lobby setting, not a total conversion. Choose your experience. No one’s preference invalidates anyone else’s.</p>
+<p><strong>6. Platform reach is limited.</strong>
+The Remastered Collection is Windows/Xbox only. OpenRA covers Windows, macOS, and Linux but not browser or mobile. There’s no way to play on a phone, in a browser, or on a Steam Deck without workarounds.
+→ <em>IC answer:</em> Designed for Windows, macOS, Linux, Steam Deck, browser (WASM), and mobile from day one. Platform-agnostic architecture (invariant #10) — input abstracted behind traits, responsive UI, no raw filesystem access.</p>
+<h3 id="critical--for-modders"><a class="header" href="#critical--for-modders">Critical — For Modders</a></h3>
+<p><strong>7. Deep modding requires C#.</strong>
+OpenRA’s YAML system covers ~80% of modding, but anything beyond value tweaks — new mechanics, total conversions, custom AI — requires writing C# against a large codebase with a .NET build toolchain. This limits the modder pool to people comfortable with enterprise software development.
+→ <em>IC answer:</em> Three tiers — YAML (data, 80% of mods), Lua (scripting, missions and abilities), WASM (engine-level, total conversions) — no recompilation ever (invariant #3). WASM accepts any language. The modding barrier drops from “learn C# and .NET” to “edit a YAML file.”</p>
+<p><strong>8. MiniYAML has no tooling.</strong>
+OpenRA’s custom data format has no IDE support, no schema validation, no linting, no standard parsing libraries. Every editor is a plain text editor. Typos and structural errors are discovered at runtime.
+→ <em>IC answer:</em> Standard YAML with <code>serde_yaml</code> (D003). JSON Schema for validation. IDE autocompletion and error highlighting work out of the box with any YAML-aware editor.</p>
+<p><strong>9. No mod distribution system.</strong>
+Mods are shared via forum posts and manual file copying. There’s no in-game browser, no dependency management, no integrity verification, no one-click install.
+→ <em>IC answer:</em> Workshop registry (D030) with in-game browser, auto-download on lobby join (CS:GO-style), semver dependencies, SHA-256 integrity, federated mirrors, Steam Workshop as optional source.</p>
+<p><strong>10. No hot-reload.</strong>
+Changing a YAML value requires restarting the game. Changing C# code requires recompiling the engine. Iteration speed for mod development is slow.
+→ <em>IC answer:</em> YAML + Lua hot-reload during development. Change a value, see it in-game immediately. WASM mods reload without game restart.</p>
+<h3 id="important--structural"><a class="header" href="#important--structural">Important — Structural</a></h3>
+<p><strong>11. Single-threaded performance ceiling.</strong>
+OpenRA’s game loop is single-threaded (verified from source). There’s a hard ceiling on how many units can be simulated per tick, regardless of how many CPU cores are available.
+→ <em>IC answer:</em> Bevy’s ECS scheduling enables parallel systems where profiling justifies it. But per the efficiency pyramid (D015), algorithmic improvements and cache layout come first — threading is the last optimization, not the first.</p>
+<p><strong>12. Scenario editor is terrain-only.</strong>
+OpenRA’s map editor handles terrain and actor placement but not mission logic — triggers, objectives, AI behavior, and scripting must be done in separate files by hand.
+→ <em>IC answer:</em> The IC SDK (D038+D040) ships a full creative toolchain: visual trigger editor, drag-and-drop logic modules, campaign graph editor, Game Master mode, asset studio. Inspired by OFP/Arma 3 Eden — not just a map painter, a mission design environment.</p>
+<hr>
+<blockquote>
+<p>These pain points are not criticisms of OpenRA — they’re structural consequences of technology choices made 18 years ago. OpenRA is a remarkable achievement. Iron Curtain exists because we believe the community deserves the next step.</p>
+</blockquote>
 <h2 id="why-this-deserves-to-exist"><a class="header" href="#why-this-deserves-to-exist">Why This Deserves to Exist</a></h2>
 <h3 id="capabilities-beyond-openra-and-the-remastered-collection"><a class="header" href="#capabilities-beyond-openra-and-the-remastered-collection">Capabilities Beyond OpenRA and the Remastered Collection</a></h3>
 <div class="table-wrapper">
@@ -233,8 +278,8 @@
 <li>3D rendering: a Tier 3 (WASM) mod can replace the sprite renderer entirely with 3D models while the simulation stays unchanged</li>
 </ul>
 <p>These are <strong>modding possibilities enabled by the engine’s architecture</strong>, not development goals for the base game. The base game ships with the classic isometric aesthetic. Visual enhancements are content that modders and the community build on top.</p>
-<p><strong>In-Engine Scenario Editor (D038)</strong></p>
-<p>OpenRA’s map editor is a standalone terrain/actor tool. Our editor runs inside the game and goes further — not just terrain/unit placement, but full mission logic: visual triggers with countdown/timeout timers, waypoints, drag-and-drop modules (wave spawner, patrol route, guard position, reinforcements, objectives), compositions (reusable prefabs), Probability of Presence per entity for replayability, layers, and a Game Master mode for live scenario manipulation. Inspired by Operation Flashpoint’s mission editor and Arma 3’s Eden Editor.</p>
+<p><strong>Scenario Editor &amp; Asset Studio (D038 + D040)</strong></p>
+<p>OpenRA’s map editor is a standalone terrain/actor tool. The IC SDK ships a full creative toolchain as a separate application from the game — not just terrain/unit placement, but full mission logic: visual triggers with countdown/timeout timers, waypoints, drag-and-drop modules (wave spawner, patrol route, guard position, reinforcements, objectives), compositions (reusable prefabs), Probability of Presence per entity for replayability, layers, and a Game Master mode for live scenario manipulation. The SDK also includes an asset studio (D040) for browsing, editing, and generating game resources — sprites, palettes, terrain, chrome/UI themes — with optional LLM-assisted generation for non-artists. Inspired by Operation Flashpoint’s mission editor, Arma 3’s Eden Editor, and Bethesda’s Creation Kit.</p>
 <h3 id="architectural-differences-from-openra"><a class="header" href="#architectural-differences-from-openra">Architectural Differences from OpenRA</a></h3>
 <p>OpenRA is a mature, actively maintained project with 18 years of community investment. These are genuine architectural differences, not criticisms:</p>
 <div class="table-wrapper">
@@ -246,7 +291,7 @@
 <tr><td>Runtime</td><td>C# / .NET (mature, productive)</td><td>Rust — no GC, predictable perf, WASM target</td></tr>
 <tr><td>Threading</td><td>Single-threaded game loop (verified)</td><td>Parallel systems via ECS</td></tr>
 <tr><td>Modding</td><td>Powerful but requires C# for deep mods</td><td>YAML + Lua + WASM (no compile step)</td></tr>
-<tr><td>Map editor</td><td>Separate tool, recently improved</td><td>In-engine scenario editor with mission logic (D038, Phase 6a/6b)</td></tr>
+<tr><td>Map editor</td><td>Separate tool, recently improved</td><td>SDK scenario editor with mission logic + asset studio (D038+D040, Phase 6a/6b)</td></tr>
 <tr><td>Multiplayer</td><td>135+ desync issues tracked</td><td>Snapshottable sim designed for desync pinpointing</td></tr>
 <tr><td>Competitive</td><td>Community ladders via CnCNet</td><td>Integrated ranked matchmaking, tournament mode</td></tr>
 <tr><td>Portability</td><td>Desktop (Windows, macOS, Linux)</td><td>Desktop + WASM (browser) + mobile</td></tr>
@@ -261,7 +306,7 @@
 <ol>
 <li><strong>Better performance</strong> — visible: bigger maps, more units, no stutters</li>
 <li><strong>Campaigns that flow</strong> — branching paths, persistent units, no menu between missions, failure continues the story</li>
-<li><strong>Better modding</strong> — WASM scripting, in-engine editor, hot reload</li>
+<li><strong>Better modding</strong> — WASM scripting, SDK with scenario editor &amp; asset studio, hot reload</li>
 <li><strong>Competitive infrastructure</strong> — ranked matchmaking, anti-cheat, tournaments, signed replays — OpenRA has none of this</li>
 <li><strong>Player analytics</strong> — post-game stats, career page, campaign dashboard with roster graphs — your match history is queryable data, not a forgotten replay folder</li>
 <li><strong>Better multiplayer</strong> — desync debugging, smoother netcode, relay server</li>

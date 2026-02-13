@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-0fa94a75.js";
+            window.path_to_searchindex_js = "searchindex-738ccda3.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-a85074c4.js"></script>
+        <script src="toc-678cb19b.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -274,7 +274,7 @@
 <li><strong>Cross-game component library (D029):</strong> Mind control, carrier/spawner, teleport networks, shield system, upgrade system, delayed weapons (7 first-party systems)</li>
 <li>Fixed-point coordinate system (no floats in sim)</li>
 <li>Deterministic RNG</li>
-<li>Pathfinding: <code>Pathfinder</code> trait + grid flowfield implementation (D013)</li>
+<li>Pathfinding: <code>Pathfinder</code> trait + <code>IcPathfinder</code> multi-layer hybrid (D013), <code>RemastersPathfinder</code> and <code>OpenRaPathfinder</code> ported from GPL sources (D045)</li>
 <li>Order system: Player inputs → Orders → deterministic sim application</li>
 <li><code>LocalNetwork</code> and <code>ReplayPlayback</code> NetworkModel implementations</li>
 <li>Sim snapshot/restore for save games and future rollback</li>
@@ -347,7 +347,7 @@
 <ul>
 <li>Lua-based scripting for mission scripts</li>
 <li>WASM mod runtime (basic)</li>
-<li>Basic skirmish AI: harvest, build, attack patterns</li>
+<li>Basic skirmish AI: priority-based manager hierarchy (D043) with harvester management, share-based unit production, influence-map building placement, tick-gated evaluation, and fuzzy engagement logic — target quality: better than EA RA, comparable to OpenRA</li>
 <li>Campaign mission loading (OpenRA mission format)</li>
 <li><strong>Branching campaign graph engine (D021):</strong> campaigns as directed graphs of missions with named outcomes, multiple paths, and convergence points</li>
 <li><strong>Persistent campaign state:</strong> unit roster carryover, veterancy across missions, equipment persistence, story flags — serializable for save games</li>
@@ -357,12 +357,15 @@
 <li><strong>Adaptive difficulty via campaign state:</strong> designer-authored conditional bonuses/penalties based on cumulative performance</li>
 <li><strong>Campaign dashboard (D034):</strong> Roster composition graphs per mission, veterancy progression for named units, campaign path visualization, performance trends — from SQLite <code>campaign_missions</code> + <code>roster_snapshots</code></li>
 <li><strong><code>ic-ai</code> reads player history (D034):</strong> Skirmish AI queries SQLite <code>matches</code> + <code>gameplay_events</code> for difficulty scaling, build order variety, and counter-strategy selection between games</li>
+<li><strong>Player style profile building (D042):</strong> <code>ic-ai</code> aggregates <code>gameplay_events</code> into <code>PlayerStyleProfile</code> per player; <code>StyleDrivenAi</code> (AiStrategy impl) mimics a specific player’s tendencies in skirmish; “Challenge My Weakness” training mode targets the local player’s weakest matchups; <code>player_profiles</code> + <code>training_sessions</code> SQLite tables; progress tracking across training sessions</li>
 <li><strong>FMV cutscene playback</strong> between missions (original <code>.vqa</code> briefings and victory/defeat sequences)</li>
 <li><strong>Full Allied and Soviet campaigns</strong> for Red Alert, playable start to finish</li>
 </ul>
 <h3 id="key-architecture-work-3"><a class="header" href="#key-architecture-work-3">Key Architecture Work</a></h3>
 <ul>
 <li>Lua sandbox with engine bindings</li>
+<li><strong>Lua AI scripting primitives:</strong> <code>Ai</code> global exposing force composition targets, resource collection ratios, patrol/attack commands — enabling Tier 2 modders to write custom AI behaviors without Tier 3 WASM (Stratagus precedent, see <code>research/stratagus-stargus-opencraft-analysis.md</code> §4)</li>
+<li><strong>External AI socket interface (stretch goal):</strong> TCP/JSON protocol for ML/RL training — engine as environment, external process as agent. Stratagus has a working example (<code>AiProcessorSetup</code>); IC’s version targets structured state and async communication for <code>ic mod test --ai-harness</code></li>
 <li>WASM host API with capability system (see <code>06-SECURITY.md</code>)</li>
 <li>Campaign graph loader + validator: parse YAML campaign definitions, validate graph connectivity (no orphan nodes, all outcome targets exist)</li>
 <li><code>CampaignState</code> serialization: roster, flags, equipment, path taken — full snapshot support</li>
@@ -378,7 +381,7 @@
 <li>Campaign branches work: different mission outcomes lead to different next missions</li>
 <li>Unit roster persists across missions (surviving units, veterancy, equipment)</li>
 <li>Save/load works mid-campaign with full state preservation</li>
-<li>Skirmish AI provides a basic challenge</li>
+<li>Skirmish AI provides a credible challenge: <strong>better than EA Red Alert, comparable to OpenRA</strong> — maintains economy (no idle harvesters, no power brownouts), builds a reasonable army composition, attacks at appropriate timing, and defends its base reactively (see D043 implementation architecture and <code>research/rts-ai-implementation-survey.md</code> §9 for target quality)</li>
 </ul>
 <h2 id="phase-5-multiplayer-months-2026"><a class="header" href="#phase-5-multiplayer-months-2026">Phase 5: Multiplayer (Months 20–26)</a></h2>
 <p><strong>Goal:</strong> Deterministic lockstep multiplayer with competitive infrastructure. Not just “multiplayer works” — multiplayer that’s worth switching from OpenRA for.</p>
@@ -396,6 +399,7 @@
 <li><strong>Tournament mode:</strong> bracket API, relay-certified <code>CertifiedMatchResult</code>, server-side replay archive</li>
 <li><strong>Competitive map pool:</strong> curated per-season, community-nominated</li>
 <li><strong>Anti-cheat:</strong> relay-side behavioral analysis (APM, reaction time, pattern entropy), suspicion scoring, community reports</li>
+<li><strong>“Train Against” opponent mode (D042):</strong> With multiplayer match data, players can select any opponent from match history → pick a map → instantly play against <code>StyleDrivenAi</code> loaded with that opponent’s aggregated behavioral profile; no scenario editor required</li>
 <li><strong>Competitive governance (D037):</strong> Competitive committee formation, seasonal map pool curation process, community representative elections</li>
 <li><strong>Competitive achievements (D036):</strong> Ranked placement, league promotion, season finish, tournament participation achievements</li>
 </ul>
@@ -439,7 +443,7 @@
 </ul>
 <h3 id="deliverables--scenario-editor-d038-core"><a class="header" href="#deliverables--scenario-editor-d038-core">Deliverables — Scenario Editor (D038 Core)</a></h3>
 <ul>
-<li><strong>In-engine scenario editor (D038):</strong> OFP/Eden-inspired visual editor for maps AND mission logic — terrain painting, unit placement, triggers (area-based with countdown/timeout timers and min/mid/max randomization), waypoints, pre-built modules (wave spawner, patrol route, guard position, reinforcements, objectives, weather change, etc.), visual connection lines between triggers/modules/waypoints, Probability of Presence per entity for replayability, compositions (reusable prefabs), layers with lock/visibility, Simple/Advanced mode toggle, preview/test button, autosave with crash recovery, undo/redo, direct Workshop publishing</li>
+<li><strong>SDK scenario editor (D038):</strong> OFP/Eden-inspired visual editor for maps AND mission logic — ships as part of the IC SDK (separate application from the game — D040). Terrain painting, unit placement, triggers (area-based with countdown/timeout timers and min/mid/max randomization), waypoints, pre-built modules (wave spawner, patrol route, guard position, reinforcements, objectives, weather change, etc.), visual connection lines between triggers/modules/waypoints, Probability of Presence per entity for replayability, compositions (reusable prefabs), layers with lock/visibility, Simple/Advanced mode toggle, Test button (launches ic-game with scenario), autosave with crash recovery, undo/redo, direct Workshop publishing</li>
 <li>Controller input mapping for core editing workflows (Steam Deck compatible)</li>
 <li>Accessibility: colorblind palette, UI scaling, full keyboard navigation</li>
 </ul>
@@ -460,7 +464,7 @@
 <h3 id="exit-criteria-6"><a class="header" href="#exit-criteria-6">Exit Criteria</a></h3>
 <ul>
 <li>Someone ports an existing OpenRA mod (Tiberian Dawn, Dune 2000) and it runs</li>
-<li>In-engine scenario editor supports terrain painting, unit placement, triggers with timers, waypoints, modules, compositions, undo/redo, autosave, and Workshop publishing</li>
+<li>SDK scenario editor supports terrain painting, unit placement, triggers with timers, waypoints, modules, compositions, undo/redo, autosave, and Workshop publishing</li>
 <li>A mod can declare 3+ Workshop resource dependencies and <code>ic mod install</code> resolves, downloads, and caches them correctly</li>
 <li><code>ic mod audit</code> correctly identifies license incompatibilities in a dependency tree</li>
 <li>An individual resource (e.g., a music track) can be published to and pulled from the Workshop independently</li>
@@ -511,6 +515,7 @@
 <li>Adaptive difficulty: AI observes playstyle, generates targeted challenges (experimental)</li>
 <li><strong>LLM-driven Workshop resource discovery (D030):</strong> When LLM provider is configured, LLM can search Workshop by <code>llm_meta</code> tags, evaluate fitness, auto-pull resources as dependencies for generated content; license-aware filtering</li>
 <li><strong>LLM player-aware generation (D034):</strong> When LLM provider is configured, <code>ic-llm</code> reads local SQLite for player context — faction preferences, unit usage patterns, win/loss streaks, campaign roster state; generates personalized missions, adaptive briefings, post-match commentary, coaching suggestions, rivalry narratives</li>
+<li><strong>LLM coaching loop (D042):</strong> When LLM provider is configured, <code>ic-llm</code> reads <code>training_sessions</code> + <code>player_profiles</code> for structured training plans (“Week 1: expansion timing”), post-session natural language coaching, multi-session arc tracking, and contextual tips during weakness review; builds on Phase 4–5 rule-based training system</li>
 <li><strong>AI training data pipeline (D031):</strong> gameplay event stream → OTEL collector → Parquet/Arrow columnar format → ML training; build order learning, engagement patterns, balance analysis from aggregated match telemetry</li>
 </ul>
 <h3 id="deliverables--visual-modding-infrastructure-bevy-rendering"><a class="header" href="#deliverables--visual-modding-infrastructure-bevy-rendering">Deliverables — Visual Modding Infrastructure (Bevy Rendering)</a></h3>

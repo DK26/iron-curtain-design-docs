@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-0fa94a75.js";
+            window.path_to_searchindex_js = "searchindex-738ccda3.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-a85074c4.js"></script>
+        <script src="toc-678cb19b.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -291,6 +291,185 @@ impl CoordTransform {
     }
 }
 <span class="boring">}</span></code></pre>
+<h2 id="save-game-format"><a class="header" href="#save-game-format">Save Game Format</a></h2>
+<p>Save games store a complete <code>SimSnapshot</code> — the entire sim state at a single tick, sufficient to restore the game exactly.</p>
+<h3 id="structure"><a class="header" href="#structure">Structure</a></h3>
+<pre><code>iron_curtain_save_v1.icsave  (file extension: .icsave)
+├── Header (fixed-size, uncompressed)
+├── Metadata (JSON, uncompressed)
+└── Payload (serde-serialized SimSnapshot, LZ4-compressed)
+</code></pre>
+<h3 id="header-32-bytes-fixed"><a class="header" href="#header-32-bytes-fixed">Header (32 bytes, fixed)</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct SaveHeader {
+    pub magic: [u8; 4],          // b"ICSV" — "Iron Curtain Save"
+    pub version: u16,            // Save format version (1)
+    pub flags: u16,              // Bit flags (compressed, has_thumbnail, etc.)
+    pub metadata_offset: u32,    // Byte offset to metadata section
+    pub metadata_length: u32,    // Metadata section length
+    pub payload_offset: u32,     // Byte offset to compressed payload
+    pub payload_length: u32,     // Compressed payload length
+    pub uncompressed_length: u32,// Uncompressed payload length (for pre-allocation)
+    pub state_hash: u64,         // state_hash() of the saved tick (integrity check)
+}
+<span class="boring">}</span></code></pre>
+<h3 id="metadata-json"><a class="header" href="#metadata-json">Metadata (JSON)</a></h3>
+<p>Human-readable metadata for the save browser UI. Stored as JSON (not the binary sim format) so the client can display save info without deserializing the full snapshot.</p>
+<pre><code class="language-json">{
+  "save_name": "Allied Mission 5 - Checkpoint",
+  "timestamp": "2027-03-15T14:30:00Z",
+  "engine_version": "0.5.0",
+  "mod_api_version": "1.0",
+  "game_module": "ra1",
+  "active_mods": [
+    { "id": "base-ra1", "version": "1.0.0" }
+  ],
+  "map_name": "Allied05.oramap",
+  "tick": 18432,
+  "game_time_seconds": 1228.8,
+  "players": [
+    { "name": "Player 1", "faction": "allies", "is_human": true },
+    { "name": "Soviet AI", "faction": "soviet", "is_human": false }
+  ],
+  "campaign": {
+    "campaign_id": "allied_campaign",
+    "mission_id": "allied05",
+    "flags": { "bridge_intact": true, "tanya_alive": true }
+  },
+  "thumbnail": "thumbnail.png"
+}
+</code></pre>
+<h3 id="payload"><a class="header" href="#payload">Payload</a></h3>
+<p>The payload is a <code>SimSnapshot</code> serialized via <code>serde</code> (bincode format for compactness) and compressed with LZ4 (fast decompression, good ratio for game state data). LZ4 was chosen over LZO (used by original RA) for its better Rust ecosystem support (<code>lz4_flex</code> crate) and superior decompression speed.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct SimSnapshot {
+    pub tick: u64,
+    pub rng_state: DeterministicRngState,
+    pub entities: Vec&lt;EntitySnapshot&gt;,   // all entities + all components
+    pub player_states: Vec&lt;PlayerState&gt;, // credits, power, tech tree, etc.
+    pub map_state: MapState,             // resource cells, terrain modifications
+    pub campaign_state: Option&lt;CampaignState&gt;,  // D021 branching state
+    pub script_state: Option&lt;ScriptState&gt;,      // Lua/WASM variable snapshots
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Size estimate:</strong> A 500-unit game snapshot is ~200KB uncompressed, ~40-80KB compressed. Well within “instant save/load” territory.</p>
+<h3 id="compatibility"><a class="header" href="#compatibility">Compatibility</a></h3>
+<p>Save files embed <code>engine_version</code> and <code>mod_api_version</code>. Loading a save from an older engine version triggers the migration path (if migration exists) or shows a compatibility warning. Save files are forward-compatible within the same <code>mod_api</code> major version.</p>
+<p><strong>Platform note:</strong> On WASM (browser), saves go to <code>localStorage</code> or IndexedDB via Bevy’s platform-appropriate storage. On mobile, saves go to the app sandbox. The format is identical — only the storage backend differs.</p>
+<h2 id="replay-file-format"><a class="header" href="#replay-file-format">Replay File Format</a></h2>
+<p>Replays store the complete order stream — every player command, every tick — sufficient to reproduce an entire game by re-simulating from a known initial state.</p>
+<h3 id="structure-1"><a class="header" href="#structure-1">Structure</a></h3>
+<pre><code>iron_curtain_replay_v1.icrep  (file extension: .icrep)
+├── Header (fixed-size, uncompressed)
+├── Metadata (JSON, uncompressed)
+├── Tick Order Stream (framed, LZ4-compressed)
+└── Signature Chain (Ed25519 hash chain, optional)
+</code></pre>
+<h3 id="header-48-bytes-fixed"><a class="header" href="#header-48-bytes-fixed">Header (48 bytes, fixed)</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct ReplayHeader {
+    pub magic: [u8; 4],           // b"ICRP" — "Iron Curtain Replay"
+    pub version: u16,             // Replay format version (1)
+    pub flags: u16,               // Bit flags (compressed, signed, has_events)
+    pub metadata_offset: u32,
+    pub metadata_length: u32,
+    pub orders_offset: u32,
+    pub orders_length: u32,       // Compressed length
+    pub signature_offset: u32,
+    pub signature_length: u32,
+    pub total_ticks: u64,         // Total ticks in the replay
+    pub final_state_hash: u64,    // state_hash() of the last tick (integrity)
+}
+<span class="boring">}</span></code></pre>
+<h3 id="metadata-json-1"><a class="header" href="#metadata-json-1">Metadata (JSON)</a></h3>
+<pre><code class="language-json">{
+  "replay_id": "a3f7c2d1-...",
+  "timestamp": "2027-03-15T15:00:00Z",
+  "engine_version": "0.5.0",
+  "game_module": "ra1",
+  "active_mods": [ { "id": "base-ra1", "version": "1.0.0" } ],
+  "map_name": "Tournament Island",
+  "map_hash": "sha256:abc123...",
+  "game_speed": "normal",
+  "balance_preset": "classic",
+  "total_ticks": 54000,
+  "duration_seconds": 3600,
+  "players": [
+    {
+      "slot": 0, "name": "Alice", "faction": "allies",
+      "outcome": "won", "apm_avg": 85
+    },
+    {
+      "slot": 1, "name": "Bob", "faction": "soviet",
+      "outcome": "lost", "apm_avg": 72
+    }
+  ],
+  "initial_rng_seed": 42,
+  "signed": true,
+  "relay_server": "relay.ironcurtain.gg"
+}
+</code></pre>
+<h3 id="tick-order-stream"><a class="header" href="#tick-order-stream">Tick Order Stream</a></h3>
+<p>The order stream is a sequence of per-tick frames:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// One tick's worth of orders in the replay.
+pub struct ReplayTickFrame {
+    pub tick: u64,
+    pub state_hash: u64,                // for desync detection during playback
+    pub orders: Vec&lt;TimestampedOrder&gt;,   // all player orders this tick
+}
+<span class="boring">}</span></code></pre>
+<p>Frames are serialized with bincode and compressed in blocks (LZ4 block compression): every 256 ticks form a compression block. This enables seeking — jump to any 256-tick boundary by decompressing just that block, then fast-forward within the block.</p>
+<p><strong>Streaming write:</strong> During a live game, replay frames are appended incrementally (not buffered in memory). The replay file is valid at any point — if the game crashes, the replay up to that point is usable.</p>
+<h3 id="signature-chain-relay-certified-replays"><a class="header" href="#signature-chain-relay-certified-replays">Signature Chain (Relay-Certified Replays)</a></h3>
+<p>For ranked/tournament matches, the relay server signs each tick’s state hash:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct ReplaySignature {
+    pub chain: Vec&lt;TickSignature&gt;,
+    pub relay_public_key: Ed25519PublicKey,
+}
+
+pub struct TickSignature {
+    pub tick: u64,
+    pub state_hash: u64,
+    pub relay_sig: Ed25519Signature,  // relay signs (tick, hash, prev_sig_hash)
+}
+<span class="boring">}</span></code></pre>
+<p>The signature chain is a linked hash chain — each signature includes the hash of the previous signature. Tampering with any tick invalidates all subsequent signatures. Only relay-hosted games produce signed replays. Unsigned replays are fully functional for playback — signatures add trust, not capability.</p>
+<h3 id="playback"><a class="header" href="#playback">Playback</a></h3>
+<p><code>ReplayPlayback</code> implements the <code>NetworkModel</code> trait. It reads the tick order stream and feeds orders to the sim as if they came from the network:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>impl NetworkModel for ReplayPlayback {
+    fn poll_tick(&amp;mut self) -&gt; Option&lt;TickOrders&gt; {
+        let frame = self.read_next_frame()?;
+        // Optionally verify: assert_eq!(expected_hash, sim.state_hash());
+        Some(frame.orders)
+    }
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Playback features:</strong> Variable speed (0.5x to 8x), pause, scrub to any tick (requires re-simulating from nearest snapshot or start). <code>SimSnapshot</code> can be taken at intervals during recording for fast seeking.</p>
+<h3 id="ra-formats-write-support"><a class="header" href="#ra-formats-write-support">ra-formats Write Support</a></h3>
+<p><code>ra-formats</code> currently focuses on reading C&amp;C file formats. Write support is needed for:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Format</th><th>Write Use Case</th><th>Priority</th></tr>
+</thead>
+<tbody>
+<tr><td><code>.oramap</code></td><td>SDK scenario editor exports</td><td>Phase 6a (D038)</td></tr>
+<tr><td><code>.mix</code></td><td>Mod packaging (optional — mods can ship loose files)</td><td>Phase 6a (nice-to-have)</td></tr>
+<tr><td>YAML</td><td>All IC-native content authoring</td><td>Phase 0 (serde_yaml — already available)</td></tr>
+<tr><td>MiniYAML</td><td><code>ic mod export --miniyaml</code> for OpenRA compat</td><td>Phase 6a (reverse of D025 converter)</td></tr>
+</tbody>
+</table>
+</div>
+<p>Write support for binary formats (<code>.shp</code>, <code>.pal</code>, <code>.tmp</code>) is lower priority — the Asset Studio (D040) may use modern formats internally and only export to legacy formats when needed for OpenRA mod sharing.</p>
 
                     </main>
 

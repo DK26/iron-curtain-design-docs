@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-0fa94a75.js";
+            window.path_to_searchindex_js = "searchindex-738ccda3.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-a85074c4.js"></script>
+        <script src="toc-678cb19b.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -2191,121 +2191,104 @@ rifle_infantry:
 </thead>
 <tbody>
 <tr><td>Building footprint / cell occupation</td><td>✅ <code>Building { footprint }</code> component</td></tr>
-<tr><td>Build radius / base expansion</td><td>❌ Not designed</td></tr>
-<tr><td>Building placement preview</td><td>❌ Not designed</td></tr>
-<tr><td>Line building (walls)</td><td>❌ Not designed</td></tr>
-<tr><td>Primary building designation</td><td>❌ Not designed</td></tr>
-<tr><td>Rally points</td><td>⚠️ Mentioned in <code>PlayerOrder::SetRallyPoint</code>, not designed as component</td></tr>
-<tr><td>Building exits (unit spawn points)</td><td>❌ Not designed</td></tr>
-<tr><td>Sell mechanic</td><td>⚠️ Mentioned as <code>PlayerOrder::Sell</code>, not designed</td></tr>
-<tr><td>Building repair</td><td>❌ Not designed</td></tr>
-<tr><td>Landing pad reservation</td><td>❌ Not designed</td></tr>
-<tr><td>Gate (openable barriers)</td><td>❌ Not designed</td></tr>
-<tr><td>Building transforms</td><td>❌ Not designed (MCV deploy, etc.)</td></tr>
+<tr><td>Build radius / base expansion</td><td>✅ <code>BuildArea { range }</code> component</td></tr>
+<tr><td>Building placement preview</td><td>✅ Placement validation pipeline designed</td></tr>
+<tr><td>Line building (walls)</td><td>✅ <code>LineBuild</code> marker component</td></tr>
+<tr><td>Primary building designation</td><td>✅ <code>PrimaryBuilding</code> marker component</td></tr>
+<tr><td>Rally points</td><td>✅ <code>RallyPoint { target: WorldPos }</code> component</td></tr>
+<tr><td>Building exits (unit spawn points)</td><td>✅ <code>Exit { offsets }</code> component</td></tr>
+<tr><td>Sell mechanic</td><td>✅ <code>Sellable { refund_percent, sell_time }</code> component</td></tr>
+<tr><td>Building repair</td><td>✅ <code>Repairable { repair_rate, repair_cost_per_hp }</code> component</td></tr>
+<tr><td>Landing pad reservation</td><td>✅ Covered by docking system (<code>DockHost</code> with <code>DockType::Helipad</code>)</td></tr>
+<tr><td>Gate (openable barriers)</td><td>✅ <code>Gate { open_delay, close_delay, state }</code> component</td></tr>
+<tr><td>Building transforms</td><td>✅ <code>Transforms { into, delay }</code> component (MCV ↔ ConYard)</td></tr>
 </tbody>
 </table>
 </div>
-<p><strong>Recommendation:</strong> Building mechanics are foundational to C&amp;C gameplay. Design:</p>
-<ul>
-<li><code>BaseProvider</code> / <code>GivesBuildableArea</code> equivalent (build radius)</li>
-<li><code>PlacementValidator</code> system (footprint checking, terrain validity, build radius)</li>
-<li><code>LineBuild</code> system for walls and fences</li>
-<li><code>PrimaryBuilding</code> marker component</li>
-<li><code>RallyPoint</code> component with waypoint storage</li>
-<li><code>Exit</code> component (spawn offset positions)</li>
-<li><code>Sellable</code> component and sell order processing</li>
-<li><code>RepairableBuilding</code> component and repair system</li>
-<li><code>Gate</code> component with open/close state</li>
-</ul>
+<p>All building sub-systems designed in <code>02-ARCHITECTURE.md</code> § “Extended Gameplay Systems — Building Mechanics”.</p>
 <hr>
-<h2 id="7-power-system--significant-gap"><a class="header" href="#7-power-system--significant-gap">7. Power System ❌ SIGNIFICANT GAP</a></h2>
+<h2 id="7-power-system--designed"><a class="header" href="#7-power-system--designed">7. Power System ✅ DESIGNED</a></h2>
 <p><strong>OpenRA:</strong> <code>Power</code> trait (provides/consumes), <code>PowerManager</code> (player-level tracking), <code>AffectedByPowerOutage</code> (buildings go offline), <code>ScalePowerWithHealth</code>, power bar in UI.</p>
-<p><strong>Iron Curtain status:</strong> “Power bar” mentioned in Phase 3 sidebar design. No system designed.</p>
-<p><strong>This is fundamental C&amp;C gameplay.</strong> Every building generates or consumes power. Power deficit disables defenses and production. Players optimize power balance. Modders need:</p>
+<p><strong>Iron Curtain status:</strong> Fully designed in <code>02-ARCHITECTURE.md</code> § “Extended Gameplay Systems — Power System”:</p>
 <ul>
-<li><code>Power { provides: i32, consumes: i32 }</code> component</li>
-<li><code>PowerManager</code> player resource (total capacity, total drain)</li>
-<li><code>AffectedByPowerOutage</code> conditional behavior</li>
-<li>Power bar UI</li>
+<li><code>Power { provides, consumes }</code> component per building</li>
+<li><code>PowerManager</code> player-level resource (total capacity, total drain, low_power flag)</li>
+<li><code>AffectedByPowerOutage</code> marker component — integrates with condition system (D028) to halve production and reduce defense fire rate</li>
+<li><code>power_system()</code> runs as system #2 in the tick pipeline</li>
+<li>Power bar UI reads <code>PowerManager</code> from <code>ic-ui</code></li>
 </ul>
 <hr>
-<h2 id="8-support-powers--superweapons--significant-gap"><a class="header" href="#8-support-powers--superweapons--significant-gap">8. Support Powers / Superweapons ❌ SIGNIFICANT GAP</a></h2>
+<h2 id="8-support-powers--superweapons--designed"><a class="header" href="#8-support-powers--superweapons--designed">8. Support Powers / Superweapons ✅ DESIGNED</a></h2>
 <p><strong>OpenRA:</strong> <code>SupportPowerManager</code>, <code>AirstrikePower</code>, <code>NukePower</code>, <code>ParatroopersPower</code>, <code>SpawnActorPower</code>, <code>GrantExternalConditionPower</code>, directional targeting.</p>
-<p><strong>Iron Curtain status:</strong> Chronoshift, Iron Curtain, and nukes are mentioned as visual/shader effects. The actual <strong>superweapon system</strong> (charge timer, targeting UI, activation logic) is not designed.</p>
-<p><strong>Modders need:</strong></p>
+<p><strong>Iron Curtain status:</strong> Fully designed in <code>02-ARCHITECTURE.md</code> § “Extended Gameplay Systems — Support Powers / Superweapons”:</p>
 <ul>
-<li><code>SupportPower</code> component (charge time, range, cooldown)</li>
-<li><code>SupportPowerManager</code> player-level system</li>
-<li>Charge bar UI</li>
-<li>Targeting mode (point, directional, area)</li>
-<li>Power activation pipeline (validate → deduct → apply warheads/effects)</li>
-<li>Extensibility for custom powers via Lua/WASM</li>
+<li><code>SupportPower { charge_time, current_charge, ready, targeting }</code> component per building</li>
+<li><code>SupportPowerManager</code> player-level tracking</li>
+<li><code>TargetingMode</code> enum: <code>Point</code>, <code>Area { radius }</code>, <code>Directional</code></li>
+<li><code>support_power_system()</code> runs as system #6 in the tick pipeline</li>
+<li>Activation via player order → sim validates ownership + readiness → applies warheads/effects at target</li>
+<li>Power types are data-driven (YAML <code>Named(String)</code>) — extensible for custom powers via Lua/WASM</li>
 </ul>
 <hr>
-<h2 id="9-transport--cargo-system--missing"><a class="header" href="#9-transport--cargo-system--missing">9. Transport / Cargo System ❌ MISSING</a></h2>
+<h2 id="9-transport--cargo-system--designed"><a class="header" href="#9-transport--cargo-system--designed">9. Transport / Cargo System ✅ DESIGNED</a></h2>
 <p><strong>OpenRA:</strong> <code>Cargo</code> (carries passengers), <code>Passenger</code> (can be carried), <code>Carryall</code> (air transport), <code>ParaDrop</code>, <code>EjectOnDeath</code>, <code>EntersTunnels</code>.</p>
-<p><strong>Iron Curtain status:</strong> Mentioned only in a campaign example (extraction). No transport mechanics designed.</p>
-<p><strong>Needed:</strong></p>
+<p><strong>Iron Curtain status:</strong> Fully designed in <code>02-ARCHITECTURE.md</code> § “Extended Gameplay Systems — Transport / Cargo”:</p>
 <ul>
-<li><code>Cargo { capacity: u32, slots: Vec&lt;EntityId&gt; }</code> component</li>
-<li><code>Passenger { weight: u32 }</code> component</li>
-<li>Load/unload orders and animations</li>
-<li>Garrisoning buildings (shared mechanic)</li>
-<li>Air transport (carryall pick up &amp; drop)</li>
-<li>Paradrop mechanic</li>
-<li>Eject-on-death behavior</li>
-<li>Tunnel network traversal</li>
+<li><code>Cargo { max_weight, current_weight, passengers, unload_delay }</code> component</li>
+<li><code>Passenger { weight, custom_pip }</code> component</li>
+<li><code>Carryall { carry_target }</code> for air transport</li>
+<li><code>EjectOnDeath</code> marker, <code>ParaDrop { drop_interval }</code> for paradrop capability</li>
+<li>Load/unload order processing in <code>apply_orders()</code> → <code>movement_system()</code> handles approach → add/remove from world</li>
 </ul>
 <hr>
-<h2 id="10-capture--ownership-system--missing"><a class="header" href="#10-capture--ownership-system--missing">10. Capture / Ownership System ❌ MISSING</a></h2>
+<h2 id="10-capture--ownership-system--designed"><a class="header" href="#10-capture--ownership-system--designed">10. Capture / Ownership System ✅ DESIGNED</a></h2>
 <p><strong>OpenRA:</strong> <code>Capturable</code>, <code>Captures</code>, <code>ProximityCapturable</code>, <code>CaptureManager</code>, capture progress bar, <code>TransformOnCapture</code>, <code>TemporaryOwnerManager</code>.</p>
-<p><strong>Iron Curtain status:</strong> Engineers capturing buildings mentioned only as a netcode edge case example. No system design.</p>
-<p><strong>Needed:</strong></p>
+<p><strong>Iron Curtain status:</strong> Fully designed in <code>02-ARCHITECTURE.md</code> § “Extended Gameplay Systems — Capture / Ownership”:</p>
 <ul>
-<li><code>Capturable { progress: i32, threshold: i32 }</code> component</li>
-<li><code>Captures { types: Vec&lt;TargetType&gt;, speed: i32 }</code> component</li>
-<li>Capture progress system</li>
-<li>Ownership transfer logic</li>
-<li>Visual feedback (progress bar, color change)</li>
-<li>Proximity capture variant (for neutral tech buildings)</li>
+<li><code>Capturable { capture_types, capture_threshold, current_progress, capturing_entity }</code> component</li>
+<li><code>Captures { speed, capture_type, consumed }</code> component (engineer consumed on capture for RA1)</li>
+<li><code>CaptureType</code> enum: <code>Infantry</code>, <code>Proximity</code></li>
+<li><code>capture_system()</code> runs as system #12 in tick pipeline</li>
+<li>Ownership transfer on threshold reached, progress reset on interruption</li>
 </ul>
 <hr>
-<h2 id="11-stealth--detection-system--missing"><a class="header" href="#11-stealth--detection-system--missing">11. Stealth / Detection System ❌ MISSING</a></h2>
+<h2 id="11-stealth--detection-system--designed"><a class="header" href="#11-stealth--detection-system--designed">11. Stealth / Detection System ✅ DESIGNED</a></h2>
 <p><strong>OpenRA:</strong> <code>Cloak</code>, <code>DetectCloaked</code>, <code>IgnoresCloak</code>, <code>IgnoresDisguise</code>, <code>RevealOnFire</code>.</p>
-<p><strong>Iron Curtain status:</strong> Gap generators mentioned as a Phase 7 shader effect. No stealth system designed.</p>
-<p><strong>Fundamental to RA gameplay</strong> (submarines, spies, gap generators). Needed:</p>
+<p><strong>Iron Curtain status:</strong> Fully designed in <code>02-ARCHITECTURE.md</code> § “Extended Gameplay Systems — Stealth / Cloak”:</p>
 <ul>
-<li><code>Cloak { delay: u32, detection_types: Vec&lt;CloakType&gt; }</code> component</li>
-<li><code>DetectCloaked { range: i32, types: Vec&lt;CloakType&gt; }</code> component</li>
-<li>Cloak/uncloak triggers (on attack, on movement, timed)</li>
-<li>Integration with fog system (cloaked units hidden even in revealed area unless detector present)</li>
-<li>Disguise mechanic (spy)</li>
+<li><code>Cloak { cloak_delay, cloak_types, ticks_since_action, is_cloaked, reveal_on_fire, reveal_on_move }</code> component</li>
+<li><code>DetectCloaked { range, detect_types }</code> component</li>
+<li><code>CloakType</code> enum: <code>Stealth</code>, <code>Underwater</code>, <code>Disguise</code>, <code>GapGenerator</code></li>
+<li><code>cloak_system()</code> runs as system #13 in tick pipeline</li>
+<li>Fog integration: cloaked entities hidden from enemy unless <code>DetectCloaked</code> in range</li>
 </ul>
 <hr>
-<h2 id="12-crate-system--missing"><a class="header" href="#12-crate-system--missing">12. Crate System ❌ MISSING</a></h2>
+<h2 id="12-crate-system--designed"><a class="header" href="#12-crate-system--designed">12. Crate System ✅ DESIGNED</a></h2>
 <p><strong>OpenRA:</strong> 13 crate action types — cash, units, veterancy, heal, map reveal, explosions, conditions.</p>
-<p><strong>Iron Curtain status:</strong> Crates mentioned only in a netcode edge case (two players racing for the same crate). No crate system designed.</p>
-<p><strong>Needed:</strong></p>
+<p><strong>Iron Curtain status:</strong> Fully designed in <code>02-ARCHITECTURE.md</code> § “Extended Gameplay Systems — Crate System”:</p>
 <ul>
-<li><code>Crate</code> entity with randomized action on pickup</li>
-<li><code>CrateSpawner</code> world system (periodic spawning, max count)</li>
-<li>Crate action types (cash, unit, heal, reveal, levelup, explode, cloak, etc.)</li>
-<li>Configurable crate tables in YAML (modders customize what crates give)</li>
+<li><code>Crate { action_pool }</code> entity with weighted random actions</li>
+<li><code>CrateAction</code> enum: <code>Cash</code>, <code>Unit</code>, <code>Heal</code>, <code>LevelUp</code>, <code>MapReveal</code>, <code>Explode</code>, <code>Cloak</code>, <code>Speed</code></li>
+<li><code>CrateSpawner</code> world-level system (max count, spawn interval, spawn area)</li>
+<li><code>crate_system()</code> runs as system #17 in tick pipeline</li>
+<li>Crate tables fully configurable in YAML for modders</li>
 </ul>
 <hr>
-<h2 id="13-veterancy--experience-system--partial"><a class="header" href="#13-veterancy--experience-system--partial">13. Veterancy / Experience System ⚠️ PARTIAL</a></h2>
+<h2 id="13-veterancy--experience-system--designed"><a class="header" href="#13-veterancy--experience-system--designed">13. Veterancy / Experience System ✅ DESIGNED</a></h2>
 <p><strong>OpenRA:</strong> <code>GainsExperience</code>, <code>GivesExperience</code>, <code>ProducibleWithLevel</code>, <code>ExperienceTrickler</code>, XP multipliers. Veterancy grants conditions which enable multipliers — deeply integrated with the condition system.</p>
-<p><strong>Iron Curtain status:</strong> Veterancy levels mentioned (rookie → veteran → elite → heroic), kill counts tracked, veterancy carries over in campaigns (D021). But the actual <strong>XP system mechanics</strong> are not designed:</p>
+<p><strong>Iron Curtain status:</strong> Fully designed in <code>02-ARCHITECTURE.md</code> § “Extended Gameplay Systems — Veterancy / Experience”:</p>
 <ul>
-<li>How is XP earned? (kill value, damage dealt, etc.)</li>
-<li>What thresholds trigger level-ups?</li>
-<li>What bonuses does each level grant? (via condition system + multipliers)</li>
-<li>How does <code>ProducibleWithLevel</code> work? (barracks with veterancy upgrade)</li>
-<li>XP trickler (passive XP over time)</li>
+<li><code>GainsExperience { current_xp, level, thresholds, level_conditions }</code> component</li>
+<li><code>GivesExperience { value }</code> component (XP awarded to killer)</li>
+<li><code>VeterancyLevel</code> enum: <code>Rookie</code>, <code>Veteran</code>, <code>Elite</code>, <code>Heroic</code></li>
+<li><code>veterancy_system()</code> runs as system #15 in tick pipeline</li>
+<li>XP earned from kills (based on victim’s <code>GivesExperience.value</code>)</li>
+<li>Level-up grants conditions → triggers multipliers (veteran = +25% firepower/armor, elite = +50% + self-heal, heroic = +75% + faster fire)</li>
+<li>All values YAML-configurable, not hardcoded</li>
+<li>Campaign carry-over: XP and level are part of the roster snapshot (D021)</li>
 </ul>
-<p><strong>Recommendation:</strong> Design this after the condition and multiplier systems, since veterancy relies on both.</p>
 <hr>
-<h2 id="14-damage-model--partial"><a class="header" href="#14-damage-model--partial">14. Damage Model ⚠️ PARTIAL</a></h2>
+<h2 id="14-damage-model--designed"><a class="header" href="#14-damage-model--designed">14. Damage Model ✅ DESIGNED</a></h2>
 <p><strong>OpenRA damage flow:</strong></p>
 <pre><code>Armament → fires → Projectile → travels → hits → Warhead(s) applied
     → target validity check (target types, stances)
@@ -2314,50 +2297,50 @@ rifle_infantry:
     → DamageMultiplier traits
     → Health reduced
 </code></pre>
-<p><strong>Iron Curtain status:</strong> We have <code>Armament</code>, <code>Health</code>, <code>Attackable { armor }</code>, and a <code>combat_system()</code> in the pipeline. But the intermediate steps (projectile entity, warhead application, armor-versus-weapon table, damage falloff, multiple warheads) are not designed.</p>
-<p><strong>Recommendation:</strong> Design the full damage pipeline. This is core to balance modding. Modders spend most of their time tuning:</p>
+<p><strong>Iron Curtain status:</strong> Fully designed in <code>02-ARCHITECTURE.md</code> § “Extended Gameplay Systems — Full Damage Pipeline (D028)”:</p>
 <ul>
-<li>Weapon → Projectile → Warhead chain</li>
-<li><code>Versus</code> table (armor type × weapon damage modifier)</li>
-<li>Spread/falloff curves</li>
-<li>Multiple warheads per weapon</li>
+<li><code>Projectile</code> entity with <code>ProjectileType</code> enum: <code>Bullet</code> (hitscan), <code>Missile</code> (homing), <code>Ballistic</code> (arcing), <code>Beam</code> (continuous)</li>
+<li><code>WarheadDef</code> with <code>VersusTable</code> (ArmorType × WarheadType → damage percentage), <code>spread</code>, <code>falloff</code> curves</li>
+<li><code>projectile_system()</code> runs as system #11 in tick pipeline</li>
+<li>Full chain: Armament fires → Projectile entity spawned → projectile advances → hit detection → warheads applied → Versus table → DamageMultiplier conditions → Health reduced</li>
+<li>YAML weapon definitions use OpenRA-compatible format (weapon → projectile → warhead)</li>
 </ul>
 <hr>
-<h2 id="15-death--destruction-mechanics--missing"><a class="header" href="#15-death--destruction-mechanics--missing">15. Death &amp; Destruction Mechanics ❌ MISSING</a></h2>
+<h2 id="15-death--destruction-mechanics--designed"><a class="header" href="#15-death--destruction-mechanics--designed">15. Death &amp; Destruction Mechanics ✅ DESIGNED</a></h2>
 <p><strong>OpenRA:</strong> <code>SpawnActorOnDeath</code> (husks, pilots), <code>ShakeOnDeath</code>, <code>ExplosionOnDamageTransition</code>, <code>FireWarheadsOnDeath</code>, <code>KillsSelf</code> (timed self-destruct), <code>EjectOnDeath</code>, <code>MustBeDestroyed</code> (victory condition).</p>
-<p><strong>Iron Curtain status:</strong> <code>death_system()</code> exists in the pipeline but only described as “remove destroyed entities.” The rich on-death behaviors are not designed.</p>
-<p><strong>Needed:</strong></p>
+<p><strong>Iron Curtain status:</strong> Fully designed in <code>02-ARCHITECTURE.md</code> § “Extended Gameplay Systems — Death Mechanics”:</p>
 <ul>
-<li><code>SpawnOnDeath { actor: ActorId }</code> — spawn husks, eject pilots</li>
-<li><code>ExplodeOnDeath { warhead: WarheadId }</code> — explosion on destruction</li>
-<li><code>SelfDestruct { timer: u32 }</code> — timed self-destruct (demo trucks, C4)</li>
+<li><code>SpawnOnDeath { actor_type, probability }</code> — spawn husks, eject pilots</li>
+<li><code>ExplodeOnDeath { warheads }</code> — explosion on destruction</li>
+<li><code>SelfDestruct { timer, warheads }</code> — timed self-destruct (demo trucks, C4)</li>
+<li><code>DamageStates { thresholds }</code> with <code>DamageState</code> enum: <code>Undamaged</code>, <code>Light</code>, <code>Medium</code>, <code>Heavy</code>, <code>Critical</code></li>
 <li><code>MustBeDestroyed</code> — victory condition marker</li>
-<li><code>DamageState</code> thresholds (light → medium → heavy → critical) with visual/behavioral changes at each stage</li>
+<li><code>death_system()</code> runs as system #16 in tick pipeline</li>
 </ul>
 <hr>
-<h2 id="16-docking-system--missing"><a class="header" href="#16-docking-system--missing">16. Docking System ❌ MISSING</a></h2>
+<h2 id="16-docking-system--designed"><a class="header" href="#16-docking-system--designed">16. Docking System ✅ DESIGNED</a></h2>
 <p><strong>OpenRA:</strong> <code>DockHost</code> (refinery, repair pad, helipad), <code>DockClientBase</code>/<code>DockClientManager</code> (harvesters, aircraft).</p>
-<p><strong>Iron Curtain status:</strong> Harvesters mentioned but the docking/delivery mechanic isn’t designed — how does a harvester deliver ore to a refinery? How does an aircraft land on a helipad?</p>
-<p><strong>Needed:</strong></p>
+<p><strong>Iron Curtain status:</strong> Fully designed in <code>02-ARCHITECTURE.md</code> § “Extended Gameplay Systems — Docking System”:</p>
 <ul>
-<li><code>DockHost { dock_type: DockType, queue: Vec&lt;EntityId&gt; }</code> — refinery, helipad, repair pad</li>
-<li><code>DockClient { dock_type: DockType }</code> — harvester, aircraft</li>
-<li>Docking queue system (one unit docks at a time, others wait)</li>
-<li>Dock assignment (nearest available dock)</li>
+<li><code>DockHost { dock_type, dock_position, queue, occupied }</code> component</li>
+<li><code>DockClient { dock_type }</code> component</li>
+<li><code>DockType</code> enum: <code>Refinery</code>, <code>Helipad</code>, <code>RepairPad</code></li>
+<li><code>docking_system()</code> runs as system #5 in tick pipeline</li>
+<li>Queue management (one unit docks at a time, others wait)</li>
+<li>Dock assignment (nearest available <code>DockHost</code> of matching type)</li>
 </ul>
 <hr>
-<h2 id="17-palette-system--partial"><a class="header" href="#17-palette-system--partial">17. Palette System ⚠️ PARTIAL</a></h2>
+<h2 id="17-palette-system--designed"><a class="header" href="#17-palette-system--designed">17. Palette System ✅ DESIGNED</a></h2>
 <p><strong>OpenRA:</strong> 13 palette source types + 9 palette effect types. Runtime palette manipulation for player colors, cloak shimmer, screen flash, palette rotation (water animation).</p>
-<p><strong>Iron Curtain status:</strong> <code>.pal</code> file loading designed in <code>ra-formats</code>. But runtime palette effects are not designed — these are critical for the classic RA visual style.</p>
-<p><strong>Key palette effects needed:</strong></p>
+<p><strong>Iron Curtain status:</strong> Fully designed across <code>ra-formats</code> (<code>.pal</code> loading) and <code>02-ARCHITECTURE.md</code> § “Extended Gameplay Systems — Palette Effects”:</p>
 <ul>
-<li>Player color remapping (faction colors on units)</li>
-<li>Palette rotation animation (water, ore sparkle)</li>
-<li>Cloak shimmer effect</li>
-<li>Screen flash (nuke, chronoshift)</li>
-<li>Damage tinting</li>
+<li><code>PaletteEffect</code> enum: <code>Flash</code>, <code>FadeToBlack/White</code>, <code>Tint</code>, <code>CycleRange</code>, <code>PlayerRemap</code></li>
+<li>Player color remapping via <code>PlayerRemap</code> (faction colors on units)</li>
+<li>Palette rotation animation (<code>CycleRange</code> for water, ore sparkle)</li>
+<li>Cloak shimmer via <code>Tint</code> effect + transparency</li>
+<li>Screen flash (nuke, chronoshift) via <code>Flash</code> effect</li>
+<li>Modern shader equivalents via Bevy’s material system — modder-facing YAML config is identical regardless of render backend</li>
 </ul>
-<p><strong>Note:</strong> Some of these may be handled differently with modern shaders (Bevy’s material system), but the modder-facing configuration should be equivalent.</p>
 <hr>
 <h2 id="18-radar--minimap-system--partial"><a class="header" href="#18-radar--minimap-system--partial">18. Radar / Minimap System ⚠️ PARTIAL</a></h2>
 <p><strong>OpenRA:</strong> <code>AppearsOnRadar</code>, <code>ProvidesRadar</code>, <code>RadarColorFromTerrain</code>, <code>RadarPings</code>, <code>RadarWidget</code>.</p>
@@ -2369,102 +2352,108 @@ rifle_infantry:
 <li>Radar rendering (terrain colors, unit dots, fog overlay)</li>
 </ul>
 <hr>
-<h2 id="19-infantry-mechanics--missing"><a class="header" href="#19-infantry-mechanics--missing">19. Infantry Mechanics ❌ MISSING</a></h2>
+<h2 id="19-infantry-mechanics--designed"><a class="header" href="#19-infantry-mechanics--designed">19. Infantry Mechanics ✅ DESIGNED</a></h2>
 <p><strong>OpenRA:</strong> <code>WithInfantryBody</code> (sub-cell positioning — 5 infantry share one cell), <code>ScaredyCat</code> (panic flee), <code>TakeCover</code> (prone behavior), <code>TerrainModifiesDamage</code> (infantry in cover).</p>
-<p><strong>Iron Curtain status:</strong> Not designed. Infantry sub-cell positioning is a fundamental C&amp;C visual and gameplay mechanic — up to 5 infantry occupy one cell in different sub-positions.</p>
-<p><strong>Needed:</strong></p>
+<p><strong>Iron Curtain status:</strong> Fully designed in <code>02-ARCHITECTURE.md</code> § “Extended Gameplay Systems — Infantry Mechanics”:</p>
 <ul>
-<li>Sub-cell positioning system (5 slots per cell for infantry)</li>
-<li>Prone/cover behavior (reduces damage, reduces speed)</li>
-<li>Scatter behavior (infantry scatter when attacked)</li>
-<li>Panic behavior (run away when overwhelmed)</li>
+<li><code>InfantryBody { sub_cell }</code> with <code>SubCell</code> enum: <code>Center</code>, <code>TopLeft</code>, <code>TopRight</code>, <code>BottomLeft</code>, <code>BottomRight</code> (5 per cell)</li>
+<li><code>ScaredyCat { flee_range, panic_ticks }</code> — panic flee behavior</li>
+<li><code>TakeCover { damage_modifier, speed_modifier, prone_delay }</code> — prone/cover behavior</li>
+<li><code>movement_system()</code> handles sub-cell slot assignment when infantry enters a cell</li>
+<li>Prone auto-triggers on attack via condition system (“prone” condition → <code>DamageMultiplier</code> of 50%)</li>
 </ul>
 <hr>
-<h2 id="20-mine-system--missing"><a class="header" href="#20-mine-system--missing">20. Mine System ❌ MISSING</a></h2>
+<h2 id="20-mine-system--designed"><a class="header" href="#20-mine-system--designed">20. Mine System ✅ DESIGNED</a></h2>
 <p><strong>OpenRA:</strong> <code>Mine</code>, <code>Minelayer</code>, mine detonation on contact.</p>
-<p><strong>Iron Curtain status:</strong> Not mentioned.</p>
-<p><strong>Needed:</strong></p>
+<p><strong>Iron Curtain status:</strong> Fully designed in <code>02-ARCHITECTURE.md</code> § “Extended Gameplay Systems — Mine System”:</p>
 <ul>
-<li><code>Mine { trigger_types: Vec&lt;TargetType&gt;, warhead: WarheadId }</code> — detonates on contact</li>
-<li><code>Minelayer { mine_type: ActorId }</code> — can lay mines</li>
-<li>Mine placement order</li>
-<li>Mine detection (engineer/mine-sweeper reveals mines)</li>
+<li><code>Mine { trigger_types, warhead, visible_to_owner }</code> component</li>
+<li><code>Minelayer { mine_type, lay_delay }</code> component</li>
+<li><code>mine_system()</code> runs as system #9 in tick pipeline</li>
+<li>Mines invisible to enemy unless detected (uses <code>DetectCloaked</code> with <code>CloakType::Stealth</code>)</li>
+<li>Mine placement via player order</li>
 </ul>
 <hr>
-<h2 id="21-guard-command--missing"><a class="header" href="#21-guard-command--missing">21. Guard Command ❌ MISSING</a></h2>
+<h2 id="21-guard-command--designed"><a class="header" href="#21-guard-command--designed">21. Guard Command ✅ DESIGNED</a></h2>
 <p><strong>OpenRA:</strong> <code>Guard</code>, <code>Guardable</code> — unit follows and protects a target, engaging threats within range.</p>
-<p><strong>Iron Curtain status:</strong> Not mentioned. Guard is a fundamental RTS command.</p>
-<p><strong>Needed:</strong></p>
+<p><strong>Iron Curtain status:</strong> Fully designed in <code>02-ARCHITECTURE.md</code> § “Extended Gameplay Systems — Guard Command”:</p>
 <ul>
-<li><code>Guard { target: EntityId, leash_range: i32 }</code> behavior</li>
-<li>Guard order processing</li>
-<li>Auto-engage threats near guarded target</li>
+<li><code>Guard { target, leash_range }</code> behavior component</li>
+<li><code>Guardable</code> marker component</li>
+<li>Guard order processing in <code>apply_orders()</code></li>
+<li><code>combat_system()</code> integration: guarding units auto-engage attackers of their guarded target within leash range</li>
 </ul>
 <hr>
-<h2 id="22-crush-mechanics--missing"><a class="header" href="#22-crush-mechanics--missing">22. Crush Mechanics ❌ MISSING</a></h2>
+<h2 id="22-crush-mechanics--designed"><a class="header" href="#22-crush-mechanics--designed">22. Crush Mechanics ✅ DESIGNED</a></h2>
 <p><strong>OpenRA:</strong> <code>Crushable</code>, <code>AutoCrusher</code> — vehicles crush infantry, walls.</p>
-<p><strong>Iron Curtain status:</strong> Not mentioned.</p>
-<p><strong>Needed:</strong></p>
+<p><strong>Iron Curtain status:</strong> Fully designed in <code>02-ARCHITECTURE.md</code> § “Extended Gameplay Systems — Crush Mechanics”:</p>
 <ul>
-<li><code>Crushable { crush_class: CrushClass }</code> — can be crushed</li>
-<li>Crush behavior on movement collision</li>
-<li>Crush classes (infantry, walls, hedgehogs)</li>
+<li><code>Crushable { crush_class }</code> with <code>CrushClass</code> enum: <code>Infantry</code>, <code>Wall</code>, <code>Hedgehog</code></li>
+<li><code>Crusher { crush_classes }</code> component for vehicles</li>
+<li><code>crush_system()</code> runs as system #8 in tick pipeline (after <code>movement_system()</code>)</li>
+<li>Checks spatial index at new position for matching <code>Crushable</code> entities, applies instant kill</li>
 </ul>
 <hr>
-<h2 id="23-demolition-mechanics--missing"><a class="header" href="#23-demolition-mechanics--missing">23. Demolition Mechanics ❌ MISSING</a></h2>
+<h2 id="23-demolition-mechanics--designed"><a class="header" href="#23-demolition-mechanics--designed">23. Demolition Mechanics ✅ DESIGNED</a></h2>
 <p><strong>OpenRA:</strong> <code>Demolition</code>, <code>Demolishable</code> — C4 charges on buildings.</p>
-<p><strong>Iron Curtain status:</strong> Not mentioned.</p>
-<p><strong>Needed:</strong></p>
+<p><strong>Iron Curtain status:</strong> Fully designed in <code>02-ARCHITECTURE.md</code> § “Extended Gameplay Systems — Demolition / C4”:</p>
 <ul>
-<li><code>Demolition { delay: u32, warhead: WarheadId }</code> — places C4</li>
-<li>Demolition order for engineer-type units</li>
+<li><code>Demolition { delay, warhead, required_target }</code> component</li>
+<li>Engineer places C4 → countdown → warhead detonates → building takes massive damage</li>
+<li>Engineer consumed on placement</li>
 </ul>
 <hr>
-<h2 id="24-plug-system--missing"><a class="header" href="#24-plug-system--missing">24. Plug System ❌ MISSING</a></h2>
+<h2 id="24-plug-system--designed"><a class="header" href="#24-plug-system--designed">24. Plug System ✅ DESIGNED</a></h2>
 <p><strong>OpenRA:</strong> <code>Plug</code>, <code>Pluggable</code> — actors that plug into buildings (e.g., bio-reactor accepting infantry for power).</p>
-<p><strong>Iron Curtain status:</strong> Not mentioned. Primarily an RA2 mechanic but used by modders extensively.</p>
+<p><strong>Iron Curtain status:</strong> Fully designed in <code>02-ARCHITECTURE.md</code> § “Extended Gameplay Systems — Plug System”:</p>
+<ul>
+<li><code>Pluggable { plug_type, max_plugs, current_plugs, effect_per_plug }</code> component</li>
+<li><code>Plug { plug_type }</code> component</li>
+<li>Plug entry grants condition per plug (e.g., “+50 power per infantry in reactor”)</li>
+<li>Primarily RA2 mechanic, included for mod compatibility</li>
+</ul>
 <hr>
-<h2 id="25-transform-mechanics--missing"><a class="header" href="#25-transform-mechanics--missing">25. Transform Mechanics ❌ MISSING</a></h2>
+<h2 id="25-transform-mechanics--designed"><a class="header" href="#25-transform-mechanics--designed">25. Transform Mechanics ✅ DESIGNED</a></h2>
 <p><strong>OpenRA:</strong> <code>Transforms</code> — actor transforms into another type (MCV ↔ Construction Yard, siege tank deploy/undeploy).</p>
-<p><strong>Iron Curtain status:</strong> Not designed as a system. MCV deployment is implied but not specified.</p>
-<p><strong>Needed:</strong></p>
+<p><strong>Iron Curtain status:</strong> Fully designed in <code>02-ARCHITECTURE.md</code> § “Extended Gameplay Systems — Transform / Deploy”:</p>
 <ul>
-<li><code>Transforms { into: ActorId, delay: u32, condition: Option&lt;ConditionId&gt; }</code> component</li>
-<li>Deploy/undeploy orders</li>
-<li>Transform animation handling</li>
+<li><code>Transforms { into, delay, facing, condition }</code> component</li>
+<li><code>transform_system()</code> runs as system #18 in tick pipeline</li>
+<li>Deploy and undeploy orders in <code>apply_orders()</code></li>
+<li>Grants conditions on deploy (e.g., MCV → ConYard, siege tank → deployed mode)</li>
+<li>Facing check — unit must face correct direction before transforming</li>
 </ul>
 <hr>
-<h2 id="26-notification-system--partial"><a class="header" href="#26-notification-system--partial">26. Notification System ⚠️ PARTIAL</a></h2>
+<h2 id="26-notification-system--designed"><a class="header" href="#26-notification-system--designed">26. Notification System ✅ DESIGNED</a></h2>
 <p><strong>OpenRA:</strong> <code>ActorLostNotification</code> (“Unit lost”), <code>AnnounceOnSeen</code> (“Enemy unit spotted”), <code>DamageNotifier</code> (“Our base is under attack”), <code>HarvesterAttackNotifier</code>, <code>ResourceStorageWarning</code> (“Silos needed”), <code>StartGameNotification</code>, <code>CaptureNotification</code>.</p>
-<p><strong>Iron Curtain status:</strong> EVA voice lines and audio mentioned in Phase 3. But the notification <em>framework</em> (when to trigger which notification, cooldowns, priority) is not designed.</p>
-<p><strong>Needed:</strong></p>
+<p><strong>Iron Curtain status:</strong> Fully designed in <code>02-ARCHITECTURE.md</code> § “Extended Gameplay Systems — Notification System”:</p>
 <ul>
-<li>Notification event system with types (unit_lost, base_under_attack, harvester_attacked, silos_needed, building_captured, enemy_spotted, low_power)</li>
-<li>Cooldown system (don’t spam “under attack” every frame)</li>
-<li>Audio notification mapping (event → audio file)</li>
-<li>Text notification display</li>
+<li><code>NotificationType</code> enum with variants: <code>UnitLost</code>, <code>BaseUnderAttack</code>, <code>HarvesterUnderAttack</code>, <code>SilosNeeded</code>, <code>BuildingCaptured</code>, <code>EnemySpotted</code>, <code>LowPower</code>, <code>BuildingComplete</code>, <code>UnitReady</code>, <code>InsufficientFunds</code>, <code>NuclearLaunchDetected</code>, <code>ReinforcementsArrived</code></li>
+<li><code>NotificationCooldowns { cooldowns, default_cooldown }</code> resource — per-type cooldown to prevent spam</li>
+<li><code>notification_system()</code> runs as system #20 in tick pipeline</li>
+<li><code>ic-audio</code> EVA engine consumes notification events (event → audio file mapping)</li>
+<li>Text notifications rendered by <code>ic-ui</code></li>
 </ul>
 <hr>
-<h2 id="27-cursor-system--missing"><a class="header" href="#27-cursor-system--missing">27. Cursor System ❌ MISSING</a></h2>
+<h2 id="27-cursor-system--designed"><a class="header" href="#27-cursor-system--designed">27. Cursor System ✅ DESIGNED</a></h2>
 <p><strong>OpenRA:</strong> Contextual cursors — different cursor sprites for move, attack, capture, enter, deploy, sell, repair, chronoshift, nuke, etc.</p>
-<p><strong>Iron Curtain status:</strong> Not mentioned anywhere.</p>
-<p><strong>Needed:</strong></p>
+<p><strong>Iron Curtain status:</strong> Fully designed in <code>02-ARCHITECTURE.md</code> § “Extended Gameplay Systems — Cursor System”:</p>
 <ul>
-<li>Cursor context system (hover over enemy = attack cursor, hover over allied building = enter/repair cursor)</li>
-<li>Cursor sprite definitions in YAML</li>
-<li>Cursor hotspot configuration</li>
-<li>Force-modifier cursors (force-fire, force-move)</li>
+<li>YAML-defined cursor set with <code>name</code>, <code>sprite</code>, <code>hotspot</code>, <code>sequence</code></li>
+<li><code>CursorProvider</code> resource tracking current cursor based on hover context</li>
+<li>Built-in cursors: <code>default</code>, <code>move</code>, <code>attack</code>, <code>force_attack</code>, <code>capture</code>, <code>enter</code>, <code>deploy</code>, <code>sell</code>, <code>repair</code>, <code>chronoshift</code>, <code>nuke</code>, <code>harvest</code>, <code>c4</code>, <code>garrison</code>, <code>guard</code>, <code>patrol</code>, <code>waypoint</code></li>
+<li>Force-modifier cursors activated by holding Ctrl/Alt (force-fire on ground, force-move through obstacles)</li>
+<li>Cursor resolution logic: selected units’ abilities × hovered target → choose appropriate cursor</li>
 </ul>
 <hr>
-<h2 id="28-hotkey-system--missing"><a class="header" href="#28-hotkey-system--missing">28. Hotkey System ❌ MISSING</a></h2>
+<h2 id="28-hotkey-system--designed"><a class="header" href="#28-hotkey-system--designed">28. Hotkey System ✅ DESIGNED</a></h2>
 <p><strong>OpenRA:</strong> 8 hotkey config files. Fully rebindable. Categories: common, player, production, control-groups, observer, chat, music, map creation.</p>
-<p><strong>Iron Curtain status:</strong> Not mentioned.</p>
-<p><strong>Needed:</strong></p>
+<p><strong>Iron Curtain status:</strong> Fully designed in <code>02-ARCHITECTURE.md</code> § “Extended Gameplay Systems — Hotkey System”:</p>
 <ul>
-<li>Rebindable hotkey system with categories</li>
-<li>Default hotkey profiles (classic RA, modern RTS)</li>
-<li>Hotkey configuration UI</li>
-<li>Hotkey categories: unit commands, production, control groups, camera, chat, debug</li>
+<li><code>HotkeyConfig</code> with categories: <code>Unit</code>, <code>Production</code>, <code>ControlGroup</code>, <code>Camera</code>, <code>Chat</code>, <code>Debug</code>, <code>Observer</code>, <code>Music</code>, <code>Editor</code></li>
+<li>Default profiles: Classic RA, OpenRA, Modern RTS — selectable in settings</li>
+<li>Fully rebindable via settings UI</li>
+<li>Abstracted behind <code>InputSource</code> trait (D010 platform-agnostic) — gamepad/touch supported</li>
 </ul>
 <hr>
 <h2 id="29-lua-scripting-api--designed-d024--strict-superset"><a class="header" href="#29-lua-scripting-api--designed-d024--strict-superset">29. Lua Scripting API ✅ DESIGNED (D024 — Strict Superset)</a></h2>
@@ -2473,127 +2462,137 @@ rifle_infantry:
 <p>IC extends with additional globals: <code>Campaign</code> (D021 branching campaigns), <code>Weather</code> (D022 dynamic weather), <code>Workshop</code> (mod queries), <code>LLM</code> (Phase 7 integration).</p>
 <p>Each actor reference exposes properties matching its components (<code>.Health</code>, <code>.Location</code>, <code>.Owner</code>, <code>.Move()</code>, <code>.Attack()</code>, <code>.Stop()</code>, <code>.Guard()</code>, <code>.Deploy()</code>, etc.) — identical to OpenRA’s actor property groups.</p>
 <hr>
-<h2 id="30-map-editor--resolved-d038"><a class="header" href="#30-map-editor--resolved-d038">30. Map Editor ✅ RESOLVED (D038)</a></h2>
+<h2 id="30-map-editor--resolved-d038--d040"><a class="header" href="#30-map-editor--resolved-d038--d040">30. Map Editor ✅ RESOLVED (D038 + D040)</a></h2>
 <p><strong>OpenRA:</strong> Full in-engine map editor with actor placement, terrain painting, resource placement, tile editing, undo/redo, script cell triggers, marker layers, road/path tiling tool.</p>
-<p><strong>Iron Curtain status:</strong> Resolved as D038 — in-engine scenario editor (OFP/Eden-inspired). Goes beyond OpenRA’s map editor to include full mission logic editing: triggers with countdown/timeout timers and min/mid/max randomization, waypoints, pre-built modules (wave spawner, patrol route, guard position, reinforcements, objectives), visual connection lines, Probability of Presence per entity for replayability, compositions (reusable prefabs), layers, Simple/Advanced mode toggle, preview/test button, Game Master mode, Workshop publishing. See <code>09-DECISIONS.md</code> § D038 for full design.</p>
+<p><strong>Iron Curtain status:</strong> Resolved as D038+D040 — SDK scenario editor &amp; asset studio (OFP/Eden-inspired). Ships as part of the IC SDK (separate application from the game). Goes beyond OpenRA’s map editor to include full mission logic editing: triggers with countdown/timeout timers and min/mid/max randomization, waypoints, pre-built modules (wave spawner, patrol route, guard position, reinforcements, objectives), visual connection lines, Probability of Presence per entity for replayability, compositions (reusable prefabs), layers, Simple/Advanced mode toggle, Test button, Game Master mode, Workshop publishing. The asset studio (D040) adds visual browsing, editing, and generation of game assets (sprites, palettes, terrain, chrome). See <code>09-DECISIONS.md</code> § D038 and § D040 for full design.</p>
 <hr>
-<h2 id="31-debug--developer-tools--partial"><a class="header" href="#31-debug--developer-tools--partial">31. Debug / Developer Tools ⚠️ PARTIAL</a></h2>
+<h2 id="31-debug--developer-tools--designed"><a class="header" href="#31-debug--developer-tools--designed">31. Debug / Developer Tools ✅ DESIGNED</a></h2>
 <p><strong>OpenRA:</strong> <code>DeveloperMode</code> (instant build, give cash, unlimited power, build anywhere), combat debug overlay, pathfinder overlay, actor map overlay, performance graph, asset browser.</p>
-<p><strong>Iron Curtain status:</strong> <code>egui</code> via <code>bevy_egui</code> mentioned for debug overlays. No specific developer mode or debug tools designed.</p>
-<p><strong>Needed for modders:</strong></p>
+<p><strong>Iron Curtain status:</strong> Fully designed in <code>02-ARCHITECTURE.md</code> § “Extended Gameplay Systems — Debug / Developer Tools”:</p>
 <ul>
-<li>Developer mode (toggle: instant build, free units, reveal map, unlimited power, invincibility)</li>
-<li>Combat debug overlay (weapon ranges, target lines, damage numbers)</li>
-<li>Pathfinding debug overlay (flowfield visualization, path cost)</li>
-<li>Performance profiler (tick time, system time breakdown, entity count)</li>
-<li>Asset browser (preview sprites, sounds, palettes)</li>
+<li>DeveloperMode flags: <code>instant_build</code>, <code>free_units</code>, <code>reveal_map</code>, <code>unlimited_power</code>, <code>invincibility</code>, <code>path_debug</code>, <code>combat_debug</code></li>
+<li>Debug overlays via <code>bevy_egui</code>: weapon ranges, target lines, pathfinder visualization (JPS paths, flow field tiles, sector graph), path costs, damage numbers, spatial index grid</li>
+<li>Performance profiler: per-system tick time, entity count, memory usage, ECS archetype stats</li>
+<li>Asset browser panel: preview sprites with palette application, play sounds, inspect YAML definitions</li>
+<li>All debug features compile-gated behind <code>#[cfg(feature = "dev-tools")]</code> — zero cost in release builds</li>
 </ul>
 <hr>
-<h2 id="32-selection-system--partial"><a class="header" href="#32-selection-system--partial">32. Selection System ⚠️ PARTIAL</a></h2>
+<h2 id="32-selection-system--designed"><a class="header" href="#32-selection-system--designed">32. Selection System ✅ DESIGNED</a></h2>
 <p><strong>OpenRA:</strong> <code>Selection</code>, <code>Selectable</code> (bounds, priority, voice), <code>IsometricSelectable</code>, <code>ControlGroups</code>, selection decorations, double-click select-all-of-type, tab cycling.</p>
-<p><strong>Iron Curtain status:</strong> <code>Selectable { bounds, priority }</code> component exists. Control groups mentioned in Phase 3. But detailed selection mechanics aren’t designed:</p>
+<p><strong>Iron Curtain status:</strong> Fully designed in <code>02-ARCHITECTURE.md</code> § “Extended Gameplay Systems — Selection Details”:</p>
 <ul>
-<li>Selection priority (prefer combat units over harvesters)</li>
-<li>Double-click to select all of type on screen</li>
-<li>Tab cycling through selected unit types</li>
-<li>Box selection edge cases (what happens when box covers 200 units?)</li>
-<li><code>IsometricSelectable</code> for proper diamond-shaped selection boxes</li>
+<li><code>Selectable { bounds, priority, voice_set }</code> component with <code>SelectionPriority</code> enum (<code>Combat</code>, <code>Support</code>, <code>Harvester</code>, <code>Building</code>, <code>Misc</code>)</li>
+<li>Priority-based selection: when box covers mixed types, prefer higher-priority (Combat &gt; Harvester)</li>
+<li>Double-click: select all visible units of same type owned by same player</li>
+<li>Ctrl+click: add/remove from selection</li>
+<li>Tab cycling: rotate through unit types within selection</li>
+<li>Control groups: Ctrl+1..9 to assign, 1..9 to recall, double-tap to center camera</li>
+<li>Selection limit: configurable (default 40) — excess units excluded by distance from box center</li>
+<li>Isometric diamond selection boxes for proper 2.5D feel</li>
 </ul>
 <hr>
-<h2 id="33-observer--spectator-system--partial"><a class="header" href="#33-observer--spectator-system--partial">33. Observer / Spectator System ⚠️ PARTIAL</a></h2>
+<h2 id="33-observer--spectator-system--designed"><a class="header" href="#33-observer--spectator-system--designed">33. Observer / Spectator System ✅ DESIGNED</a></h2>
 <p><strong>OpenRA:</strong> Observer widgets for army composition, production tracking, superweapon timers, strategic progress score.</p>
-<p><strong>Iron Curtain status:</strong> Observer mode and broadcast delay mentioned in competitive design. But the observer <strong>UI</strong> (what information is shown, how) isn’t designed.</p>
-<p><strong>Needed:</strong></p>
+<p><strong>Iron Curtain status:</strong> Fully designed in <code>02-ARCHITECTURE.md</code> § “Extended Gameplay Systems — Observer / Spectator UI”:</p>
 <ul>
-<li>Army composition overlay (unit counts per player)</li>
-<li>Production tracking overlay (what each player is building)</li>
-<li>Economy overlay (income rate, resource count per player)</li>
-<li>Support power timer overlay</li>
-<li>Strategic score tracker</li>
+<li>Observer overlay panels: Army composition, production queues, economy (income/stockpile), support power timers</li>
+<li><code>ObserverState { followed_player, show_overlays }</code> resource</li>
+<li>Player switching: cycle through players or view “god mode” (all players visible)</li>
+<li>Broadcast delay: configurable (default 3 minutes for competitive, 0 for casual)</li>
+<li>Strategic score tracker: army value, buildings, income rate, kills/losses</li>
+<li>Tournament mode: relay-certified results + server-side replay archive</li>
 </ul>
 <hr>
-<h2 id="34-game-speed-system--partial"><a class="header" href="#34-game-speed-system--partial">34. Game Speed System ⚠️ PARTIAL</a></h2>
+<h2 id="34-game-speed-system--designed"><a class="header" href="#34-game-speed-system--designed">34. Game Speed System ✅ DESIGNED</a></h2>
 <p><strong>OpenRA:</strong> 6 game speed presets (Slowest 80ms → Fastest 20ms). Configurable in lobby.</p>
-<p><strong>Iron Curtain status:</strong> Sim tick rate is mentioned (15/sec = 67ms default). Game speed as a lobby option isn’t designed.</p>
-<p><strong>Needed:</strong></p>
+<p><strong>Iron Curtain status:</strong> Fully designed in <code>02-ARCHITECTURE.md</code> § “Extended Gameplay Systems — Game Speed”:</p>
 <ul>
-<li>Game speed presets in lobby</li>
-<li>Speed adjustment during single-player</li>
-<li>Speed affects tick interval, not system behavior</li>
+<li><code>SpeedPreset</code> enum: <code>Slowest</code> (80ms), <code>Slower</code> (67ms, default), <code>Normal</code> (50ms), <code>Faster</code> (35ms), <code>Fastest</code> (20ms)</li>
+<li>Lobby-configurable; speed affects tick interval only (systems run identically at any speed)</li>
+<li>Single-player: speed adjustable at runtime via hotkey (+ / −)</li>
+<li>Pause support in single-player</li>
 </ul>
 <hr>
-<h2 id="35-faction-system--partial"><a class="header" href="#35-faction-system--partial">35. Faction System ⚠️ PARTIAL</a></h2>
+<h2 id="35-faction-system--designed"><a class="header" href="#35-faction-system--designed">35. Faction System ✅ DESIGNED</a></h2>
 <p><strong>OpenRA:</strong> <code>Faction</code> trait (name, internal name, side). Factions determine tech trees, unit availability, starting configurations.</p>
-<p><strong>Iron Curtain status:</strong> Factions mentioned (Allied, Soviet) but the faction system isn’t designed as a formal component:</p>
+<p><strong>Iron Curtain status:</strong> Fully designed in <code>02-ARCHITECTURE.md</code> § “Extended Gameplay Systems — Faction System”:</p>
 <ul>
-<li>Faction → available tech tree mapping</li>
-<li>Faction → player color defaults</li>
-<li>Faction → starting unit configurations</li>
-<li>Faction selection in lobby</li>
-<li>Side grouping (Allies has multiple subfactions in RA2)</li>
+<li><code>Faction { id, display_name, side, color_default, tech_tree }</code> YAML-defined</li>
+<li><code>Side</code> grouping (e.g., <code>allies</code> contains England/France/Germany subfactions in RA)</li>
+<li>Faction → available <code>Buildable</code> items via <code>tech_tree</code> (list of unlockable actor IDs)</li>
+<li>Faction → starting units configuration (map-defined or mod-default)</li>
+<li>Lobby faction selection with random option</li>
+<li>RA2+ subfaction support: each subfaction gets unique units/abilities while sharing the side’s base roster</li>
 </ul>
 <hr>
 <h2 id="36-replay-browser--partial"><a class="header" href="#36-replay-browser--partial">36. Replay Browser ⚠️ PARTIAL</a></h2>
 <p><strong>OpenRA:</strong> Full replay browser with filtering (by map, players, date), sorting, metadata display, replay playback with speed control.</p>
 <p><strong>Iron Curtain status:</strong> <code>ReplayPlayback</code> NetworkModel designed. Signed replays with hash chains. But the <strong>replay browser UI</strong> and metadata storage aren’t designed.</p>
 <hr>
-<h2 id="37-encyclopedia--asset-browser--missing"><a class="header" href="#37-encyclopedia--asset-browser--missing">37. Encyclopedia / Asset Browser ❌ MISSING</a></h2>
+<h2 id="37-encyclopedia--asset-browser--designed"><a class="header" href="#37-encyclopedia--asset-browser--designed">37. Encyclopedia / Asset Browser ✅ DESIGNED</a></h2>
 <p><strong>OpenRA:</strong> In-game encyclopedia with unit descriptions, stats, and previews. Asset browser for modders to preview sprites, sounds, videos.</p>
-<p><strong>Iron Curtain status:</strong> Not mentioned.</p>
-<p><strong>Recommended:</strong> An in-game encyclopedia improves discoverability. The asset browser is essential for mod development.</p>
+<p><strong>Iron Curtain status:</strong> Fully designed in <code>02-ARCHITECTURE.md</code> § “Extended Gameplay Systems — Encyclopedia”:</p>
+<ul>
+<li>In-game encyclopedia with categories: Units, Structures, Weapons, Abilities, Terrain</li>
+<li>Each entry: name, description, sprite preview, stats table (HP, speed, cost, damage, range), prerequisite tree</li>
+<li>Populated from YAML definitions + <code>llm:</code> metadata when present</li>
+<li>Filtered by faction, searchable</li>
+<li>Asset browser is part of IC SDK (D040) — visual browsing/editing of sprites, palettes, terrain, sounds with format-aware import/export</li>
+</ul>
 <hr>
 <h2 id="38-procedural-map-generation--partial"><a class="header" href="#38-procedural-map-generation--partial">38. Procedural Map Generation ⚠️ PARTIAL</a></h2>
 <p><strong>OpenRA:</strong> <code>ClassicMapGenerator</code> (38KB) — procedural map generation with terrain types, resource placement, spawn points.</p>
 <p><strong>Iron Curtain status:</strong> Not explicitly designed as a standalone system, though multiple D038 features partially address this: game mode templates provide pre-configured map layouts, compositions provide reusable building blocks that could be randomly assembled, and the Probability of Presence system creates per-entity randomization. LLM-generated missions (Phase 7) provide full procedural generation when a provider is configured. A dedicated procedural map generator (terrain + resource placement + spawn balancing) is a natural Phase 7 addition to the scenario editor.</p>
 <hr>
-<h2 id="39-localization--i18n--missing"><a class="header" href="#39-localization--i18n--missing">39. Localization / i18n ❌ MISSING</a></h2>
+<h2 id="39-localization--i18n--designed"><a class="header" href="#39-localization--i18n--designed">39. Localization / i18n ✅ DESIGNED</a></h2>
 <p><strong>OpenRA:</strong> <code>FluentMessages</code> section in mod manifest — full localization support using Project Fluent.</p>
-<p><strong>Iron Curtain status:</strong> Not mentioned anywhere.</p>
-<p><strong>Needed:</strong></p>
+<p><strong>Iron Curtain status:</strong> Fully designed in <code>02-ARCHITECTURE.md</code> § “Extended Gameplay Systems — Localization Framework”:</p>
 <ul>
-<li>Localization framework (string tables, parameterized messages)</li>
-<li>Multiple language support</li>
-<li>Font handling for non-Latin scripts</li>
-<li>Mod-provided translations</li>
+<li>Fluent-based (.ftl files) for parameterized messages and plural rules</li>
+<li><code>Localization { current_locale, bundles }</code> resource</li>
+<li>String keys in YAML reference <code>fluent:key.name</code> — resolved at load time</li>
+<li>Mods provide their own <code>.ftl</code> translation files</li>
+<li>CJK/RTL font support via Bevy’s font pipeline</li>
+<li>Language selection in settings UI</li>
 </ul>
 <hr>
 <h2 id="priority-assessment-for-modder-familiarity"><a class="header" href="#priority-assessment-for-modder-familiarity">Priority Assessment for Modder Familiarity</a></h2>
+<blockquote>
+<p><strong>Status: All gameplay systems below are now designed.</strong> See <code>02-ARCHITECTURE.md</code> § “Extended Gameplay Systems (RA1 Module)” for full component definitions, Rust structs, YAML examples, and system logic. The tables below are retained for priority reference during implementation.</p>
+</blockquote>
 <h3 id="p0--critical-modders-cannot-work-without-these"><a class="header" href="#p0--critical-modders-cannot-work-without-these">P0 — CRITICAL (Modders cannot work without these)</a></h3>
 <div class="table-wrapper">
 <table>
 <thead>
-<tr><th>#</th><th>System</th><th>Impact</th><th>Effort</th></tr>
+<tr><th>#</th><th>System</th><th>Status</th><th>Reference</th></tr>
 </thead>
 <tbody>
-<tr><td>1</td><td><strong>Condition System</strong></td><td>Core modding primitive — 80% of OpenRA mods use it</td><td>High</td></tr>
-<tr><td>2</td><td><strong>Multiplier System</strong></td><td>All numeric modifiers (veterancy, terrain, crates) depend on it</td><td>Medium</td></tr>
-<tr><td>3</td><td><strong>Warhead System</strong></td><td>Weapons don’t work properly without composable warheads</td><td>Medium</td></tr>
+<tr><td>1</td><td><strong>Condition System</strong></td><td>✅ DESIGNED (D028)</td><td>Phase 2 exit criterion</td></tr>
+<tr><td>2</td><td><strong>Multiplier System</strong></td><td>✅ DESIGNED (D028)</td><td>Phase 2 exit criterion</td></tr>
+<tr><td>3</td><td><strong>Warhead System</strong></td><td>✅ DESIGNED (D028)</td><td>Full damage pipeline</td></tr>
 </tbody>
 </table>
 </div>
-<blockquote>
-<p><strong>✅ Items 1–3 are now Phase 2 hard exit criteria (D028).</strong> Items 6–7 are Phase 2 deliverables (D029).</p>
-</blockquote>
-<p>| 4   | <strong>Building mechanics</strong> (power, placement, sell, repair, build radius) | Fundamental C&amp;C gameplay                                        | High   |
-| 5   | <strong>Support Powers</strong>                                                    | Superweapons are iconic RA gameplay                             | Medium |
-| 6   | <strong>Damage Model</strong> (full pipeline)                                      | Core balance modding                                            | Medium |
-| 7   | <strong>Projectile System</strong> (travel, tracking, types)                       | Weapons need physical projectiles                               | Medium |</p>
+<p>| 4   | <strong>Building mechanics</strong> | ✅ DESIGNED | <code>BuildArea</code>, <code>PrimaryBuilding</code>, <code>RallyPoint</code>, <code>Exit</code>, <code>Sellable</code>, <code>Repairable</code>, <code>Gate</code>, <code>LineBuild</code> |
+| 5   | <strong>Support Powers</strong>     | ✅ DESIGNED | <code>SupportPower</code> component + <code>SupportPowerManager</code> resource |
+| 6   | <strong>Damage Model</strong>       | ✅ DESIGNED (D028) | Full pipeline: Projectile → Warhead → Armor → Modifiers → Health |
+| 7   | <strong>Projectile System</strong>  | ✅ DESIGNED | <code>Projectile</code> component + <code>projectile_system()</code> in tick pipeline |</p>
 <h3 id="p1--high-core-gameplay-gaps--noticeable-to-players-immediately"><a class="header" href="#p1--high-core-gameplay-gaps--noticeable-to-players-immediately">P1 — HIGH (Core gameplay gaps — noticeable to players immediately)</a></h3>
 <div class="table-wrapper">
 <table>
 <thead>
-<tr><th>#</th><th>System</th><th>Impact</th><th>Effort</th></tr>
+<tr><th>#</th><th>System</th><th>Status</th><th>Reference</th></tr>
 </thead>
 <tbody>
-<tr><td>8</td><td><strong>Transport / Cargo</strong></td><td>APCs, helicopters, naval transports</td><td>Medium</td></tr>
-<tr><td>9</td><td><strong>Capture / Engineers</strong></td><td>Fundamental C&amp;C mechanic</td><td>Low</td></tr>
-<tr><td>10</td><td><strong>Stealth / Cloak</strong></td><td>Subs, spies, gap generators</td><td>Medium</td></tr>
-<tr><td>11</td><td><strong>Death mechanics</strong> (husks, spawn-on-death, explosions)</td><td>Visual polish + gameplay</td><td>Low</td></tr>
-<tr><td>12</td><td><strong>Infantry sub-cell positioning</strong></td><td>Visual authenticity + gameplay</td><td>Medium</td></tr>
-<tr><td>13</td><td><strong>Veterancy system</strong> (full)</td><td>Depth of gameplay</td><td>Medium</td></tr>
-<tr><td>14</td><td><strong>Docking system</strong></td><td>Harvester-refinery, helipad</td><td>Medium</td></tr>
-<tr><td>15</td><td><strong>Transform / Deploy</strong></td><td>MCV, siege units</td><td>Low</td></tr>
-<tr><td>16</td><td><strong>Power System</strong></td><td>Core economy mechanic</td><td>Low</td></tr>
+<tr><td>8</td><td><strong>Transport / Cargo</strong></td><td>✅ DESIGNED</td><td><code>Cargo</code> / <code>Passenger</code> components</td></tr>
+<tr><td>9</td><td><strong>Capture / Engineers</strong></td><td>✅ DESIGNED</td><td><code>Capturable</code> / <code>Captures</code> components</td></tr>
+<tr><td>10</td><td><strong>Stealth / Cloak</strong></td><td>✅ DESIGNED</td><td><code>Cloak</code> / <code>DetectCloaked</code> components</td></tr>
+<tr><td>11</td><td><strong>Death mechanics</strong></td><td>✅ DESIGNED</td><td><code>SpawnOnDeath</code>, <code>ExplodeOnDeath</code>, <code>SelfDestruct</code>, <code>DamageStates</code></td></tr>
+<tr><td>12</td><td><strong>Infantry sub-cell positioning</strong></td><td>✅ DESIGNED</td><td><code>InfantryBody</code> / <code>SubCell</code> enum</td></tr>
+<tr><td>13</td><td><strong>Veterancy system</strong></td><td>✅ DESIGNED</td><td><code>GainsExperience</code> / <code>GivesExperience</code> + condition promotions</td></tr>
+<tr><td>14</td><td><strong>Docking system</strong></td><td>✅ DESIGNED</td><td><code>DockClient</code> / <code>DockHost</code> components</td></tr>
+<tr><td>15</td><td><strong>Transform / Deploy</strong></td><td>✅ DESIGNED</td><td><code>Transforms</code> component</td></tr>
+<tr><td>16</td><td><strong>Power System</strong></td><td>✅ DESIGNED</td><td><code>Power</code> component + <code>PowerManager</code> resource</td></tr>
 </tbody>
 </table>
 </div>
@@ -2601,20 +2600,20 @@ rifle_infantry:
 <div class="table-wrapper">
 <table>
 <thead>
-<tr><th>#</th><th>System</th><th>Impact</th><th>Effort</th></tr>
+<tr><th>#</th><th>System</th><th>Status</th><th>Reference</th></tr>
 </thead>
 <tbody>
-<tr><td>17</td><td><strong>Crate System</strong></td><td>Standard skirmish feature</td><td>Low</td></tr>
-<tr><td>18</td><td><strong>Mine System</strong></td><td>Defensive gameplay</td><td>Low</td></tr>
-<tr><td>19</td><td><strong>Guard Command</strong></td><td>Fundamental order type</td><td>Low</td></tr>
-<tr><td>20</td><td><strong>Crush Mechanics</strong></td><td>Vehicle vs infantry interaction</td><td>Low</td></tr>
-<tr><td>21</td><td><strong>Notification System</strong> (framework)</td><td>Audio/visual feedback</td><td>Medium</td></tr>
-<tr><td>22</td><td><strong>Cursor System</strong></td><td>UX polish, essential for usability</td><td>Low</td></tr>
-<tr><td>23</td><td><strong>Hotkey System</strong></td><td>UX — rebindable keys</td><td>Low</td></tr>
-<tr><td>24</td><td><strong>Lua API</strong> (detailed)</td><td>Mission scripters need this</td><td>High</td></tr>
-<tr><td>25</td><td><strong>Selection system</strong> (detailed)</td><td>UX polish</td><td>Low</td></tr>
-<tr><td>26</td><td><strong>Palette effects</strong> (runtime)</td><td>Classic RA visual style</td><td>Medium</td></tr>
-<tr><td>27</td><td><strong>Game speed presets</strong></td><td>Lobby option</td><td>Low</td></tr>
+<tr><td>17</td><td><strong>Crate System</strong></td><td>✅ DESIGNED</td><td><code>Crate</code> / <code>CrateAction</code></td></tr>
+<tr><td>18</td><td><strong>Mine System</strong></td><td>✅ DESIGNED</td><td><code>Mine</code> / <code>Minelayer</code></td></tr>
+<tr><td>19</td><td><strong>Guard Command</strong></td><td>✅ DESIGNED</td><td><code>Guard</code> / <code>Guardable</code></td></tr>
+<tr><td>20</td><td><strong>Crush Mechanics</strong></td><td>✅ DESIGNED</td><td><code>Crushable</code> / <code>Crusher</code></td></tr>
+<tr><td>21</td><td><strong>Notification System</strong></td><td>✅ DESIGNED</td><td><code>NotificationType</code> enum + <code>NotificationCooldowns</code></td></tr>
+<tr><td>22</td><td><strong>Cursor System</strong></td><td>✅ DESIGNED</td><td>YAML-defined, contextual resolution</td></tr>
+<tr><td>23</td><td><strong>Hotkey System</strong></td><td>✅ DESIGNED</td><td><code>HotkeyConfig</code> categories, profiles</td></tr>
+<tr><td>24</td><td><strong>Lua API</strong></td><td>✅ DESIGNED (D024)</td><td>Strict superset of OpenRA</td></tr>
+<tr><td>25</td><td><strong>Selection system</strong></td><td>✅ DESIGNED</td><td>Priority, double-click, tab cycle, control groups</td></tr>
+<tr><td>26</td><td><strong>Palette effects</strong></td><td>✅ DESIGNED</td><td><code>PaletteEffect</code> enum</td></tr>
+<tr><td>27</td><td><strong>Game speed presets</strong></td><td>✅ DESIGNED</td><td>5 presets (<code>SpeedPreset</code> enum), lobby-configurable</td></tr>
 </tbody>
 </table>
 </div>
@@ -2622,18 +2621,18 @@ rifle_infantry:
 <div class="table-wrapper">
 <table>
 <thead>
-<tr><th>#</th><th>System</th><th>Impact</th><th>Effort</th></tr>
+<tr><th>#</th><th>System</th><th>Status</th><th>Reference</th></tr>
 </thead>
 <tbody>
-<tr><td>28</td><td><strong>Demolition / C4</strong></td><td>Engineer ability</td><td>Low</td></tr>
-<tr><td>29</td><td><strong>Plug System</strong></td><td>Primarily RA2</td><td>Low</td></tr>
-<tr><td>30</td><td><strong>Encyclopedia</strong></td><td>Discoverability</td><td>Low</td></tr>
-<tr><td>31</td><td><strong>Localization</strong></td><td>Multi-language support</td><td>Medium</td></tr>
-<tr><td>32</td><td><strong>Observer UI</strong> (detailed)</td><td>Spectator experience</td><td>Medium</td></tr>
-<tr><td>33</td><td><strong>Replay browser UI</strong></td><td>Replay management</td><td>Low</td></tr>
-<tr><td>34</td><td><strong>Debug tools</strong> (detailed)</td><td>Developer experience</td><td>Medium</td></tr>
-<tr><td>35</td><td><strong>Procedural map gen</strong></td><td>Map variety</td><td>High</td></tr>
-<tr><td>36</td><td><strong>Faction system</strong> (formal)</td><td>Multi-faction support</td><td>Low</td></tr>
+<tr><td>28</td><td><strong>Demolition / C4</strong></td><td>✅ DESIGNED</td><td><code>Demolition</code> component</td></tr>
+<tr><td>29</td><td><strong>Plug System</strong></td><td>✅ DESIGNED</td><td><code>Pluggable</code> / <code>Plug</code></td></tr>
+<tr><td>30</td><td><strong>Encyclopedia</strong></td><td>✅ DESIGNED</td><td>Categories, stats, previews</td></tr>
+<tr><td>31</td><td><strong>Localization</strong></td><td>✅ DESIGNED</td><td>Fluent-based .ftl</td></tr>
+<tr><td>32</td><td><strong>Observer UI</strong></td><td>✅ DESIGNED</td><td>Overlays, player switching, broadcast delay</td></tr>
+<tr><td>33</td><td><strong>Replay browser UI</strong></td><td>⚠️ PARTIAL</td><td>Format designed; browser UI deferred to Phase 3</td></tr>
+<tr><td>34</td><td><strong>Debug tools</strong></td><td>✅ DESIGNED</td><td>DeveloperMode flags, overlays, profiler</td></tr>
+<tr><td>35</td><td><strong>Procedural map gen</strong></td><td>⚠️ PARTIAL</td><td>Phase 7; scenario editor provides building blocks</td></tr>
+<tr><td>36</td><td><strong>Faction system</strong></td><td>✅ DESIGNED</td><td><code>Faction</code> YAML type with sides and tech trees</td></tr>
 </tbody>
 </table>
 </div>
@@ -2678,7 +2677,7 @@ rifle_infantry:
 </div>
 <hr>
 <h2 id="mapping-table-openra-trait--iron-curtain-equivalent"><a class="header" href="#mapping-table-openra-trait--iron-curtain-equivalent">Mapping Table: OpenRA Trait → Iron Curtain Equivalent</a></h2>
-<p>For modders migrating from OpenRA, this table shows where each familiar trait maps. Items marked “NEEDS DESIGN” are the gaps identified above.</p>
+<p>For modders migrating from OpenRA, this table shows where each familiar trait maps.</p>
 <div class="table-wrapper">
 <table>
 <thead>
@@ -2690,48 +2689,48 @@ rifle_infantry:
 <tr><td><code>Mobile</code></td><td><code>Mobile { speed, locomotor }</code></td><td>✅</td></tr>
 <tr><td><code>Building</code></td><td><code>Building { footprint }</code></td><td>✅</td></tr>
 <tr><td><code>Buildable</code></td><td><code>Buildable { cost, time, prereqs }</code></td><td>✅</td></tr>
-<tr><td><code>Selectable</code></td><td><code>Selectable { bounds, priority }</code></td><td>✅</td></tr>
+<tr><td><code>Selectable</code></td><td><code>Selectable { bounds, priority, voice_set }</code></td><td>✅</td></tr>
 <tr><td><code>Harvester</code></td><td><code>Harvester { capacity, resource }</code></td><td>✅</td></tr>
 <tr><td><code>Armament</code></td><td><code>Armament { weapon, cooldown }</code></td><td>✅</td></tr>
 <tr><td><code>Valued</code></td><td>Part of <code>Buildable.cost</code></td><td>✅</td></tr>
 <tr><td><code>Tooltip</code></td><td><code>display.name</code> in YAML</td><td>✅</td></tr>
-<tr><td><code>Voiced</code></td><td><code>display.voice</code> (implied)</td><td>⚠️</td></tr>
+<tr><td><code>Voiced</code></td><td><code>display.voice</code> in YAML</td><td>✅</td></tr>
 <tr><td><code>ConditionalTrait</code></td><td><code>Conditions</code> component (D028)</td><td>✅</td></tr>
 <tr><td><code>GrantConditionOn*</code></td><td>Condition sources in YAML (D028)</td><td>✅</td></tr>
 <tr><td><code>*Multiplier</code></td><td><code>StatModifiers</code> component (D028)</td><td>✅</td></tr>
-<tr><td><code>AttackBase/Follow/Frontal/Omni/Turreted</code></td><td>Part of <code>combat</code> YAML section</td><td>⚠️</td></tr>
-<tr><td><code>AutoTarget</code></td><td>NEEDS DESIGN</td><td>❌</td></tr>
-<tr><td><code>Turreted</code></td><td>NEEDS DESIGN</td><td>❌</td></tr>
-<tr><td><code>AmmoPool</code></td><td>NEEDS DESIGN</td><td>❌</td></tr>
-<tr><td><code>Cargo</code> / <code>Passenger</code></td><td>NEEDS DESIGN</td><td>❌</td></tr>
-<tr><td><code>Capturable</code> / <code>Captures</code></td><td>NEEDS DESIGN</td><td>❌</td></tr>
-<tr><td><code>Cloak</code> / <code>DetectCloaked</code></td><td>NEEDS DESIGN</td><td>❌</td></tr>
-<tr><td><code>Power</code> / <code>PowerManager</code></td><td>NEEDS DESIGN</td><td>❌</td></tr>
-<tr><td><code>SupportPower*</code></td><td>NEEDS DESIGN</td><td>❌</td></tr>
-<tr><td><code>GainsExperience</code> / <code>GivesExperience</code></td><td>NEEDS DESIGN (partially mentioned)</td><td>⚠️</td></tr>
+<tr><td><code>AttackBase/Follow/Frontal/Omni/Turreted</code></td><td><code>AutoTarget</code>, <code>Turreted</code> components</td><td>✅</td></tr>
+<tr><td><code>AutoTarget</code></td><td><code>AutoTarget { stance, scan_range }</code></td><td>✅</td></tr>
+<tr><td><code>Turreted</code></td><td><code>Turreted { turn_speed, offset, default_facing }</code></td><td>✅</td></tr>
+<tr><td><code>AmmoPool</code></td><td><code>AmmoPool { max, current, reload_ticks }</code></td><td>✅</td></tr>
+<tr><td><code>Cargo</code> / <code>Passenger</code></td><td><code>Cargo { max_weight, slots }</code> / <code>Passenger { weight }</code></td><td>✅</td></tr>
+<tr><td><code>Capturable</code> / <code>Captures</code></td><td><code>Capturable { threshold }</code> / <code>Captures { types }</code></td><td>✅</td></tr>
+<tr><td><code>Cloak</code> / <code>DetectCloaked</code></td><td><code>Cloak { cloak_type, delay }</code> / <code>DetectCloaked { types }</code></td><td>✅</td></tr>
+<tr><td><code>Power</code> / <code>PowerManager</code></td><td><code>Power { provides, consumes }</code> / <code>PowerManager</code> resource</td><td>✅</td></tr>
+<tr><td><code>SupportPower*</code></td><td><code>SupportPower { charge_ticks, ready_sound, effect }</code></td><td>✅</td></tr>
+<tr><td><code>GainsExperience</code> / <code>GivesExperience</code></td><td><code>GainsExperience { levels }</code> / <code>GivesExperience { amount }</code></td><td>✅</td></tr>
 <tr><td><code>Locomotor</code></td><td><code>locomotor</code> field in <code>Mobile</code></td><td>✅</td></tr>
-<tr><td><code>Aircraft</code></td><td>NEEDS DESIGN (air movement)</td><td>❌</td></tr>
-<tr><td><code>ProductionQueue</code></td><td>Mentioned, not fully designed</td><td>⚠️</td></tr>
-<tr><td><code>Crate</code> / <code>CrateAction*</code></td><td>NEEDS DESIGN</td><td>❌</td></tr>
-<tr><td><code>Mine</code> / <code>Minelayer</code></td><td>NEEDS DESIGN</td><td>❌</td></tr>
-<tr><td><code>Guard</code> / <code>Guardable</code></td><td>NEEDS DESIGN</td><td>❌</td></tr>
-<tr><td><code>Crushable</code> / <code>AutoCrusher</code></td><td>NEEDS DESIGN</td><td>❌</td></tr>
-<tr><td><code>Transforms</code></td><td>NEEDS DESIGN</td><td>❌</td></tr>
-<tr><td><code>Sellable</code></td><td>Mentioned as order, not as component</td><td>⚠️</td></tr>
-<tr><td><code>RepairableBuilding</code></td><td>NEEDS DESIGN</td><td>❌</td></tr>
-<tr><td><code>RallyPoint</code></td><td>Mentioned as order, not as component</td><td>⚠️</td></tr>
-<tr><td><code>PrimaryBuilding</code></td><td>NEEDS DESIGN</td><td>❌</td></tr>
-<tr><td><code>Gate</code></td><td>NEEDS DESIGN</td><td>❌</td></tr>
-<tr><td><code>LineBuild</code> (walls)</td><td>NEEDS DESIGN</td><td>❌</td></tr>
-<tr><td><code>BaseProvider</code> / <code>GivesBuildableArea</code></td><td>NEEDS DESIGN</td><td>❌</td></tr>
-<tr><td><code>Faction</code></td><td>Implied, not formalized</td><td>⚠️</td></tr>
-<tr><td><code>Encyclopedia</code></td><td>NEEDS DESIGN</td><td>❌</td></tr>
-<tr><td><code>DeveloperMode</code></td><td>NEEDS DESIGN</td><td>❌</td></tr>
-<tr><td><code>WithInfantryBody</code> (sub-cell)</td><td>NEEDS DESIGN</td><td>❌</td></tr>
-<tr><td><code>ScaredyCat</code> / <code>TakeCover</code></td><td>NEEDS DESIGN</td><td>❌</td></tr>
-<tr><td><code>KillsSelf</code></td><td>NEEDS DESIGN</td><td>❌</td></tr>
-<tr><td><code>SpawnActorOnDeath</code></td><td>NEEDS DESIGN</td><td>❌</td></tr>
-<tr><td><code>Husk</code></td><td>NEEDS DESIGN</td><td>❌</td></tr>
+<tr><td><code>Aircraft</code></td><td><code>locomotor: fly</code> + <code>Mobile</code> with air-type locomotor</td><td>⚠️</td></tr>
+<tr><td><code>ProductionQueue</code></td><td><code>ProductionQueue { queue_type, items }</code></td><td>✅</td></tr>
+<tr><td><code>Crate</code> / <code>CrateAction*</code></td><td><code>Crate { action_pool }</code> / <code>CrateAction</code> enum</td><td>✅</td></tr>
+<tr><td><code>Mine</code> / <code>Minelayer</code></td><td><code>Mine { trigger_types, warhead }</code> / <code>Minelayer { mine_type }</code></td><td>✅</td></tr>
+<tr><td><code>Guard</code> / <code>Guardable</code></td><td><code>Guard { target, leash_range }</code> / <code>Guardable</code> marker</td><td>✅</td></tr>
+<tr><td><code>Crushable</code> / <code>AutoCrusher</code></td><td><code>Crushable { crush_class }</code> / <code>Crusher { crush_classes }</code></td><td>✅</td></tr>
+<tr><td><code>Transforms</code></td><td><code>Transforms { into, delay, facing, condition }</code></td><td>✅</td></tr>
+<tr><td><code>Sellable</code></td><td><code>Sellable</code> marker + sell order</td><td>✅</td></tr>
+<tr><td><code>RepairableBuilding</code></td><td><code>Repairable { repair_rate, repair_cost_per_hp }</code> component</td><td>✅</td></tr>
+<tr><td><code>RallyPoint</code></td><td><code>RallyPoint { position }</code> component</td><td>✅</td></tr>
+<tr><td><code>PrimaryBuilding</code></td><td><code>PrimaryBuilding</code> marker component</td><td>✅</td></tr>
+<tr><td><code>Gate</code></td><td><code>Gate { open_ticks, close_delay }</code> component</td><td>✅</td></tr>
+<tr><td><code>LineBuild</code> (walls)</td><td><code>LineBuild { segment_types }</code> component</td><td>✅</td></tr>
+<tr><td><code>BaseProvider</code> / <code>GivesBuildableArea</code></td><td><code>BuildArea { range }</code> component</td><td>✅</td></tr>
+<tr><td><code>Faction</code></td><td><code>Faction { id, side, tech_tree }</code> YAML-defined</td><td>✅</td></tr>
+<tr><td><code>Encyclopedia</code></td><td>In-game encyclopedia (categories, stats, previews)</td><td>✅</td></tr>
+<tr><td><code>DeveloperMode</code></td><td><code>DeveloperMode</code> flags (<code>#[cfg(feature = "dev-tools")]</code>)</td><td>✅</td></tr>
+<tr><td><code>WithInfantryBody</code> (sub-cell)</td><td><code>InfantryBody { sub_cell }</code> with <code>SubCell</code> enum</td><td>✅</td></tr>
+<tr><td><code>ScaredyCat</code> / <code>TakeCover</code></td><td><code>ScaredyCat</code> / <code>TakeCover</code> components</td><td>✅</td></tr>
+<tr><td><code>KillsSelf</code></td><td><code>SelfDestruct { delay, warhead }</code> component</td><td>✅</td></tr>
+<tr><td><code>SpawnActorOnDeath</code></td><td><code>SpawnOnDeath { actor, probability }</code> component</td><td>✅</td></tr>
+<tr><td><code>Husk</code></td><td>Part of death mechanics (husk actor + <code>DamageStates</code>)</td><td>✅</td></tr>
 </tbody>
 </table>
 </div>
@@ -2746,45 +2745,45 @@ rifle_infantry:
 <li><strong>Condition system</strong> — ✅ DESIGNED (D028) — Phase 2 exit criterion</li>
 <li><strong>Multiplier system</strong> — ✅ DESIGNED (D028) — Phase 2 exit criterion</li>
 <li><strong>Full damage pipeline</strong> — ✅ DESIGNED (D028) — Phase 2 exit criterion (Projectile → Warhead → Armor table → Modifiers → Health)</li>
-<li><strong>Power system</strong> — Affects building behavior</li>
-<li><strong>Building mechanics</strong> — Placement, sell, repair, build radius, rally points</li>
-<li><strong>Transport/Cargo</strong> — Core unit type</li>
-<li><strong>Capture</strong> — Core unit type (engineers)</li>
-<li><strong>Stealth/Cloak</strong> — Core mechanic (subs, spies)</li>
-<li><strong>Infantry sub-cell</strong> — Core visual/gameplay mechanic</li>
-<li><strong>Death mechanics</strong> — Husks, spawn-on-death</li>
-<li><strong>Transform/Deploy</strong> — MCV, siege units</li>
-<li><strong>Veterancy</strong> (full system) — XP → conditions → multipliers</li>
-<li><strong>Guard command</strong> — Fundamental order type</li>
-<li><strong>Crush mechanics</strong> — Vehicle/infantry interaction</li>
+<li><strong>Power system</strong> — ✅ DESIGNED — <code>Power</code> component + <code>PowerManager</code> resource</li>
+<li><strong>Building mechanics</strong> — ✅ DESIGNED — <code>BuildArea</code>, <code>PrimaryBuilding</code>, <code>RallyPoint</code>, <code>Exit</code>, <code>Sellable</code>, <code>Repairable</code>, <code>Gate</code>, <code>LineBuild</code></li>
+<li><strong>Transport/Cargo</strong> — ✅ DESIGNED — <code>Cargo</code> / <code>Passenger</code> components</li>
+<li><strong>Capture</strong> — ✅ DESIGNED — <code>Capturable</code> / <code>Captures</code> components</li>
+<li><strong>Stealth/Cloak</strong> — ✅ DESIGNED — <code>Cloak</code> / <code>DetectCloaked</code> components</li>
+<li><strong>Infantry sub-cell</strong> — ✅ DESIGNED — <code>InfantryBody</code> / <code>SubCell</code> enum</li>
+<li><strong>Death mechanics</strong> — ✅ DESIGNED — <code>SpawnOnDeath</code>, <code>ExplodeOnDeath</code>, <code>SelfDestruct</code>, <code>DamageStates</code></li>
+<li><strong>Transform/Deploy</strong> — ✅ DESIGNED — <code>Transforms</code> component</li>
+<li><strong>Veterancy</strong> (full system) — ✅ DESIGNED — <code>GainsExperience</code> / <code>GivesExperience</code> + condition-based promotions</li>
+<li><strong>Guard command</strong> — ✅ DESIGNED — <code>Guard</code> / <code>Guardable</code> components</li>
+<li><strong>Crush mechanics</strong> — ✅ DESIGNED — <code>Crushable</code> / <code>Crusher</code> components</li>
 </ol>
 <h3 id="phase-3-additions-ui--months-1216"><a class="header" href="#phase-3-additions-ui--months-1216">Phase 3 Additions (UI — Months 12–16)</a></h3>
 <ol start="15">
-<li><strong>Support Powers</strong> — UI + sim system</li>
-<li><strong>Cursor system</strong> — Contextual cursors</li>
-<li><strong>Hotkey system</strong> — Rebindable keys</li>
-<li><strong>Notification framework</strong> — EVA event → audio mapping</li>
-<li><strong>Selection details</strong> — Priority, double-click, tab cycle</li>
-<li><strong>Game speed presets</strong> — Lobby option</li>
-<li><strong>Radar system</strong> (detailed) — ProvidesRadar, AppearsOnRadar</li>
-<li><strong>Power bar UI</strong> — Visualization</li>
-<li><strong>Observer UI</strong> — Army/production/economy overlays</li>
+<li><strong>Support Powers</strong> — ✅ DESIGNED — <code>SupportPower</code> component + <code>SupportPowerManager</code> resource</li>
+<li><strong>Cursor system</strong> — ✅ DESIGNED — YAML-defined cursors, contextual resolution, force-modifiers</li>
+<li><strong>Hotkey system</strong> — ✅ DESIGNED — <code>HotkeyConfig</code> categories, rebindable, profiles</li>
+<li><strong>Notification framework</strong> — ✅ DESIGNED — <code>NotificationType</code> enum + <code>NotificationCooldowns</code> + EVA mapping</li>
+<li><strong>Selection details</strong> — ✅ DESIGNED — Priority, double-click, tab cycle, control groups, selection limit</li>
+<li><strong>Game speed presets</strong> — ✅ DESIGNED — 5 presets (<code>SpeedPreset</code> enum), lobby-configurable, runtime adjustable in SP</li>
+<li><strong>Radar system</strong> (detailed) — ⚠️ PARTIAL — Minimap rendering is ic-ui responsibility; <code>AppearsOnRadar</code> implied but not a standalone component</li>
+<li><strong>Power bar UI</strong> — Part of ic-ui chrome design (Phase 3)</li>
+<li><strong>Observer UI</strong> — ✅ DESIGNED — Army/production/economy overlays, player switching, broadcast delay</li>
 </ol>
 <h3 id="phase-4-additions-scripting--months-1620"><a class="header" href="#phase-4-additions-scripting--months-1620">Phase 4 Additions (Scripting — Months 16–20)</a></h3>
 <ol start="24">
 <li><strong>Lua API specification</strong> — ✅ DESIGNED (D024) — strict superset of OpenRA’s 16 globals, identical signatures</li>
-<li><strong>Crate system</strong> — Skirmish feature</li>
-<li><strong>Mine system</strong> — Tactical gameplay</li>
-<li><strong>Demolition/C4</strong> — Engineer ability</li>
+<li><strong>Crate system</strong> — ✅ DESIGNED — <code>Crate</code> component + <code>CrateAction</code> variants</li>
+<li><strong>Mine system</strong> — ✅ DESIGNED — <code>Mine</code> / <code>Minelayer</code> components</li>
+<li><strong>Demolition/C4</strong> — ✅ DESIGNED — <code>Demolition</code> component</li>
 </ol>
 <h3 id="phase-6a6b-additions-modding--ecosystem--months-2632"><a class="header" href="#phase-6a6b-additions-modding--ecosystem--months-2632">Phase 6a/6b Additions (Modding &amp; Ecosystem — Months 26–32)</a></h3>
 <ol start="28">
-<li><strong>Debug/developer tools</strong> — Modder essential</li>
-<li><strong>Encyclopedia</strong> — Discoverability</li>
-<li><strong>Localization framework</strong> — i18n</li>
-<li><strong>Faction system</strong> (formal) — Multi-faction support</li>
-<li><strong>Palette effects</strong> (runtime) — Classic visual style</li>
-<li><strong>Asset browser</strong> — Mod development</li>
+<li><strong>Debug/developer tools</strong> — ✅ DESIGNED — DeveloperMode flags, overlays, profiler, asset browser</li>
+<li><strong>Encyclopedia</strong> — ✅ DESIGNED — In-game encyclopedia with categories, stats, previews</li>
+<li><strong>Localization framework</strong> — ✅ DESIGNED — Fluent-based .ftl files, locale resource, CJK/RTL support</li>
+<li><strong>Faction system</strong> (formal) — ✅ DESIGNED — <code>Faction</code> YAML type with side grouping and tech trees</li>
+<li><strong>Palette effects</strong> (runtime) — ✅ DESIGNED — <code>PaletteEffect</code> enum (flash, fade, tint, cycle, remap)</li>
+<li><strong>Asset browser</strong> — ✅ DESIGNED — Part of IC SDK (D040)</li>
 </ol>
 
                     </main>

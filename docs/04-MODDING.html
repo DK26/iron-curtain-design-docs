@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-0fa94a75.js";
+            window.path_to_searchindex_js = "searchindex-738ccda3.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-a85074c4.js"></script>
+        <script src="toc-678cb19b.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -382,6 +382,51 @@ ic mod import /path/to/openra-mod/ --output ./my-ic-mod/
 </tbody>
 </table>
 </div>
+<h3 id="mod-load-order--conflict-resolution"><a class="header" href="#mod-load-order--conflict-resolution">Mod Load Order &amp; Conflict Resolution</a></h3>
+<p>When multiple mods modify the same game data, deterministic load order and explicit conflict handling are essential. Bethesda taught the modding world this lesson: Skyrim’s 200+ mod setups are only viable because community tools (LOOT, xEdit, Bashed Patches) compensate for Bethesda’s vague native load order. IC builds deterministic conflict resolution into the engine from day one — no third-party tools required.</p>
+<p><strong>Load order rules:</strong></p>
+<ol>
+<li><strong>Engine defaults</strong> load first (built-in RA1/TD rules).</li>
+<li><strong>Balance preset</strong> (D019) overlays next.</li>
+<li><strong>Mods</strong> load in dependency-graph order — if mod A depends on mod B, B loads first.</li>
+<li><strong>Mods with no dependency relationship</strong> between them load in lexicographic order by mod ID. Deterministic tiebreaker — no ambiguity.</li>
+<li><strong>Within a mod</strong>, files load in directory order, then alphabetical within each directory.</li>
+</ol>
+<p><strong>Multiplayer enforcement:</strong> In multiplayer, the lobby enforces identical mod sets, versions, and load order across all clients before the game starts (see <code>03-NETCODE.md</code> § <code>GameListing.required_mods</code>). The deterministic load order is sufficient <em>because</em> divergent mod configurations are rejected at join time — there is no scenario where two clients resolve the same mods differently.</p>
+<p><strong>Conflict behavior (same YAML key modified by two mods):</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Scenario</th><th>Behavior</th><th>Rationale</th></tr>
+</thead>
+<tbody>
+<tr><td>Two mods set different values for the same field on the same unit</td><td>Last-wins (later in load order) + warning in <code>ic mod check</code></td><td>Modders need to know about the collision</td></tr>
+<tr><td>Mod adds a new field to a unit also modified by another mod</td><td>Merge — both additions survive</td><td>Non-conflicting additions are safe</td></tr>
+<tr><td>Mod deletes a field that another mod modifies</td><td>Delete wins + warning</td><td>Explicit deletion is intentional</td></tr>
+<tr><td>Two mods define the same new unit ID</td><td>Error — refuses to load</td><td>Ambiguous identity is never acceptable</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Tooling:</strong></p>
+<ul>
+<li><code>ic mod check-conflicts [mod1] [mod2] ...</code> — reports all field-level conflicts between a set of mods before launch. Shows which mod “wins” each conflict and why.</li>
+<li><code>ic mod load-order [mod1] [mod2] ...</code> — prints the resolved load order with dependency graph visualization.</li>
+<li>In-game mod manager shows conflict warnings with “which mod wins” detail when enabling mods.</li>
+</ul>
+<p><strong>Conflict override file (optional):</strong></p>
+<p>For advanced setups, a <code>conflicts.yaml</code> file in the <strong>game’s user configuration directory</strong> (next to <code>settings.yaml</code>) lets the player explicitly resolve conflicts in their personal setup. This is a per-user file — it is not distributed with mods or modpacks, and it is not synced in multiplayer. Players who want to share their conflict resolutions can distribute the file manually or include it in a modpack manifest (the <code>modpack.conflicts</code> field serves the same purpose for published modpacks):</p>
+<pre><code class="language-yaml"># conflicts.yaml — explicit conflict resolution
+overrides:
+  - unit: heavy_tank
+    field: health.max
+    use_mod: "alice/tank-rebalance"     # force this mod's value
+    reason: "Prefer Alice's balance for heavy tanks"
+  - unit: rifle_infantry
+    field: buildable.cost
+    use_mod: "bob/economy-overhaul"
+</code></pre>
+<p>This is the manual equivalent of Bethesda’s Bashed Patches — but declarative, version-controlled, and shareable.</p>
+<p><strong>Phase:</strong> Load order engine support in Phase 2 (part of YAML rule loading). Conflict detection CLI in Phase 4 (with <code>ic</code> CLI). In-game mod manager in Phase 6a.</p>
 <h2 id="tier-2-lua-scripting"><a class="header" href="#tier-2-lua-scripting">Tier 2: Lua Scripting</a></h2>
 <h3 id="decision-lua-over-python"><a class="header" href="#decision-lua-over-python">Decision: Lua over Python</a></h3>
 <p><strong>Why Lua:</strong></p>
@@ -445,6 +490,8 @@ ic mod import /path/to/openra-mod/ --output ./my-ic-mod/
 <tr><td><code>Var</code></td><td>Mission/campaign variable access</td></tr>
 <tr><td><code>Workshop</code></td><td>Mod metadata queries</td></tr>
 <tr><td><code>LLM</code></td><td>LLM integration hooks (Phase 7)</td></tr>
+<tr><td><code>Achievement</code></td><td>Achievement trigger/query API (D036)</td></tr>
+<tr><td><code>Ai</code></td><td>AI scripting primitives (Phase 4) — force composition, resource ratios, patrol/attack commands; inspired by Stratagus’s proven Lua AI API (<code>AiForce</code>, <code>AiSetCollect</code>, <code>AiWait</code> pattern — see <code>research/stratagus-stargus-opencraft-analysis.md</code>). Enables Tier 2 modders to write custom AI behaviors without Tier 3 WASM.</td></tr>
 </tbody>
 </table>
 </div>
@@ -479,6 +526,26 @@ end)
 <li>Execution resource limits per tick (see <code>LuaExecutionLimits</code> below)</li>
 <li>Memory limits per mod</li>
 </ul>
+<p><strong>Lua standard library inclusion policy</strong> (precedent: Stratagus selectively loads stdlib modules, excluding <code>io</code> and <code>package</code> in release builds — see <code>research/stratagus-stargus-opencraft-analysis.md</code> §6). IC is stricter:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Lua stdlib</th><th>Loaded</th><th>Notes</th></tr>
+</thead>
+<tbody>
+<tr><td><code>base</code></td><td>✅ selective</td><td><code>print</code> redirected to engine log; <code>dofile</code>, <code>loadfile</code>, <code>load</code> <strong>removed</strong> (arbitrary code execution vectors)</td></tr>
+<tr><td><code>table</code></td><td>✅</td><td>Safe — table manipulation only</td></tr>
+<tr><td><code>string</code></td><td>✅</td><td>Safe — string operations only</td></tr>
+<tr><td><code>math</code></td><td>✅ modified</td><td><code>math.random</code> <strong>removed</strong> — replaced by <code>Utils.RandomInteger()</code> from engine’s deterministic PRNG</td></tr>
+<tr><td><code>coroutine</code></td><td>✅</td><td>Useful for mission scripting flow control</td></tr>
+<tr><td><code>utf8</code></td><td>✅</td><td>Safe — Unicode string handling (Lua 5.4)</td></tr>
+<tr><td><code>io</code></td><td>❌</td><td>Filesystem access — never loaded in sandbox</td></tr>
+<tr><td><code>os</code></td><td>❌</td><td><code>os.execute()</code>, <code>os.remove()</code>, <code>os.rename()</code> are dangerous; entire module excluded</td></tr>
+<tr><td><code>package</code></td><td>❌</td><td>Module loading from filesystem — never loaded in sandbox</td></tr>
+<tr><td><code>debug</code></td><td>❌</td><td>Can inspect/modify internals, bypass sandboxing; development-only if needed</td></tr>
+</tbody>
+</table>
+</div>
 <p><strong>Determinism note:</strong> Lua’s internal number type is <code>f64</code>, but this does not affect sim determinism. Lua has <strong>read-only access</strong> to game state and <strong>write access exclusively through orders</strong> (and campaign state writes like <code>Campaign.set_flag()</code>, which are themselves deterministic because they execute at the same pipeline step on every client). The sim processes orders deterministically — Lua cannot directly modify sim components. Lua evaluation produces identical results across all clients because it runs at the same point in the system pipeline (the <code>triggers</code> step, see system execution order in <code>02-ARCHITECTURE.md</code>), with the same game state as input, on every tick. Any Lua-driven campaign state mutations are applied deterministically within this step, ensuring save/load and replay consistency.</p>
 <p><strong>Additional determinism safeguards:</strong></p>
 <ul>
@@ -553,6 +620,9 @@ fn get_unit_position(unit_id: u32) -&gt; Option&lt;(i32, i32)&gt; {
     pub read_visible_state: bool,
     // Can NEVER read fogged state (API doesn't exist)
     pub issue_orders: bool,           // For AI mods
+    pub render: bool,                 // For render mods (ic_render_* API)
+    pub pathfinding: bool,            // For pathfinder mods (ic_pathfind_* API)
+    pub ai_strategy: bool,            // For AI mods (ic_ai_* API + AiStrategy trait)
     pub filesystem: FileAccess,       // Usually None
     pub network: NetworkAccess,       // Usually None
 }
@@ -592,6 +662,325 @@ impl Default for WasmExecutionLimits {
 <span class="boring">}</span></code></pre>
 <p><strong>Why this matters for multiplayer:</strong> In deterministic lockstep, all clients run the same mods. A mod that consumes excessive CPU causes tick overruns on slower machines, triggering adaptive run-ahead increases for everyone. A mod that spawns hundreds of entities per tick inflates state size and network traffic. The execution limits prevent a single mod from degrading the experience — and because the limits are deterministic (same fuel budget, same cutoff point), all clients agree on when a mod is throttled.</p>
 <p><strong>Mod authors can request higher limits</strong> via their mod manifest. The lobby displays requested limits and players can accept or reject. Tournament/ranked play enforces stricter defaults.</p>
+<h3 id="wasm-rendering-api-surface"><a class="header" href="#wasm-rendering-api-surface">WASM Rendering API Surface</a></h3>
+<p>Tier 3 WASM mods that replace the visual presentation (e.g., a 3D render mod) need a well-defined rendering API surface. These are the WASM host functions exposed for render mods — they are the <em>only</em> way a WASM mod can draw to the screen.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>// === Render Host API (ic_render_* namespace) ===
+// Available only to mods with ModCapabilities.render = true
+
+/// Register a custom Renderable implementation for an actor type.
+#[wasm_host_fn] fn ic_render_register(actor_type: &amp;str, renderable_id: u32);
+
+/// Draw a sprite at a world position (default renderer).
+#[wasm_host_fn] fn ic_render_draw_sprite(
+    sprite_id: u32, frame: u32, position: WorldPos, facing: u8, palette: u32
+);
+
+/// Draw a 3D mesh at a world position (Bevy 3D pipeline).
+#[wasm_host_fn] fn ic_render_draw_mesh(
+    mesh_handle: u32, position: WorldPos, rotation: [i32; 4], scale: [i32; 3]
+);
+
+/// Draw a line (debug overlays, targeting lines).
+#[wasm_host_fn] fn ic_render_draw_line(
+    start: WorldPos, end: WorldPos, color: u32, width: f32
+);
+
+/// Play a skeletal animation on a mesh entity.
+#[wasm_host_fn] fn ic_render_play_animation(
+    mesh_handle: u32, animation_name: &amp;str, speed: f32, looping: bool
+);
+
+/// Set camera position and mode.
+#[wasm_host_fn] fn ic_render_set_camera(
+    position: WorldPos, mode: CameraMode, fov: Option&lt;f32&gt;
+);
+
+/// Screen-to-world conversion (for input mapping).
+#[wasm_host_fn] fn ic_render_screen_to_world(
+    screen_x: f32, screen_y: f32
+) -&gt; Option&lt;WorldPos&gt;;
+
+/// Load an asset (sprite sheet, mesh, texture) by path.
+/// Returns a handle ID for use in draw calls.
+#[wasm_host_fn] fn ic_render_load_asset(path: &amp;str) -&gt; Option&lt;u32&gt;;
+
+/// Spawn a particle effect at a position.
+#[wasm_host_fn] fn ic_render_spawn_particles(
+    effect_id: u32, position: WorldPos, duration: u32
+);
+
+pub enum CameraMode {
+    Isometric,          // fixed angle, zoom only
+    FreeLook,           // full 3D rotation
+    Orbital { target: WorldPos },  // orbit a point
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Render mod registration:</strong> A render mod implements the <code>Renderable</code> and <code>ScreenToWorld</code> traits (see <code>02-ARCHITECTURE.md</code> § “3D Rendering as a Mod”). It registers via <code>ic_render_register()</code> for each actor type it handles. Unregistered actor types fall through to the default sprite renderer. This allows <strong>partial</strong> render overrides — a mod can replace tank rendering with 3D meshes while leaving infantry as sprites.</p>
+<p><strong>Security:</strong> Render host functions are gated by <code>ModCapabilities.render</code>. A gameplay mod (AI, scripting) cannot access <code>ic_render_*</code> functions. Render mods cannot access <code>ic_host_issue_order()</code> — they draw, they don’t command. These capabilities are declared in the mod manifest and verified at load time.</p>
+<h3 id="wasm-pathfinding-api-surface"><a class="header" href="#wasm-pathfinding-api-surface">WASM Pathfinding API Surface</a></h3>
+<p>Tier 3 WASM mods can provide custom <code>Pathfinder</code> trait implementations (D013, D045). This follows the same pattern as render mods — a well-defined host API surface, capability-gated, with the WASM module implementing the trait through exported functions that the engine calls.</p>
+<p><strong>Why modders want this:</strong> Different games need different pathfinding. A Generals-style total conversion needs layered grid pathfinding with bridge and surface bitmask support. A naval mod needs flow-based routing. A tower defense mod needs waypoint pathfinding. The three built-in presets (Remastered, OpenRA, IC Default) cover the Red Alert family — community pathfinders cover everything else.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>// === Pathfinding Host API (ic_pathfind_* namespace) ===
+// Available only to mods with ModCapabilities.pathfinding = true
+
+/// Register this WASM module as a Pathfinder implementation.
+/// Called once at load time. The engine calls the exported trait methods below.
+#[wasm_host_fn] fn ic_pathfind_register(pathfinder_id: &amp;str);
+
+/// Query terrain passability at a position for a given locomotor.
+/// Pathfinder mods need to read terrain but not modify it.
+#[wasm_host_fn] fn ic_pathfind_get_terrain(pos: WorldPos) -&gt; TerrainType;
+
+/// Query the terrain height at a position (for 3D-aware pathfinding).
+#[wasm_host_fn] fn ic_pathfind_get_height(pos: WorldPos) -&gt; SimCoord;
+
+/// Query entities in a radius (for dynamic obstacle avoidance).
+/// Returns entity positions and radii — no gameplay data exposed.
+#[wasm_host_fn] fn ic_pathfind_query_obstacles(
+    center: WorldPos, radius: SimCoord
+) -&gt; Vec&lt;(WorldPos, SimCoord)&gt;;
+
+/// Read the current map dimensions.
+#[wasm_host_fn] fn ic_pathfind_map_bounds() -&gt; (WorldPos, WorldPos);
+
+/// Allocate scratch memory from the engine's pre-allocated pool.
+/// Pathfinding is hot-path — no per-tick heap allocation allowed.
+#[wasm_host_fn] fn ic_pathfind_scratch_alloc(bytes: u32) -&gt; *mut u8;
+
+/// Return scratch memory to the pool.
+#[wasm_host_fn] fn ic_pathfind_scratch_free(ptr: *mut u8, bytes: u32);
+<span class="boring">}</span></code></pre>
+<p><strong>WASM-exported trait functions</strong> (the engine <em>calls</em> these on the mod):</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>// Exported by the WASM pathfinder mod — these map to the Pathfinder trait
+
+/// Called by the engine when a unit requests a path.
+#[wasm_export] fn pathfinder_request_path(
+    origin: WorldPos, dest: WorldPos, locomotor: LocomotorType
+) -&gt; PathId;
+
+/// Called by the engine to retrieve computed waypoints.
+#[wasm_export] fn pathfinder_get_path(id: PathId) -&gt; Option&lt;Vec&lt;WorldPos&gt;&gt;;
+
+/// Called by the engine to check passability (e.g., building placement).
+#[wasm_export] fn pathfinder_is_passable(
+    pos: WorldPos, locomotor: LocomotorType
+) -&gt; bool;
+
+/// Called by the engine when terrain changes (building placed/destroyed).
+#[wasm_export] fn pathfinder_invalidate_area(
+    center: WorldPos, radius: SimCoord
+);
+<span class="boring">}</span></code></pre>
+<p><strong>Example: Generals-style layered grid pathfinder as a WASM mod</strong></p>
+<p>The C&amp;C Generals source code (GPL v3, <code>electronicarts/CnC_Generals_Zero_Hour</code>) uses a layered grid system with 10-unit cells, surface bitmasks, and bridge layers. A community mod can reimplement this as a WASM pathfinder — see <code>research/pathfinding-ic-default-design.md</code> § “C&amp;C Generals / Zero Hour” for the <code>LayeredGridPathfinder</code> design sketch.</p>
+<pre><code class="language-yaml"># generals_pathfinder/mod.yaml
+mod:
+  name: "Generals Pathfinder"
+  type: pathfinder
+  pathfinder_id: layered-grid-generals
+  display_name: "Generals (Layered Grid)"
+  description: "Grid pathfinding with bridge layers and surface bitmasks, inspired by C&amp;C Generals"
+  wasm_module: generals_pathfinder.wasm
+  capabilities:
+    pathfinding: true
+  config:
+    zone_block_size: 10
+    bridge_clearance: 10.0
+    surface_types: [ground, water, cliff, air, rubble]
+</code></pre>
+<p><strong>Security:</strong> Pathfinding host functions are gated by <code>ModCapabilities.pathfinding</code>. A pathfinder mod can read terrain and obstacle positions but cannot issue orders, read gameplay state (health, resources, fog), or access render functions. This is a narrower capability than gameplay mods — pathfinders compute routes, nothing else.</p>
+<p><strong>Determinism:</strong> WASM pathfinder mods execute in the deterministic sim context. They use the same <code>WasmExecutionLimits</code> fuel budget as other WASM mods. All clients run the same WASM binary (verified by SHA-256 hash in the lobby) with the same inputs, producing identical paths. If the fuel budget is exceeded mid-path-request, the path is truncated deterministically — all clients truncate at the same point.</p>
+<p><strong>Multiplayer sync:</strong> Because pathfinding is sim-affecting, all players must use the same pathfinder. The lobby validates that all clients have the same pathfinder WASM module (hash + version). A modded pathfinder is treated identically to a built-in preset for sync purposes.</p>
+<p><strong>Phase:</strong> WASM pathfinding API ships in Phase 6a alongside the mod testing framework and Workshop. Built-in pathfinder presets (D045) ship in Phase 2 as native Rust implementations.</p>
+<h3 id="wasm-ai-strategy-api-surface"><a class="header" href="#wasm-ai-strategy-api-surface">WASM AI Strategy API Surface</a></h3>
+<p>Tier 3 WASM mods can provide custom <code>AiStrategy</code> trait implementations (D041, D043). This follows the same pattern as render and pathfinder mods — a well-defined host API surface, capability-gated, with the WASM module implementing the trait through exported functions that the engine calls.</p>
+<p><strong>Why modders want this:</strong> Different games call for different AI approaches. A competitive mod wants a GOAP planner that reads influence maps. An academic project wants a Monte Carlo tree search AI. A Generals-clone needs AI that understands bridge layers and surface types. A novelty mod wants a neural-net AI that learns from replays. The three built-in behavior presets (Classic RA, OpenRA, IC Default) use <code>PersonalityDrivenAi</code> — community AIs can use fundamentally different algorithms.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>// === AI Host API (ic_ai_* namespace) ===
+// Available only to mods with ModCapabilities.read_visible_state = true
+// AND ModCapabilities.issue_orders = true
+
+/// Query own units visible to this AI player.
+/// Returns (entity_id, unit_type, position, health, max_health) tuples.
+#[wasm_host_fn] fn ic_ai_get_own_units() -&gt; Vec&lt;AiUnitInfo&gt;;
+
+/// Query enemy units visible to this AI player (fog-filtered).
+/// Only returns units in line of sight — no maphack.
+#[wasm_host_fn] fn ic_ai_get_visible_enemies() -&gt; Vec&lt;AiUnitInfo&gt;;
+
+/// Query neutral/capturable entities visible to this AI player.
+#[wasm_host_fn] fn ic_ai_get_visible_neutrals() -&gt; Vec&lt;AiUnitInfo&gt;;
+
+/// Get current resource state for this AI player.
+#[wasm_host_fn] fn ic_ai_get_resources() -&gt; AiResourceInfo;
+
+/// Get current power state (production, drain, surplus).
+#[wasm_host_fn] fn ic_ai_get_power() -&gt; AiPowerInfo;
+
+/// Get current production queue state.
+#[wasm_host_fn] fn ic_ai_get_production_queues() -&gt; Vec&lt;AiProductionQueue&gt;;
+
+/// Check if a unit type can be built (prerequisites, cost, factory available).
+#[wasm_host_fn] fn ic_ai_can_build(unit_type: &amp;str) -&gt; bool;
+
+/// Check if a building can be placed at a position.
+#[wasm_host_fn] fn ic_ai_can_place_building(
+    building_type: &amp;str, pos: WorldPos
+) -&gt; bool;
+
+/// Get terrain type at a position (for strategic planning).
+#[wasm_host_fn] fn ic_ai_get_terrain(pos: WorldPos) -&gt; TerrainType;
+
+/// Get map dimensions.
+#[wasm_host_fn] fn ic_ai_map_bounds() -&gt; (WorldPos, WorldPos);
+
+/// Get current tick number.
+#[wasm_host_fn] fn ic_ai_current_tick() -&gt; u64;
+
+/// Get fog-filtered event narrative since a given tick (D041 AiEventLog).
+/// Returns a natural-language chronological account of game events.
+/// This is the "inner game event log / action story / context" that LLM-based
+/// AI (D044) and any WASM AI can use for temporal awareness.
+#[wasm_host_fn] fn ic_ai_get_event_narrative(since_tick: u64) -&gt; String;
+
+/// Get structured event log since a given tick (D041 AiEventLog).
+/// Returns fog-filtered events as typed entries for programmatic consumption.
+#[wasm_host_fn] fn ic_ai_get_events(since_tick: u64) -&gt; Vec&lt;AiEventEntry&gt;;
+
+/// Issue an order for an owned unit. Returns false if order is invalid.
+/// Orders go through the same OrderValidator (D012/D041) as human orders.
+#[wasm_host_fn] fn ic_ai_issue_order(order: &amp;PlayerOrder) -&gt; bool;
+
+/// Allocate scratch memory from the engine's pre-allocated pool.
+#[wasm_host_fn] fn ic_ai_scratch_alloc(bytes: u32) -&gt; *mut u8;
+#[wasm_host_fn] fn ic_ai_scratch_free(ptr: *mut u8, bytes: u32);
+
+pub struct AiUnitInfo {
+    pub entity_id: u32,
+    pub unit_type: String,
+    pub position: WorldPos,
+    pub health: i32,
+    pub max_health: i32,
+    pub is_idle: bool,
+    pub is_moving: bool,
+}
+
+pub struct AiEventEntry {
+    pub tick: u64,
+    pub event_type: u32,      // mapped from AiEventType enum
+    pub description: String,  // human/LLM-readable summary
+    pub entity_id: Option&lt;u32&gt;,
+    pub related_entity_id: Option&lt;u32&gt;,
+}
+<span class="boring">}</span></code></pre>
+<p><strong>WASM-exported trait functions</strong> (the engine <em>calls</em> these on the mod):</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>// Exported by the WASM AI mod — these map to the AiStrategy trait
+
+/// Called once per tick. Returns serialized Vec&lt;PlayerOrder&gt;.
+#[wasm_export] fn ai_decide(player_id: u32, tick: u64) -&gt; Vec&lt;PlayerOrder&gt;;
+
+/// Event callbacks — called before ai_decide() in the same tick.
+#[wasm_export] fn ai_on_unit_created(unit_id: u32, unit_type: &amp;str);
+#[wasm_export] fn ai_on_unit_destroyed(unit_id: u32, attacker_id: Option&lt;u32&gt;);
+#[wasm_export] fn ai_on_unit_idle(unit_id: u32);
+#[wasm_export] fn ai_on_enemy_spotted(unit_id: u32, unit_type: &amp;str);
+#[wasm_export] fn ai_on_enemy_destroyed(unit_id: u32);
+#[wasm_export] fn ai_on_under_attack(unit_id: u32, attacker_id: u32);
+#[wasm_export] fn ai_on_building_complete(building_id: u32);
+#[wasm_export] fn ai_on_research_complete(tech: &amp;str);
+
+/// Parameter introspection — called by lobby UI for "Advanced AI Settings."
+#[wasm_export] fn ai_get_parameters() -&gt; Vec&lt;ParameterSpec&gt;;
+#[wasm_export] fn ai_set_parameter(name: &amp;str, value: i32);
+
+/// Engine scaling opt-out.
+#[wasm_export] fn ai_uses_engine_difficulty_scaling() -&gt; bool;
+<span class="boring">}</span></code></pre>
+<p><strong>Security:</strong> AI mods can read visible game state (<code>ic_ai_get_own_units</code>, <code>ic_ai_get_visible_enemies</code>) and issue orders (<code>ic_ai_issue_order</code>). They CANNOT read fogged state — <code>ic_ai_get_visible_enemies()</code> returns only units in the AI player’s line of sight. They cannot access render functions, pathfinder internals, or other players’ private data. Orders go through the same <code>OrderValidator</code> as human orders — an AI mod cannot issue impossible commands.</p>
+<p><strong>Determinism:</strong> WASM AI mods execute in the deterministic sim context. Events fire in a fixed order (same order on all clients). <code>decide()</code> is called at the same pipeline point on all clients with the same <code>FogFilteredView</code>. All clients run the same WASM binary (verified by SHA-256 hash per AI player slot) with the same inputs, producing identical orders.</p>
+<p><strong>Performance:</strong> AI mods share the <code>WasmExecutionLimits</code> fuel budget. The <code>tick_budget_hint()</code> return value is advisory — the engine uses it for scheduling but enforces the fuel limit regardless. A community AI that exceeds its budget mid-tick gets truncated deterministically.</p>
+<p><strong>Phase:</strong> WASM AI API ships in Phase 6a. Built-in AI (<code>PersonalityDrivenAi</code> + behavior presets from D043) ships in Phase 4 as native Rust.</p>
+<h3 id="mod-testing-framework"><a class="header" href="#mod-testing-framework">Mod Testing Framework</a></h3>
+<p><code>ic mod test</code> is referenced throughout this document but needs a concrete assertion API and test runner design.</p>
+<h4 id="test-file-structure"><a class="header" href="#test-file-structure">Test File Structure</a></h4>
+<pre><code class="language-yaml"># tests/my_mod_tests.yaml
+tests:
+  - name: "Tank costs 800 credits"
+    setup:
+      map: test_maps/flat_8x8.oramap
+      players: [{ faction: allies, credits: 10000 }]
+    actions:
+      - build: { actor: medium_tank, player: 0 }
+      - wait_ticks: 500
+    assertions:
+      - entity_exists: { type: medium_tank, owner: 0 }
+      - player_credits: { player: 0, less_than: 9300 }
+
+  - name: "Tesla coil requires power"
+    setup:
+      map: test_maps/flat_8x8.oramap
+      players: [{ faction: soviet, credits: 10000 }]
+      buildings: [{ type: tesla_coil, player: 0, pos: [4, 4] }]
+    actions:
+      - destroy: { type: power_plant, player: 0 }
+      - wait_ticks: 30
+    assertions:
+      - condition_active: { entity_type: tesla_coil, condition: "disabled" }
+</code></pre>
+<h4 id="lua-test-api"><a class="header" href="#lua-test-api">Lua Test API</a></h4>
+<p>For more complex test scenarios, Lua scripts can use test assertion functions:</p>
+<pre><code class="language-lua">-- tests/combat_test.lua
+function TestTankDamage()
+    local tank = Actor.Create("medium_tank", { Owner = Player.GetPlayer(0), Location = CellPos(4, 4) })
+    local target = Actor.Create("light_tank", { Owner = Player.GetPlayer(1), Location = CellPos(5, 4) })
+
+    -- Force attack
+    tank.Attack(target)
+    Trigger.AfterDelay(100, function()
+        Test.Assert(target.Health &lt; target.MaxHealth, "Target should take damage")
+        Test.AssertRange(target.Health, 100, 350, "Damage should be in expected range")
+        Test.Pass("Tank combat works correctly")
+    end)
+end
+
+-- Test API globals (available only in test mode)
+-- Test.Assert(condition, message)
+-- Test.AssertEqual(actual, expected, message)
+-- Test.AssertRange(value, min, max, message)
+-- Test.AssertNear(actual, expected, tolerance, message)
+-- Test.Pass(message)
+-- Test.Fail(message)
+-- Test.Log(message)
+</code></pre>
+<h4 id="test-runner-ic-mod-test"><a class="header" href="#test-runner-ic-mod-test">Test Runner (<code>ic mod test</code>)</a></h4>
+<pre><code>$ ic mod test
+Running 12 tests from tests/*.yaml and tests/*.lua...
+  ✓ Tank costs 800 credits (0.3s)
+  ✓ Tesla coil requires power (0.2s)
+  ✓ Tank combat works correctly (0.8s)
+  ✗ Harvester delivery rate (expected 100, got 0) (1.2s)
+  ...
+Results: 11 passed, 1 failed (2.5s total)
+</code></pre>
+<p><strong>Features:</strong></p>
+<ul>
+<li><code>ic mod test</code> — run all tests in <code>tests/</code> directory</li>
+<li><code>ic mod test --filter "combat"</code> — run matching tests</li>
+<li><code>ic mod test --headless</code> — no rendering (CI/CD mode, used by modpack validation)</li>
+<li><code>ic mod test --verbose</code> — show per-tick sim state for failing tests</li>
+<li><code>ic mod test --coverage</code> — report which YAML rules are exercised by tests</li>
+</ul>
+<p><strong>Headless mode:</strong> The engine initializes <code>ic-sim</code> without <code>ic-render</code> or <code>ic-audio</code>. Orders are injected programmatically. This is the same <code>LocalNetwork</code> model used for automated testing of the engine itself. Tests run at maximum speed (no frame rate limit).</p>
+<p><strong>Phase:</strong> Basic test runner (YAML assertions) in Phase 4. Lua test API in Phase 4. Coverage reporting in Phase 6a.</p>
 <h3 id="3d-rendering-mods-tier-3-showcase"><a class="header" href="#3d-rendering-mods-tier-3-showcase">3D Rendering Mods (Tier 3 Showcase)</a></h3>
 <p>The most powerful example of Tier 3 modding: replacing the entire visual presentation with 3D rendering. A “3D Red Alert” mod swaps sprites for GLTF meshes and the isometric camera for a free-rotating 3D camera — while the simulation, networking, pathfinding, and rules are completely unchanged.</p>
 <p>This works because Bevy already ships a full 3D pipeline. The mod doesn’t build a 3D engine — it uses Bevy’s existing 3D renderer through the WASM mod API.</p>
@@ -642,6 +1031,146 @@ medium_tank:
 </code></pre>
 <p><strong>Cross-view multiplayer is a natural consequence.</strong> Since the mod only changes rendering, a player using the 3D mod can play against a player using classic isometric sprites. The sim produces identical state; each client just draws it differently. Replays are viewable in either mode.</p>
 <p>See <code>02-ARCHITECTURE.md</code> § “3D Rendering as a Mod” for the full architectural rationale.</p>
+<h3 id="custom-pathfinding-mods-tier-3-showcase"><a class="header" href="#custom-pathfinding-mods-tier-3-showcase">Custom Pathfinding Mods (Tier 3 Showcase)</a></h3>
+<p>The second major Tier 3 showcase: replacing how units navigate the battlefield. Just as 3D render mods replace the visual presentation, pathfinder mods replace the movement algorithm — while combat, building, harvesting, and everything else remain unchanged.</p>
+<p><strong>Why this matters:</strong> The original C&amp;C Generals uses a layered grid pathfinder with surface bitmasks and bridge layers — fundamentally different from Red Alert’s approach. A Generals-clone mod needs Generals-style pathfinding. A naval mod needs flow routing. A tower defense mod needs waypoint constraint pathfinding. No single algorithm fits every RTS — the <code>Pathfinder</code> trait (D013) lets modders bring their own.</p>
+<p><strong>A pathfinder mod implements:</strong></p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>// WASM mod: Generals-style layered grid pathfinder
+// (See research/pathfinding-ic-default-design.md § "C&amp;C Generals / Zero Hour")
+struct LayeredGridPathfinder {
+    grid: Vec&lt;CellLayer&gt;,          // 10-unit cells with bridge layers
+    zones: ZoneMap,                // flood-fill reachability zones
+    surface_bitmask: SurfaceMask,  // ground | water | cliff | air | rubble
+}
+
+impl Pathfinder for LayeredGridPathfinder {
+    fn request_path(&amp;mut self, origin: WorldPos, dest: WorldPos, locomotor: LocomotorType) -&gt; PathId {
+        // 1. Check zone connectivity (instant reject if unreachable)
+        // 2. Surface bitmask check for locomotor compatibility
+        // 3. A* over layered grid (bridges are separate layers)
+        // 4. Path smoothing pass
+        // ...
+    }
+    fn get_path(&amp;self, id: PathId) -&gt; Option&lt;&amp;[WorldPos]&gt; { /* ... */ }
+    fn is_passable(&amp;self, pos: WorldPos, locomotor: LocomotorType) -&gt; bool {
+        let cell = self.grid.cell_at(pos);
+        cell.surface_bitmask.allows(locomotor)
+    }
+    fn invalidate_area(&amp;mut self, center: WorldPos, radius: SimCoord) {
+        // Rebuild affected zones, recalculate bridge connectivity
+    }
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Mod manifest and config:</strong></p>
+<pre><code class="language-yaml"># generals_pathfinder/mod.yaml
+mod:
+  name: "Generals Pathfinder"
+  type: pathfinder
+  pathfinder_id: layered-grid-generals
+  display_name: "Generals (Layered Grid)"
+  version: "1.0.0"
+  capabilities:
+    pathfinding: true
+  config:
+    zone_block_size: 10
+    bridge_clearance: 10.0
+    surface_types: [ground, water, cliff, air, rubble]
+</code></pre>
+<p><strong>How other mods use it:</strong></p>
+<pre><code class="language-yaml"># desert_strike_mod/mod.yaml — a total conversion using the Generals pathfinder
+mod:
+  name: "Desert Strike"
+  pathfinder: layered-grid-generals
+  depends:
+    - community/generals-pathfinder@^1.0
+</code></pre>
+<p><strong>Multiplayer sync:</strong> All players must use the same pathfinder — the WASM binary hash is validated in the lobby, same as any sim-affecting mod. If a player is missing the pathfinder mod, the engine auto-downloads it from the Workshop (CS:GO-style, per D030).</p>
+<p><strong>Performance contract:</strong> Pathfinder mods share the same <code>WasmExecutionLimits</code> fuel budget as other WASM mods. The engine monitors per-tick pathfinding time. If a community pathfinder consistently exceeds the budget, the lobby warns players. The engine never falls back silently to a different pathfinder — determinism means all clients must agree on every path.</p>
+<p><strong>Phase:</strong> WASM pathfinder mods in Phase 6a. The three built-in pathfinder presets (D045) ship as native Rust in Phase 2.</p>
+<h3 id="custom-ai-mods-tier-3-showcase"><a class="header" href="#custom-ai-mods-tier-3-showcase">Custom AI Mods (Tier 3 Showcase)</a></h3>
+<p>The third major Tier 3 showcase: replacing how AI opponents think. Just as render mods replace visual presentation and pathfinder mods replace navigation algorithms, AI mods replace the decision-making engine — while the simulation rules, damage pipeline, and everything else remain unchanged.</p>
+<p><strong>Why this matters:</strong> The built-in <code>PersonalityDrivenAi</code> uses behavior trees tuned by YAML personality parameters. This works well for most players. But the RTS AI community spans decades of research — GOAP planners, Monte Carlo tree search, influence map systems, neural networks, evolutionary strategies (see <code>research/rts-ai-extensibility-survey.md</code>). The <code>AiStrategy</code> trait (D041) lets modders bring any algorithm to Iron Curtain, and the two-axis difficulty system (D043) lets any AI scale from Sandbox to Nightmare.</p>
+<p><strong>A custom AI mod implements:</strong></p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>// WASM mod: GOAP (Goal-Oriented Action Planning) AI
+struct GoapPlannerAi {
+    goals: Vec&lt;Goal&gt;,         // Expand, Attack, Defend, Tech, Harass
+    plan: Option&lt;ActionPlan&gt;, // Current multi-step plan
+    world_model: WorldModel,  // Internal state tracking
+}
+
+impl AiStrategy for GoapPlannerAi {
+    fn decide(&amp;mut self, player: PlayerId, view: &amp;FogFilteredView, tick: u64) -&gt; Vec&lt;PlayerOrder&gt; {
+        // 1. Update world model from visible state
+        self.world_model.update(view);
+        // 2. Re-evaluate goal priorities
+        self.goals.sort_by_key(|g| -g.priority(&amp;self.world_model));
+        // 3. If plan invalidated or expired, re-plan
+        if self.plan.is_none() || tick % self.replan_interval == 0 {
+            self.plan = self.planner.search(
+                &amp;self.world_model, &amp;self.goals[0], self.search_depth
+            );
+        }
+        // 4. Execute next action in plan
+        self.plan.as_mut().map(|p| p.next_orders()).unwrap_or_default()
+    }
+
+    fn on_enemy_spotted(&amp;mut self, unit: EntityId, unit_type: &amp;str) {
+        // Scouting intel → update world model → may trigger re-plan
+        self.world_model.add_sighting(unit, unit_type);
+        if self.world_model.threat_level() &gt; self.defend_threshold {
+            self.plan = None; // force re-plan next tick
+        }
+    }
+
+    fn on_under_attack(&amp;mut self, _unit: EntityId, _attacker: EntityId) {
+        self.goals.iter_mut().find(|g| g.name == "Defend")
+            .map(|g| g.urgency += 30); // boost defense priority
+    }
+
+    fn get_parameters(&amp;self) -&gt; Vec&lt;ParameterSpec&gt; {
+        vec![
+            ParameterSpec { name: "search_depth".into(), min: 1, max: 10, default: 5, .. },
+            ParameterSpec { name: "replan_interval".into(), min: 10, max: 120, default: 30, .. },
+            ParameterSpec { name: "defend_threshold".into(), min: 0, max: 100, default: 40, .. },
+        ]
+    }
+
+    fn uses_engine_difficulty_scaling(&amp;self) -&gt; bool { false }
+    // This AI handles difficulty via search_depth and replan_interval
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Mod manifest:</strong></p>
+<pre><code class="language-yaml"># goap_ai/mod.yaml
+mod:
+  name: "GOAP Planner AI"
+  type: ai_strategy
+  ai_strategy_id: goap-planner
+  display_name: "GOAP Planner"
+  description: "Goal-oriented action planning — multi-step strategic reasoning"
+  version: "2.1.0"
+  wasm_module: goap_planner.wasm
+  capabilities:
+    read_visible_state: true
+    issue_orders: true
+    ai_strategy: true
+  config:
+    search_depth: 5
+    replan_interval: 30
+</code></pre>
+<p><strong>How other mods use it:</strong></p>
+<pre><code class="language-yaml"># zero_hour_mod/mod.yaml — a total conversion using the GOAP AI
+mod:
+  name: "Zero Hour Remake"
+  default_ai: goap-planner
+  depends:
+    - community/goap-planner-ai@^2.0
+</code></pre>
+<p><strong>AI tournament community:</strong> Workshop can host AI tournament leaderboards — automated matches between community AI submissions, ranked by Elo/TrueSkill. This is directly inspired by BWAPI’s SSCAIT tournament (15+ years of StarCraft AI competition) and AoE2’s AI ladder (20+ years of community AI development). The <code>ic mod test</code> framework (above) provides headless match execution; the Workshop provides distribution and ranking.</p>
+<p><strong>Phase:</strong> WASM AI mods in Phase 6a. Built-in <code>PersonalityDrivenAi</code> + behavior presets (D043) ship as native Rust in Phase 4.</p>
 <h2 id="tera-templating-phase-6a"><a class="header" href="#tera-templating-phase-6a">Tera Templating (Phase 6a)</a></h2>
 <h3 id="tera-as-the-template-engine"><a class="header" href="#tera-as-the-template-engine">Tera as the Template Engine</a></h3>
 <p>Tera is a Rust-native Jinja2-compatible template engine. <strong>All first-party IC content uses it</strong> — the default Red Alert campaign, built-in resource packs, and balance presets are all Tera-templated. This means the system is proven by the content that ships with the engine, not just an abstract capability.</p>
@@ -784,7 +1313,7 @@ pub fn render_mission_template(
 <h3 id="scene-templates-composable-building-blocks"><a class="header" href="#scene-templates-composable-building-blocks">Scene Templates (Composable Building Blocks)</a></h3>
 <p>Inspired by Operation Flashpoint / ArmA’s mission editor: scene templates are <strong>sub-mission components</strong> — reusable, pre-scripted building blocks that snap together inside a mission. Each scene template has its own trigger logic, AI behavior, and Lua scripts already written and tested. The user or LLM only fills in parameters.</p>
 <blockquote>
-<p><strong>Visual editor equivalent:</strong> The in-engine scenario editor (D038) exposes these same building blocks as <strong>modules</strong> — drag-and-drop logic nodes with a properties panel. Scene templates are the YAML/Lua format; modules are the visual editor face. Same underlying data — a composition saved in the editor can be loaded as a scene template by Lua/LLM, and vice versa. See <code>09-DECISIONS.md</code> § D038.</p>
+<p><strong>Visual editor equivalent:</strong> The IC SDK’s scenario editor (D038) exposes these same building blocks as <strong>modules</strong> — drag-and-drop logic nodes with a properties panel. Scene templates are the YAML/Lua format; modules are the visual editor face. Same underlying data — a composition saved in the editor can be loaded as a scene template by Lua/LLM, and vice versa. See <code>09-DECISIONS.md</code> § D038.</p>
 </blockquote>
 <p><strong>Template hierarchy:</strong></p>
 <pre><code>Scene Template    — a single scripted encounter or event
@@ -1924,6 +2453,59 @@ workshop:
 <li><strong>Collections:</strong> Curated bundles (“Best Soviet mods”, “Tournament map pool Season 5”)</li>
 <li><strong>Creator profiles:</strong> Author page showing all published resources, reputation score, tip links (D035)</li>
 </ul>
+<h3 id="modpacks-as-first-class-workshop-resources-d030"><a class="header" href="#modpacks-as-first-class-workshop-resources-d030">Modpacks as First-Class Workshop Resources (D030)</a></h3>
+<p>A <strong>modpack</strong> is a Workshop resource that bundles a curated set of mods with pinned versions, load order, and configuration — published as a single installable artifact. This is the lesson from Minecraft’s CurseForge and Modrinth: modpacks solve the three hardest problems in modding ecosystems — discovery (“what mods should I use?”), compatibility (“do these mods work together?”), and onboarding (“how do I install all of this?”).</p>
+<pre><code class="language-yaml"># mod.yaml for a modpack
+mod:
+  id: alice/red-apocalypse-pack
+  title: "Red Apocalypse Complete Experience"
+  version: "2.1.0"
+  authors: ["alice"]
+  description: "A curated collection of 12 mods for an enhanced RA1 experience"
+  license: "CC0-1.0"
+  category: Modpack                    # distinct category from Mod
+
+engine:
+  version: "^0.5.0"
+  game_module: "ra1"
+
+# Modpack-specific: list of mods with pinned versions and load order
+modpack:
+  mods:
+    - id: "bob/hd-sprites"
+      version: "=2.1.0"               # exact pin — tested with this version
+    - id: "carol/economy-overhaul"
+      version: "=1.4.2"
+    - id: "dave/ai-improvements"
+      version: "=3.0.1"
+    - id: "alice/tank-rebalance"
+      version: "=1.1.0"
+  
+  # Explicit conflict resolutions (if any)
+  conflicts:
+    - unit: heavy_tank
+      field: health.max
+      use_mod: "alice/tank-rebalance"
+  
+  # Configuration overrides applied after all mods load
+  config:
+    balance_preset: classic
+    qol_preset: iron_curtain
+</code></pre>
+<p><strong>Why modpacks matter:</strong></p>
+<ul>
+<li><strong>For players:</strong> One-click install of a tested, working mod combination. No manual dependency chasing, no version mismatch debugging.</li>
+<li><strong>For modpack curators:</strong> A creative role that doesn’t require writing any mod code. Curators test combinations, resolve conflicts, and publish a known-good experience.</li>
+<li><strong>For mod authors:</strong> Inclusion in popular modpacks drives discovery and downloads. Modpacks reference mods by Workshop ID — the original mod author keeps full credit and control.</li>
+</ul>
+<p><strong>Modpack lifecycle:</strong></p>
+<ul>
+<li><code>ic mod init modpack</code> — scaffolds a modpack manifest</li>
+<li><code>ic mod check</code> — validates all mods in the pack are compatible (version resolution, conflict detection)</li>
+<li><code>ic mod test --headless</code> — loads all mods in sequence, runs smoke tests</li>
+<li><code>ic mod publish</code> — publishes the modpack to Workshop. Installing the modpack auto-installs all referenced mods.</li>
+</ul>
+<p><strong>Phase:</strong> Modpack support in Phase 6a (alongside full Workshop registry).</p>
 <h3 id="auto-download-on-lobby-join-d030"><a class="header" href="#auto-download-on-lobby-join-d030">Auto-Download on Lobby Join (D030)</a></h3>
 <p>When a player joins a multiplayer lobby, the client checks <code>GameListing.required_mods</code> (see <code>03-NETCODE.md</code> § <code>GameListing</code>) against the local cache. Missing resources trigger automatic download:</p>
 <ol>
@@ -2331,6 +2913,61 @@ llm_meta:
 <li><strong><code>tactical_notes</code> is free-text.</strong> This is the field where nuance lives. “Build 5+ to be cost-effective” or “Position behind walls for maximum effectiveness” — advice that can’t be captured in tags.</li>
 <li><strong>Metadata is part of the YAML spec, not a sidecar.</strong> It lives in the same file as the resource definition. No separate metadata files to lose or desync.</li>
 </ol>
+<h2 id="mod-api-stability--compatibility"><a class="header" href="#mod-api-stability--compatibility">Mod API Stability &amp; Compatibility</a></h2>
+<p>The mod-facing API — YAML schema, Lua globals, WASM host functions — is a <strong>stability surface</strong> distinct from engine internals. Engine crates can refactor freely between releases; the mod API changes only with explicit versioning and migration support. This section documents how IC avoids the Minecraft anti-pattern (community fragmenting across incompatible versions) and follows the Factorio model (stable API, deprecation warnings, migration scripts).</p>
+<p><strong>Lesson from Minecraft:</strong> Forge and Fabric have no stable API contract. Every Minecraft update breaks most mods, fragmenting the community into version silos. Popular mods take months to update. Players are forced to choose between new game content and their mod setup. This is the single biggest friction in Minecraft modding.</p>
+<p><strong>Lesson from Factorio:</strong> Wube publishes a versioned mod API with explicit stability guarantees. Breaking changes are announced releases in advance, include migration scripts, and come with deprecation warnings that fire during <code>mod check</code>. Result: 5,000+ mods on the portal, most updated within days of a new game version.</p>
+<p><strong>Lesson from Stardew Valley:</strong> SMAPI (Stardew Modding API) acts as an adapter layer between the game and mods. When the game updates, SMAPI absorbs the breaking changes — mods written against SMAPI’s stable surface continue to work even when Stardew’s internals change. A single community-maintained compatibility layer protects thousands of mods.</p>
+<p><strong>Lesson from ArmA/OFP:</strong> Bohemia Interactive’s SQF scripting language has remained backwards-compatible across 25+ years of releases (OFP → ArmA → ArmA 2 → ArmA 3). Scripts written for Operation Flashpoint in 2001 still execute in ArmA 3 (2013+). This extraordinary stability is a primary reason the ArmA modding community survived multiple engine generations — modders invest in learning an API only when they trust it won’t be discarded. Conversely, ArmA’s lack of a formal deprecation process meant obsolete commands accumulated indefinitely. IC applies both lessons: backwards compatibility within major versions (the ArmA principle) combined with explicit deprecation cycles (the Factorio principle) so the API stays clean without breaking existing work.</p>
+<h3 id="stability-tiers"><a class="header" href="#stability-tiers">Stability Tiers</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Surface</th><th>Stability Guarantee</th><th>Breaking Change Policy</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>YAML schema</strong> (unit fields, weapon fields, structure fields)</td><td>Stable within major version</td><td>Fields can be added (non-breaking). Renaming or removing a field requires a deprecation cycle: old name works for 2 minor versions with a warning, then errors.</td></tr>
+<tr><td><strong>Lua API globals</strong> (D024, 16 OpenRA-compatible globals + IC extensions)</td><td>Stable within major version</td><td>New globals can be added. Existing globals never change signature. Deprecated globals emit warnings for 2 minor versions.</td></tr>
+<tr><td><strong>WASM host functions</strong> (<code>ic_host_*</code> API)</td><td>Stable within major version</td><td>New host functions can be added. Existing function signatures never change. Deprecated functions continue to work with warnings.</td></tr>
+<tr><td><strong>OpenRA aliases</strong> (D023 vocabulary layer)</td><td>Permanent</td><td>Aliases are never removed — they can only accumulate. An alias that worked in IC 0.3 works in IC 5.0.</td></tr>
+<tr><td><strong>Engine internals</strong> (Bevy systems, component layouts, crate APIs)</td><td>No guarantee</td><td>Can change freely between any versions. Mods never depend on these directly.</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="migration-support"><a class="header" href="#migration-support">Migration Support</a></h3>
+<p>When a breaking change is unavoidable (major version bump):</p>
+<ul>
+<li><strong><code>ic mod migrate</code></strong> — CLI command that auto-updates mod YAML/Lua to the new schema. Handles field renames, deprecated API replacements, and schema restructuring. Inspired by <code>rustfix</code> and Factorio’s migration scripts.</li>
+<li><strong>Deprecation warnings in <code>ic mod check</code></strong> — flag usage of deprecated fields, globals, or host functions before they become errors. Shows the replacement.</li>
+<li><strong>Changelog with migration guide</strong> — every release that touches the mod API surface includes a “For Modders” section with before/after examples.</li>
+</ul>
+<h3 id="versioned-mod-api-independent-of-engine-version"><a class="header" href="#versioned-mod-api-independent-of-engine-version">Versioned Mod API (Independent of Engine Version)</a></h3>
+<p>The mod API version is declared separately from the engine version:</p>
+<pre><code class="language-yaml"># mod.yaml
+engine:
+  version: "^0.5.0"          # engine version (can change rapidly)
+  mod_api: "^1.0"            # mod API version (changes slowly)
+</code></pre>
+<p>A mod targeting <code>mod_api: "^1.0"</code> works on any engine version that supports mod API 1.x. The engine can ship 0.5.0 through 0.9.0 without breaking mod API 1.0 compatibility. This decoupling means engine development velocity doesn’t fragment the mod ecosystem.</p>
+<h3 id="compatibility-adapter-layer"><a class="header" href="#compatibility-adapter-layer">Compatibility Adapter Layer</a></h3>
+<p>Internally, the engine maintains an adapter between the mod API surface and engine internals — structurally similar to Stardew’s SMAPI:</p>
+<pre><code>  Mod code (YAML / Lua / WASM)
+        │
+        ▼
+  ┌─────────────────────────┐
+  │  Mod API Surface        │  ← versioned, stable
+  │  (schema, globals, host │
+  │   functions)            │
+  ├─────────────────────────┤
+  │  Compatibility Adapter  │  ← translates stable API → current internals
+  │  (ic-script crate)      │
+  ├─────────────────────────┤
+  │  Engine Internals       │  ← free to change
+  │  (Bevy ECS, systems)    │
+  └─────────────────────────┘
+</code></pre>
+<p>When engine internals change, the adapter is updated — mods don’t notice. This is the same pattern that makes OpenRA’s trait aliases (D023) work: the public YAML surface is stable, the internal component routing can change.</p>
+<p><strong>Phase:</strong> Mod API versioning and <code>ic mod migrate</code> in Phase 4 (alongside Lua/WASM runtime). Compatibility adapter formalized in Phase 6a (when mod ecosystem is large enough to matter). Deprecation warnings from Phase 2 onward (YAML schema stability starts early).</p>
 
                     </main>
 

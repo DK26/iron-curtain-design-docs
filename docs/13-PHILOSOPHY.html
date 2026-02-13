@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-0fa94a75.js";
+            window.path_to_searchindex_js = "searchindex-738ccda3.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-a85074c4.js"></script>
+        <script src="toc-678cb19b.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -402,6 +402,24 @@ Competitors like Warcraft used unit caps for balance and performance. Westwood r
 <li>Balance preset definitions (D019)</li>
 <li>Modding documentation — versus table editing should be a first tutorial, not an advanced topic</li>
 </ul>
+<h3 id="19-build-for-surprise--powerful-enough-to-transcend"><a class="header" href="#19-build-for-surprise--powerful-enough-to-transcend">19. Build for Surprise — Powerful Enough to Transcend</a></h3>
+<p>The greatest validation of a modding system isn’t a balance tweak or an HD texture pack — it’s when modders create something the engine developers never imagined. Warcraft III’s World Editor was designed for custom RTS maps. Modders built Defense of the Ancients (DotA), which spawned the entire MOBA genre — a genre Blizzard didn’t envision and couldn’t have designed top-down. Doom’s WAD system was designed for custom levels. Modders built total conversions that influenced decades of first-person design. Half-Life’s SDK was designed for single-player mods. Counter-Strike became one of the most-played multiplayer games in history.</p>
+<p>The pattern: <strong>expressive modding tools produce emergent creativity that transcends the original game’s genre.</strong> This doesn’t happen by accident. It requires the modding system to be powerful enough that the set of possible creations includes things the developers cannot enumerate in advance. A modding system that only supports “variations on what we shipped” cannot produce genre-defining surprises.</p>
+<p>IC’s tiered modding architecture (D003/D004/D005) is explicitly designed with this in mind:</p>
+<ul>
+<li><strong>YAML</strong> (Tier 1) handles the 80% case — balance mods, cosmetics, new units within existing mechanics. These are variations.</li>
+<li><strong>Lua</strong> (Tier 2) enables new game logic — triggers, abilities, AI behaviors, mission mechanics that don’t exist in the base game.</li>
+<li><strong>WASM</strong> (Tier 3) enables new <em>systems</em> — entirely new mechanics, game modes, even new genres running on the IC engine. A WASM module could implement a tower defense mode, a turn-based layer, a card game phase between battles, or something nobody has imagined.</li>
+<li><strong>Game modules</strong> (D018) go further — a community-created game module can register its own system pipeline, pathfinder, spatial index, and renderer. At this level, IC is a platform, not a game.</li>
+</ul>
+<p><strong>Rule:</strong> When evaluating modding API design decisions, ask: “Does this make it possible for modders to build something we can’t predict?” If an API only supports parameterizing existing behavior, it’s too narrow. If it exposes enough primitives that novel combinations are possible, it’s on the right track. The WC3 World Editor didn’t have a “create MOBA” button — it had flexible trigger scripting, custom UI, and unit ability composition. The emergent genre was an unplanned consequence of expressive tools.</p>
+<p><strong>Where this applies:</strong></p>
+<ul>
+<li>WASM host API design — expose primitives, not just parameterized behaviors</li>
+<li>Lua API extensions beyond OpenRA’s 16 globals — IC’s superset should enable new game logic patterns</li>
+<li>Game module trait design (D018) — <code>GameModule</code> should be flexible enough for non-RTS game types</li>
+<li>Workshop discovery (D030) — total conversions and genre experiments deserve first-class visibility, not burial under “Maps” and “Balance Mods”</li>
+</ul>
 <hr>
 <h2 id="engineering-methods"><a class="header" href="#engineering-methods">Engineering Methods</a></h2>
 <p>These are not principles — they’re specific engineering practices validated by Westwood’s code and OpenRA’s 18 years of open-source development.</p>
@@ -478,7 +496,8 @@ Competitors like Warcraft used unit caps for balance and performance. Westwood r
 <h2 id="how-to-use-this-chapter"><a class="header" href="#how-to-use-this-chapter">How to Use This Chapter</a></h2>
 <h3 id="for-code-review"><a class="header" href="#for-code-review">For Code Review</a></h3>
 <p>When reviewing a PR or design proposal, check it against these principles — <strong>but don’t use them as a rigid gate.</strong> The original creators discovered their best ideas by breaking their own rules. The principles provide grounding when a decision feels uncertain. They should never prevent innovation.</p>
-<p>Key questions to ask during review:</p>
+<p>Key questions to ask during review:
+0. <strong>Is this the game the community actually wants?</strong> The community wants to play Red Alert — the real thing, not a diminished version — forever, on anything, with anyone, and to make it their own. Does this feature, system, or decision bring that game closer to existing? If it’s architecture that doesn’t serve a playable game, it needs strong justification.</p>
 <ol>
 <li>Does this serve the core fantasy, or is it infrastructure for infrastructure’s sake?</li>
 <li>Does this keep the sim pure, or does it leak I/O into game logic?</li>
@@ -486,10 +505,12 @@ Competitors like Warcraft used unit caps for balance and performance. Westwood r
 <li>Is this scoped appropriately for the current phase?</li>
 <li>If this is a compromise, is it explicitly labeled and reversible?</li>
 <li>How does this affect the community — players, modders, server hosts, contributors? Does it address a known pain point or create a new one?</li>
+<li>If this touches the modding API, does it expose primitives that enable novel creations, or only parameterize existing behavior?</li>
 </ol>
 <h3 id="for-feature-proposals"><a class="header" href="#for-feature-proposals">For Feature Proposals</a></h3>
 <p>When proposing a new feature:</p>
 <ol>
+<li><strong>Does this bring the game closer to existing?</strong> The most important feature is a playable game. If this proposal doesn’t serve that, it must justify why it’s worth the time.</li>
 <li>State which principle(s) it serves</li>
 <li>Cross-reference the relevant design docs (<a href="02-ARCHITECTURE.html">02-ARCHITECTURE.md</a>, <a href="08-ROADMAP.html">08-ROADMAP.md</a>, etc.)</li>
 <li>If it conflicts with a principle, acknowledge the trade-off — don’t pretend the conflict doesn’t exist</li>
@@ -531,6 +552,9 @@ Competitors like Warcraft used unit caps for balance and performance. Westwood r
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                             </a>
 
+                            <a rel="next prefetch" href="14-METHODOLOGY.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
 
                         <div style="clear: both"></div>
                     </nav>
@@ -542,6 +566,9 @@ Competitors like Warcraft used unit caps for balance and performance. Westwood r
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                     </a>
 
+                    <a rel="next prefetch" href="14-METHODOLOGY.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
             </nav>
 
         </div>

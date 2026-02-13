@@ -1,0 +1,764 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Development Methodology - Iron Curtain — Design Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Design docs for a Rust-native Red Alert RTS engine">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="favicon-8114d1fc.png">
+        <link rel="stylesheet" href="css/variables-8adf115d.css">
+        <link rel="stylesheet" href="css/general-2459343d.css">
+        <link rel="stylesheet" href="css/chrome-ae938929.css">
+        <link rel="stylesheet" href="css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "searchindex-738ccda3.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc-678cb19b.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Iron Curtain — Design Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs/edit/main/src/14-METHODOLOGY.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="14--development-methodology"><a class="header" href="#14--development-methodology">14 — Development Methodology</a></h1>
+<blockquote>
+<p>How Iron Curtain moves from design docs to a playable game — the meta-process that governs everything from research through release.</p>
+</blockquote>
+<h2 id="purpose-of-this-chapter"><a class="header" href="#purpose-of-this-chapter">Purpose of This Chapter</a></h2>
+<p>The other design docs say <strong>what</strong> we’re building (<a href="01-VISION.html">01-VISION</a>, <a href="02-ARCHITECTURE.html">02-ARCHITECTURE</a>), <strong>why</strong> decisions were made (<a href="09-DECISIONS.html">09-DECISIONS</a>, <a href="13-PHILOSOPHY.html">13-PHILOSOPHY</a>), and <strong>when</strong> things ship (<a href="08-ROADMAP.html">08-ROADMAP</a>). This chapter says <strong>how we get there</strong> — the methodology that turns 13 design documents into a working engine.</p>
+<p><strong>When to read this chapter:</strong></p>
+<ul>
+<li>You’re starting work on a new phase and need to know the process</li>
+<li>You’re an agent (human or AI) about to write code and need to understand the workflow</li>
+<li>You’re planning which tasks to tackle next within a phase</li>
+<li>You need to understand how isolated development, integration, and community feedback fit together</li>
+</ul>
+<p><strong>When NOT to read this chapter:</strong></p>
+<ul>
+<li>You need architecture specifics → <a href="02-ARCHITECTURE.html">02-ARCHITECTURE.md</a></li>
+<li>You need performance guidance → <a href="10-PERFORMANCE.html">10-PERFORMANCE.md</a></li>
+<li>You need the phase timeline → <a href="08-ROADMAP.html">08-ROADMAP.md</a></li>
+<li>You need coding rules for agents → see <a href="#stage-6-coding-guidelines-for-agents">Stage 6</a> below, plus <code>AGENTS.md</code> § “Working With This Codebase”</li>
+</ul>
+<hr>
+<h2 id="the-eight-stages"><a class="header" href="#the-eight-stages">The Eight Stages</a></h2>
+<p>Development follows eight stages. They’re roughly sequential, but later stages feed back into earlier ones — implementation teaches us things that update the design.</p>
+<pre><code>┌──────────────────────┐
+│ 1. Research          │ ◀────────────────────────────────────────┐
+│    &amp; Document        │                                          │
+└──────────┬───────────┘                                          │
+           ▼                                                      │
+┌──────────────────────┐                                          │
+│ 2. Architectural     │                                          │
+│    Blueprint         │                                          │
+└──────────┬───────────┘                                          │
+           ▼                                                      │
+┌──────────────────────┐                                          │
+│ 3. Delivery          │                                          │
+│    Sequence (MVP)    │                                          │
+└──────────┬───────────┘                                          │
+           ▼                                                      │
+┌──────────────────────┐                                          │
+│ 4. Dependency        │                                          │
+│    Analysis          │                                          │
+└──────────┬───────────┘                                          │
+           ▼                                                      │
+┌──────────────────────┐                                          │
+│ 5. Context-Bounded   │                                          │
+│    Work Units        │                                          │
+└──────────┬───────────┘                                   ┌──────┴──────┐
+           ▼                                               │ 8. Design   │
+┌──────────────────────┐                                   │ Evolution   │
+│ 6. Coding Guidelines │                                   └──────┬──────┘
+│    for Agents        │                                          ▲
+└──────────┬───────────┘                                          │
+           ▼                                                      │
+┌──────────────────────┐                                          │
+│ 7. Integration       │──────────────────────────────────────────┘
+│    &amp; Validation      │
+└──────────────────────┘
+</code></pre>
+<hr>
+<h2 id="stage-1-research--document"><a class="header" href="#stage-1-research--document">Stage 1: Research &amp; Document</a></h2>
+<blockquote>
+<p>Explore every idea. Study prior art. Write it down.</p>
+</blockquote>
+<p><strong>What this produces:</strong> Design documents (this book), research analyses, decision records.</p>
+<p><strong>Process:</strong></p>
+<ul>
+<li>Study the original EA source code, OpenRA architecture, and other RTS engines (see <code>AGENTS.md</code> § “Reference Material”)</li>
+<li>Identify community pain points from OpenRA’s issue tracker, Reddit, Discord, modder feedback (see <a href="01-VISION.html">01-VISION</a> § “Community Pain Points”)</li>
+<li>For every significant design question, explore alternatives, pick one, document the rationale in <a href="09-DECISIONS.html">09-DECISIONS</a></li>
+<li>Capture lessons from the original C&amp;C creators and other game development veterans (see <a href="13-PHILOSOPHY.html">13-PHILOSOPHY</a> and <code>research/westwood-ea-development-philosophy.md</code>)</li>
+<li>Research is concurrent with other work in later stages — new questions arise during implementation</li>
+<li>Research is a <strong>continuous discipline</strong>, not a phase that ends. Every new prior art study can challenge assumptions, confirm patterns, or reveal gaps. The project’s commit history shows active research throughout pre-development — not tapering early but intensifying as design maturity makes it easier to ask precise questions.</li>
+</ul>
+<p><strong>Current status (February 2026):</strong> The major architectural questions are answered across 14 design chapters, 48+ decisions, and 12+ research analyses. Research continues as a parallel track — recent examples include AI implementation surveys across 7+ codebases and Stratagus/Stargus engine analysis, each producing new cross-references and actionable design refinements. The shift is from <em>exploratory</em> research (“what should we build?”) to <em>confirmatory</em> research (“does this prior art validate or challenge our approach?”).</p>
+<p><strong>Exit criteria:</strong></p>
+<ul>
+<li>Every major subsystem has a design doc section with component definitions, Rust struct signatures, and YAML examples</li>
+<li>Every significant alternative has been considered and the choice is documented in <a href="09-DECISIONS.html">09-DECISIONS</a></li>
+<li>The gap analysis against OpenRA (<a href="11-OPENRA-FEATURES.html">11-OPENRA-FEATURES</a>) covers all ~700 traits with IC equivalents or explicit “not planned” decisions</li>
+<li>Community context is documented: who we’re building for, what they actually want, what makes them switch (see <a href="01-VISION.html">01-VISION</a> § “What Makes People Actually Switch”)</li>
+</ul>
+<hr>
+<h2 id="stage-2-architectural-blueprint"><a class="header" href="#stage-2-architectural-blueprint">Stage 2: Architectural Blueprint</a></h2>
+<blockquote>
+<p>Map the complete project — every crate, every trait, every data flow.</p>
+</blockquote>
+<p><strong>What this produces:</strong> The system map. What connects to what, where boundaries live, which traits abstract which concerns.</p>
+<p><strong>Process:</strong></p>
+<ul>
+<li>Define crate boundaries with precision: which crate owns which types, which crate never imports from which other crate (see <a href="02-ARCHITECTURE.html">02-ARCHITECTURE</a> § crate structure)</li>
+<li>Map every trait interface: <code>NetworkModel</code>, <code>Pathfinder</code>, <code>SpatialIndex</code>, <code>FogProvider</code>, <code>DamageResolver</code>, <code>AiStrategy</code>, <code>OrderValidator</code>, <code>RankingProvider</code>, <code>Renderable</code>, <code>InputSource</code>, <code>OrderCodec</code>, <code>GameModule</code>, etc. (see D041 in <a href="09-DECISIONS.html">09-DECISIONS</a>)</li>
+<li>Define the simulation system pipeline — fixed order, documented dependencies between systems (see <a href="02-ARCHITECTURE.html">02-ARCHITECTURE</a> § “System Pipeline”)</li>
+<li>Map data flow: <code>PlayerOrder</code> → <code>ic-protocol</code> → <code>NetworkModel</code> → <code>TickOrders</code> → <code>Simulation::apply_tick()</code> → state hash → snapshot</li>
+<li>Identify every point where a game module plugs in (see D018 <code>GameModule</code> trait)</li>
+</ul>
+<p><strong>The blueprint is NOT code.</strong> It’s the map that makes code possible. When two developers (or agents) work on different crates, the blueprint tells them exactly what the interface between their work looks like — before either writes a line.</p>
+<p><strong>Relationship to Stage 1:</strong> Stage 1 produces the ideas and decisions. Stage 2 organizes them into a coherent technical map. Stage 1 asks “should pathfinding be trait-abstracted?” Stage 2 says “the <code>Pathfinder</code> trait lives in <code>ic-sim</code>, <code>IcPathfinder</code> (multi-layer hybrid) is the RA1 <code>GameModule</code> implementation, the engine core calls <code>pathfinder.request_path()</code> and never algorithm-specific functions directly.”</p>
+<p><strong>Exit criteria:</strong></p>
+<ul>
+<li>Every crate’s public API surface is sketched (trait signatures, key structs, module structure)</li>
+<li>Every cross-crate dependency is documented and justified</li>
+<li>The <code>GameModule</code> trait is complete — it captures everything that varies between game modules</li>
+<li>A developer can look at the blueprint and know exactly where a new feature belongs — which crate, which system in the pipeline, which trait it implements or extends</li>
+</ul>
+<hr>
+<h2 id="stage-3-delivery-sequence-mvp-releases"><a class="header" href="#stage-3-delivery-sequence-mvp-releases">Stage 3: Delivery Sequence (MVP Releases)</a></h2>
+<blockquote>
+<p>Plan releases so there’s something playable at every milestone. The community sees progress, not promises.</p>
+</blockquote>
+<p><strong>What this produces:</strong> A release plan where each cycle ships a playable prototype that improves on the last.</p>
+<p><strong>The MVP principle:</strong> Every release cycle produces something a community member can download, run, and react to. Not “the pathfinding crate compiles” — “you can load a map and watch units move.” Not “the lobby protocol is defined” — “you can play a game against someone over the internet.” Each release is a superset of the previous one.</p>
+<p><strong>Process:</strong></p>
+<ul>
+<li>Start from the roadmap phases (<a href="08-ROADMAP.html">08-ROADMAP</a>) — these define the major capability milestones</li>
+<li>Within each phase, identify the smallest slice that produces a visible, testable result</li>
+<li>Prioritize features that make the game <em>feel real</em> early — rendering a map with units matters more than optimizing the spatial hash</li>
+<li>Front-load the hardest unknowns: deterministic simulation, networking, format compatibility. If these are wrong, we want to know at month 6, not month 24</li>
+<li>Every release gets a community feedback window before the next cycle begins</li>
+</ul>
+<p><strong>Release sequence (maps to roadmap phases):</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Release</th><th>What’s Playable</th><th>Community Can…</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Phase 0</strong></td><td>CLI tools, format inspection</td><td>Verify their .mix/.shp/.pal files load correctly, file bug reports for format edge cases</td></tr>
+<tr><td><strong>Phase 1</strong></td><td>Visual map viewer</td><td>See their OpenRA maps rendered by the IC engine, compare visual fidelity</td></tr>
+<tr><td><strong>Phase 2</strong></td><td>Headless sim + replay viewer</td><td>Watch a pre-recorded game play back, verify unit behavior looks right</td></tr>
+<tr><td><strong>Phase 3</strong></td><td>First playable skirmish (vs AI)</td><td>Actually <em>play</em> — sidebar, build queue, units, combat. This is the big one.</td></tr>
+<tr><td><strong>Phase 4</strong></td><td>Campaign missions, scripting</td><td>Play through RA campaign missions, create Lua-scripted scenarios</td></tr>
+<tr><td><strong>Phase 5</strong></td><td>Online multiplayer</td><td>Play against other people. This is where retention starts.</td></tr>
+<tr><td><strong>Phase 6a</strong></td><td>Mod tools + scenario editor</td><td>Create and publish mods. The community starts building.</td></tr>
+<tr><td><strong>Phase 6b</strong></td><td>Campaign editor, game modes</td><td>Create campaigns, custom game modes, co-op scenarios</td></tr>
+<tr><td><strong>Phase 7</strong></td><td>LLM features, ecosystem</td><td>Generate missions, full visual modding pipeline, polish</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>The Phase 3 moment is critical.</strong> That’s when the project goes from “interesting tech demo” to “thing I want to play.” Everything before Phase 3 builds toward that moment. Everything after Phase 3 builds on the trust it creates.</p>
+<p><strong>Exit criteria:</strong></p>
+<ul>
+<li>Each phase has a concrete “what the player sees” description (not just a feature list)</li>
+<li>Dependencies between phases are explicit — no phase starts until its predecessors’ exit criteria are met</li>
+<li>The community has a clear picture of what’s coming and when</li>
+</ul>
+<hr>
+<h2 id="stage-4-dependency-analysis"><a class="header" href="#stage-4-dependency-analysis">Stage 4: Dependency Analysis</a></h2>
+<blockquote>
+<p>What blocks what? What can run in parallel? What’s the critical path?</p>
+</blockquote>
+<p><strong>What this produces:</strong> A dependency graph that tells you which work must happen in which order, and which work can happen simultaneously.</p>
+<p><strong>Why this matters:</strong> A 36-month project with 11 crates has hundreds of potential tasks. Without dependency analysis, you either serialize everything (slow) or parallelize carelessly (integration nightmares). The dependency graph is the tool that finds the sweet spot.</p>
+<p><strong>Process:</strong></p>
+<ul>
+<li>For each deliverable in each phase, identify:
+<ul>
+<li><strong>Hard dependencies:</strong> What must exist before this can start? (e.g., <code>ic-sim</code> must exist before <code>ic-net</code> can test against it)</li>
+<li><strong>Soft dependencies:</strong> What would be nice to have but isn’t blocking? (e.g., the scenario editor is easier to build if the renderer exists, but the editor’s data model can be designed independently)</li>
+<li><strong>Test dependencies:</strong> What does this need to be <em>tested</em>? (e.g., the <code>Pathfinder</code> trait can be defined without a map, but testing it requires at least a stub map)</li>
+</ul>
+</li>
+<li>Identify the <strong>critical path</strong> — the longest chain of hard dependencies that determines minimum project duration</li>
+<li>Identify <strong>parallel tracks</strong> — work that has no dependency on each other and can proceed simultaneously</li>
+</ul>
+<p><strong>Example dependency chains:</strong></p>
+<pre><code>Critical path (sim-first):
+  ra-formats → ic-sim (needs parsed rules) → ic-net (needs sim to test against)
+                                            → ic-render (needs sim state to draw)
+                                            → ic-ai (needs sim to run AI against)
+
+Parallel tracks (can proceed alongside sim work):
+  ic-ui (chrome layout, widget system — stubbed data)
+  ic-editor (editor framework, UI — stubbed scenario data)
+  ic-audio (format loading, playback — independent)
+  research (ongoing — netcode analysis, community feedback)
+</code></pre>
+<p><strong>Key insight:</strong> The simulation (<code>ic-sim</code>) is on almost every critical path. Getting it right early — and getting it testable in isolation — is the single most important scheduling decision.</p>
+<p><strong>Exit criteria:</strong></p>
+<ul>
+<li>Every task has its dependencies identified (hard, soft, test)</li>
+<li>The critical path is documented</li>
+<li>Parallel tracks are identified — work that can proceed without waiting</li>
+<li>No task is scheduled before its hard dependencies are met</li>
+</ul>
+<hr>
+<h2 id="stage-5-context-bounded-work-units"><a class="header" href="#stage-5-context-bounded-work-units">Stage 5: Context-Bounded Work Units</a></h2>
+<blockquote>
+<p>Decompose work into tasks that can be completed in isolation — without polluting an agent’s context window.</p>
+</blockquote>
+<p><strong>What this produces:</strong> Precise, self-contained task definitions that a developer (human or AI agent) can pick up and complete without needing the entire project in their head.</p>
+<p><strong>Why this matters for agentic development:</strong> An AI agent has a finite context window. If completing a task requires understanding 14 design docs, 11 crates, and 42 decisions simultaneously, the agent will produce worse results — it’s working at the edge of its capacity. If the task is scoped so the agent needs exactly one design doc section, one crate’s public API, and one or two decisions, the agent produces precise, correct work.</p>
+<p>This isn’t just an AI constraint — it’s a software engineering principle. Fred Brooks called it “information hiding.” The less an implementer needs to know about the rest of the system, the better their work on their piece will be.</p>
+<p><strong>Process:</strong></p>
+<ol>
+<li>
+<p><strong>Define the context boundary.</strong> For each task, list exactly what the implementer needs to know:</p>
+<ul>
+<li>Which crate(s) are touched</li>
+<li>Which trait interfaces are involved</li>
+<li>Which design doc sections are relevant</li>
+<li>What the inputs and outputs look like</li>
+<li>What “done” means (test criteria)</li>
+</ul>
+</li>
+<li>
+<p><strong>Minimize cross-crate work.</strong> A good work unit touches one crate. If a task requires changes to two crates, split it: define the trait interface first (one task), then implement it (another task). The trait definition is the handshake between the two.</p>
+</li>
+<li>
+<p><strong>Stub at the boundaries.</strong> Each work unit should be testable with stubs/mocks at its boundary. The <code>Pathfinder</code> implementation doesn’t need a real renderer — it needs a test map and an assertion about the path it produces. The <code>NetworkModel</code> implementation doesn’t need a real sim — it needs a test order stream and assertions about delivery timing.</p>
+</li>
+<li>
+<p><strong>Write task specifications.</strong> Each work unit gets a spec:</p>
+<pre><code>Task: Implement IcPathfinder (Pathfinder trait for RA1)
+Crate: ic-sim
+Reads: 02-ARCHITECTURE.md § "Pathfinding", 10-PERFORMANCE.md § "Multi-Layer Hybrid", research/pathfinding-ic-default-design.md
+Trait: Pathfinder (defined in ic-sim)
+Inputs: map grid, start position, goal position
+Outputs: Vec&lt;WorldPos&gt; path, or PathError
+Test: pathfinding_tests.rs — 12 test cases (open field, wall, chokepoint, unreachable, ...)
+Does NOT touch: ic-render, ic-net, ic-ui, ic-editor
+</code></pre>
+</li>
+<li>
+<p><strong>Order by dependency.</strong> Trait definitions before implementations. Shared types (<code>ic-protocol</code>) before consumers (<code>ic-sim</code>, <code>ic-net</code>). Foundation crates before application crates.</p>
+</li>
+</ol>
+<p><strong>Example decomposition for Phase 2 (Simulation):</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>#</th><th>Work Unit</th><th>Crate</th><th>Context Needed</th><th>Depends On</th></tr>
+</thead>
+<tbody>
+<tr><td>1</td><td>Define <code>PlayerOrder</code> enum + serialization</td><td><code>ic-protocol</code></td><td>02-ARCHITECTURE § orders, 05-FORMATS § order types</td><td>Phase 0 (format types)</td></tr>
+<tr><td>2</td><td>Define <code>Pathfinder</code> trait</td><td><code>ic-sim</code></td><td>02-ARCHITECTURE § pathfinding, D013, D041</td><td>—</td></tr>
+<tr><td>3</td><td>Define <code>SpatialIndex</code> trait</td><td><code>ic-sim</code></td><td>02-ARCHITECTURE § spatial queries, D041</td><td>—</td></tr>
+<tr><td>4</td><td>Implement <code>SpatialHash</code> (SpatialIndex for RA1)</td><td><code>ic-sim</code></td><td>10-PERFORMANCE § spatial hash</td><td>#3</td></tr>
+<tr><td>5</td><td>Implement <code>IcPathfinder</code> (Pathfinder for RA1)</td><td><code>ic-sim</code></td><td>10-PERFORMANCE § pathfinding, pathfinding-ic-default-design.md</td><td>#2, #4</td></tr>
+<tr><td>6</td><td>Define sim system pipeline (apply_orders through fog)</td><td><code>ic-sim</code></td><td>02-ARCHITECTURE § system pipeline</td><td>#1</td></tr>
+<tr><td>7</td><td>Implement movement system</td><td><code>ic-sim</code></td><td>02-ARCHITECTURE § movement, RA1 movement rules</td><td>#5, #6</td></tr>
+<tr><td>8</td><td>Implement combat system</td><td><code>ic-sim</code></td><td>02-ARCHITECTURE § combat, <code>DamageResolver</code> trait (D041)</td><td>#4, #6</td></tr>
+<tr><td>9</td><td>Implement harvesting system</td><td><code>ic-sim</code></td><td>02-ARCHITECTURE § harvesting</td><td>#5, #6</td></tr>
+<tr><td>10</td><td>Implement <code>LocalNetwork</code></td><td><code>ic-net</code></td><td>03-NETCODE § LocalNetwork</td><td>#1</td></tr>
+<tr><td>11</td><td>Implement <code>ReplayPlayback</code></td><td><code>ic-net</code></td><td>03-NETCODE § ReplayPlayback</td><td>#1</td></tr>
+<tr><td>12</td><td>State hashing + snapshot system</td><td><code>ic-sim</code></td><td>02-ARCHITECTURE § snapshots, D010</td><td>#6</td></tr>
+</tbody>
+</table>
+</div>
+<p>Work units 2, 3, and 10 have no dependencies on each other — they can proceed in parallel. Work unit 7 depends on 5 and 6 — it cannot start until both are done. This is the scheduling discipline that prevents chaos.</p>
+<h3 id="documentation-work-units"><a class="header" href="#documentation-work-units">Documentation Work Units</a></h3>
+<p>The context-bounded discipline applies equally to design work — not just code. During the design phase, work units are research and documentation tasks that follow the same principles: bounded context, clear inputs/outputs, explicit dependencies.</p>
+<p><strong>Example decomposition for a research integration task:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>#</th><th>Work Unit</th><th>Scope</th><th>Context Needed</th><th>Depends On</th></tr>
+</thead>
+<tbody>
+<tr><td>1</td><td>Research Stratagus/Stargus engine architecture</td><td><code>research/</code></td><td>GitHub repos, AGENTS.md § Reference Material</td><td>—</td></tr>
+<tr><td>2</td><td>Create research document with findings</td><td><code>research/</code></td><td>Notes from #1</td><td>#1</td></tr>
+<tr><td>3</td><td>Extract lessons applicable to IC AI system</td><td><code>src/09-DECISIONS.md</code></td><td>Research doc from #2, D043 section</td><td>#2</td></tr>
+<tr><td>4</td><td>Update modding docs with Lua AI primitives</td><td><code>src/04-MODDING.md</code></td><td>Research doc from #2, existing Lua API section</td><td>#2</td></tr>
+<tr><td>5</td><td>Update security docs with Lua stdlib policy</td><td><code>src/06-SECURITY.md</code></td><td>Research doc from #2, existing sandbox section</td><td>#2</td></tr>
+<tr><td>6</td><td>Update AGENTS.md reference material</td><td><code>AGENTS.md</code></td><td>Research doc from #2</td><td>#2</td></tr>
+</tbody>
+</table>
+</div>
+<p>Work units 3–6 are independent of each other (can proceed in parallel) but all depend on #2. This is the same dependency logic as code work units — applied to documentation.</p>
+<p><strong>The key discipline:</strong> A documentation work unit that touches more than 2-3 files is probably too broad. “Update all design docs with Stratagus findings” is not a good work unit. “Update D043 cross-references with Stratagus evidence” is.</p>
+<h3 id="cross-cutting-propagation"><a class="header" href="#cross-cutting-propagation">Cross-Cutting Propagation</a></h3>
+<p>Some changes are inherently cross-cutting — a new decision like D034 (SQLite storage) or D041 (trait-abstracted subsystems) affects architecture, roadmap, modding, security, and other docs. When this happens:</p>
+<ol>
+<li><strong>Identify all affected documents first.</strong> Before editing anything, search for every reference to the topic across all docs. Use the decision ID, related keywords, and affected crate names.</li>
+<li><strong>Make a checklist.</strong> List every file that needs updating and what specifically changes in each.</li>
+<li><strong>Update in one pass.</strong> Don’t edit three files today and discover two more tomorrow. The checklist prevents this.</li>
+<li><strong>Verify cross-references.</strong> After all edits, confirm that every cross-reference between docs is consistent — section names match, decision IDs are correct, phase numbers align.</li>
+</ol>
+<p>The project’s commit history shows this pattern repeatedly: a single concept (LLM integration, SQLite storage, platform-agnostic design) propagated across 5–8 files in one commit. The discipline is in the completeness of the propagation, not in the scope of the change.</p>
+<p><strong>Exit criteria:</strong></p>
+<ul>
+<li>Every deliverable in the current phase is decomposed into work units</li>
+<li>Each work unit has a context boundary spec (crate/scope, reads, inputs, outputs, verification)</li>
+<li>No work unit requires more than 2-3 design doc sections to understand</li>
+<li>Dependencies between work units are explicit</li>
+<li>Cross-cutting changes have a propagation checklist before any edits begin</li>
+</ul>
+<hr>
+<h2 id="stage-6-coding-guidelines-for-agents"><a class="header" href="#stage-6-coding-guidelines-for-agents">Stage 6: Coding Guidelines for Agents</a></h2>
+<blockquote>
+<p>Rules for how code gets written — whether the writer is a human or an AI agent.</p>
+</blockquote>
+<p><strong>What this produces:</strong> A set of constraints that ensure consistent, correct, reviewable code regardless of who writes it.</p>
+<p>The full agent rules live in <code>AGENTS.md</code> § “Working With This Codebase.” This section covers the principles; <code>AGENTS.md</code> has the specifics.</p>
+<h3 id="general-rules"><a class="header" href="#general-rules">General Rules</a></h3>
+<ol>
+<li>
+<p><strong>Read <code>AGENTS.md</code> first.</strong> Always. It’s the single source of truth for architectural invariants, crate boundaries, settled decisions, and prohibited actions.</p>
+</li>
+<li>
+<p><strong>Respect crate boundaries.</strong> <code>ic-sim</code> never imports from <code>ic-net</code>. <code>ic-net</code> never imports from <code>ic-sim</code>. They share only <code>ic-protocol</code>. <code>ic-game</code> never imports from <code>ic-editor</code>. If your change requires a cross-boundary import, the design is wrong — add a trait to the shared boundary instead.</p>
+</li>
+<li>
+<p><strong>No floats in <code>ic-sim</code>.</strong> Fixed-point only (<code>i32</code>/<code>i64</code>). This is invariant #1. If you need fractional math in the simulation, use the fixed-point scale (P002).</p>
+</li>
+<li>
+<p><strong>Every public type in <code>ic-sim</code> derives <code>Serialize, Deserialize</code>.</strong> Snapshots and replays depend on this.</p>
+</li>
+<li>
+<p><strong>System execution order is fixed and documented.</strong> Adding a new system to the pipeline requires deciding where in the order it runs <em>and</em> documenting why it goes there. See <a href="02-ARCHITECTURE.html">02-ARCHITECTURE</a> § “System Pipeline.”</p>
+</li>
+<li>
+<p><strong>Tests before integration.</strong> Every work unit ships with tests that verify it in isolation. Integration happens in Stage 7, not during implementation.</p>
+</li>
+<li>
+<p><strong>Idiomatic Rust.</strong> <code>clippy</code> and <code>rustfmt</code> clean. Zero-allocation patterns in hot paths. <code>Vec::clear()</code> over <code>Vec::new()</code>. See <a href="10-PERFORMANCE.html">10-PERFORMANCE</a> § efficiency pyramid.</p>
+</li>
+<li>
+<p><strong>Data belongs in YAML, not code.</strong> If a modder would want to change it, it’s a data value, not a constant. Weapon damage, unit speed, build time, cost — all YAML. See principle #4 in <a href="13-PHILOSOPHY.html">13-PHILOSOPHY</a>.</p>
+</li>
+</ol>
+<h3 id="agent-specific-rules"><a class="header" href="#agent-specific-rules">Agent-Specific Rules</a></h3>
+<ol start="9">
+<li>
+<p><strong>Never commit or push.</strong> Agents edit files; the maintainer reviews, commits, and pushes. A commit is a human decision.</p>
+</li>
+<li>
+<p><strong>Never run <code>mdbook build</code> or <code>mdbook serve</code>.</strong> The book is built manually when the maintainer decides.</p>
+</li>
+<li>
+<p><strong>Verify claims before stating them.</strong> Don’t say “OpenRA stutters at 300 units” unless you’ve benchmarked it. Don’t say “Phase 2 is complete” unless every exit criterion is met. See <code>AGENTS.md</code> § “Mistakes to Never Repeat.”</p>
+</li>
+<li>
+<p><strong>Use future tense for unbuilt features.</strong> Nothing is implemented until it is. “The engine will load .mix files” — not “the engine loads .mix files.”</p>
+</li>
+<li>
+<p><strong>When a change touches multiple files, update all of them in one pass.</strong> <code>AGENTS.md</code>, <code>SUMMARY.md</code>, <code>00-INDEX.md</code>, design docs, roadmap — whatever references the thing you’re changing. Don’t leave stale cross-references.</p>
+</li>
+<li>
+<p><strong>One work unit at a time.</strong> Complete the current task, verify it, then move to the next. Don’t start three work units and leave all of them half-done.</p>
+</li>
+</ol>
+<hr>
+<h2 id="stage-7-integration--validation"><a class="header" href="#stage-7-integration--validation">Stage 7: Integration &amp; Validation</a></h2>
+<blockquote>
+<p>How isolated pieces come together. Where bugs live. Where the community weighs in.</p>
+</blockquote>
+<p><strong>What this produces:</strong> A working, tested system from individually-developed components — plus community validation that we’re building the right thing.</p>
+<p><strong>The integration problem:</strong> Stages 4–6 optimize for isolation. That’s correct for development quality, but isolation creates a risk: the pieces might not fit together. Stage 7 is where we find out.</p>
+<p><strong>Process:</strong></p>
+<h3 id="technical-integration"><a class="header" href="#technical-integration">Technical Integration</a></h3>
+<ol>
+<li>
+<p><strong>Interface verification.</strong> Before integrating two components, verify that the trait interface between them matches expectations. The <code>Pathfinder</code> trait that <code>ic-sim</code> calls must match the <code>IcPathfinder</code> that implements it — not just in type signature, but in behavioral contract (does it handle unreachable goals? does it respect terrain cost? does the multi-layer system degrade gracefully?).</p>
+</li>
+<li>
+<p><strong>Integration tests.</strong> These are different from unit tests. Unit tests verify a component in isolation. Integration tests verify that two or more components work together correctly:</p>
+<ul>
+<li>Sim + LocalNetwork: orders go in, state comes out, hashes match</li>
+<li>Sim + ReplayPlayback: replay file produces identical state sequence</li>
+<li>Sim + Renderer: state changes produce correct visual updates</li>
+<li>Sim + AI: AI generates valid orders, sim accepts them</li>
+</ul>
+</li>
+<li>
+<p><strong>Desync testing.</strong> Run the same game on two instances with the same orders. Compare state hashes every tick. Any divergence is a determinism bug. This is the most critical integration test — it validates invariant #1.</p>
+</li>
+<li>
+<p><strong>Performance integration.</strong> Individual components may meet their performance targets in isolation but degrade when combined (cache thrashing, unexpected allocation, scheduling contention). Profile the integrated system, not just the parts.</p>
+</li>
+</ol>
+<h3 id="community-validation"><a class="header" href="#community-validation">Community Validation</a></h3>
+<ol start="5">
+<li>
+<p><strong>Release the MVP.</strong> At the end of each phase, ship what’s playable (see Stage 3 release table). Make it easy to download and run.</p>
+</li>
+<li>
+<p><strong>Collect feedback.</strong> Not just “does it work?” but “does it feel right?” The community knows what RA should feel like. If unit movement feels wrong, pathfinding is wrong — regardless of what the unit tests say. See Philosophy principle #2: “Fun beats documentation.”</p>
+</li>
+<li>
+<p><strong>Triage feedback into three buckets:</strong></p>
+<ul>
+<li><strong>Fix now:</strong> Bugs, crashes, format compatibility failures. If someone’s .mix file doesn’t load, that blocks everything (invariant #8).</li>
+<li><strong>Fix this phase:</strong> Behavior that’s wrong but not crashing. Unit speed feels off, build times are weird, UI is confusing.</li>
+<li><strong>Defer:</strong> Feature requests, nice-to-haves, things that belong in a later phase. Acknowledge them, log them, don’t act on them yet.</li>
+</ul>
+</li>
+<li>
+<p><strong>Update the roadmap.</strong> Community feedback may reveal that our priorities are wrong. If everyone says “the sidebar is unusable” and we planned to polish it in Phase 6, pull it forward. The roadmap serves the game, not the other way around.</p>
+</li>
+</ol>
+<p><strong>Exit criteria (per phase):</strong></p>
+<ul>
+<li>All integration tests pass</li>
+<li>Desync test produces zero divergence over 10,000 ticks</li>
+<li>Performance meets the targets in <a href="10-PERFORMANCE.html">10-PERFORMANCE</a> for the current phase’s scope</li>
+<li>Community feedback is collected, triaged, and incorporated into the next phase’s plan</li>
+<li>Known issues are documented — not hidden, not ignored</li>
+</ul>
+<hr>
+<h2 id="stage-8-design-evolution"><a class="header" href="#stage-8-design-evolution">Stage 8: Design Evolution</a></h2>
+<blockquote>
+<p>The design docs are alive. Implementation teaches us things. Update accordingly.</p>
+</blockquote>
+<p><strong>What this produces:</strong> Design documents that stay accurate as the project evolves — not frozen artifacts from before we wrote any code.</p>
+<p><strong>The problem:</strong> A design doc written before implementation is a hypothesis. Implementation tests that hypothesis. Sometimes the hypothesis is wrong. When that happens, the design doc must change — not the code.</p>
+<p><strong>Process:</strong></p>
+<ol>
+<li>
+<p><strong>When implementation contradicts the design, investigate.</strong> Sometimes the implementation is wrong (bug). Sometimes the design is wrong (bad assumption). Sometimes both need adjustment. Don’t reflexively change either one — understand <em>why</em> they disagree first.</p>
+</li>
+<li>
+<p><strong>Update the design doc in the same pass as the code change.</strong> If you change how the damage pipeline works, update <a href="02-ARCHITECTURE.html">02-ARCHITECTURE</a> § damage pipeline, <a href="09-DECISIONS.html">09-DECISIONS</a> § D028, and <code>AGENTS.md</code>. Don’t leave stale documentation for the next person to discover.</p>
+</li>
+<li>
+<p><strong>Log design changes in <code>09-DECISIONS.md</code>.</strong> If a decision changes, don’t silently edit it. Add a note: “Revised from X to Y because implementation revealed Z.” The decision log is a history, not just a current snapshot.</p>
+</li>
+<li>
+<p><strong>Community feedback triggers design review.</strong> If the community consistently reports that a design choice doesn’t work in practice, that’s data. Evaluate it against the philosophy principles, and if the design is wrong, update it. See <a href="13-PHILOSOPHY.html">13-PHILOSOPHY</a> principle #2: “Fun beats documentation — if it’s in the doc but plays poorly, cut it.”</p>
+</li>
+<li>
+<p><strong>Never silently promise something the code can’t deliver.</strong> If a design doc describes a feature that hasn’t been built yet, it must use future tense. If a feature was cut or descoped, the doc must say so explicitly. Silence implies completeness — and that makes silence a lie.</p>
+</li>
+</ol>
+<p><strong>What triggers design evolution:</strong></p>
+<ul>
+<li>Implementation reveals a better approach than what was planned</li>
+<li>Performance profiling shows an algorithm choice doesn’t meet targets</li>
+<li>Community feedback identifies a pain point the design didn’t anticipate</li>
+<li>A new decision (D043, D044, …) changes assumptions that earlier decisions relied on</li>
+<li>A pending decision (P002, P003, …) gets resolved and affects other sections</li>
+<li><strong>Research integration</strong> — a new prior art analysis reveals cross-project evidence that strengthens, challenges, or refines existing decisions (e.g., Stratagus analysis confirming D043’s manager hierarchy across a 7th independent codebase, or revealing a Lua stdlib security pattern applicable to D005’s sandbox)</li>
+</ul>
+<p><strong>Exit criteria:</strong> There is no exit. Design evolution is continuous. The docs are accurate on every commit.</p>
+<hr>
+<h2 id="how-the-stages-map-to-roadmap-phases"><a class="header" href="#how-the-stages-map-to-roadmap-phases">How the Stages Map to Roadmap Phases</a></h2>
+<p>The eight stages aren’t “do Stage 1, then Stage 2, then never touch Stage 1 again.” They repeat at different scales:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Roadmap Phase</th><th>Primary Stages Active</th><th>What’s Happening</th></tr>
+</thead>
+<tbody>
+<tr><td>Pre-development (now)</td><td>1, 2, 3, 8</td><td>Research, blueprint, delivery planning — design evolution already active as research findings refine earlier decisions</td></tr>
+<tr><td>Phase 0 start</td><td>1, 4, 5, 6</td><td>Dependency analysis, work unit decomposition, coding rules — targeted research continues</td></tr>
+<tr><td>Phase 0 development</td><td>5, 6, 7, 8</td><td>Work units executed, integrated, first community release (format tools)</td></tr>
+<tr><td>Phase 1–2 development</td><td>5, 6, 7, 8, (1 targeted)</td><td>Core engine work, continuous integration, design docs evolve, research on specific unknowns</td></tr>
+<tr><td>Phase 3 (first playable)</td><td>5, 6, 7, 8, (1 targeted)</td><td>The big community moment — heavy feedback, heavy design evolution</td></tr>
+<tr><td>Phase 4+</td><td>5, 6, 7, 8, (1 targeted)</td><td>Ongoing development cycle with targeted research on new subsystems</td></tr>
+</tbody>
+</table>
+</div>
+<p>Stage 1 (research) never fully stops. The project’s pre-development history demonstrates this: even after major architectural questions were answered, ongoing research (AI implementation surveys across 7 codebases, Stratagus engine analysis, Westwood development philosophy compilation) continued to produce actionable refinements to existing decisions. The shift is from breadth (“what should we build?”) to depth (“does this prior art validate our approach?”). Stage 8 (design evolution) is active from the very first research cycle — not only after implementation begins.</p>
+<hr>
+<h2 id="the-research-design-refine-cycle"><a class="header" href="#the-research-design-refine-cycle">The Research-Design-Refine Cycle</a></h2>
+<blockquote>
+<p>The repeatable micro-workflow that operates within the stages. This is the actual working pattern — observed across 80+ commits of pre-development work on this project and applicable to any design-heavy endeavor.</p>
+</blockquote>
+<p>The eight stages above describe the macro structure — the project-level phases. But within those stages, the dominant working pattern is a smaller, repeatable cycle:</p>
+<pre><code>┌─────────────────────────┐
+│ 1. Identify a question  │ "What can we learn from Stratagus's AI system?"
+└──────────┬──────────────┘ "How should Lua sandboxing work?"
+           ▼                "What does the security model for Workshop look like?"
+┌─────────────────────────┐
+│ 2. Research prior art   │  Read source code, docs, papers. Compare 3-7 projects.
+└──────────┬──────────────┘  Take structured notes.
+           ▼
+┌─────────────────────────┐
+│ 3. Document findings    │  Write a research document (research/*.md).
+└──────────┬──────────────┘  Structured: overview, analysis, lessons, sources.
+           ▼
+┌─────────────────────────┐
+│ 4. Extract decisions    │  "This confirms our manager hierarchy."
+└──────────┬──────────────┘  "This adds a new precedent for stdlib policy."
+           ▼                 "This reveals a gap we haven't addressed."
+┌─────────────────────────┐
+│ 5. Propagate across     │  Update AGENTS.md, 09-DECISIONS.md, architecture,
+│    design docs          │  roadmap, modding, security — every affected doc.
+└──────────┬──────────────┘  Use cross-cutting propagation discipline (Stage 5).
+           ▼
+┌─────────────────────────┐
+│ 6. Review and refine    │  Re-read in context. Fix inconsistencies.
+└─────────────────────────┘  Verify cross-references. Improve clarity.
+   │
+   └──▶ (New questions arise → back to step 1)
+</code></pre>
+<p><strong>This cycle maps to the stages:</strong> Step 1-3 is Stage 1 (Research). Step 4 is Stage 2 (Blueprint refinement). Step 5 is Stage 8 (Design Evolution). Step 6 is quality discipline. The cycle is Stages 1→2→8 in miniature, repeated per topic.</p>
+<p><strong>Observed cadence:</strong> In this project’s pre-development phase, the cycle typically completes in 1-3 work sessions. The research step is the longest; propagation is mechanical but must be thorough. A single cycle often spawns 1-2 new questions that start their own cycles.</p>
+<p><strong>Why this matters for future projects:</strong> This cycle is project-agnostic. Any design-heavy project — not just Iron Curtain — benefits from the discipline of:</p>
+<ul>
+<li>Researching before designing (don’t reinvent what others have solved)</li>
+<li>Documenting research separately from decisions (research is evidence; decisions are conclusions)</li>
+<li>Propagating decisions systematically (a decision that only updates one file is a consistency bug waiting to happen)</li>
+<li>Treating refinement as a first-class work type (not “cleanup” — it’s how design quality improves)</li>
+</ul>
+<p><strong>Anti-patterns to avoid:</strong></p>
+<ul>
+<li><strong>Research without documentation.</strong> If findings aren’t written down, they’re lost when context resets. The research document is the artifact.</li>
+<li><strong>Documentation without propagation.</strong> A new finding that only updates the research file but not the design docs creates drift. The propagation step is non-optional.</li>
+<li><strong>Propagation without verification.</strong> Updating 6 files but missing the 7th creates an inconsistency. The checklist discipline (Stage 5 § Cross-Cutting Propagation) prevents this.</li>
+<li><strong>Skipping the refinement step.</strong> First-draft design text is hypothesis. Re-reading in context after propagation often reveals awkward phrasing, missing cross-references, or logical gaps.</li>
+</ul>
+<hr>
+<h2 id="principles-underlying-the-methodology"><a class="header" href="#principles-underlying-the-methodology">Principles Underlying the Methodology</a></h2>
+<p>These aren’t new principles — they’re existing project principles applied to the development process itself.</p>
+<ol>
+<li>
+<p><strong>The community sees progress, not promises</strong> (Philosophy #0). Every release cycle produces something playable. We never go dark for 6 months.</p>
+</li>
+<li>
+<p><strong>Separate concerns</strong> (Architecture invariant #1, #2). Crate boundaries exist so that work on one subsystem doesn’t require understanding every other subsystem. The methodology enforces this through context-bounded work units.</p>
+</li>
+<li>
+<p><strong>Data-driven everything</strong> (Philosophy #4). The task spec for a work unit is data — crate, trait, inputs, outputs, tests. It’s not a vague description; it’s a structured definition that can be validated.</p>
+</li>
+<li>
+<p><strong>Fun beats documentation</strong> (Philosophy #2). If community feedback says the design is wrong, update the design. The docs serve the game, not the other way around.</p>
+</li>
+<li>
+<p><strong>Scope to what you have</strong> (Philosophy #7). Each phase focuses. Don’t spread work across too many subsystems at once. Complete one thing excellently before starting the next.</p>
+</li>
+<li>
+<p><strong>Make temporary compromises explicit</strong> (Philosophy #8). If a Phase 2 implementation is “good enough for now,” label it. Use <code>// TODO(phase-N): description</code> comments. Don’t let shortcuts become permanent without a conscious decision.</p>
+</li>
+<li>
+<p><strong>Efficiency-first</strong> (Architecture invariant #5, <a href="10-PERFORMANCE.html">10-PERFORMANCE</a>). This applies to the development process too — better methodology, clearer task specs, cleaner boundaries before “throw more agents at it.”</p>
+</li>
+<li>
+<p><strong>Research is a continuous discipline, not a phase</strong> (observed pattern). The project’s commit history shows research intensifying — not tapering — as design maturity enables more precise questions. New prior art analysis is never “too late” if it produces actionable refinements. Budget time for research throughout the project, not just at the start.</p>
+</li>
+</ol>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="13-PHILOSOPHY.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="13-PHILOSOPHY.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr-ef4e11c1.min.js"></script>
+        <script src="mark-09e88c2c.min.js"></script>
+        <script src="searcher-c2a407aa.js"></script>
+
+        <script src="clipboard-1626706a.min.js"></script>
+        <script src="highlight-abc7f01d.js"></script>
+        <script src="book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

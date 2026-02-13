@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-0fa94a75.js";
+            window.path_to_searchindex_js = "searchindex-738ccda3.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-a85074c4.js"></script>
+        <script src="toc-678cb19b.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -210,19 +210,22 @@
 </code></pre>
 <h2 id="layer-1-algorithmic-efficiency"><a class="header" href="#layer-1-algorithmic-efficiency">Layer 1: Algorithmic Efficiency</a></h2>
 <p>Better algorithms on one core beat bad algorithms on eight cores. This is where 90% of the performance comes from.</p>
-<h3 id="pathfinding-flowfields-replace-per-unit-a-ra1-pathfinder-implementation"><a class="header" href="#pathfinding-flowfields-replace-per-unit-a-ra1-pathfinder-implementation">Pathfinding: Flowfields Replace Per-Unit A* (RA1 <code>Pathfinder</code> Implementation)</a></h3>
-<p>The RA1 game module implements the <code>Pathfinder</code> trait with grid-based flowfields. When 50 units move to the same area, OpenRA computes 50 separate A* paths.</p>
+<h3 id="pathfinding-multi-layer-hybrid-replaces-per-unit-a-ra1-pathfinder-implementation"><a class="header" href="#pathfinding-multi-layer-hybrid-replaces-per-unit-a-ra1-pathfinder-implementation">Pathfinding: Multi-Layer Hybrid Replaces Per-Unit A* (RA1 <code>Pathfinder</code> Implementation)</a></h3>
+<p>The RA1 game module implements the <code>Pathfinder</code> trait with <code>IcPathfinder</code> — a multi-layer hybrid combining JPS, flow field tiles, and local avoidance (see <code>research/pathfinding-ic-default-design.md</code>). The gains come from multiple layers:</p>
+<p><em><em>JPS vs. A</em> (small groups, &lt;8 units):</em>* JPS (Jump Point Search) prunes symmetric paths that A* explores redundantly. On uniform-cost grids (typical of open terrain in RA), JPS explores 10–100× fewer nodes than A*.</p>
+<p><em><em>Flow field tiles vs. per-unit A</em> (mass movement, ≥8 units sharing destination):</em>* When 50 units move to the same area, OpenRA computes 50 separate A* paths.</p>
 <pre><code>OpenRA (per-unit A*):
   50 units × ~200 nodes explored × ~10 ops/node = ~100,000 operations
 
-Flowfield:
+Flow field tile:
   1 field × ~2000 cells × ~5 ops/cell              = ~10,000 operations
   50 units × 1 lookup each                          =       50 operations
   Total                                             = ~10,050 operations
 
 10x reduction. No threading involved.
 </code></pre>
-<p>The 51st unit ordered to the same area costs zero — the field already exists. Flowfields amortize across all units sharing a destination.</p>
+<p>The 51st unit ordered to the same area costs zero — the field already exists. Flow field tiles amortize across all units sharing a destination. The adaptive threshold (configurable, default 8 units) ensures flow fields are only computed when the amortization benefit exceeds the generation cost.</p>
+<p><strong>Hierarchical sector graph:</strong> O(1) reachability check (flood-fill domain IDs) eliminates pathfinding for unreachable destinations entirely. Coarse sector-level routing reduces the search space for detailed pathfinding.</p>
 <h3 id="spatial-indexing-grid-hash-replaces-brute-force-range-checks-ra1-spatialindex-implementation"><a class="header" href="#spatial-indexing-grid-hash-replaces-brute-force-range-checks-ra1-spatialindex-implementation">Spatial Indexing: Grid Hash Replaces Brute-Force Range Checks (RA1 <code>SpatialIndex</code> Implementation)</a></h3>
 <p>“Which enemies are in range of this turret?”</p>
 <pre><code>Brute force: 1000 units × 1000 units = 1,000,000 distance checks/tick
@@ -232,7 +235,7 @@ Spatial hash: 1000 units × ~8 nearby   =     8,000 distance checks/tick
 </code></pre>
 <p>A spatial hash divides the world into buckets. Each entity registers in its bucket. Range queries only check nearby buckets. O(1) lookup per bucket, O(k) per query where k is the number of nearby entities (typically &lt; 20). The bucket size is a tunable parameter independent of any game grid — the same spatial hash structure works for grid-based and continuous-space games.</p>
 <h3 id="hierarchical-pathfinding-coarse-then-fine"><a class="header" href="#hierarchical-pathfinding-coarse-then-fine">Hierarchical Pathfinding: Coarse Then Fine</a></h3>
-<p>Break the map into ~32x32 cell chunks. Path between chunks first (few nodes, fast), then path within the current chunk only. Most of the map is never pathfinded at all. Units approaching a new chunk compute the next fine-grained path just before entering.</p>
+<p><code>IcPathfinder</code>’s Layer 2 breaks the map into ~32×32 cell sectors. Path between sectors first (few nodes, fast), then path within the current sector only. Most of the map is never pathfinded at all. Units approaching a new sector compute the next fine-grained path just before entering. Combined with JPS (Layer 3), this reduces pathfinding cost by orders of magnitude compared to flat A*.</p>
 <h2 id="layer-2-cache-friendly-data-layout"><a class="header" href="#layer-2-cache-friendly-data-layout">Layer 2: Cache-Friendly Data Layout</a></h2>
 <h3 id="ecs-archetype-storage-bevy-provides-this"><a class="header" href="#ecs-archetype-storage-bevy-provides-this">ECS Archetype Storage (Bevy provides this)</a></h3>
 <pre><code>OOP (cache-hostile, typical C# pattern):
@@ -326,6 +329,25 @@ fn assign_sim_lod(
 </table>
 </div>
 <p><strong>Determinism preserved:</strong> The stagger schedule is based on entity ID and tick number — deterministic on all clients.</p>
+<h3 id="ai-computation-budget"><a class="header" href="#ai-computation-budget">AI Computation Budget</a></h3>
+<p>AI runs on the same stagger/amortization principles as the rest of the sim. The default <code>PersonalityDrivenAi</code> (D043) uses a priority-based manager hierarchy where each manager runs on its own tick-gated schedule — cheap decisions run often, expensive decisions run rarely (pattern used by EA Generals, 0 A.D. Petra, and MicroRTS). Full architectural detail in D043 (<code>09-DECISIONS.md</code>); survey analysis in <code>research/rts-ai-implementation-survey.md</code>.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>AI Component</th><th>Frequency</th><th>Target Time</th><th>Approach</th></tr>
+</thead>
+<tbody>
+<tr><td>Harvester assignment</td><td>Every 4 ticks</td><td>&lt; 0.1ms</td><td>Nearest-resource lookup</td></tr>
+<tr><td>Defense response</td><td>Every tick (reactive)</td><td>&lt; 0.1ms</td><td>Event-driven, not polling</td></tr>
+<tr><td>Unit production</td><td>Every 8 ticks</td><td>&lt; 0.2ms</td><td>Priority queue evaluation</td></tr>
+<tr><td>Building placement</td><td>On demand</td><td>&lt; 1.0ms</td><td>Influence map lookup</td></tr>
+<tr><td>Attack planning</td><td>Every 30 ticks</td><td>&lt; 2.0ms</td><td>Composition check + timing</td></tr>
+<tr><td>Strategic reassessment</td><td>Every 60 ticks</td><td>&lt; 5.0ms</td><td>Full state evaluation</td></tr>
+<tr><td><strong>Total per tick (amortized)</strong></td><td></td><td><strong>&lt; 0.5ms</strong></td><td><strong>Budget for 500 units</strong></td></tr>
+</tbody>
+</table>
+</div>
+<p>All AI working memory (influence maps, squad rosters, composition tallies, priority queues) is pre-allocated in <code>AiScratch</code> — analogous to <code>TickScratch</code> (Layer 5). Zero per-tick heap allocation. Influence maps are fixed-size arrays, cleared and rebuilt on their evaluation schedule. The <code>AiStrategy::tick_budget_hint()</code> method (D041) provides a hard microsecond cap — if the budget is exhausted mid-evaluation, the AI returns partial results and uses cached plans from the previous complete evaluation.</p>
 <h2 id="layer-5-zero-allocation-hot-paths"><a class="header" href="#layer-5-zero-allocation-hot-paths">Layer 5: Zero-Allocation Hot Paths</a></h2>
 <p>Heap allocation is expensive: the allocator touches cold memory, fragments the heap, and (in C#) creates GC pressure. Rust eliminates GC, but allocation itself still costs cache misses.</p>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]

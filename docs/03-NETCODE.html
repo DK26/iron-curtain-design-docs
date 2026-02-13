@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-0fa94a75.js";
+            window.path_to_searchindex_js = "searchindex-738ccda3.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-a85074c4.js"></script>
+        <script src="toc-678cb19b.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -755,6 +755,9 @@ tracking_servers:
 </li>
 <li>
 <p><strong>Community self-hosting is a first-class use case.</strong> A clan, tournament organizer, or hobbyist runs the same binary on their own machine. No cloud account needed. No Docker needed. The binary reads a config file or env vars and starts listening. For those who prefer containers, <code>docker-compose up</code> works too. For production scale, Helm charts are available.</p>
+</li>
+<li>
+<p><strong>Five minutes from download to running server.</strong> (Lesson from ArmA/OFP: the communities that survive decades are the ones where anyone can host a server.) The setup flow is: download one binary → run it → players connect. No registration, no account creation, no mandatory configuration beyond a port number. The binary ships with sane defaults — a tracking server with in-memory storage and 30-second heartbeat TTL, a relay server with 100-game capacity and 5-second tick timeout. Advanced configuration (Redis backing, TLS, OTEL, regions) is available but never required for first-time setup. A “Getting Started” guide in the community knowledge base walks through the entire process in under 5 minutes, including port forwarding. For communities that want managed hosting without touching binaries, IC provides one-click deploy templates for common platforms (DigitalOcean, Hetzner, Railway, Fly.io).</p>
 </li>
 <li>
 <p><strong>Federation, not centralization.</strong> The client aggregates listings from multiple tracking servers simultaneously (already designed — see <code>tracking_servers</code> list in settings). If the official server goes down, community servers still work. If all tracking servers go down, direct IP / join codes / QR still work. The architecture degrades gracefully, never fails completely.</p>

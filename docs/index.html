@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-0fa94a75.js";
+            window.path_to_searchindex_js = "searchindex-738ccda3.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-a85074c4.js"></script>
+        <script src="toc-678cb19b.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -205,6 +205,7 @@
 <tr><td>11</td><td><code>11-OPENRA-FEATURES.md</code></td><td>OpenRA feature catalog (~700 traits), gap analysis, migration mapping</td><td>You’re assessing feature parity or planning which systems to build next</td></tr>
 <tr><td>12</td><td><code>12-MOD-MIGRATION.md</code></td><td>Combined Arms mod migration, Remastered recreation feasibility</td><td>You’re validating modding architecture against real-world mods</td></tr>
 <tr><td>13</td><td><code>13-PHILOSOPHY.md</code></td><td>Development philosophy, game design principles, design review, lessons from C&amp;C creators and OpenRA</td><td>You’re reviewing design/code, evaluating a feature, or resolving a design tension</td></tr>
+<tr><td>14</td><td><code>14-METHODOLOGY.md</code></td><td>Development methodology: stages from research through release, context-bounded work units, agent coding guidelines</td><td>You’re planning work, starting a new phase, or onboarding as a new contributor</td></tr>
 </tbody>
 </table>
 </div>
@@ -230,12 +231,12 @@
 ├── ic-net         # NetworkModel trait + implementations (Bevy plugins)
 ├── ic-render      # Isometric rendering, shaders, post-FX (Bevy plugin)
 ├── ic-ui          # Game chrome: sidebar, minimap, build queue (Bevy UI)
-├── ic-editor      # In-engine scenario/campaign editor, Game Master mode (D038, Bevy plugin)
+├── ic-editor      # SDK: scenario editor, asset studio, campaign editor, Game Master mode (D038+D040, Bevy app)
 ├── ic-audio       # .aud playback, EVA, music (Bevy audio plugin)
 ├── ic-script      # Lua + WASM mod runtimes
 ├── ic-ai          # Skirmish AI, mission scripting
-├── ic-llm         # LLM mission/campaign generation, adaptive difficulty
-└── ic-game        # Top-level Bevy App, ties all plugins together
+├── ic-llm         # LLM mission/campaign generation, asset generation, adaptive difficulty
+└── ic-game        # Top-level Bevy App, ties all game plugins together (NO editor code)
 </code></pre>
 
                     </main>

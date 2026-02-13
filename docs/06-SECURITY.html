@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-0fa94a75.js";
+            window.path_to_searchindex_js = "searchindex-738ccda3.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-a85074c4.js"></script>
+        <script src="toc-678cb19b.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -808,6 +808,54 @@ impl RelayServer {
 <blockquote>
 <p><strong>Academic reference:</strong> Bryant, B.D. &amp; Saiedian, H. (2021). <em>An evaluation of videogame network architecture performance and security.</em> Computer Networks, 192, 108128. DOI: <a href="https://doi.org/10.1016/j.comnet.2021.108128">10.1016/j.comnet.2021.108128</a>. Companion: Bryant, B.D. &amp; Saiedian, H. (2021). <em>A State Saturation Attack against Massively Multiplayer Online Videogames.</em> ICISSP 2021.</p>
 </blockquote>
+<h2 id="vulnerability-18-workshop-supply-chain-compromise"><a class="header" href="#vulnerability-18-workshop-supply-chain-compromise">Vulnerability 18: Workshop Supply Chain Compromise</a></h2>
+<h3 id="the-problem-17"><a class="header" href="#the-problem-17">The Problem</a></h3>
+<p>A trusted mod author’s account is compromised (or goes rogue), and a malicious update is pushed to a widely-depended-upon Workshop resource. Thousands of players auto-update and receive the compromised package.</p>
+<p><strong>Precedent:</strong> The Minecraft <strong>fractureiser</strong> incident (June 2023). A malware campaign compromised CurseForge and Bukkit accounts, injecting a multi-stage downloader into popular mods. The malware stole browser credentials, Discord tokens, and cryptocurrency wallets. It propagated through the dependency chain — mods depending on compromised libraries inherited the payload. The incident affected millions of potential downloads before detection. CurseForge had SHA-256 checksums and author verification, but neither helped because the attacker <em>was</em> the authenticated author pushing a “legitimate” update.</p>
+<p>IC’s WASM sandbox (Vulnerability 5) prevents runtime exploits — a malicious WASM mod cannot access the filesystem or network without explicit capabilities. But the supply chain threat is broader than WASM: YAML rules can reference malicious asset URLs, Lua scripts execute within the Lua sandbox, and even non-code resources (sprites, audio) could exploit parser vulnerabilities.</p>
+<blockquote>
+<p><strong>Lua sandbox surface:</strong> Lua scripts are sandboxed via selective standard library loading (see <code>04-MODDING.md</code> § “Lua Sandbox Rules” for the full inclusion/exclusion table). The <code>io</code>, <code>os</code>, <code>package</code>, and <code>debug</code> modules are never loaded. Dangerous <code>base</code> functions (<code>dofile</code>, <code>loadfile</code>, <code>load</code>) are removed. <code>math.random</code> is replaced by the engine’s deterministic PRNG. This approach follows the precedent set by Stratagus, which excludes <code>io</code> and <code>package</code> in release builds — IC is stricter, also excluding <code>os</code> and <code>debug</code> entirely. Execution is bounded by <code>LuaExecutionLimits</code> (instruction count, memory, host call budget). The primary defense against malicious Lua is the sandbox + capability model, not code review.</p>
+</blockquote>
+<h3 id="mitigation-defense-in-depth-supply-chain-security"><a class="header" href="#mitigation-defense-in-depth-supply-chain-security">Mitigation: Defense-in-Depth Supply Chain Security</a></h3>
+<p><strong>Layer 1 — Reproducible builds and build provenance:</strong></p>
+<ul>
+<li>Workshop server records build metadata: source repository URL, commit hash, build environment, and builder identity.</li>
+<li><code>ic mod publish --provenance</code> attaches a signed build attestation (inspired by SLSA/Sigstore). Consumers can verify that the published artifact was built from a specific commit in a public repository.</li>
+<li>Provenance is encouraged, not required — solo modders without CI/CD can still publish directly. But provenance-verified resources get a visible badge in the Workshop browser.</li>
+</ul>
+<p><strong>Layer 2 — Update anomaly detection (Workshop server-side):</strong></p>
+<ul>
+<li><strong>Size delta alerts:</strong> If a mod update changes package size by &gt;50%, flag for review before making it available as <code>release</code>. Small balance tweaks don’t triple in size.</li>
+<li><strong>New capability requests:</strong> If a WASM module’s declared capabilities change between versions (e.g., suddenly requests <code>network: AllowList</code>), flag for moderator review.</li>
+<li><strong>Dependency injection:</strong> If an update adds new transitive dependencies that didn’t exist before, flag. This was fractureiser’s propagation vector.</li>
+<li><strong>Rapid-fire updates:</strong> Multiple publishes within minutes to the same resource trigger rate limiting and moderator notification.</li>
+</ul>
+<p><strong>Layer 3 — Author identity and account security:</strong></p>
+<ul>
+<li><strong>Two-factor authentication</strong> required for Workshop publishing accounts (TOTP or WebAuthn).</li>
+<li><strong>Scoped API tokens</strong> (D030) — CI/CD tokens can publish but not change account settings or transfer namespace ownership. A compromised CI token cannot escalate to full account control.</li>
+<li><strong>Namespace transfer requires manual moderator approval</strong> — prevents silent account takeover.</li>
+<li><strong>Verified author badge</strong> — linked GitHub/GitLab identity provides a second factor of trust. If a Workshop account is compromised but the linked Git identity is not, the community has a signal.</li>
+</ul>
+<p><strong>Layer 4 — Client-side verification:</strong></p>
+<ul>
+<li><code>ic.lock</code> pins exact versions AND SHA-256 checksums. <code>ic mod install</code> refuses mismatches. A supply chain attacker who replaces a package on the server cannot affect users who have already locked their dependencies.</li>
+<li><strong>Update review mode:</strong> <code>ic mod update --review</code> shows a diff of what changed in each dependency before applying updates. Human review of changes before accepting is the last line of defense.</li>
+<li><strong>Rollback:</strong> <code>ic mod rollback [resource] [version]</code> instantly reverts a dependency to a known-good version.</li>
+</ul>
+<p><strong>Layer 5 — Incident response:</strong></p>
+<ul>
+<li>Workshop moderators can <strong>yank</strong> a specific version (remove from download but not from existing <code>ic.lock</code> files — users who already have it keep it, new installs get the previous version).</li>
+<li><strong>Security advisory system:</strong> Workshop server can push advisories for specific resource versions. <code>ic mod audit</code> checks for advisories. The in-game mod manager displays warnings for affected resources.</li>
+<li>Community-hosted Workshop servers replicate advisories from the official server (opt-in).</li>
+</ul>
+<p><strong>What this does NOT include:</strong></p>
+<ul>
+<li>Bytecode analysis or static analysis of WASM modules — too complex, too many false positives, and the capability sandbox is the real defense.</li>
+<li>Mandatory code review for all updates — doesn’t scale. Anomaly detection targets the high-risk cases.</li>
+<li>Blocking updates entirely — that fragments the ecosystem. The goal is detection and fast response, not prevention of all possible attacks.</li>
+</ul>
+<p><strong>Phase:</strong> Basic SHA-256 verification and scoped tokens ship with initial Workshop (Phase 4–5). Anomaly detection and provenance attestation in Phase 6a. Security advisory system in Phase 6a. 2FA requirement for publishing accounts from Phase 5 onward.</p>
 <h2 id="competitive-integrity-summary"><a class="header" href="#competitive-integrity-summary">Competitive Integrity Summary</a></h2>
 <p>Iron Curtain’s anti-cheat is <strong>architectural, not bolted on.</strong> Every defense emerges from design decisions made for other reasons:</p>
 <div class="table-wrapper">
@@ -831,6 +879,7 @@ impl RelayServer {
 <tr><td>Version mismatch</td><td>Protocol handshake</td><td>Lobby system</td></tr>
 <tr><td>WASM mod abuse</td><td>Capability-based sandbox</td><td>Modding architecture (D005)</td></tr>
 <tr><td>Desync exploit</td><td>Server-side only analysis</td><td>Security by design</td></tr>
+<tr><td>Supply chain attack</td><td>Anomaly detection + provenance + 2FA + lockfile</td><td>Workshop security (D030)</td></tr>
 </tbody>
 </table>
 </div>
