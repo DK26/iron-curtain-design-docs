@@ -75,8 +75,9 @@ Development follows eight stages. They're roughly sequential, but later stages f
 - For every significant design question, explore alternatives, pick one, document the rationale in [09-DECISIONS](09-DECISIONS.md)
 - Capture lessons from the original C&C creators and other game development veterans (see [13-PHILOSOPHY](13-PHILOSOPHY.md) and `research/westwood-ea-development-philosophy.md`)
 - Research is concurrent with other work in later stages — new questions arise during implementation
+- Research is a **continuous discipline**, not a phase that ends. Every new prior art study can challenge assumptions, confirm patterns, or reveal gaps. The project's commit history shows active research throughout pre-development — not tapering early but intensifying as design maturity makes it easier to ask precise questions.
 
-**Current status (February 2026):** Largely complete. 13 design chapters, 42 decisions, 11 research analyses. The major architectural questions are answered. Remaining research happens on-demand as implementation reveals new questions.
+**Current status (February 2026):** The major architectural questions are answered across 14 design chapters, 48+ decisions, and 12+ research analyses. Research continues as a parallel track — recent examples include AI implementation surveys across 7+ codebases and Stratagus/Stargus engine analysis, each producing new cross-references and actionable design refinements. The shift is from *exploratory* research ("what should we build?") to *confirmatory* research ("does this prior art validate or challenge our approach?").
 
 **Exit criteria:**
 - Every major subsystem has a design doc section with component definitions, Rust struct signatures, and YAML examples
@@ -246,11 +247,42 @@ This isn't just an AI constraint — it's a software engineering principle. Fred
 
 Work units 2, 3, and 10 have no dependencies on each other — they can proceed in parallel. Work unit 7 depends on 5 and 6 — it cannot start until both are done. This is the scheduling discipline that prevents chaos.
 
+### Documentation Work Units
+
+The context-bounded discipline applies equally to design work — not just code. During the design phase, work units are research and documentation tasks that follow the same principles: bounded context, clear inputs/outputs, explicit dependencies.
+
+**Example decomposition for a research integration task:**
+
+| #   | Work Unit                                      | Scope                 | Context Needed                                 | Depends On |
+| --- | ---------------------------------------------- | --------------------- | ---------------------------------------------- | ---------- |
+| 1   | Research Stratagus/Stargus engine architecture | `research/`           | GitHub repos, AGENTS.md § Reference Material   | —          |
+| 2   | Create research document with findings         | `research/`           | Notes from #1                                  | #1         |
+| 3   | Extract lessons applicable to IC AI system     | `src/09-DECISIONS.md` | Research doc from #2, D043 section             | #2         |
+| 4   | Update modding docs with Lua AI primitives     | `src/04-MODDING.md`   | Research doc from #2, existing Lua API section | #2         |
+| 5   | Update security docs with Lua stdlib policy    | `src/06-SECURITY.md`  | Research doc from #2, existing sandbox section | #2         |
+| 6   | Update AGENTS.md reference material            | `AGENTS.md`           | Research doc from #2                           | #2         |
+
+Work units 3–6 are independent of each other (can proceed in parallel) but all depend on #2. This is the same dependency logic as code work units — applied to documentation.
+
+**The key discipline:** A documentation work unit that touches more than 2-3 files is probably too broad. "Update all design docs with Stratagus findings" is not a good work unit. "Update D043 cross-references with Stratagus evidence" is.
+
+### Cross-Cutting Propagation
+
+Some changes are inherently cross-cutting — a new decision like D034 (SQLite storage) or D041 (trait-abstracted subsystems) affects architecture, roadmap, modding, security, and other docs. When this happens:
+
+1. **Identify all affected documents first.** Before editing anything, search for every reference to the topic across all docs. Use the decision ID, related keywords, and affected crate names.
+2. **Make a checklist.** List every file that needs updating and what specifically changes in each.
+3. **Update in one pass.** Don't edit three files today and discover two more tomorrow. The checklist prevents this.
+4. **Verify cross-references.** After all edits, confirm that every cross-reference between docs is consistent — section names match, decision IDs are correct, phase numbers align.
+
+The project's commit history shows this pattern repeatedly: a single concept (LLM integration, SQLite storage, platform-agnostic design) propagated across 5–8 files in one commit. The discipline is in the completeness of the propagation, not in the scope of the change.
+
 **Exit criteria:**
 - Every deliverable in the current phase is decomposed into work units
-- Each work unit has a context boundary spec (crate, reads, trait, inputs, outputs, tests, does-not-touch)
+- Each work unit has a context boundary spec (crate/scope, reads, inputs, outputs, verification)
 - No work unit requires more than 2-3 design doc sections to understand
 - Dependencies between work units are explicit
+- Cross-cutting changes have a propagation checklist before any edits begin
 
 ---
 
@@ -368,6 +400,7 @@ The full agent rules live in `AGENTS.md` § "Working With This Codebase." This s
 - Community feedback identifies a pain point the design didn't anticipate
 - A new decision (D043, D044, ...) changes assumptions that earlier decisions relied on
 - A pending decision (P002, P003, ...) gets resolved and affects other sections
+- **Research integration** — a new prior art analysis reveals cross-project evidence that strengthens, challenges, or refines existing decisions (e.g., Stratagus analysis confirming D043's manager hierarchy across a 7th independent codebase, or revealing a Lua stdlib security pattern applicable to D005's sandbox)
 
 **Exit criteria:** There is no exit. Design evolution is continuous. The docs are accurate on every commit.
 
@@ -377,16 +410,69 @@ The full agent rules live in `AGENTS.md` § "Working With This Codebase." This s
 
 The eight stages aren't "do Stage 1, then Stage 2, then never touch Stage 1 again." They repeat at different scales:
 
-| Roadmap Phase            | Primary Stages Active     | What's Happening                                                        |
-| ------------------------ | ------------------------- | ----------------------------------------------------------------------- |
-| Pre-development (now)    | 1, 2, 3                   | Research, blueprint, delivery planning                                  |
-| Phase 0 start            | 4, 5, 6                   | Dependency analysis, work unit decomposition, coding rules established  |
-| Phase 0 development      | 5, 6, 7                   | Work units executed, integrated, first community release (format tools) |
-| Phase 1–2 development    | 5, 6, 7, 8                | Core engine work, continuous integration, design docs evolve            |
-| Phase 3 (first playable) | 5, 6, 7, 8                | The big community moment — heavy feedback, heavy design evolution       |
-| Phase 4+                 | 5, 6, 7, 8, (1 on-demand) | Ongoing development cycle with occasional new research                  |
+| Roadmap Phase            | Primary Stages Active    | What's Happening                                                                                                       |
+| ------------------------ | ------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
+| Pre-development (now)    | 1, 2, 3, 8               | Research, blueprint, delivery planning — design evolution already active as research findings refine earlier decisions |
+| Phase 0 start            | 1, 4, 5, 6               | Dependency analysis, work unit decomposition, coding rules — targeted research continues                               |
+| Phase 0 development      | 5, 6, 7, 8               | Work units executed, integrated, first community release (format tools)                                                |
+| Phase 1–2 development    | 5, 6, 7, 8, (1 targeted) | Core engine work, continuous integration, design docs evolve, research on specific unknowns                            |
+| Phase 3 (first playable) | 5, 6, 7, 8, (1 targeted) | The big community moment — heavy feedback, heavy design evolution                                                      |
+| Phase 4+                 | 5, 6, 7, 8, (1 targeted) | Ongoing development cycle with targeted research on new subsystems                                                     |
 
-Stage 1 (research) never fully stops — new questions arise throughout development. But its intensity peaks before Phase 0 and tapers. Stage 8 (design evolution) intensifies as implementation progresses and community feedback accumulates.
+Stage 1 (research) never fully stops. The project's pre-development history demonstrates this: even after major architectural questions were answered, ongoing research (AI implementation surveys across 7 codebases, Stratagus engine analysis, Westwood development philosophy compilation) continued to produce actionable refinements to existing decisions. The shift is from breadth ("what should we build?") to depth ("does this prior art validate our approach?"). Stage 8 (design evolution) is active from the very first research cycle — not only after implementation begins.
+
+---
+
+## The Research-Design-Refine Cycle
+
+> The repeatable micro-workflow that operates within the stages. This is the actual working pattern — observed across 80+ commits of pre-development work on this project and applicable to any design-heavy endeavor.
+
+The eight stages above describe the macro structure — the project-level phases. But within those stages, the dominant working pattern is a smaller, repeatable cycle:
+
+```
+┌─────────────────────────┐
+│ 1. Identify a question  │ "What can we learn from Stratagus's AI system?"
+└──────────┬──────────────┘ "How should Lua sandboxing work?"
+           ▼                "What does the security model for Workshop look like?"
+┌─────────────────────────┐
+│ 2. Research prior art   │  Read source code, docs, papers. Compare 3-7 projects.
+└──────────┬──────────────┘  Take structured notes.
+           ▼
+┌─────────────────────────┐
+│ 3. Document findings    │  Write a research document (research/*.md).
+└──────────┬──────────────┘  Structured: overview, analysis, lessons, sources.
+           ▼
+┌─────────────────────────┐
+│ 4. Extract decisions    │  "This confirms our manager hierarchy."
+└──────────┬──────────────┘  "This adds a new precedent for stdlib policy."
+           ▼                 "This reveals a gap we haven't addressed."
+┌─────────────────────────┐
+│ 5. Propagate across     │  Update AGENTS.md, 09-DECISIONS.md, architecture,
+│    design docs          │  roadmap, modding, security — every affected doc.
+└──────────┬──────────────┘  Use cross-cutting propagation discipline (Stage 5).
+           ▼
+┌─────────────────────────┐
+│ 6. Review and refine    │  Re-read in context. Fix inconsistencies.
+└─────────────────────────┘  Verify cross-references. Improve clarity.
+   │
+   └──▶ (New questions arise → back to step 1)
+```
+
+**This cycle maps to the stages:** Step 1-3 is Stage 1 (Research). Step 4 is Stage 2 (Blueprint refinement). Step 5 is Stage 8 (Design Evolution). Step 6 is quality discipline. The cycle is Stages 1→2→8 in miniature, repeated per topic.
+
+**Observed cadence:** In this project's pre-development phase, the cycle typically completes in 1-3 work sessions. The research step is the longest; propagation is mechanical but must be thorough. A single cycle often spawns 1-2 new questions that start their own cycles.
+
+**Why this matters for future projects:** This cycle is project-agnostic. Any design-heavy project — not just Iron Curtain — benefits from the discipline of:
+- Researching before designing (don't reinvent what others have solved)
+- Documenting research separately from decisions (research is evidence; decisions are conclusions)
+- Propagating decisions systematically (a decision that only updates one file is a consistency bug waiting to happen)
+- Treating refinement as a first-class work type (not "cleanup" — it's how design quality improves)
+
+**Anti-patterns to avoid:**
+- **Research without documentation.** If findings aren't written down, they're lost when context resets. The research document is the artifact.
+- **Documentation without propagation.** A new finding that only updates the research file but not the design docs creates drift. The propagation step is non-optional.
+- **Propagation without verification.** Updating 6 files but missing the 7th creates an inconsistency. The checklist discipline (Stage 5 § Cross-Cutting Propagation) prevents this.
+- **Skipping the refinement step.** First-draft design text is hypothesis. Re-reading in context after propagation often reveals awkward phrasing, missing cross-references, or logical gaps.
 
 ---
 
@@ -407,3 +493,5 @@ These aren't new principles — they're existing project principles applied to t
 6. **Make temporary compromises explicit** (Philosophy #8). If a Phase 2 implementation is "good enough for now," label it. Use `// TODO(phase-N): description` comments. Don't let shortcuts become permanent without a conscious decision.
 
 7. **Efficiency-first** (Architecture invariant #5, [10-PERFORMANCE](10-PERFORMANCE.md)). This applies to the development process too — better methodology, clearer task specs, cleaner boundaries before "throw more agents at it."
+
+8. **Research is a continuous discipline, not a phase** (observed pattern). The project's commit history shows research intensifying — not tapering — as design maturity enables more precise questions. New prior art analysis is never "too late" if it produces actionable refinements. Budget time for research throughout the project, not just at the start.
