@@ -7523,6 +7523,94 @@ These policies are **per-community**. The Official IC Community might use `Requi
 
 The community server is **not** a rubber stamp. It is a **validation authority** that only signs credentials it can independently verify or that it computed itself. The player never provides the data that gets signed — the data comes from the relay, the ranking algorithm, or the community's own registration policy.
 
+### Community Transparency Log
+
+The trust model above establishes that the community server only signs credentials it computed or verified. But who watches the server? A malicious or compromised operator could inflate a friend's rating, issue contradictory records to different players (equivocation), or silently revoke and reissue credentials. Players trust the community, but have no way to *audit* it.
+
+IC solves this with a **transparency log** — an append-only Merkle tree of every SCR the community server has ever issued. This is the same technique Google deployed at scale for [Certificate Transparency](https://certificate.transparency.dev/) (CT, RFC 6962) to prevent certificate authorities from issuing rogue TLS certificates. CT has been mandatory for all publicly-trusted certificates since 2018 and processes billions of entries. The insight transfers directly: a community server is a credential authority, and the same accountability mechanism that works for CAs works here.
+
+**How it works:**
+
+1. Every time the community server signs an SCR, it appends `SHA-256(scr_bytes)` as a leaf in an append-only Merkle tree.
+2. The server returns an **inclusion proof** alongside the SCR — a set of O(log N) hashes that proves the SCR exists in the tree at a specific index. The player stores this proof alongside the SCR in their local credential file.
+3. The server publishes its current **Signed Tree Head** (STH) — the root hash + tree size + a timestamp + the server's signature — at a well-known endpoint (e.g., `GET /transparency/sth`). This is a single ~128-byte value.
+4. **Auditors** (any interested party — players, other community operators, automated monitors) periodically fetch the STH and verify **consistency**: that each new STH is an extension of the previous one (no entries removed or rewritten). This is a single O(log N) consistency proof per check.
+5. Players can verify their personal inclusion proofs against the published STH — confirming their SCRs are in the same tree everyone else sees.
+
+```
+                    Merkle Tree (append-only)
+                    ┌───────────────────────┐
+                    │      Root Hash        │  ← Published as 
+                    │   (Signed Tree Head)  │    STH every hour
+                    └───────────┬───────────┘
+                   ┌────────────┴────────────┐
+                   │                         │
+              ┌────┴────┐              ┌─────┴────┐
+              │  H(0,1) │              │  H(2,3)  │
+              └────┬────┘              └────┬─────┘
+           ┌───────┴───────┐        ┌──────┴───────┐
+           │               │        │              │
+       ┌───┴───┐     ┌────┴───┐ ┌──┴───┐    ┌────┴───┐
+       │ SCR 0 │     │ SCR 1  │ │ SCR 2│    │ SCR 3  │
+       │(alice │     │(bob    │ │(alice│    │(carol  │
+       │rating)│     │match)  │ │achv) │    │rating) │
+       └───────┘     └────────┘ └──────┘    └────────┘
+
+Inclusion proof for SCR 2: [H(SCR 3), H(0,1)]
+→ Verifier recomputes: H(2,3) = H(H(SCR 2) || H(SCR 3)),
+   Root = H(H(0,1) || H(2,3)) → must match published STH root.
+```
+
+**What this catches:**
+
+| Attack                                                     | How the transparency log detects it                                                                                                                                                                                        |
+| ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Rating inflation**                                       | Auditor sees a rating SCR that doesn't follow from prior match results in the log. The Merkle tree includes every SCR — match SCRs and rating SCRs are interleaved, so the full causal chain is visible.                   |
+| **Equivocation** (different records for different players) | Two players comparing inclusion proofs against the same STH would find one proof fails — the tree can't contain two contradictory entries at the same index. An auditor monitoring the log catches this directly.          |
+| **Silent revocation**                                      | Revocation SCRs are logged like any other record. A player whose credential was revoked can see the revocation in the log and verify it was issued by the server, not fabricated.                                          |
+| **History rewriting**                                      | Consistency proofs between successive STHs detect any modification to past entries. The append-only structure means the server can't edit history without publishing a new root that's inconsistent with the previous one. |
+
+**What this does NOT provide:**
+
+- **Correctness of game outcomes.** The log proves the server issued a particular SCR. It doesn't prove the underlying match was played fairly — that's the relay's job (`CertifiedMatchResult`). The log is an accountability layer over the signing layer.
+- **Real-time fraud prevention.** A compromised server can still issue a bad SCR. The transparency log ensures the bad SCR is *visible* — it can't be quietly slipped in. Detection is retrospective (auditors find it later), not preventive.
+
+**Operational model:**
+
+- **STH publish frequency:** Configurable per community, default hourly. More frequent = faster detection, more bandwidth. Tournament communities might publish every minute during events.
+- **Auditor deployment:** The `ic community audit` CLI command fetches and verifies consistency of a community's transparency log. Players can run this manually. Automated monitors (a cron job, a GitHub Action, a community-run service) provide continuous monitoring. IC provides the tooling; communities decide how to deploy it.
+- **Log storage:** The Merkle tree is append-only and grows at ~32 bytes per SCR issued (one hash per leaf). A community that issues 100,000 SCRs has a ~3.2 MB log. This is stored server-side in SQLite alongside the existing community state.
+- **Inclusion proof size:** O(log N) hashes. For 100,000 SCRs, that's ~17 hashes × 32 bytes = ~544 bytes per proof. Added to the SCR response, this is negligible.
+
+```rust
+/// Signed Tree Head — published periodically by the community server.
+pub struct SignedTreeHead {
+    pub tree_size: u64,            // Number of SCRs in the log
+    pub root_hash: [u8; 32],       // SHA-256 Merkle root
+    pub timestamp: i64,            // Unix seconds
+    pub community_key: [u8; 32],   // Ed25519 public key
+    pub signature: [u8; 64],       // Ed25519 signature over the above
+}
+
+/// Inclusion proof returned alongside each SCR.
+pub struct InclusionProof {
+    pub leaf_index: u64,           // Position in the tree
+    pub tree_size: u64,            // Tree size at time of inclusion
+    pub path: Vec<[u8; 32]>,      // O(log N) sibling hashes
+}
+
+/// Consistency proof between two tree heads.
+pub struct ConsistencyProof {
+    pub old_size: u64,
+    pub new_size: u64,
+    pub path: Vec<[u8; 32]>,      // O(log N) hashes
+}
+```
+
+**Phase:** The transparency log ships with the community server in **Phase 5**. It's an integral part of community accountability, not an afterthought. The `ic community audit` CLI command ships in the same phase. Automated monitoring tooling is Phase 6a.
+
+**Why this isn't blockchain:** A transparency log is a cryptographic data structure maintained by a single authority (the community server), auditable by anyone. It provides non-equivocation and append-only guarantees without distributed consensus, proof-of-work, tokens, or peer-to-peer gossip. The server runs it unilaterally; auditors verify it externally. This is orders of magnitude simpler and cheaper than any blockchain — and it's exactly what's needed. Certificate Transparency protects the entire web's TLS infrastructure using this pattern. It works.
+
 ### Matchmaking Design
 
 The community server's matchmaking uses verified ratings from presented SCRs:
@@ -8262,6 +8350,7 @@ This is cheaper than any centralized ranking service. Operating a community is w
 - **Centralized ranking database** (rejected — expensive to host, single point of failure, doesn't match IC's federation model, violates local-first privacy principle)
 - **JWT for credentials** (rejected — algorithm confusion attacks, `alg: none` bypass, JSON parsing ambiguity, no built-in replay protection, no built-in revocation. See comparison table above)
 - **Blockchain/DLT for rankings** (rejected — massively overcomplicated for this use case, environmental concerns, no benefit over Ed25519 signed records)
+- **Per-player credential chaining (prev_hash linking)** (evaluated, rejected — would add a 32-byte `prev_hash` field to each SCR, linking each record to its predecessor in a per-player hash chain. Goal: guarantee completeness of match history presentation, preventing players from hiding losses. Rejected because: the server-computed rating already reflects all matches — the rating IS the ground truth, and a player hiding individual match SCRs can't change their verified rating. The chain also creates false positives when legitimate credential file loss/corruption breaks the chain, requires the server to track per-player chain heads adding state proportional to `N_players × N_record_types`, and complicates the clean "verify signature, check sequence" flow for a primarily cosmetic concern. The transparency log — which audits the *server*, not the player — is the higher-value accountability mechanism.)
 - **Web-of-trust (players sign each other's match results)** (rejected — Sybil attacks trivially game this; a trusted community server as signing authority is simpler and more resistant)
 - **PASETO (Platform-Agnostic Security Tokens)** (considered — fixes many JWT flaws, mandates modern algorithms. Rejected because: still JSON-based, still has header/payload/footer structure that invites parsing issues, and IC's binary SCR format is more compact and purpose-built. PASETO is good; SCR is better for this niche.)
 
