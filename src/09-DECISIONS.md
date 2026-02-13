@@ -4739,7 +4739,7 @@ The IC Default AI is not a simple difficulty bump — it's a qualitatively diffe
 
 ### IC Default AI — Implementation Architecture
 
-Based on cross-project analysis of EA Red Alert, EA Generals/Zero Hour, OpenRA, 0 A.D. Petra, Spring Engine, and MicroRTS (see `research/rts-ai-implementation-survey.md`), `PersonalityDrivenAi` uses a **priority-based manager hierarchy** — the dominant pattern across all surveyed RTS AI implementations:
+Based on cross-project analysis of EA Red Alert, EA Generals/Zero Hour, OpenRA, 0 A.D. Petra, Spring Engine, MicroRTS, and Stratagus (see `research/rts-ai-implementation-survey.md` and `research/stratagus-stargus-opencraft-analysis.md`), `PersonalityDrivenAi` uses a **priority-based manager hierarchy** — the dominant pattern across all surveyed RTS AI implementations (independently confirmed in 7 codebases):
 
 ```
 PersonalityDrivenAi → AiStrategy trait impl

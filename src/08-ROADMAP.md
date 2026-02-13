@@ -178,6 +178,8 @@ Units moving, shooting, dying — headless sim + rendered. Record replay file. P
 
 ### Key Architecture Work
 - Lua sandbox with engine bindings
+- **Lua AI scripting primitives:** `Ai` global exposing force composition targets, resource collection ratios, patrol/attack commands — enabling Tier 2 modders to write custom AI behaviors without Tier 3 WASM (Stratagus precedent, see `research/stratagus-stargus-opencraft-analysis.md` §4)
+- **External AI socket interface (stretch goal):** TCP/JSON protocol for ML/RL training — engine as environment, external process as agent. Stratagus has a working example (`AiProcessorSetup`); IC's version targets structured state and async communication for `ic mod test --ai-harness`
 - WASM host API with capability system (see `06-SECURITY.md`)
 - Campaign graph loader + validator: parse YAML campaign definitions, validate graph connectivity (no orphan nodes, all outcome targets exist)
 - `CampaignState` serialization: roster, flags, equipment, path taken — full snapshot support

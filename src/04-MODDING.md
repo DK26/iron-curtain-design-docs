@@ -331,16 +331,17 @@ Iron Curtain's Lua API is a **strict superset** of OpenRA's 16 global objects. A
 
 **IC-exclusive extensions (additive, no conflicts):**
 
-| Global        | Purpose                              |
-| ------------- | ------------------------------------ |
-| `Campaign`    | Branching campaign state (D021)      |
-| `Weather`     | Dynamic weather control (D022)       |
-| `Layer`       | Runtime layer activation/deaction    |
-| `Region`      | Named region queries                 |
-| `Var`         | Mission/campaign variable access     |
-| `Workshop`    | Mod metadata queries                 |
-| `LLM`         | LLM integration hooks (Phase 7)      |
-| `Achievement` | Achievement trigger/query API (D036) |
+| Global        | Purpose                                                                                                                                                                                                                                                                                                                    |
+| ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Campaign`    | Branching campaign state (D021)                                                                                                                                                                                                                                                                                            |
+| `Weather`     | Dynamic weather control (D022)                                                                                                                                                                                                                                                                                             |
+| `Layer`       | Runtime layer activation/deaction                                                                                                                                                                                                                                                                                          |
+| `Region`      | Named region queries                                                                                                                                                                                                                                                                                                       |
+| `Var`         | Mission/campaign variable access                                                                                                                                                                                                                                                                                           |
+| `Workshop`    | Mod metadata queries                                                                                                                                                                                                                                                                                                       |
+| `LLM`         | LLM integration hooks (Phase 7)                                                                                                                                                                                                                                                                                            |
+| `Achievement` | Achievement trigger/query API (D036)                                                                                                                                                                                                                                                                                       |
+| `Ai`          | AI scripting primitives (Phase 4) — force composition, resource ratios, patrol/attack commands; inspired by Stratagus's proven Lua AI API (`AiForce`, `AiSetCollect`, `AiWait` pattern — see `research/stratagus-stargus-opencraft-analysis.md`). Enables Tier 2 modders to write custom AI behaviors without Tier 3 WASM. |
 
 Each actor reference exposes properties matching its components (`.Health`, `.Location`, `.Owner`, `.Move()`, `.Attack()`, `.Stop()`, `.Guard()`, `.Deploy()`, etc.) — identical to OpenRA's actor property groups.
 
@@ -376,6 +377,21 @@ end)
 - Fixed-point math provided via engine bindings (no raw floats)
 - Execution resource limits per tick (see `LuaExecutionLimits` below)
 - Memory limits per mod
+
+**Lua standard library inclusion policy** (precedent: Stratagus selectively loads stdlib modules, excluding `io` and `package` in release builds — see `research/stratagus-stargus-opencraft-analysis.md` §6). IC is stricter:
+
+| Lua stdlib  | Loaded      | Notes                                                                                                         |
+| ----------- | ----------- | ------------------------------------------------------------------------------------------------------------- |
+| `base`      | ✅ selective | `print` redirected to engine log; `dofile`, `loadfile`, `load` **removed** (arbitrary code execution vectors) |
+| `table`     | ✅           | Safe — table manipulation only                                                                                |
+| `string`    | ✅           | Safe — string operations only                                                                                 |
+| `math`      | ✅ modified  | `math.random` **removed** — replaced by `Utils.RandomInteger()` from engine's deterministic PRNG              |
+| `coroutine` | ✅           | Useful for mission scripting flow control                                                                     |
+| `utf8`      | ✅           | Safe — Unicode string handling (Lua 5.4)                                                                      |
+| `io`        | ❌           | Filesystem access — never loaded in sandbox                                                                   |
+| `os`        | ❌           | `os.execute()`, `os.remove()`, `os.rename()` are dangerous; entire module excluded                            |
+| `package`   | ❌           | Module loading from filesystem — never loaded in sandbox                                                      |
+| `debug`     | ❌           | Can inspect/modify internals, bypass sandboxing; development-only if needed                                   |
 
 **Determinism note:** Lua's internal number type is `f64`, but this does not affect sim determinism. Lua has **read-only access** to game state and **write access exclusively through orders** (and campaign state writes like `Campaign.set_flag()`, which are themselves deterministic because they execute at the same pipeline step on every client). The sim processes orders deterministically — Lua cannot directly modify sim components. Lua evaluation produces identical results across all clients because it runs at the same point in the system pipeline (the `triggers` step, see system execution order in `02-ARCHITECTURE.md`), with the same game state as input, on every tick. Any Lua-driven campaign state mutations are applied deterministically within this step, ensuring save/load and replay consistency.
 
