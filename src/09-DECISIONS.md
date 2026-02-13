@@ -4077,19 +4077,127 @@ pub trait AiStrategy: Send + Sync {
 
     /// Optional: per-tick compute budget hint (microseconds).
     fn tick_budget_hint(&self) -> Option<u64>;
+
+    // --- Event callbacks (inspired by Spring Engine + BWAPI research) ---
+    // Default implementations are no-ops. AIs override what they care about.
+    // Events are pushed by the engine at the same pipeline point as decide(),
+    // before the decide() call — so the AI can react within the same tick.
+
+    /// Own unit finished construction/training.
+    fn on_unit_created(&mut self, _unit: EntityId, _unit_type: &str) {}
+    /// Own unit destroyed.
+    fn on_unit_destroyed(&mut self, _unit: EntityId, _attacker: Option<EntityId>) {}
+    /// Own unit has no orders (idle).
+    fn on_unit_idle(&mut self, _unit: EntityId) {}
+    /// Enemy unit enters line of sight.
+    fn on_enemy_spotted(&mut self, _unit: EntityId, _unit_type: &str) {}
+    /// Known enemy unit destroyed.
+    fn on_enemy_destroyed(&mut self, _unit: EntityId) {}
+    /// Own unit taking damage.
+    fn on_under_attack(&mut self, _unit: EntityId, _attacker: EntityId) {}
+    /// Own building completed.
+    fn on_building_complete(&mut self, _building: EntityId) {}
+    /// Research/upgrade completed.
+    fn on_research_complete(&mut self, _tech: &str) {}
+
+    // --- Parameter introspection (inspired by MicroRTS research) ---
+    // Enables: automated parameter tuning, UI-driven difficulty sliders,
+    // tournament parameter search, AI vs AI evaluation.
+
+    /// Expose tunable parameters for external configuration.
+    fn get_parameters(&self) -> Vec<ParameterSpec> { vec![] }
+    /// Set a parameter value (called by engine from YAML config or UI).
+    fn set_parameter(&mut self, _name: &str, _value: i32) {}
+
+    // --- Engine difficulty scaling (inspired by 0 A.D. + AoE2 research) ---
+
+    /// Whether this AI uses engine-level difficulty scaling (resource bonuses,
+    /// reaction delays, etc.). Default: true. Sophisticated AIs that handle
+    /// difficulty internally can return false to opt out.
+    fn uses_engine_difficulty_scaling(&self) -> bool { true }
 }
 
-pub enum AiDifficulty { Easy, Normal, Hard, Brutal, Custom }
+pub enum AiDifficulty { Sandbox, Easy, Normal, Hard, Brutal, Custom(String) }
+
+pub struct ParameterSpec {
+    pub name: String,
+    pub description: String,
+    pub min_value: i32,
+    pub max_value: i32,
+    pub default_value: i32,
+    pub current_value: i32,
+}
 ```
 
 **Key design points:**
 - `FogFilteredView` ensures AI honesty — no maphack by default. Campaign scripts can provide an omniscient view for specific AI players via conditions.
 - `AiPersonality` becomes the configuration for the *default* `AiStrategy` implementation (`PersonalityDrivenAi`), not the only way to configure AI.
+- **Event callbacks** (from Spring Engine/BWAPI research, see `research/rts-ai-extensibility-survey.md`) enable reactive AI without polling. Pure `decide()`-only AI works fine (events are optional), but event-aware AI can respond immediately to threats, idle units, and scouting information. Events fire before `decide()` in the same tick, so the AI can incorporate event data into its tick decision.
+- **Parameter introspection** (from MicroRTS research) enables automated parameter tuning and UI-driven difficulty sliders. Every `AiStrategy` can expose its knobs — tournament systems use this for automated parameter search, the lobby UI uses it for "Advanced AI Settings" sliders.
+- **Engine difficulty scaling opt-out** (from 0 A.D. + AoE2 research) lets sophisticated AIs handle difficulty internally. Simple AIs get engine-provided resource bonuses and reaction time delays; advanced AIs that model difficulty as behavioral parameters can opt out.
 - AI strategies are selectable in the lobby: "IC Default (Normal)", "IC Default (Brutal)", "Workshop: Neural Net v2.1", etc.
 - WASM Tier 3 mods can provide `AiStrategy` implementations — the trait is part of the stable mod API surface.
 - Lua Tier 2 mods can script lightweight AI via the existing Lua API (trigger-based). `AiStrategy` trait is for full-replacement AI, not scripted behaviors.
 - Adaptive difficulty (D034 integration) is implemented inside the default strategy, not in the trait — it's an implementation detail of `PersonalityDrivenAi`.
-- Determinism: `decide()` is called at a fixed point in the system pipeline. All clients run the same AI with the same state → same orders. Mod-provided AI is subject to the same determinism requirements as any sim code.
+- Determinism: `decide()` and all event callbacks are called at a fixed point in the system pipeline. All clients run the same AI with the same state → same orders. Mod-provided AI is subject to the same determinism requirements as any sim code.
+
+**Event accumulation — `AiEventLog`:**
+
+The engine provides an `AiEventLog` utility struct to every `AiStrategy` instance. It accumulates fog-filtered events from the callbacks above into a structured, queryable log — the "inner game event log" that D044 (LLM-enhanced AI) consumes as its primary context source. Non-LLM AI can ignore the log entirely (zero cost if `to_narrative()` is never called); LLM-based AI uses it as the bridge between simulation events and natural-language prompts.
+
+```rust
+/// Accumulates fog-filtered game events into a structured log.
+/// Provided by the engine to every AiStrategy instance. Events are pushed
+/// into the log when callbacks fire — the AI gets both the callback
+/// AND a persistent log entry.
+pub struct AiEventLog {
+    entries: CircularBuffer<AiEventEntry>,  // bounded, oldest entries evicted
+    capacity: usize,                        // default: 1000 entries
+}
+
+pub struct AiEventEntry {
+    pub tick: u64,
+    pub event_type: AiEventType,
+    pub description: String,  // human/LLM-readable summary
+    pub entity: Option<EntityId>,
+    pub related_entity: Option<EntityId>,
+}
+
+pub enum AiEventType {
+    UnitCreated, UnitDestroyed, UnitIdle,
+    EnemySpotted, EnemyDestroyed,
+    UnderAttack, BuildingComplete, ResearchComplete,
+    StrategicUpdate,  // injected by orchestrator AI when plan changes (D044)
+}
+
+impl AiEventLog {
+    /// All events since a given tick (for periodic LLM consultations).
+    pub fn since(&self, tick: u64) -> &[AiEventEntry] { /* ... */ }
+
+    /// Natural-language narrative summary — suitable for LLM prompts.
+    /// Produces chronological text: "Tick 450: Enemy tank spotted near our
+    /// expansion. Tick 460: Our refinery under attack by 3 enemy units."
+    pub fn to_narrative(&self, since_tick: u64) -> String { /* ... */ }
+
+    /// Structured summary — counts by event type, key entities, threat level.
+    pub fn summary(&self) -> EventSummary { /* ... */ }
+}
+```
+
+Key properties of the event log:
+- **Fog-filtered by construction.** All entries originate from the same callback pipeline that respects `FogFilteredView` — no event reveals information the AI shouldn't have. This is the architectural guarantee the user asked for: the "action story / context" the LLM reads is honest.
+- **Bounded.** Circular buffer with configurable capacity (default 1000 entries). Oldest entries are evicted. No unbounded memory growth.
+- **`to_narrative(since_tick)`** generates a chronological natural-language account of events since a given tick — this is the "inner game event log / action story / context" that D044's `LlmOrchestratorAi` sends to the LLM for strategic guidance.
+- **`StrategicUpdate` event type.** D044's LLM orchestrator records its own plan changes into the log, creating a complete narrative that includes both game events and AI strategic decisions.
+- **Useful beyond LLM.** Debug/spectator overlays for any AI ("what does this AI know?"), D042's behavioral profile building, and replay analysis all benefit from a structured event log.
+- **Zero cost if unused.** The engine pushes entries regardless (they're cheap structs), but `to_narrative()` — the expensive serialization — is only called by consumers that need it.
+
+**Modder-selectable and modder-provided:** The `AiStrategy` trait is open — not locked to first-party implementations. This follows the same pattern as `Pathfinder` (D013/D045) and render modes (D048):
+1. **Select** any registered `AiStrategy` for a mod (e.g., a Generals total conversion uses a GOAP planner instead of behavior trees)
+2. **Provide** a custom `AiStrategy` via a Tier 3 WASM module and distribute it through the Workshop (D030)
+3. **Use someone else's** community-created AI — declare it as a dependency in the mod manifest
+
+Unlike pathfinders (one axis: algorithm), AI has **two orthogonal axes**: which algorithm (`AiStrategy` impl) and how hard it plays (difficulty level). See D043 for the full two-axis difficulty system.
 
 **What we build now:** Only `PersonalityDrivenAi` (the existing YAML-configurable behavior). The trait exists from Phase 4 (when AI ships); alternative implementations are future work by us or the community.
 
@@ -4629,6 +4737,104 @@ The IC Default preset draws from published research and open-source implementati
 
 The IC Default AI is not a simple difficulty bump — it's a qualitatively different decision process. Where Classic RA groups all units and attack-moves to the enemy base, IC Default maintains map control, denies expansions, and probes for weaknesses before committing.
 
+### IC Default AI — Implementation Architecture
+
+Based on cross-project analysis of EA Red Alert, EA Generals/Zero Hour, OpenRA, 0 A.D. Petra, Spring Engine, and MicroRTS (see `research/rts-ai-implementation-survey.md`), `PersonalityDrivenAi` uses a **priority-based manager hierarchy** — the dominant pattern across all surveyed RTS AI implementations:
+
+```
+PersonalityDrivenAi → AiStrategy trait impl
+├── EconomyManager
+│   ├── HarvesterController     (nearest-resource assignment, danger avoidance)
+│   ├── PowerMonitor            (urgency-based power plant construction)
+│   └── ExpansionPlanner        (economic triggers for new base timing)
+├── ProductionManager
+│   ├── UnitCompositionTarget   (share-based, self-correcting — from OpenRA)
+│   ├── BuildOrderEvaluator     (priority queue with urgency — from Petra)
+│   └── StructurePlanner        (influence-map placement — from 0 A.D.)
+├── MilitaryManager
+│   ├── AttackPlanner           (composition thresholds + timing — from Petra)
+│   ├── DefenseResponder        (event-driven reactive defense — from OpenRA)
+│   └── SquadManager            (unit grouping, assignment, retreat)
+└── AiState (shared)
+    ├── ThreatMap               (influence map: enemy unit positions + DPS)
+    ├── ResourceMap             (known resource node locations and status)
+    ├── ScoutingMemory          (last-seen timestamps for enemy buildings)
+    └── StrategyClassification  (Phase 5+: opponent archetype tracking)
+```
+
+Each manager runs on its own tick-gated schedule (see Performance Budget below). Managers communicate through shared `AiState`, not direct calls — the same pattern used by 0 A.D. Petra and OpenRA's modular bot architecture.
+
+#### Key Techniques (Phase 4)
+
+These six techniques form the Phase 4 implementation. Each is proven across multiple surveyed projects:
+
+1. **Priority-based resource allocation** (from Petra's `QueueManager`) — single most impactful pattern. Build requests go into a priority queue ordered by urgency. Power plant at 90% capacity is urgent; third barracks is not. Prevents the "AI has 50k credits and no power" failure mode seen in EA Red Alert.
+
+2. **Share-based unit composition** (from OpenRA's `UnitBuilderBotModule`) — production targets expressed as ratios (e.g., infantry 40%, vehicles 50%, air 10%). Each production cycle builds whatever unit type is furthest below its target share. Self-correcting: losing tanks naturally shifts production toward tanks. Personality parameters (D043 YAML config) tune the ratios per preset.
+
+3. **Influence map for building placement** (from 0 A.D. Petra) — a grid overlay scoring each cell by proximity to resources, distance from known threats, and connectivity to existing base. Dramatically better base layouts than EA RA's random placement. The influence map is a fixed-size array in `AiScratch`, cleared and rebuilt on the building-placement schedule.
+
+4. **Tick-gated evaluation** (from Generals/Petra/MicroRTS) — expensive decisions run infrequently, cheap ones run often. Defense response is near-instant (every tick, event-driven). Strategic reassessment is every 60 ticks (~2 seconds). This pattern appears in *every* surveyed project that handles 200+ units. See Performance Budget table below.
+
+5. **Fuzzy engagement logic** (from OpenRA's `AttackOrFleeFuzzy`) — combat decisions use fuzzy membership functions over health ratio, relative DPS, and nearby ally strength, producing a continuous attack↔retreat score rather than a binary threshold. This avoids the "oscillating dance" where units alternate between attacking and fleeing at a hard HP boundary.
+
+6. **Computation budget cap** (from MicroRTS) — `AiStrategy::tick_budget_hint()` (D041) returns a microsecond budget. The AI *must* return within this budget, even if evaluation is incomplete — partial results are better than frame stalls. The manager hierarchy makes this natural: if the budget is exhausted after `EconomyManager` and `ProductionManager`, `MilitaryManager` runs its cached plan from last evaluation.
+
+#### Evaluation and Threat Assessment
+
+The evaluation function is the foundation of all AI decision-making. A bad evaluation function makes every other component worse (MicroRTS research). Iron Curtain uses **Lanchester-inspired threat scoring**:
+
+```
+threat(army) = Σ(unit_dps × unit_hp) × count^0.7
+```
+
+This captures Lanchester's Square Law — military power scales superlinearly with unit count. Two tanks aren't twice as effective as one; they're ~1.6× as effective (at exponent 0.7, conservative vs. full Lanchester exponent of 2.0). The exponent is a YAML-tunable personality parameter, allowing presets to value army mass differently.
+
+For evaluating damage taken against our own units:
+
+```
+value(unit) = unit_cost × sqrt(hp / max_hp) × 40
+```
+
+The `sqrt(hp/maxHP)` gives diminishing returns for overkill — killing a 10% HP unit is worth less than the same cost in fresh units. This is the MicroRTS `SimpleSqrtEvaluationFunction` pattern, validated across years of AI competition.
+
+Both formulas use fixed-point arithmetic (integer math only, consistent with sim determinism).
+
+#### Phase 5+ Enhancements
+
+These techniques are explicitly deferred — the Phase 4 AI ships without them:
+
+- **Strategy classification and adaptation:** Track opponent behavior patterns (build timing, unit composition, attack frequency). Classify into archetypes: "rush", "turtle", "boom", "all-in". Select counter-strategy from personality parameters. This is the MicroRTS Stratified Strategy Selection (SCV) pattern applied at RTS scale.
+- **Active scouting system:** No surveyed project scouts well — opportunity to lead. Periodically send cheap units to explore unknown areas. Maintain "last seen" timestamps for enemy building locations in `AiState::ScoutingMemory`. Higher urgency when opponent is quiet (they're probably teching up).
+- **Multi-pronged attacks:** Graduate from Petra/OpenRA's single-army-blob pattern. Split forces based on attack plan (main force + flanking/harassment force). Coordinate timing via shared countdown in `AiState`. The `AiEventLog` (D041) enables coordination visibility between sub-plans.
+- **Advanced micro:** Kiting, focus-fire priority targeting, ability usage. Kept out of Phase 4 to avoid the "chasing optimal AI" anti-pattern.
+
+#### What to Explicitly Not Do
+
+Five anti-patterns identified from surveyed implementations (full analysis in `research/rts-ai-implementation-survey.md` §9):
+
+1. **Don't implement MCTS/minimax for strategic decisions.** The search space is too large for 500+ unit games. MicroRTS research confirms: portfolio/script search beats raw MCTS at RTS scale. Reserve tree search for micro-scale decisions only (if at all).
+2. **Don't use behavior trees for the strategic AI.** Every surveyed RTS uses priority cascades or manager hierarchies, not BTs. BTs add complexity without proven benefit at RTS strategic scale.
+3. **Don't chase "optimal" AI at launch.** RA shipped with terrible AI and sold 10 million copies. The Remastered Collection shipped with the same terrible AI. Get a good-enough AI working, then iterate. Phase 4 target: "better than EA RA, comparable to OpenRA."
+4. **Don't hardcode strategies.** Use YAML configuration (the personality model above) so modders and the difficulty system can tune behavior without code changes.
+5. **Don't skip evaluation function design.** A bad evaluation function makes every other AI component worse. Invest time in getting threat assessment right (Lanchester scoring above) — it's the foundation everything else builds on.
+
+#### AI Performance Budget
+
+Based on the efficiency pyramid (D015) and surveyed projects' performance characteristics (see also `10-PERFORMANCE.md`):
+
+| AI Component                   | Frequency             | Target Time | Approach                   |
+| ------------------------------ | --------------------- | ----------- | -------------------------- |
+| Harvester assignment           | Every 4 ticks         | < 0.1ms     | Nearest-resource lookup    |
+| Defense response               | Every tick (reactive) | < 0.1ms     | Event-driven, not polling  |
+| Unit production                | Every 8 ticks         | < 0.2ms     | Priority queue evaluation  |
+| Building placement             | On demand             | < 1.0ms     | Influence map lookup       |
+| Attack planning                | Every 30 ticks        | < 2.0ms     | Composition check + timing |
+| Strategic reassessment         | Every 60 ticks        | < 5.0ms     | Full state evaluation      |
+| **Total per tick (amortized)** |                       | **< 0.5ms** | **Budget for 500 units**   |
+
+All AI working memory (influence maps, squad rosters, composition tallies, priority queues) is pre-allocated in `AiScratch` — analogous to `TickScratch` (Layer 5 of the efficiency pyramid). Zero per-tick heap allocation. Influence maps are fixed-size arrays, cleared and rebuilt on their evaluation schedule.
+
 ### Configuration Model
 
 AI presets are YAML-driven, paralleling balance presets:
@@ -4684,8 +4890,9 @@ ai_preset:
 profiles:
   classic-ra:
     balance: classic
-    ai_preset: classic-ra          # NEW — AI behavior preset
+    ai_preset: classic-ra          # D043 — original RA AI behavior
     pathfinding: classic-ra        # D045 — original RA movement feel
+    render_mode: classic           # D048 — original sprite rendering
     theme: classic
     qol: vanilla
 
@@ -4693,13 +4900,15 @@ profiles:
     balance: openra
     ai_preset: openra
     pathfinding: openra            # D045 — OpenRA movement feel
+    render_mode: classic           # D048
     theme: modern
     qol: openra
 
   iron-curtain-ra:
     balance: classic
-    ai_preset: ic-default          # NEW — enhanced AI
+    ai_preset: ic-default          # D043 — enhanced AI
     pathfinding: ic-default        # D045 — modern flowfield movement
+    render_mode: hd                # D048 — high-definition sprites
     theme: modern
     qol: iron_curtain
 ```
@@ -4727,11 +4936,218 @@ Modders can create custom AI presets as Workshop resources (D030):
 - Full `AiStrategy` implementations via WASM Tier 3 mods (D041)
 - AI tournament brackets: community members compete by submitting AI presets, tournament server runs automated matches
 
+### Engine-Level Difficulty System
+
+Inspired by 0 A.D.'s two-axis difficulty (engine cheats + behavioral parameters) and AoE2's strategic number scaling with opt-out (see `research/rts-ai-extensibility-survey.md`), Iron Curtain separates difficulty into two independent layers:
+
+**Layer 1 — Engine scaling (applies to ALL AI players by default):**
+
+The engine provides resource, build-time, and reaction-time multipliers that scale an AI's raw capability independent of how smart its decisions are. This ensures that even a simple YAML-configured AI can be made harder or easier without touching its behavioral parameters.
+
+```yaml
+# difficulties/built-in.yaml
+difficulties:
+  sandbox:
+    name: "Sandbox"
+    description: "AI barely acts — for learning the interface"
+    engine_scaling:
+      resource_gather_rate: 0.5     # AI gathers half speed (fixed-point: 512/1024)
+      build_time_multiplier: 1.5    # AI builds 50% slower
+      reaction_delay_ticks: 30      # AI waits 30 ticks (~1s) before acting on events
+      vision_range_multiplier: 0.8  # AI sees 20% less
+    personality_overrides:
+      aggression: 0.1
+      adaptation: none
+
+  easy:
+    name: "Easy"
+    engine_scaling:
+      resource_gather_rate: 0.8
+      build_time_multiplier: 1.2
+      reaction_delay_ticks: 8
+      vision_range_multiplier: 1.0
+
+  normal:
+    name: "Normal"
+    engine_scaling:
+      resource_gather_rate: 1.0     # No modification
+      build_time_multiplier: 1.0
+      reaction_delay_ticks: 0
+      vision_range_multiplier: 1.0
+
+  hard:
+    name: "Hard"
+    engine_scaling:
+      resource_gather_rate: 1.0     # No economic bonus
+      build_time_multiplier: 1.0
+      reaction_delay_ticks: 0
+      vision_range_multiplier: 1.0
+    # Hard is purely behavioral — the AI makes smarter decisions, not cheaper ones
+    personality_overrides:
+      micro_level: moderate
+      adaptation: reactive
+
+  brutal:
+    name: "Brutal"
+    engine_scaling:
+      resource_gather_rate: 1.3     # AI gets 30% bonus
+      build_time_multiplier: 0.8    # AI builds 20% faster
+      reaction_delay_ticks: 0
+      vision_range_multiplier: 1.2  # AI sees 20% further
+    personality_overrides:
+      aggression: 0.8
+      micro_level: extreme
+      adaptation: full
+```
+
+**Layer 2 — Implementation-level difficulty (per-`AiStrategy` impl):**
+
+Each `AiStrategy` implementation interprets difficulty through its own behavioral parameters. `PersonalityDrivenAi` uses the `personality:` YAML config (aggression, micro level, adaptation). A neural-net AI might have a "skill cap" parameter. A GOAP planner might limit search depth. The `get_parameters()` method (from MicroRTS research) exposes these as introspectable knobs.
+
+**Engine scaling opt-out** (from AoE2's `sn-do-not-scale-for-difficulty-level`): Sophisticated AI implementations that model difficulty internally can opt out of engine scaling by returning `false` from `uses_engine_difficulty_scaling()`. This prevents double-scaling — an advanced AI that already weakens its play at Easy difficulty shouldn't also get the engine's gather-rate penalty on top.
+
+**Modder-addable difficulty levels:** Difficulty levels are YAML files, not hardcoded enums. Community modders can define new difficulties via Workshop (D030) — no code required (Tier 1):
+
+```yaml
+# workshop: community/nightmare-difficulty/difficulty.yaml
+difficulty:
+  name: "Nightmare"
+  description: "Economy bonuses + perfect micro — for masochists"
+  engine_scaling:
+    resource_gather_rate: 2.0
+    build_time_multiplier: 0.5
+    reaction_delay_ticks: 0
+    vision_range_multiplier: 1.5
+  personality_overrides:
+    aggression: 0.95
+    micro_level: extreme
+    adaptation: full
+    harassment: true
+    group_tactics: multi_prong
+```
+
+Once installed, "Nightmare" appears alongside built-in difficulties in the lobby dropdown. Any `AiStrategy` implementation (first-party or community) can be paired with any difficulty level — they compose independently.
+
+### Mod-Selectable and Mod-Provided AI
+
+The three built-in behavior presets (Classic RA, OpenRA, IC Default) are configurations for `PersonalityDrivenAi`. They are not the only `AiStrategy` implementations. The trait (D041) is explicitly open to community implementations — following the same pattern as `Pathfinder` (D013/D045) and render modes (D048).
+
+**Two-axis lobby selection:**
+
+In the lobby, each AI player slot has two independent selections:
+
+1. **AI implementation** — which `AiStrategy` algorithm
+2. **Difficulty level** — which engine scaling + personality config
+
+```
+Player 2: [AI] IC Default / Hard        Faction: Allied
+Player 3: [AI] Classic RA / Normal      Faction: Allied
+Player 4: [AI] Workshop: GOAP Planner / Brutal   Faction: Soviet
+Player 5: [AI] Workshop: Neural Net v2 / Nightmare   Faction: Soviet
+
+Balance Preset: Classic RA
+```
+
+This is different from pathfinders (one axis: which algorithm). AI has two orthogonal axes because *how smart the AI plays* and *what advantages it gets* are independent concerns. A "Brutal Classic RA" AI should play with original 1996 patterns but get economic bonuses and instant reactions; an "Easy IC Default" AI should use modern tactics but gather slowly and react late.
+
+**Modder as consumer — selecting an AI:**
+
+A mod's YAML manifest can declare which `AiStrategy` implementations it ships with or requires:
+
+```yaml
+# mod.yaml — total conversion with custom AI
+mod:
+  name: "Zero Hour Remake"
+  ai_strategies:
+    - goap-planner              # Requires this community AI
+    - personality-driven        # Also supports the built-in default
+  default_ai: goap-planner
+  depends:
+    - community/goap-planner-ai@^2.0
+```
+
+If the mod doesn't specify `ai_strategies`, all registered AI implementations are available.
+
+**Modder as author — providing an AI:**
+
+A Tier 3 WASM mod can implement the `AiStrategy` trait and register it:
+
+```rust
+// WASM mod: GOAP (Goal-Oriented Action Planning) AI
+impl AiStrategy for GoapPlannerAi {
+    fn decide(&mut self, player: PlayerId, view: &FogFilteredView, tick: u64) -> Vec<PlayerOrder> {
+        // 1. Update world model from FogFilteredView
+        // 2. Evaluate goal priorities (expand? attack? defend? tech?)
+        // 3. GOAP search: find action sequence to achieve highest-priority goal
+        // 4. Emit orders for first action in plan
+        // ...
+    }
+
+    fn name(&self) -> &str { "GOAP Planner" }
+    fn difficulty(&self) -> AiDifficulty { AiDifficulty::Custom("adaptive".into()) }
+
+    fn on_enemy_spotted(&mut self, unit: EntityId, unit_type: &str) {
+        // Re-prioritize goals: if enemy spotted near base, defend goal priority increases
+        self.goal_priorities.defend += self.threat_weight(unit_type);
+    }
+
+    fn on_under_attack(&mut self, _unit: EntityId, _attacker: EntityId) {
+        // Emergency re-plan: abort current plan, switch to defense
+        self.force_replan = true;
+    }
+
+    fn get_parameters(&self) -> Vec<ParameterSpec> {
+        vec![
+            ParameterSpec { name: "plan_depth".into(), min_value: 1, max_value: 10, default_value: 5, .. },
+            ParameterSpec { name: "replan_interval".into(), min_value: 10, max_value: 120, default_value: 30, .. },
+            ParameterSpec { name: "aggression_weight".into(), min_value: 0, max_value: 100, default_value: 50, .. },
+        ]
+    }
+
+    fn uses_engine_difficulty_scaling(&self) -> bool { false } // handles difficulty internally
+}
+```
+
+The mod registers its AI in its manifest:
+
+```yaml
+# goap_planner/mod.yaml
+mod:
+  name: "GOAP Planner AI"
+  type: ai_strategy
+  ai_strategy_id: goap-planner
+  display_name: "GOAP Planner"
+  description: "Goal-oriented action planning AI — plans multi-step strategies"
+  wasm_module: goap_planner.wasm
+  capabilities:
+    read_visible_state: true
+    issue_orders: true
+  config:
+    plan_depth: 5
+    replan_interval_ticks: 30
+```
+
+**Workshop distribution:** Community AI implementations are Workshop resources (D030). They can be rated, reviewed, and depended upon — same as pathfinder mods. The Workshop can host AI tournament leaderboards: automated matches between community AI submissions, ranked by Elo/TrueSkill (inspired by BWAPI's SSCAIT and AoE2's AI ladder communities, see `research/rts-ai-extensibility-survey.md`).
+
+**Multiplayer implications:** AI selection is NOT sim-affecting in the same way pathfinding is. In a human-vs-AI game, each AI player can run a different `AiStrategy` — they're independent agents. In AI-vs-AI tournaments, all AI players can be different. The engine doesn't need to validate that all clients have the same AI WASM module (unlike pathfinding). However, for determinism, the AI's `decide()` output must be identical on all clients — so the WASM binary hash IS validated per AI player slot.
+
+### Relationship to Existing Decisions
+
+- **D019 (balance presets):** Orthogonal. Balance defines *what units can do*; AI presets define *how the AI uses them*. A player can combine any balance preset with any AI preset. "Classic RA balance + IC Default AI" is valid and interesting.
+- **D041 (`AiStrategy` trait):** AI behavior presets are configurations for the default `PersonalityDrivenAi` strategy. The trait allows entirely different AI algorithms (neural net, GOAP planner); presets are parameter sets within one algorithm. Both coexist — presets for built-in AI, traits for custom AI. The trait now includes event callbacks, parameter introspection, and engine scaling opt-out based on cross-project research.
+- **D042 (`StyleDrivenAi`):** Player behavioral profiles are a fourth source of AI behavior (alongside Classic/OpenRA/IC Default presets). No conflict — `StyleDrivenAi` implements `AiStrategy` independently of presets.
+- **D033 (QoL toggles / experience profiles):** AI preset selection integrates naturally into experience profiles. The "Classic Red Alert" experience profile bundles classic balance + classic AI + classic theme.
+- **D045 (pathfinding presets):** Same modder-selectable pattern. Mods select or provide pathfinders; mods select or provide AI implementations. Both distribute via Workshop; both compose with experience profiles. Key difference: pathfinding is one axis (algorithm), AI is two axes (algorithm + difficulty).
+- **D048 (render modes):** Same modder-selectable pattern. The trait-per-subsystem architecture means every pluggable system follows the same model: engine ships built-in implementations, mods can add more, players/modders pick what they want.
+
 ### Alternatives Considered
 
 - AI difficulty only, no style presets (rejected — difficulty is orthogonal to style; a "Hard Classic RA" AI should be hard but still play like original RA, not like a modern AI turned up)
 - One "best" AI only (rejected — the community is split like they are on balance; offer choice)
 - Lua-only AI scripting (rejected — too slow for tick-level decisions; Lua is for mission triggers, WASM for full AI replacement)
+- Difficulty as a fixed enum only (rejected — modders should be able to define new difficulty levels via YAML without code changes; AoE2's 20+ years of community AI prove that a large parameter space outlasts a restrictive one)
+- No engine-level difficulty scaling (rejected — delegating difficulty entirely to AI implementations produces inconsistent experiences across different AIs; 0 A.D. and AoE2 both provide engine scaling with opt-out, proving this is the right separation of concerns)
+- No event callbacks on `AiStrategy` (rejected — polling-only AI misses reactive opportunities; Spring Engine and BWAPI both use event + tick hybrid, which is the proven model)
 
 ---
 
@@ -4766,6 +5182,7 @@ pub struct LlmOrchestratorAi {
     consultation_interval: u64,         // ticks between LLM consultations
     last_consultation: u64,
     current_plan: Option<StrategicPlan>,
+    event_log: AiEventLog,              // D041 — fog-filtered event accumulator
 }
 ```
 
@@ -4777,28 +5194,115 @@ Every N ticks (configurable, default ~300 = ~10 seconds at 30 tick/s):
      - Own base layout, army composition, resource levels
      - Known enemy positions, army composition estimate
      - Current strategic plan (if any)
-     - Gameplay event log since last consultation
+     - event_log.to_narrative(last_consultation) — fog-filtered event chronicle
   2. Send prompt to LlmProvider (D016)
   3. LLM returns a StrategicPlan:
      - Priority targets (e.g., "attack enemy expansion at north")
      - Build focus (e.g., "switch to anti-air production")
      - Economic guidance (e.g., "expand to second ore field")
      - Risk assessment (e.g., "enemy likely to push soon, fortify choke")
-  4. Inject StrategicPlan into inner AI's decision context
-  5. Inner AI incorporates plan into its normal tick-level decisions
+  4. Translate StrategicPlan into inner AI parameter adjustments via set_parameter()
+     (e.g., "switch to anti-air" → set_parameter("tech_priority_aa", 80))
+  5. Record plan change as StrategicUpdate event in event_log
+  6. Inner AI incorporates guidance into its normal tick-level decisions
 
 Between consultations:
-  - Inner AI runs normally, using the last StrategicPlan as guidance
+  - Inner AI runs normally, using the last parameter adjustments as guidance
   - Tick-level micro, build queue management, unit control all handled by inner AI
   - No LLM latency in the hot path
+  - Events continue accumulating in event_log for the next consultation
 ```
+
+**Event log as LLM context (D041 integration):**
+
+The `AiEventLog` (defined in D041) is the bridge between simulation events and LLM understanding. The orchestrator accumulates fog-filtered events from the D041 callback pipeline — `on_enemy_spotted`, `on_under_attack`, `on_unit_destroyed`, etc. — and serializes them into a natural-language narrative via `to_narrative(since_tick)`. This narrative is the "inner game event log / action story / context" the LLM reads to understand what happened since its last consultation.
+
+The event log is **fog-filtered by construction** — all events originate from the same fog-filtered callback pipeline that respects `FogFilteredView`. The LLM never receives information about actions behind fog of war, only events the AI player is supposed to be aware of. This is an architectural guarantee, not a filtering step that could be bypassed.
+
+**Event callback forwarding:**
+
+The orchestrator implements all D041 event callbacks by forwarding to both the inner AI and the event log:
+
+```rust
+impl AiStrategy for LlmOrchestratorAi {
+    fn decide(&mut self, player: PlayerId, view: &FogFilteredView, tick: u64) -> Vec<PlayerOrder> {
+        // Check if it's time for an LLM consultation
+        if tick - self.last_consultation >= self.consultation_interval {
+            self.consult_llm(player, view, tick);
+        }
+        // Delegate tick-level decisions to the inner AI
+        self.inner.decide(player, view, tick)
+    }
+
+    fn on_enemy_spotted(&mut self, unit: EntityId, unit_type: &str) {
+        self.event_log.push(AiEventEntry {
+            tick: self.current_tick,
+            event_type: AiEventType::EnemySpotted,
+            description: format!("Enemy {} spotted", unit_type),
+            entity: Some(unit),
+            related_entity: None,
+        });
+        self.inner.on_enemy_spotted(unit, unit_type);  // forward to inner AI
+    }
+
+    fn on_under_attack(&mut self, unit: EntityId, attacker: EntityId) {
+        self.event_log.push(/* ... */);
+        self.inner.on_under_attack(unit, attacker);
+    }
+
+    // ... all other callbacks follow the same pattern:
+    // 1. Record in event_log  2. Forward to inner AI
+
+    fn name(&self) -> &str { "LLM Orchestrator" }
+    fn difficulty(&self) -> AiDifficulty { self.inner.difficulty() }
+    fn tick_budget_hint(&self) -> Option<u64> { self.inner.tick_budget_hint() }
+
+    // Delegate parameter introspection — expose orchestrator params + inner AI params
+    fn get_parameters(&self) -> Vec<ParameterSpec> {
+        let mut params = vec![
+            ParameterSpec {
+                name: "consultation_interval".into(),
+                description: "Ticks between LLM consultations".into(),
+                min_value: 30, max_value: 3000,
+                default_value: 300, current_value: self.consultation_interval as i32,
+            },
+        ];
+        // Include inner AI's parameters (prefixed for clarity)
+        params.extend(self.inner.get_parameters());
+        params
+    }
+
+    fn set_parameter(&mut self, name: &str, value: i32) {
+        match name {
+            "consultation_interval" => self.consultation_interval = value as u64,
+            _ => self.inner.set_parameter(name, value),  // delegate to inner AI
+        }
+    }
+
+    // Delegate engine scaling to inner AI — the orchestrator adds LLM guidance,
+    // difficulty scaling applies to the underlying AI that executes orders
+    fn uses_engine_difficulty_scaling(&self) -> bool {
+        self.inner.uses_engine_difficulty_scaling()
+    }
+}
+```
+
+**How StrategicPlan reaches the inner AI:**
+
+The orchestrator translates `StrategicPlan` fields into `set_parameter()` calls on the inner AI (D041). For example:
+- "Switch to anti-air production" → `set_parameter("tech_priority_aa", 80)`
+- "Be more aggressive" → `set_parameter("aggression", 75)`
+- "Expand to second ore field" → `set_parameter("expansion_priority", 90)`
+
+This uses D041's existing parameter introspection infrastructure — no new trait methods needed. The inner AI's `get_parameters()` exposes its tunable knobs; the LLM's strategic output maps to those knobs. An inner AI that doesn't expose relevant parameters simply ignores guidance it can't act on — the orchestrator degrades gracefully.
 
 **Key design points:**
 - **No latency impact on gameplay.** LLM consultation is async — fires off a request, continues with the previous plan until the response arrives. If the LLM is slow (or unavailable), the inner AI plays normally.
 - **BYOLLM (D016).** Same provider system — users configure their own model. Local models (Ollama) give lowest latency; cloud APIs work but add ~1-3s round-trip per consultation.
 - **Determinism maintained.** In multiplayer, the LLM runs on exactly one machine (the AI slot owner's client). The resulting `StrategicPlan` is submitted as an order through the `NetworkModel` — the same path as human player orders. Other clients never run the LLM; they receive and apply the same plan at the same deterministic tick boundary. In singleplayer, determinism is trivially preserved (orders are recorded in the replay, not LLM calls).
-- **Inner AI is any `AiStrategy`.** Orchestrator wraps IC Default, Classic RA, or even a `StyleDrivenAi` (D042). The LLM adds strategic thinking on top of whatever execution style is underneath.
-- **Observable.** The current `StrategicPlan` is displayed in a debug overlay (developer/spectator mode), letting players see the LLM's "thinking."
+- **Inner AI is any `AiStrategy`.** Orchestrator wraps IC Default, Classic RA, a community WASM AI (D043), or even a `StyleDrivenAi` (D042). The LLM adds strategic thinking on top of whatever execution style is underneath. Because the orchestrator communicates through the generic `AiStrategy` trait (event callbacks + `set_parameter()`), it works with any implementation — including community-provided WASM AI mods.
+- **Two-axis difficulty compatibility (D043).** The orchestrator delegates `difficulty()` and `uses_engine_difficulty_scaling()` to the inner AI. Engine-level difficulty scaling (resource bonuses, reaction delays) applies to the inner AI's execution; the LLM consultation frequency and depth are separate parameters exposed via `get_parameters()`. In the lobby, players select the inner AI + difficulty normally, then optionally enable LLM orchestration on top.
+- **Observable.** The current `StrategicPlan` and the event log narrative are displayed in a debug overlay (developer/spectator mode), letting players see the LLM's "thinking" and the events that informed it.
 - **Prompt engineering is in YAML.** Prompt templates are mod-data, not hardcoded. Modders can customize LLM prompts for different game modules or scenarios.
 
 ```yaml
@@ -4818,7 +5322,7 @@ orchestrator:
 
 ### 2. LLM Player (`LlmPlayerAi`) — Experimental
 
-A fully LLM-driven player where the language model makes every decision. No inner AI — the LLM receives game state and emits player orders directly.
+A fully LLM-driven player where the language model makes every decision. No inner AI — the LLM receives game state and emits player orders directly. This is the "LLM makes every small decision" path — the architecture supports it through the same `AiStrategy` trait and `AiEventLog` infrastructure as the orchestrator.
 
 ```rust
 /// Experimental: LLM makes all decisions directly.
@@ -4829,13 +5333,25 @@ pub struct LlmPlayerAi {
     decision_interval: u64,           // ticks between LLM decisions
     pending_orders: Vec<PlayerOrder>, // buffered orders from last LLM response
     order_cursor: usize,              // index into pending_orders for drip-feeding
+    event_log: AiEventLog,            // D041 — fog-filtered event accumulator
 }
 ```
 
 **How it works:**
-- Every N ticks, serialize full visible game state → send to LLM → receive a batch of `PlayerOrder` values
+- Every N ticks, serialize `FogFilteredView` + `event_log.to_narrative(last_decision_tick)` → send to LLM → receive a batch of `PlayerOrder` values
+- The event log narrative gives the LLM a chronological understanding of what happened — "what has been going on in this game" — rather than just a snapshot of current state
 - Between decisions, drip-feed buffered orders to the sim (one or few per tick)
 - If the LLM response is slow, the player idles (no orders until response arrives)
+- Event callbacks continue accumulating into the event log between LLM decisions, building a richer narrative for the next consultation
+
+**Why the event log matters for full LLM control:**
+
+The LLM Player receives `FogFilteredView` (current game state) AND `AiEventLog` (recent game history). Together these give the LLM:
+- **Spatial awareness** — what's where right now (from `FogFilteredView`)
+- **Temporal awareness** — what happened recently (from the event log narrative)
+- **Causal understanding** — "I was attacked from the north, my refinery was destroyed, I spotted 3 enemy tanks" forms a coherent story the LLM can reason about
+
+Without the event log, the LLM would see only a static snapshot every N ticks, with no continuity between decisions. The log bridges decisions into a narrative that LLMs are natively good at processing.
 
 **Why this is experimental:**
 - **Latency.** Even local LLMs take 100-500ms per response. A 30 tick/s sim expects decisions every 33ms. The LLM Player will always be slower than a conventional AI.
@@ -4846,21 +5362,51 @@ pub struct LlmPlayerAi {
 **Design constraints:**
 - **Never the default.** LLM Player is clearly labeled "Experimental" in the lobby.
 - **Not allowed in ranked.** LLM AI modes are excluded from competitive matchmaking.
-- **Observable.** The LLM's reasoning text is capturable as a spectator overlay, enabling commentary-style viewing.
+- **Observable.** The LLM's reasoning text and event log narrative are capturable as a spectator overlay, enabling commentary-style viewing.
 - **Same BYOLLM infrastructure.** Uses `LlmProvider` trait (D016), same configuration, same provider options.
+- **Two-axis difficulty compatibility (D043).** Engine-level difficulty scaling (resource bonuses, reaction delays) applies normally — `uses_engine_difficulty_scaling()` returns `true`. The LLM's "skill" is inherent in the model's capability and prompt engineering, not in engine parameters. `get_parameters()` exposes LLM-specific knobs: decision interval, max tokens, model selection, prompt template — but the LLM's quality is ultimately model-dependent, not engine-controlled. This is an honest design: we don't pretend to make the LLM "harder" or "easier" through engine scaling, but we do let the engine give it economic advantages or handicaps.
 - **Determinism:** The LLM runs on one machine (the AI slot owner's client) and submits orders through the `NetworkModel`, just like human input. All clients apply the same orders at the same deterministic tick boundaries. The LLM itself is non-deterministic (different responses per run), but that non-determinism is resolved before orders enter the sim — the sim only sees deterministic order streams. Replays record orders (not LLM calls), so replay playback is fully deterministic.
+
+### Relationship to D041/D043 — Integration Summary
+
+The LLM AI modes build entirely on the `AiStrategy` trait (D041) and the two-axis difficulty system (D043):
+
+| Concern                             | Orchestrator                                                                                   | LLM Player                                                  |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| Implements `AiStrategy`?            | Yes — wraps an inner `AiStrategy`                                                              | Yes — direct implementation                                 |
+| Uses `AiEventLog`?                  | Yes — accumulates events for LLM prompts, forwards callbacks to inner AI                       | Yes — accumulates events for LLM self-context               |
+| `FogFilteredView`?                  | Yes — serialized into LLM prompt alongside event narrative                                     | Yes — serialized into LLM prompt                            |
+| Event callbacks?                    | Forwards to inner AI + records in event log                                                    | Records in event log for next LLM consultation              |
+| `set_parameter()`?                  | Exposes orchestrator params + delegates to inner AI; translates LLM plans to param adjustments | Exposes LLM-specific params (decision_interval, max_tokens) |
+| `get_parameters()`?                 | Returns orchestrator params + inner AI's params                                                | Returns LLM Player params                                   |
+| `uses_engine_difficulty_scaling()`? | Delegates to inner AI                                                                          | Returns `true` (engine bonuses/handicaps apply)             |
+| `difficulty()`?                     | Delegates to inner AI                                                                          | Returns selected difficulty (user picks in lobby)           |
+| Two-axis difficulty?                | Inner AI axis applies to execution; orchestrator params are separate                           | Engine scaling applies; LLM quality is model-dependent      |
+
+The critical architectural property: **neither LLM AI mode introduces any new trait methods, crate dependencies, or sim-layer concepts.** They compose entirely from existing infrastructure — `AiStrategy`, `AiEventLog`, `FogFilteredView`, `set_parameter()`, `LlmProvider`. This means the LLM AI path doesn't constrain or complicate the non-LLM AI path. A modder who never uses LLM features is completely unaffected.
+
+### Future Path: Full LLM Control at Scale
+
+The current `LlmPlayerAi` is limited by latency (LLM responses take 100-500ms vs. 33ms sim ticks) and spatial reasoning capability. As LLM inference speeds improve and models gain better spatial/numerical reasoning, the same architecture scales:
+- Faster models → lower `decision_interval` → more responsive LLM play
+- Better spatial reasoning → LLM can handle micro, not just strategy
+- Multimodal models → render a minimap image as additional LLM context alongside the event narrative
+- The `AiStrategy` trait, `AiEventLog`, and `FogFilteredView` infrastructure are all model-agnostic — they serve whatever LLM capability exists at runtime
+
+The architecture is deliberately designed not to stand in the way of full LLM control becoming practical. Every piece needed for "LLM makes every small decision" already exists in the trait design — the only bottleneck is LLM speed and quality, which are external constraints that improve over time.
 
 ### Crate Boundaries
 
-| Component                     | Crate    | Reason                                               |
-| ----------------------------- | -------- | ---------------------------------------------------- |
-| `LlmOrchestratorAi` struct    | `ic-ai`  | AI strategy implementation                           |
-| `LlmPlayerAi` struct          | `ic-ai`  | AI strategy implementation                           |
-| `StrategicPlan` type          | `ic-ai`  | AI-internal data structure                           |
-| `LlmProvider` trait           | `ic-llm` | Existing D016 infrastructure                         |
-| Prompt templates (YAML)       | mod data | Game-module-specific, moddable                       |
-| Game state serializer for LLM | `ic-ai`  | Reads sim state (read-only), formats for LLM prompts |
-| Debug overlay (plan viewer)   | `ic-ui`  | Spectator/dev UI for observing LLM reasoning         |
+| Component                     | Crate    | Reason                                                         |
+| ----------------------------- | -------- | -------------------------------------------------------------- |
+| `LlmOrchestratorAi` struct    | `ic-ai`  | AI strategy implementation                                     |
+| `LlmPlayerAi` struct          | `ic-ai`  | AI strategy implementation                                     |
+| `StrategicPlan` type          | `ic-ai`  | AI-internal data structure                                     |
+| `AiEventLog` struct           | `ic-ai`  | Engine-provided event accumulator (D041 design, `ic-ai` impl)  |
+| `LlmProvider` trait           | `ic-llm` | Existing D016 infrastructure                                   |
+| Prompt templates (YAML)       | mod data | Game-module-specific, moddable                                 |
+| Game state serializer for LLM | `ic-ai`  | Reads sim state (read-only), formats for LLM prompts           |
+| Debug overlay (plan viewer)   | `ic-ui`  | Spectator/dev UI for observing LLM reasoning + event narrative |
 
 ### Alternatives Considered
 
@@ -4868,6 +5414,17 @@ pub struct LlmPlayerAi {
 - LLM operates between games only (rejected — D042 already covers between-game coaching; real-time guidance is the new capability)
 - No LLM Player mode (rejected — the experimental mode has minimal implementation cost and high community interest/entertainment value)
 - LLM in the sim crate (rejected — violates BYOLLM optionality; `ic-ai` imports `ic-llm` optionally, `ic-sim` never imports either)
+- New trait method `set_strategic_guidance()` for LLM → inner AI communication (rejected — `set_parameter()` already provides the mechanism; adding an LLM-specific method to the generic `AiStrategy` trait would couple the trait to an optional feature)
+- Custom event log per AI instead of engine-provided `AiEventLog` (rejected — the log benefits all AI implementations for debugging/observation, not just LLM; making it engine infrastructure avoids redundant implementations)
+
+### Relationship to Existing Decisions
+
+- **D016 (BYOLLM):** Same provider infrastructure. Both LLM AI modes use `LlmProvider` trait for model access.
+- **D041 (`AiStrategy` trait):** Both modes implement `AiStrategy`. The orchestrator wraps any `AiStrategy` via the generic trait. Both use `AiEventLog` (D041) for fog-filtered event accumulation. The orchestrator communicates with the inner AI through `set_parameter()` and event callback forwarding — all D041 infrastructure.
+- **D042 (`StyleDrivenAi`):** The orchestrator can wrap `StyleDrivenAi` — LLM strategic guidance on top of a mimicked player's style. The `AiEventLog` serves both D042 (profile building reads events) and D044 (LLM reads events).
+- **D043 (AI presets + two-axis difficulty):** LLM AI integrates with the two-axis difficulty system. Orchestrator delegates difficulty to inner AI; LLM Player accepts engine scaling. Users select inner AI + difficulty in the lobby, then optionally enable LLM orchestration.
+- **D031 (telemetry):** The `GameplayEvent` stream (D031) feeds the fog-filtered callback pipeline that populates `AiEventLog`. D031 is the raw data source; D041 callbacks are the filtered AI-facing interface; `AiEventLog` is the accumulated narrative.
+- **D034 (SQLite):** LLM consultation history (prompts sent, plans received, execution outcomes) stored in SQLite for debugging and quality analysis. No new tables required — uses the existing `gameplay_events` schema with LLM-specific event types.
 
 ---
 

@@ -461,6 +461,7 @@ pub struct ModCapabilities {
     pub issue_orders: bool,           // For AI mods
     pub render: bool,                 // For render mods (ic_render_* API)
     pub pathfinding: bool,            // For pathfinder mods (ic_pathfind_* API)
+    pub ai_strategy: bool,            // For AI mods (ic_ai_* API + AiStrategy trait)
     pub filesystem: FileAccess,       // Usually None
     pub network: NetworkAccess,       // Usually None
 }
@@ -656,6 +657,125 @@ mod:
 **Multiplayer sync:** Because pathfinding is sim-affecting, all players must use the same pathfinder. The lobby validates that all clients have the same pathfinder WASM module (hash + version). A modded pathfinder is treated identically to a built-in preset for sync purposes.
 
 **Phase:** WASM pathfinding API ships in Phase 6a alongside the mod testing framework and Workshop. Built-in pathfinder presets (D045) ship in Phase 2 as native Rust implementations.
+
+### WASM AI Strategy API Surface
+
+Tier 3 WASM mods can provide custom `AiStrategy` trait implementations (D041, D043). This follows the same pattern as render and pathfinder mods — a well-defined host API surface, capability-gated, with the WASM module implementing the trait through exported functions that the engine calls.
+
+**Why modders want this:** Different games call for different AI approaches. A competitive mod wants a GOAP planner that reads influence maps. An academic project wants a Monte Carlo tree search AI. A Generals-clone needs AI that understands bridge layers and surface types. A novelty mod wants a neural-net AI that learns from replays. The three built-in behavior presets (Classic RA, OpenRA, IC Default) use `PersonalityDrivenAi` — community AIs can use fundamentally different algorithms.
+
+```rust
+// === AI Host API (ic_ai_* namespace) ===
+// Available only to mods with ModCapabilities.read_visible_state = true
+// AND ModCapabilities.issue_orders = true
+
+/// Query own units visible to this AI player.
+/// Returns (entity_id, unit_type, position, health, max_health) tuples.
+#[wasm_host_fn] fn ic_ai_get_own_units() -> Vec<AiUnitInfo>;
+
+/// Query enemy units visible to this AI player (fog-filtered).
+/// Only returns units in line of sight — no maphack.
+#[wasm_host_fn] fn ic_ai_get_visible_enemies() -> Vec<AiUnitInfo>;
+
+/// Query neutral/capturable entities visible to this AI player.
+#[wasm_host_fn] fn ic_ai_get_visible_neutrals() -> Vec<AiUnitInfo>;
+
+/// Get current resource state for this AI player.
+#[wasm_host_fn] fn ic_ai_get_resources() -> AiResourceInfo;
+
+/// Get current power state (production, drain, surplus).
+#[wasm_host_fn] fn ic_ai_get_power() -> AiPowerInfo;
+
+/// Get current production queue state.
+#[wasm_host_fn] fn ic_ai_get_production_queues() -> Vec<AiProductionQueue>;
+
+/// Check if a unit type can be built (prerequisites, cost, factory available).
+#[wasm_host_fn] fn ic_ai_can_build(unit_type: &str) -> bool;
+
+/// Check if a building can be placed at a position.
+#[wasm_host_fn] fn ic_ai_can_place_building(
+    building_type: &str, pos: WorldPos
+) -> bool;
+
+/// Get terrain type at a position (for strategic planning).
+#[wasm_host_fn] fn ic_ai_get_terrain(pos: WorldPos) -> TerrainType;
+
+/// Get map dimensions.
+#[wasm_host_fn] fn ic_ai_map_bounds() -> (WorldPos, WorldPos);
+
+/// Get current tick number.
+#[wasm_host_fn] fn ic_ai_current_tick() -> u64;
+
+/// Get fog-filtered event narrative since a given tick (D041 AiEventLog).
+/// Returns a natural-language chronological account of game events.
+/// This is the "inner game event log / action story / context" that LLM-based
+/// AI (D044) and any WASM AI can use for temporal awareness.
+#[wasm_host_fn] fn ic_ai_get_event_narrative(since_tick: u64) -> String;
+
+/// Get structured event log since a given tick (D041 AiEventLog).
+/// Returns fog-filtered events as typed entries for programmatic consumption.
+#[wasm_host_fn] fn ic_ai_get_events(since_tick: u64) -> Vec<AiEventEntry>;
+
+/// Issue an order for an owned unit. Returns false if order is invalid.
+/// Orders go through the same OrderValidator (D012/D041) as human orders.
+#[wasm_host_fn] fn ic_ai_issue_order(order: &PlayerOrder) -> bool;
+
+/// Allocate scratch memory from the engine's pre-allocated pool.
+#[wasm_host_fn] fn ic_ai_scratch_alloc(bytes: u32) -> *mut u8;
+#[wasm_host_fn] fn ic_ai_scratch_free(ptr: *mut u8, bytes: u32);
+
+pub struct AiUnitInfo {
+    pub entity_id: u32,
+    pub unit_type: String,
+    pub position: WorldPos,
+    pub health: i32,
+    pub max_health: i32,
+    pub is_idle: bool,
+    pub is_moving: bool,
+}
+
+pub struct AiEventEntry {
+    pub tick: u64,
+    pub event_type: u32,      // mapped from AiEventType enum
+    pub description: String,  // human/LLM-readable summary
+    pub entity_id: Option<u32>,
+    pub related_entity_id: Option<u32>,
+}
+```
+
+**WASM-exported trait functions** (the engine *calls* these on the mod):
+
+```rust
+// Exported by the WASM AI mod — these map to the AiStrategy trait
+
+/// Called once per tick. Returns serialized Vec<PlayerOrder>.
+#[wasm_export] fn ai_decide(player_id: u32, tick: u64) -> Vec<PlayerOrder>;
+
+/// Event callbacks — called before ai_decide() in the same tick.
+#[wasm_export] fn ai_on_unit_created(unit_id: u32, unit_type: &str);
+#[wasm_export] fn ai_on_unit_destroyed(unit_id: u32, attacker_id: Option<u32>);
+#[wasm_export] fn ai_on_unit_idle(unit_id: u32);
+#[wasm_export] fn ai_on_enemy_spotted(unit_id: u32, unit_type: &str);
+#[wasm_export] fn ai_on_enemy_destroyed(unit_id: u32);
+#[wasm_export] fn ai_on_under_attack(unit_id: u32, attacker_id: u32);
+#[wasm_export] fn ai_on_building_complete(building_id: u32);
+#[wasm_export] fn ai_on_research_complete(tech: &str);
+
+/// Parameter introspection — called by lobby UI for "Advanced AI Settings."
+#[wasm_export] fn ai_get_parameters() -> Vec<ParameterSpec>;
+#[wasm_export] fn ai_set_parameter(name: &str, value: i32);
+
+/// Engine scaling opt-out.
+#[wasm_export] fn ai_uses_engine_difficulty_scaling() -> bool;
+```
+
+**Security:** AI mods can read visible game state (`ic_ai_get_own_units`, `ic_ai_get_visible_enemies`) and issue orders (`ic_ai_issue_order`). They CANNOT read fogged state — `ic_ai_get_visible_enemies()` returns only units in the AI player's line of sight. They cannot access render functions, pathfinder internals, or other players' private data. Orders go through the same `OrderValidator` as human orders — an AI mod cannot issue impossible commands.
+
+**Determinism:** WASM AI mods execute in the deterministic sim context. Events fire in a fixed order (same order on all clients). `decide()` is called at the same pipeline point on all clients with the same `FogFilteredView`. All clients run the same WASM binary (verified by SHA-256 hash per AI player slot) with the same inputs, producing identical orders.
+
+**Performance:** AI mods share the `WasmExecutionLimits` fuel budget. The `tick_budget_hint()` return value is advisory — the engine uses it for scheduling but enforces the fuel limit regardless. A community AI that exceeds its budget mid-tick gets truncated deterministically.
+
+**Phase:** WASM AI API ships in Phase 6a. Built-in AI (`PersonalityDrivenAi` + behavior presets from D043) ships in Phase 4 as native Rust.
 
 ### Mod Testing Framework
 
@@ -871,6 +991,100 @@ mod:
 **Performance contract:** Pathfinder mods share the same `WasmExecutionLimits` fuel budget as other WASM mods. The engine monitors per-tick pathfinding time. If a community pathfinder consistently exceeds the budget, the lobby warns players. The engine never falls back silently to a different pathfinder — determinism means all clients must agree on every path.
 
 **Phase:** WASM pathfinder mods in Phase 6a. The three built-in pathfinder presets (D045) ship as native Rust in Phase 2.
+
+### Custom AI Mods (Tier 3 Showcase)
+
+The third major Tier 3 showcase: replacing how AI opponents think. Just as render mods replace visual presentation and pathfinder mods replace navigation algorithms, AI mods replace the decision-making engine — while the simulation rules, damage pipeline, and everything else remain unchanged.
+
+**Why this matters:** The built-in `PersonalityDrivenAi` uses behavior trees tuned by YAML personality parameters. This works well for most players. But the RTS AI community spans decades of research — GOAP planners, Monte Carlo tree search, influence map systems, neural networks, evolutionary strategies (see `research/rts-ai-extensibility-survey.md`). The `AiStrategy` trait (D041) lets modders bring any algorithm to Iron Curtain, and the two-axis difficulty system (D043) lets any AI scale from Sandbox to Nightmare.
+
+**A custom AI mod implements:**
+
+```rust
+// WASM mod: GOAP (Goal-Oriented Action Planning) AI
+struct GoapPlannerAi {
+    goals: Vec<Goal>,         // Expand, Attack, Defend, Tech, Harass
+    plan: Option<ActionPlan>, // Current multi-step plan
+    world_model: WorldModel,  // Internal state tracking
+}
+
+impl AiStrategy for GoapPlannerAi {
+    fn decide(&mut self, player: PlayerId, view: &FogFilteredView, tick: u64) -> Vec<PlayerOrder> {
+        // 1. Update world model from visible state
+        self.world_model.update(view);
+        // 2. Re-evaluate goal priorities
+        self.goals.sort_by_key(|g| -g.priority(&self.world_model));
+        // 3. If plan invalidated or expired, re-plan
+        if self.plan.is_none() || tick % self.replan_interval == 0 {
+            self.plan = self.planner.search(
+                &self.world_model, &self.goals[0], self.search_depth
+            );
+        }
+        // 4. Execute next action in plan
+        self.plan.as_mut().map(|p| p.next_orders()).unwrap_or_default()
+    }
+
+    fn on_enemy_spotted(&mut self, unit: EntityId, unit_type: &str) {
+        // Scouting intel → update world model → may trigger re-plan
+        self.world_model.add_sighting(unit, unit_type);
+        if self.world_model.threat_level() > self.defend_threshold {
+            self.plan = None; // force re-plan next tick
+        }
+    }
+
+    fn on_under_attack(&mut self, _unit: EntityId, _attacker: EntityId) {
+        self.goals.iter_mut().find(|g| g.name == "Defend")
+            .map(|g| g.urgency += 30); // boost defense priority
+    }
+
+    fn get_parameters(&self) -> Vec<ParameterSpec> {
+        vec![
+            ParameterSpec { name: "search_depth".into(), min: 1, max: 10, default: 5, .. },
+            ParameterSpec { name: "replan_interval".into(), min: 10, max: 120, default: 30, .. },
+            ParameterSpec { name: "defend_threshold".into(), min: 0, max: 100, default: 40, .. },
+        ]
+    }
+
+    fn uses_engine_difficulty_scaling(&self) -> bool { false }
+    // This AI handles difficulty via search_depth and replan_interval
+}
+```
+
+**Mod manifest:**
+
+```yaml
+# goap_ai/mod.yaml
+mod:
+  name: "GOAP Planner AI"
+  type: ai_strategy
+  ai_strategy_id: goap-planner
+  display_name: "GOAP Planner"
+  description: "Goal-oriented action planning — multi-step strategic reasoning"
+  version: "2.1.0"
+  wasm_module: goap_planner.wasm
+  capabilities:
+    read_visible_state: true
+    issue_orders: true
+    ai_strategy: true
+  config:
+    search_depth: 5
+    replan_interval: 30
+```
+
+**How other mods use it:**
+
+```yaml
+# zero_hour_mod/mod.yaml — a total conversion using the GOAP AI
+mod:
+  name: "Zero Hour Remake"
+  default_ai: goap-planner
+  depends:
+    - community/goap-planner-ai@^2.0
+```
+
+**AI tournament community:** Workshop can host AI tournament leaderboards — automated matches between community AI submissions, ranked by Elo/TrueSkill. This is directly inspired by BWAPI's SSCAIT tournament (15+ years of StarCraft AI competition) and AoE2's AI ladder (20+ years of community AI development). The `ic mod test` framework (above) provides headless match execution; the Workshop provides distribution and ranking.
+
+**Phase:** WASM AI mods in Phase 6a. Built-in `PersonalityDrivenAi` + behavior presets (D043) ship as native Rust in Phase 4.
 
 ## Tera Templating (Phase 6a)
 

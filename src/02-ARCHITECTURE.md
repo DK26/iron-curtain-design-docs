@@ -1406,6 +1406,18 @@ pub struct Jukebox {
 
 **Architecture:** AI players run as Bevy systems that read visible game state and emit `PlayerOrder`s through `ic-protocol`. The sim processes AI orders identically to human orders — no special privileges. AI has no maphack by default (reads only fog-of-war-revealed state), though campaign scripts can grant omniscience for specific AI players via conditions.
 
+**Internal structure — priority-based manager hierarchy:** The default `PersonalityDrivenAi` (D043) uses the dominant pattern found across all surveyed open-source RTS AI implementations (see `research/rts-ai-implementation-survey.md`):
+
+```
+PersonalityDrivenAi
+├── EconomyManager       — harvester assignment, power monitoring, expansion timing
+├── ProductionManager    — share-based unit composition, priority-queue build orders, influence-map building placement
+├── MilitaryManager      — attack planning, event-driven defense, squad management
+└── AiState (shared)     — threat map, resource map, scouting memory
+```
+
+Key techniques: priority-based resource allocation (from 0 A.D. Petra), share-based unit composition (from OpenRA), influence maps for building placement (from 0 A.D.), tick-gated evaluation (from Generals/Petra), fuzzy engagement logic (from OpenRA), Lanchester-inspired threat scoring (from MicroRTS research). Each manager runs on its own tick schedule — cheap decisions (defense) every tick, expensive decisions (strategic reassessment) every 60 ticks. Total amortized AI budget: <0.5ms per tick for 500 units. All AI working memory is pre-allocated in `AiScratch` (zero per-tick allocation). Full implementation detail in D043 (`09-DECISIONS.md`).
+
 **AI tiers (YAML-configured):**
 
 | Tier   | Behavior                                                           | Target Audience                      |

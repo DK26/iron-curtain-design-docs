@@ -162,7 +162,7 @@ Units moving, shooting, dying — headless sim + rendered. Record replay file. P
 ### Deliverables
 - Lua-based scripting for mission scripts
 - WASM mod runtime (basic)
-- Basic skirmish AI: harvest, build, attack patterns
+- Basic skirmish AI: priority-based manager hierarchy (D043) with harvester management, share-based unit production, influence-map building placement, tick-gated evaluation, and fuzzy engagement logic — target quality: better than EA RA, comparable to OpenRA
 - Campaign mission loading (OpenRA mission format)
 - **Branching campaign graph engine (D021):** campaigns as directed graphs of missions with named outcomes, multiple paths, and convergence points
 - **Persistent campaign state:** unit roster carryover, veterancy across missions, equipment persistence, story flags — serializable for save games
@@ -192,7 +192,7 @@ Units moving, shooting, dying — headless sim + rendered. Record replay file. P
 - Campaign branches work: different mission outcomes lead to different next missions
 - Unit roster persists across missions (surviving units, veterancy, equipment)
 - Save/load works mid-campaign with full state preservation
-- Skirmish AI provides a basic challenge
+- Skirmish AI provides a credible challenge: **better than EA Red Alert, comparable to OpenRA** — maintains economy (no idle harvesters, no power brownouts), builds a reasonable army composition, attacks at appropriate timing, and defends its base reactively (see D043 implementation architecture and `research/rts-ai-implementation-survey.md` §9 for target quality)
 
 ## Phase 5: Multiplayer (Months 20–26)
 

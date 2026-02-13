@@ -185,6 +185,22 @@ fn pathfinding_system(
 
 **Determinism preserved:** The stagger schedule is based on entity ID and tick number — deterministic on all clients.
 
+### AI Computation Budget
+
+AI runs on the same stagger/amortization principles as the rest of the sim. The default `PersonalityDrivenAi` (D043) uses a priority-based manager hierarchy where each manager runs on its own tick-gated schedule — cheap decisions run often, expensive decisions run rarely (pattern used by EA Generals, 0 A.D. Petra, and MicroRTS). Full architectural detail in D043 (`09-DECISIONS.md`); survey analysis in `research/rts-ai-implementation-survey.md`.
+
+| AI Component                   | Frequency             | Target Time | Approach                   |
+| ------------------------------ | --------------------- | ----------- | -------------------------- |
+| Harvester assignment           | Every 4 ticks         | < 0.1ms     | Nearest-resource lookup    |
+| Defense response               | Every tick (reactive) | < 0.1ms     | Event-driven, not polling  |
+| Unit production                | Every 8 ticks         | < 0.2ms     | Priority queue evaluation  |
+| Building placement             | On demand             | < 1.0ms     | Influence map lookup       |
+| Attack planning                | Every 30 ticks        | < 2.0ms     | Composition check + timing |
+| Strategic reassessment         | Every 60 ticks        | < 5.0ms     | Full state evaluation      |
+| **Total per tick (amortized)** |                       | **< 0.5ms** | **Budget for 500 units**   |
+
+All AI working memory (influence maps, squad rosters, composition tallies, priority queues) is pre-allocated in `AiScratch` — analogous to `TickScratch` (Layer 5). Zero per-tick heap allocation. Influence maps are fixed-size arrays, cleared and rebuilt on their evaluation schedule. The `AiStrategy::tick_budget_hint()` method (D041) provides a hard microsecond cap — if the budget is exhausted mid-evaluation, the AI returns partial results and uses cached plans from the previous complete evaluation.
+
 ## Layer 5: Zero-Allocation Hot Paths
 
 Heap allocation is expensive: the allocator touches cold memory, fragments the heap, and (in C#) creates GC pressure. Rust eliminates GC, but allocation itself still costs cache misses.
