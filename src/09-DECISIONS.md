@@ -7426,12 +7426,12 @@ The community server signs a match record SCR containing the match metadata (pla
 
 Achievements are more nuanced because they can be earned in different contexts:
 
-| Context | How the server validates | Trust level |
-| --- | --- | --- |
-| **Multiplayer match** | Achievement condition cross-referenced with `CertifiedMatchResult` data. E.g., "Win 50 matches" — server counts its own signed match SCRs for this player. "Win under 5 minutes" — server checks match duration from the relay's certified result. | **High** — server validates against its own records |
-| **Multiplayer in-game** | Relay attests that the achievement trigger fired during a live match (the trigger is part of the deterministic sim, so the relay can verify by running headless). Alternatively, both clients attest the trigger fired (same as match outcome consensus). | **High** — relay-attested or consensus-verified |
-| **Single-player (online)** | Player submits a replay file. Community server can fast-forward the replay (deterministic sim) to verify the achievement condition was met. Expensive but possible. | **Medium** — replay-verified, but replay submission is voluntary |
-| **Single-player (offline)** | Player claims the achievement with no server involvement. When reconnecting, the claim can be submitted with the replay for retroactive verification. Community policy decides whether to accept: casual communities may accept on trust, competitive communities may require replay proof. | **Low** — self-reported unless replay-backed |
+| Context                     | How the server validates                                                                                                                                                                                                                                                                    | Trust level                                                      |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| **Multiplayer match**       | Achievement condition cross-referenced with `CertifiedMatchResult` data. E.g., "Win 50 matches" — server counts its own signed match SCRs for this player. "Win under 5 minutes" — server checks match duration from the relay's certified result.                                          | **High** — server validates against its own records              |
+| **Multiplayer in-game**     | Relay attests that the achievement trigger fired during a live match (the trigger is part of the deterministic sim, so the relay can verify by running headless). Alternatively, both clients attest the trigger fired (same as match outcome consensus).                                   | **High** — relay-attested or consensus-verified                  |
+| **Single-player (online)**  | Player submits a replay file. Community server can fast-forward the replay (deterministic sim) to verify the achievement condition was met. Expensive but possible.                                                                                                                         | **Medium** — replay-verified, but replay submission is voluntary |
+| **Single-player (offline)** | Player claims the achievement with no server involvement. When reconnecting, the claim can be submitted with the replay for retroactive verification. Community policy decides whether to accept: casual communities may accept on trust, competitive communities may require replay proof. | **Low** — self-reported unless replay-backed                     |
 
 The community server's policy for achievement signing is configurable per community:
 
@@ -7439,6 +7439,13 @@ The community server's policy for achievement signing is configurable per commun
 pub enum AchievementPolicy {
     /// Sign any achievement reported by the client (casual community).
     TrustClient,
+    /// Sign immediately, but any player can submit a fraud proof
+    /// (replay segment) to challenge. If the challenge verifies,
+    /// the achievement SCR is revoked via sequence-based revocation.
+    /// Inspired by Optimistic Rollup fraud proofs (Optimism, Arbitrum).
+    OptimisticWithChallenge {
+        challenge_window_hours: u32,  // default: 72
+    },
     /// Sign only achievements backed by a CertifiedMatchResult
     /// or relay attestation (competitive community).
     RequireRelayAttestation,
@@ -7448,7 +7455,11 @@ pub enum AchievementPolicy {
 }
 ```
 
-Most communities will use `RequireRelayAttestation` for multiplayer achievements and `TrustClient` for single-player achievements. The achievement SCR includes a `verification_level` field so viewers know how the achievement was validated.
+**`OptimisticWithChallenge` explained:** This policy borrows the core insight from Optimistic Rollups (Optimism, Arbitrum) in the Web3 ecosystem: execute optimistically (assume valid), and only do expensive verification if someone challenges. The server signs the achievement SCR immediately — same speed as `TrustClient`. But a challenge window opens (default 72 hours, configurable) during which any player who was in the same match can submit a **fraud proof**: a replay segment showing the achievement condition wasn't met. The community server fast-forwards the replay (deterministic sim — Invariant #1) to verify the challenge. If the challenge is valid, the achievement SCR is revoked via the existing sequence-based revocation mechanism. If no challenge arrives within the window, the achievement is final.
+
+In practice, most achievements are legitimate, so the challenge rate is near zero — the expensive replay verification almost never runs. This gives the speed of `TrustClient` with the security guarantees of `RequireReplayVerification`. The pattern works because IC's deterministic sim means any disputed claim can be objectively verified from the replay — there's no ambiguity about what happened.
+
+Most communities will use `RequireRelayAttestation` for multiplayer achievements and `TrustClient` or `OptimisticWithChallenge` for single-player achievements. The achievement SCR includes a `verification_level` field so viewers know how the achievement was validated. SCRs issued under `OptimisticWithChallenge` carry a `verification_level: "optimistic"` tag that upgrades to `"verified"` after the challenge window closes without dispute.
 
 **Player registration — identity binding and Sybil resistance:**
 
@@ -7491,24 +7502,24 @@ pub enum RegistrationPolicy {
 
 **Layer 5 — Community-specific policies (optional):**
 
-| Policy | Description | Use case |
-| --- | --- | --- |
-| **Email verification** | Player provides email, server sends confirmation link. One account per email. | Medium-security communities |
-| **Invite-only** | Existing members generate invite codes. New players must have a code. | Clan servers, private communities |
-| **Vouching** | An existing member in good standing (e.g., 100+ matches, no bans) vouches for the new player. If the new player cheats, the voucher's reputation is penalized too. | Competitive leagues |
-| **Probation period** | New accounts are marked "probationary" for their first N matches (e.g., 10). Probationary players can't play ranked, can't join "Verified only" rooms, and their achievements aren't signed until probation ends. | Balances accessibility with fraud prevention |
+| Policy                 | Description                                                                                                                                                                                                       | Use case                                     |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
+| **Email verification** | Player provides email, server sends confirmation link. One account per email.                                                                                                                                     | Medium-security communities                  |
+| **Invite-only**        | Existing members generate invite codes. New players must have a code.                                                                                                                                             | Clan servers, private communities            |
+| **Vouching**           | An existing member in good standing (e.g., 100+ matches, no bans) vouches for the new player. If the new player cheats, the voucher's reputation is penalized too.                                                | Competitive leagues                          |
+| **Probation period**   | New accounts are marked "probationary" for their first N matches (e.g., 10). Probationary players can't play ranked, can't join "Verified only" rooms, and their achievements aren't signed until probation ends. | Balances accessibility with fraud prevention |
 
 These policies are **per-community**. The Official IC Community might use `RequirePlatform(Steam) + Probation(10 matches)`. A clan server uses `RequireInvite`. A casual LAN community uses `Open`. IC doesn't impose a single registration policy — it provides the building blocks and lets community operators assemble the policy that fits their community's threat model.
 
 **Summary — what the server validates before signing each SCR type:**
 
-| SCR Type | Server validates... | Trust anchor |
-| --- | --- | --- |
-| Rating | Computed by the server itself from relay-certified match results | Server's own computation |
-| Match result | Relay-signed `CertifiedMatchResult` (both clients agreed on outcome) | Relay attestation |
-| Achievement (MP) | Cross-referenced with match data or relay attestation | Relay + server records |
-| Achievement (SP) | Replay verification (if required by community policy) | Replay determinism |
-| Membership | Registration policy (platform binding, invite, challenge, etc.) | Community policy |
+| SCR Type         | Server validates...                                                  | Trust anchor             |
+| ---------------- | -------------------------------------------------------------------- | ------------------------ |
+| Rating           | Computed by the server itself from relay-certified match results     | Server's own computation |
+| Match result     | Relay-signed `CertifiedMatchResult` (both clients agreed on outcome) | Relay attestation        |
+| Achievement (MP) | Cross-referenced with match data or relay attestation                | Relay + server records   |
+| Achievement (SP) | Replay verification (if required by community policy)                | Replay determinism       |
+| Membership       | Registration policy (platform binding, invite, challenge, etc.)      | Community policy         |
 
 The community server is **not** a rubber stamp. It is a **validation authority** that only signs credentials it can independently verify or that it computed itself. The player never provides the data that gets signed — the data comes from the relay, the ranking algorithm, or the community's own registration policy.
 
@@ -7943,10 +7954,10 @@ Why 8 bytes (64 bits) instead of GPG-style 4-byte short IDs? GPG short key IDs (
 
 Every community server has **two** Ed25519 keypairs, inspired by DNSSEC's Zone Signing Key (ZSK) / Key Signing Key (KSK) pattern:
 
-| Key | Purpose | Storage | Usage Frequency |
-| --- | --- | --- | --- |
-| **Signing Key (SK)** | Signs all day-to-day SCRs (ratings, matches, achievements) | On the server, encrypted at rest | Every match result, every rating update |
-| **Recovery Key (RK)** | Signs key rotation records and emergency revocations only | **Offline** — operator saves it, never stored on the server | Rare: only for key rotation or compromise recovery |
+| Key                   | Purpose                                                    | Storage                                                     | Usage Frequency                                    |
+| --------------------- | ---------------------------------------------------------- | ----------------------------------------------------------- | -------------------------------------------------- |
+| **Signing Key (SK)**  | Signs all day-to-day SCRs (ratings, matches, achievements) | On the server, encrypted at rest                            | Every match result, every rating update            |
+| **Recovery Key (RK)** | Signs key rotation records and emergency revocations only  | **Offline** — operator saves it, never stored on the server | Rare: only for key rotation or compromise recovery |
 
 **Why two keys?** A single-key system has a catastrophic failure mode: if the key is lost, the community dies (no way to rotate to a new key). If the key is stolen, the attacker can forge credentials *and* the operator can't prove they're the real owner (both parties have the same key). The two-key pattern solves both:
 - **Key loss:** Operator uses the RK (stored offline) to sign a rotation to a new SK. Community survives.
@@ -7993,13 +8004,13 @@ The RK private key is shown exactly once during `ic community init`. The server 
 
 **Key backup and retrieval:**
 
-| Operation | Command | What It Does |
-| --- | --- | --- |
-| Export SK (encrypted) | `ic community export-signing-key` | Exports the SK private key in an encrypted file (AEAD, operator passphrase). For backup or server migration. |
-| Import SK | `ic community import-signing-key <file>` | Restores the SK from an encrypted export. For server migration or disaster recovery. |
-| Rotate SK (voluntary) | `ic community rotate-signing-key` | Generates a new SK, signs a rotation record with the old SK: "old_SK → new_SK". Graceful, no disruption. |
-| Emergency rotation (SK lost/stolen) | `ic community emergency-rotate --recovery-key <rk>` | Generates a new SK, signs a rotation record with the RK: "RK revokes old_SK, authorizes new_SK". The only operation that uses the RK. |
-| Regenerate RK | `ic community regenerate-recovery-key --recovery-key <old_rk>` | Generates a new RK, signs a rotation record: "old_RK → new_RK". The old RK authorizes the new one. |
+| Operation                           | Command                                                        | What It Does                                                                                                                          |
+| ----------------------------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| Export SK (encrypted)               | `ic community export-signing-key`                              | Exports the SK private key in an encrypted file (AEAD, operator passphrase). For backup or server migration.                          |
+| Import SK                           | `ic community import-signing-key <file>`                       | Restores the SK from an encrypted export. For server migration or disaster recovery.                                                  |
+| Rotate SK (voluntary)               | `ic community rotate-signing-key`                              | Generates a new SK, signs a rotation record with the old SK: "old_SK → new_SK". Graceful, no disruption.                              |
+| Emergency rotation (SK lost/stolen) | `ic community emergency-rotate --recovery-key <rk>`            | Generates a new SK, signs a rotation record with the RK: "RK revokes old_SK, authorizes new_SK". The only operation that uses the RK. |
+| Regenerate RK                       | `ic community regenerate-recovery-key --recovery-key <old_rk>` | Generates a new RK, signs a rotation record: "old_RK → new_RK". The old RK authorizes the new one.                                    |
 
 #### Key Rotation (Voluntary)
 
@@ -8069,12 +8080,12 @@ Central revocation authorities (CRLs, OCSP) require central infrastructure — e
 
 Arguments for expiry (and why they don't apply):
 
-| Argument | Counterpoint |
-| --- | --- |
-| "Limits damage from silent compromise" | SCRs already have per-record `expires_at` (7 days default for ratings). A silently compromised key can only forge SCRs that expire in a week. Voluntary key rotation provides the same benefit without forced expiry. |
-| "Forces rotation hygiene" | IC's community operators are hobbyists running $5 VPSes. Forced expiry creates an operational burden that causes more harm (communities dying from forgotten renewal) than good. Let rotation be voluntary. |
-| "TLS certs expire" | TLS operates in a CA trust model with automated renewal (ACME/Let's Encrypt). IC has no CA and no automated renewal infrastructure. The analogy doesn't hold. |
-| "What if the operator disappears?" | SCR `expires_at` handles this naturally. If the server goes offline, rating SCRs expire within 7 days and become un-refreshable. The community dies gracefully — players' old match/achievement SCRs (which have `expires_at: never`) remain verifiable, but ratings go stale. No key expiry needed. |
+| Argument                               | Counterpoint                                                                                                                                                                                                                                                                                         |
+| -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| "Limits damage from silent compromise" | SCRs already have per-record `expires_at` (7 days default for ratings). A silently compromised key can only forge SCRs that expire in a week. Voluntary key rotation provides the same benefit without forced expiry.                                                                                |
+| "Forces rotation hygiene"              | IC's community operators are hobbyists running $5 VPSes. Forced expiry creates an operational burden that causes more harm (communities dying from forgotten renewal) than good. Let rotation be voluntary.                                                                                          |
+| "TLS certs expire"                     | TLS operates in a CA trust model with automated renewal (ACME/Let's Encrypt). IC has no CA and no automated renewal infrastructure. The analogy doesn't hold.                                                                                                                                        |
+| "What if the operator disappears?"     | SCR `expires_at` handles this naturally. If the server goes offline, rating SCRs expire within 7 days and become un-refreshable. The community dies gracefully — players' old match/achievement SCRs (which have `expires_at: never`) remain verifiable, but ratings go stale. No key expiry needed. |
 
 The correct analogy is SSH host keys (never expire, TOFU model) and PGP keys (no forced expiry, voluntary rotation or revocation), not TLS certificates.
 
@@ -8124,15 +8135,77 @@ The `key_rotations` table provides an audit trail: the client can verify the ent
 
 Revocations are distinct from key rotations. Revocations invalidate a specific player's credentials. Key rotations replace the community's signing key. Both use signed records; they solve different problems.
 
+#### Social Recovery (Optional, for Large Communities)
+
+The two-key system has one remaining single point of failure: the RK itself. If the sole operator loses the RK private key (hardware failure, lost USB drive) AND the SK is also compromised, the community is dead. For small clan servers this is acceptable — the operator is one person who backs up their key. For large communities (1,000+ members, years of match history), the stakes are higher.
+
+**Social recovery** eliminates this single point by distributing the RK across multiple trusted people using **Shamir's Secret Sharing** (SSS). Instead of one person holding the RK, the community designates N **recovery guardians** — trusted community members who each hold a shard. A threshold of K shards (e.g., 3 of 5) is required to reconstruct the RK and sign an emergency rotation.
+
+This pattern comes from Ethereum's account abstraction ecosystem (ERC-4337, Argent wallet, Vitalik Buterin's 2021 social recovery proposal), adapted for IC's community key model. The Web3 ecosystem spent years refining social recovery UX because key loss destroyed real value — IC benefits from those lessons without needing a blockchain.
+
+**Setup:**
+
+```
+$ ic community setup-social-recovery --guardians 5 --threshold 3
+
+  Social Recovery Setup
+  ─────────────────────
+  Your Recovery Key will be split into 5 shards.
+  Any 3 shards can reconstruct it.
+
+  Enter guardian identities (player keys or community member names):
+    Guardian 1: alice   (player_key: 3f7a2b91...)
+    Guardian 2: bob     (player_key: 9c4d17e3...)
+    Guardian 3: carol   (player_key: a1b2c3d4...)
+    Guardian 4: dave    (player_key: e5f6a7b8...)
+    Guardian 5: eve     (player_key: 12345678...)
+
+  Generating shards...
+  Each guardian will receive their shard encrypted to their player key.
+  Shards are transmitted via the community server's secure channel.
+
+  ⚠️  Store the guardian list securely. You need 3 of these 5 people
+     to recover your community if the Recovery Key is lost.
+
+  [Confirm and distribute shards]
+```
+
+**How it works:**
+
+1. The RK private key is split into N shards using Shamir's Secret Sharing over the Ed25519 scalar field.
+2. Each shard is encrypted to the guardian's player public key (X25519 key agreement + AEAD) and transmitted.
+3. Guardians store their shard locally (in their player credential SQLite, encrypted at rest).
+4. The operator's server stores only the guardian list (public keys + shard indices) — never the shards themselves.
+5. To perform emergency rotation, K guardians each decrypt and submit their shard to a recovery coordinator (can be the operator's new server, or any guardian). The coordinator reconstructs the RK, signs the rotation record, and discards the reconstructed key.
+6. After recovery, new shards should be generated (the old shards reconstructed the old RK; a fresh `setup-social-recovery` generates shards for a new RK).
+
+**Guardian management:**
+
+| Operation              | Command                                                                                   |
+| ---------------------- | ----------------------------------------------------------------------------------------- |
+| Set up social recovery | `ic community setup-social-recovery --guardians N --threshold K`                          |
+| Replace a guardian     | `ic community replace-guardian <old> <new> --recovery-key <rk>` (requires RK to re-shard) |
+| Check guardian status  | `ic community guardian-status` (pings guardians, verifies they still hold valid shards)   |
+| Initiate recovery      | `ic community social-recover` (collects K shards, reconstructs RK, rotates SK)            |
+
+**Guardian liveness:** `ic community guardian-status` periodically checks (opt-in, configurable interval) whether guardians are still reachable and their shards are intact (guardians sign a challenge with their player key; possession of the shard is verified via a zero-knowledge proof of shard validity, not by revealing the shard). If a guardian is unreachable for 90+ days, the operator is warned: "Guardian dave has been unreachable for 94 days. Consider replacing them."
+
+**Why not just use N independent RKs?** With N independent RKs, any single compromise recovers the full key — the security level degrades as N increases. With Shamir's threshold scheme, compromising K-1 guardians reveals *zero information* about the RK. This is information-theoretically secure, not just computationally secure.
+
+**Rust crate:** `sharks` (Shamir's Secret Sharing, permissively licensed, well-audited). Alternatively `vsss-rs` (Verifiable Secret Sharing — adds the property that each guardian can verify their shard is valid without learning the secret, preventing a malicious dealer from distributing fake shards).
+
+**Phase:** Social recovery is optional and ships in Phase 6a. The two-key system (Phase 5) works without it. Communities that want social recovery enable it as an upgrade — it doesn't change any existing key management flows, just adds a recovery path.
+
 #### Summary: Failure Mode Comparison
 
-| Scenario | Single-Key System | IC Two-Key System |
-| --- | --- | --- |
-| SK lost, operator has no backup | Community dead. All credentials permanently unverifiable. Players start over. | Operator uses RK to rotate to new SK. Community survives. All existing SCRs remain valid. |
-| SK stolen | Attacker can forge credentials AND operator can't prove legitimacy (both hold same key). Community dead. | Operator uses RK to revoke stolen SK, rotate to new SK. Attacker locked out. Community recovers. |
-| SK stolen + operator doesn't notice for weeks | Unlimited forgery window. No recovery. | SCR `expires_at` limits forgery to 7-day windows. RK-signed rotation locks out attacker retroactively. |
-| Both SK and RK lost | — | Community dead. But this requires losing both an online server key AND an offline backup. Extraordinary negligence. |
-| RK stolen (but SK is fine) | — | No immediate impact — RK isn't used for day-to-day operations. Operator should regenerate RK immediately: `ic community regenerate-recovery-key`. |
+| Scenario                                      | Single-Key System                                                                                        | IC Two-Key System                                                                                                                                 | IC Two-Key + Social Recovery                                                              |
+| --------------------------------------------- | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| SK lost, operator has no backup               | Community dead. All credentials permanently unverifiable. Players start over.                            | Operator uses RK to rotate to new SK. Community survives. All existing SCRs remain valid.                                                         | Same as two-key.                                                                          |
+| SK stolen                                     | Attacker can forge credentials AND operator can't prove legitimacy (both hold same key). Community dead. | Operator uses RK to revoke stolen SK, rotate to new SK. Attacker locked out. Community recovers.                                                  | Same as two-key.                                                                          |
+| SK stolen + operator doesn't notice for weeks | Unlimited forgery window. No recovery.                                                                   | SCR `expires_at` limits forgery to 7-day windows. RK-signed rotation locks out attacker retroactively.                                            | Same as two-key.                                                                          |
+| Both SK and RK lost                           | —                                                                                                        | Community dead. But this requires losing both an online server key AND an offline backup. Extraordinary negligence.                               | **K guardians reconstruct RK → rotate SK. Community survives.** This is the upgrade.      |
+| Operator disappears (burnout, health, life)   | Community dead.                                                                                          | Community dead (unless operator shared RK with a trusted successor).                                                                              | **K guardians reconstruct RK → transfer operations to new operator. Community survives.** |
+| RK stolen (but SK is fine)                    | —                                                                                                        | No immediate impact — RK isn't used for day-to-day operations. Operator should regenerate RK immediately: `ic community regenerate-recovery-key`. | Same as two-key — but after regeneration, resharding is recommended.                      |
 
 ### Cross-Community Interoperability
 
@@ -8142,6 +8215,18 @@ Communities are independent ranking domains — a 1500 rating on "Official IC" m
 - "I have 500+ matches on the official community" — provable by presenting signed match SCRs.
 - "I achieved 'Iron Curtain' achievement on Official IC" — provable by presenting the signed achievement SCR.
 - A tournament community can require "minimum 50 rated matches on any community with verifiable SCRs" as an entry requirement.
+
+**Cross-domain credential principle:** Cross-community credential presentation is architecturally a "bridge" — data signed in Domain A is presented in Domain B. The most expensive lessons in Web3 were bridge hacks (Ronin $625M, Wormhole $325M, Nomad $190M), all caused by trusting cross-domain data without sufficient validation at the boundary. IC's design is already better than most Web3 bridges (each verifier independently checks Ed25519 signatures locally, no intermediary trusted), but the following principle should be explicit:
+
+> **Cross-domain credentials are read-only.** Community Y can *display* and *verify* credentials signed by Community X, but must never *update its own state* based on them without independent re-verification. If Community Y grants a privilege based on Community X membership (e.g., "skip probation if you have 100+ matches on Official IC"), it must re-verify the SCR at the moment the privilege is exercised — not cache the check from an earlier session. Stale cached trust checks are the root cause of bridge exploits: the external state changed (key rotated, credential revoked), but the receiving domain still trusted its cached approval.
+
+In practice, this means:
+- Trust requirements (D053 `TrustRequirement`) re-verify SCRs on every room join, not once per session.
+- Matchmaking checks re-verify rating SCRs before each match, not at queue entry.
+- Tournament entry requirements re-verify all credential conditions at match start, not at registration.
+- The `expires_at` field on SCRs (default 7 days for ratings) provides a natural staleness bound, but point-of-use re-verification catches revocations within the validity window.
+
+This costs one Ed25519 signature check (~65μs) per verification — negligible even at thousands of verifications per second.
 
 **Leaderboards:**
 - Each community maintains its own leaderboard, compiled from the rating SCRs it has issued.
@@ -8739,12 +8824,12 @@ Joined communities are automatically trusted (you trust the community you chose 
 
 When viewing another player's profile, stats from trusted vs. untrusted communities are visually distinct:
 
-| Badge | Meaning | Display |
-| --- | --- | --- |
-| ✅ | Signature valid + community in your trust list | Full color, prominent |
-| ⚠️ | Signature valid + community NOT in your trust list | Dimmed, italic, "Untrusted community" tooltip |
-| ❌ | Signature verification failed | Red, strikethrough, "Verification failed" warning |
-| — | No signed data (player-claimed) | Gray, no badge |
+| Badge | Meaning                                            | Display                                           |
+| ----- | -------------------------------------------------- | ------------------------------------------------- |
+| ✅     | Signature valid + community in your trust list     | Full color, prominent                             |
+| ⚠️     | Signature valid + community NOT in your trust list | Dimmed, italic, "Untrusted community" tooltip     |
+| ❌     | Signature verification failed                      | Red, strikethrough, "Verification failed" warning |
+| —     | No signed data (player-claimed)                    | Gray, no badge                                    |
 
 This lets players immediately distinguish between "1800 rated on a community I trust" and "1800 rated on some random community I've never heard of." The profile doesn't hide untrusted data — it shows it clearly labeled so the viewer can make their own judgment.
 

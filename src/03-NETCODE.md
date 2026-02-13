@@ -240,6 +240,45 @@ Every tick, each client hashes their sim state. But a full `state_hash()` over t
 
 The relay server (or P2P peers) compares hashes. On mismatch → desync detected at a specific tick. Because the sim is snapshottable (D010), dump full state and diff to pinpoint exact divergence — entity by entity, component by component.
 
+#### Merkle Tree State Hashing (Phase 2+)
+
+A flat `state_hash()` tells you *that* state diverged, but not *where*. Diagnosing which entity or subsystem diverged requires a full state dump and diff — expensive for large games (500+ units, ~100KB+ of serialized state). IC addresses this by structuring the state hash as a **Merkle tree**, enabling binary search over *state within a tick* — not just binary search over ticks (which is what OpenTTD's snapshot bisection already provides).
+
+The Merkle tree partitions ECS state by archetype (or configurable groupings — e.g., per-player, per-subsystem). Each leaf is the hash of one archetype's serialized components. Interior nodes are `SHA-256(left_child || right_child)`. The root hash is the `state_hash()` used for sync comparison. This costs the same as a flat hash (every byte is still hashed once) — the tree structure is overhead-free for the common case where hashes match.
+
+When hashes *don't* match, the tree enables **logarithmic desync localization**:
+
+1. Clients exchange the Merkle root (same as today — one `u64` per sync frame).
+2. On mismatch, clients exchange interior node hashes at depth 1 (2 hashes).
+3. Whichever subtree differs, descend into it — exchange its children (2 more hashes).
+4. Repeat until reaching a leaf: the specific archetype (or entity group) that diverged.
+
+For a sim with 32 archetypes, this requires ~5 round trips of 2 hashes each (10 hashes total, ~320 bytes) instead of a full state dump (~100KB+). The desync report then contains the exact archetype and a compact diff of its components — actionable information, not a haystack.
+
+```rust
+/// Merkle tree over ECS state for efficient desync localization.
+pub struct StateMerkleTree {
+    /// Leaf hashes, one per archetype or entity group.
+    pub leaves: Vec<(ArchetypeLabel, u64)>,
+    /// Interior node hashes (computed bottom-up).
+    pub nodes: Vec<u64>,
+    /// Root hash — this is the state_hash() used for sync comparison.
+    pub root: u64,
+}
+
+impl StateMerkleTree {
+    /// Returns the path of hashes needed to prove a specific leaf's
+    /// membership in the tree. Used for selective verification.
+    pub fn proof_path(&self, leaf_index: usize) -> Vec<u64> { /* ... */ }
+}
+```
+
+**This pattern comes from blockchain state tries** (Ethereum's Patricia-Merkle trie, Bitcoin's Merkle trees for transaction verification), adapted for game state. The original insight — that a tree structure over hashed state enables O(log N) divergence localization without transmitting full state — is one of the few genuinely useful ideas to emerge from the Web3 ecosystem. IC uses it for desync debugging, not consensus.
+
+**Selective replay verification** also benefits: a viewer can verify that a specific tick's state is authentic by checking the Merkle path from the tick's root hash to the replay's signature chain — without replaying the entire game. See `05-FORMATS.md` § Signature Chain for how this integrates with relay-signed replays.
+
+**Phase:** Flat `state_hash()` ships in Phase 2 (sufficient for detection). Merkle tree structure added in Phase 2+ when desync diagnosis tooling is built. The tree is a strict upgrade — same root hash, more information on mismatch.
+
 #### Debug Levels (from OpenTTD)
 
 Desync diagnosis uses configurable debug levels. Each level adds overhead, so higher levels are only enabled when actively hunting a bug:
