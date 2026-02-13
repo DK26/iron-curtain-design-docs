@@ -39,15 +39,19 @@ Ordered by impact. Each layer works on a single core. Only the top layer require
 
 Better algorithms on one core beat bad algorithms on eight cores. This is where 90% of the performance comes from.
 
-### Pathfinding: Flowfields Replace Per-Unit A* (RA1 `Pathfinder` Implementation)
+### Pathfinding: Multi-Layer Hybrid Replaces Per-Unit A* (RA1 `Pathfinder` Implementation)
 
-The RA1 game module implements the `Pathfinder` trait with grid-based flowfields. When 50 units move to the same area, OpenRA computes 50 separate A* paths.
+The RA1 game module implements the `Pathfinder` trait with `IcPathfinder` — a multi-layer hybrid combining JPS, flow field tiles, and local avoidance (see `research/pathfinding-ic-default-design.md`). The gains come from multiple layers:
+
+**JPS vs. A* (small groups, <8 units):** JPS (Jump Point Search) prunes symmetric paths that A* explores redundantly. On uniform-cost grids (typical of open terrain in RA), JPS explores 10–100× fewer nodes than A*.
+
+**Flow field tiles vs. per-unit A* (mass movement, ≥8 units sharing destination):** When 50 units move to the same area, OpenRA computes 50 separate A* paths.
 
 ```
 OpenRA (per-unit A*):
   50 units × ~200 nodes explored × ~10 ops/node = ~100,000 operations
 
-Flowfield:
+Flow field tile:
   1 field × ~2000 cells × ~5 ops/cell              = ~10,000 operations
   50 units × 1 lookup each                          =       50 operations
   Total                                             = ~10,050 operations
@@ -55,7 +59,9 @@ Flowfield:
 10x reduction. No threading involved.
 ```
 
-The 51st unit ordered to the same area costs zero — the field already exists. Flowfields amortize across all units sharing a destination.
+The 51st unit ordered to the same area costs zero — the field already exists. Flow field tiles amortize across all units sharing a destination. The adaptive threshold (configurable, default 8 units) ensures flow fields are only computed when the amortization benefit exceeds the generation cost.
+
+**Hierarchical sector graph:** O(1) reachability check (flood-fill domain IDs) eliminates pathfinding for unreachable destinations entirely. Coarse sector-level routing reduces the search space for detailed pathfinding.
 
 ### Spatial Indexing: Grid Hash Replaces Brute-Force Range Checks (RA1 `SpatialIndex` Implementation)
 
@@ -72,7 +78,7 @@ A spatial hash divides the world into buckets. Each entity registers in its buck
 
 ### Hierarchical Pathfinding: Coarse Then Fine
 
-Break the map into ~32x32 cell chunks. Path between chunks first (few nodes, fast), then path within the current chunk only. Most of the map is never pathfinded at all. Units approaching a new chunk compute the next fine-grained path just before entering.
+`IcPathfinder`'s Layer 2 breaks the map into ~32×32 cell sectors. Path between sectors first (few nodes, fast), then path within the current sector only. Most of the map is never pathfinded at all. Units approaching a new sector compute the next fine-grained path just before entering. Combined with JPS (Layer 3), this reduces pathfinding cost by orders of magnitude compared to flat A*.
 
 ## Layer 2: Cache-Friendly Data Layout
 

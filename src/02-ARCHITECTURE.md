@@ -1141,15 +1141,15 @@ impl<N: NetworkModel, I: InputSource> GameLoop<N, I> {
 
 ## Pathfinding & Spatial Queries
 
-**Decision:** Pathfinding and spatial queries are abstracted behind traits — like `NetworkModel`. Grid-based flowfields are the first implementation (RA1 game module). The engine core has no hardcoded assumption about grids vs. continuous space.
+**Decision:** Pathfinding and spatial queries are abstracted behind traits — like `NetworkModel`. A multi-layer hybrid pathfinder is the first implementation (RA1 game module). The engine core has no hardcoded assumption about grids vs. continuous space.
 
-OpenRA uses standard A* which struggles with large unit groups. Hierarchical pathfinding or flowfields handle mass unit movement far better and are the right choice for grid-based terrain. But pathfinding is a game-module concern, not an engine-core assumption.
+OpenRA uses hierarchical A* which struggles with large unit groups and lacks local avoidance. A multi-layer approach (hierarchical sectors + JPS/flowfield tiles + ORCA-lite avoidance) handles both small-group and mass unit movement. But pathfinding is a game-module concern, not an engine-core assumption.
 
 ### Pathfinder Trait
 
 ```rust
 /// Game modules implement this to provide pathfinding.
-/// Grid-based games use flowfields/hierarchical A*.
+/// Grid-based games use multi-layer hybrid (JPS + flowfield tiles + avoidance).
 /// Continuous-space games would use navmesh.
 /// The engine core calls this trait — never a specific algorithm.
 pub trait Pathfinder: Send + Sync {
@@ -1189,20 +1189,20 @@ pub trait SpatialIndex: Send + Sync {
 
 This is the same philosophy as `WorldPos.z` — costs near-zero now, prevents rewrites later:
 
-| Abstraction       | Costs Now                              | Saves Later                                                |
-| ----------------- | -------------------------------------- | ---------------------------------------------------------- |
-| `WorldPos.z`      | One extra `i32` per position           | RA2/TS elevation works without restructuring coordinates   |
-| `NetworkModel`    | One trait + `LocalNetwork` impl        | Multiplayer netcode slots in without touching sim          |
-| `InputSource`     | One trait + mouse/keyboard impl        | Touch/gamepad slot in without touching game loop           |
-| `Pathfinder`      | One trait + grid flowfield impl        | Navmesh pathfinding slots in without touching sim          |
-| `SpatialIndex`    | One trait + spatial hash impl          | BVH/R-tree slots in without touching combat/targeting      |
-| `FogProvider`     | One trait + radius fog impl            | Elevation fog, fog-authoritative server slot in            |
-| `DamageResolver`  | One trait + standard pipeline impl     | Shield-first/sub-object damage models slot in              |
-| `AiStrategy`      | One trait + personality-driven AI impl | Neural/planning/custom AI slots in without forking ic-ai   |
-| `RankingProvider` | One trait + Glicko-2 impl              | Community servers choose their own rating algorithm        |
-| `OrderValidator`  | One trait + standard validation impl   | Engine enforces validation; modules can't skip it silently |
+| Abstraction       | Costs Now                                 | Saves Later                                                |
+| ----------------- | ----------------------------------------- | ---------------------------------------------------------- |
+| `WorldPos.z`      | One extra `i32` per position              | RA2/TS elevation works without restructuring coordinates   |
+| `NetworkModel`    | One trait + `LocalNetwork` impl           | Multiplayer netcode slots in without touching sim          |
+| `InputSource`     | One trait + mouse/keyboard impl           | Touch/gamepad slot in without touching game loop           |
+| `Pathfinder`      | One trait + multi-layer hybrid impl first | Navmesh pathfinding slots in; RA1 ships 3 impls (D045)     |
+| `SpatialIndex`    | One trait + spatial hash impl             | BVH/R-tree slots in without touching combat/targeting      |
+| `FogProvider`     | One trait + radius fog impl               | Elevation fog, fog-authoritative server slot in            |
+| `DamageResolver`  | One trait + standard pipeline impl        | Shield-first/sub-object damage models slot in              |
+| `AiStrategy`      | One trait + personality-driven AI impl    | Neural/planning/custom AI slots in without forking ic-ai   |
+| `RankingProvider` | One trait + Glicko-2 impl                 | Community servers choose their own rating algorithm        |
+| `OrderValidator`  | One trait + standard validation impl      | Engine enforces validation; modules can't skip it silently |
 
-The RA1 game module registers `GridFlowfieldPathfinder` and `GridSpatialHash`. A future continuous-space game module registers `NavmeshPathfinder` and `BvhSpatialIndex`. The sim core calls the trait — it never knows which one is running. The same principle applies to fog, damage, AI, ranking, and validation — see D041 in `09-DECISIONS.md` for the full trait definitions and rationale.
+The RA1 game module registers three `Pathfinder` implementations — `RemastersPathfinder`, `OpenRaPathfinder`, and `IcPathfinder` (D045) — plus `GridSpatialHash`. The active pathfinder is selected via experience profiles (D045). A future continuous-space game module registers `NavmeshPathfinder` and `BvhSpatialIndex`. The sim core calls the trait — it never knows which one is running. The same principle applies to fog, damage, AI, ranking, and validation — see D041 in `09-DECISIONS.md` for the full trait definitions and rationale.
 
 ## Platform Portability
 
@@ -1552,7 +1552,7 @@ pub trait GameModule {
     /// Return the ordered system pipeline for this game's simulation tick.
     fn system_pipeline(&self) -> Vec<Box<dyn System>>;
 
-    /// Provide the pathfinding implementation (grid flowfields, navmesh, etc.).
+    /// Provide the pathfinding implementation (selected by lobby/experience profile, D045).
     fn pathfinder(&self) -> Box<dyn Pathfinder>;
 
     /// Provide the spatial index implementation (spatial hash, BVH, etc.).
@@ -1580,18 +1580,18 @@ pub trait GameModule {
 
 ### What the engine provides (game-agnostic)
 
-| Layer           | Game-Agnostic                                                                        | Game-Module-Specific                                                         |
-| --------------- | ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------- |
-| **Sim core**    | `Simulation`, `apply_tick()`, `snapshot()`, state hashing, order validation pipeline | Components, systems, rules, resource types                                   |
-| **Positions**   | `WorldPos { x, y, z }`                                                               | `CellPos` (grid-based modules), coordinate mapping, z usage                  |
-| **Pathfinding** | `Pathfinder` trait, `SpatialIndex` trait                                             | Grid flowfields (RA1), navmesh (future), spatial hash vs BVH                 |
-| **Fog of war**  | `FogProvider` trait                                                                  | Radius fog (RA1), elevation LOS (RA2/TS), no fog (sandbox)                   |
-| **Damage**      | `DamageResolver` trait                                                               | Standard pipeline (RA1), shield-first (RA2), sub-object (Generals)           |
-| **Validation**  | `OrderValidator` trait (engine-enforced)                                             | Per-module validation rules (ownership, affordability, placement, etc.)      |
-| **Networking**  | `NetworkModel` trait, relay server, lockstep, replays                                | `PlayerOrder` variants (game-specific commands)                              |
-| **Rendering**   | Camera, sprite batching, UI framework; post-FX pipeline available to modders         | Sprite renderer (RA1), voxel renderer (RA2), mesh renderer (3D mod/future)   |
-| **Modding**     | YAML loader, Lua runtime, WASM sandbox, workshop                                     | Rule schemas, API surface exposed to scripts                                 |
-| **Formats**     | Archive loading, format registry                                                     | `.mix`/`.shp` (RA1), `.vxl`/`.hva` (RA2), `.big`/`.w3d` (future), map format |
+| Layer           | Game-Agnostic                                                                        | Game-Module-Specific                                                              |
+| --------------- | ------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------- |
+| **Sim core**    | `Simulation`, `apply_tick()`, `snapshot()`, state hashing, order validation pipeline | Components, systems, rules, resource types                                        |
+| **Positions**   | `WorldPos { x, y, z }`                                                               | `CellPos` (grid-based modules), coordinate mapping, z usage                       |
+| **Pathfinding** | `Pathfinder` trait, `SpatialIndex` trait                                             | Remastered/OpenRA/IC flowfield (RA1, D045), navmesh (future), spatial hash vs BVH |
+| **Fog of war**  | `FogProvider` trait                                                                  | Radius fog (RA1), elevation LOS (RA2/TS), no fog (sandbox)                        |
+| **Damage**      | `DamageResolver` trait                                                               | Standard pipeline (RA1), shield-first (RA2), sub-object (Generals)                |
+| **Validation**  | `OrderValidator` trait (engine-enforced)                                             | Per-module validation rules (ownership, affordability, placement, etc.)           |
+| **Networking**  | `NetworkModel` trait, relay server, lockstep, replays                                | `PlayerOrder` variants (game-specific commands)                                   |
+| **Rendering**   | Camera, sprite batching, UI framework; post-FX pipeline available to modders         | Sprite renderer (RA1), voxel renderer (RA2), mesh renderer (3D mod/future)        |
+| **Modding**     | YAML loader, Lua runtime, WASM sandbox, workshop                                     | Rule schemas, API surface exposed to scripts                                      |
+| **Formats**     | Archive loading, format registry                                                     | `.mix`/`.shp` (RA1), `.vxl`/`.hva` (RA2), `.big`/`.w3d` (future), map format      |
 
 ### RA2 Extension Points
 

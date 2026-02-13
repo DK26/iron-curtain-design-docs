@@ -1907,7 +1907,7 @@ Each actor reference exposes properties matching its components (`.Health`, `.Lo
 
 **Iron Curtain status:** Fully designed in `02-ARCHITECTURE.md` § "Extended Gameplay Systems — Debug / Developer Tools":
 - DeveloperMode flags: `instant_build`, `free_units`, `reveal_map`, `unlimited_power`, `invincibility`, `path_debug`, `combat_debug`
-- Debug overlays via `bevy_egui`: weapon ranges, target lines, flowfield visualization, path costs, damage numbers, spatial index grid
+- Debug overlays via `bevy_egui`: weapon ranges, target lines, pathfinder visualization (JPS paths, flow field tiles, sector graph), path costs, damage numbers, spatial index grid
 - Performance profiler: per-system tick time, entity count, memory usage, ECS archetype stats
 - Asset browser panel: preview sprites with palette application, play sounds, inspect YAML definitions
 - All debug features compile-gated behind `#[cfg(feature = "dev-tools")]` — zero cost in release builds

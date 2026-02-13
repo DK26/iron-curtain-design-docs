@@ -195,13 +195,13 @@ Every major design decision, with rationale and alternatives considered. Referen
 
 ---
 
-## D013: Pathfinding — Trait-Abstracted, Grid Flowfields First
+## D013: Pathfinding — Trait-Abstracted, Multi-Layer Hybrid First
 
-**Decision:** Pathfinding and spatial queries are abstracted behind traits (`Pathfinder`, `SpatialIndex`) in the engine core. The RA1 game module implements them with grid-based flowfields and spatial hash. The engine core never calls grid-specific functions directly.
+**Decision:** Pathfinding and spatial queries are abstracted behind traits (`Pathfinder`, `SpatialIndex`) in the engine core. The RA1 game module implements them with a multi-layer hybrid pathfinder and spatial hash. The engine core never calls algorithm-specific functions directly.
 
 **Rationale:**
-- OpenRA uses basic A* which struggles with large unit groups
-- Hierarchical/flowfield pathfinding handles mass movement far better
+- OpenRA uses hierarchical A* which struggles with large unit groups and lacks local avoidance
+- A multi-layer approach (hierarchical sectors + JPS/flowfield tiles + local avoidance) handles both small and mass movement well
 - Grid-based implementations are the right choice for the isometric C&C family
 - But pathfinding is a *game module concern*, not an engine-core assumption
 - Abstracting behind a trait costs near-zero now (one trait, one impl) and prevents a rewrite if a future game module needs navmesh or any other spatial model
@@ -210,13 +210,13 @@ Every major design decision, with rationale and alternatives considered. Referen
 **Concrete design:**
 - `Pathfinder` trait: `request_path()`, `get_path()`, `is_passable()`, `invalidate_area()`
 - `SpatialIndex` trait: `query_range()`, `update_position()`, `remove()`
-- RA1 module registers `GridFlowfieldPathfinder` + `GridSpatialHash`
+- RA1 module registers `IcPathfinder` (primary) + `GridSpatialHash`; D045 adds `RemastersPathfinder` and `OpenRaPathfinder` as additional `Pathfinder` implementations for movement feel presets
 - All sim systems call the traits, never grid-specific data structures
 - See `02-ARCHITECTURE.md` § "Pathfinding & Spatial Queries" for trait definitions
 
 **Performance:** identical to hardcoding. Rust traits monomorphize — the trait call compiles to a direct function call when there's one implementation. Zero overhead.
 
-**What we build now:** Only grid flowfields and spatial hash. The traits exist from day one; alternative implementations are future work (by us or by the community).
+**What we build first:** `IcPathfinder` and `GridSpatialHash`. The traits exist from day one. `RemastersPathfinder` and `OpenRaPathfinder` are Phase 2 deliverables (D045) — ported from their respective GPL codebases.
 
 ---
 
@@ -362,7 +362,7 @@ pub trait GameModule: Send + Sync + 'static {
     /// List available balance presets (D019)
     fn balance_presets(&self) -> Vec<BalancePreset>;
 
-    /// List available experience profiles (D019 + D032 + D033)
+    /// List available experience profiles (D019 + D032 + D033 + D043 + D045)
     fn experience_profiles(&self) -> Vec<ExperienceProfile>;
 
     /// Default experience profile name
@@ -374,7 +374,7 @@ pub trait GameModule: Send + Sync + 'static {
 
 | Capability              | RA1 (ships Phase 2) | TD (ships Phase 3-4) | Generals-class (future) | Non-C&C (community) |
 | ----------------------- | ------------------- | -------------------- | ----------------------- | ------------------- |
-| Pathfinding             | Grid flowfields     | Grid flowfields      | Navmesh                 | Module-provided     |
+| Pathfinding             | Multi-layer hybrid  | Multi-layer hybrid   | Navmesh                 | Module-provided     |
 | Spatial index           | Spatial hash        | Spatial hash         | BVH/R-tree              | Module-provided     |
 | Fog of war              | Radius fog          | Radius fog           | Elevation LOS           | Module-provided     |
 | Damage resolution       | Standard pipeline   | Standard pipeline    | Sub-object targeting    | Module-provided     |
@@ -436,7 +436,7 @@ Profiles are selectable in the lobby. Players can customize individual settings 
 2. System execution order is registered per game module, not hardcoded in engine
 3. No game-specific enums in engine core — resource types, unit categories come from YAML / module registration
 4. Renderer uses a `Renderable` trait — sprite and voxel backends implement it equally
-5. Pathfinding uses a `Pathfinder` trait — grid flowfields are the RA1 impl; navmesh could slot in without touching sim
+5. Pathfinding uses a `Pathfinder` trait — `IcPathfinder` (multi-layer hybrid) is the RA1 impl; navmesh could slot in without touching sim
 6. Spatial queries use a `SpatialIndex` trait — spatial hash is the RA1 impl; BVH/R-tree could slot in without touching combat/targeting
 7. `GameModule` trait bundles component registration, system pipeline, pathfinder, spatial index, fog provider, damage resolver, order validator, format loaders, render backends, and experience profiles (see D041 for the 5 additional trait abstractions)
 8. `PlayerOrder` is extensible to game-specific commands
@@ -4866,64 +4866,103 @@ pub struct LlmPlayerAi {
 
 ### The Problem
 
-D013 provides the `Pathfinder` trait for pluggable pathfinding *algorithms* (grid flowfields vs. navmesh). D019 provides switchable *balance* values. But movement *feel* — how units navigate, group, avoid each other, and handle congestion — varies dramatically between Classic RA, OpenRA, and what modern pathfinding research enables. This is partially balance (unit speed values) but mostly *behavioral*: how the pathfinder handles collisions, how units merge into formations, how traffic jams resolve, and how responsive movement commands feel.
+D013 provides the `Pathfinder` trait for pluggable pathfinding *algorithms* (multi-layer hybrid vs. navmesh). D019 provides switchable *balance* values. But movement *feel* — how units navigate, group, avoid each other, and handle congestion — varies dramatically between Classic RA, OpenRA, and what modern pathfinding research enables. This is partially balance (unit speed values) but mostly *behavioral*: how the pathfinder handles collisions, how units merge into formations, how traffic jams resolve, and how responsive movement commands feel.
 
 ### Decision
 
-Ship **pathfinding behavior presets** as configurable parameters within a `Pathfinder` implementation, selectable alongside balance presets (D019) and AI presets (D043).
+Ship **pathfinding behavior presets** as separate `Pathfinder` trait implementations (D013), each sourced from the codebase it claims to reproduce. Presets are selectable alongside balance presets (D019) and AI presets (D043), bundled into experience profiles, and presented through progressive disclosure so casual players never see the word "pathfinding."
 
 ### Built-In Presets
 
-| Preset         | Movement Feel                                                                                                                                                           | Source                               |
-| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
-| **Classic RA** | Unit-level A*-like pathing, units block each other, congestion causes jams, no formation movement, units take wide detours around obstacles                             | EA Red Alert source code analysis    |
-| **OpenRA**     | Improved cell-based pathing, basic crush/push logic, units attempt to flow around blockages, locomotor-based speed modifiers, no formal formations                      | OpenRA pathfinding implementation    |
-| **IC Default** | Flowfield-based group movement, units flow around obstacles naturally, formation-aware movement, congestion handling via pressure diffusion, responsive repath on block | Open-source RTS research (see below) |
+| Preset         | Movement Feel                                                                                                                                                                 | Source                                             | `Pathfinder` Implementation |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- | --------------------------- |
+| **Classic RA** | Unit-level A*-like pathing, units block each other, congestion causes jams, no formation movement, units take wide detours around obstacles                                   | EA Remastered Collection source code (GPL v3)      | `RemastersPathfinder`       |
+| **OpenRA**     | Improved cell-based pathing, basic crush/push logic, units attempt to flow around blockages, locomotor-based speed modifiers, no formal formations                            | OpenRA pathfinding implementation (GPL v3)         | `OpenRaPathfinder`          |
+| **IC Default** | Multi-layer hybrid: hierarchical sectors for routing, JPS for small groups, flow field tiles for mass movement, ORCA-lite local avoidance, formation-aware group coordination | Open-source RTS research + IC original (see below) | `IcPathfinder`              |
+
+Each preset is a **distinct `Pathfinder` trait implementation**, not a parameterized variant of one algorithm. The Remastered pathfinder and OpenRA pathfinder use fundamentally different algorithms and produce fundamentally different movement behavior — parameterizing one to emulate the other would be an approximation at best and a lie at worst. The `Pathfinder` trait (D013) was designed for exactly this: slot in different implementations without touching sim code.
+
+**Why "IcPathfinder," not "IcFlowfieldPathfinder"?** Research revealed that no shipped RTS engine uses pure flowfields (except SupCom2/PA by the same team). Spring Engine tried flow maps and abandoned them. Independent developers (jdxdev) documented the same "ant line" failure with 100+ units. IC's default pathfinder is a multi-layer hybrid — flowfield tiles are one layer activated for large groups, not the system's identity. See `research/pathfinding-ic-default-design.md` for full architecture.
+
+**Why Remastered, not original RA source?** The Remastered Collection engine DLLs (GPL v3) contain the same pathfinding logic as original RA but with bug fixes and modernized C++ that's easier to port to Rust. The original RA source is also GPL and available for cross-reference. Both produce the same movement feel — the Remastered version is simply a cleaner starting point.
 
 ### IC Default Pathfinding — Research Foundation
 
-The IC Default preset synthesizes pathfinding approaches from across the open-source RTS ecosystem:
+The IC Default preset (`IcPathfinder`) is a five-layer hybrid architecture synthesizing pathfinding approaches from across the open-source RTS ecosystem and academic research. Full design: `research/pathfinding-ic-default-design.md`.
 
-- **Spring Engine (BAR/Zero-K)** — unit push/slide mechanics, formation movement, terrain cost awareness
-- **0 A.D.** — short-range pathfinding with long-range hierarchical planning, unit clearance handling for different unit sizes
-- **OpenDungeons / Warzone 2100** — hierarchical pathfinding, waypoint systems
-- **Supreme Commander (GPG research papers)** — flowfield pathfinding for mass unit movement, the gold standard for RTS group pathing
-- **Planetary Annihilation** — flowfield improvements, dynamic obstacle avoidance
-- **Academic research** — continuum crowds (Treuille et al.), flow tiles (Brewer & Sturtevant), potential fields for local avoidance
+**Layer 1 — Cost Field & Passability:** Per-cell movement cost (u8, 1–255) per locomotor type, inspired by EA Remastered terrain cost tables and 0 A.D.'s passability classes.
+
+**Layer 2 — Hierarchical Sector Graph:** Map divided into 32×32-cell sectors with portal connections between them. Flood-fill domain IDs for O(1) reachability checks. Inspired by OpenRA's hierarchical abstraction and HPA* research.
+
+**Layer 3 — Adaptive Detailed Pathfinding:** JPS (Jump Point Search) for small groups (<8 units) — 10–100× faster than A* on uniform-cost grids. Flow field tiles for mass movement (≥8 units sharing a destination). Weighted A* fallback for non-uniform terrain. LRU flow field cache. Inspired by 0 A.D.'s JPS, SupCom2's flow field tiles, Game AI Pro 2's JPS+ precomputed tables.
+
+**Layer 4 — ORCA-lite Local Avoidance:** Fixed-point deterministic collision avoidance based on RVO2/ORCA (Reciprocal Velocity Obstacles). Commitment locking prevents hallway dance. Cooperative side selection ("mind reading") from HowToRTS research.
+
+**Layer 5 — Group Coordination:** Formation offset assignment, synchronized arrival, chokepoint compression. Inspired by jdxdev's boids-for-RTS formation offsets and Spring Engine's group movement.
+
+**Source engines studied:**
+- **EA Remastered Collection** (GPL v3) — obstacle-tracing, terrain cost tables, integer math
+- **OpenRA** (GPL v3) — hierarchical A*, custom search graph with 10×10 abstraction
+- **Spring Engine** (GPL v2) — QTPFS quadtree, flow-map attempt (abandoned), unit push/slide
+- **0 A.D.** (GPL v2/MIT) — JPS long-range + vertex short-range, clearance-based sizing, fixed-point `CFixed_15_16`
+- **Warzone 2100** (GPL v2) — A* with LRU context caching, gateway optimization
+- **SupCom2/PA** — flow field tiles (only shipped flowfield RTS)
+- **Academic** — RVO2/ORCA (UNC), HPA*, continuum crowds (Treuille et al.), JPS+ (Game AI Pro 2)
 
 ### Configuration Model
 
-Pathfinding presets are YAML-driven parameters applied to the `Pathfinder` implementation:
+Each `Pathfinder` implementation exposes its own tunable parameters via YAML. Parameters differ between implementations because they control fundamentally different algorithms — there is no shared "pathfinding config" struct that applies to all three.
 
 ```yaml
-# pathfinding/presets/classic-ra.yaml
-pathfinding_preset:
+# pathfinding/remastered.yaml — RemastersPathfinder tunables
+remastered_pathfinder:
   name: "Classic Red Alert"
   description: "Movement feel matching the original game"
-  collision_handling: blocking       # units block each other (original behavior)
-  repath_on_block: false             # units wait, don't repath (original behavior)
-  formation_movement: false          # no formation support
-  push_mechanics: none               # units cannot push/slide past each other
-  congestion_resolution: wait        # units queue behind blocking unit
-  path_smoothing: none               # jagged grid-aligned movement
-  diagonal_movement: true            # original RA allowed diagonal
-  repath_frequency: low              # infrequent repathing (original was frame-limited)
+  # These are behavioral overrides on the Remastered pathfinder.
+  # Defaults reproduce original behavior exactly.
+  harvester_stuck_fix: false         # true = apply minor QoL fix for harvesters stuck on each other
+  bridge_queue_behavior: original    # original | relaxed (slightly wider queue threshold)
+  infantry_scatter_pattern: original # original | smoothed (less jagged scatter on damage)
 
-# pathfinding/presets/ic-default.yaml
-pathfinding_preset:
+# pathfinding/openra.yaml — OpenRaPathfinder tunables
+openra_pathfinder:
+  name: "OpenRA"
+  description: "Movement feel matching OpenRA's pathfinding"
+  locomotor_speed_modifiers: true    # per-terrain speed multipliers (OpenRA feature)
+  crush_logic: true                  # vehicles can crush infantry
+  blockage_flow: true                # units attempt to flow around blocking units
+
+# pathfinding/ic-default.yaml — IcPathfinder tunables
+ic_pathfinder:
   name: "IC Default"
-  description: "Modern flowfield movement with responsive feel"
-  collision_handling: flow           # units flow around obstacles
-  repath_on_block: true              # immediately seek alternate path
+  description: "Multi-layer hybrid: JPS + flow field tiles + ORCA-lite avoidance"
+
+  # Layer 2 — Hierarchical sectors
+  sector_size: 32                    # cells per sector side
+  portal_max_width: 8                # max portal opening (cells)
+
+  # Layer 3 — Adaptive pathfinding
+  flowfield_group_threshold: 8       # units sharing dest before flowfield activates
+  flowfield_cache_size: 64           # LRU cache entries for flow field tiles
+  jps_enabled: true                  # JPS for small groups on uniform terrain
+  repath_frequency: adaptive         # low | medium | high | adaptive
+
+  # Layer 4 — Local avoidance (ORCA-lite)
+  avoidance_radius_multiplier: 1.2   # multiplier on unit collision radius
+  commitment_frames: 4               # frames locked into avoidance direction
+  cooperative_avoidance: true        # "mind reading" side selection
+
+  # Layer 5 — Group coordination
   formation_movement: true           # groups move in formation
-  push_mechanics: gentle             # units nudge each other to resolve congestion
-  congestion_resolution: pressure    # pressure diffusion spreads units out naturally
-  path_smoothing: funnel             # smooth paths via funnel algorithm
-  diagonal_movement: true
-  repath_frequency: adaptive         # repath when obstacle changes, not on timer
+  synchronized_arrival: true         # units slow down to arrive together
+  chokepoint_compression: true       # formation compresses at narrow passages
+
+  # General
+  path_smoothing: funnel             # none | funnel | spline
   influence_avoidance: true          # avoid areas with high enemy threat
-  unit_flow_width: auto              # automatically widen formation for narrow passages
 ```
+
+Power users can override any parameter in the lobby's advanced settings or in mod YAML. Casual players never see these — they pick an experience profile and the correct implementation + parameters are selected automatically.
 
 ### Sim-Affecting Nature
 
@@ -4959,18 +4998,46 @@ profiles:
     qol: iron_curtain
 ```
 
+### User-Facing UX — Progressive Disclosure
+
+Pathfinding selection follows the same progressive disclosure pyramid as the rest of the experience profile system. A casual player should never encounter the word "pathfinding."
+
+**Level 1 — One dropdown (casual player):** The lobby's experience profile selector offers "Classic RA," "OpenRA," or "Iron Curtain." Picking one sets balance, theme, QoL, AI, AND movement feel. The pathfinder selection is invisible — it's bundled. A player who picks "Classic RA" gets Remastered pathfinding because that's what Classic RA movement *is*.
+
+**Level 2 — Per-axis override (intermediate player):** An "Advanced" toggle in the lobby expands the experience profile into its 5 independent axes. The movement axis is labeled by feel, not algorithm: "Movement: Classic / OpenRA / Modern" — not "`RemastersPathfinder` / `OpenRaPathfinder` / `IcPathfinder`." The player can mix "OpenRA balance + Classic movement" if they want.
+
+**Level 3 — Parameter tuning (power user / modder):** A gear icon next to the movement axis opens implementation-specific parameters (see Configuration Model above). This is where harvester stuck fixes, pressure diffusion strength, and formation toggles live.
+
+### Scenario-Required Pathfinding
+
+Scenarios and campaign missions can specify a **required** or **recommended** pathfinding preset in their YAML metadata:
+
+```yaml
+scenario:
+  name: "Bridge Assault"
+  pathfinding:
+    required: classic-ra    # this mission depends on chokepoint blocking behavior
+    reason: "Mission balance depends on single-file bridge queuing"
+```
+
+When the lobby loads this scenario, it auto-selects the required pathfinder and shows the player why: "This scenario requires Classic movement (mission balance depends on chokepoint behavior)." The player cannot override a `required` setting. A `recommended` setting auto-selects but allows override with a warning.
+
+This preserves original campaign missions. A mission designed around units jamming at a bridge works correctly because it ships with `required: classic-ra`. A modern community scenario can ship with `required: ic-default` to ensure smooth flowfield behavior.
+
 ### Relationship to Existing Decisions
 
-- **D013 (`Pathfinder` trait):** Presets are *parameters within* a pathfinder implementation, not separate implementations. `GridFlowfieldPathfinder` accepts a `PathfindingPreset` config struct that controls its behavior. The trait boundary separates algorithms (flowfield vs. navmesh); presets separate behaviors within one algorithm.
-- **D019 (balance presets):** Parallel concept. Balance = what units can do. Pathfinding = how they get there.
-- **D043 (AI presets):** Orthogonal. AI decides where to send units; pathfinding decides how they move.
-- **D033 (QoL toggles):** Some pathfinding behaviors might be classified as QoL (path smoothing, repath responsiveness). Presets bundle them for consistency; individual toggles remain available in D033 for fine-tuning.
+- **D013 (`Pathfinder` trait):** Each preset is a separate `Pathfinder` trait implementation. `RemastersPathfinder`, `OpenRaPathfinder`, and `IcPathfinder` are all registered by the RA1 game module. The trait boundary serves double duty: it separates algorithmic families (grid vs. navmesh for future game modules) AND behavioral families (Classic vs. Modern within a game module). This is the natural extension of D013's pluggable design.
+- **D018 (`GameModule` trait):** The RA1 game module ships all three pathfinder implementations. The lobby's experience profile selection determines which one the `GameModule` instantiates — `fn pathfinder()` returns whichever `Box<dyn Pathfinder>` the player selected, not all three. Other game modules (TD, RA2) ship their own sets.
+- **D019 (balance presets):** Parallel concept. Balance = what units can do. Pathfinding = how they get there. Both are sim-affecting and synced in multiplayer.
+- **D043 (AI presets):** Orthogonal. AI decides where to send units; pathfinding decides how they move. An AI preset + pathfinding preset combination determines overall movement behavior.
+- **D033 (QoL toggles):** Some implementation-specific parameters (harvester stuck fix, infantry scatter smoothing) could be classified as QoL. Presets bundle them for consistency; individual toggles in advanced settings allow fine-tuning.
 
 ### Alternatives Considered
 
-- One "best" pathfinding only (rejected — Classic RA movement feel is part of the nostalgia; forcing modern pathing on purists would alienate them)
-- Pathfinding differences handled by balance presets (rejected — movement behavior is fundamentally different from numeric values; a separate concept deserves a separate preset)
-- Separate `Pathfinder` implementations per preset (rejected — wasteful; the algorithm is the same, only parameters change)
+- **One "best" pathfinding only** (rejected — Classic RA movement feel is part of the nostalgia and is critical for original scenario compatibility; forcing modern pathing on purists would alienate them AND break existing missions)
+- **Pathfinding differences handled by balance presets** (rejected — movement behavior is fundamentally different from numeric values; a separate axis deserves separate selection)
+- **One parameterized implementation that emulates all three** (rejected — Remastered pathfinding and IC flowfield pathfinding are fundamentally different algorithms with different data structures and different computational models; parameterizing one to approximate the other produces a neither-fish-nor-fowl result that reproduces neither accurately; separate implementations are honest and maintainable)
+- **Only IC Default pathfinding, with "classic mode" as a cosmetic approximation** (rejected — scenario compatibility requires *actual* reproduction of original movement behavior, not an approximation; bridge missions, chokepoint defense, harvester timing all depend on specific pathfinding quirks)
 
 ---
 

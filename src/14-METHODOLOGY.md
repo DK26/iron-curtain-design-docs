@@ -101,7 +101,7 @@ Development follows eight stages. They're roughly sequential, but later stages f
 
 **The blueprint is NOT code.** It's the map that makes code possible. When two developers (or agents) work on different crates, the blueprint tells them exactly what the interface between their work looks like — before either writes a line.
 
-**Relationship to Stage 1:** Stage 1 produces the ideas and decisions. Stage 2 organizes them into a coherent technical map. Stage 1 asks "should pathfinding be trait-abstracted?" Stage 2 says "the `Pathfinder` trait lives in `ic-sim`, grid flowfields are the RA1 `GameModule` implementation, the engine core calls `pathfinder.find_path()` and never `grid_flowfield_find_path()` directly."
+**Relationship to Stage 1:** Stage 1 produces the ideas and decisions. Stage 2 organizes them into a coherent technical map. Stage 1 asks "should pathfinding be trait-abstracted?" Stage 2 says "the `Pathfinder` trait lives in `ic-sim`, `IcPathfinder` (multi-layer hybrid) is the RA1 `GameModule` implementation, the engine core calls `pathfinder.request_path()` and never algorithm-specific functions directly."
 
 **Exit criteria:**
 - Every crate's public API surface is sketched (trait signatures, key structs, module structure)
@@ -215,9 +215,9 @@ This isn't just an AI constraint — it's a software engineering principle. Fred
 
 4. **Write task specifications.** Each work unit gets a spec:
    ```
-   Task: Implement GridFlowfield (Pathfinder trait for RA1)
+   Task: Implement IcPathfinder (Pathfinder trait for RA1)
    Crate: ic-sim
-   Reads: 02-ARCHITECTURE.md § "Pathfinding", 10-PERFORMANCE.md § "Flowfields"
+   Reads: 02-ARCHITECTURE.md § "Pathfinding", 10-PERFORMANCE.md § "Multi-Layer Hybrid", research/pathfinding-ic-default-design.md
    Trait: Pathfinder (defined in ic-sim)
    Inputs: map grid, start position, goal position
    Outputs: Vec<WorldPos> path, or PathError
@@ -229,20 +229,20 @@ This isn't just an AI constraint — it's a software engineering principle. Fred
 
 **Example decomposition for Phase 2 (Simulation):**
 
-| #   | Work Unit                                             | Crate         | Context Needed                                          | Depends On             |
-| --- | ----------------------------------------------------- | ------------- | ------------------------------------------------------- | ---------------------- |
-| 1   | Define `PlayerOrder` enum + serialization             | `ic-protocol` | 02-ARCHITECTURE § orders, 05-FORMATS § order types      | Phase 0 (format types) |
-| 2   | Define `Pathfinder` trait                             | `ic-sim`      | 02-ARCHITECTURE § pathfinding, D013, D041               | —                      |
-| 3   | Define `SpatialIndex` trait                           | `ic-sim`      | 02-ARCHITECTURE § spatial queries, D041                 | —                      |
-| 4   | Implement `SpatialHash` (SpatialIndex for RA1)        | `ic-sim`      | 10-PERFORMANCE § spatial hash                           | #3                     |
-| 5   | Implement `GridFlowfield` (Pathfinder for RA1)        | `ic-sim`      | 10-PERFORMANCE § flowfields                             | #2, #4                 |
-| 6   | Define sim system pipeline (apply_orders through fog) | `ic-sim`      | 02-ARCHITECTURE § system pipeline                       | #1                     |
-| 7   | Implement movement system                             | `ic-sim`      | 02-ARCHITECTURE § movement, RA1 movement rules          | #5, #6                 |
-| 8   | Implement combat system                               | `ic-sim`      | 02-ARCHITECTURE § combat, `DamageResolver` trait (D041) | #4, #6                 |
-| 9   | Implement harvesting system                           | `ic-sim`      | 02-ARCHITECTURE § harvesting                            | #5, #6                 |
-| 10  | Implement `LocalNetwork`                              | `ic-net`      | 03-NETCODE § LocalNetwork                               | #1                     |
-| 11  | Implement `ReplayPlayback`                            | `ic-net`      | 03-NETCODE § ReplayPlayback                             | #1                     |
-| 12  | State hashing + snapshot system                       | `ic-sim`      | 02-ARCHITECTURE § snapshots, D010                       | #6                     |
+| #   | Work Unit                                             | Crate         | Context Needed                                                 | Depends On             |
+| --- | ----------------------------------------------------- | ------------- | -------------------------------------------------------------- | ---------------------- |
+| 1   | Define `PlayerOrder` enum + serialization             | `ic-protocol` | 02-ARCHITECTURE § orders, 05-FORMATS § order types             | Phase 0 (format types) |
+| 2   | Define `Pathfinder` trait                             | `ic-sim`      | 02-ARCHITECTURE § pathfinding, D013, D041                      | —                      |
+| 3   | Define `SpatialIndex` trait                           | `ic-sim`      | 02-ARCHITECTURE § spatial queries, D041                        | —                      |
+| 4   | Implement `SpatialHash` (SpatialIndex for RA1)        | `ic-sim`      | 10-PERFORMANCE § spatial hash                                  | #3                     |
+| 5   | Implement `IcPathfinder` (Pathfinder for RA1)         | `ic-sim`      | 10-PERFORMANCE § pathfinding, pathfinding-ic-default-design.md | #2, #4                 |
+| 6   | Define sim system pipeline (apply_orders through fog) | `ic-sim`      | 02-ARCHITECTURE § system pipeline                              | #1                     |
+| 7   | Implement movement system                             | `ic-sim`      | 02-ARCHITECTURE § movement, RA1 movement rules                 | #5, #6                 |
+| 8   | Implement combat system                               | `ic-sim`      | 02-ARCHITECTURE § combat, `DamageResolver` trait (D041)        | #4, #6                 |
+| 9   | Implement harvesting system                           | `ic-sim`      | 02-ARCHITECTURE § harvesting                                   | #5, #6                 |
+| 10  | Implement `LocalNetwork`                              | `ic-net`      | 03-NETCODE § LocalNetwork                                      | #1                     |
+| 11  | Implement `ReplayPlayback`                            | `ic-net`      | 03-NETCODE § ReplayPlayback                                    | #1                     |
+| 12  | State hashing + snapshot system                       | `ic-sim`      | 02-ARCHITECTURE § snapshots, D010                              | #6                     |
 
 Work units 2, 3, and 10 have no dependencies on each other — they can proceed in parallel. Work unit 7 depends on 5 and 6 — it cannot start until both are done. This is the scheduling discipline that prevents chaos.
 
@@ -308,7 +308,7 @@ The full agent rules live in `AGENTS.md` § "Working With This Codebase." This s
 
 ### Technical Integration
 
-1. **Interface verification.** Before integrating two components, verify that the trait interface between them matches expectations. The `Pathfinder` trait that `ic-sim` calls must match the `GridFlowfield` that implements it — not just in type signature, but in behavioral contract (does it handle unreachable goals? does it respect terrain cost?).
+1. **Interface verification.** Before integrating two components, verify that the trait interface between them matches expectations. The `Pathfinder` trait that `ic-sim` calls must match the `IcPathfinder` that implements it — not just in type signature, but in behavioral contract (does it handle unreachable goals? does it respect terrain cost? does the multi-layer system degrade gracefully?).
 
 2. **Integration tests.** These are different from unit tests. Unit tests verify a component in isolation. Integration tests verify that two or more components work together correctly:
    - Sim + LocalNetwork: orders go in, state comes out, hashes match

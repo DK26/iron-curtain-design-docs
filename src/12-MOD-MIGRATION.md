@@ -166,16 +166,16 @@ In IC, activities map to ECS system behaviors, triggered by conditions or orders
 
 ### What CA Gains by Migrating
 
-| Benefit                              | Details                                                                                                                             |
-| ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
-| **No more engine version treadmill** | CA currently pins to OpenRA releases, rebasing C# against every engine update. IC's mod API is versioned and stable.                |
-| **Better performance**               | CA with 5 factions pushes OpenRA hard. IC's efficiency pyramid (flowfields, spatial hashing, sim LOD) handles large battles better. |
-| **Better multiplayer**               | Relay server, sub-tick ordering, signed replays, ranked infrastructure built in — no custom ladder server needed.                   |
-| **Hot-reloadable mods**              | Change YAML, see results immediately. No recompilation ever.                                                                        |
-| **Workshop distribution**            | `ic` CLI tool packages and publishes mods. No manual download/install.                                                              |
-| **Branching campaigns (D021)**       | IC's narrative graph with persistent unit roster would elevate CA's 34 missions significantly.                                      |
-| **WASM sandboxing**                  | Custom code runs in a sandbox with capability-based API — no risk of mods crashing the engine or accessing filesystem.              |
-| **Cross-platform for free**          | CA currently packages per-platform. IC runs on Windows/Mac/Linux/Browser/Mobile from one codebase.                                  |
+| Benefit                              | Details                                                                                                                                                 |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **No more engine version treadmill** | CA currently pins to OpenRA releases, rebasing C# against every engine update. IC's mod API is versioned and stable.                                    |
+| **Better performance**               | CA with 5 factions pushes OpenRA hard. IC's efficiency pyramid (multi-layer hybrid pathfinding, spatial hashing, sim LOD) handles large battles better. |
+| **Better multiplayer**               | Relay server, sub-tick ordering, signed replays, ranked infrastructure built in — no custom ladder server needed.                                       |
+| **Hot-reloadable mods**              | Change YAML, see results immediately. No recompilation ever.                                                                                            |
+| **Workshop distribution**            | `ic` CLI tool packages and publishes mods. No manual download/install.                                                                                  |
+| **Branching campaigns (D021)**       | IC's narrative graph with persistent unit roster would elevate CA's 34 missions significantly.                                                          |
+| **WASM sandboxing**                  | Custom code runs in a sandbox with capability-based API — no risk of mods crashing the engine or accessing filesystem.                                  |
+| **Cross-platform for free**          | CA currently packages per-platform. IC runs on Windows/Mac/Linux/Browser/Mobile from one codebase.                                                      |
 
 ### Verdict
 
