@@ -223,13 +223,15 @@ This is the gold standard for C&C modernization. The question: could someone ach
 
 #### HD/SD Graphics Toggle
 
-IC handles this through three converging architectural decisions:
+IC handles this through **D048 (Switchable Render Modes)** — a first-class engine concept that bundles render backend, camera, resource packs, and visual config into a named, instantly-switchable unit. The Remastered Collection's F1 toggle is exactly the use case D048 was designed for, and IC generalizes it further: not just classic↔HD, but classic↔HD↔3D if a 3D render mod is installed.
 
-**Invariant #9** (game-agnostic renderer): The engine uses a `Renderable` trait. The RA1 game module registers sprite rendering, but the engine doesn't know what format the sprites are. A game module can register *two* asset sets and swap at runtime.
+Three converging architectural decisions make it work:
+
+**Invariant #9** (game-agnostic renderer): The engine uses a `Renderable` trait. The RA1 game module registers sprite rendering, but the engine doesn't know what format the sprites are. A game module can register *multiple* render modes and swap at runtime.
 
 **Invariant #10** (platform-agnostic): "Render quality is runtime-configurable." This is literally the HD/SD toggle stated as an architectural requirement.
 
-**Bevy's asset system**: Both classic `.shp` sprites and HD texture atlases load as Bevy asset handles. The toggle swaps which handle the `Renderable` component references. This is a frame-instant operation — no loading screen required.
+**Bevy's asset system**: Both classic `.shp` sprites and HD texture atlases load as Bevy asset handles. The toggle swaps which handle the `Renderable` component references. This is a frame-instant operation — no loading screen required. Cross-backend switches (2D↔3D) load on first toggle, instant thereafter.
 
 **Implementation sketch:**
 
@@ -410,10 +412,11 @@ impl GameModule for RemasteredModule {
 **Yes, someone could recreate the Remastered experience on IC.** The architecture explicitly supports it:
 
 - Game-agnostic engine with `GameModule` trait (D018) — Remastered becomes a module
-- Runtime-configurable render quality (invariant #10) — the HD/SD toggle
+- Switchable render modes (D048) — F1 toggles Classic↔HD↔3D, same as Remastered's F1
 - Switchable balance presets (D019) — `remastered` preset alongside `classic` and `openra`
 - Full original format compatibility (invariant #8) — classic assets load unchanged
 - Bevy/wgpu for modern rendering — 4K, zoom, post-processing, all native
+- Cross-view multiplayer — one player on Classic, another on HD, same game
 
 **The bottleneck is art, not engineering.** If someone produced HD sprite assets compatible with IC's asset system, the engine work for the HD/SD toggle, 4K rendering, zoom, and modern UI is straightforward Bevy development — estimated at 4-6 weeks of focused engineering on top of the base RA1 game module.
 

@@ -1335,9 +1335,9 @@ Toggles are categorized as **sim-affecting** (production rules, unit commands �
 
 ### Experience Profiles
 
-D019 (balance), D032 (theme), D033 (behavior), D043 (AI behavior), and D045 (pathfinding feel) are five independent axes that compose into **experience profiles**. Selecting "Vanilla RA" sets all five to classic in one click. Selecting "Iron Curtain" sets classic balance + modern theme + best QoL + enhanced AI + modern movement. After selecting a profile, any individual setting can still be overridden.
+D019 (balance), D032 (theme), D033 (behavior), D043 (AI behavior), D045 (pathfinding feel), and D048 (render mode) are six independent axes that compose into **experience profiles**. Selecting "Vanilla RA" sets all six to classic in one click. Selecting "Iron Curtain" sets classic balance + modern theme + best QoL + enhanced AI + modern movement + HD graphics. After selecting a profile, any individual setting can still be overridden.
 
-See `09-DECISIONS.md` § D033 for the full toggle catalog, YAML schema, and sim/client split details. See D043 for AI behavior presets and D045 for pathfinding behavior presets.
+See `09-DECISIONS.md` § D033 for the full toggle catalog, YAML schema, and sim/client split details. See D043 for AI behavior presets, D045 for pathfinding behavior presets, and D048 for switchable render modes.
 
 ## Crate Dependency Graph
 
@@ -1573,6 +1573,9 @@ pub trait GameModule {
     /// Register render backends (sprite renderer, voxel renderer, etc.).
     fn register_renderers(&self, registry: &mut RenderRegistry);
 
+    /// List available render modes — Classic, HD, 3D, etc. (D048).
+    fn render_modes(&self) -> Vec<RenderMode>;
+
     /// YAML rule schema for this game's unit definitions.
     fn rule_schema(&self) -> RuleSchema;
 }
@@ -1692,6 +1695,7 @@ rifle_infantry:
 - **Cross-view multiplayer.** A player running 3D can play against a player running classic isometric — the sim is identical. Like StarCraft Remastered's graphics toggle, but more radical.
 - **Cross-view replays.** Watch any replay in 2D or 3D.
 - **Orthogonal to gameplay mods.** A balance mod works in both views. A 3D graphics mod stacks with a gameplay mod.
+- **Toggleable, not permanent.** D048 (Switchable Render Modes) formalizes this: a 3D render mod adds a render mode alongside the default 2D modes. F1 cycles between classic, HD, and 3D — the player isn't locked into one view. See `09-DECISIONS.md` § D048.
 
 This is a **Tier 3 (WASM) mod** — it replaces a rendering backend, which is too deep for YAML or Lua. See `04-MODDING.md` for details.
 

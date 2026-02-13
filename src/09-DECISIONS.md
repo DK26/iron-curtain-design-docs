@@ -353,6 +353,9 @@ pub trait GameModule: Send + Sync + 'static {
     /// Provide the module's render plugin (sprite, voxel, 3D, etc.)
     fn render_plugin(&self) -> Box<dyn RenderPlugin>;
 
+    /// List available render modes — Classic, HD, 3D, etc. (D048)
+    fn render_modes(&self) -> Vec<RenderMode>;
+
     /// Provide the module's UI layout (sidebar style, build queue, etc.)
     fn ui_layout(&self) -> UiLayout;
 
@@ -362,7 +365,7 @@ pub trait GameModule: Send + Sync + 'static {
     /// List available balance presets (D019)
     fn balance_presets(&self) -> Vec<BalancePreset>;
 
-    /// List available experience profiles (D019 + D032 + D033 + D043 + D045)
+    /// List available experience profiles (D019 + D032 + D033 + D043 + D045 + D048)
     fn experience_profiles(&self) -> Vec<ExperienceProfile>;
 
     /// Default experience profile name
@@ -392,9 +395,9 @@ pub trait GameModule: Send + Sync + 'static {
 
 The pattern: game-specific rendering, pathfinding, spatial queries, fog, damage resolution, AI strategy, and validation; shared networking, modding, workshop, replays, saves, and competitive infrastructure.
 
-**Experience profiles (composing D019 + D032 + D033 + D043 + D045):**
+**Experience profiles (composing D019 + D032 + D033 + D043 + D045 + D048):**
 
-An experience profile bundles a balance preset, UI theme, QoL settings, AI behavior, and pathfinding feel into a named configuration:
+An experience profile bundles a balance preset, UI theme, QoL settings, AI behavior, pathfinding feel, and render mode into a named configuration:
 
 ```yaml
 profiles:
@@ -406,6 +409,7 @@ profiles:
     qol: vanilla            # D033 — no QoL additions
     ai_preset: classic-ra   # D043 — original RA AI behavior
     pathfinding: classic-ra # D045 — original RA movement feel
+    render_mode: classic    # D048 — original pixel art
     description: "Original Red Alert experience, warts and all"
 
   openra-ra:
@@ -416,6 +420,7 @@ profiles:
     qol: openra             # D033 — OpenRA QoL features
     ai_preset: openra       # D043 — OpenRA skirmish AI behavior
     pathfinding: openra     # D045 — OpenRA movement feel
+    render_mode: classic    # D048 — OpenRA uses classic sprites
     description: "OpenRA-style experience on the Iron Curtain engine"
 
   iron-curtain-ra:
@@ -426,6 +431,7 @@ profiles:
     qol: iron_curtain       # D033 — IC's recommended QoL
     ai_preset: ic-default   # D043 — research-informed AI
     pathfinding: ic-default # D045 — modern flowfield movement
+    render_mode: hd         # D048 — HD sprites if available, else classic
     description: "Recommended — classic balance with modern QoL and enhanced AI"
 ```
 
@@ -937,27 +943,27 @@ Every Workshop resource gets a globally unique identifier: `namespace/name@versi
 
 Resources aren't limited to mod-sized packages. Granularity is flexible:
 
-| Category           | Granularity Examples                                                             |
-| ------------------ | -------------------------------------------------------------------------------- |
-| Music              | Single track, album, soundtrack                                                  |
-| Sound Effects      | Weapon sound pack, ambient loops, UI sounds                                      |
-| Voice Lines        | EVA pack, unit response set, faction voice pack                                  |
-| Sprites            | Single unit sheet, building sprites, effects pack                                |
-| Textures           | Terrain tileset, UI skin, palette-indexed sprites                                |
-| Palettes           | Theater palette, faction palette, seasonal palette                               |
-| Maps               | Single map, map pack, tournament map pool                                        |
-| Missions           | Single mission, mission chain                                                    |
-| Campaign Chapters  | Story arc with persistent state                                                  |
-| Scene Templates    | Tera scene template for LLM composition                                          |
-| Mission Templates  | Tera mission template for LLM composition                                        |
-| Cutscenes / Video  | Briefing video, in-game cinematic, tutorial clip                                 |
-| UI Themes          | Sidebar layout, font pack, cursor set                                            |
-| Balance Presets    | Tuned unit/weapon stats as a selectable preset                                   |
-| QoL Presets        | Gameplay behavior toggle set (D033) — sim-affecting + client-only toggles        |
-| Experience Profile | Combined balance + theme + QoL preset (D019+D032+D033) — one-click experience    |
-| Resource Packs     | Switchable asset layer for any category — see `04-MODDING.md` § "Resource Packs" |
-| Script Libraries   | Reusable Lua modules, utility functions, AI behavior scripts, trigger templates  |
-| Full Mods          | Traditional mod (may depend on individual resources)                             |
+| Category           | Granularity Examples                                                                            |
+| ------------------ | ----------------------------------------------------------------------------------------------- |
+| Music              | Single track, album, soundtrack                                                                 |
+| Sound Effects      | Weapon sound pack, ambient loops, UI sounds                                                     |
+| Voice Lines        | EVA pack, unit response set, faction voice pack                                                 |
+| Sprites            | Single unit sheet, building sprites, effects pack                                               |
+| Textures           | Terrain tileset, UI skin, palette-indexed sprites                                               |
+| Palettes           | Theater palette, faction palette, seasonal palette                                              |
+| Maps               | Single map, map pack, tournament map pool                                                       |
+| Missions           | Single mission, mission chain                                                                   |
+| Campaign Chapters  | Story arc with persistent state                                                                 |
+| Scene Templates    | Tera scene template for LLM composition                                                         |
+| Mission Templates  | Tera mission template for LLM composition                                                       |
+| Cutscenes / Video  | Briefing video, in-game cinematic, tutorial clip                                                |
+| UI Themes          | Sidebar layout, font pack, cursor set                                                           |
+| Balance Presets    | Tuned unit/weapon stats as a selectable preset                                                  |
+| QoL Presets        | Gameplay behavior toggle set (D033) — sim-affecting + client-only toggles                       |
+| Experience Profile | Combined balance + theme + QoL + AI + pathfinding + render mode (D019+D032+D033+D043+D045+D048) |
+| Resource Packs     | Switchable asset layer for any category — see `04-MODDING.md` § "Resource Packs"                |
+| Script Libraries   | Reusable Lua modules, utility functions, AI behavior scripts, trigger templates                 |
+| Full Mods          | Traditional mod (may depend on individual resources)                                            |
 
 A published resource is just a `ResourcePackage` with the appropriate `ResourceCategory`. The existing `asset-pack` template and `ic mod publish` flow handle this natively — no separate command needed.
 
@@ -1803,7 +1809,7 @@ Pre-built Grafana dashboards ship with the project:
 
 The Remastered Collection nailed its main menu — it respects the original Red Alert's military aesthetic while modernizing the presentation. OpenRA went a completely different direction: functional, data-driven, but with a generic feel that doesn't evoke the same nostalgia. Both approaches have merit for different audiences. Rather than pick one style, let the player choose.
 
-This also mirrors D019 (switchable balance presets). Just as players choose between Classic, OpenRA, and Remastered balance rules in the lobby, they should be able to choose their visual experience the same way.
+This also mirrors D019 (switchable balance presets) and D048 (switchable render modes). Just as players choose between Classic, OpenRA, and Remastered balance rules in the lobby, and toggle between classic and HD graphics with F1, they should be able to choose their UI chrome the same way. All three compose into experience profiles.
 
 **Built-in themes (original art, not copied assets):**
 
@@ -2142,7 +2148,7 @@ Critical for multiplayer: some toggles change game rules, others are purely cosm
 
 **D032 (UI Themes):** QoL and themes are also independent. The "Classic" theme changes chrome appearance; the "Vanilla" QoL preset changes gameplay behavior. They're separate settings that happen to compose well.
 
-**Experience Profiles:** The meta-layer above all three. Selecting "Vanilla RA" experience profile sets D019=classic, D032=classic, D033=vanilla in one click. Selecting "Iron Curtain" sets D019=classic, D032=modern, D033=iron_curtain. After selecting a profile, any individual setting can still be overridden.
+**Experience Profiles:** The meta-layer above all of these. Selecting "Vanilla RA" experience profile sets D019=classic, D032=classic, D033=vanilla, D043=classic-ra, D045=classic-ra, D048=classic in one click. Selecting "Iron Curtain" sets D019=classic, D032=modern, D033=iron_curtain, D043=ic-default, D045=ic-default, D048=hd. After selecting a profile, any individual setting can still be overridden.
 
 **Modding (Tier 1):** QoL presets are just YAML files in `presets/qol/`. Modders can create custom QoL presets — a total conversion mod ships its own preset tuned for its gameplay. The `mod.yaml` manifest can specify a default QoL preset.
 
@@ -5002,9 +5008,9 @@ profiles:
 
 Pathfinding selection follows the same progressive disclosure pyramid as the rest of the experience profile system. A casual player should never encounter the word "pathfinding."
 
-**Level 1 — One dropdown (casual player):** The lobby's experience profile selector offers "Classic RA," "OpenRA," or "Iron Curtain." Picking one sets balance, theme, QoL, AI, AND movement feel. The pathfinder selection is invisible — it's bundled. A player who picks "Classic RA" gets Remastered pathfinding because that's what Classic RA movement *is*.
+**Level 1 — One dropdown (casual player):** The lobby's experience profile selector offers "Classic RA," "OpenRA," or "Iron Curtain." Picking one sets balance, theme, QoL, AI, movement feel, AND render mode. The pathfinder and render mode selections are invisible — they're bundled. A player who picks "Classic RA" gets Remastered pathfinding and classic pixel art because that's what Classic RA *is*.
 
-**Level 2 — Per-axis override (intermediate player):** An "Advanced" toggle in the lobby expands the experience profile into its 5 independent axes. The movement axis is labeled by feel, not algorithm: "Movement: Classic / OpenRA / Modern" — not "`RemastersPathfinder` / `OpenRaPathfinder` / `IcPathfinder`." The player can mix "OpenRA balance + Classic movement" if they want.
+**Level 2 — Per-axis override (intermediate player):** An "Advanced" toggle in the lobby expands the experience profile into its 6 independent axes. The movement axis is labeled by feel, not algorithm: "Movement: Classic / OpenRA / Modern" — not "`RemastersPathfinder` / `OpenRaPathfinder` / `IcPathfinder`." The render mode axis shows "Graphics: Classic / HD / 3D" (D048). The player can mix "OpenRA balance + Classic movement + HD graphics" if they want.
 
 **Level 3 — Parameter tuning (power user / modder):** A gear icon next to the movement axis opens implementation-specific parameters (see Configuration Model above). This is where harvester stuck fixes, pressure diffusion strength, and formation toggles live.
 
@@ -5345,6 +5351,184 @@ CREATE TABLE llm_task_routing (
 - No community sharing (rejected — LLM configuration is a significant friction point; community knowledge sharing reduces the barrier)
 - Include API keys in exports (rejected — obvious security risk; never export secrets)
 - Centralized LLM service run by IC project (rejected — conflicts with BYOLLM principle; users control their own data and costs)
+
+---
+
+## D048: Switchable Render Modes — Classic, HD, and 3D in One Game
+
+**Status:** Accepted
+**Scope:** `ic-render`, `ic-game`, `ic-ui`
+**Phase:** Phase 2 (render mode infrastructure), Phase 3 (toggle UI), Phase 6a (3D mode mod support)
+
+### The Problem
+
+The C&C Remastered Collection's most iconic UX feature is pressing F1 to instantly toggle between classic 320×200 sprites and hand-painted HD art — mid-game, no loading screen. This isn't just swapping sprites. It's switching the *entire visual presentation*: sprite resolution, palette handling, terrain tiles, shadow rendering, UI chrome, and scaling behavior. The engine already has pieces to support this (resource packs in `04-MODDING.md`, dual asset rendering in D029, `Renderable` trait, `ScreenToWorld` trait, 3D render mods in `02-ARCHITECTURE.md`), but they exist as independent systems with no unified mechanism for "switch everything at once." Furthermore, the current design treats 3D rendering exclusively as a Tier 3 WASM mod that **replaces** the default renderer — there's no concept of a game or mod that ships *both* 2D and 3D views and lets the player toggle between them.
+
+### Decision
+
+Introduce **render modes** as a first-class engine concept. A render mode bundles a rendering backend, camera system, resource pack selection, and visual configuration into a named, instantly-switchable unit. Game modules and mods can register multiple render modes; the player toggles between them with a keybind or settings menu.
+
+### What a Render Mode Is
+
+A render mode composes four concerns that must change together:
+
+| Concern            | What Changes                                                     | Trait / System          |
+| ------------------ | ---------------------------------------------------------------- | ----------------------- |
+| **Render backend** | Sprite renderer vs. mesh renderer vs. voxel renderer             | `Renderable` impl       |
+| **Camera**         | Isometric orthographic vs. free 3D perspective                   | `ScreenToWorld` impl    |
+| **Resource packs** | Which asset set to use (classic `.shp`, HD sprites, GLTF models) | Resource pack selection |
+| **Visual config**  | Scaling mode, palette handling, shadow style, post-FX preset     | `RenderSettings` subset |
+
+A render mode is NOT a game module. The simulation, pathfinding, networking, balance, and game rules are completely unchanged between modes. Two players in the same multiplayer game can use different render modes — the sim is view-agnostic (this is already an established architectural property).
+
+### Render Mode Registration
+
+Game modules register their supported render modes via the `GameModule` trait:
+
+```rust
+pub struct RenderMode {
+    pub id: String,                        // "classic", "hd", "3d"
+    pub display_name: String,              // "Classic (320×200)", "HD Sprites", "3D View"
+    pub render_backend: RenderBackendId,   // Which Renderable impl to use
+    pub camera: CameraMode,                // Isometric, Perspective, FreeRotate
+    pub resource_pack_overrides: Vec<ResourcePackRef>, // Per-category pack selections
+    pub visual_config: VisualConfig,       // Scaling, palette, shadow, post-FX
+    pub keybind: Option<KeyCode>,          // Optional dedicated toggle key
+}
+
+pub struct VisualConfig {
+    pub scaling: ScalingMode,              // IntegerNearest, Bilinear, Native
+    pub palette_mode: PaletteMode,         // IndexedPalette, DirectColor
+    pub shadow_style: ShadowStyle,         // SpriteShadow, ProjectedShadow, None
+    pub post_fx: PostFxPreset,             // None, Classic, Enhanced
+}
+```
+
+The RA1 game module would register:
+
+```yaml
+render_modes:
+  classic:
+    display_name: "Classic"
+    render_backend: sprite
+    camera: isometric
+    resource_packs:
+      sprites: classic-shp
+      terrain: classic-tiles
+    visual_config:
+      scaling: integer_nearest
+      palette_mode: indexed
+      shadow_style: sprite_shadow
+      post_fx: none
+    description: "Original 320×200 pixel art, integer-scaled"
+
+  hd:
+    display_name: "HD"
+    render_backend: sprite
+    camera: isometric
+    resource_packs:
+      sprites: hd-sprites         # Requires HD sprite resource pack
+      terrain: hd-terrain
+    visual_config:
+      scaling: native
+      palette_mode: direct_color
+      shadow_style: sprite_shadow
+      post_fx: enhanced
+    description: "High-definition sprites at native resolution"
+```
+
+A 3D render mod adds a third mode:
+
+```yaml
+# 3d_mod/render_modes.yaml (extends base game module)
+render_modes:
+  3d:
+    display_name: "3D View"
+    render_backend: mesh            # Provided by the WASM mod
+    camera: free_rotate
+    resource_packs:
+      sprites: 3d-models           # GLTF meshes mapped to unit types
+      terrain: 3d-terrain
+    visual_config:
+      scaling: native
+      palette_mode: direct_color
+      shadow_style: projected_shadow
+      post_fx: enhanced
+    description: "Full 3D rendering with free camera"
+    requires_mod: "3d-ra"          # Only available when this mod is loaded
+```
+
+### Toggle Mechanism
+
+**Default keybind:** F1 cycles through available render modes (matching the Remastered Collection). A game with only `classic` and `hd` modes: F1 toggles between them. A game with three modes: F1 cycles classic → hd → 3d → classic. The cycle order matches the `render_modes` declaration order.
+
+**Settings UI:**
+
+```
+Settings → Graphics → Render Mode
+┌───────────────────────────────────────────────┐
+│ Active Render Mode:  [HD ▾]                   │
+│                                               │
+│ Toggle Key: [F1]                              │
+│ Cycle Order: Classic → HD → 3D                │
+│                                               │
+│ Available Modes:                              │
+│ ● Classic — Original pixel art, integer-scaled│
+│ ● HD — High-definition sprites (requires      │
+│         HD sprite pack)                       │
+│ ○ 3D View — Full 3D (requires 3D RA mod)     │
+│              [Not installed — Browse Workshop] │
+└───────────────────────────────────────────────┘
+```
+
+Modes whose required resource packs or mods aren't installed appear grayed out with an install/browse link.
+
+### How the Switch Works (Runtime)
+
+The toggle is instant — no loading screen, no fade-to-black for same-backend switches:
+
+1. **Same render backend** (classic ↔ hd): Swap `Handle` references on all `Renderable` components. Both asset sets are loaded at startup (or on first toggle). Bevy's asset system makes this a single-frame operation — exactly like the Remastered Collection's F1.
+
+2. **Different render backend** (2D ↔ 3D): Swap the active `Renderable` implementation and camera. This is heavier — the first switch loads the 3D asset set (brief loading indicator). Subsequent switches are instant because both backends stay resident. Camera interpolates smoothly between isometric and perspective over ~0.3 seconds.
+
+3. **Multiplayer**: Render mode is a client-only setting. The sim doesn't know or care. No sync, no lobby lock. One player on Classic, one on HD, one on 3D — all in the same game. This already works architecturally; D048 just formalizes it.
+
+4. **Replays**: Render mode is switchable during replay playback. Watch a classic-era replay in 3D, or vice versa.
+
+### Cross-View Multiplayer
+
+This deserves emphasis because it's a feature no shipped C&C game has offered: **players using different visual presentations in the same multiplayer match.** The sim/render split (Invariant #1, #9) makes this free. A competitive player who prefers classic pixel clarity plays against someone using 3D — same rules, same sim, same balance, different eyes.
+
+Cross-view also means **cross-view spectating**: an observer can watch a tournament match in 3D while the players compete in classic 2D. This creates unique content creation and broadcasting opportunities.
+
+### Relationship to Existing Systems
+
+| System                   | Before D048                                          | After D048                                                                                           |
+| ------------------------ | ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| **Resource Packs**       | Per-category asset selection in Settings             | Resource packs become a *component* of render modes; the mode auto-selects the right packs           |
+| **D029 Dual Asset**      | Dual asset handles per entity                        | Generalized to N render modes, not just two. D029's mechanism is how same-backend switches work      |
+| **3D Render Mods**       | Tier 3 WASM mod that *replaces* the default renderer | Tier 3 WASM mod that *adds* a render mode alongside the default — toggleable, not a replacement      |
+| **D032 UI Themes**       | Switchable UI chrome                                 | UI theme can optionally be paired with a render mode (classic mode + classic chrome)                 |
+| **Render Quality Tiers** | Hardware-adaptive Baseline → Ultra                   | Tiers apply *within* a render mode. Classic mode on Tier 0 hardware; 3D mode requires Tier 2 minimum |
+| **Experience Profiles**  | Balance + theme + QoL + AI + pathfinding             | Now also include a default render mode                                                               |
+
+### What Mod Authors Need to Do
+
+**For a sprite HD pack** (most common case): Nothing new. Publish a resource pack with HD sprites. The game module's `hd` render mode references it. The player installs it and F1 toggles.
+
+**For a 3D rendering mod** (Tier 3): Ship a WASM mod that provides a `Renderable` impl (mesh renderer) and a `ScreenToWorld` impl (3D camera). Declare a render mode in YAML that references these implementations and the 3D asset resource packs. The engine registers the mode alongside the built-in modes — F1 now cycles through all three.
+
+**For a complete 3D game module** (e.g., Generals clone): The game module can register only 3D render modes — no classic 2D at all. Or it can ship both. The architecture supports any combination.
+
+### Minimum Viable Scope
+
+Phase 2 delivers the infrastructure — render mode registration, asset handle swapping, the `RenderMode` struct. The HD/SD toggle (classic ↔ hd) works. Phase 3 adds the settings UI and keybind. Phase 6a supports mod-provided render modes (3D). The architecture supports all of this from day one; the phases gate what's *tested and polished.*
+
+### Alternatives Considered
+
+1. **Resource packs only, no render mode concept** — Rejected. Switching from 2D to 3D requires changing the render backend and camera, not just assets. Resource packs can't do that.
+2. **3D as a separate game module** — Rejected. A "3D RA1" game module would duplicate all the rules, balance, and systems from the base RA1 module. The whole point is that the sim is unchanged.
+3. **No 2D↔3D toggle; 3D replaces 2D permanently when mod is active** — Rejected. The Remastered Collection proved that *toggling* is the feature, not just having two visual options. Players love comparing. Content creators use it for dramatic effect. It's also a safety net — if the 3D mod has rendering bugs, you can toggle back.
 
 ---
 
