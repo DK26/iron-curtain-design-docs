@@ -1641,25 +1641,27 @@ A "convoy escort with two ambushes and a base-building finale" is 3 scene templa
 
 Scene templates and mission templates are both first-class workshop resource types — shared, rated, versioned, and downloadable like any other content. See the full resource category taxonomy in the [Workshop Resource Registry](#workshop-resource-registry--dependency-system-d030) section below.
 
-| Type                  | Contents                                        | Examples                                         |
-| --------------------- | ----------------------------------------------- | ------------------------------------------------ |
-| Mods                  | YAML rules + Lua scripts + WASM modules         | Total conversions, balance patches, new factions |
-| Maps                  | `.oramap` or native map format                  | Skirmish maps, campaign maps, tournament pools   |
-| Missions              | YAML map + Lua triggers + briefing              | Hand-crafted or LLM-generated scenarios          |
-| **Scene Templates**   | **Tera-templated Lua + schema**                 | **Reusable sub-mission building blocks**         |
-| **Mission Templates** | **Tera templates + scene refs + schema**        | **Full parameterized mission blueprints**        |
-| Campaigns             | Ordered mission sets + narrative                | Multi-mission storylines                         |
-| Music                 | Audio tracks (`.ogg`, `.mp3`, `.flac`)          | Custom soundtracks, faction themes, menu music   |
-| Sound Effects         | Audio clips                                     | Weapon sounds, ambient loops, UI feedback        |
-| Voice Lines           | Audio clips + trigger metadata                  | EVA packs, unit responses, faction voice sets    |
-| Sprites               | `.shp`, `.png`, sprite sheets                   | HD unit packs, building sprites, effects packs   |
-| Textures              | Terrain tiles, UI skins                         | Theater tilesets, seasonal terrain variants      |
-| Palettes              | `.pal` files                                    | Theater palettes, faction colors, seasonal       |
-| Cutscenes / Video     | `.vqa`, `.mp4`, `.webm`                         | Custom briefings, cinematics, narrative videos   |
-| UI Themes             | Chrome layouts, fonts, cursors                  | Alternative sidebars, HD cursor packs            |
-| Balance Presets       | YAML rule overrides                             | Competitive tuning, historical accuracy presets  |
-| QoL Presets           | Gameplay behavior toggle sets (D033)            | Custom QoL configurations, community favorites   |
-| Experience Profiles   | Combined balance + theme + QoL (D019+D032+D033) | One-click full experience configurations         |
+| Type                  | Contents                                                        | Examples                                         |
+| --------------------- | --------------------------------------------------------------- | ------------------------------------------------ |
+| Mods                  | YAML rules + Lua scripts + WASM modules                         | Total conversions, balance patches, new factions |
+| Maps                  | `.oramap` or native IC YAML map format                          | Skirmish maps, campaign maps, tournament pools   |
+| Missions              | YAML map + Lua triggers + briefing                              | Hand-crafted or LLM-generated scenarios          |
+| **Scene Templates**   | **Tera-templated Lua + schema**                                 | **Reusable sub-mission building blocks**         |
+| **Mission Templates** | **Tera templates + scene refs + schema**                        | **Full parameterized mission blueprints**        |
+| Campaigns             | Ordered mission sets + narrative                                | Multi-mission storylines                         |
+| Music                 | OGG Vorbis recommended (`.ogg`); also `.mp3`, `.flac`           | Custom soundtracks, faction themes, menu music   |
+| Sound Effects         | WAV or OGG (`.wav`, `.ogg`); legacy `.aud` accepted             | Weapon sounds, ambient loops, UI feedback        |
+| Voice Lines           | OGG Vorbis + trigger metadata; legacy `.aud` accepted           | EVA packs, unit responses, faction voice sets    |
+| Sprites               | PNG recommended (`.png`); legacy `.shp`+`.pal` accepted         | HD unit packs, building sprites, effects packs   |
+| Textures              | PNG or KTX2 (GPU-compressed); legacy `.tmp` accepted            | Theater tilesets, seasonal terrain variants      |
+| Palettes              | `.pal` files (unchanged — 768 bytes, universal)                 | Theater palettes, faction colors, seasonal       |
+| Cutscenes / Video     | WebM recommended (`.webm`); also `.mp4`; legacy `.vqa` accepted | Custom briefings, cinematics, narrative videos   |
+| UI Themes             | Chrome layouts, fonts, cursors                                  | Alternative sidebars, HD cursor packs            |
+| Balance Presets       | YAML rule overrides                                             | Competitive tuning, historical accuracy presets  |
+| QoL Presets           | Gameplay behavior toggle sets (D033)                            | Custom QoL configurations, community favorites   |
+| Experience Profiles   | Combined balance + theme + QoL (D019+D032+D033)                 | One-click full experience configurations         |
+
+> **Format guidance (D049):** New Workshop content should use Bevy-native modern formats (OGG, PNG, WAV, WebM, KTX2, GLTF) for best compatibility, security, and tooling support. C&C legacy formats (.aud, .shp, .vqa, .tmp) are fully supported for backward compatibility but not recommended for new content. See `05-FORMATS.md` § Canonical Asset Format Recommendations and `09-DECISIONS.md` § D049 for full rationale.
 
 ## Resource Packs (Switchable Asset Layers)
 
@@ -2171,45 +2173,100 @@ The template/scene system makes this tractable — the LLM composes from known b
 
 ### Configurable Workshop Server
 
-The Workshop is a **universal artifact repository for game resources** — an Artifactory-style federated registry (D030). The client aggregates listings from multiple sources simultaneously via a virtual repository view, with priority-based deduplication.
+The Workshop is the single place players go to **browse, install, and share** game content — mods, maps, music, sprites, voice packs, everything. Behind the scenes it's a federated resource registry (D030) that merges multiple repository sources into one seamless view. Players never need to know where content is hosted — they just see "Workshop" and hit install.
 
-Just as JFrog Artifactory stores Maven, npm, Docker, and PyPI artifacts under one roof with unified metadata and federation, our Workshop stores music, sprites, maps, mods, and every other game asset type under one registry with semver, license tracking, integrity verification, and multi-source resolution.
+> **Workshop Ubiquitous Language (DDD)**
+>
+> The Workshop bounded context uses the following vocabulary consistently across design docs, Rust structs, YAML keys, CLI commands, and player-facing UI. These are the domain terms — implementation pattern origins (Artifactory, npm, crates.io) are referenced for context but are not the vocabulary.
+>
+> | Domain Term | Rust Type (planned) | Definition |
+> |---|---|---|
+> | **Resource** | `ResourcePackage` | Any publishable unit: mod, map, music track, sprite pack, voice pack, template, balance preset. The atomic unit of the Workshop. |
+> | **Publisher** | `Publisher` | The identity (person or organization) that publishes resources. The `alice/` prefix in `alice/soviet-march-music@1.2.0`. Owns the name, controls releases. |
+> | **Repository** | `Repository` | A storage location for resources. Types: Local, Remote, Git Index. |
+> | **Workshop** | `Workshop` (aggregate root) | The virtual merged view across all repositories. What players browse. What the `ic` CLI queries. The bounded context itself. |
+> | **Manifest** | `ResourceManifest` | The metadata file (`manifest.yaml`) describing a resource: name, version, dependencies, checksums, license. |
+> | **Package** | `.icpkg` | The distributable archive (ZIP with manifest). The physical artifact. |
+> | **Collection** | `Collection` | A curated set of resources (modpack, map pool, theme bundle). |
+> | **Dependency** | `Dependency` | A declared requirement on another resource, with semver range. |
+> | **Channel** | `Channel` | Maturity stage: `dev`, `beta`, `release`. Controls visibility. |
+>
+> *Player-facing UI may use friendlier synonyms ("content", "creator", "install") but the code, config files, and design docs use the terms above.*
 
-#### Repository Types (Artifactory Model)
+The technical architecture is inspired by JFrog Artifactory's federated repository model — multiple sources aggregated into a single view with priority-based deduplication. This gives us the power of npm/crates.io-style package management with a UX that feels like Steam Workshop to players.
 
-The Workshop uses three repository types, directly inspired by Artifactory:
+#### Repository Types
 
-| Repository Type | Artifactory Analog | Description                                                                                                                                                                                                                                                 |
-| --------------- | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Local**       | Local repository   | A directory on disk following Workshop structure. Stores artifacts you create. Used for development, LAN parties, offline play, pre-publish testing.                                                                                                        |
-| **Remote**      | Remote repository  | A Workshop server (official or community-hosted). Artifacts are downloaded and cached locally on first access. Cache is used for subsequent requests — works offline after first pull.                                                                      |
-| **Virtual**     | Virtual repository | The aggregated view across all configured sources. The `ic` CLI and in-game browser query the virtual repository — it merges listings from all local + remote sources, deduplicates by resource ID, and resolves version conflicts using priority ordering. |
+The Workshop aggregates resources from multiple repository types (architecture inspired by Artifactory's local/remote/virtual model). Configure sources in `settings.yaml` — or just use the default (which works out of the box):
+
+| Source Type   | Description                                                                                                                                                                                                                     |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Local**     | A directory on disk following Workshop structure. Stores resources you create. Used for development, LAN parties, offline play, pre-publish testing.                                                                            |
+| **Git Index** | A git-hosted package index (Phase 0–3 default). Contains YAML manifests describing resources and download URLs — no asset files. Engine fetches `index.yaml` via HTTP or clones the repo. See D049 for full specification.      |
+| **Remote**    | A Workshop server (official or community-hosted). Resources are downloaded and cached locally on first access. Cache is used for subsequent requests — works offline after first pull.                                          |
+| **Virtual**   | The merged view across all configured sources — this is what players see as "the Workshop". Merges all local + remote + git-index sources, deduplicates by resource ID, and resolves version conflicts using priority ordering. |
 
 ```yaml
-# settings.yaml
+# settings.yaml — Phase 0-3 (before Workshop server exists)
 workshop:
   sources:
-    - url: "https://workshop.ironcurtain.gg"     # remote: official (always included, default)
+    - url: "https://github.com/iron-curtain/workshop-index" # git-index: GitHub-hosted package registry
+      type: git-index
       priority: 1                                 # highest priority in virtual view
-    - url: "https://mods.myclan.com/workshop"     # remote: community-hosted
-      priority: 2
     - path: "C:/my-local-workshop"                # local: directory on disk
-      priority: 3
+      type: local
+      priority: 2
   deduplicate: true               # same resource ID from multiple sources → highest priority wins
-  cache_dir: "~/.ic/cache"        # local cache for remote artifacts
+  cache_dir: "~/.ic/cache"        # local cache for downloaded content
 ```
 
-**Official server (remote):** We host one. Default for all players. Curated categories, search, ratings, download counts.
+```yaml
+# settings.yaml — Phase 5+ (full Workshop server + git-index fallback)
+workshop:
+  sources:
+    - url: "https://workshop.ironcurtain.gg"      # remote: official Workshop server
+      type: remote
+      priority: 1
+    - url: "https://github.com/iron-curtain/workshop-index" # git-index: still available as fallback
+      type: git-index
+      priority: 2
+    - url: "https://mods.myclan.com/workshop"     # remote: community-hosted
+      type: remote
+      priority: 3
+    - path: "C:/my-local-workshop"                # local: directory on disk
+      type: local
+      priority: 4
+  deduplicate: true
+  cache_dir: "~/.ic/cache"
+```
 
-**Community servers (remote):** Anyone can host their own (open-source server binary, same Rust stack as relay/tracking servers). Clans, modding communities, tournament organizers. Useful for private content, regional servers, or alternative curation policies.
+**Git-hosted index (git-index) — Phase 0–3 default:** A public GitHub repo (`iron-curtain/workshop-index`) containing YAML manifests per package — names, versions, SHA-256, download URLs (GitHub Releases), BitTorrent info hashes, dependencies. The engine fetches the consolidated `index.yaml` via a single HTTP GET to `raw.githubusercontent.com` (CDN-backed globally). Power users and the SDK can `git clone` the repo for offline browsing or scripting. Community contributes packages via PR. Proven pattern: Homebrew, crates.io-index, Winget, Nixpkgs. See D049 for full repo structure and manifest format.
+
+**Official server (remote) — Phase 5+:** We host one. Default for all players. Curated categories, search, ratings, download counts. The git-index remains available as a fallback source.
+
+**Community servers (remote):** Anyone can host their own (open-source server binary, same Rust stack as relay/tracking servers). Clans, modding communities, tournament organizers. Useful for private resources, regional servers, or alternative curation policies.
 
 **Local directory (local):** A folder on disk that follows the Workshop directory structure. Works fully offline. Ideal for mod developers testing before publishing, or LAN-party content distribution.
 
-**Virtual view:** The `ic` CLI and in-game browser always query the virtual repository — they never talk to raw servers directly. The virtual view merges all configured sources, handles deduplication, and respects priority ordering. This is transparent to the user.
+**How the Workshop looks to players:** The in-game Workshop browser, the `ic` CLI, and the SDK all query the same merged view. They never interact with individual sources directly — the engine handles source selection, caching, and fallback transparently. A player browsing the Workshop in Phase 0–3 (backed by a git index) sees the same UI as a player in Phase 5+ (backed by a full Workshop server). The only difference is backend plumbing that's invisible to the user.
 
-#### Artifact Integrity
+#### Phase 0–3: What Players Actually Experience
 
-Every published artifact includes cryptographic checksums for integrity verification:
+With only the git-hosted index and GitHub Releases as the backend, all core Workshop workflows work:
+
+| Workflow           | What the player does                                               | What happens under the hood                                                                                                                                                                                                |
+| ------------------ | ------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Browse**         | Opens Workshop in-game or runs `ic mod search`                     | Engine fetches `index.yaml` from GitHub (cached locally). Displays content list with names, descriptions, ratings, tags.                                                                                                   |
+| **Install**        | Clicks "Install" or runs `ic mod install alice/soviet-march-music` | Resolves dependencies from index. Downloads `.icpkg` from GitHub Releases (HTTP). Verifies SHA-256. Extracts to local cache.                                                                                               |
+| **Play with mods** | Joins a multiplayer lobby                                          | Auto-download checks `required_mods` against local cache. Missing content fetched from GitHub Releases (P2P when tracker is live in Phase 3-4).                                                                            |
+| **Publish**        | Runs `ic mod publish`                                              | Packages content into `.icpkg`, computes SHA-256, uploads to GitHub Releases, generates index manifest, opens PR to `workshop-index` repo. *(Phase 0–3 publishes via PR; Phase 5+ publishes directly to Workshop server.)* |
+| **Update**         | Runs `ic mod update`                                               | Fetches latest `index.yaml`, shows available updates, downloads new versions.                                                                                                                                              |
+
+The in-game browser works with the git index from day one — it reads the same manifest format that the full Workshop server will use. Search is local (filter/sort on cached index data). Ratings and download counts are deferred to Phase 4-5 (when the Workshop server can track them), but all other features work.
+
+#### Package Integrity
+
+Every published resource includes cryptographic checksums for integrity verification:
 
 - **SHA-256 checksum** stored in the package manifest and on the Workshop server
 - `ic mod install` verifies checksums after download — mismatch → abort + warning
@@ -2219,7 +2276,7 @@ Every published artifact includes cryptographic checksums for integrity verifica
 
 #### Promotion & Maturity Channels
 
-Artifacts can be published to maturity channels, allowing staged releases:
+Resources can be published to maturity channels, allowing staged releases:
 
 | Channel   | Purpose                         | Visibility                      |
 | --------- | ------------------------------- | ------------------------------- |
@@ -2238,26 +2295,70 @@ ic mod install --include-beta     # pull beta resources
 
 Community Workshop servers can replicate from the official server (pull replication, Artifactory-style):
 
-- **Pull replication:** Community server periodically syncs popular artifacts from official. Reduces latency for regional players, provides redundancy.
-- **Selective sync:** Community servers choose which categories/namespaces to replicate (e.g., replicate all Maps but not Mods)
+- **Pull replication:** Community server periodically syncs popular resources from official. Reduces latency for regional players, provides redundancy.
+- **Selective sync:** Community servers choose which categories/publishers to replicate (e.g., replicate all Maps but not Mods)
 - **Offline bundles:** `ic workshop export-bundle` creates a portable archive of selected resources for LAN parties or airgapped environments. `ic workshop import-bundle` loads them into a local repository.
+
+#### P2P Distribution (BitTorrent/WebTorrent) — D049
+
+Workshop delivery uses **peer-to-peer distribution** for large packages, with HTTP direct download as fallback. The Workshop server acts as both metadata registry (SQLite, lightweight) and BitTorrent tracker (peer coordination, lightweight). Actual content transfer happens peer-to-peer between players.
+
+**Transport strategy by package size:**
+
+| Package Size | Strategy                     | Rationale                                                                 |
+| ------------ | ---------------------------- | ------------------------------------------------------------------------- |
+| < 5MB        | HTTP direct only             | P2P overhead exceeds benefit. Maps, balance presets, palettes.            |
+| 5–50MB       | P2P preferred, HTTP fallback | Sprite packs, sound packs, script libraries.                              |
+| > 50MB       | P2P strongly preferred       | HD resource packs, cutscene packs, full mods. Cost advantage is decisive. |
+
+**How it works:**
+
+1. `ic mod publish` packages `.icpkg` and publishes it. Phase 0–3: uploads to GitHub Releases + opens PR to `workshop-index`. Phase 3+: Workshop server computes BitTorrent info hash and starts seeding.
+2. `ic mod install` fetches manifest (from git index or Workshop server), downloads content via HTTP or BitTorrent from other players who have it. Falls back to HTTP if no peers available.
+3. Players who download automatically seed to others (opt-out in settings). Popular resources get faster — the opposite of CDN economics.
+4. SHA-256 verification on complete package, same as D030's existing integrity design.
+5. **WebTorrent** extends this to browser builds (WASM) — P2P over WebRTC. Desktop and browser clients interoperate.
+
+**Seeding infrastructure:** A dedicated seed box (~$20-50/month VPS) permanently seeds all content, ensuring new/unpopular packages are always downloadable. Community seed volunteers and federated Workshop servers also seed. Lobby-optimized seeding prioritizes peers in the same lobby.
+
+**P2P client configuration:** Players control P2P behavior in `settings.yaml`. Bandwidth limiting is critical — residential users cannot have their connection saturated by mod seeding (a lesson from Uber Kraken's production deployment, where even datacenter agents need bandwidth caps):
+
+```yaml
+# settings.yaml — P2P distribution settings
+workshop:
+  p2p:
+    max_upload_speed: "1 MB/s"       # Default seeding speed cap (0 = unlimited)
+    max_download_speed: "unlimited"   # Most users won't limit
+    seed_after_download: true         # Keep seeding while game is running
+    seed_duration_after_exit: "30m"   # Background seeding after game closes
+    cache_size_limit: "2 GB"          # LRU eviction when exceeded
+    prefer_p2p: true                  # false = always use HTTP direct
+```
+
+The P2P engine uses **rarest-first** piece selection, an **endgame mode** that sends duplicate requests for the last few pieces to prevent stalls, a **connection state machine** (pending → active → blacklisted) that avoids wasting time on dead or throttled peers, **statistical bad-peer detection** (demotes peers whose transfer times deviate beyond 3σ — adapted from Dragonfly's evaluator), and **3-tier download priority** (lobby-urgent / user-requested / background) for QoS differentiation. Full protocol design details — peer selection policy, weighted multi-dimensional scoring, piece request strategy, announce cycle, size-based piece lengths, health checks, preheat/prefetch, persistent replica count — are in `09-DECISIONS.md` § D049 "P2P protocol design details."
+
+**Cost:** A BitTorrent tracker costs $5-20/month. Centralized CDN for a popular 500MB mod downloaded 10K times = 5TB = $50-450/month. P2P reduces marginal distribution cost to near-zero.
+
+See `09-DECISIONS.md` § D049 for full design including security analysis, Rust implementation options, gaming industry precedent, and phased bootstrap strategy.
 
 ### Workshop Resource Registry & Dependency System (D030)
 
-The Workshop operates as a **universal artifact repository for game resources**. Any game asset — music, sprites, textures, cutscenes, maps, sound effects, voice lines, templates, balance presets — is individually publishable as a versioned, integrity-verified, licensed artifact. Others (including LLM agents) can discover, depend on, and pull resources automatically.
+The Workshop operates as a **universal resource repository for game assets**. Any game asset — music, sprites, textures, cutscenes, maps, sound effects, voice lines, templates, balance presets — is individually publishable as a versioned, integrity-verified, licensed resource. Others (including LLM agents) can discover, depend on, and download resources automatically.
+
+> **Standalone platform potential:** The Workshop's federated registry + P2P distribution architecture is game-agnostic by design. It could serve other games, creative tools, AI model distribution, and more. See `research/p2p-federated-registry-analysis.md` for analysis of this as a standalone platform, competitive landscape survey across 13+ platforms (Nexus Mods, mod.io, Steam Workshop, Modrinth, CurseForge, Thunderstore, ModDB, GameBanana, Uber Kraken, Dragonfly, Artifactory, IPFS, Homebrew), and actionable design lessons applied to IC.
 
 #### Resource Identity & Versioning
 
 Every Workshop resource gets a globally unique identifier:
 
 ```
-Format:  namespace/name@version
+Format:  publisher/name@version
 Example: alice/soviet-march-music@1.2.0
          community-hd-project/allied-infantry-sprites@2.1.0
          bob/desert-tileset@1.0.3
 ```
 
-- **Namespace** = author username or organization
+- **Publisher** = author username or organization (the publishing identity)
 - **Name** = resource name, lowercase with hyphens
 - **Version** = semantic versioning (semver)
 
@@ -2307,7 +2408,7 @@ ic mod update          # update deps to latest compatible versions (respects sem
 ic mod tree            # display dependency tree (like `cargo tree`)
 ic mod lock            # regenerate ic.lock from current mod.yaml
 ic mod audit           # check dependency licenses for compatibility
-ic mod promote         # promote artifact to a higher channel (beta → release)
+ic mod promote         # promote resource to a higher channel (beta → release)
 ic workshop export-bundle  # export selected resources as portable offline archive
 ic workshop import-bundle  # import offline archive into local repository
 ```
@@ -2363,9 +2464,101 @@ mod:
 | `GPL-3.0-only`      | ✅                     | ✅                    | ✅           | For code (EA source compat) |
 | `LicenseRef-Custom` | varies                | varies               | varies      | Link to full text required  |
 
+#### Optional EULA
+
+Authors who need terms beyond what SPDX licenses cover can attach an End User License Agreement:
+
+```yaml
+mod:
+  license: "CC-BY-4.0"                # SPDX license (always required)
+  eula:
+    url: "https://example.com/my-eula.txt"   # link to full EULA text
+    summary: "No use in commercial products without written permission"
+```
+
+- **EULA is always optional.** The SPDX license alone is sufficient for most resources.
+- **EULA cannot contradict the SPDX license.** `ic mod check` warns if the EULA appears to restrict rights the license explicitly grants. Example: `license: CC0-1.0` with an EULA restricting commercial use is flagged as contradictory.
+- **EULA acceptance in UI:** When a user installs a resource with an EULA, the Workshop browser displays the EULA and requires explicit acceptance before download. Accepted EULAs are recorded in local SQLite (D034) so the prompt is shown only once per resource per user.
+- **EULA is NOT a substitute for a license.** Even with an EULA, the `license` field is still required. The EULA adds terms; it doesn't replace the baseline.
+- **Dependency EULAs surface during `ic mod install`:** If a dependency has an EULA the user hasn't accepted, the install pauses to show it. No silent EULA acceptance through transitive dependencies.
+
+#### Workshop Terms of Service (Platform License)
+
+**The GitHub model:** Just as GitHub's Terms of Service grant GitHub (and other users) certain rights to hosted content regardless of the repository's license, the IC Workshop requires acceptance of platform Terms of Service before any publishing. This ensures the platform can operate legally even when individual resources use restrictive licenses.
+
+**What the Workshop ToS grants (minimum platform rights):**
+
+By publishing a resource to the IC Workshop, the author grants IC (the platform) and its users the following irrevocable, non-exclusive rights:
+
+1. **Hosting & distribution:** The platform may store, cache, replicate (D030 federation), and distribute the resource to users who request it. This includes P2P distribution (D049) where other users' clients temporarily cache and re-serve the resource.
+2. **Indexing & search:** The platform may index resource metadata (title, description, tags, `llm_meta`) for search functionality, including full-text search (FTS5).
+3. **Thumbnails & previews:** The platform may generate and display thumbnails, screenshots, previews, and excerpts of the resource for browsing purposes.
+4. **Dependency resolution:** The platform may serve this resource as a transitive dependency when other resources declare a dependency on it.
+5. **Auto-download in multiplayer:** The platform may automatically distribute this resource to players joining a multiplayer lobby that requires it (CS:GO-style auto-download, D030).
+6. **Forking & derivation:** Other users may create derivative works of the resource **to the extent permitted by the resource's declared SPDX license**. The ToS does not expand license rights — it ensures the platform can mechanically serve the resource; what recipients may *do* with it is governed by the license.
+7. **Metadata for AI agents:** The platform may expose resource metadata to LLM/AI agents **to the extent permitted by the resource's `ai_usage` field** (see `AiUsagePermission`). The ToS does not override `ai_usage: deny`.
+
+**What the Workshop ToS does NOT grant:**
+- No transfer of copyright. Authors retain full ownership.
+- No right for the platform to modify the resource content (only metadata indexing and preview generation).
+- No right to use the resource for advertising or promotional purposes beyond Workshop listings.
+- No right for the platform to sub-license the resource beyond what the declared SPDX license permits.
+
+**ToS acceptance flow:**
+- First-time publishers see the ToS and must accept before their first `ic mod publish` succeeds.
+- ToS acceptance is recorded server-side and in local SQLite. The ToS is not re-shown unless the version changes.
+- `ic mod publish --accept-tos` allows headless acceptance in CI/CD pipelines.
+- The ToS is versioned. When updated, publishers are prompted to re-accept on their next publish. Existing published resources remain distributed under the ToS version they were published under.
+
+**Why this matters:**
+
+Without platform ToS, an author could publish a resource with `All Rights Reserved` and then demand the Workshop stop distributing it — legally, the platform would have no right to host, cache, or serve the file. The ToS establishes the minimum rights the platform needs to function. This is standard for any content hosting platform (GitHub, npm, Steam Workshop, mod.io, Nexus Mods all have equivalent clauses).
+
+**Community-hosted Workshop servers** define their own ToS. The official IC Workshop's ToS is the reference template. `ic mod publish` to a community server shows that server's ToS, not IC's. The engine provides the ToS acceptance infrastructure; the policy is per-deployment.
+
+#### Minimum Age Requirement (COPPA)
+
+**Workshop accounts require users to be 13 years or older.** Account creation presents an age gate; users who do not meet the minimum age cannot create a publishing account.
+
+- Compliance with COPPA (US Children's Online Privacy Protection Act) and the UK Age Appropriate Design Code
+- Users under 13 cannot create Workshop accounts, publish resources, or post reviews
+- Users under 13 **can** play the game, browse the Workshop, and install resources — these actions don't require an account and collect no personal data
+- In-game multiplayer lobbies with text chat follow the same age boundary for account-linked features
+- This applies to the official IC Workshop. Community-hosted servers define their own age policies
+
+#### Third-Party Content Disclaimer
+
+Iron Curtain provides Workshop hosting infrastructure — not editorial approval. Resources published to the Workshop are provided by their respective authors under their declared SPDX licenses.
+
+- **The platform is not liable** for the content, accuracy, legality, or quality of user-submitted Workshop resources
+- **No warranty** is provided for Workshop resources — they are offered "as is" by their respective authors
+- **DMCA safe harbor** applies — the Workshop follows the notice-and-takedown process documented in `09-DECISIONS.md` § D030
+- **The Workshop does not review or approve resources before listing.** Anomaly detection (supply chain security) and community moderation provide the safety layer, not pre-publication editorial review
+
+This disclaimer appears in the Workshop ToS that authors accept before publishing, and is visible to users in the Workshop browser footer.
+
+#### Privacy Policy Requirements
+
+The Workshop collects and processes data necessary for operation. Before any Workshop server deployment, a Privacy Policy must be published covering:
+
+- **What data is collected:** Account identity, published resource metadata, download counts, review text, ratings, IP addresses (for abuse prevention)
+- **Lawful basis:** Consent (account creation) and legitimate interest (platform security)
+- **Retention:** Connection logs purged after configured retention window (default: 30 days). Account data retained while account is active. Deleted on account deletion request.
+- **User rights (GDPR):** Right to access, right to rectification, right to erasure (account deletion deletes profile and reviews; published resources optionally transferable or removable), right to data portability (export in standard format)
+- **Third parties:** Federated Workshop servers may replicate metadata. P2P distribution exposes IP addresses to other peers (same as multiplayer — see `09-DECISIONS.md` § D049 privacy notes)
+
+The Privacy Policy template ships with the Workshop server deployment. Community servers customize and publish their own.
+
+**Phase:** ToS text drafted during Phase 3 (manifest format finalized). Requires legal review before official Workshop launch in Phase 4–5. CI/CD headless acceptance in Phase 5+.
+
 #### Publishing Workflow
 
-Publishing uses the existing `ic mod init` + `ic mod publish` flow — resources are packages with the appropriate `ResourceCategory`:
+Publishing uses the existing `ic mod init` + `ic mod publish` flow — resources are packages with the appropriate `ResourceCategory`. The `ic mod publish` command detects the configured Workshop backend automatically:
+
+- **Phase 0–3 (git-index):** `ic mod publish` packages the `.icpkg`, uploads it to GitHub Releases, generates a manifest YAML, and opens a PR to the `workshop-index` repo. The modder reviews and submits the PR. GitHub Actions validates the manifest.
+- **Phase 5+ (Workshop server):** `ic mod publish` uploads directly to the Workshop server. No PR needed — the server validates and indexes immediately.
+
+The command is the same in both phases — the backend is transparent to the modder.
 
 ```
 # Publish a single music track
@@ -2373,7 +2566,8 @@ ic mod init asset-pack
 # Edit mod.yaml: set category to "Music", add license, add llm_meta
 # Add audio files
 ic mod check                   # validates license present, llm_meta recommended
-ic mod publish                 # uploads to Workshop with dependency metadata
+ic mod publish                 # Phase 0-3: uploads to GitHub Releases + opens PR to index
+                               # Phase 5+:  uploads directly to Workshop server
 ```
 
 ```yaml
@@ -2396,6 +2590,82 @@ llm:
   gameplay_tags: [soviet, military, march, orchestral, briefing]
   composition_hints: "Pairs well with Soviet faction voice lines for immersive briefings"
 ```
+
+#### Moderation & Publisher Trust (D030)
+
+Workshop moderation is **tooling-enabled, policy-configurable**. The engine provides moderation infrastructure; each deployment (official IC server, community servers) defines its own policies.
+
+**Publisher trust tiers:**
+
+| Tier           | Requirements                                                                                  | Privileges                                                                 |
+| -------------- | --------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| **Unverified** | Account created                                                                               | Can publish to `dev` channel only (local testing)                          |
+| **Verified**   | Email confirmed                                                                               | Can publish to `beta` and `release` channels. Subject to moderation queue. |
+| **Trusted**    | N successful publishes (configurable, default 5), no policy violations, account age > 30 days | Updates auto-approved. New resources still moderation-queued.              |
+| **Featured**   | Editor's pick / staff selection                                                               | Highlighted in browse UI, eligible for "Mod of the Week"                   |
+
+Trust tiers are tracked per-server. A publisher who is Trusted on the official server starts as Verified on a community server — trust doesn't federate automatically (a community decision, not an engine constraint).
+
+**Moderation rules engine (Phase 5+):**
+
+The Workshop server supports configurable moderation rules — YAML-defined automation that runs on every publish event. Inspired by mod.io's rules engine but exposed as user-configurable server policy, not proprietary SaaS logic.
+
+```yaml
+# workshop-server.yaml — moderation rules
+moderation:
+  rules:
+    - name: "hold-new-publishers"
+      condition: "publisher.trust_tier == 'verified' AND resource.is_new"
+      action: queue_for_review
+    - name: "auto-approve-trusted-updates"
+      condition: "publisher.trust_tier == 'trusted' AND resource.is_update"
+      action: auto_approve
+    - name: "flag-large-packages"
+      condition: "resource.size > 500_000_000"  # > 500MB
+      action: queue_for_review
+      reason: "Package exceeds 500MB — manual review required"
+    - name: "reject-missing-license"
+      condition: "resource.license == null"
+      action: reject
+      reason: "License field is required"
+```
+
+Community server operators define their own rules. The official IC server ships with sensible defaults. Rules are structural (file format, size, metadata completeness) — not content-based creative judgment.
+
+**Community reporting:** Report button on every resource in the Workshop browser. Report categories: license violation, malware, DMCA, policy violation. Reports go to a moderator queue. DMCA with due process per D030. Publisher notified and can appeal.
+
+#### CI/CD Publishing Integration
+
+`ic mod publish` is designed to work in CI/CD pipelines — not just interactive terminals. Inspired by Artifactory's CI integration and npm's automation tokens.
+
+```yaml
+# GitHub Actions example
+- name: Publish to Workshop
+  env:
+    IC_AUTH_TOKEN: ${{ secrets.IC_WORKSHOP_TOKEN }}
+  run: |
+    ic mod check --strict
+    ic mod publish --non-interactive --json
+```
+
+- **Scoped API tokens:** `ic auth create-token --scope publish` generates a token limited to publish operations. Separate scopes: `publish`, `admin`, `readonly`. Tokens stored in `~/.ic/credentials.yaml` locally, or `IC_AUTH_TOKEN` env var in CI.
+- **Non-interactive mode:** `--non-interactive` flag skips all prompts (required for CI). `--json` flag returns structured output for pipeline parsing.
+- **Lockfile verification in CI:** `ic mod install --locked` fails if `ic.lock` doesn't match `mod.yaml` — ensures reproducible builds.
+- **Pre-publish validation:** `ic mod check --strict` validates manifest, license, dependencies, SHA-256 integrity, and file format compliance before upload. Catch errors before hitting the server.
+
+#### Platform-Targeted Releases
+
+Resources can declare platform compatibility in `manifest.yaml`, enabling per-platform release control. Inspired by mod.io's per-platform targeting (console+PC+mobile) — adapted for IC's target platforms:
+
+```yaml
+# manifest.yaml
+package:
+  name: "hd-terrain-textures"
+  platforms: [windows, linux, macos]     # KTX2 textures not supported on WASM
+  # Omitting platforms field = available on all platforms (default)
+```
+
+The Workshop browser filters resources by the player's current platform. Platform-incompatible resources are hidden by default (shown grayed-out with an "Other platforms" toggle). Phase 0–3: no platform filtering (all resources visible). Phase 5+: server-side filtering.
 
 ### LLM-Driven Resource Discovery (D030)
 
@@ -2424,27 +2694,42 @@ The `ic-llm` crate can search the Workshop programmatically and incorporate disc
   │ → query="winter terrain", tags=["snow", "forest"]              │
   │ → query="Soviet voice lines", tags=["soviet", "military"]     │
   │ → query="tension music", tags=["ambush", "suspense"]          │
+  │ → Filter: ai_usage != Deny (exclude resources authors          │
+  │   have marked as off-limits to LLM agents)                     │
   └──────────────┬──────────────────────────────────────────────────┘
                  │
                  ▼
   ┌─────────────────────────────────────────────────────────────────┐
   │ Evaluate candidates via llm_meta                                │
-  │ → Read summary, purpose, composition_hints                      │
+  │ → Read summary, purpose, composition_hints,                     │
+  │   content_description, related_resources                        │
   │ → Filter by license compatibility                               │
   │ → Rank by gameplay_tags match score                             │
   └──────────────┬──────────────────────────────────────────────────┘
                  │
                  ▼
   ┌─────────────────────────────────────────────────────────────────┐
+  │ Partition by ai_usage permission                                │
+  │ → ai_usage: Allow  → auto-add as dependency (no human needed)  │
+  │ → ai_usage: MetadataOnly → recommend to human for confirmation │
+  └──────────────┬──────────────────────────────────────────────────┘
+                 │
+                 ▼
+  ┌─────────────────────────────────────────────────────────────────┐
   │ Add discovered resources as dependencies in generated mod.yaml │
-  │ → Generated mission references assets by resource ID            │
+  │ → Allow resources added directly                                │
+  │ → MetadataOnly resources shown as suggestions in editor UI     │
   │ → Dependencies resolved at install time via `ic mod install`   │
   └─────────────────────────────────────────────────────────────────┘
 ```
 
 The LLM sees workshop resources through their `llm_meta` fields. A music track tagged `summary: "Military march, Soviet theme, orchestral, 2:30"` and `composition_hints: "Pairs well with Soviet faction voice lines"` lets the LLM intelligently select and compose assets for a coherent mission experience.
 
-**License-aware generation:** The LLM filters by license compatibility — if generating content for a CC-BY mod, it only pulls CC-BY-compatible resources (`CC0-1.0`, `CC-BY-4.0`), excluding `CC-BY-NC-4.0` or `CC-BY-SA-4.0` unless the mod's own license is compatible.
+**Author consent (ai_usage):** Every Workshop resource carries an `ai_usage` permission that is SEPARATE from the SPDX license. A CC-BY music track can be ai_usage: Deny (author is fine with human redistribution but doesn't want LLMs auto-incorporating it). Conversely, an all-rights-reserved cutscene could be ai_usage: Allow (author wants the resource to be discoverable and composable by LLM agents even though the license is restrictive). The license governs human legal rights; `ai_usage` governs automated agent behavior. See the `AiUsagePermission` enum above for the three tiers.
+
+**Default: `MetadataOnly`.** When an author publishes without explicitly setting `ai_usage`, the default is `MetadataOnly` — LLMs can find and recommend the resource, but a human must confirm adding it. This respects authors who haven't thought about AI usage while still making their content discoverable. Authors who want full LLM integration set `ai_usage: allow` explicitly. `ic mod publish` prompts for this choice on first publish and remembers it as a user-level default.
+
+**License-aware generation:** The LLM also filters by license compatibility — if generating content for a CC-BY mod, it only pulls CC-BY-compatible resources (`CC0-1.0`, `CC-BY-4.0`), excluding `CC-BY-NC-4.0` or `CC-BY-SA-4.0` unless the mod's own license is compatible. Both ai_usage AND license must pass for a resource to be auto-added.
 
 ### Steam Workshop Integration (D030)
 
@@ -2471,19 +2756,19 @@ workshop:
 
 ### In-Game Workshop Browser (D030)
 
-The in-game browser queries the virtual repository (all configured sources merged). UX inspired by CS:GO/Steam Workshop browser:
+The in-game browser is how most players interact with the Workshop. It queries the merged view of all configured repository sources — whether that's a git-hosted index (Phase 0–3), a full Workshop server (Phase 5+), or both. UX inspired by CS:GO/Steam Workshop browser:
 
-- **Search:** FTS5-powered full-text search across names, descriptions, tags, and `llm_meta` fields
-- **Filter:** By category (map, mod, music, sprites, etc.), game module (RA1, TD, RA2), rating, download count, author, license
-- **Sort:** By popularity, newest, highest rated, most downloaded, trending (recent velocity)
-- **Preview:** Screenshot gallery, description, dependency tree, license info, author profile with reputation badge
-- **One-click subscribe:** Adds to local cache, resolves dependencies automatically
-- **Collections:** Curated bundles ("Best Soviet mods", "Tournament map pool Season 5")
-- **Creator profiles:** Author page showing all published resources, reputation score, tip links (D035)
+- **Search:** Full-text search across names, descriptions, tags, and `llm_meta` fields. Phase 0–3: local search over cached `index.yaml`. Phase 5+: FTS5-powered server-side search.
+- **Filter:** By category (map, mod, music, sprites, etc.), game module (RA1, TD, RA2), author, license. Rating and download count filters available when Workshop server is live (Phase 5+).
+- **Sort:** By newest, alphabetical, author. Phase 5+ adds: popularity, highest rated, most downloaded, trending.
+- **Preview:** Screenshot, description, dependency list, license info, author name.
+- **One-click install:** Downloads to local cache, resolves dependencies automatically. Works identically regardless of backend.
+- **Collections:** Curated bundles ("Best Soviet mods", "Tournament map pool Season 5"). Phase 5+ feature.
+- **Creator profiles:** Author page showing all published content, reputation score, tip links (D035). Phase 5+ feature.
 
 ### Modpacks as First-Class Workshop Resources (D030)
 
-A **modpack** is a Workshop resource that bundles a curated set of mods with pinned versions, load order, and configuration — published as a single installable artifact. This is the lesson from Minecraft's CurseForge and Modrinth: modpacks solve the three hardest problems in modding ecosystems — discovery ("what mods should I use?"), compatibility ("do these mods work together?"), and onboarding ("how do I install all of this?").
+A **modpack** is a Workshop resource that bundles a curated set of mods with pinned versions, load order, and configuration — published as a single installable resource. This is the lesson from Minecraft's CurseForge and Modrinth: modpacks solve the three hardest problems in modding ecosystems — discovery ("what mods should I use?"), compatibility ("do these mods work together?"), and onboarding ("how do I install all of this?").
 
 ```yaml
 # mod.yaml for a modpack
@@ -2543,8 +2828,8 @@ When a player joins a multiplayer lobby, the client checks `GameListing.required
 
 1. **Diff:** Compare `required_mods` against local cache
 2. **Prompt:** Show missing resources with total download size and estimated time
-3. **Download:** Fetch from virtual repository (IC Workshop → Steam Workshop → community sources by priority)
-4. **Verify:** SHA-256 checksum validation for every downloaded artifact
+3. **Download:** Fetch via P2P (BitTorrent/WebTorrent — D049) from lobby peers and the wider swarm, with HTTP fallback from Workshop server. Lobby peers are prioritized as download sources since they already have the required content.
+4. **Verify:** SHA-256 checksum validation for every downloaded resource
 5. **Install:** Place in local cache, update dependency graph
 6. **Ready:** Player joins game with all required content
 
@@ -2643,18 +2928,18 @@ pub trait WorkshopClient: Send + Sync {
     fn create_token(&self, name: &str, scopes: &[TokenScope], expires: Duration) -> Result<ApiToken>; // CI/CD auth
     fn revoke_token(&self, token_id: &str) -> Result<()>; // CI/CD: revoke compromised tokens
     fn report_content(&self, id: &ResourceId, reason: ContentReport) -> Result<()>; // D030: content moderation
-    fn get_creator_profile(&self, namespace: &str) -> Result<CreatorProfile>; // D030: creator reputation
+    fn get_creator_profile(&self, publisher: &str) -> Result<CreatorProfile>; // D030: creator reputation
 }
 
-/// Globally unique resource identifier: "namespace/name@version"
+/// Globally unique resource identifier: "publisher/name@version"
 pub struct ResourceId {
-    pub namespace: String,
+    pub publisher: String,
     pub name: String,
     pub version: Version,             // semver
 }
 
 pub struct Dependency {
-    pub id: String,                   // "namespace/name"
+    pub id: String,                   // "publisher/name"
     pub version: VersionReq,          // semver range
     pub source: DependencySource,     // Workshop, Local, Url
     pub optional: bool,
@@ -2664,13 +2949,46 @@ pub struct ResourcePackage {
     pub id: ResourceId,               // globally unique identifier
     pub meta: ResourceMeta,           // title, author, description, tags
     pub license: String,              // SPDX identifier (REQUIRED)
+    pub eula: Option<Eula>,           // optional additional terms (URL + summary)
+    pub ai_usage: AiUsagePermission,  // author's consent for LLM/AI access (REQUIRED)
     pub llm_meta: Option<LlmResourceMeta>, // LLM-readable description
     pub category: ResourceCategory,   // Music, Sprites, Map, Mod, etc.
     pub files: Vec<PackageFile>,      // the actual content
-    pub checksum: Sha256Hash,         // artifact integrity (computed on publish)
+    pub checksum: Sha256Hash,         // package integrity (computed on publish)
     pub channel: Channel,             // dev | beta | release
     pub dependencies: Vec<Dependency>,// other workshop items this requires
     pub compatibility: VersionInfo,   // engine version + game module this targets
+}
+
+/// Optional End User License Agreement for additional terms beyond the SPDX license.
+pub struct Eula {
+    pub url: String,                  // link to full EULA text (REQUIRED if eula present)
+    pub summary: Option<String>,      // one-line human-readable summary
+}
+
+/// Author's explicit consent for how LLM/AI agents may interact with this resource.
+/// This is SEPARATE from the SPDX license — a resource can be CC-BY (humans may
+/// redistribute) but ai_usage: Deny (author doesn't want automated AI incorporation).
+/// The license governs human use; ai_usage governs automated agent use.
+pub enum AiUsagePermission {
+    /// LLMs can discover, evaluate, pull, and incorporate this resource into
+    /// generated content (missions, mods, campaigns) without per-use approval.
+    /// The resource appears in LLM search results and can be auto-added as a
+    /// dependency by ic-llm's discovery pipeline (D030).
+    Allow,
+
+    /// LLMs can read this resource's metadata (llm_meta, tags, description) for
+    /// discovery and recommendation, but cannot auto-pull it as a dependency.
+    /// A human must explicitly confirm adding this resource. This is the DEFAULT —
+    /// it lets LLMs recommend the resource to modders while keeping the author's
+    /// content behind a human decision gate.
+    MetadataOnly,
+
+    /// Resource is excluded from LLM agent queries entirely. Human users can still
+    /// browse, search, and install it normally. The resource is invisible to ic-llm's
+    /// automated discovery pipeline. Use this for resources where the author does not
+    /// want any AI-mediated discovery or incorporation.
+    Deny,
 }
 
 /// LLM-readable metadata for workshop resources.
@@ -2681,6 +2999,20 @@ pub struct LlmResourceMeta {
     pub gameplay_tags: Vec<String>,   // semantic: ["desert", "2v2", "competitive", "scarce_resources"]
     pub difficulty: Option<String>,   // for missions/campaigns: "hard", "beginner-friendly"
     pub composition_hints: Option<String>, // how this combines with other resources
+    pub content_description: Option<ContentDescription>, // rich structured description for complex resources
+    pub related_resources: Vec<String>, // resource IDs that compose well with this one
+}
+
+/// Rich structured description for complex multi-file resources (cutscene packs,
+/// campaign bundles, sound libraries). Gives LLMs enough context to evaluate
+/// relevance without downloading and parsing the full resource.
+pub struct ContentDescription {
+    pub contents: Vec<String>,        // what's inside: ["5 briefing videos", "3 radar comm clips"]
+    pub themes: Vec<String>,          // mood/tone: ["military", "suspense", "soviet_propaganda"]
+    pub style: Option<String>,        // visual/audio style: "Retro FMV with live actors"
+    pub duration: Option<String>,     // for temporal media: "12 minutes total"
+    pub resolution: Option<String>,   // for visual media: "320x200 palette-indexed"
+    pub technical_notes: Option<String>, // format-specific info an LLM needs to know
 }
 
 pub struct DependencyGraph {
@@ -2984,6 +3316,155 @@ This metadata is indexed by the workshop server for semantic search. When an LLM
 3. **Tags use a controlled vocabulary.** `role`, `strengths`, `weaknesses`, `counters`, and `gameplay_tags` draw from a published tag dictionary (extensible by mods). This prevents tag drift where the same concept has five spellings.
 4. **`tactical_notes` is free-text.** This is the field where nuance lives. "Build 5+ to be cost-effective" or "Position behind walls for maximum effectiveness" — advice that can't be captured in tags.
 5. **Metadata is part of the YAML spec, not a sidecar.** It lives in the same file as the resource definition. No separate metadata files to lose or desync.
+6. **`ai_usage` is required on publish, defaults to `metadata_only`.** Authors must make an explicit choice about AI access. `ic mod publish` prompts for ai_usage on first publish and remembers the choice as a user-level default. Authors can change ai_usage on any existing resource at any time via `ic mod update --ai-usage allow|metadata_only|deny`.
+
+### Author Consent for LLM Usage (ai_usage)
+
+The Workshop's AI consent model is deliberately **separate from the license system**. A resource's SPDX license governs what humans may legally do (redistribute, modify, sell). The `ai_usage` field governs what **automated AI agents** may do — and these are genuinely different questions.
+
+**Why this separation is necessary:**
+
+A composer publishes a Soviet march track under CC-BY-4.0. They're fine with other modders using it in their mods (with credit). But they don't want an LLM to automatically select their track when generating missions — they'd prefer a human to choose it deliberately. Under a license-only model, CC-BY permits both uses identically. The `ai_usage` field lets the author distinguish.
+
+Conversely, a modder publishes cutscene briefings with all rights reserved (no redistribution). But they *do* want LLMs to know these cutscenes exist and recommend them — because more visibility means more downloads. `ai_usage: allow` with a restrictive license means the LLM can auto-add it as a dependency reference (the mission says "requires bob/soviet-briefings@1.0"), but the end user's `ic mod install` still respects the license when downloading.
+
+**The three tiers:**
+
+| `ai_usage` Value          | LLM Can Search | LLM Can Read Metadata | LLM Can Auto-Add as Dependency | Human Approval Required |
+| ------------------------- | -------------- | --------------------- | ------------------------------ | ----------------------- |
+| `allow`                   | Yes            | Yes                   | Yes                            | No                      |
+| `metadata_only` (default) | Yes            | Yes                   | No — LLM recommends only       | Yes — human confirms    |
+| `deny`                    | No             | No                    | No                             | N/A — invisible to LLMs |
+
+**YAML manifest example:**
+
+```yaml
+# A cutscene pack published with full LLM access
+mod:
+  id: alice/soviet-briefing-pack
+  title: "Soviet Campaign Briefings"
+  version: "1.0.0"
+  license: "CC-BY-4.0"
+  ai_usage: allow                      # LLMs can auto-pull this
+
+  llm_meta:
+    summary: "5 live-action Soviet briefing videos with English subtitles"
+    purpose: "Campaign briefings for Soviet missions — general briefs troops before battle"
+    gameplay_tags: [soviet, briefing, cutscene, campaign, live_action]
+    difficulty: null
+    composition_hints: "Use before Soviet campaign missions. Pairs with soviet-march-music for atmosphere."
+    content_description:
+      contents:
+        - "briefing_01.webm — General introduces the war (2:30)"
+        - "briefing_02.webm — Orders to capture Allied base (1:45)"
+        - "briefing_03.webm — Retreat and regroup speech (2:10)"
+        - "briefing_04.webm — Final assault planning (3:00)"
+        - "briefing_05.webm — Victory celebration (1:20)"
+      themes: [military, soviet_propaganda, dramatic, patriotic]
+      style: "Retro FMV with live actors, 4:3 aspect ratio, film grain"
+      duration: "10:45 total"
+      resolution: "640x480"
+    related_resources:
+      - "alice/soviet-march-music"
+      - "community/ra1-soviet-voice-lines"
+```
+
+```yaml
+# A music track with metadata-only access (default)
+mod:
+  id: bob/ambient-war-music
+  title: "Ambient Battlefield Soundscapes"
+  version: "2.0.0"
+  license: "CC-BY-NC-4.0"
+  ai_usage: metadata_only              # LLMs can recommend but not auto-add
+
+  llm_meta:
+    summary: "6 ambient war soundscape loops, 3-5 minutes each"
+    purpose: "Background audio for tense defensive scenarios"
+    gameplay_tags: [ambient, tension, defense, loop, atmospheric]
+    composition_hints: "Works best layered under game audio, not as primary music track"
+```
+
+**Workshop UI integration:**
+- The Workshop browser shows an "AI Discoverable" badge on resources with `ai_usage: allow`
+- Resource settings page includes a clear toggle: "Allow AI agents to use this resource automatically"
+- Creator profile shows aggregate AI stats: "42 of your resources are AI-discoverable" with a bulk-edit option
+- `ic mod lint` warns if `ai_usage` is set to `allow` but `llm_meta` is empty (the resource is auto-pullable but provides no context for LLMs to evaluate it)
+
+### Workshop Organization for LLM Discovery
+
+Beyond individual resource metadata, the Workshop itself is organized to support LLM navigation and composition:
+
+**Semantic resource relationships:**
+
+Resources can declare relationships to other resources beyond simple dependencies:
+
+```yaml
+# In mod.yaml
+relationships:
+  variant_of: "community/standard-soviet-sprites"  # this is an HD variant
+  works_with:                                         # bidirectional composition hints
+    - "alice/soviet-march-music"
+    - "community/snow-terrain-textures"
+  supersedes: "bob/old-soviet-sprites@1.x"            # migration path from older resource
+```
+
+These relationships are indexed by the Workshop server and exposed to LLM queries. An LLM searching for "Soviet sprites" finds the standard version and is told "alice/hd-soviet-sprites is an HD variant." An LLM building a winter mission finds snow terrain and is told "works well with alice/soviet-march-music." This is structured composition knowledge that tags alone can't express.
+
+**Category hierarchies for LLM navigation:**
+
+Resource categories (Music, Sprites, Maps, etc.) have sub-categories that LLMs can traverse:
+
+```
+Music/
+├── Soundtrack/          # full game soundtracks
+├── Ambient/             # background loops
+├── Faction/             # faction-themed tracks
+│   ├── Soviet/
+│   ├── Allied/
+│   └── Custom/
+└── Event/               # victory, defeat, mission start
+Cutscenes/
+├── Briefing/            # pre-mission briefings  
+├── InGame/              # triggered during gameplay
+└── Cinematic/           # standalone story videos
+```
+
+LLMs query hierarchically: "find a Soviet faction music track" → navigate Music → Faction → Soviet, rather than relying solely on tag matching. The hierarchy provides structure; tags provide precision within that structure.
+
+**Curated LLM composition sets (Phase 7+):**
+
+Workshop curators (human or LLM-assisted) can publish **composition sets** — pre-vetted bundles of resources that work together for a specific creative goal:
+
+```yaml
+# A composition set (published as a Workshop resource with category: CompositionSet)
+mod:
+  id: curators/soviet-campaign-starter-kit
+  category: CompositionSet
+  ai_usage: allow
+  llm_meta:
+    summary: "Pre-vetted resource bundle for creating Soviet campaign missions"
+    purpose: "Starting point for LLM mission generation — all resources are ai_usage:allow and license-compatible"
+    gameplay_tags: [soviet, campaign, starter_kit, curated]
+    composition_hints: "Use as a base, then search for mission-specific assets"
+  
+composition:
+  resources:
+    - id: "alice/soviet-briefing-pack"
+      role: "briefings"
+    - id: "alice/soviet-march-music"
+      role: "soundtrack"
+    - id: "community/ra1-soviet-voice-lines"
+      role: "unit_voices"
+    - id: "community/snow-terrain-textures"
+      role: "terrain"
+    - id: "community/standard-soviet-sprites"
+      role: "unit_sprites"
+  verified_compatible: true            # curator has tested these together
+  all_ai_accessible: true              # all resources in set are ai_usage: allow
+```
+
+An LLM asked to "generate a Soviet campaign mission" can start by pulling a relevant composition set, then search for additional mission-specific assets. This saves the LLM from evaluating hundreds of individual resources and avoids license/ai_usage conflicts — the curator has already verified compatibility.
 
 ## Mod API Stability & Compatibility
 

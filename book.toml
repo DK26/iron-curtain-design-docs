@@ -10,3 +10,7 @@ build-dir = "docs"
 [output.html]
 git-repository-url = "https://github.com/DK26/iron-curtain-design-docs"
 edit-url-template = "https://github.com/DK26/iron-curtain-design-docs/edit/main/{path}"
+additional-css = []
+
+# License: Design documents (src/, research/) are CC BY-SA 4.0.
+# Engine code license is pending (P006). See LICENSE-DOCS.

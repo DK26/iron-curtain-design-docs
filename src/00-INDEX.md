@@ -13,22 +13,22 @@ A Rust-native RTS engine that supports OpenRA resource formats (`.mix`, `.shp`, 
 
 ## Document Index
 
-| #   | Document                | Purpose                                                                                                            | Read When...                                                                      |
-| --- | ----------------------- | ------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------- |
-| 01  | `01-VISION.md`          | Project goals, competitive landscape, why this should exist                                                        | You need to understand the project's purpose and market position                  |
-| 02  | `02-ARCHITECTURE.md`    | Core architecture: crate structure, ECS, sim/render split, game loop                                               | You need to make any structural or code-level decision                            |
-| 03  | `03-NETCODE.md`         | Unified relay lockstep netcode, sub-tick ordering, adaptive run-ahead, NetworkModel trait                          | You're working on multiplayer, networking, or the sim/network boundary            |
-| 04  | `04-MODDING.md`         | YAML rules, Lua scripting, WASM modules, templating                                                                | You're working on data formats, scripting, or mod support                         |
-| 05  | `05-FORMATS.md`         | File formats, original source code insights, compatibility layer                                                   | You're working on asset loading, ra-formats crate, or OpenRA interop              |
-| 06  | `06-SECURITY.md`        | Threat model, vulnerabilities, mitigations for online play                                                         | You're working on networking, modding sandbox, or anti-cheat                      |
-| 07  | `07-CROSS-ENGINE.md`    | Cross-engine compatibility, protocol adapters, reconciliation                                                      | You're exploring OpenRA interop or multi-engine play                              |
-| 08  | `08-ROADMAP.md`         | 36-month development plan with phased milestones                                                                   | You need to plan work or understand phase dependencies                            |
-| 09  | `09-DECISIONS.md`       | Decision log with rationale for every major choice                                                                 | You want to understand WHY a decision was made, or revisit one                    |
-| 10  | `10-PERFORMANCE.md`     | Efficiency-first performance philosophy, targets, profiling                                                        | You're optimizing a system, choosing algorithms, or adding parallelism            |
-| 11  | `11-OPENRA-FEATURES.md` | OpenRA feature catalog (~700 traits), gap analysis, migration mapping                                              | You're assessing feature parity or planning which systems to build next           |
-| 12  | `12-MOD-MIGRATION.md`   | Combined Arms mod migration, Remastered recreation feasibility                                                     | You're validating modding architecture against real-world mods                    |
-| 13  | `13-PHILOSOPHY.md`      | Development philosophy, game design principles, design review, lessons from C&C creators and OpenRA                | You're reviewing design/code, evaluating a feature, or resolving a design tension |
-| 14  | `14-METHODOLOGY.md`     | Development methodology: stages from research through release, context-bounded work units, agent coding guidelines | You're planning work, starting a new phase, or onboarding as a new contributor    |
+| #   | Document                | Purpose                                                                                                                                                         | Read When...                                                                                                       |
+| --- | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| 01  | `01-VISION.md`          | Project goals, competitive landscape, why this should exist                                                                                                     | You need to understand the project's purpose and market position                                                   |
+| 02  | `02-ARCHITECTURE.md`    | Core architecture: crate structure, ECS, sim/render split, game loop                                                                                            | You need to make any structural or code-level decision                                                             |
+| 03  | `03-NETCODE.md`         | Unified relay lockstep netcode, sub-tick ordering, adaptive run-ahead, NetworkModel trait                                                                       | You're working on multiplayer, networking, or the sim/network boundary                                             |
+| 04  | `04-MODDING.md`         | YAML rules, Lua scripting, WASM modules, templating                                                                                                             | You're working on data formats, scripting, or mod support                                                          |
+| 05  | `05-FORMATS.md`         | File formats, original source code insights, compatibility layer                                                                                                | You're working on asset loading, ra-formats crate, or OpenRA interop                                               |
+| 06  | `06-SECURITY.md`        | Threat model, vulnerabilities, mitigations for online play                                                                                                      | You're working on networking, modding sandbox, or anti-cheat                                                       |
+| 07  | `07-CROSS-ENGINE.md`    | Cross-engine compatibility, protocol adapters, reconciliation                                                                                                   | You're exploring OpenRA interop or multi-engine play                                                               |
+| 08  | `08-ROADMAP.md`         | 36-month development plan with phased milestones                                                                                                                | You need to plan work or understand phase dependencies                                                             |
+| 09  | `09-DECISIONS.md`       | Decision log with rationale for every major choice                                                                                                              | You want to understand WHY a decision was made, or revisit one                                                     |
+| 10  | `10-PERFORMANCE.md`     | Efficiency-first performance philosophy, targets, profiling                                                                                                     | You're optimizing a system, choosing algorithms, or adding parallelism                                             |
+| 11  | `11-OPENRA-FEATURES.md` | OpenRA feature catalog (~700 traits), gap analysis, migration mapping                                                                                           | You're assessing feature parity or planning which systems to build next                                            |
+| 12  | `12-MOD-MIGRATION.md`   | Combined Arms mod migration, Remastered recreation feasibility                                                                                                  | You're validating modding architecture against real-world mods                                                     |
+| 13  | `13-PHILOSOPHY.md`      | Development philosophy, game design principles, design review, lessons from C&C creators and OpenRA                                                             | You're reviewing design/code, evaluating a feature, or resolving a design tension                                  |
+| 14  | `14-METHODOLOGY.md`     | Development methodology: stages from research through release, context-bounded work units, research rigor & AI-assisted design process, agent coding guidelines | You're planning work, starting a new phase, understanding the research process, or onboarding as a new contributor |
 
 ## Key Architectural Invariants
 
@@ -62,3 +62,11 @@ iron-curtain/
 ├── ic-llm         # LLM mission/campaign generation, asset generation, adaptive difficulty
 └── ic-game        # Top-level Bevy App, ties all game plugins together (NO editor code)
 ```
+
+## License
+
+All files in `src/` and `research/` are licensed under [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/). Engine source code is licensed under [GPL v3](https://www.gnu.org/licenses/gpl-3.0.html) with an explicit modding exception (D051).
+
+## Trademarks
+
+Red Alert, Tiberian Dawn, Command & Conquer, and C&C are trademarks of Electronic Arts Inc. Iron Curtain is not affiliated with, endorsed by, or sponsored by Electronic Arts.

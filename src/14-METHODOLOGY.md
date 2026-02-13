@@ -495,3 +495,106 @@ These aren't new principles — they're existing project principles applied to t
 7. **Efficiency-first** (Architecture invariant #5, [10-PERFORMANCE](10-PERFORMANCE.md)). This applies to the development process too — better methodology, clearer task specs, cleaner boundaries before "throw more agents at it."
 
 8. **Research is a continuous discipline, not a phase** (observed pattern). The project's commit history shows research intensifying — not tapering — as design maturity enables more precise questions. New prior art analysis is never "too late" if it produces actionable refinements. Budget time for research throughout the project, not just at the start.
+
+---
+
+## Research Rigor & AI-Assisted Design
+
+> This project uses LLM agents as research assistants and writing tools within a human-directed methodology. This section documents the actual process — because "AI-assisted" is frequently misunderstood as "AI-generated," and the difference matters.
+
+### The Misconception
+
+When people hear "built with AI assistance," they often imagine: someone typed a few prompts, an LLM produced some text, and that text was shipped as-is. If that were the process, the result would be shallow, inconsistent, and full of hallucinated claims. It would read like marketing copy, not engineering documentation.
+
+That is not what happened here.
+
+### What Actually Happened
+
+Every design decision in this project followed a deliberate, multi-step process:
+
+1. **The human identifies the question.** Not the LLM. The questions come from domain expertise, community knowledge, and architectural reasoning. "How should the Workshop handle P2P distribution?" is a question born from years of experience with modding communities, not a prompt template.
+
+2. **Prior art is studied at the source code level.** Not summarized from blog posts. When this project says "Generals uses adaptive run-ahead," that claim was verified by reading the actual `FrameReadiness` enum in EA's GPL-licensed C++ source. When it says "IPFS has a 9-year-unresolved bandwidth limiting issue," the actual GitHub issue (#3065) was read, along with its 73 reactions and 67 comments. When it says "Minetest uses a LagPool for rate control," the Minetest source was examined.
+
+3. **Findings are documented in structured research documents.** Each research analysis follows a consistent format: overview, architecture analysis, lessons applicable to IC, comparison with IC's approach, and source citations. These aren't LLM summaries — they're analytical documents where every claim traces to a specific codebase, issue, or commit.
+
+4. **Decisions are extracted with alternatives and rationale.** Each of the 50 decisions in the decision log (D001–D050) records what was chosen, what alternatives were considered, and why. Many decisions evolved through multiple revision cycles as new research challenged initial assumptions.
+
+5. **Findings are propagated across all affected documents.** A single research finding (e.g., "Stratagus confirms the manager hierarchy pattern for AI") doesn't just update one file — it's traced through every document that references the topic: architecture, decisions, roadmap, modding, security, methodology. The cross-cutting propagation discipline documented in Stage 5 of this chapter isn't theoretical — it's how every research integration actually works.
+
+6. **The human reviews, verifies, and commits.** The maintainer reads every change, verifies factual claims, checks cross-references, and decides what ships. The LLM agent never commits — it proposes, the human approves. A commit is a human judgment that the content is correct.
+
+### The Evidence: By the Numbers
+
+The body of work speaks for itself:
+
+| Metric                                            | Count                                                                                                                                                                  |
+| ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Design chapters                                   | 14 (Vision, Architecture, Netcode, Modding, Formats, Security, Cross-Engine, Roadmap, Decisions, Performance, OpenRA Features, Mod Migration, Philosophy, Methodology) |
+| Standalone research documents                     | 19 (netcode analyses, AI surveys, pathfinding studies, security research, development philosophy, Workshop/P2P analysis)                                               |
+| Total lines of structured documentation           | ~35,000                                                                                                                                                                |
+| Recorded design decisions (D001–D050)             | 50                                                                                                                                                                     |
+| Pending decisions with analysis                   | 6 (P001–P007, two resolved)                                                                                                                                            |
+| Git commits (design iteration)                    | 100+                                                                                                                                                                   |
+| Open-source codebases studied at source level     | 8+ (EA Red Alert, EA Remastered, EA Generals, EA Tiberian Dawn, OpenRA, OpenRA Mod SDK, Stratagus/Stargus, Chrono Divide)                                              |
+| Additional projects studied for specific patterns | 12+ (Spring Engine, 0 A.D., MicroRTS, Veloren, Hypersomnia, OpenBW, DDNet, OpenTTD, Minetest, Lichess, Quake 3, Warzone 2100)                                          |
+| Workshop/P2P platforms analyzed                   | 13+ (npm, Cargo, NuGet, PyPI, Nexus Mods, CurseForge, mod.io, Steam Workshop, ModDB, GameBanana, Uber Kraken, Dragonfly, IPFS)                                         |
+| OpenRA traits mapped in gap analysis              | ~700                                                                                                                                                                   |
+| Original creator quotes compiled and sourced      | 50+ (from Bostic, Sperry, Castle, Klepacki, Long, Legg, and other Westwood/EA veterans)                                                                                |
+| Cross-system pattern analyses                     | 3 (netcode ↔ Workshop cross-pollination, AI extensibility across 7 codebases, pathfinding survey across 6 engines)                                                     |
+
+This corpus wasn't generated in a single session. It was built iteratively over 100+ commits, with each commit refining, cross-referencing, and sometimes revising previous work. The decision log shows decisions that evolved through multiple revisions — D002 (Bevy) was originally "No Bevy" before research changed the conclusion. D043 (AI presets) grew from a simple paragraph to a multi-page design as each new codebase study (Spring Engine, 0 A.D., MicroRTS, Stratagus) added validated evidence.
+
+### How the Human-Agent Relationship Works
+
+The roles are distinct:
+
+**The human (maintainer/architect) does:**
+- Identifies which questions matter and in what order
+- Decides which codebases and prior art to study
+- Evaluates whether findings are accurate and relevant
+- Makes every architectural decision — the LLM never decides
+- Reviews all text for factual accuracy, tone, and consistency
+- Commits changes only after verification
+- Directs the overall vision and priorities
+- Catches when the LLM is wrong, imprecise, or overconfident
+
+**The LLM agent does:**
+- Reads source code and documentation at scale (an LLM can process a 10,000-line codebase faster than a human)
+- Searches for patterns across multiple codebases simultaneously
+- Drafts structured analysis documents following established formats
+- Propagates changes across multiple files (mechanical but error-prone if done manually)
+- Maintains consistent cross-references across 35,000+ lines of documentation
+- Produces initial drafts that the human refines
+
+**What the LLM does NOT do:**
+- Make architectural decisions
+- Decide what to research next
+- Ship anything without human review
+- Determine project direction or priorities
+- Evaluate whether a design is "good enough"
+- Commit to the repository
+
+The relationship is closer to an architect working with a highly capable research assistant than to someone using a text generator. The assistant can read faster, search broader, and draft more consistently — but the architect decides what to build, evaluates the research, and signs off on every deliverable.
+
+### Why This Matters
+
+Three reasons:
+
+1. **Quality.** An LLM generating text without structured methodology produces plausible-sounding but shallow output. The same LLM operating within a rigorous process — where every claim is verified against source code, every decision has documented alternatives, and every cross-reference is maintained — produces documentation that matches or exceeds what a single human could produce in the same timeframe. The methodology is the quality control, not the model.
+
+2. **Accountability.** Every claim in these design documents can be traced: which research document supports it, which source code was examined, which decision records the rationale. If a claim is wrong, the trail shows where the error entered. If a decision was revised, the log shows when and why. This auditability is a property of the process, not the tool.
+
+3. **Reproducibility.** The Research-Design-Refine cycle documented in this chapter is a repeatable methodology. Another project could follow the same process — with or without an LLM — and produce similarly rigorous results. The LLM accelerates the process; it doesn't define it. The methodology works without AI assistance — it just takes longer.
+
+### What We've Learned About AI-Assisted Design
+
+Having used this methodology across 100+ iterations, some observations:
+
+- **The constraining documents matter more than the prompts.** `AGENTS.md`, the architectural invariants, the crate boundaries, the "Mistakes to Never Repeat" list — these constrain what the LLM can produce. As the constraint set grows, the LLM's output quality improves because there are fewer ways to be wrong. This is the compounding effect described in the Foreword.
+
+- **Research compounds.** Each research document makes subsequent research more productive. When studying Stratagus's AI system, having already analyzed Spring Engine, 0 A.D., and MicroRTS meant the agent could immediately compare findings against three prior analyses. By the time the Workshop P2P research was done (Kraken → Dragonfly → IPFS, three deep-dives in sequence), the pattern recognition was sharp enough to identify cross-pollination with the netcode design — a connection that wouldn't have been visible without the accumulated context.
+
+- **The human's domain expertise is irreplaceable.** The LLM doesn't know that C&C LAN parties still happen. It doesn't know that the OFP mission editor was the most empowering creative tool of its era. It doesn't know that the feeling of tank treads crushing infantry is what makes Red Alert *Red Alert*. These intuitions direct the research and shape the decisions. The LLM is a tool; the vision is human.
+
+- **Verification is non-negotiable.** The "Mistakes to Never Repeat" section in `AGENTS.md` exists because the LLM got things wrong — sometimes confidently. It claimed "design documents are complete" when they weren't. It used present tense for unbuilt features. It stated unverified performance numbers as fact. Each mistake was caught during review, corrected, and added to the constraint set so it wouldn't recur. The methodology assumes the LLM will make errors and builds in verification at every step.

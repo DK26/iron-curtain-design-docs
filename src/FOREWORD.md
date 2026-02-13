@@ -40,6 +40,8 @@ This project is also a research opportunity. I want to take LLM-assisted coding 
 
 There's a compounding effect here: as the framework and architecture become more solid, the rules for how the LLM creates and modifies code become more focused and restricted. The design docs, the invariants, the crate boundaries — they all constrain what the LLM can do, which reduces the chance of serious errors. On top of that, I'm a firm believer in verifying code with tests and benchmarks. If it's not tested, it doesn't count.
 
+If you're curious about the actual methodology — how research is conducted, how decisions are made, how the human-agent relationship works in practice, and exactly how much work is behind these documents — see [Chapter 14: Development Methodology](14-METHODOLOGY.md), particularly the sections on the Research-Design-Refine cycle and Research Rigor. The short version: 50 design decisions, 19 standalone research documents, 20+ open-source codebases studied at the source code level, ~35,000 lines of structured documentation, 100+ commits of iterative refinement. None of it generated in a few prompts. All of it human-directed, human-reviewed, and human-committed.
+
 ## What Bugged Me About the Alternatives
 
 OpenRA is great for what it is. But I've felt the lag — not just in big battles, it's random. Something feels off sometimes. The Remastered Collection has the same problem, which made me wonder if they went the C# route too — and it turns out they did. The original C++ engine runs as a DLL, but the networking and rendering layers are handled by a proprietary C# client. For me it comes down to raw performance: the original Red Alert was written in C, and it ran close to the hardware. C# doesn't.

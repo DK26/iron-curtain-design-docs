@@ -275,29 +275,36 @@ The full research is published in the `research/` directory. Here's what was stu
 
 Every major component of the netcode traces back to a real, working system. No single project had all the answers — the value was in studying enough of them to see which patterns emerge independently across unrelated codebases. Those are the patterns most likely to be correct.
 
+### Beyond Netcode
+
+The same research methodology applies to every major subsystem — not just netcode. The Workshop and P2P distribution design studied 13+ platforms (npm, Cargo, Nexus Mods, CurseForge, Steam Workshop, mod.io, Uber Kraken, Dragonfly, IPFS, and more). The AI system studied 7+ codebases (Spring Engine, 0 A.D., MicroRTS, Stratagus, and academic RTS AI research). The pathfinding design surveyed 6 engines. The development philosophy compiled 50+ sourced quotes from the original C&C creators.
+
+Across the entire project: 50 recorded design decisions with rationale and alternatives, 19 standalone research documents, 20+ codebases studied at the source code level, ~35,000 lines of structured documentation — all built through 100+ commits of iterative refinement. The LLM accelerated the research; the human directed every question and made every decision. For the full methodology — how research is conducted, how the human-agent relationship works, and why this matters for quality — see [Chapter 14: Development Methodology](https://dk26.github.io/iron-curtain-design-docs/14-METHODOLOGY.html).
+
 ## Project Status
 
 📐 **Design phase** — architecture documents in progress, implementation not yet started.
 
 See the [design documents](https://dk26.github.io/iron-curtain-design-docs/) for the technical foundation:
 
-| Document                                                                                      | Contents                                              |
-| --------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
-| [Foreword](https://dk26.github.io/iron-curtain-design-docs/FOREWORD.html)                     | Why this project exists — the personal story          |
-| [00-INDEX](https://dk26.github.io/iron-curtain-design-docs/00-INDEX.html)                     | Navigation and architectural invariants               |
-| [01-VISION](https://dk26.github.io/iron-curtain-design-docs/01-VISION.html)                   | Project goals and competitive landscape               |
-| [02-ARCHITECTURE](https://dk26.github.io/iron-curtain-design-docs/02-ARCHITECTURE.html)       | Core architecture, ECS, sim/render split              |
-| [03-NETCODE](https://dk26.github.io/iron-curtain-design-docs/03-NETCODE.html)                 | Pluggable networking, relay server, sub-tick ordering |
-| [04-MODDING](https://dk26.github.io/iron-curtain-design-docs/04-MODDING.html)                 | YAML + Lua + WASM modding tiers, workshop registry    |
-| [05-FORMATS](https://dk26.github.io/iron-curtain-design-docs/05-FORMATS.html)                 | File format support, original source insights         |
-| [06-SECURITY](https://dk26.github.io/iron-curtain-design-docs/06-SECURITY.html)               | Threat model and mitigations                          |
-| [07-CROSS-ENGINE](https://dk26.github.io/iron-curtain-design-docs/07-CROSS-ENGINE.html)       | OpenRA interop strategy                               |
-| [08-ROADMAP](https://dk26.github.io/iron-curtain-design-docs/08-ROADMAP.html)                 | 36-month development plan                             |
-| [09-DECISIONS](https://dk26.github.io/iron-curtain-design-docs/09-DECISIONS.html)             | Decision log with rationale (39 decisions)            |
-| [10-PERFORMANCE](https://dk26.github.io/iron-curtain-design-docs/10-PERFORMANCE.html)         | Efficiency-first performance philosophy               |
-| [11-OPENRA-FEATURES](https://dk26.github.io/iron-curtain-design-docs/11-OPENRA-FEATURES.html) | OpenRA feature catalog and gap analysis               |
-| [12-MOD-MIGRATION](https://dk26.github.io/iron-curtain-design-docs/12-MOD-MIGRATION.html)     | Mod migration case studies                            |
-| [13-PHILOSOPHY](https://dk26.github.io/iron-curtain-design-docs/13-PHILOSOPHY.html)           | Development philosophy and design review principles   |
+| Document                                                                                      | Contents                                                            |
+| --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| [Foreword](https://dk26.github.io/iron-curtain-design-docs/FOREWORD.html)                     | Why this project exists — the personal story                        |
+| [00-INDEX](https://dk26.github.io/iron-curtain-design-docs/00-INDEX.html)                     | Navigation and architectural invariants                             |
+| [01-VISION](https://dk26.github.io/iron-curtain-design-docs/01-VISION.html)                   | Project goals and competitive landscape                             |
+| [02-ARCHITECTURE](https://dk26.github.io/iron-curtain-design-docs/02-ARCHITECTURE.html)       | Core architecture, ECS, sim/render split                            |
+| [03-NETCODE](https://dk26.github.io/iron-curtain-design-docs/03-NETCODE.html)                 | Pluggable networking, relay server, sub-tick ordering               |
+| [04-MODDING](https://dk26.github.io/iron-curtain-design-docs/04-MODDING.html)                 | YAML + Lua + WASM modding tiers, workshop registry                  |
+| [05-FORMATS](https://dk26.github.io/iron-curtain-design-docs/05-FORMATS.html)                 | File format support, original source insights                       |
+| [06-SECURITY](https://dk26.github.io/iron-curtain-design-docs/06-SECURITY.html)               | Threat model and mitigations                                        |
+| [07-CROSS-ENGINE](https://dk26.github.io/iron-curtain-design-docs/07-CROSS-ENGINE.html)       | OpenRA interop strategy                                             |
+| [08-ROADMAP](https://dk26.github.io/iron-curtain-design-docs/08-ROADMAP.html)                 | 36-month development plan                                           |
+| [09-DECISIONS](https://dk26.github.io/iron-curtain-design-docs/09-DECISIONS.html)             | Decision log with rationale (50 decisions)                          |
+| [10-PERFORMANCE](https://dk26.github.io/iron-curtain-design-docs/10-PERFORMANCE.html)         | Efficiency-first performance philosophy                             |
+| [11-OPENRA-FEATURES](https://dk26.github.io/iron-curtain-design-docs/11-OPENRA-FEATURES.html) | OpenRA feature catalog and gap analysis                             |
+| [12-MOD-MIGRATION](https://dk26.github.io/iron-curtain-design-docs/12-MOD-MIGRATION.html)     | Mod migration case studies                                          |
+| [13-PHILOSOPHY](https://dk26.github.io/iron-curtain-design-docs/13-PHILOSOPHY.html)           | Development philosophy and design review principles                 |
+| [14-METHODOLOGY](https://dk26.github.io/iron-curtain-design-docs/14-METHODOLOGY.html)         | Development methodology, research rigor, AI-assisted design process |
 
 ## Contributing
 
@@ -312,9 +319,23 @@ This project is in its earliest stages. If you're interested in:
 
 ...we'd love to hear from you. Open an issue, start a discussion, or just say hello.
 
-## License
+## Legal
 
-[TBD — GPL v3, MIT, and Apache 2.0 are under consideration]
+### Trademarks
+
+Red Alert, Tiberian Dawn, Command & Conquer, and C&C are trademarks of Electronic Arts Inc. Iron Curtain is an independent, community-driven project. It is **not** affiliated with, endorsed by, or sponsored by Electronic Arts Inc. or any of its subsidiaries. Trademark names are used solely to identify the games and formats that this engine is designed to be compatible with (nominative fair use).
+
+### License
+
+**Design documents** (everything in `src/` and `research/`) are licensed under [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/). You may share and adapt this material with attribution and share-alike.
+
+**Engine source code** is licensed under [GPL v3](https://www.gnu.org/licenses/gpl-3.0.html) with an explicit modding exception (see [D051](https://dk26.github.io/iron-curtain-design-docs/09-DECISIONS.html)). The modding exception uses GPL v3 § 7 to clarify that YAML, Lua, and WASM mods loaded through the engine's data interfaces are NOT derivative works — modders choose their own license. Engine source modifications remain GPL v3.
+
+### Disclaimer
+
+Iron Curtain does not distribute any copyrighted game assets. It is designed to load assets from games you already own — the same approach used by OpenRA and other open-source game engine projects. Users must provide their own game files.
+
+This project is provided "as is", without warranty of any kind, express or implied. See the applicable license for details.
 
 ## Acknowledgments
 

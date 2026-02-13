@@ -912,7 +912,7 @@ ic sdk open [project]      # launch SDK with a specific mod/scenario
 
 ## D030: Workshop Resource Registry & Dependency System
 
-**Decision:** The Workshop operates as a crates.io-style resource registry where any game asset — music, sprites, textures, cutscenes, maps, sound effects, palettes, voice lines, UI themes, templates — is publishable as an independent, versioned, licensable resource that others (including LLM agents) can discover, depend on, and pull automatically.
+**Decision:** The Workshop operates as a crates.io-style resource registry where any game asset — music, sprites, textures, cutscenes, maps, sound effects, palettes, voice lines, UI themes, templates — is publishable as an independent, versioned, licensable resource that others (including LLM agents, with author consent) can discover, depend on, and pull automatically. Authors control AI access to their resources separately from the license via `ai_usage` permissions.
 
 **Rationale:**
 - OpenRA has no resource sharing infrastructure — modders copy-paste files, share on forums, lose attribution
@@ -929,19 +929,21 @@ ic sdk open [project]      # launch SDK with a specific mod/scenario
 
 The Workshop design below is comprehensive, but it ships incrementally:
 
-| Phase     | Scope                                                                                                                                                                       | Complexity   |
-| --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
-| Phase 4–5 | **Minimal viable Workshop:** Central IC server + `ic mod publish` + `ic mod install` + in-game browser + auto-download on lobby join                                        | Medium       |
-| Phase 6a  | **Full Workshop:** Federation, community servers, replication, promotion channels, CI/CD token scoping, creator reputation, DMCA process, Steam Workshop as optional source | High         |
-| Phase 7+  | **Advanced:** LLM-driven discovery, premium hosting tiers                                                                                                                   | Low priority |
+| Phase     | Scope                                                                                                                                                                                                                                                                  | Complexity   |
+| --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| Phase 0–3 | **Git-hosted index:** `workshop-index` GitHub repo as package registry (`index.yaml` + per-package manifests). `.icpkg` files stored on GitHub Releases (free CDN). Community contributes via PR. `git-index` source type in Workshop client. Zero infrastructure cost | Minimal      |
+| Phase 3–4 | **Add P2P:** BitTorrent tracker ($5-10/month VPS). Package manifests gain `torrent` source entries. P2P delivery for large packages. Git index remains discovery layer. Format recommendations published                                                               | Low–Medium   |
+| Phase 4–5 | **Minimal viable Workshop:** Full Workshop server (search, ratings, deps) + integrated P2P tracker + `ic mod publish` + `ic mod install` + in-game browser + auto-download on lobby join                                                                               | Medium       |
+| Phase 6a  | **Full Workshop:** Federation, community servers join P2P swarm, replication, promotion channels, CI/CD token scoping, creator reputation, DMCA process, Steam Workshop as optional source                                                                             | High         |
+| Phase 7+  | **Advanced:** LLM-driven discovery, premium hosting tiers                                                                                                                                                                                                              | Low priority |
 
-The Artifactory-level federation design is the end state, not the MVP. Ship simple, iterate toward complex.
+The Artifactory-level federation design is the end state, not the MVP. Ship simple, iterate toward complex. P2P delivery (D049) is integrated from Phase 3–4 because centralized hosting costs are a sustainability risk — better to solve early than retrofit. Workshop packages use the `.icpkg` format (ZIP with `manifest.yaml`) — see D049 for full specification.
 
 ### Resource Identity & Versioning
 
-Every Workshop resource gets a globally unique identifier: `namespace/name@version`.
+Every Workshop resource gets a globally unique identifier: `publisher/name@version`.
 
-- **Namespace** = author username or organization (e.g., `alice`, `community-hd-project`)
+- **Publisher** = author username or organization (e.g., `alice`, `community-hd-project`)
 - **Name** = resource name, lowercase with hyphens (e.g., `soviet-march-music`, `allied-infantry-hd`)
 - **Version** = semver (e.g., `1.2.0`)
 - Full ID example: `alice/soviet-march-music@1.2.0`
@@ -1006,21 +1008,21 @@ dependencies:
     source: workshop
 ```
 
-### Repository Types (Artifactory Model)
+### Repository Types
 
-The Workshop uses three repository types, directly inspired by Artifactory's local/remote/virtual model:
+The Workshop uses three repository types (architecture inspired by Artifactory's local/remote/virtual model):
 
-| Repository Type | Artifactory Analog | Description                                                                                                                                                                                                                                                 |
-| --------------- | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Local**       | Local repository   | A directory on disk following Workshop structure. Stores artifacts you create. Used for development, LAN parties, offline play, pre-publish testing.                                                                                                        |
-| **Remote**      | Remote repository  | A Workshop server (official or community-hosted). Artifacts are downloaded and cached locally on first access. Cache is used for subsequent requests — works offline after first pull.                                                                      |
-| **Virtual**     | Virtual repository | The aggregated view across all configured sources. The `ic` CLI and in-game browser query the virtual repository — it merges listings from all local + remote sources, deduplicates by resource ID, and resolves version conflicts using priority ordering. |
+| Source Type | Description                                                                                                                                                                                                                                                       |
+| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Local**   | A directory on disk following Workshop structure. Stores resources you create. Used for development, LAN parties, offline play, pre-publish testing.                                                                                                              |
+| **Remote**  | A Workshop server (official or community-hosted). Resources are downloaded and cached locally on first access. Cache is used for subsequent requests — works offline after first pull.                                                                            |
+| **Virtual** | The aggregated view across all configured sources. The `ic` CLI and in-game browser query the virtual view — it merges listings from all local + remote + git-index sources, deduplicates by resource ID, and resolves version conflicts using priority ordering. |
 
-The `settings.yaml` `sources:` list defines which local and remote repositories compose the virtual repository. This is the federation model — the client never queries raw servers directly, it queries its virtual repository.
+The `settings.yaml` `sources:` list defines which local and remote sources compose the virtual view. This is the federation model — the client never queries raw servers directly, it queries the merged Workshop view.
 
-### Artifact Integrity
+### Package Integrity
 
-Every published artifact includes cryptographic checksums for integrity verification:
+Every published resource includes cryptographic checksums for integrity verification:
 
 - **SHA-256 checksum** stored in the package manifest and on the Workshop server
 - `ic mod install` verifies checksums after download — mismatch → abort + warning
@@ -1030,7 +1032,7 @@ Every published artifact includes cryptographic checksums for integrity verifica
 
 ### Promotion & Maturity Channels
 
-Artifacts can be published to maturity channels, allowing staged releases:
+Resources can be published to maturity channels, allowing staged releases:
 
 | Channel   | Purpose                         | Visibility                      |
 | --------- | ------------------------------- | ------------------------------- |
@@ -1048,14 +1050,14 @@ mod:
 - `ic mod publish --channel beta` → visible only to users who opt in to beta resources
 - `ic mod publish` (no flag) → release channel by default
 - `ic mod install` pulls from release channel unless `--include-beta` is specified
-- Promotion: `ic mod promote 1.3.0-beta.1 release` → moves artifact to release channel without re-upload
+- Promotion: `ic mod promote 1.3.0-beta.1 release` → moves resource to release channel without re-upload
 
 ### Replication & Mirroring
 
 Community Workshop servers can replicate from the official server (pull replication, Artifactory-style):
 
-- **Pull replication:** Community server periodically syncs popular artifacts from official. Reduces latency for regional players, provides redundancy.
-- **Selective sync:** Community servers choose which categories/namespaces to replicate (e.g., replicate all Maps but not Mods)
+- **Pull replication:** Community server periodically syncs popular resources from official. Reduces latency for regional players, provides redundancy.
+- **Selective sync:** Community servers choose which categories/publishers to replicate (e.g., replicate all Maps but not Mods)
 - **Offline bundles:** `ic workshop export-bundle` creates a portable archive of selected resources for LAN parties or airgapped environments. `ic workshop import-bundle` loads them into a local repository.
 
 ### Dependency Resolution
@@ -1149,6 +1151,11 @@ mod:
 - `ic mod audit` checks the full dependency tree for license compatibility (e.g., CC-BY-NC dep in a CC-BY mod → warning)
 - Common licenses for game assets: `CC-BY-4.0`, `CC-BY-SA-4.0`, `CC-BY-NC-4.0`, `CC0-1.0`, `MIT`, `GPL-3.0-only`, `LicenseRef-Custom` (with link to full text)
 - Resources with incompatible licenses can coexist in the Workshop but `ic mod audit` warns when combining them
+- **Optional EULA** for authors who need additional terms beyond SPDX (e.g., "no use in commercial products without written permission"). EULA cannot contradict the SPDX license. See `04-MODDING.md` § "Optional EULA"
+- **Workshop Terms of Service (platform license):** By publishing, authors grant the platform minimum rights to host, cache, replicate, index, generate previews, serve as dependency, and auto-download in multiplayer — regardless of the resource's declared license. Same model as GitHub/npm/Steam Workshop. The ToS does not expand what *recipients* can do (that's the license) — it ensures the platform can mechanically operate. See `04-MODDING.md` § "Workshop Terms of Service"
+- **Minimum age (COPPA):** Workshop accounts require users to be 13+. See `04-MODDING.md` § "Minimum Age Requirement"
+- **Third-party content disclaimer:** IC is not liable for Workshop content. See `04-MODDING.md` § "Third-Party Content Disclaimer"
+- **Privacy Policy:** Required before Workshop server deployment. Covers data collection, retention, GDPR rights. See `04-MODDING.md` § "Privacy Policy Requirements"
 
 ### LLM-Driven Resource Discovery
 
@@ -1159,13 +1166,26 @@ Pipeline:
   1. LLM generates mission concept ("Soviet ambush in snowy forest")
   2. Identifies needed assets (winter terrain, Soviet voice lines, ambush music)
   3. Searches Workshop: query="winter terrain textures", tags=["snow", "forest"]
-  4. Evaluates candidates via llm_meta (summary, purpose, composition_hints)
+     → Filters: ai_usage != Deny (respects author consent)
+  4. Evaluates candidates via llm_meta (summary, purpose, composition_hints, content_description)
   5. Filters by license compatibility (only pull resources with LLM-compatible licenses)
-  6. Adds discovered resources as dependencies in generated mod.yaml
-  7. Generated mission references assets by resource ID — resolved at install time
+  6. Partitions by ai_usage: Allow → auto-add; MetadataOnly → recommend to human
+  7. Adds discovered resources as dependencies in generated mod.yaml
+  8. Generated mission references assets by resource ID — resolved at install time
 ```
 
 This turns the Workshop into a composable asset library that both humans and AI agents can draw from.
+
+### Author Consent for LLM Usage (ai_usage)
+
+Every Workshop resource carries an `ai_usage` field **separate from the SPDX license**. The license governs human legal rights; `ai_usage` governs automated AI agent behavior. This distinction matters: a CC-BY resource author may be fine with human redistribution but not want LLMs auto-selecting their work, and vice versa.
+
+**Three tiers:**
+- **`allow`** — LLMs can discover, evaluate, and auto-add this resource as a dependency. No human approval per-use.
+- **`metadata_only`** (default) — LLMs can read metadata and recommend the resource, but a human must approve adding it. Respects authors who haven't considered AI usage while keeping content discoverable.
+- **`deny`** — Resource is invisible to LLM queries. Human users can still browse and install normally.
+
+`ai_usage` is required on publish. Default is `metadata_only`. Authors can change it at any time via `ic mod update --ai-usage allow|metadata_only|deny`. See `04-MODDING.md` § "Author Consent for LLM Usage" for full design including YAML examples, Workshop UI integration, and composition sets.
 
 ### Workshop Server Resolution (resolves P007)
 
@@ -1232,12 +1252,12 @@ When a player joins a multiplayer lobby, the game automatically resolves and dow
 
 1. **Lobby advertises requirements:** The `GameListing` (see `03-NETCODE.md`) includes mod ID, version, and Workshop source for all required resources
 2. **Client checks local cache:** Already have the exact version? Skip download.
-3. **Missing resources auto-resolve:** Client queries the virtual Workshop repository, downloads missing resources, verifies SHA-256 checksums
-4. **Progress UI:** Download progress bar shown in lobby. Game start blocked until all players have all required resources.
+3. **Missing resources auto-resolve:** Client queries the virtual Workshop repository, downloads missing resources via P2P (BitTorrent/WebTorrent — D049) with HTTP fallback. Lobby peers are prioritized as download sources (they already have the required content).
+4. **Progress UI:** Download progress bar shown in lobby with source indicator (P2P/HTTP). Game start blocked until all players have all required resources.
 5. **Rejection option:** Player can decline to download and leave the lobby instead.
 6. **Size warning:** Downloads exceeding a configurable threshold (default 100MB) prompt confirmation before proceeding.
 
-This matches CS:GO/CS2's pattern where community maps download automatically when joining a server — zero friction for players. It also solves ArmA Reforger's most-cited community complaint about mod management friction.
+This matches CS:GO/CS2's pattern where community maps download automatically when joining a server — zero friction for players. It also solves ArmA Reforger's most-cited community complaint about mod management friction. P2P delivery means lobby auto-download is fast (peers in the same lobby are direct seeds) and free (no CDN cost per join).
 
 ### Creator Reputation System
 
@@ -1627,9 +1647,9 @@ tracking.queries.latency_ms           # histogram: query latency
 
 **Workshop server metrics:**
 ```
-workshop.artifacts.total              # gauge: total published resources
-workshop.artifacts.downloads          # counter: download events
-workshop.artifacts.publishes          # counter: publish events
+workshop.resources.total              # gauge: total published resources
+workshop.resources.downloads          # counter: download events
+workshop.resources.publishes          # counter: publish events
 workshop.resolve.latency_ms           # histogram: dependency resolution time
 workshop.resolve.conflicts            # counter: version conflicts detected
 workshop.search.latency_ms            # histogram: search query time
@@ -3880,8 +3900,8 @@ Browse, search, and preview every asset the engine can load. This is the XCC Mix
 | **Sprite viewer**       | View .shp sprites with palette applied, animate frame sequences, scrub through frames, zoom                                                        |
 | **Palette viewer**      | View .pal palettes as color grids, compare palettes side-by-side, see palette applied to any sprite                                                |
 | **Terrain tile viewer** | Preview .tmp terrain tiles in grid layout, see how tiles connect                                                                                   |
-| **Audio player**        | Play .aud files directly, waveform visualization                                                                                                   |
-| **Video player**        | Play .vqa cutscenes, frame-by-frame scrub                                                                                                          |
+| **Audio player**        | Play .aud/.wav/.ogg/.mp3 files directly, waveform visualization, spectral view, loop point markers, sample rate / bit depth / channel info display |
+| **Video player**        | Play .vqa/.mp4/.webm cutscenes, frame-by-frame scrub, preview in all three display modes (fullscreen, radar_comm, picture_in_picture)              |
 | **Chrome previewer**    | View UI theme sprite sheets (D032) with 9-slice visualization, see button states                                                                   |
 | **3D model viewer**     | Preview GLTF/GLB models (and .vxl voxel models for future RA2 module) with rotation, lighting                                                      |
 | **Asset search**        | Full-text search across all loaded assets — by filename, type, archive, tags                                                                       |
@@ -3904,15 +3924,17 @@ Browse, search, and preview every asset the engine can load. This is the XCC Mix
 
 Scoped asset editing operations. Not pixel painting — structured operations on game asset types.
 
-| Tool                        | What It Does                                                                                                                       | Example                                                                                                   |
-| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| **Palette editor**          | Remap colors, adjust faction-color ranges, create palette variants, shift hue/saturation/brightness per range                      | "Make a winter palette from temperate" — shift greens to whites                                           |
-| **Sprite sheet organizer**  | Reorder frames, adjust animation timing, add/remove frames, composite sprite layers, set hotpoints/offsets                         | Import 8 PNG frames → assemble into .shp-compatible sprite sheet with correct facing rotations            |
-| **Chrome / theme designer** | Visual editor for D032 UI themes — drag 9-slice panels, position elements, see result live in actual menu mockup                   | Design a new sidebar layout: drag resource bar, build queue, minimap into position. Live preview updates. |
-| **Terrain tile editor**     | Create terrain tile sets — assign connectivity rules, transition tiles, cliff edges. Preview tiling on a test map.                 | Paint a new snow terrain set: assign which tiles connect to which edges                                   |
-| **Import pipeline**         | Convert standard formats to game-ready assets: PNG → palette-quantized .shp, GLTF → game model with LODs, font → bitmap font sheet | Drag in a 32-bit PNG → auto-quantize to .pal, preview dithering options, export as .shp                   |
-| **Batch operations**        | Apply operations across multiple assets: bulk palette remap, bulk resize, bulk re-export                                           | "Remap all Soviet unit sprites to use the Tiberium Sun palette"                                           |
-| **Diff / compare**          | Side-by-side comparison of two versions of an asset — sprite diff, palette diff, before/after                                      | Compare original RA1 sprite with your modified version, pixel-diff highlighted                            |
+| Tool                        | What It Does                                                                                                                                                         | Example                                                                                                                                                                                                           |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Palette editor**          | Remap colors, adjust faction-color ranges, create palette variants, shift hue/saturation/brightness per range                                                        | "Make a winter palette from temperate" — shift greens to whites                                                                                                                                                   |
+| **Sprite sheet organizer**  | Reorder frames, adjust animation timing, add/remove frames, composite sprite layers, set hotpoints/offsets                                                           | Import 8 PNG frames → assemble into .shp-compatible sprite sheet with correct facing rotations                                                                                                                    |
+| **Chrome / theme designer** | Visual editor for D032 UI themes — drag 9-slice panels, position elements, see result live in actual menu mockup                                                     | Design a new sidebar layout: drag resource bar, build queue, minimap into position. Live preview updates.                                                                                                         |
+| **Terrain tile editor**     | Create terrain tile sets — assign connectivity rules, transition tiles, cliff edges. Preview tiling on a test map.                                                   | Paint a new snow terrain set: assign which tiles connect to which edges                                                                                                                                           |
+| **Import pipeline**         | Convert standard formats to game-ready assets: PNG → palette-quantized .shp, GLTF → game model with LODs, font → bitmap font sheet                                   | Drag in a 32-bit PNG → auto-quantize to .pal, preview dithering options, export as .shp                                                                                                                           |
+| **Batch operations**        | Apply operations across multiple assets: bulk palette remap, bulk resize, bulk re-export                                                                             | "Remap all Soviet unit sprites to use the Tiberium Sun palette"                                                                                                                                                   |
+| **Diff / compare**          | Side-by-side comparison of two versions of an asset — sprite diff, palette diff, before/after                                                                        | Compare original RA1 sprite with your modified version, pixel-diff highlighted                                                                                                                                    |
+| **Video converter**         | Convert between C&C video formats (.vqa) and modern formats (.mp4, .webm). Trim, crop, resize. Subtitle overlay. Frame rate control.                                 | Record a briefing in OBS → import .mp4 → convert to .vqa for classic feel, or keep as .mp4 for modern campaigns. Extract original RA1 briefings to .mp4 for remixing in Premiere/DaVinci.                         |
+| **Audio converter**         | Convert between C&C audio format (.aud) and modern formats (.wav, .ogg). Trim, normalize, fade in/out. Sample rate conversion. Batch convert entire sound libraries. | Extract all RA1 sound effects to .wav for remixing in Audacity/Reaper. Record custom EVA lines → normalize → convert to .aud for classic feel. Batch-convert a voice pack from .wav to .ogg for Workshop publish. |
 
 **Design rule:** Every operation the Asset Studio performs produces standard output formats. Palette edits produce .pal files. Sprite operations produce .shp or sprite sheet PNGs. Chrome editing produces YAML + sprite sheet PNGs. No proprietary intermediate format — the output is always mod-ready.
 
@@ -3960,16 +3982,26 @@ UI themes (D032) are YAML + sprite sheets. Currently there's no visual editor �
 
 The Asset Studio understands multiple C&C format families and can convert between them:
 
-| Conversion             | Direction     | Use Case                                                   | Phase  |
-| ---------------------- | ------------- | ---------------------------------------------------------- | ------ |
-| .shp (RA1) → .png      | Export        | Extract classic sprites for editing in external tools      | 6a     |
-| .png → .shp + .pal     | Import        | Turn modern art into classic-compatible format             | 6a     |
-| .vxl (RA2) → .glb      | Export        | Convert RA2 voxel models to standard 3D format for editing | Future |
-| .glb → game model      | Import        | Import artist-created 3D models for future 3D game modules | Future |
-| .w3d (Generals) → .glb | Export        | Convert Generals models for viewing and editing            | Future |
-| Theme YAML ↔ visual    | Bidirectional | Edit themes visually or as YAML — changes sync both ways   | 6a     |
+| Conversion                 | Direction     | Use Case                                                                                                                                                   | Phase  |
+| -------------------------- | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| .shp (RA1) → .png          | Export        | Extract classic sprites for editing in external tools                                                                                                      | 6a     |
+| .png → .shp + .pal         | Import        | Turn modern art into classic-compatible format                                                                                                             | 6a     |
+| .vxl (RA2) → .glb          | Export        | Convert RA2 voxel models to standard 3D format for editing                                                                                                 | Future |
+| .glb → game model          | Import        | Import artist-created 3D models for future 3D game modules                                                                                                 | Future |
+| .w3d (Generals) → .glb     | Export        | Convert Generals models for viewing and editing                                                                                                            | Future |
+| .vqa → .mp4/.webm          | Export        | Extract original RA/TD cutscenes to modern formats for viewing, remixing, or re-editing in standard video tools (Premiere, DaVinci, Kdenlive)              | 6a     |
+| .mp4/.webm → .vqa          | Import        | Convert custom-recorded campaign briefings/cutscenes to classic VQA format (palette-quantized, VQ-compressed) for authentic retro feel                     | 6a     |
+| .mp4/.webm passthrough     | Native        | Modern video formats play natively — no conversion required. Campaign creators can use .mp4/.webm directly for briefings and radar comms.                  | 4      |
+| .aud → .wav/.ogg           | Export        | Extract original RA/TD sound effects, EVA lines, and music to modern formats for remixing or editing in standard audio tools (Audacity, Reaper, FL Studio) | 6a     |
+| .wav/.ogg → .aud           | Import        | Convert custom audio recordings to classic Westwood AUD format (IMA ADPCM compressed) for authentic retro sound or OpenRA mod compatibility                | 6a     |
+| .wav/.ogg/.mp3 passthrough | Native        | Modern audio formats play natively — no conversion required. Mod creators can use .wav/.ogg/.mp3 directly for sound effects, music, and EVA lines.         | 3      |
+| Theme YAML ↔ visual        | Bidirectional | Edit themes visually or as YAML — changes sync both ways                                                                                                   | 6a     |
 
-**ra-formats write support:** Currently `ra-formats` is read-only (parse .mix, .shp, .pal). The Asset Studio requires write support — generating .shp from frames, writing .pal files, optionally packing .mix archives. This is an additive extension to `ra-formats` (no redesign of existing parsers), but non-trivial engineering: .shp writing requires correct header generation, frame offset tables, and optional LCW/RLE compression; .mix packing requires building the file index and hash table. Budget accordingly in Phase 6a.
+**ra-formats write support:** Currently `ra-formats` is read-only (parse .mix, .shp, .pal, .vqa, .aud). The Asset Studio requires write support — generating .shp from frames, writing .pal files, encoding .vqa video, encoding .aud audio, optionally packing .mix archives. This is an additive extension to `ra-formats` (no redesign of existing parsers), but non-trivial engineering: .shp writing requires correct header generation, frame offset tables, and optional LCW/RLE compression; .vqa encoding requires VQ codebook generation and frame differencing; .aud encoding requires IMA ADPCM compression with correct `AUDHeaderType` generation and `IndexTable`/`DiffTable` lookup table application; .mix packing requires building the file index and CRC hash table. All encoders reference the EA GPL source code implementations directly (see `05-FORMATS.md` § Binary Format Codec Reference). Budget accordingly in Phase 6a.
+
+**Video pipeline:** The game engine natively plays .mp4 and .webm via standard media decoders (platform-provided or bundled). Campaign creators can use modern formats directly — no conversion needed. The .vqa ↔ .mp4/.webm conversion in the Asset Studio is for creators who *want* the classic C&C aesthetic (palette-quantized, low-res FMV look) or who need to extract and remix original EA cutscenes. The conversion pipeline lives in `ra-formats` (VQA codec) + `ic-editor` (UI, preview, trim/crop tools). Someone recording a briefing with a webcam or screen recorder imports their .mp4, previews it in the Video Playback module's display modes (fullscreen, radar_comm, picture_in_picture), optionally converts to .vqa for retro feel, and publishes via Workshop (D030).
+
+**Audio pipeline:** The game engine natively plays .wav, .ogg, and .mp3 via standard audio decoders (Bevy audio plugin + platform codecs). Modern formats are the recommended choice for new content — .ogg for music and voice lines (good compression, no licensing issues), .wav for short sound effects (zero decode latency). The .aud ↔ .wav/.ogg conversion in the Asset Studio is for creators who need to extract and remix original EA audio (hundreds of classic sound effects, EVA voice lines, and Hell March variations) or who want to encode custom audio in classic AUD format for OpenRA mod compatibility. The conversion pipeline lives in `ra-formats` (AUD codec — IMA ADPCM encode/decode using the original Westwood `IndexTable`/`DiffTable` from the EA GPL source) + `ic-editor` (UI, waveform preview, trim/normalize/fade tools). Someone recording custom EVA voice lines imports their .wav files, previews with waveform visualization, normalizes volume, optionally converts to .aud for classic feel or keeps as .ogg for modern mods, and publishes via Workshop (D030). Batch conversion handles entire sound libraries — extract all 200+ RA1 sound effects to .wav in one operation.
 
 ### Alternatives Considered
 
@@ -6155,7 +6187,639 @@ Phase 2 delivers the infrastructure — render mode registration, asset handle s
 
 ---
 
-## PENDING DECISIONS
+## D049: Workshop Asset Formats & Distribution — Bevy-Native Canonical, P2P Delivery
+
+**Decision:** The Workshop's canonical asset formats are **Bevy-native modern formats** (OGG, PNG, WAV, WebM, KTX2, GLTF). C&C legacy formats (.aud, .shp, .pal, .vqa, .mix) are fully supported for backward compatibility but are not the recommended distribution format for new content. Workshop delivery uses **peer-to-peer distribution** (BitTorrent/WebTorrent protocol) with HTTP fallback, reducing hosting costs from CDN-level to a lightweight tracker.
+
+> **Note (D050):** The format recommendations in this section are **IC-specific** — they reflect Bevy's built-in asset pipeline. The Workshop's P2P distribution protocol and package format are engine-agnostic (see D050). Future projects consuming the Workshop core library will define their own format recommendations based on their engine's capabilities. The `.icpkg` extension, `ic mod` CLI commands, and `game_module` manifest fields are likewise IC-specific — the Workshop core library uses configurable equivalents.
+
+### The Format Problem
+
+The engine serves two audiences with conflicting format needs:
+
+1. **Legacy community:** Thousands of existing .shp, .aud, .mix, .pal assets. OpenRA mods. Original game files. These must load.
+2. **New content creators:** Making sprites in Aseprite/Photoshop, recording audio in Audacity/Reaper, editing video in DaVinci Resolve. These tools export PNG, OGG, WAV, WebM — not .shp or .aud.
+
+Forcing new creators to encode into C&C formats creates unnecessary friction. Forcing legacy content through format converters before it can load breaks the "community's existing work is sacred" invariant. The answer is: **accept both, recommend modern.**
+
+### Canonical Format Recommendations
+
+| Asset Type      | Workshop Format (new content)     | Legacy Support (existing) | Runtime Decode         | Rationale                                                                                                                                                                                         |
+| --------------- | --------------------------------- | ------------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Music**       | OGG Vorbis (128–320kbps)          | .aud (ra-formats decode)  | PCM via rodio          | Bevy default feature, excellent quality/size ratio, open/patent-free, WASM-safe. OGG at 192kbps ≈ 1.4MB/min vs .aud at ~0.5MB/min but dramatically higher quality (stereo, 44.1kHz vs mono 22kHz) |
+| **SFX**         | WAV (16-bit PCM) or OGG           | .aud (ra-formats decode)  | PCM via rodio          | WAV = zero decode latency for gameplay-critical sounds (weapon fire, explosions). OGG for larger ambient/UI sounds where decode latency is acceptable                                             |
+| **Voice**       | OGG Vorbis (96–128kbps)           | .aud (ra-formats decode)  | PCM via rodio          | Speech compresses well. OGG at 96kbps is transparent for voice. EVA packs with 200+ lines stay under 30MB                                                                                         |
+| **Sprites**     | PNG (RGBA, indexed, or truecolor) | .shp+.pal (ra-formats)    | GPU texture via Bevy   | Bevy-native via `image` crate. Lossless. Every art tool exports it. Palette-indexed PNG preserves classic aesthetic. HD packs use truecolor RGBA                                                  |
+| **HD Textures** | KTX2 (GPU-compressed: BC7/ASTC)   | N/A                       | Zero-cost GPU upload   | Bevy-native. No decode — GPU reads directly. Best runtime performance. `ic mod build` can batch-convert PNG→KTX2 for release builds                                                               |
+| **Terrain**     | PNG tiles (indexed or RGBA)       | .tmp+.pal (ra-formats)    | GPU texture            | Same as sprites. Theater tilesets are sprite sheets                                                                                                                                               |
+| **Cutscenes**   | WebM (VP9, 720p–1080p)            | .vqa (ra-formats decode)  | Frame→texture (custom) | Open, royalty-free, browser-compatible (WASM target). VP9 achieves ~5MB/min at 720p. Neither WebM nor VQA is Bevy-native — both need custom decode, so no advantage to VQA here                   |
+| **3D Models**   | GLTF/GLB                          | N/A (future: .vxl)        | Bevy mesh              | Bevy's native 3D format. Community 3D mods (D048) use this                                                                                                                                        |
+| **Palettes**    | .pal (768 bytes) or PNG strip     | .pal (ra-formats)         | Palette texture        | .pal is already tiny and universal in the C&C community. No reason to change. PNG strip is an alternative for tools that don't understand .pal                                                    |
+| **Maps**        | IC YAML (native)                  | .oramap (ZIP+MiniYAML)    | ECS world state        | Already designed (D025, D026)                                                                                                                                                                     |
+
+### Why Modern Formats as Default
+
+**Bevy integration:** OGG, WAV, PNG, KTX2, and GLTF load through Bevy's built-in asset pipeline with zero custom code. Every Bevy feature — hot-reload, asset dependencies, async loading, platform abstraction — works automatically. C&C formats require custom `AssetLoader` implementations in ra-formats with manual integration into Bevy's pipeline.
+
+**Security:** OGG (lewton/rodio), PNG (image crate), and WebM decoders in the Rust ecosystem have been fuzz-tested and used in production by thousands of projects. Browser vendors (Chrome, Firefox, Safari) have security-audited these formats for decades. Our .aud/.shp/.vqa parsers in ra-formats are custom code that has never been independently security-audited. For Workshop content downloaded from untrusted sources, mature parsers with established security track records are strictly safer. C&C format parsers use `BoundedReader` (see `06-SECURITY.md`), but defense in depth favors formats with deeper audit history.
+
+**Multi-game:** Non-C&C game modules (D039) won't use .shp or .aud at all. A tower defense mod, a naval RTS, a Dune-inspired game — these ship PNG sprites and OGG audio. The Workshop serves all game modules, not just the C&C family.
+
+**Tooling:** Every image editor saves PNG. Every DAW exports WAV/OGG. Every video editor exports WebM/MP4. Nobody's toolchain outputs .aud or .shp. Requiring C&C formats forces creators through a conversion step before they can publish — unnecessary friction.
+
+**WASM/browser:** OGG and PNG work in Bevy's WASM builds out of the box. C&C formats need custom WASM decoders compiled into the browser bundle.
+
+**Storage efficiency comparison:**
+
+| Content                        | C&C Format                      | Modern Format                        | Notes                                                                       |
+| ------------------------------ | ------------------------------- | ------------------------------------ | --------------------------------------------------------------------------- |
+| 3min music track               | .aud: ~1.5MB (22kHz mono ADPCM) | OGG: ~2.8MB (44.1kHz stereo 128kbps) | OGG is 2× larger but dramatically higher quality. At mono 22kHz OGG: ~0.7MB |
+| Full soundtrack (30 tracks)    | .aud: ~45MB                     | OGG 128kbps: ~84MB                   | Acceptable for modern bandwidth/storage                                     |
+| Unit sprite sheet (200 frames) | .shp+.pal: ~50KB                | PNG indexed: ~80KB                   | PNG slightly larger but universal tooling                                   |
+| HD sprite sheet (200 frames)   | N/A (.shp can't do HD)          | PNG RGBA: ~500KB                     | Only modern format option for HD content                                    |
+| 3min cutscene (720p)           | .vqa: ~15MB                     | WebM VP9: ~15MB                      | Comparable. WebM quality is higher at same bitrate                          |
+
+Modern formats are somewhat larger for legacy-quality content but the difference is small relative to modern storage and bandwidth. For HD content, modern formats are the only option.
+
+### The Conversion Escape Hatch
+
+The Asset Studio (D040) converts in both directions:
+- **Import:** .aud/.shp/.vqa/.pal → OGG/PNG/WebM/.pal (for modders working with legacy assets)
+- **Export:** OGG/PNG/WebM → .aud/.shp/.vqa (for modders targeting OpenRA compatibility or classic aesthetic)
+- **Batch convert:** `ic mod convert --to-modern` or `ic mod convert --to-classic` converts entire mod directories
+
+The engine loads both format families at runtime. `ra-formats` decoders handle legacy formats; Bevy's built-in loaders handle modern formats. No manual conversion is ever required — only recommended for new Workshop publications.
+
+### Workshop Package Format (.icpkg)
+
+Workshop packages are **ZIP archives** with a standardized manifest — the same pattern as `.oramap` but generalized to any resource type:
+
+```
+my-hd-sprites-1.2.0.icpkg          # ZIP archive
+├── manifest.yaml                    # Package metadata (required)
+├── README.md                        # Long description (optional)
+├── CHANGELOG.md                     # Version history (optional)
+├── preview.png                      # Thumbnail, max 512×512 (required for Workshop listing)
+└── assets/                          # Actual content files
+    ├── sprites/
+    │   ├── infantry-allied.png
+    │   └── vehicles-soviet.png
+    └── palettes/
+        └── temperate-hd.pal
+```
+
+**manifest.yaml:**
+```yaml
+package:
+  name: "hd-allied-sprites"
+  publisher: "community-hd-project"
+  version: "1.2.0"
+  license: "CC-BY-SA-4.0"
+  description: "HD sprite replacements for Allied infantry and vehicles"
+  category: sprites
+  game_module: ra1
+  engine_version: "^0.3.0"
+
+  # Per-file integrity (verified on install)
+  files:
+    sprites/infantry-allied.png:
+      sha256: "a1b2c3d4..."
+      size: 524288
+    sprites/vehicles-soviet.png:
+      sha256: "e5f6a7b8..."
+      size: 1048576
+
+  dependencies:
+    - id: "community-hd-project/base-palettes"
+      version: "^1.0"
+
+  # P2P distribution metadata (added by Workshop server on publish)
+  distribution:
+    sha256: "full-package-hash..."        # Hash of entire .icpkg
+    size: 1572864                          # Total package size in bytes
+    infohash: "btih:abc123def..."          # BitTorrent info hash (for P2P)
+```
+
+ZIP was chosen over tar.gz because: random access to individual files (no full decompression to read manifest.yaml), universal tooling, `.oramap` precedent, and Rust's `zip` crate is mature.
+
+### P2P Distribution (BitTorrent/WebTorrent)
+
+**The cost problem:** A popular 500MB mod downloaded 10,000 times generates 5TB of egress. At CDN rates ($0.01–0.09/GB), that's $50–450/month — per mod. For a community project sustained by donations, centralized hosting is financially unsustainable at scale. A BitTorrent tracker VPS costs $5–20/month regardless of popularity.
+
+**The solution:** Workshop distribution uses the **BitTorrent protocol** for large packages, with HTTP direct download as fallback. The Workshop server acts as both metadata registry (SQLite, lightweight) and BitTorrent tracker (peer coordination, lightweight). Actual content transfer happens peer-to-peer between players who have the package.
+
+**How it works:**
+
+```
+┌─────────────┐     1. Search/browse     ┌──────────────────┐
+│  ic CLI /    │ ───────────────────────► │  Workshop Server │
+│  In-Game     │ ◄─────────────────────── │  (metadata +     │
+│  Browser     │  2. manifest.yaml +      │   tracker)       │
+│              │     torrent info         │                  │
+│              │                          └──────────────────┘
+│              │     3. P2P download
+│              │ ◄──────────────────────► Other players (peers/seeds)
+│              │     (BitTorrent protocol)
+│              │
+│              │     4. Fallback: HTTP direct download
+│              │ ◄─────────────────────── Workshop server / mirrors / seed box
+└─────────────┘     5. Verify SHA-256
+```
+
+1. **Publish:** `ic mod publish` uploads .icpkg to Workshop server. Server computes SHA-256, generates torrent metadata (info hash), starts seeding the package alongside any initial seed infrastructure.
+2. **Browse/Search:** Workshop server handles all metadata queries (search, dependency resolution, ratings) via the existing SQLite + FTS5 design. Lightweight.
+3. **Install:** `ic mod install` fetches the manifest from the server, then downloads the .icpkg via BitTorrent from other players who have it. Falls back to HTTP direct download if no peers are available or if P2P is too slow.
+4. **Seed:** Players who have downloaded a package automatically seed it to others (opt-out in settings). The more popular a resource, the faster it downloads — the opposite of CDN economics where popularity means higher cost.
+5. **Verify:** SHA-256 checksum validation on the complete package, regardless of download method. BitTorrent's built-in piece-level hashing provides additional integrity during transfer.
+
+**WebTorrent for browser builds (WASM):** Standard BitTorrent uses TCP/UDP, which browsers can't access. [WebTorrent](https://webtorrent.io/) extends the BitTorrent protocol over WebRTC, enabling browser-to-browser P2P. The Workshop server includes a WebTorrent tracker endpoint. Desktop clients and browser clients can interoperate — desktop seeds serve browser peers and vice versa through hybrid WebSocket/WebRTC bridges.
+
+**Transport strategy by package size:**
+
+| Package Size | Strategy                     | Rationale                                                                                   |
+| ------------ | ---------------------------- | ------------------------------------------------------------------------------------------- |
+| < 5MB        | HTTP direct only             | P2P overhead exceeds benefit for small files. Maps, balance presets, palettes.              |
+| 5–50MB       | P2P preferred, HTTP fallback | Small sprite packs, sound effect packs, script libraries. P2P helps but HTTP is acceptable. |
+| > 50MB       | P2P strongly preferred       | HD resource packs, cutscene packs, full mods. P2P's cost advantage is decisive.             |
+
+Thresholds are configurable in `settings.yaml`. Players on connections where BitTorrent is throttled or blocked can force HTTP-only mode.
+
+**Auto-download on lobby join (D030 interaction):** When joining a lobby with missing resources, the client first attempts P2P download (likely fast, since other players in the lobby are already seeding). If the lobby timer is short or P2P is slow, falls back to HTTP. The lobby UI shows download progress with source indicators (P2P/HTTP).
+
+**Gaming industry precedent:**
+- **Blizzard (WoW, StarCraft 2, Diablo 3):** Used a custom P2P downloader ("Blizzard Downloader", later integrated into Battle.net) for game patches and updates from 2004–2016. Saved millions in CDN costs for multi-GB patches distributed to millions of players.
+- **Wargaming (World of Tanks):** Used P2P distribution for game updates.
+- **Linux distributions:** Ubuntu, Fedora, Arch all offer torrent downloads for ISOs — the standard solution for distributing large files from community infrastructure.
+- **Steam Workshop:** Steam subsidizes centralized hosting from game sales revenue. We don't have that luxury — P2P is the community-sustainable alternative.
+
+**Competitive landscape — game mod platforms:**
+
+IC's Workshop exists in a space with several established modding platforms. None offer the combination of P2P distribution, federation, self-hosting, and in-engine integration that IC targets.
+
+| Platform                                                              | Model                                                                                                                       | Scale                                                                           | In-game integration                                                                            | P2P | Federation / Self-host | Dependencies | Open source                                          |
+| --------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | --- | ---------------------- | ------------ | ---------------------------------------------------- |
+| **[Nexus Mods](https://www.nexusmods.com)**                           | Centralized web portal + Vortex mod manager. CDN distribution, throttled for free users. Revenue: premium membership + ads. | 70.7M users, 4,297 games, 21B downloads. Largest modding platform.              | None — external app (Vortex).                                                                  | ❌   | ❌                      | ❌            | Vortex client (GPL-3.0). Backend proprietary.        |
+| **[mod.io](https://mod.io)**                                          | UGC middleware — embeddable SDKs (Unreal/Unity/C++), REST API, white-label UI. Revenue: B2B SaaS (free tier + enterprise).  | 2.5B downloads, 38M MAU, 332 live games. Backed by Tencent ($26M Series A).     | Yes — SDK provides in-game browsing, download, moderation. Console-certified (PS/Xbox/Switch). | ❌   | ❌                      | partial      | SDKs open (MIT/Apache). Backend/service proprietary. |
+| **[Modrinth](https://modrinth.com)**                                  | Open-source mod registry. Centralized CDN. Revenue: ads + donations.                                                        | ~100K projects, millions of monthly downloads. Growing fast.                    | Through third-party launchers (Prism, etc).                                                    | ❌   | ❌                      | ✅            | Server (AGPL), API open.                             |
+| **[CurseForge](https://www.curseforge.com)** (Overwolf)               | Centralized mod registry + CurseForge app. Revenue: Overwolf overlay ads.                                                   | Dominant for Minecraft, WoW, other Blizzard games.                              | CurseForge app, some launcher integrations.                                                    | ❌   | ❌                      | ✅            | ❌                                                    |
+| **[Thunderstore](https://thunderstore.io)**                           | Open-source mod registry. Centralized CDN.                                                                                  | Popular for Risk of Rain 2, Lethal Company, Valheim.                            | Through r2modman manager.                                                                      | ❌   | ❌                      | ✅            | Server (AGPL-3.0).                                   |
+| **Steam Workshop**                                                    | Integrated into Steam. Free hosting (subsidized by game sales revenue).                                                     | Thousands of games, billions of downloads.                                      | Deep Steam integration.                                                                        | ❌   | ❌                      | ❌            | ❌                                                    |
+| **[ModDB](https://moddb.com) / [GameBanana](https://gamebanana.com)** | Web portals — manual upload/download, community features, editorial content. Legacy platforms (2001–2002).                  | ModDB: 12.5K+ mods, 108M+ downloads. GameBanana: strong in Source Engine games. | None.                                                                                          | ❌   | ❌                      | ❌            | ❌                                                    |
+
+**Competitive landscape — P2P + Registry infrastructure:**
+
+The game mod platforms above are all centralized. A separate set of projects tackle P2P distribution at the infrastructure level, but none target game modding specifically. See `research/p2p-federated-registry-analysis.md` for a comprehensive standalone analysis of this space and its applicability beyond IC.
+
+| Project                                                                          | Architecture                                                                                                                                                                                                                                                                                                                                                           | Domain                                 | How it relates to IC Workshop                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| -------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **[Uber Kraken](https://github.com/uber/kraken)** (6.6k★)                        | P2P Docker registry — custom BitTorrent-like protocol, Agent/Origin/Tracker/Build-Index. Pluggable storage (S3/GCS/HDFS).                                                                                                                                                                                                                                              | Container images (datacenter)          | Closest architectural match. Kraken's Agent/Origin/Tracker/Build-Index maps to IC's Peer/Seed-box/Tracker/Workshop-Index. IC's P2P protocol design (peer selection policy, piece request strategy, connection state machine, announce cycle, bandwidth limiting) is directly informed by Kraken's production experience — see protocol details above and `research/p2p-federated-registry-analysis.md` § "Uber Kraken — Deep Dive" for the full analysis. Key difference: Kraken is intra-datacenter (3s announce, 10Gbps links), IC is internet-scale (30s announce, residential connections).                                                                                                                                                                                                                                                                   |
+| **[Dragonfly](https://github.com/dragonflyoss/dragonfly)** (3k★, CNCF Graduated) | P2P content distribution — Manager/Scheduler/Seed-Peer/Peer. Centralized evaluator-based scheduling with 4-dimensional peer scoring (`LoadQuality×0.6 + IDCAffinity×0.2 + LocationAffinity×0.1 + HostType×0.1`). DAG-based peer graph, back-to-source fallback. Persistent cache with replica management. Client rewritten in Rust (v2). Trail of Bits audited (2023). | Container images, AI models, artifacts | Same P2P-with-fallback pattern. Dragonfly's hierarchical location affinity (`country\|province\|city\|zone`), statistical bad-peer detection (three-sigma rule), capacity-aware scoring, persistent replica count, and download priority tiers are all patterns IC adapts. Key differences: Dragonfly uses centralized scheduling (IC uses BitTorrent swarm — simpler, more resilient to churn), Dragonfly is single-cluster with no cross-cluster P2P (IC is federated), Dragonfly requires K8s+Redis+MySQL (IC requires only SQLite). Dragonfly's own RFC #3713 acknowledges piece-level selection is FCFS — BitTorrent's rarest-first is already better. See `research/p2p-federated-registry-analysis.md` § "Dragonfly — CNCF P2P Distribution (Deep Dive)" for full analysis.                                                                                |
+| **JFrog Artifactory P2P** (proprietary)                                          | Enterprise P2P distribution — mesh of nodes sharing cached binary artifacts within corporate networks.                                                                                                                                                                                                                                                                 | Enterprise build artifacts             | The direct inspiration for IC's repository model. JFrog added P2P because CDN costs for large binaries at scale are unsustainable — same motivation as IC.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| **Blizzard NGDP/Agent** (proprietary)                                            | Custom P2P game patching — BitTorrent-based, CDN+P2P hybrid, integrated into Battle.net launcher.                                                                                                                                                                                                                                                                      | Game patches (WoW, SC2, Diablo)        | Closest gaming precedent. Proved P2P game content distribution works at massive scale. Proprietary, not a registry (no search/ratings/deps), not federated.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| **Homebrew / crates.io-index**                                                   | Git-backed package indexes. CDN for actual downloads.                                                                                                                                                                                                                                                                                                                  | Software packages                      | IC's Phase 0–3 git-index is directly inspired by these. No P2P distribution.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| **IPFS**                                                                         | Content-addressed P2P storage — any content gets a CID, any node can pin and serve it. DHT-based discovery. Bitswap protocol for block exchange with Decision Engine and Score Ledger.                                                                                                                                                                                 | General-purpose decentralized storage  | Rejected as primary distribution protocol (too general, slow cold-content discovery, complex setup, poor game-quality UX). However, IPFS's Bitswap protocol contributes significant patterns IC adopts: EWMA peer scoring with time-decaying reputation (Score Ledger), per-peer fairness caps (`MaxOutstandingBytesPerPeer`), want-have/want-block two-phase discovery, broadcast control (target proven-useful peers), dual WAN/LAN discovery (validates IC's LAN party mode), delegated HTTP routing (validates IC's registry-as-router), server/client mode separation, and batch provider announcements (Sweep Provider). IPFS's 9-year-unresolved bandwidth limiting issue (#3065, 73 👍) proves bandwidth caps must ship day one. See `research/p2p-federated-registry-analysis.md` § "IPFS — Content-Addressed P2P Storage (Deep Dive)" for full analysis. |
+| **Microsoft Delivery Optimization**                                              | Windows Update P2P — peers on the same network share update packages.                                                                                                                                                                                                                                                                                                  | OS updates                             | Proves P2P works for verified package distribution at billions-of-devices scale. Proprietary, no registry model.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+
+**What's novel about IC's combination:** No existing system — modding platform or infrastructure — combines (1) federated registry with repository types, (2) P2P distribution via BitTorrent/WebTorrent, (3) zero-infrastructure git-hosted bootstrap, (4) browser-compatible P2P via WebTorrent, (5) in-engine integration with lobby auto-download, and (6) fully open-source with self-hosting as a first-class use case. The closest architectural comparison is mod.io (embeddable SDK approach, in-game integration) but mod.io is a proprietary centralized SaaS — no P2P, no federation, no self-hosting. The closest distribution comparison is Uber Kraken (P2P registry) but it has no modding features. Each piece has strong precedent; the combination is new. The Workshop architecture is game-agnostic and could serve as a standalone platform — see the research analysis for exploration of this possibility.
+
+**Seeding infrastructure:**
+
+The Workshop doesn't rely solely on player altruism for seeding:
+
+- **Workshop seed server:** A dedicated seed box (modest: a VPS with good upload bandwidth) that permanently seeds all Workshop content. This ensures new/unpopular packages are always downloadable even with zero player peers. Cost: ~$20-50/month for a VPS with 1TB+ storage and unmetered bandwidth.
+- **Community seed volunteers:** Players who opt in to extended seeding (beyond just while the game is running). Similar to how Linux mirror operators volunteer bandwidth. Could be incentivized with Workshop badges/reputation (D036/D037).
+- **Mirror servers (federation):** Community-hosted Workshop servers (D030 federation) also seed the content they host. Regional community servers naturally become regional seeds.
+- **Lobby-optimized seeding:** When a lobby host has required mods, the game client prioritizes seeding to joining players who are downloading. The "auto-download on lobby join" flow becomes: download from lobby peers first → swarm → HTTP fallback.
+
+**Privacy and security:**
+
+- **IP visibility:** Standard BitTorrent exposes peer IP addresses. This is the same exposure as any multiplayer game (players already see each other's IPs or relay IPs). For privacy-sensitive users, HTTP-only mode avoids P2P IP exposure.
+- **Content integrity:** SHA-256 verification on complete packages catches any tampering. BitTorrent's piece-level hashing catches corruption during transfer. Double-verified.
+- **No metadata leakage:** The tracker only knows which peers have which packages (by info hash). It doesn't inspect content. Package contents are just game assets — sprites, audio, maps.
+- **ISP throttling mitigation:** BitTorrent traffic can be throttled by ISPs. Mitigations: protocol encryption (standard in modern BT clients), WebSocket transport (looks like web traffic), and HTTP fallback as ultimate escape. Settings allow forcing HTTP-only mode.
+- **Resource exhaustion:** Rate-limited seeding (configurable upload cap in settings). Players control how much bandwidth they donate. Default: 1MB/s upload, adjustable to 0 (leech-only, no seeding — discouraged but available).
+
+**P2P protocol design details:**
+
+The Workshop's P2P engine is informed by production experience from Uber Kraken (Apache 2.0, 6.6k★) and Dragonfly (Apache 2.0, CNCF Graduated). Kraken distributes 1M+ container images/day across 15K+ hosts using a custom BitTorrent-inspired protocol; Dragonfly uses centralized evaluator-based scheduling at Alibaba scale. IC adapts Kraken's connection management and Dragonfly's scoring insights for internet-scale game mod distribution. See `research/p2p-federated-registry-analysis.md` for full architectural analyses of both systems.
+
+> **Cross-pollination with IC netcode.** The Workshop P2P engine and IC's netcode infrastructure (relay server, tracking server — `03-NETCODE.md`) share deep structural parallels: federation, heartbeat/TTL, rate control, connection state machines, observability, deployment model. Patterns flow both directions — netcode's three-layer rate control and token-based liveness improve Workshop; Workshop's EWMA scoring and multi-dimensional peer evaluation improve relay server quality tracking. A full cross-pollination analysis (including shared infrastructure opportunities: unified server binary, federation library, auth/identity layer) is in `research/p2p-federated-registry-analysis.md` § "Netcode ↔ Workshop Cross-Pollination."
+
+*Peer selection policy (tracker-side):* The tracker returns a sorted peer list on each announce response. The sorting policy is **pluggable** — inspired by Kraken's `assignmentPolicy` interface pattern. IC's default policy prioritizes:
+
+1. **Seeders** (completed packages — highest priority, like Kraken's `completeness` policy)
+2. **Lobby peers** (peers in the same multiplayer lobby — guaranteed to have the content, lowest latency)
+3. **Geographically close peers** (same region/ASN — reduces cross-continent transfers)
+4. **High-completion peers** (more pieces available — better utilization of each connection)
+5. **Random** (fallback for ties — prevents herding)
+
+Peer handout limit: 30 peers per announce response (Kraken uses 50, but IC has fewer total peers per package). Community-hosted trackers can implement custom policies via the server config.
+
+*Planned evolution — weighted multi-dimensional scoring (Phase 5+):* Dragonfly's evaluator demonstrates that combining capacity, locality, and node type into a weighted score produces better peer selection than linear priority tiers. IC's Phase 5+ peer selection evolves to a weighted scoring model informed by Dragonfly's approach:
+
+```
+PeerScore = Capacity(0.4) + Locality(0.3) + SeedStatus(0.2) + LobbyContext(0.1)
+```
+
+- **Capacity (weight 0.4):** Spare bandwidth reported in announce (`1 - upload_bw_used / upload_bw_max`). Peers with more headroom score higher. Inspired by Dragonfly's `LoadQuality` metric (which sub-decomposes into peak bandwidth, sustained load, and concurrency). IC uses a single utilization ratio — simpler, captures the same core insight.
+- **Locality (weight 0.3):** Hierarchical location matching. Clients self-report location as `continent|country|region|city` (4-level, pipe-delimited — adapted from Dragonfly's 5-level `country|province|city|zone|cluster`). Score = `matched_prefix_elements / 4`. Two peers in the same city score 0.75; same country but different region: 0.5; same continent: 0.25.
+- **SeedStatus (weight 0.2):** Seed box = 1.0, completed seeder = 0.7, uploading leecher = 0.3. Inspired by Dragonfly's `HostType` score (seed peers = 1.0, normal = 0.5).
+- **LobbyContext (weight 0.1):** Same lobby = 1.0, same game session = 0.5, no context = 0. IC-specific — Dragonfly has no equivalent (no lobby concept).
+
+The initial 5-tier priority system (above) ships first and is adequate for community scale. Weighted scoring is additive — the same pluggable policy interface supports both approaches. Community servers can configure their own weights or contribute custom scoring policies.
+
+*Piece request strategy (client-side):* The engine uses **rarest-first** piece selection by default — a priority queue sorted by fewest peers having each piece. This is standard BitTorrent behavior, well-validated for internet conditions. Kraken also implements this as `rarestFirstPolicy`.
+
+- **Pipeline limit:** 3 concurrent piece requests per peer (matches Kraken's default). Prevents overwhelming slow peers.
+- **Piece request timeout:** 8s base + 6s per MB of piece size (more generous than Kraken's 4s+4s/MB, compensating for residential internet variance).
+- **Endgame mode:** When remaining pieces ≤ 5, the engine sends duplicate piece requests to multiple peers. This prevents the "last piece stall" — a well-known BitTorrent problem where the final piece's sole holder is slow. Kraken implements this as `EndgameThreshold` — it's essential.
+
+*Connection state machine (client-side):*
+
+```
+pending ──connect──► active ──timeout/error──► blacklisted
+   ▲                    │                          │
+   │                    │                          │
+   └──────────── cooldown (5min) ◄─────────────────┘
+```
+
+- `MaxConnectionsPerPackage: 8` (lower than Kraken's 10 — residential connections have less bandwidth to share)
+- Blacklisting: peers that produce zero useful throughput over 30 seconds are temporarily blacklisted (5-minute cooldown). Catches both dead peers and ISP-throttled connections.
+- *Statistical degradation detection (Phase 5+):* Inspired by Dragonfly's `IsBadParent` algorithm — track per-peer piece transfer times. Peers whose last transfer exceeds `max(3 × mean, 2 × p95)` of observed transfer times are demoted in scoring (not hard-blacklisted — they may recover). For sparse data (< 50 samples per peer), fall back to the simpler "20× mean" ratio check. Hard blacklist remains only for zero-throughput (complete failure). This catches degrading peers before they fail completely.
+- Connections have TTL — idle connections are closed after 60 seconds to free resources.
+
+*Announce cycle (client → tracker):* Clients announce to the tracker every **30 seconds** (Kraken uses 3s for datacenter — far too aggressive for internet). The tracker can dynamically adjust: faster intervals (10s) during active downloads, slower (60s) when seeding idle content. Max interval cap (120s) prevents unbounded growth. Announce payload includes: PeerID, package info hash, bitfield (what pieces the client has), upload/download speed.
+
+*Size-based piece length:* Different package sizes use different piece lengths to balance metadata overhead against download granularity (inspired by Kraken's `PieceLengths` config):
+
+| Package Size | Piece Length    | Rationale                                                     |
+| ------------ | --------------- | ------------------------------------------------------------- |
+| < 5MB        | N/A — HTTP only | P2P overhead exceeds benefit                                  |
+| 5–50MB       | 256KB           | Fine-grained. Good for partial recovery and slow connections. |
+| 50–500MB     | 1MB             | Balanced. Reasonable metadata overhead.                       |
+| > 500MB      | 4MB             | Reduced metadata overhead for large packages.                 |
+
+*Bandwidth limiting:* Configurable per-client in `settings.yaml`. Residential users cannot have their connection saturated by mod seeding — this is a hard requirement that Kraken solves with `egress_bits_per_sec`/`ingress_bits_per_sec` and IC must match.
+
+```yaml
+# settings.yaml — P2P bandwidth configuration
+workshop:
+  p2p:
+    max_upload_speed: "1 MB/s"       # Default. 0 = unlimited, "0 B/s" = no seeding
+    max_download_speed: "unlimited"   # Default. Most users won't limit.
+    seed_after_download: true         # Keep seeding while game is running
+    seed_duration_after_exit: "30m"   # Background seeding after game closes (0 = none)
+    cache_size_limit: "2 GB"          # LRU eviction when exceeded
+    prefer_p2p: true                  # false = always use HTTP direct
+```
+
+*Health checks:* Seed boxes implement heartbeat health checks (30s interval, 3 failures → unhealthy, 2 passes → healthy again — matching Kraken's active health check parameters). The tracker marks peers as offline after 2× announce interval without contact. Unhealthy seed boxes are removed from the announce response until they recover.
+
+*Content lifecycle:* Downloaded packages stay in the seeding pool for 30 minutes after the game exits (configurable via `seed_duration_after_exit`). This is longer than Kraken's 5-minute `seeder_tti` because IC has fewer peers per package — each seeder is more valuable. Disk cache uses LRU eviction when over `cache_size_limit`. Packages currently in use or being seeded are never evicted.
+
+*Download priority tiers:* Inspired by Dragonfly's 7-level priority system (Level0–Level6), IC uses 3 priority tiers to enable QoS differentiation. Higher-priority downloads preempt lower-priority ones (pause background downloads, reallocate bandwidth and connection slots):
+
+| Priority | Name             | When Used                                                | Behavior                                                   |
+| -------- | ---------------- | -------------------------------------------------------- | ---------------------------------------------------------- |
+| 1 (high) | `lobby-urgent`   | Player joining a lobby that requires missing mods        | Preempts all other downloads. Uses all available bandwidth |
+| 2 (mid)  | `user-requested` | Player manually downloads from Workshop browser          | Normal bandwidth. Runs alongside background.               |
+| 3 (low)  | `background`     | Cache warming, auto-updates, subscribed mod pre-download | Bandwidth-limited. Paused when higher-priority active.     |
+
+*Preheat / prefetch:* Adapted from Dragonfly's preheat jobs (which pre-warm content on seed peers before demand). IC uses two prefetch patterns:
+
+- **Lobby prefetch:** When a lobby host sets required mods, the Workshop server (Phase 5+) can pre-seed those mods to seed boxes before players join. The lobby creation event is the prefetch signal. This ensures seed infrastructure is warm when players start downloading.
+- **Subscription prefetch:** Players can subscribe to Workshop publishers or resources. Subscribed content auto-downloads in the background at `background` priority. When a subscribed mod updates, the new version downloads automatically before the player next launches the game.
+
+*Persistent replica count (Phase 5+):* Inspired by Dragonfly's `PersistentReplicaCount`, the Workshop server tracks how many seed boxes hold each resource. If the count drops below a configurable threshold (default: 2 for popular resources, 1 for all others), the server triggers automatic re-seeding from HTTP origin. This ensures the "always available" guarantee — even if all player peers are offline, seed infrastructure maintains minimum replica coverage.
+
+**Early-phase bootstrap — Git-hosted package index:**
+
+Before the full Workshop server is built (Phase 4-5), a **GitHub-hosted package index repository** serves as the Workshop's discovery and coordination layer. This is a well-proven pattern — Homebrew (`homebrew-core`), Rust (`crates.io-index`), Winget (`winget-pkgs`), and Nixpkgs all use a git repository as their canonical package index.
+
+**How it works:**
+
+A public GitHub repository (e.g., `iron-curtain/workshop-index`) contains YAML manifest files — one per package — that describe available resources, their versions, checksums, download locations, and dependencies. The repo itself contains NO asset files — only lightweight metadata.
+
+```
+workshop-index/                      # The git-hosted package index
+├── index.yaml                       # Consolidated index (single-fetch for game client)
+├── packages/
+│   ├── alice/
+│   │   └── soviet-march-music/
+│   │       ├── 1.0.0.yaml           # Per-version manifests
+│   │       └── 1.1.0.yaml
+│   ├── community-hd-project/
+│   │   └── allied-infantry-hd/
+│   │       └── 2.0.0.yaml
+│   └── ...
+├── sources.yaml                     # List of storage servers, mirrors, seed boxes
+└── .github/
+    └── workflows/
+        └── validate.yml             # CI: validates manifest format, checks SHA-256
+```
+
+**Per-package manifest (`packages/alice/soviet-march-music/1.1.0.yaml`):**
+
+```yaml
+name: soviet-march-music
+publisher: alice
+version: 1.1.0
+license: CC-BY-4.0
+description: "Soviet faction battle music pack"
+size: 48_000_000  # 48MB
+sha256: "a1b2c3d4..."
+
+sources:
+  - type: http
+    url: "https://github.com/iron-curtain/workshop-packages/releases/download/alice-soviet-march-music-1.1.0/soviet-march-music-1.1.0.icpkg"
+  - type: torrent
+    info_hash: "e5f6a7b8..."
+    trackers:
+      - "wss://tracker.ironcurtain.gg/announce"   # WebTorrent tracker
+      - "udp://tracker.ironcurtain.gg:6969/announce"
+
+dependencies:
+  community-hd-project/base-audio-lib: "^1.0"
+
+game_modules: [ra]
+tags: [music, soviet, battle]
+```
+
+**`sources.yaml` — storage server and tracker registry:**
+
+```yaml
+# Where to find actual .icpkg files and BitTorrent peers.
+# The engine reads this to discover available download sources.
+# Adding an official server later = adding a line here.
+storage_servers:
+  - url: "https://github.com/iron-curtain/workshop-packages/releases"  # GitHub Releases (Phase 0-3)
+    type: github-releases
+    priority: 1
+  # - url: "https://cdn.ironcurtain.gg"   # Future: official CDN (Phase 5+)
+  #   type: http
+  #   priority: 1
+
+torrent_trackers:
+  - "wss://tracker.ironcurtain.gg/announce"      # WebTorrent (browser + desktop)
+  - "udp://tracker.ironcurtain.gg:6969/announce"  # UDP (desktop only)
+
+seed_boxes:
+  - "https://seed1.ironcurtain.gg"  # Permanent seeder for all packages
+```
+
+**Two client access patterns:**
+
+1. **HTTP fetch** (game client default): The engine fetches `index.yaml` via `raw.githubusercontent.com` — a single GET request returns the full package listing. Fast, no git dependency, CDN-backed globally by GitHub. Cached locally with ETag/Last-Modified for incremental updates.
+2. **Git clone/pull** (SDK, power users, offline): `git clone` the entire index repo. `git pull` for incremental atomic updates. Full offline browsing. Better for the SDK/editor and users who want to script against the index.
+
+The engine's Workshop source configuration (D030) treats this as a new source type:
+
+```yaml
+# settings.yaml — Phase 0-3 configuration
+workshop:
+  sources:
+    - url: "https://github.com/iron-curtain/workshop-index"  # git-index source
+      type: git-index
+      priority: 1
+    - path: "C:/my-local-workshop"   # local development
+      type: local
+      priority: 2
+```
+
+**Community contribution workflow (manual):**
+
+1. Modder creates a `.icpkg` package and uploads it to GitHub Releases (or any HTTP host)
+2. Modder submits a PR to `workshop-index` adding a manifest YAML with SHA-256 and download URL
+3. GitHub Actions validates manifest format, checks SHA-256 against the download URL, verifies metadata
+4. Maintainers review and merge → package is discoverable to all players on next index fetch
+5. When the full Workshop server ships (Phase 4-5), published packages migrate automatically — the manifest format is the same
+
+**Automated publish via `ic` CLI (same UX as Phase 5+):**
+
+The `ic mod publish` command works against the git-index backend in Phase 0–3:
+
+1. `ic mod publish` packages content into `.icpkg`, computes SHA-256
+2. Uploads `.icpkg` to GitHub Releases (via GitHub API, using a personal access token configured in `ic auth`)
+3. Generates the index manifest YAML from `mod.yaml` metadata
+4. Opens a PR to `workshop-index` with the manifest file
+5. Modder reviews the PR and confirms; GitHub Actions validates; maintainers merge
+
+The command is identical to Phase 5+ publishing (`ic mod publish`) — the only difference is the backend. When the Workshop server ships, `ic mod publish` targets the server instead. Modders don't change their workflow.
+
+**Adding official storage servers later:**
+
+When official infrastructure is ready (Phase 5+), adding it is a one-line change to `sources.yaml` — no architecture change, no client update. The `sources.yaml` in the index repo is the single place that lists where packages can be downloaded from. Community mirrors and CDN endpoints are added the same way.
+
+**Phased progression:**
+
+1. **Phase 0–3 — Git-hosted index + GitHub Releases:** The index repo is the Workshop. Players fetch `index.yaml` for discovery, download `.icpkg` files from GitHub Releases (2GB per file, free, CDN-backed). Community contributes via PR. Zero custom server code. Zero hosting cost.
+2. **Phase 3–4 — Add BitTorrent tracker:** A minimal tracker binary goes live ($5-10/month VPS). Package manifests gain `torrent` source entries. P2P delivery begins for large packages. The index repo remains the discovery layer.
+3. **Phase 4–5 — Full Workshop server:** Search, ratings, dependency resolution, FTS5, integrated P2P tracker. The Workshop server can either replace the git index or coexist alongside it (both are valid D030 sources). The git index remains available as a fallback and for community-hosted Workshop servers.
+
+The progression is smooth because the federated source model (D030) already supports multiple source types — `git-index`, `local`, `remote` (Workshop server), and `steam` all coexist in `settings.yaml`.
+
+**Industry precedent:**
+
+| Project                                | Index Mechanism                                          | Scale          |
+| -------------------------------------- | -------------------------------------------------------- | -------------- |
+| **Homebrew** (`homebrew-core`)         | Git repo of Ruby formulae; `brew update` = `git pull`    | ~7K packages   |
+| **Rust crates.io** (`crates.io-index`) | Git repo of JSON metadata; sparse HTTP fetch added later | ~150K crates   |
+| **Winget** (`winget-pkgs`)             | Git repo of YAML manifests; community PRs                | ~5K packages   |
+| **Nixpkgs**                            | Git repo of Nix expressions                              | ~100K packages |
+| **Scoop** (Windows)                    | Git repo ("buckets") of JSON manifests                   | ~5K packages   |
+
+All of these started with git-as-index and some (crates.io) later augmented with sparse HTTP fetching for performance at scale. The same progression applies here — git index works perfectly for a community of hundreds to low thousands, and can be complemented (not replaced) by a Workshop API when scale demands it.
+
+**Workshop server architecture with P2P:**
+
+```
+┌─────────────────────────────────────────────────────┐
+│                  Workshop Server                     │
+│  ┌─────────────┐  ┌──────────┐  ┌────────────────┐ │
+│  │  Metadata    │  │ Tracker  │  │  HTTP Fallback │ │
+│  │  (SQLite +   │  │ (BT/WT   │  │  (S3/R2 or     │ │
+│  │   FTS5)      │  │  peer     │  │   local disk)  │ │
+│  │             │  │  coord)   │  │               │ │
+│  └─────────────┘  └──────────┘  └────────────────┘ │
+│        ▲               ▲               ▲            │
+│        │ search/browse │ announce/     │ GET .icpkg  │
+│        │ deps/ratings  │ scrape        │ (fallback)  │
+└────────┼───────────────┼───────────────┼────────────┘
+         │               │               │
+    ┌────┴────┐    ┌─────┴─────┐   ┌─────┴─────┐
+    │ ic CLI  │    │  Players  │   │ Seed Box  │
+    │ Browser │    │  (seeds)  │   │ (always   │
+    └─────────┘    └───────────┘   │  seeds)   │
+                                   └───────────┘
+```
+
+All three components (metadata, tracker, HTTP fallback) run in the same binary — "just a Rust binary" deployment philosophy. Community self-hosters get the full stack with one executable.
+
+### Rust Implementation
+
+**BitTorrent client library:** The `ic` CLI and game client embed a BitTorrent client. Rust options:
+- [`librqbit`](https://github.com/ikatson/rqbit) — pure Rust, async (tokio), actively maintained, supports WebTorrent
+- [`cratetorrent`](https://github.com/mandreyel/cratetorrent) — pure Rust, educational focus
+- Custom minimal client — only needs download + seed + tracker announce; no DHT, no PEX needed for a controlled Workshop ecosystem
+
+**BitTorrent tracker:** Embeddable in the Workshop server binary. Rust options:
+- [`aquatic`](https://github.com/greatest-ape/aquatic) — high-performance Rust tracker
+- Custom minimal tracker — HTTP announce/scrape endpoints, peer list management. The Workshop server already has SQLite; peer lists are another table.
+
+**WebTorrent:** `librqbit` has WebTorrent support. The WASM build would use the WebRTC transport.
+
+### Rationale
+
+- **Cost sustainability:** P2P reduces Workshop hosting costs by 90%+. A community project cannot afford CDN bills that scale with popularity. A tracker + seed box for $30-50/month serves unlimited download volume.
+- **Fits federation (D030):** P2P is another source in the federated model. The virtual repository queries metadata from remote servers, then downloads content from the swarm — same user experience, different transport.
+- **Fits "no single point of failure" (D037):** P2P is inherently resilient. If the Workshop server goes down, peers keep sharing. Content already downloaded is always available.
+- **Fits SHA-256 integrity (D030):** P2P needs exactly the integrity verification already designed. Same `manifest.yaml` checksums, same `ic.lock` pinning, same verification on install.
+- **Fits WASM target (invariant #10):** WebTorrent enables browser-to-browser P2P. Desktop and browser clients interoperate. No second-class platform.
+- **Popular resources get faster:** More downloads → more seeders → faster downloads for everyone. The opposite of CDN economics where popularity increases cost.
+- **Self-hosting scales:** Community Workshop servers (D030 federation) benefit from the same P2P economics. A small community server needs only a $5 VPS — the community's players provide the bandwidth.
+- **Privacy-responsible:** IP exposure is equivalent to any multiplayer game. HTTP-only mode available for privacy-sensitive users. No additional surveillance beyond standard BitTorrent protocol.
+- **Proven technology:** BitTorrent has been distributing large files reliably for 20+ years. Blizzard used it for WoW patches. The protocol is well-understood, well-documented, and well-implemented.
+
+### Alternatives Considered
+
+- **Centralized CDN only** (rejected — financially unsustainable for a donation-funded community project. A popular 500MB mod downloaded 10K times = 5TB = $50-450/month. P2P reduces this to near-zero marginal cost)
+- **IPFS** (rejected as primary distribution protocol — slow cold-content discovery, complex setup, ecosystem declining, content pinning is expensive, poor game-quality UX. However, multiple Bitswap protocol design patterns adopted: EWMA peer scoring, per-peer fairness caps, want-have/want-block two-phase discovery, broadcast control, dual WAN/LAN discovery, delegated HTTP routing, batch provider announcements. See competitive landscape table above and research deep dive)
+- **Custom P2P protocol** (rejected — massive engineering effort with no advantage over BitTorrent's 20-year-proven protocol)
+- **Git LFS** (rejected — 1GB free then paid; designed for source code, not binary asset distribution; no P2P)
+- **Steam Workshop only** (rejected — platform lock-in, Steam subsidizes hosting from game sales revenue we don't have, excludes non-Steam/WASM builds)
+- **GitHub Releases only** (rejected — works for bootstrap but no search, ratings, dependency resolution, P2P, or lobby auto-download. Adequate interim solution, not long-term architecture)
+- **HTTP-only with community mirrors** (rejected — still fragile. Mirrors are one operator away from going offline. P2P is inherently more resilient than any number of mirrors)
+- **No git index / custom server from day one** (rejected — premature complexity. A git-hosted index costs $0 and ships with the first playable build. Custom server code can wait until Phase 4-5 when the community is large enough to need search/ratings)
+
+### Phase
+
+- **Phase 0–3:** Git-hosted package index (`workshop-index` repo) + GitHub Releases for `.icpkg` storage. Zero infrastructure cost. Community contributes via PR. Game client fetches `index.yaml` for discovery.
+- **Phase 3–4:** Add BitTorrent tracker ($5-10/month VPS). Package manifests gain `torrent` source entries. P2P delivery begins for large packages. Git index remains the discovery layer.
+- **Phase 4–5:** Full Workshop server with integrated BitTorrent/WebTorrent tracker, search, ratings, dependency resolution, P2P delivery, HTTP fallback via S3-compatible storage. Git index can coexist or be subsumed.
+- **Phase 6a:** Federation (community servers join the P2P swarm), Steam Workshop as additional source, Publisher workflows
+- **Format recommendations** apply from Phase 0 — all first-party content uses the recommended canonical formats
+
+---
+
+## D050: Workshop as Cross-Project Reusable Library
+
+**Decision:** The Workshop core (registry, distribution, federation, P2P) is designed as a **standalone, engine-agnostic, game-agnostic Rust library** that Iron Curtain is the first consumer of, with the explicit intent that future game projects (XCOM-inspired tactics clone, Civilization-inspired 4X clone, Operation Flashpoint/ArmA-inspired military sim) will be additional consumers. These future projects may or may not use Bevy — the Workshop library must not depend on any specific game engine.
+
+**Rationale:**
+- The author plans to build multiple open-source game clones in the spirit of OpenRA, each targeting a different genre's community. Every one of these projects faces the same Workshop problem: mod distribution, versioning, dependencies, integrity, community hosting, P2P delivery
+- Building Workshop infrastructure once and reusing it across projects amortizes the significant design and engineering investment over multiple games
+- An XCOM clone needs soldier mods, ability packs, map presets, voice packs. A Civ clone needs civilization packs, map scripts, leader art, scenario bundles. An OFP/ArmA clone needs terrains (often 5–20 GB), vehicle models, weapon packs, mission scripts, campaign packages. All of these are "versioned packages with metadata, dependencies, and integrity verification" — the same core abstraction
+- The P2P distribution layer is especially valuable for the ArmA-style project where mod sizes routinely exceed what any free CDN can sustain
+- Making the library engine-agnostic also produces cleaner IC code — the Bevy integration layer is thinner, better tested, and easier to maintain
+
+### Two-Layer Architecture
+
+The Workshop is split into two layers with a clean boundary:
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  Game Integration Layer (per-project, engine-specific)  │
+│                                                         │
+│  IC: Bevy plugin, lobby auto-download, game_module,     │
+│       .icpkg extension, `ic mod` CLI, ra-formats,       │
+│       Bevy-native format recommendations (D049)         │
+│                                                         │
+│  XCOM clone: its engine plugin, mission-trigger          │
+│       download, .xpkg, its CLI, its format prefs        │
+│                                                         │
+│  Civ clone: its engine plugin, scenario-load download,  │
+│       .cpkg, its CLI, its format prefs                  │
+│                                                         │
+│  OFP clone: its engine plugin, server-join download,    │
+│       .opkg, its CLI, its format prefs                  │
+├─────────────────────────────────────────────────────────┤
+│  Workshop Core Library (engine-agnostic, game-agnostic) │
+│                                                         │
+│  Registry: search, publish, version, depend, license    │
+│  Distribution: BitTorrent/WebTorrent, HTTP fallback     │
+│  Federation: multi-source, git-index, remote, local     │
+│  Integrity: SHA-256, piece hashing, signed manifests    │
+│  Identity: publisher/name@version                       │
+│  P2P engine: peer scoring, piece selection, bandwidth   │
+│  CLI core: auth, publish, install, update, resolve      │
+│  Protocol: federation spec, manifest schema, APIs       │
+└─────────────────────────────────────────────────────────┘
+```
+
+### Core Library Boundary — What's In and What's Out
+
+| Concern                    | Core Library (game-agnostic)                                                                                                                 | Game Integration Layer (per-project)                                                                                                                                                                                 |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Package format**         | ZIP archive with `manifest.yaml`. Extension is configurable (default: `.pkg`)                                                                | IC uses `.icpkg`, other projects choose their own                                                                                                                                                                    |
+| **Manifest schema**        | Core fields: `name`, `version`, `publisher`, `description`, `license`, `dependencies`, `platforms`, `sha256`, `tags`                         | Extension fields: `game_module`, `engine_version`, `category` (IC-specific). Each project defines its own extension fields                                                                                           |
+| **Resource categories**    | Tags (free-form strings). Core provides no fixed category enum                                                                               | Each project defines a recommended tag vocabulary (IC: `sprites`, `music`, `map`; XCOM: `soldiers`, `abilities`, `missions`; Civ: `civilizations`, `leaders`, `scenarios`; OFP: `terrains`, `vehicles`, `campaigns`) |
+| **Package identity**       | `publisher/name@version` — already game-agnostic                                                                                             | No change needed                                                                                                                                                                                                     |
+| **Dependency resolution**  | semver resolution, lockfile, integrity verification                                                                                          | Per-project compatibility checks (e.g., IC checks `game_module` + `engine_version`)                                                                                                                                  |
+| **P2P distribution**       | BitTorrent/WebTorrent protocol, tracker, peer scoring, piece selection, bandwidth limiting, HTTP fallback                                    | Per-project seed infrastructure (IC uses `ironcurtain.gg` tracker, OFP clone uses its own)                                                                                                                           |
+| **P2P peer scoring**       | Weighted multi-dimensional: `Capacity × w1 + Locality × w2 + SeedStatus × w3 + ApplicationContext × w4`. Weights and dimensions configurable | Each project defines `ApplicationContext`: IC = same-lobby bonus, OFP = same-server bonus, Civ = same-matchmaking-pool bonus. Projects that have no context concept set weight to 0                                  |
+| **Download priority**      | Three tiers: `critical` (blocking gameplay), `requested` (user-initiated), `background` (cache warming)                                      | Each project maps its triggers: IC's lobby-join → `critical`. OFP's server-join → `critical`. Civ's scenario-load → `requested`                                                                                      |
+| **Auto-download trigger**  | Library provides `download_packages(list, priority)` API                                                                                     | Integration layer decides WHEN to call it: IC calls on lobby join, OFP calls on server connect, XCOM calls on mod browser click                                                                                      |
+| **CLI operations**         | Core operations: `auth`, `publish`, `install`, `update`, `search`, `resolve`, `lock`, `audit`, `export-bundle`, `import-bundle`              | Each project wraps as its own CLI: `ic mod *`, `xcom mod *`, etc.                                                                                                                                                    |
+| **Format recommendations** | None. The core library is format-agnostic — it distributes opaque files                                                                      | Each project recommends formats for its engine: IC recommends Bevy-native (D049). A Godot-based project recommends Godot-native formats. A custom-engine project recommends whatever it loads                        |
+| **Federation**             | Multi-source registry, `sources.yaml`, git-index support, remote server API, local repository                                                | Per-project default sources: IC uses `ironcurtain.gg` + `iron-curtain/workshop-index`. Each project configures its own                                                                                               |
+| **Config paths**           | Library accepts a config root path                                                                                                           | Each project sets its own: IC uses `~/.ic/`, XCOM clone uses `~/.xcom/`, etc.                                                                                                                                        |
+| **Auth tokens**            | Token generation, storage, scoping (publish/admin/readonly), environment variable override                                                   | Per-project env var names: `IC_AUTH_TOKEN`, `XCOM_AUTH_TOKEN`, etc.                                                                                                                                                  |
+| **Lockfile**               | Core lockfile format with package hashes                                                                                                     | Per-project lockfile name: `ic.lock`, `xcom.lock`, etc.                                                                                                                                                              |
+
+### Impact on Existing D030/D049 Design
+
+The existing Workshop design requires only **architectural clarification**, not redesign. The core abstractions (packages, manifests, publishers, dependencies, federation, P2P) are already game-agnostic in concept. The changes are:
+
+1. **Naming**: Where the design says `.icpkg`, the implementation will have a configurable extension with `.icpkg` as IC's default. Where it says `ic mod *`, the core library provides operations and IC wraps them as `ic mod *` subcommands.
+
+2. **Categories**: Where D030 lists a fixed `ResourceCategory` enum (Music, Sprites, Maps...), the core library uses free-form tags. IC's integration layer provides a recommended tag vocabulary and UI groupings. Other projects provide their own.
+
+3. **Manifest**: The `manifest.yaml` schema splits into core fields (in the library) and extension fields (per-project). `game_module: ra1` is an IC extension field, not a core manifest requirement.
+
+4. **Format recommendations**: D049's Bevy-native format table is IC-specific guidance, not a core Workshop concern. The core library is format-agnostic. Each consuming project publishes its own format recommendations based on its engine's capabilities.
+
+5. **P2P scoring**: The `LobbyContext` dimension in peer scoring becomes `ApplicationContext` — a generic callback where any project can inject context-aware peer prioritization. IC implements it as "same lobby = bonus." An ArmA-style project implements it as "same server = bonus."
+
+6. **Infrastructure**: Domain names (`ironcurtain.gg`), GitHub org (`iron-curtain/`), tracker URLs — these are IC deployment configuration. The core library is configured via `sources.yaml` with no hardcoded URLs.
+
+### Cross-Project Infrastructure Sharing
+
+While each project has its own Workshop deployment, sharing is possible:
+
+- **Shared tracker**: A single BitTorrent tracker can serve multiple game projects. The info-hash namespace is naturally disjoint (different packages = different hashes).
+- **Shared git-index hosting**: One GitHub org could host workshop-index repos for multiple projects.
+- **Shared seed boxes**: Seed infrastructure can serve packages from multiple games simultaneously — BitTorrent doesn't care about content semantics.
+- **Cross-project dependencies**: A music pack or shader effect could be published once and depended on by packages from multiple games. The identity system (`publisher/name@version`) is globally unique.
+- **Shared federation network**: Community-hosted Workshop servers could participate in multiple games' federation networks simultaneously.
+
+> **Also shared with IC's netcode infrastructure.** The tracking server, relay server, and Workshop server share deep structural parallels within IC itself — federation, heartbeats, rate control, connection management, observability, deployment principles. The cross-pollination analysis (`research/p2p-federated-registry-analysis.md` § "Netcode ↔ Workshop Cross-Pollination") identifies four shared infrastructure opportunities: a unified `ic-server` binary (tracking + relay + workshop in one process for small community operators), a shared federation library (multi-source aggregation used by both tracking and Workshop), a shared auth/identity layer (one Ed25519 keypair for multiplayer + publishing + profile), and shared scoring infrastructure (EWMA time-decaying reputation used by both P2P peer scoring and relay player quality tracking). The federation library and scoring infrastructure belong in the Workshop core library (D050) since they're already game-agnostic.
+
+### Engine-Agnostic P2P and Netcode
+
+The P2P distribution protocol (BitTorrent/WebTorrent) and all the patterns adopted from Kraken, Dragonfly, and IPFS (see D049 competitive landscape and `research/p2p-federated-registry-analysis.md`) are **already engine-agnostic**. The protocol operates at the TCP/UDP level — it doesn't know or care whether the consuming application uses Bevy, Godot, Unreal, or a custom engine. The Rust implementation (`ic-workshop` core library) has no engine dependency.
+
+For projects that use a non-Rust engine (unlikely given the author's preferences, but architecturally supported): the Workshop core library exposes a C FFI or can be compiled as a standalone process that the game communicates with via IPC/localhost HTTP. The CLI itself serves as a non-Rust integration path — any game engine can shell out to the Workshop CLI for install/update operations.
+
+### Non-RTS Game Considerations
+
+Each future genre introduces patterns the current design doesn't explicitly address:
+
+| Genre                         | Key Workshop Differences                                                                                            | Already Handled                                                               | Needs Attention                                                                                                                                                                                                                                   |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Turn-based tactics** (XCOM) | Smaller mod sizes, more code-heavy mods (abilities, AI), procedural map parameters                                  | Package format, dependencies, P2P                                             | Ability/behavior mods may need a scripting sandbox equivalent to IC's Lua/WASM — but that's a game concern, not a Workshop concern                                                                                                                |
+| **Turn-based 4X** (Civ)       | Very large mod variety (civilizations, maps, scenarios, art), DLC-like mod structure, long-lived save compatibility | Package format, dependencies, versioning, P2P                                 | Save-game compatibility metadata (a Civ mod that changes game rules may break existing saves). Workshop manifest could include `breaks_saves: true` as an extension field                                                                         |
+| **Military sim** (OFP/ArmA)   | Very large packages (terrains 5–20 GB), server-mandated mod lists, many simultaneous mods active                    | P2P (critical for large packages), dependencies, auto-download on server join | Partial downloads (download terrain mesh now, HD textures later) could benefit from sub-package granularity. Workshop packages already support dependencies — a terrain could be split into `base` + `hd-textures` + `satellite-imagery` packages |
+| **Any**                       | Different scripting languages, different asset formats, different mod structures                                    | Core library is content-agnostic                                              | Nothing — this is the point of the two-layer design                                                                                                                                                                                               |
+
+### Phase
+
+D050 is an architectural principle, not a deliverable with its own phase. It shapes HOW D030 and D049 are implemented:
+
+- **IC Phase 3–4**: Implement Workshop core as a separate Rust library crate within the IC monorepo. The crate has zero Bevy dependencies. IC's Bevy plugin wraps the core library. The API boundary enforces the two-layer split from the start.
+- **IC Phase 5–6**: If a second game project begins, the core library can be extracted to its own repo with minimal effort because the boundary was enforced from day one.
+- **Post-IC-launch**: Each new game project creates its own integration layer and deployment configuration. The core library, P2P protocol, and federation specification are shared.
+
+---
 
 | ID   | Topic                                                                                 | Needs Resolution By |
 | ---- | ------------------------------------------------------------------------------------- | ------------------- |
@@ -6164,32 +6828,87 @@ Phase 2 delivers the infrastructure — render mode registration, asset handle s
 | P003 | Audio library choice + music integration design (see note below)                      | Phase 3 start       |
 | P004 | Lobby/matchmaking protocol specifics                                                  | Phase 5 start       |
 | P005 | ~~Map editor architecture~~ — RESOLVED: Scenario editor in SDK (D038+D040)            | Resolved            |
-| P006 | License choice (see tension analysis below)                                           | Phase 0 start       |
+| P006 | ~~License choice~~ — RESOLVED: GPL v3 with modding exception (D051)                   | Resolved            |
 | P007 | ~~Workshop: single source vs multi-source~~ — RESOLVED: Federated multi-source (D030) | Resolved            |
 
 ### P003 — Audio System Design Notes
 
 The audio system is the least-designed critical subsystem. Beyond the library choice, Phase 3 needs to resolve:
 
-- **Original `.aud` playback:** Decoding original Westwood `.aud` format (IMA ADPCM, mono, varying sample rates)
+- **Original `.aud` playback and encoding:** Decoding and encoding Westwood's `.aud` format (IMA ADPCM, mono/stereo, 8/16-bit, varying sample rates). Full codec implementation based on EA GPL source — `AUDHeaderType` header, `IndexTable`/`DiffTable` lookup tables, 4-bit nibble processing. See `05-FORMATS.md` § AUD Audio Format for complete struct definitions and algorithm details. Encoding support enables the Asset Studio (D040) audio converter for .aud ↔ .wav/.ogg conversion
 - **Music loading from Remastered Collection:** If the player owns the Remastered Collection, can IC load the remastered soundtrack? Licensing allows personal use of purchased files, but the integration path needs design
 - **Dynamic music states:** Combat/build/idle transitions (original RA had this — "Act on Instinct" during combat, ambient during base building). State machine driven by sim events
 - **Music as Workshop resources:** Swappable soundtrack packs via D030 — architecture supports this, but audio pipeline needs to be resource-pack-aware
 - **Frank Klepacki’s music is integral to C&C identity.** The audio system should treat music as a first-class system, not an afterthought. See `13-PHILOSOPHY.md` § "Audio Drives Tempo"
 
-### P006 — License Tension Analysis
+### P006 — RESOLVED: See D051
 
-This is the single most consequential undecided item. The license choice has cascading effects on modding, community contributions, and legal relationship with EA’s GPL-licensed source.
+---
 
-**The tension:**
-- **GPL v3** (matching EA source): Ensures legal clarity when referencing EA’s original code for gameplay values and behavior. But GPL requires derivative works to also be GPL — this could mean WASM mods compiled against IC APIs are GPL-contaminated, contradicting D035’s promise that modders choose their own license.
-- **MIT / Apache 2.0:** Maximum modder freedom, but creates legal ambiguity when referencing GPL’d EA source code. Values can be independently derived (clean-room), but any copy-paste of constants or algorithms from EA source requires GPL.
-- **LGPL:** Engine is open, mods can use any license — but LGPL is complex and poorly understood.
-- **Dual license (GPL + commercial):** Some open-source projects offer GPL for community, commercial license for businesses. Adds complexity.
+## D051: Engine License — GPL v3 with Explicit Modding Exception
 
-**What needs resolution:**
-1. Can IC reference EA source code values (damage tables, unit speeds) without being GPL?
-2. If the engine is GPL, are WASM mods running in the sandbox considered derivative works?
-3. What license maximizes both community contribution AND modder freedom?
+**Decision:** The Iron Curtain engine is licensed under **GNU General Public License v3.0** (GPL v3) with an explicit **modding exception** that clarifies mods loaded through the engine's data and scripting interfaces are NOT derivative works.
 
-**Recommendation:** Resolve with legal counsel before any public announcement. The Bevy ecosystem uses MIT/Apache 2.0 dual license, which grants maximum flexibility. The EA source code values can potentially be treated as independently derivable facts (not copyrightable expression) — but this needs legal confirmation.
+**Rationale:**
+
+1. **The C&C open-source community is a GPL community.** EA released every C&C source code drop under GPL v3 — Red Alert, Tiberian Dawn, Generals/Zero Hour, and the Remastered Collection engine. OpenRA uses GPL v3. Stratagus uses GPL-2.0. Spring Engine uses GPL-2.0. The community this project is built for lives in GPL-land. GPL v3 is the license they know, trust, and expect.
+
+2. **Legal compatibility with EA source.** `ra-formats` directly references EA's GPL v3 source code for struct definitions, compression algorithms, and lookup tables (see `05-FORMATS.md` § Binary Format Codec Reference). GPL v3 for the engine is the cleanest legal path — no license compatibility analysis required.
+
+3. **The engine stays open — forever.** GPL guarantees that no one can fork the engine, close-source it, and compete with the community's own project. For a community that has watched proprietary decisions kill or fragment C&C projects over three decades, this guarantee matters. MIT/Apache would allow exactly the kind of proprietary fork the community fears.
+
+4. **Contributor alignment.** DCO + GPL v3 is the combination used by the Linux kernel — the most successful community-developed project in history. OpenRA contributors moving to IC (or contributing to both) face zero license friction.
+
+5. **Modders are NOT restricted.** This is the key concern the old tension analysis raised, and the answer is clear: YAML data files, Lua scripts, and WASM modules loaded through a sandboxed runtime interface are NOT derivative works under GPL. This is the same settled legal interpretation as:
+   - Linux kernel (GPL) + userspace programs (any license)
+   - Blender (GPL) + Python scripts (any license)
+   - WordPress (GPL) + themes and plugins loaded via defined APIs
+   - GCC (GPL) + programs compiled by GCC (any license, via runtime library exception)
+   
+   IC's tiered modding architecture (D003/D004/D005) was specifically designed so that mods operate through data interfaces and sandboxed runtimes, never linking against engine code. The modding exception makes this explicit.
+
+6. **Commercial use is allowed.** GPL v3 permits selling copies, hosting commercial servers, running tournaments with prize pools, and charging for relay hosting. It requires sharing source modifications — which is exactly what this community wants.
+
+**The modding exception (added to LICENSE header):**
+
+```
+Additional permission under GNU GPL version 3 section 7:
+
+If you modify this Program or any covered work, by linking or combining
+it with content loaded through the engine's data interfaces (YAML rule
+files, Lua scripts, WASM modules, resource packs, Workshop packages, or
+any content loaded through the modding tiers described in the
+documentation as "Tier 1", "Tier 2", or "Tier 3"), the content loaded
+through those interfaces is NOT considered part of the covered work and
+is NOT subject to the terms of this License. Authors of such content may
+choose any license they wish.
+
+This exception does not affect the copyleft requirement for modifications
+to the engine source code itself.
+```
+
+This exception uses GPL v3 § 7's "additional permissions" mechanism — the same mechanism GCC uses for its runtime library exception. It is legally sound and well-precedented.
+
+**Alternatives considered:**
+
+- **MIT / Apache 2.0** (rejected — allows proprietary forks that fragment the community; creates legal ambiguity when referencing GPL'd EA source code; the Bevy ecosystem uses MIT/Apache but Bevy is a general-purpose framework, not a community-specific game engine)
+- **LGPL** (rejected — complex, poorly understood by non-lawyers, and unnecessary given the explicit modding exception under GPL v3 § 7)
+- **Dual license (GPL + commercial)** (rejected — adds complexity with no clear benefit; GPL v3 already permits commercial use)
+- **GPL v3 without modding exception** (rejected — would leave legal ambiguity about WASM mods that might be interpreted as derivative works; the explicit exception removes all doubt)
+
+**What this means in practice:**
+
+| Activity                                    | Allowed? | Requirement                                              |
+| ------------------------------------------- | -------- | -------------------------------------------------------- |
+| Play the game                               | Yes      | —                                                        |
+| Create YAML/Lua/WASM mods                   | Yes      | Any license you want (modding exception)                 |
+| Publish mods on Workshop                    | Yes      | Author chooses license (D030 requires SPDX declaration)  |
+| Sell a total conversion mod                 | Yes      | Mod's license is the author's choice                     |
+| Fork the engine                             | Yes      | Your fork must also be GPL v3                            |
+| Run a commercial server                     | Yes      | If you modify the server code, share those modifications |
+| Use IC code in a proprietary game           | No       | Engine modifications must be GPL v3                      |
+| Embed IC engine in a closed-source launcher | Yes      | The engine remains GPL v3; the launcher is separate      |
+
+### Phase
+
+Resolved. The LICENSE file ships with the GPL v3 text plus the modding exception header from Phase 0 onward.

@@ -1,3 +1,22 @@
+Iron Curtain — Additional Permission under GNU GPL v3 § 7
+=========================================================
+
+Additional permission under GNU GPL version 3 section 7:
+
+If you modify this Program or any covered work, by linking or combining
+it with content loaded through the engine's data interfaces (YAML rule
+files, Lua scripts, WASM modules, resource packs, Workshop packages, or
+any content loaded through the modding tiers described in the
+documentation as "Tier 1", "Tier 2", or "Tier 3"), the content loaded
+through those interfaces is NOT considered part of the covered work and
+is NOT subject to the terms of this License. Authors of such content may
+choose any license they wish.
+
+This exception does not affect the copyleft requirement for modifications
+to the engine source code itself.
+
+=========================================================
+
                     GNU GENERAL PUBLIC LICENSE
                        Version 3, 29 June 2007
 
