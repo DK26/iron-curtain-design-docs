@@ -590,10 +590,12 @@ Connection method is a concern *below* the `NetworkModel`. By the time a `Networ
 
 ```
 Discovery (tracking server / join code / direct IP / QR)
-  → Connection establishment (hole-punch / direct TCP+UDP)
-    → NetworkModel constructed (LockstepNetwork or RelayLockstepNetwork)
+  → Transport::connect() (UdpTransport, WebSocketTransport, etc.)
+    → NetworkModel constructed over Transport (LockstepNetwork<T> or RelayLockstepNetwork<T>)
       → Game loop runs — sim doesn't know or care how connection happened
 ```
+
+The transport layer is abstracted behind a `Transport` trait (D054). Each `Transport` instance represents a single bidirectional channel (point-to-point). `NetworkModel` implementations are generic over `Transport` — relay mode uses one `Transport` to the relay, P2P mode uses one `Transport` per peer. This enables different physical transports per platform — raw UDP (connected socket) on desktop, WebSocket in the browser, `MemoryTransport` in tests — without conditional branches in `NetworkModel`. The protocol layer always runs its own reliability; on reliable transports the retransmit logic becomes a no-op. See `09-DECISIONS.md` § D054 for the full trait definition and implementation inventory.
 
 ### Direct IP
 

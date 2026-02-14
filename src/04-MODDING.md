@@ -2047,6 +2047,30 @@ pub struct CampaignState {
     pub flags: HashMap<String, Value>, // story flags set by Lua
     pub stats: CampaignStats,         // cumulative performance
     pub path_taken: Vec<MissionId>,   // breadcrumb trail for replay/debrief
+    pub world_map: Option<WorldMapState>, // territory state for World Domination campaigns (D016)
+}
+
+/// Territory control state for World Domination campaigns.
+/// None for narrative campaigns; populated for strategic map campaigns.
+#[derive(Serialize, Deserialize, Clone)]
+pub struct WorldMapState {
+    pub map_id: String,               // which world map asset is active
+    pub mission_count: u32,           // how many missions played so far
+    pub regions: HashMap<String, RegionState>,
+    pub narrative_state: HashMap<String, Value>, // LLM narrative flags (alliances, story arcs, etc.)
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct RegionState {
+    pub controlling_faction: String,  // faction id or "contested"/"neutral"
+    pub stability: i32,               // 0-100; low = vulnerable to revolt/counter-attack
+    pub garrison_strength: i32,       // abstract force level
+    pub garrison_units: Vec<RosterUnit>, // actual units garrisoned (for force persistence)
+    pub named_characters: Vec<String>,// character IDs assigned to this region
+    pub recently_captured: bool,      // true if changed hands last mission
+    pub war_damage: i32,              // 0-100; accumulated destruction from repeated battles
+    pub battles_fought: u32,          // how many missions have been fought over this region
+    pub fortification_remaining: i32, // current fortification (degrades with battles, rebuilds)
 }
 
 pub struct CompletedMission {

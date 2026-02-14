@@ -106,7 +106,7 @@ These are settled. Don't re-litigate unless the user explicitly wants to revisit
 | D038 | Scenario editor (OFP/Eden-inspired, SDK)      | Visual editor for maps + mission logic; `ic-editor` crate                                                                                                              |
 | D039 | Engine scope — general-purpose RTS            | `ic-*` naming; ships RA1+TD; C&C remains primary focus                                                                                                                 |
 | D040 | Asset Studio                                  | Visual asset browser/editor in IC SDK; format-aware via ra-formats                                                                                                     |
-| D041 | Trait-abstracted subsystem strategy           | 5 more traits: AiStrategy, FogProvider, DamageResolver, RankingProvider, OrderValidator                                                                                |
+| D041 | Trait-abstracted subsystem strategy           | 5+1 traits: AiStrategy, FogProvider, DamageResolver, RankingProvider, OrderValidator + Transport (D054)                                                                |
 | D042 | Player behavioral profiles & training         | PlayerStyleProfile from event logs; StyleDrivenAi; privacy-first local replays only                                                                                    |
 | D043 | AI behavior presets                           | Priority-based managers; two-axis difficulty; modder-providable via WASM Workshop                                                                                      |
 | D044 | LLM-enhanced AI                               | LlmOrchestratorAi wraps existing AI; LlmPlayerAi experimental; not ranked                                                                                              |
@@ -119,6 +119,7 @@ These are settled. Don't re-litigate unless the user explicitly wants to revisit
 | D051 | GPL v3 with modding exception                 | GPL v3 §7 explicit exception; mods NOT derivative works; same precedent as Linux kernel                                                                                |
 | D052 | Community servers & signed credentials        | Federated community servers (relay+ranking+matchmaking); local SQLite credential files; Ed25519 signed records (not JWT)                                               |
 | D053 | Player Profile system                         | Identity expression, achievement showcase, verified statistics, friends list, community memberships; all reputation data SCR-backed (D052); local-first SQLite storage |
+| D054 | Extended switchability                        | Transport trait (WASM multiplayer), SignatureScheme enum (post-quantum crypto), SnapshotCodec version dispatch (cross-version saves)                                   |
 
 ## Pending Decisions
 

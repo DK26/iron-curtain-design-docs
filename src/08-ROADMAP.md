@@ -95,7 +95,7 @@ Open source `ra-formats` early. Useful standalone, builds credibility and commun
 - **Cross-game component library (D029):** Mind control, carrier/spawner, teleport networks, shield system, upgrade system, delayed weapons (7 first-party systems)
 - Fixed-point coordinate system (no floats in sim)
 - Deterministic RNG
-- Pathfinding: `Pathfinder` trait + `IcPathfinder` multi-layer hybrid (D013), `RemastersPathfinder` and `OpenRaPathfinder` ported from GPL sources (D045)
+- Pathfinding: `Pathfinder` trait + `IcFlowfieldPathfinder` (D013), `RemastersPathfinder` and `OpenRaPathfinder` ported from GPL sources (D045)
 - Order system: Player inputs → Orders → deterministic sim application
 - `LocalNetwork` and `ReplayPlayback` NetworkModel implementations
 - Sim snapshot/restore for save games and future rollback
@@ -162,7 +162,7 @@ Units moving, shooting, dying — headless sim + rendered. Record replay file. P
 ### Deliverables
 - Lua-based scripting for mission scripts
 - WASM mod runtime (basic)
-- Basic skirmish AI: priority-based manager hierarchy (D043) with harvester management, share-based unit production, influence-map building placement, tick-gated evaluation, and fuzzy engagement logic — target quality: better than EA RA, comparable to OpenRA
+- Basic skirmish AI: harvest, build, attack patterns
 - Campaign mission loading (OpenRA mission format)
 - **Branching campaign graph engine (D021):** campaigns as directed graphs of missions with named outcomes, multiple paths, and convergence points
 - **Persistent campaign state:** unit roster carryover, veterancy across missions, equipment persistence, story flags — serializable for save games
@@ -178,8 +178,6 @@ Units moving, shooting, dying — headless sim + rendered. Record replay file. P
 
 ### Key Architecture Work
 - Lua sandbox with engine bindings
-- **Lua AI scripting primitives:** `Ai` global exposing force composition targets, resource collection ratios, patrol/attack commands — enabling Tier 2 modders to write custom AI behaviors without Tier 3 WASM (Stratagus precedent, see `research/stratagus-stargus-opencraft-analysis.md` §4)
-- **External AI socket interface (stretch goal):** TCP/JSON protocol for ML/RL training — engine as environment, external process as agent. Stratagus has a working example (`AiProcessorSetup`); IC's version targets structured state and async communication for `ic mod test --ai-harness`
 - WASM host API with capability system (see `06-SECURITY.md`)
 - Campaign graph loader + validator: parse YAML campaign definitions, validate graph connectivity (no orphan nodes, all outcome targets exist)
 - `CampaignState` serialization: roster, flags, equipment, path taken — full snapshot support
@@ -194,7 +192,7 @@ Units moving, shooting, dying — headless sim + rendered. Record replay file. P
 - Campaign branches work: different mission outcomes lead to different next missions
 - Unit roster persists across missions (surviving units, veterancy, equipment)
 - Save/load works mid-campaign with full state preservation
-- Skirmish AI provides a credible challenge: **better than EA Red Alert, comparable to OpenRA** — maintains economy (no idle harvesters, no power brownouts), builds a reasonable army composition, attacks at appropriate timing, and defends its base reactively (see D043 implementation architecture and `research/rts-ai-implementation-survey.md` §9 for target quality)
+- Skirmish AI provides a basic challenge
 
 ## Phase 5: Multiplayer (Months 20–26)
 
@@ -323,6 +321,8 @@ All LLM features require the player to configure their own LLM provider. The gam
 - Difficulty scaling: same scenario at different challenge levels
 - Mission sharing: rate, remix, publish generated missions
 - Campaign generation: connected multi-mission storylines (experimental)
+- **World Domination campaign mode (D016):** LLM-driven narrative across a world map; world map renderer in `ic-ui` (region overlays, faction colors, frontline animation, briefing panel); mission generation from campaign state; template fallback without LLM; strategic AI for non-player WD factions; per-region force pool and garrison management
+- **Template fallback system (D016):** Built-in mission templates per terrain type and action type (urban assault, rural defense, naval landing, arctic recon, mountain pass, etc.); template selection from strategic state; force pool population; deterministic progression rules for no-LLM mode
 - Adaptive difficulty: AI observes playstyle, generates targeted challenges (experimental)
 - **LLM-driven Workshop resource discovery (D030):** When LLM provider is configured, LLM can search Workshop by `llm_meta` tags, evaluate fitness, auto-pull resources as dependencies for generated content; license-aware filtering
 - **LLM player-aware generation (D034):** When LLM provider is configured, `ic-llm` reads local SQLite for player context — faction preferences, unit usage patterns, win/loss streaks, campaign roster state; generates personalized missions, adaptive briefings, post-match commentary, coaching suggestions, rivalry narratives

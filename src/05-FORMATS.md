@@ -864,7 +864,7 @@ Human-readable metadata for the save browser UI. Stored as JSON (not the binary 
 
 ### Payload
 
-The payload is a `SimSnapshot` serialized via `serde` (bincode format for compactness) and compressed with LZ4 (fast decompression, good ratio for game state data). LZ4 was chosen over LZO (used by original RA) for its better Rust ecosystem support (`lz4_flex` crate) and superior decompression speed.
+The payload is a `SimSnapshot` serialized via `serde` (bincode format for compactness) and compressed with LZ4 (fast decompression, good ratio for game state data). LZ4 was chosen over LZO (used by original RA) for its better Rust ecosystem support (`lz4_flex` crate) and superior decompression speed. The save file header's `version` field selects the codec — version 1 uses bincode + LZ4 (current), future versions may use postcard + LZ4 for schema-stable serialization. See `09-DECISIONS.md` § D054 for the full version-to-codec dispatch design.
 
 ```rust
 pub struct SimSnapshot {
@@ -968,7 +968,7 @@ Frames are serialized with bincode and compressed in blocks (LZ4 block compressi
 
 ### Signature Chain (Relay-Certified Replays)
 
-For ranked/tournament matches, the relay server signs each tick's state hash:
+For ranked/tournament matches, the relay server signs each tick's state hash. The signature algorithm is determined by the replay header version — version 1 uses Ed25519 (current), future versions may use post-quantum algorithms via the `SignatureScheme` enum (D054):
 
 ```rust
 pub struct ReplaySignature {

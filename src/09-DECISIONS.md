@@ -292,7 +292,8 @@ See `10-PERFORMANCE.md` for full details, targets, and implementation patterns.
 - Phase 7: single mission generation (terrain, objectives, enemy composition, triggers, briefing)
 - Phase 7: player-aware generation — LLM reads local SQLite (D034) for faction history, unit preferences, win rates, campaign roster state; injects player context into prompts for personalized missions, adaptive briefings, post-match commentary, coaching suggestions, and rivalry narratives
 - Phase 7: replay-to-scenario narrative generation — LLM reads gameplay event logs from replays to generate briefings, objectives, dialogue, and story context for scenarios extracted from real matches (see D038 § Replay-to-Scenario Pipeline)
-- Future: multi-mission campaigns, adaptive difficulty, cooperative scenario design
+- Phase 7: **generative campaigns** — full multi-mission branching campaigns generated progressively as the player advances (see Generative Campaign Mode below)
+- Future: cooperative scenario design, community challenge campaigns
 
 > **Positioning note:** LLM features are a quiet power-user capability, not a project headline. The primary single-player story is the hand-authored branching campaign system (D021), which requires no LLM and is genuinely excellent on its own merits. LLM generation is for players who want more content — it should never appear before D021 in marketing or documentation ordering. The word “AI” in gaming contexts attracts immediate hostility from a significant audience segment regardless of implementation quality. Lead with campaigns, reveal LLM as “also, modders and power users can use AI tools if they want.”
 
@@ -311,6 +312,1616 @@ See `10-PERFORMANCE.md` for full details, targets, and implementation patterns.
 - Provider is a runtime setting, not a compile-time dependency
 - All prompts and responses are logged (opt-in) for debugging and sharing
 - Offline mode: pre-generated content works without any LLM connection
+
+### Generative Campaign Mode
+
+The single biggest use of LLM generation: **full branching campaigns created on the fly.** The player picks a faction, adjusts parameters (or accepts defaults), and the LLM generates an entire campaign — backstory, missions, branching paths, persistent characters, and narrative arc — progressively as they play. Every generated campaign is a standard D021 campaign: YAML graph, Lua scripts, maps, briefings. Once generated, a campaign is **fully playable without an LLM** — generation is the creative act; playing is standard IC.
+
+#### How It Works
+
+**Step 1 — Campaign Setup (one screen, defaults provided):**
+
+The player opens "New Generative Campaign" from the main menu. If no LLM provider is configured, the button is still clickable — it opens a guidance panel: "Generative campaigns need an LLM provider to create missions. [Configure LLM Provider →] You can also browse pre-generated campaigns on the Workshop. [Browse Workshop →]" (see D033 § "UX Principle: No Dead-End Buttons"). Once an LLM is configured, the same button opens the configuration screen with defaults and an "Advanced" expander for fine-tuning:
+
+| Parameter              | Default           | Description                                                                                                                                                                                                                                                          |
+| ---------------------- | ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Player faction**     | (must pick)       | Soviet, Allied, or a modded faction. Determines primary enemies and narrative allegiance.                                                                                                                                                                            |
+| **Campaign length**    | 24 missions       | Total missions in the campaign arc. Configurable: 8 (short), 16 (medium), 24 (standard), 32+ (epic), or **open-ended** (no fixed count — campaign ends when victory conditions are met; see Open-Ended Campaigns below).                                             |
+| **Branching density**  | Medium            | How many branch points. Low = mostly linear with occasional forks. High = every mission has 2–3 outcomes leading to different paths.                                                                                                                                 |
+| **Tone**               | Military thriller | Narrative style: military thriller, pulp action, dark/gritty, campy Cold War, espionage, or freeform text description.                                                                                                                                               |
+| **Story style**        | C&C Classic       | Story structure and character voice. See "Story Style Presets" below. Options: C&C Classic (default — over-the-top military drama with memorable personalities), Realistic Military, Political Thriller, Pulp Sci-Fi, Character Drama, or freeform text description. |
+| **Difficulty curve**   | Adaptive          | Start easy, escalate. Options: flat, escalating, adaptive (adjusts based on player performance), brutal (hard from mission 1).                                                                                                                                       |
+| **Roster persistence** | Enabled           | Surviving units carry forward (D021 carryover). Disabled = fresh forces each mission.                                                                                                                                                                                |
+| **Named characters**   | 3–5               | How many recurring characters the LLM creates. Built using personality-driven construction (see Character Construction Principles below). These can survive, die, betray, return.                                                                                    |
+| **Theater**            | Random            | European, Arctic, Desert, Pacific, Global (mixed), or a specific setting.                                                                                                                                                                                            |
+| **Game module**        | (current)         | RA1, TD, or any installed game module.                                                                                                                                                                                                                               |
+
+**Advanced parameters** (hidden by default):
+
+| Parameter                   | Default             | Description                                                                                                                                                                                                                                                                                                                                                                                   |
+| --------------------------- | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Mission variety targets** | Balanced            | Distribution of mission types: assault, defense, stealth, escort, naval, combined arms. The LLM aims for this mix but adapts based on narrative flow.                                                                                                                                                                                                                                         |
+| **Faction purity**          | 90%                 | Percentage of missions fighting the opposing faction. Remainder = rogue elements of your own faction, third parties, or storyline twists (civil war, betrayal missions).                                                                                                                                                                                                                      |
+| **Resource level**          | Standard            | Starting resources per mission. Scarce = more survival-focused. Abundant = more action-focused.                                                                                                                                                                                                                                                                                               |
+| **Weather variation**       | Enabled             | LLM introduces weather changes across the campaign arc (D022). Arctic campaign starts mild, ends in blizzard.                                                                                                                                                                                                                                                                                 |
+| **Workshop resources**      | Configured sources  | Which Workshop sources (D030) the LLM can pull assets from (maps, terrain packs, music, voice lines). Only resources with `ai_usage: Allow` are eligible.                                                                                                                                                                                                                                     |
+| **Custom instructions**     | (empty)             | Freeform text the player adds to every prompt. "Include lots of naval missions." "Make Tanya a villain." "Based on actual WW2 Eastern Front operations."                                                                                                                                                                                                                                      |
+| **Moral complexity**        | Low                 | How often the LLM generates tactical dilemmas with no clean answer, and how much character personality drives the fallout. Low = straightforward objectives. Medium = occasional trade-offs with character consequences. High = genuine moral weight with long-tail consequences across missions. See "Moral Complexity Parameter" under Extended Generative Campaign Modes.                  |
+| **Victory conditions**      | (fixed length only) | For open-ended campaigns: a set of conditions that define campaign victory. Examples: "Eliminate General Morrison," "Capture all three Allied capitals," "Survive 30 missions." The LLM works toward these conditions narratively — building tension, creating setbacks, escalating stakes — and generates the final mission when conditions are ripe. Ignored when campaign length is fixed. |
+
+The player clicks "Generate Campaign" — the LLM produces the campaign skeleton before the first mission starts (typically 10–30 seconds depending on provider).
+
+**Step 2 — Campaign Skeleton (generated once, upfront):**
+
+Before the first mission, the LLM generates a **campaign skeleton** — the high-level arc that provides coherence across all missions:
+
+```yaml
+# Generated campaign skeleton (stored in campaign save)
+generative_campaign:
+  id: gen_soviet_2026-02-14_001
+  title: "Operation Iron Tide"           # LLM-generated title
+  faction: soviet
+  enemy_faction: allied
+  theater: european
+  length: 24
+  
+  # Narrative arc — the LLM's plan for the full campaign
+  arc:
+    act_1: "Establishing foothold in Eastern Europe (missions 1–8)"
+    act_2: "Push through Central Europe, betrayal from within (missions 9–16)"
+    act_3: "Final assault on Allied HQ, resolution (missions 17–24)"
+  
+  # Named characters (persistent across the campaign)
+  characters:
+    - name: "Colonel Petrov"
+      role: player_commander
+      allegiance: soviet           # current allegiance (can change mid-campaign)
+      loyalty: 100                 # 0–100; below threshold triggers defection risk
+      personality:
+        mbti: ISTJ                 # Personality type — guides dialogue voice, decision patterns, stress reactions
+        core_traits: ["pragmatic", "veteran", "distrusts politicians"]
+        flaw: "Rigid adherence to doctrine; struggles when improvisation is required"
+        desire: "Protect his soldiers and win the war with minimal casualties"
+        fear: "Becoming the kind of officer who treats troops as expendable"
+        speech_style: "Clipped military brevity. No metaphors. States facts, expects action."
+      arc: "Loyal commander who questions orders in Act 2"
+      hidden_agenda: null          # no secret agenda
+    - name: "Lieutenant Sonya"
+      role: intelligence_officer
+      allegiance: soviet
+      loyalty: 75                  # not fully committed — exploitable
+      personality:
+        mbti: ENTJ                 # Ambitious leader type — strategic, direct, will challenge authority
+        core_traits: ["brilliant", "ambitious", "morally flexible"]
+        flaw: "Believes the ends always justify the means; increasingly willing to cross lines"
+        desire: "Power and control over the outcome of the war"
+        fear: "Being a pawn in someone else's game — which is exactly what she is"
+        speech_style: "Precise intelligence language with subtle manipulation. Plants ideas as questions."
+      arc: "Provides intel briefings; has a hidden agenda revealed in Act 2"
+      hidden_agenda: "secretly working for a rogue faction; will betray if loyalty drops below 40"
+    - name: "Sergeant Volkov"
+      role: field_hero
+      allegiance: soviet
+      loyalty: 100
+      unit_type: commando
+      personality:
+        mbti: ESTP                 # Action-oriented operator — lives in the moment, reads the battlefield
+        core_traits: ["fearless", "blunt", "fiercely loyal"]
+        flaw: "Impulsive; acts first, thinks later; puts himself at unnecessary risk"
+        desire: "To be in the fight. Peace terrifies him more than bullets."
+        fear: "Being sidelined or deemed unfit for combat"
+        speech_style: "Short, punchy, darkly humorous. Gallows humor under fire. Calls everyone by nickname."
+      arc: "Accompanies the player; can die permanently"
+      hidden_agenda: null
+    - name: "General Morrison"
+      role: antagonist
+      allegiance: allied
+      loyalty: 90
+      personality:
+        mbti: INTJ                 # Strategic mastermind — plans 10 moves ahead, emotionally distant
+        core_traits: ["strategic genius", "ruthless", "respects worthy opponents"]
+        flaw: "Arrogance — sees the player as a puzzle to solve, not a genuine threat, until it's too late"
+        desire: "To prove the intellectual superiority of his approach to warfare"
+        fear: "Losing to brute force rather than strategy — it would invalidate his entire philosophy"
+        speech_style: "Calm, measured, laced with classical references. Never raises his voice. Compliments the player before threatening them."
+      arc: "Allied commander; grows from distant threat to personal rival"
+      hidden_agenda: "may offer a secret truce if the player's reputation is high enough"
+  
+  # Backstory and context (fed to the LLM for every subsequent mission prompt)
+  backstory: |
+    The year is 1953. The Allied peace treaty has collapsed after the
+    assassination of the Soviet delegate at the Vienna Conference.
+    Colonel Petrov leads a reformed armored division tasked with...
+  
+  # Planned branch points (approximate — adjusted as the player plays)
+  branch_points:
+    - mission: 4
+      theme: "betray or protect civilian population"
+    - mission: 8
+      theme: "follow orders or defy command"
+    - mission: 12
+      theme: "Sonya's loyalty revealed"
+    - mission: 16
+      theme: "ally with rogue faction or destroy them"
+    - mission: 20
+      theme: "mercy or ruthlessness in final push"
+```
+
+The skeleton is a plan, not a commitment. The LLM adapts it as the player makes choices and encounters different outcomes. Act 2's betrayal might happen in mission 10 or mission 14 depending on how the player's story unfolds.
+
+#### Character Construction Principles
+
+Generative campaigns live or die on character quality. A procedurally generated mission with a mediocre map is forgettable. A procedurally generated mission where a character you care about betrays you is unforgettable. The LLM's system prompt includes explicit character construction guidance drawn from proven storytelling principles.
+
+**Personality-first construction:**
+
+Every named character is built from a personality model, not just a role label. The LLM assigns each character:
+
+| Field            | Purpose                                                                                             | Example (Sonya)                                                               |
+| ---------------- | --------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| **MBTI type**    | Governs decision-making patterns, stress reactions, communication style, and interpersonal dynamics | ENTJ — ambitious strategist who leads from the front and challenges authority |
+| **Core traits**  | 3–5 adjectives that define the character's public-facing personality                                | Brilliant, ambitious, morally flexible                                        |
+| **Flaw**         | A specific weakness that creates dramatic tension and makes the character human                     | Believes the ends always justify the means                                    |
+| **Desire**       | What the character wants — drives their actions and alliances                                       | Power and control over the outcome of the war                                 |
+| **Fear**         | What the character dreads — drives their mistakes and vulnerabilities                               | Being a pawn in someone else's game                                           |
+| **Speech style** | Concrete voice direction so dialogue sounds like a person, not a bot                                | "Precise intelligence language with subtle manipulation"                      |
+
+The MBTI type is not a horoscope — it's a **consistency framework**. When the LLM generates dialogue, decisions, and reactions over 24 missions, the personality type keeps the character's voice and behavior coherent. An ISTJ commander (Petrov) responds to a crisis differently than an ESTP commando (Volkov): Petrov consults doctrine, Volkov acts immediately. An ENTJ intelligence officer (Sonya) challenges the player's plan head-on; an INFJ would express doubts obliquely. The LLM's system prompt maps each type to concrete behavioral patterns:
+
+- **Under stress:** How the character cracks (ISTJ → becomes rigidly procedural; ESTP → reckless improvisation; ENTJ → autocratic overreach; INTJ → cold withdrawal)
+- **In conflict:** How they argue (ST types cite facts; NF types appeal to values; TJ types issue ultimatums; FP types walk away)
+- **Loyalty shifts:** What makes them stay or leave (SJ types value duty and chain of command; NP types value autonomy and moral alignment; NT types follow competence; SF types follow personal bonds)
+- **Dialogue voice:** How they talk (specific sentence structures, vocabulary patterns, verbal tics, and what they never say)
+
+**The flaw/desire/fear triangle** is the engine of character drama. Every meaningful character moment comes from the collision between what a character wants, what they're afraid of, and the weakness that undermines them. Sonya *wants* control, *fears* being a pawn, and her *flaw* (ends justify means) is exactly what makes her vulnerable to becoming the thing she fears. The LLM uses this triangle to generate character arcs that feel authored, not random.
+
+**Ensemble dynamics:**
+
+The LLM doesn't build characters in isolation — it builds a cast with deliberate personality contrasts. The system prompt instructs:
+
+- **No duplicate MBTI types** in the core cast (3–5 characters). Personality diversity creates natural interpersonal tension.
+- **Complementary and opposing pairs.** Petrov (ISTJ, duty-bound) and Sonya (ENTJ, ambitious) disagree on *why* they're fighting. Volkov (ESTP, lives-for-combat) and a hypothetical diplomat character (INFJ, seeks-peace) disagree on *whether* they should be. These pairings generate conflict without scripting.
+- **Role alignment — or deliberate misalignment.** A character whose MBTI fits their role (ISTJ commander) is reliable. A character whose personality clashes with their role (ENFP intelligence officer — creative but unfocused) creates tension that pays off during crises.
+
+**Inter-character dynamics (MBTI interaction simulation):**
+
+Characters don't exist in isolation — they interact with each other, and those interactions are where the best drama lives. The LLM uses MBTI compatibility and tension patterns to simulate how characters relate, argue, collaborate, and clash *with each other* — not just with the player.
+
+The system prompt maps personality pairings to interaction patterns:
+
+| Pairing dynamic                              | Example                                   | Interaction pattern                                                                                                                                                                                                                         |
+| -------------------------------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **NT + NT** (strategist meets strategist)    | Sonya (ENTJ) vs. Morrison (INTJ)          | Intellectual respect masking mutual threat. Each anticipates the other's moves. Conversations are chess games. If forced to cooperate, they're devastatingly effective — but neither trusts the other to stay loyal.                        |
+| **ST + NF** (realist meets idealist)         | Petrov (ISTJ) + diplomat (INFJ)           | Petrov dismisses idealism as naïve; the diplomat sees Petrov as a blunt instrument. Under pressure, the diplomat's moral clarity gives Petrov purpose he didn't know he lacked.                                                             |
+| **SP + SJ** (improviser meets rule-follower) | Volkov (ESTP) + Petrov (ISTJ)             | Volkov breaks protocol; Petrov enforces it. They argue constantly — but Volkov's improvisation saves the squad when doctrine fails, and Petrov's discipline saves them when improvisation gets reckless. Grudging mutual respect over time. |
+| **TJ + FP** (commander meets rebel)          | Sonya (ENTJ) + a resistance leader (ISFP) | Sonya issues orders; the ISFP resists on principle. Sonya sees inefficiency; the ISFP sees tyranny. The conflict escalates until one of them is proven right — or both are proven wrong.                                                    |
+
+The LLM generates inter-character dialogue — not just player-facing briefings — by simulating how each character would respond to the other's personality. When Petrov delivers a mission debrief and Volkov interrupts with a joke, the LLM knows Petrov's ISTJ response is clipped disapproval ("This isn't the time, Sergeant"), not laughter. When Sonya proposes a morally questionable plan, the LLM knows which characters push back (NF types, SF types) and which support it (NT types, pragmatic ST types).
+
+Over a 24-mission campaign, these simulated interactions create emergent relationships that the LLM tracks in narrative threads. A Petrov-Volkov friction arc might evolve from mutual irritation (missions 1–5) to grudging respect (missions 6–12) to genuine trust (missions 13–20) to devastating loss if one of them dies. None of this is scripted — it emerges from consistent MBTI-driven behavioral simulation applied to the campaign's actual events.
+
+**Story Style Presets:**
+
+The `story_style` parameter controls how the LLM constructs both characters and narrative. The default — **C&C Classic** — is designed to feel like an actual C&C campaign:
+
+| Style                     | Character Voice                                                                                                                                                   | Narrative Feel                                                                                                                                         | Inspired By                                                                                |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
+| **C&C Classic** (default) | Over-the-top military personalities. Commanders are larger-than-life. Villains monologue. Heroes quip under fire. Every character is memorable on first briefing. | Bombastic Cold War drama with genuine tension underneath. Betrayals. Superweapons. Last stands. The war is absurd and deadly serious at the same time. | RA1/RA2 campaigns, Tanya's one-liners, Stalin's theatrics, Yuri's menace, Carville's charm |
+| **Realistic Military**    | Understated professionalism. Characters speak in military shorthand. Emotions are implied, not stated.                                                            | Band of Brothers tone. The horror of war comes from what's *not* said. Missions feel like operations, not adventures.                                  | Generation Kill, Black Hawk Down, early Tom Clancy                                         |
+| **Political Thriller**    | Everyone has an agenda. Dialogue is subtext-heavy. Trust is currency.                                                                                             | Slow-burn intrigue with sudden violence. The real enemy is often on your own side.                                                                     | The Americans, Tinker Tailor Soldier Spy, Metal Gear Solid                                 |
+| **Pulp Sci-Fi**           | Characters are archetypes turned to 11. Scientists are mad. Soldiers are grizzled. Villains are theatrical.                                                       | Experimental tech, dimension portals, time travel, alien artifacts. Camp embraced, not apologized for.                                                 | RA2 Yuri's Revenge, C&C Renegade, Starship Troopers                                        |
+| **Character Drama**       | Deeply human characters with complex motivations. Relationships shift over the campaign.                                                                          | The war is the backdrop; the story is about the people. Victory feels bittersweet. Loss feels personal.                                                | The Wire, Battlestar Galatica, This War of Mine                                            |
+
+The default (C&C Classic) exists because generative campaigns should feel like C&C out of the box — not generic military fiction. Kane, Tanya, Yuri, and Carville are memorable because they're *specific*: exaggerated personalities with distinctive voices, clear motivations, and dramatic reveals. The LLM's system prompt for C&C Classic includes explicit guidance: "Characters should be instantly recognizable from their first line of dialogue. A commander who speaks in forgettable military platitudes is a failed character. Every briefing should have a line worth quoting."
+
+Players who want a different narrative texture pick a different style — or write a freeform description. The `custom_instructions` field in Advanced parameters stacks with the style preset, so a player can select "C&C Classic" and add "but make the villain sympathetic" for a hybrid tone.
+
+**Step 3 — Post-Mission Inspection & Progressive Generation:**
+
+After each mission, the system collects a detailed **battle report** — not just "win/lose" but a structured account of what happened during gameplay. This report is the LLM's primary input for generating the next mission. The LLM inspects what actually occurred and reacts to it against the backstory and campaign arc.
+
+**What the battle report captures:**
+
+- **Outcome:** which named outcome the player achieved (victory variant, defeat variant)
+- **Casualties:** units lost by type, how they died (combat, friendly fire, sacrificed), named characters killed or wounded
+- **Surviving forces:** exact roster state — what the player has left to carry forward
+- **Buildings:** structures built, destroyed, captured (especially enemy structures)
+- **Economy:** resources gathered, spent, remaining; whether the player was resource-starved or flush
+- **Timeline:** mission duration, how quickly objectives were completed, idle periods
+- **Territory:** areas controlled at mission end, ground gained or lost
+- **Key moments:** scripted triggers that fired (or didn't), secondary objectives attempted, hidden objectives discovered
+- **Enemy state:** what enemy forces survived, whether the enemy retreated or was annihilated, enemy structures remaining
+- **Player behavior patterns:** aggressive vs. defensive play, tech rush vs. mass production, micromanagement intensity (from D042 event logs)
+
+The LLM receives this battle report alongside the campaign context and generates the next mission **as a direct reaction to what happened.** This is not "fill in the next slot in a pre-planned arc" — it's "inspect the battlefield aftermath and decide what happens next in the story."
+
+**How inspection drives generation:**
+
+1. **Narrative consequences.** The LLM sees the player barely survived mission 5 with 3 tanks and no base — the next mission isn't a large-scale assault. It's a desperate retreat, a scavenging mission, or a resistance operation behind enemy lines. The campaign *genre* shifts based on the player's actual situation.
+2. **Escalation and de-escalation.** If the player steamrolled mission 3, the LLM escalates: the enemy regroups, brings reinforcements, changes tactics. If the player struggled, the LLM provides a breather mission — resupply, ally arrival, intelligence gathering.
+3. **Story continuity.** The LLM references specific events: "Commander, the bridge at Danzig we lost in the last operation — the enemy is using it to move armor south. We need it back." Because the player actually lost that bridge.
+4. **Character reactions.** Named characters react to what happened. Volkov's briefing changes if the player sacrificed civilians in the last mission. Sonya questions the commander's judgment after heavy losses. Morrison taunts the player after a defensive victory: "You held the line. Impressive. It won't save you."
+5. **Campaign arc awareness.** The LLM knows where it is in the story — mission 8 of 24, end of Act 1 — and paces accordingly. Early missions establish, middle missions complicate, late missions resolve. But the *specific* complications come from the battle reports, not from a pre-written script.
+6. **Mission number context.** The LLM knows which mission number it's generating relative to the total (or relative to victory conditions in open-ended mode). Mission 3/24 gets an establishing tone. Mission 20/24 gets climactic urgency. The story progression scales accordingly — the LLM won't generate a "final confrontation" at mission 6 unless the campaign is 8 missions long.
+
+**Generation pipeline per mission:**
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                 Mission Generation Pipeline              │
+│                                                          │
+│  Inputs:                                                 │
+│  ├── Campaign skeleton (backstory, arc, characters)      │
+│  ├── Campaign context (accumulated state — see below)    │
+│  ├── Player's campaign state (roster, flags, path taken) │
+│  ├── Last mission battle report (detailed telemetry)     │
+│  ├── Player profile (D042 — playstyle, preferences)      │
+│  ├── Campaign parameters (difficulty, tone, etc.)        │
+│  ├── Victory condition progress (open-ended campaigns)   │
+│  └── Available Workshop resources (maps, assets)         │
+│                                                          │
+│  LLM generates:                                          │
+│  ├── Mission briefing (text, character dialogue)         │
+│  ├── Map layout (YAML terrain definition)                │
+│  ├── Objectives (primary + secondary + hidden)           │
+│  ├── Enemy composition and AI behavior                   │
+│  ├── Triggers and scripted events (Lua)                  │
+│  ├── Named outcomes (2–4 per mission)                    │
+│  ├── Carryover configuration (roster, equipment, flags)  │
+│  ├── Weather schedule (D022)                             │
+│  ├── Debrief per outcome (text, story flag effects)      │
+│  ├── Cinematic sequences (mid-mission + pre/post)        │
+│  ├── Dynamic music playlist + mood tags                  │
+│  ├── Radar comm events (in-mission character dialogue)   │
+│  ├── In-mission branching dialogues (RPG-style choices)  │
+│  ├── EVA notification scripts (custom voice cues)        │
+│  └── Intermission dialogue trees (between missions)      │
+│                                                          │
+│  Validation pass:                                        │
+│  ├── All unit types exist in the game module             │
+│  ├── All map references resolve                          │
+│  ├── Objectives are reachable (pathfinding check)        │
+│  ├── Lua scripts parse and sandbox-check                 │
+│  ├── Named outcomes have valid transitions               │
+│  └── Difficulty budget is within configured range        │
+│                                                          │
+│  Output: standard D021 mission node (YAML + Lua + map)   │
+└─────────────────────────────────────────────────────────┘
+```
+
+**Step 4 — Campaign Context (the LLM's memory):**
+
+The LLM doesn't have inherent memory between generation calls. The system maintains a **campaign context** document — a structured summary of everything that has happened — and includes it in every generation prompt. This is the bridge between "generate mission N" and "generate mission N+1 that makes sense."
+
+```rust
+/// Accumulated campaign context — passed to the LLM with each generation request.
+/// Grows over the campaign but is summarized/compressed to fit context windows.
+#[derive(Serialize, Deserialize, Clone)]
+pub struct GenerativeCampaignContext {
+    /// The original campaign skeleton (backstory, arc, characters).
+    pub skeleton: CampaignSkeleton,
+    
+    /// Campaign parameters chosen by the player at setup.
+    pub parameters: CampaignParameters,
+    
+    /// Per-mission summary of what happened (compressed narrative, not raw state).
+    pub mission_history: Vec<MissionSummary>,
+    
+    /// Current state of each named character — tracks everything the LLM needs
+    /// to write them consistently and evolve their arc.
+    pub character_states: Vec<CharacterState>,
+    
+    /// Active story flags and campaign variables (D021 persistent state).
+    pub flags: HashMap<String, Value>,
+    
+    /// Current unit roster summary (unit counts by type, veterancy distribution,
+    /// named units — not individual unit state, which is too granular for prompts).
+    pub roster_summary: RosterSummary,
+    
+    /// Narrative threads the LLM is tracking (set up in skeleton, updated per mission).
+    /// e.g., "Sonya's betrayal — foreshadowed in missions 3, 5; reveal planned for ~mission 12"
+    pub active_threads: Vec<NarrativeThread>,
+    
+    /// Player tendency observations (from D042 profile + mission outcomes).
+    /// e.g., "Player favors aggressive strategies, rarely uses naval units,
+    /// tends to protect civilians"
+    pub player_tendencies: Vec<String>,
+    
+    /// The planned arc position — where we are in the narrative structure.
+    /// e.g., "Act 2, rising action, approaching midpoint crisis"
+    pub arc_position: String,
+}
+
+pub struct MissionSummary {
+    pub mission_number: u32,
+    pub title: String,
+    pub outcome: String,            // the named outcome the player achieved
+    pub narrative_summary: String,  // 2-3 sentence LLM-generated summary
+    pub key_events: Vec<String>,    // "Volkov killed", "bridge destroyed", "civilians saved"
+    pub performance: MissionPerformance, // time, casualties, rating
+}
+
+/// Detailed battle telemetry collected after each mission.
+/// This is what the LLM "inspects" to decide what happens next.
+pub struct BattleReport {
+    pub units_lost: HashMap<String, u32>,        // unit type → count lost
+    pub units_surviving: HashMap<String, u32>,   // unit type → count remaining
+    pub named_casualties: Vec<String>,           // named characters killed this mission
+    pub buildings_destroyed: Vec<String>,        // player structures lost
+    pub buildings_captured: Vec<String>,         // enemy structures captured
+    pub enemy_forces_remaining: EnemyState,      // annihilated, retreated, regrouping, entrenched
+    pub resources_gathered: i64,
+    pub resources_spent: i64,
+    pub mission_duration_seconds: u32,
+    pub territory_control_permille: i32,          // 0–1000, fraction of map controlled (fixed-point, not f32)
+    pub objectives_completed: Vec<String>,       // primary + secondary + hidden
+    pub objectives_failed: Vec<String>,
+    pub player_behavior: PlayerBehaviorSnapshot, // from D042 event classification
+}
+
+/// Tracks a named character's evolving state across the campaign.
+/// The LLM reads this to write consistent, reactive character behavior.
+pub struct CharacterState {
+    pub name: String,
+    pub status: CharacterStatus,         // Alive, Dead, MIA, Captured, Defected
+    pub allegiance: String,              // current faction — can change mid-campaign
+    pub loyalty: u8,                     // 0–100; LLM adjusts based on player actions
+    pub relationship_to_player: i8,      // -100 to +100 (hostile → loyal)
+    pub hidden_agenda: Option<String>,   // secret motivation; revealed when conditions trigger
+    pub personality_type: String,        // MBTI code (e.g., "ISTJ") — personality consistency anchor
+    pub speech_style: String,            // dialogue voice guidance for the LLM
+    pub flaw: String,                    // dramatic weakness — drives character conflict
+    pub desire: String,                  // what they want — drives their actions
+    pub fear: String,                    // what they dread — drives their mistakes
+    pub missions_appeared: Vec<u32>,     // which missions this character appeared in
+    pub kills: u32,                      // if a field unit — combat track record
+    pub notable_events: Vec<String>,     // "betrayed the player in mission 12", "saved Volkov in mission 7"
+    pub current_narrative_role: String,  // "ally", "antagonist", "rival", "prisoner", "rogue"
+}
+
+pub enum CharacterStatus {
+    Alive,
+    Dead { mission: u32, cause: String },     // permanently gone
+    MIA { since_mission: u32 },                // may return
+    Captured { by_faction: String },           // rescue or prisoner exchange possible
+    Defected { to_faction: String, mission: u32 }, // switched sides
+    Rogue { since_mission: u32 },              // operating independently
+}
+```
+
+**Context window management:** The context grows with each mission. For long campaigns (24+ missions), the system compresses older mission summaries into shorter recaps (the LLM itself does this compression: "Summarize missions 1–8 in 200 words, retaining key plot points and character developments"). This keeps the prompt within typical context window limits (~8K–32K tokens for the campaign context, leaving room for the generation instructions and output).
+
+#### Generated Output = Standard D021 Campaigns
+
+Everything the LLM generates is standard IC format:
+
+| Generated artifact   | Format                                                               | Same as hand-crafted? |
+| -------------------- | -------------------------------------------------------------------- | --------------------- |
+| Campaign graph       | D021 YAML (`campaign.yaml`)                                          | Identical             |
+| Mission maps         | YAML map definition                                                  | Identical             |
+| Triggers / scripts   | Lua (same API as `04-MODDING.md`)                                    | Identical             |
+| Briefings            | YAML text + character references                                     | Identical             |
+| Named characters     | D038 Named Characters format                                         | Identical             |
+| Carryover config     | D021 carryover modes                                                 | Identical             |
+| Story flags          | D021 `flags`                                                         | Identical             |
+| Intermissions        | D038 Intermission Screens (briefing, debrief, roster mgmt, dialogue) | Identical             |
+| Cinematic sequences  | D038 Cinematic Sequence module (YAML step list)                      | Identical             |
+| Dynamic music config | D038 Music Playlist module (mood-tagged track lists)                 | Identical             |
+| Radar comm events    | D038 Video Playback / Radar Comm module                              | Identical             |
+| In-mission dialogues | D038 Dialogue Editor format (branching tree YAML)                    | Identical             |
+| EVA notifications    | D038 EVA module (custom event → audio + text)                        | Identical             |
+| Ambient sound zones  | D038 Ambient Sound Zone module                                       | Identical             |
+
+This is the key architectural decision: **there is no "generative campaign runtime."** The LLM is a content creation tool. Once a mission is generated, it's a normal mission. Once the full campaign is complete (all 24 missions played), it's a normal D021 campaign — playable by anyone, with or without an LLM.
+
+#### Cinematic & Narrative Generation
+
+A generated mission that plays well but *feels* empty — no mid-mission dialogue, no music shifts, no character moments, no dramatic reveals — is a mission that fails the C&C fantasy. The original Red Alert didn't just have good missions; it had missions where Stavros called you on the radar mid-battle, where the music shifted from ambient to Hell March when the tanks rolled in, where Tanya dropped a one-liner before breaching the base. That's the standard.
+
+The LLM generates the **full cinematic layer** for each mission — not just objectives and unit placement, but the narrative moments that make a mission feel authored:
+
+**Mid-mission radar comm events:**
+
+The classic C&C moment: your radar screen flickers, a character's face appears, they deliver intel or a dramatic line. The LLM generates these as D038 Radar Comm modules, triggered by game events:
+
+```yaml
+# LLM-generated radar comm event
+radar_comms:
+  - id: bridge_warning
+    trigger:
+      type: unit_enters_region
+      region: bridge_approach
+      faction: player
+    speaker: "General Stavros"
+    portrait: stavros_concerned
+    text: "Commander, our scouts report heavy armor at the bridge. Going in head-on would be suicide. There's a ford upstream — shallow enough for infantry."
+    audio: null                        # TTS if available, silent otherwise
+    display_mode: radar_comm           # replaces radar panel
+    duration: 6.0                      # seconds, then radar returns
+    
+  - id: betrayal_reveal
+    trigger:
+      type: objective_complete
+      objective: capture_command_post
+    speaker: "Colonel Vasquez"
+    portrait: vasquez_smug
+    text: "Surprised to see me, Commander? Your General Stavros sold you out. These men now answer to me."
+    display_mode: radar_comm
+    effects:
+      - set_flag: vasquez_betrayal
+      - convert_units:                 # allied garrison turns hostile
+          region: command_post_interior
+          from_faction: player
+          to_faction: enemy
+    cinematic: true                    # brief letterbox + game pause for drama
+```
+
+The LLM decides *when* these moments should happen based on the mission's narrative arc. A routine mission might have 1-2 comms (intel at start, debrief at end). A story-critical mission might have 5-6, including a mid-battle betrayal, a desperate plea for reinforcements, and a climactic confrontation.
+
+**In-mission branching dialogues (RPG-style choices):**
+
+Not just in intermissions — branching dialogue can happen *during* a mission. An NPC unit is reached, a dialogue triggers, the player makes a choice that affects the mission in real-time:
+
+```yaml
+mid_mission_dialogues:
+  - id: prisoner_interrogation
+    trigger:
+      type: unit_enters_region
+      unit: tanya
+      region: prison_compound
+    pause_game: true                   # freezes game during dialogue
+    tree:
+      - speaker: "Captured Officer"
+        portrait: captured_officer
+        text: "I'll tell you everything — the mine locations, the patrol routes. Just let me live."
+        choices:
+          - label: "Talk. Now."
+            effects:
+              - reveal_shroud: minefield_region
+              - set_flag: intel_acquired
+            next: officer_cooperates
+          - label: "We don't negotiate with the enemy."
+            effects:
+              - set_flag: officer_executed
+              - adjust_character: { name: "Tanya", loyalty: -5 }
+            next: tanya_reacts
+          - label: "You'll come with us. Command will want to talk to you."
+            effects:
+              - spawn_unit: { type: prisoner_escort, region: prison_compound }
+              - add_objective: { text: "Extract the prisoner to the LZ", type: secondary }
+            next: extraction_added
+      
+      - id: officer_cooperates
+        speaker: "Captured Officer"
+        text: "The mines are along the ridge — I'll mark them on your map. And Commander... the base commander is planning to retreat at 0400."
+        effects:
+          - add_objective: { text: "Destroy the base before 0400", type: bonus, timer: 300 }
+      
+      - id: tanya_reacts
+        speaker: "Tanya"
+        portrait: tanya_cold
+        text: "Your call, Commander. But he might have known something useful."
+```
+
+These are **full D038 Dialogue Editor trees** — the same format a human designer would create. The LLM generates them with awareness of the mission's objectives, characters, and narrative context. The choices have *mechanical consequences* — revealing shroud, adding objectives, changing timers, spawning units, adjusting character loyalty.
+
+The LLM can also generate **consequence chains** — a choice in Mission 5's dialogue affects Mission 7's setup (via story flags). "You spared the officer in Mission 5" → in Mission 7, that officer appears as an informant. The LLM tracks these across the campaign context.
+
+**Dynamic music generation:**
+
+The LLM doesn't compose music — it curates it. For each mission, the LLM generates a D038 Music Playlist with mood-tagged tracks selected from the game module's soundtrack and any Workshop music packs the player has installed:
+
+```yaml
+music:
+  mode: dynamic
+  tracks:
+    ambient:
+      - fogger                         # game module default
+      - workshop:cold-war-ost/frozen_fields   # from Workshop music pack
+    combat:
+      - hell_march
+      - grinder
+    tension:
+      - radio_2
+      - workshop:cold-war-ost/countdown
+    victory:
+      - credits
+  
+  # Scripted music cues (override dynamic system at specific moments)
+  scripted_cues:
+    - trigger: { type: timer, seconds: 0 }         # mission start
+      track: fogger
+      fade_in: 3.0
+    - trigger: { type: objective_complete, objective: breach_wall }
+      track: hell_march
+      fade_in: 0.5                                  # hard cut — dramatic
+    - trigger: { type: flag_set, flag: vasquez_betrayal }
+      track: workshop:cold-war-ost/countdown
+      fade_in: 1.0
+```
+
+The LLM picks tracks that match the mission's tone. A desperate defense mission gets tense ambient tracks and hard-hitting combat music. A stealth infiltration gets quiet ambient and reserves the intense tracks for when the alarm triggers. The scripted cues tie specific music moments to narrative beats — the betrayal hits differently when the music shifts at exactly the right moment.
+
+**Cinematic sequences:**
+
+For high-stakes moments, the LLM generates full D038 Cinematic Sequences — multi-step scripted events combining camera movement, dialogue, music, unit spawns, and letterbox:
+
+```yaml
+cinematic_sequences:
+  - id: reinforcement_arrival
+    trigger:
+      type: objective_complete
+      objective: hold_position_2_min
+    skippable: true
+    steps:
+      - type: letterbox
+        enable: true
+        transition_time: 0.5
+      - type: camera_pan
+        from: player_base
+        to: beach_landing
+        duration: 3.0
+        easing: ease_in_out
+      - type: play_music
+        track: hell_march
+        fade_in: 0.5
+      - type: spawn_units
+        units: [medium_tank, medium_tank, medium_tank, apc, apc]
+        position: beach_landing
+        faction: player
+        arrival: landing_craft          # visual: landing craft delivers them
+      - type: dialogue
+        speaker: "Admiral Kowalski"
+        portrait: kowalski_grinning
+        text: "The cavalry has arrived, Commander. Where do you want us?"
+        duration: 4.0
+      - type: camera_pan
+        to: player_base
+        duration: 2.0
+      - type: letterbox
+        enable: false
+        transition_time: 0.5
+```
+
+The LLM generates these for **key narrative moments** — not every trigger. Typical placement:
+
+| Moment                     | Frequency           | Example                                                        |
+| -------------------------- | ------------------- | -------------------------------------------------------------- |
+| **Mission intro**          | Every mission       | Camera pan across the battlefield, briefing dialogue overlay   |
+| **Reinforcement arrival**  | 30-50% of missions  | Camera shows troops landing/parachuting in, commander dialogue |
+| **Mid-mission plot twist** | 20-40% of missions  | Betrayal reveal, surprise enemy, intel discovery               |
+| **Objective climax**       | Key objectives only | Bridge explosion, base breach, hostage rescue                  |
+| **Mission conclusion**     | Every mission       | Victory/defeat sequence, debrief comm                          |
+
+**Intermission dialogue and narrative scenes:**
+
+Between missions, the LLM generates intermission screens that go beyond simple briefings:
+
+- **Branching dialogue with consequences** — "General, do we reinforce the eastern front or push west?" The choice affects the next mission's setup, available forces, or strategic position.
+- **Character moments** — two named characters argue about strategy. The player's choice affects their loyalty and relationship. A character whose advice is ignored too many times might defect (Campaign Event Patterns).
+- **Intel briefings** — the player reviews intelligence gathered from the previous mission. What they focus on (or ignore) shapes the next mission's surprises.
+- **Moral dilemmas** — execute the prisoner or extract intel? Bomb the civilian bridge or let the enemy escape? These set story flags that ripple forward through the campaign.
+
+The LLM generates these as D038 Intermission Screens using the Dialogue template with Choice panels. Every choice links to a story flag; every flag feeds back into the LLM's campaign context for future mission generation.
+
+**EVA and ambient audio:**
+
+The LLM generates custom EVA notification scripts — mission-specific voice cues beyond the default "Unit lost" / "Construction complete":
+
+```yaml
+custom_eva:
+  - event: unit_enters_region
+    region: minefield_zone
+    text: "Warning: mines detected in this area."
+    priority: high
+    cooldown: 30                       # don't repeat for 30 seconds
+    
+  - event: building_captured
+    building: enemy_radar
+    text: "Enemy radar facility captured. Shroud cleared."
+    priority: normal
+    
+  - event: timer_warning
+    timer: evacuation_timer
+    remaining: 60
+    text: "60 seconds until evacuation window closes."
+    priority: critical
+```
+
+The LLM also generates ambient sound zone definitions for narrative atmosphere — a mission in a forest gets wind and bird sounds; a mission in a bombed-out city gets distant gunfire and sirens.
+
+**What this means in practice:**
+
+A generated mission doesn't just drop units on a map with objectives. A generated mission:
+
+1. Opens with a **cinematic pan** across the battlefield while the commander briefs you
+2. Plays **ambient music** that matches the terrain and mood
+3. Calls you on the **radar** when something important happens — a new threat, a character moment, a plot development
+4. Presents **RPG-style dialogue choices** when you reach key locations or NPCs
+5. **Shifts the music** from ambient to combat when the fighting starts
+6. Triggers a **mid-mission cinematic** when the plot twists — a betrayal, a reinforcement arrival, a bridge explosion
+7. Announces custom **EVA warnings** for mission-specific hazards
+8. Ends with a **conclusion sequence** — victory celebration or desperate evacuation
+9. Transitions to an **intermission** with character dialogue, choices, and consequences
+
+All of it is standard D038 format. All of it is editable after generation. All of it works exactly like hand-crafted content. The LLM just writes it faster.
+
+#### Saving, Replaying, and Sharing
+
+**Campaign library:**
+
+Every generative campaign is saved to the player's local campaign list:
+
+```
+┌──────────────────────────────────────────────────────┐
+│  My Campaigns                                         │
+│                                                       │
+│  📖 Operation Iron Tide          Soviet  24/24  ★★★★  │
+│     Generated 2026-02-14  |  Completed  |  18h 42m   │
+│  📖 Arctic Vengeance             Allied  12/16  ▶︎    │
+│     Generated 2026-02-10  |  In Progress              │
+│  📖 Desert Crossroads            Soviet   8/8   ★★★   │
+│     Generated 2026-02-08  |  Completed  |  6h 15m    │
+│  📕 Red Alert (Hand-crafted)     Soviet  14/14  ★★★★★ │
+│     Built-in campaign                                 │
+│                                                       │
+│  [+ New Generative Campaign]  [Import...]             │
+└──────────────────────────────────────────────────────┘
+```
+
+- **Auto-naming:** The LLM names each campaign at skeleton generation. The player can rename.
+- **Progress tracking:** Shows mission count (played / total), completion status, play time.
+- **Rating:** Player can rate their own campaign (personal quality bookmark).
+- **Resume:** In-progress campaigns resume from the last completed mission. The next mission generates on resume if not already cached.
+
+**Replayability:**
+
+A completed generative campaign is a complete D021 campaign — all 24 missions exist as YAML + Lua + maps. The player (or anyone they share it with) can replay it from the start without an LLM. The campaign graph, all branching paths, and all mission content are materialized. A replayer can take different branches than the original player did, experiencing the missions the original player never saw.
+
+**Sharing:**
+
+Campaigns are shareable as standard IC campaign packages:
+
+- **Export:** `ic campaign export "Operation Iron Tide"` → produces a `.icpkg` campaign package (ZIP with `campaign.yaml`, mission files, maps, Lua scripts, assets). Same format as any hand-crafted campaign.
+- **Workshop publish:** One-click publish to Workshop (D030). The campaign appears alongside hand-crafted campaigns — there's no second-class status. Tags indicate "LLM-generated" for discoverability, not segregation.
+- **Import:** Other players install the campaign like any Workshop content. No LLM needed to play.
+
+**Community refinement:**
+
+Shared campaigns are standard IC content — fully editable. Community members can:
+
+- **Open in the Campaign Editor (D038):** See the full mission graph, edit transitions, adjust difficulty, fix LLM-generated rough spots.
+- **Modify missions in the Scenario Editor:** Adjust unit placement, triggers, objectives, terrain. Polish LLM output into hand-crafted quality.
+- **Edit campaign parameters:** The campaign package includes the original `CampaignParameters` and `CampaignSkeleton` YAML. A modder can adjust these and re-generate specific missions (if they have an LLM configured), or directly edit the generated output.
+- **Edit inner prompts:** The campaign package preserves the generation prompts used for each mission. A modder can modify these prompts — adjusting tone, adding constraints, changing character behavior — and re-generate specific missions to see different results. This is the "prompt as mod parameter" principle: the LLM instructions are part of the campaign's editable content, not hidden internals.
+- **Fork and republish:** Take someone's campaign, improve it, publish as a new version. Standard Workshop versioning applies. Credit the original via Workshop dependency metadata.
+
+This creates a **generation → curation → refinement pipeline**: the LLM generates raw material, the community curates the best campaigns (Workshop ratings, downloads), and skilled modders refine them into polished experiences. The LLM is a starting gun, not the finish line.
+
+#### Branching in Generative Campaigns
+
+Branching is central to generative campaigns, not optional. The LLM generates missions with multiple named outcomes (D021), and the player's choice of outcome drives the next generation.
+
+**Within-mission branching:**
+
+Each generated mission has 2–4 named outcomes. These aren't just win/lose — they're narrative forks:
+
+- "Victory — civilians evacuated" vs. "Victory — civilians sacrificed for tactical advantage"
+- "Victory — Volkov survived" vs. "Victory — Volkov killed covering the retreat"
+- "Defeat — orderly retreat" vs. "Defeat — routed, heavy losses"
+
+The LLM generates different outcome descriptions and assigns different story flag effects to each. The next mission is generated based on which outcome the player achieved.
+
+**Between-mission branching:**
+
+The campaign skeleton includes planned branch points (approximately every 4–6 missions). At these points, the LLM generates 2–3 possible next missions and lets the campaign graph branch. The player's outcome determines which branch they take — but since missions are generated progressively, the LLM only generates the branch the player actually enters (plus one mission lookahead on the most likely alternate path, for pacing).
+
+**Branch convergence:**
+
+Not every branch diverges permanently. The LLM's skeleton includes convergence points — moments where different paths lead to the same narrative beat (e.g., "regardless of which route you took, the final assault on Berlin begins"). This prevents the campaign from sprawling into an unmanageable tree. The skeleton's act structure naturally creates convergence: all Act 1 paths converge at the Act 2 opening, all Act 2 paths converge at the climax.
+
+**Why branching matters even with LLM generation:**
+
+One might argue that since the LLM generates each mission dynamically, branching is unnecessary — just generate whatever comes next. But branching serves a critical purpose: **the generated campaign must be replayable without an LLM.** Once materialized, the campaign graph must contain the branches the player *didn't* take too, so a replayer (or the same player on a second playthrough) can explore alternate paths. The LLM generates branches ahead of time. Progressive generation generates the branches as they become relevant — not all 24 missions on day one, but also not waiting until the player finishes mission 7 to generate mission 8's alternatives.
+
+#### Campaign Event Patterns
+
+The LLM doesn't just generate "attack this base" missions in sequence. It draws from a vocabulary of **dramatic event patterns** — narrative structures inspired by the C&C franchise's most memorable campaign moments and classic military fiction. These patterns are documented in the system prompt so the LLM has a rich palette to paint from.
+
+The LLM chooses when and how to deploy these patterns based on the campaign context, battle reports, character states, and narrative pacing. None are scripted in advance — they emerge from the interplay of the player's actions and the LLM's storytelling.
+
+**Betrayal & defection patterns:**
+
+- **The backstab.** A trusted ally — an intelligence officer, a fellow commander, a political advisor — switches sides mid-campaign. The turn is foreshadowed in briefings (the LLM plants hints over 2–3 missions: contradictory intel, suspicious absences, intercepted communications), then triggered by a story flag or a player decision. Inspired by: Nadia poisoning Stalin (RA1), Yuri's betrayal (RA2).
+- **Defection offer.** An enemy commander, impressed by the player's performance or disillusioned with their own side, secretly offers to defect. The player must decide: accept (gaining intelligence + units but risking a double agent) or refuse. The LLM uses the `relationship_to_player` score from battle reports — if the player spared enemy forces in previous missions, defection becomes plausible.
+- **Loyalty erosion.** A character's `loyalty` score drops based on player actions: sacrificing troops carelessly, ignoring a character's advice repeatedly, making morally questionable choices. When loyalty drops below a threshold, the LLM generates a confrontation mission — the character either leaves, turns hostile, or issues an ultimatum.
+- **The double agent.** A rescued prisoner, a defector from the enemy, a "helpful" neutral — someone the player trusted turns out to be feeding intelligence to the other side. The reveal comes when the player notices the enemy is always prepared for their strategies (the LLM has been describing suspiciously well-prepared enemies for several missions).
+
+**Rogue faction patterns:**
+
+- **Splinter group.** Part of the player's own faction breaks away — a rogue general forms a splinter army, or a political faction seizes a province and declares independence. The player must fight former allies with the same unit types and tactics. Inspired by: Yuri's army splitting from the Soviets (RA2), rogue Soviet generals in RA1.
+- **Third-party emergence.** A faction that didn't exist at campaign start appears mid-campaign: a resistance movement, a mercenary army, a scientific cult with experimental weapons. The LLM introduces them as a complication — sometimes an optional ally, sometimes an enemy, sometimes both at different times.
+- **Warlord territory.** In open-ended campaigns, regions not controlled by either main faction become warlord territories — autonomous zones with their own mini-armies and demands. The LLM generates negotiation or conquest missions for these zones.
+
+**Plot twist patterns:**
+
+- **Secret weapon reveal.** The enemy unveils a devastating new technology: a superweapon, an experimental unit, a weaponized chronosphere. The LLM builds toward the reveal (intelligence fragments over 2–3 missions), then the player faces it in a desperate defense mission. Follow-up missions involve stealing or destroying it.
+- **True enemy reveal.** The faction the player has been fighting isn't the real threat. A larger power has been manipulating both sides. The campaign pivots to a temporary alliance with the former enemy against the true threat. Inspired by: RA2 Yuri's Revenge (Allies and Soviets team up against Yuri).
+- **The war was a lie.** The player's own command has been giving false intelligence. The "enemy base" the player destroyed in mission 5 was a civilian research facility. The "war hero" the player is protecting is a war criminal. Moral complexity emerges from the campaign's own history, not from a pre-written script.
+- **Time pressure crisis.** A countdown starts: nuclear launch, superweapon charging, allied capital about to fall. The next 2–3 missions are a race against time, each one clearing a prerequisite for the final mission (destroy the radar, capture the codes, reach the launch site). The LLM paces this urgently — short missions, high stakes, no breathers.
+
+**Force dynamics patterns:**
+
+- **Army to resistance.** After a catastrophic loss, the player's conventional army is shattered. The campaign genre shifts: smaller forces, guerrilla objectives (sabotage, assassination, intelligence gathering), no base building. The LLM generates this naturally when the battle report shows heavy losses. Rebuilding over subsequent missions gradually restores conventional operations.
+- **Underdog to superpower.** The inverse: the player starts with a small force and grows mission by mission. The LLM scales enemy composition accordingly, and the tone shifts from desperate survival to strategic dominance. Late-campaign missions are large-scale assaults the player couldn't have dreamed of in mission 2.
+- **Siege / last stand.** The player must hold a critical position against overwhelming odds. Reinforcement timing is the drama — will they arrive? The LLM generates increasingly desperate defensive waves, with the outcome determining whether the campaign continues as a retreat or a counter-attack.
+- **Behind enemy lines.** A commando mission deep in enemy territory with a small, hand-picked squad. No reinforcements, no base, limited resources. Named characters shine here. Inspired by: virtually every Tanya mission in the RA franchise.
+
+**Character-driven patterns:**
+
+- **Rescue the captured.** A named character is captured during a mission (or between missions, as a narrative event). The player faces a choice: launch a risky rescue operation, negotiate a prisoner exchange (giving up tactical advantage), or abandon them (with loyalty consequences for other characters). A rescued character returns with changed traits — traumatized, radicalized, or more loyal than ever.
+- **Rival commander.** The LLM develops a specific enemy commander as the player's nemesis. This character appears in briefings, taunts the player after defeats, acts surprised after losses. The rivalry develops over 5–10 missions before the final confrontation. The enemy commander reacts to the player's tactics: if the player favors air power, the rival starts deploying heavy AA and mocking the strategy.
+- **Mentor's fall.** An experienced commander who guided the player in early missions is killed, goes MIA, or turns traitor. The player must continue without their guidance — the tone shifts from "following orders" to "making hard calls alone."
+- **Character return.** A character thought dead or MIA resurfaces — changed. An MIA character returns with intelligence gained during capture. A "dead" character survived and is now leading a resistance cell. A defected character has second thoughts. The LLM tracks `CharacterStatus::MIA` and `CharacterStatus::Dead` and can reverse them with narrative justification.
+
+**Diplomatic & political patterns:**
+
+- **Temporary alliance.** The player's faction and the enemy faction must cooperate against a common threat (rogue faction, third-party invasion, natural disaster). Missions feature mixed unit control — the player commands some enemy units. Trust is fragile; the alliance may end in betrayal.
+- **Ceasefire and cold war.** Fighting pauses for 2–3 missions while the LLM generates espionage, infiltration, and political maneuvering missions. The player builds up forces during the ceasefire, knowing combat will resume. When and how it resumes depends on the player's actions during the ceasefire.
+- **Civilian dynamics.** Missions where civilians matter: evacuate a city before a bombing, protect a refugee convoy, decide whether to commandeer civilian infrastructure. The player's treatment of civilians affects the campaign's politics — a player who protects civilians gains partisan support; one who sacrifices them faces insurgencies on their own territory.
+
+These patterns are examples, not an exhaustive list. The LLM's system prompt includes them as inspiration. The LLM can also invent novel patterns that don't fit these categories — the constraint is that every event must produce standard D021 missions and respect the campaign's current state, not that every event must match a template.
+
+#### Open-Ended Campaigns
+
+Fixed-length campaigns (8, 16, 24 missions) suit players who want a structured experience. But the most interesting generative campaigns may be **open-ended** — where the campaign continues until victory conditions are met, and the LLM determines the pacing.
+
+**How open-ended campaigns work:**
+
+Instead of "generate 24 missions," the player defines **victory conditions** — a set of goals that, when achieved, trigger the campaign finale:
+
+```yaml
+victory_conditions:
+  # Any ONE of these triggers the final mission sequence
+  - type: eliminate_character
+    target: "General Morrison"
+    description: "Hunt down and eliminate the Allied Supreme Commander"
+  - type: capture_locations
+    targets: ["London", "Paris", "Washington"]
+    description: "Capture all three Allied capitals"
+  - type: survival
+    missions: 30
+    description: "Survive 30 missions against escalating odds"
+
+# Optional: defeat conditions that end the campaign in failure
+defeat_conditions:
+  - type: roster_depleted
+    threshold: 0       # lose all named characters
+    description: "All commanders killed — the war is lost"
+  - type: lose_streak
+    count: 3
+    description: "Three consecutive mission failures — command is relieved"
+```
+
+The LLM sees these conditions and works toward them narratively. It doesn't just generate missions until the player happens to kill Morrison — it builds a story arc where Morrison is an escalating threat, intelligence about his location is gathered over missions, near-misses create tension, and the final confrontation feels earned.
+
+**Dynamic narrative shifts:**
+
+Open-ended campaigns enable dramatic genre shifts that fixed-length campaigns can't. The LLM inspects the battle report and can pivot the entire campaign direction:
+
+- **Army → Resistance.** The player starts with a full division. After a devastating defeat in mission 8, they lose most forces. The LLM generates mission 9 as a guerrilla operation — small squad, no base building, ambush tactics, sabotage objectives. The campaign has organically shifted from conventional warfare to an insurgency. If the player rebuilds over the next few missions, it shifts back.
+- **Hunter → Hunted.** The player is pursuing a VIP target. The VIP escapes repeatedly. The LLM decides the VIP has learned the player's tactics and launches a counter-offensive. Now the player is defending against an enemy who knows their weaknesses.
+- **Rising power → Civil war.** The player's faction is winning the war. Political factions within their own side start competing for control. The LLM introduces betrayal missions where the player fights former allies.
+- **Conventional → Desperate.** Resources dry up. Supply lines are cut. The LLM generates missions with scarce starting resources, forcing the player to capture enemy supplies or scavenge the battlefield.
+
+These shifts emerge naturally from the battle reports. The LLM doesn't follow a script — it reads the game state and decides what makes a good story.
+
+**Escalation mechanics:**
+
+In open-ended campaigns, the enemy isn't static. The LLM uses a concept of **enemy adaptation** — the longer the campaign runs, the more the enemy evolves:
+
+- **VIP escalation.** A fleeing VIP gains experience and resources the longer they survive. Early missions to catch them are straightforward pursuits. By mission 15, the VIP has fortified a stronghold, recruited allies, and developed counter-strategies. The difficulty curve is driven by the narrative, not a slider.
+- **Enemy learning.** The LLM tracks what strategies the player uses (from battle reports) and has the enemy adapt. Player loves tank rushes? The enemy starts mining approaches and building anti-armor defenses. Player relies on air power? The enemy invests in AA.
+- **Resource escalation.** Both sides grow over the campaign. Early missions are skirmishes. Late missions are full-scale battles. The LLM scales force composition to match the campaign's progression.
+- **Alliance shifts.** Neutral factions that appeared in early missions may become allies or enemies based on the player's choices. The political landscape evolves.
+
+**How the LLM decides "it's time for the finale":**
+
+The LLM doesn't just check `if conditions_met { generate_finale(); }`. It builds toward the conclusion:
+
+1. **Sensing readiness.** The LLM evaluates whether the player's current roster, position, and narrative momentum make a finale satisfying. If the player barely survived the last mission, the finale waits — a recovery mission first.
+2. **Creating the opportunity.** When conditions are approaching (the player has captured 2/3 capitals, Morrison's location is almost known), the LLM generates missions that create the *opportunity* for the final push — intelligence missions, staging operations, securing supply lines.
+3. **The finale sequence.** The final mission (or final 2–3 missions) are generated as a climactic arc, not a single mission. The LLM knows these are the last ones and gives them appropriate weight — cutscene-worthy briefings, all surviving named characters present, callbacks to early campaign events.
+4. **Earning the ending.** The campaign length is indeterminate but not infinite. The LLM aims for a satisfying arc — typically 15–40 missions depending on the victory conditions. If the campaign has gone on "too long" without progress toward victory (the player keeps failing to advance), the LLM introduces narrative catalysts: an unexpected ally, a turning point event, or a vulnerability in the enemy's position.
+
+**Open-ended campaign identity:**
+
+What makes open-ended campaigns distinct from fixed-length ones:
+
+| Aspect               | Fixed-length (24 missions)               | Open-ended                                       |
+| -------------------- | ---------------------------------------- | ------------------------------------------------ |
+| **End condition**    | Mission count reached                    | Victory conditions met                           |
+| **Skeleton**         | Full arc planned upfront                 | Backstory + conditions + characters; arc emerges |
+| **Pacing**           | LLM knows position in arc (mission 8/24) | LLM estimates narrative momentum                 |
+| **Narrative shifts** | Planned at branch points                 | Emerge from battle reports                       |
+| **Difficulty**       | Follows configured curve                 | Driven by enemy adaptation + player state        |
+| **Replayability**    | Take different branches                  | Entirely different campaign length and arc       |
+| **Typical length**   | Exactly as configured                    | 15–40 missions (emergent)                        |
+
+Both modes produce standard D021 campaigns. Both are saveable, shareable, and replayable without an LLM. The difference is in how much creative control the LLM exercises during generation.
+
+#### World Domination Campaign
+
+A third generative campaign mode — distinct from both fixed-length narrative campaigns and open-ended condition-based campaigns. **World Domination** is an LLM-driven narrative campaign where the story plays out across a world map. The LLM is the narrative director — it generates missions, drives the story, and decides what happens next based on the player's real-time battle results. The world map is the visualization: territory expands when you win, contracts when you lose, and shifts when the narrative demands it.
+
+This is the mode where the campaign *is* the map.
+
+**How it works:**
+
+The player starts in a region — say, Greece — and fights toward a goal: conquer Europe, defend the homeland, push west to the Atlantic. The LLM generates each mission based on where the player stands on the map, what happened in previous battles, and where the narrative is heading. The player doesn't pick targets from a strategy menu — the LLM presents the next mission (or a choice between missions) based on the story it's building.
+
+After each RTS battle, the results feed back to the LLM. Won decisively? Territory advances. Lost badly? The enemy pushes into your territory. But it's not purely mechanical — the LLM controls the narrative arc. Maybe you lose three missions in a row, your territory shrinks, things look dire — and then the LLM introduces a turning point: your engineers develop a new weapon, a neutral faction joins your side, a storm destroys the enemy's supply lines. Or maybe there's no rescue — you simply lose. The LLM decides based on accumulated battle results, the story it's been building, and the dramatic pacing.
+
+```yaml
+# World Domination campaign setup (extends standard CampaignParameters)
+world_domination:
+  map: "europe_1953"                  # world map asset (see World Map Assets below)
+  starting_region: "athens"           # where the player's campaign begins
+  factions:
+    - id: soviet
+      name: "Soviet Union"
+      color: "#CC0000"
+      starting_regions: ["moscow", "leningrad", "stalingrad", "kiev", "minsk"]
+      ai_personality: null             # player-controlled
+    - id: allied
+      name: "Allied Forces"
+      color: "#0044CC"
+      starting_regions: ["london", "paris", "washington", "rome", "berlin"]
+      ai_personality: "strategic"      # AI-controlled (D043 preset)
+    - id: neutral
+      name: "Neutral States"
+      color: "#888888"
+      starting_regions: ["stockholm", "bern", "ankara", "cairo"]
+      ai_personality: "defensive"      # defends territory, doesn't expand
+  
+  # The LLM decides when and how the campaign ends — these are hints, not hard rules.
+  # The LLM may end the campaign with a climactic finale at 60% control, or let 
+  # the player push to 90% if the narrative supports it.
+  narrative_hints:
+    goal_direction: west               # general direction of conquest (flavor for LLM)
+    domination_target: "Europe"        # what "winning" means narratively
+    tone: military_drama              # narrative tone: military_drama, pulp, dark, heroic
+```
+
+**The campaign loop:**
+
+```
+┌────────────────────────────────────────────────────────────────┐
+│                    World Domination Loop                        │
+│                                                                │
+│  1. VIEW WORLD MAP                                             │
+│     ├── See your territory, enemy territory, contested zones   │
+│     ├── See the frontline — where your campaign stands         │
+│     └── See the narrative state (briefing, intel, context)     │
+│                                                                │
+│  2. LLM PRESENTS NEXT MISSION                                  │
+│     ├── Based on current frontline and strategic situation      │
+│     ├── Based on accumulated battle results and player actions  │
+│     ├── Based on narrative arc (pacing, tension, stakes)        │
+│     ├── May offer a choice: "Attack Crete or reinforce Athens?" │
+│     └── May force a scenario: "Enemy launches surprise attack!" │
+│                                                                │
+│  3. PLAY RTS MISSION (standard IC gameplay)                    │
+│     └── Full real-time battle — this is the game                │
+│                                                                │
+│  4. RESULTS FEED BACK TO LLM                                   │
+│     ├── Battle outcome (victory, defeat, pyrrhic, decisive)    │
+│     ├── Casualties, surviving units, player tactics used        │
+│     ├── Objectives completed or failed                         │
+│     └── Time taken, resources spent, player style               │
+│                                                                │
+│  5. LLM UPDATES THE WORLD                                      │
+│     ├── Territory changes (advance, retreat, or hold)           │
+│     ├── Narrative consequences (new allies, betrayals, tech)    │
+│     ├── Story progression (turning points, escalation, arcs)   │
+│     └── May introduce recovery or setback events               │
+│                                                                │
+│  6. GOTO 1                                                     │
+└────────────────────────────────────────────────────────────────┘
+```
+
+**Region properties:**
+
+Each region on the world map has strategic properties that affect mission generation:
+
+```yaml
+regions:
+  berlin:
+    display_name: "Berlin"
+    terrain_type: urban              # affects generated map terrain
+    climate: temperate               # affects weather (D022)
+    resource_value: 3                # economic importance (LLM considers for narrative weight)
+    fortification: heavy             # affects defender advantage
+    population: civilian_heavy       # affects civilian presence in missions
+    adjacent: ["warsaw", "prague", "hamburg", "munich"]
+    special_features:
+      - type: factory_complex        # bonus: faster unit production
+      - type: airfield               # bonus: air support in adjacent battles
+    strategic_importance: critical    # LLM emphasizes this in narrative
+
+  arctic_outpost:
+    display_name: "Arctic Research Station"
+    terrain_type: arctic
+    climate: arctic
+    resource_value: 1
+    fortification: light
+    population: minimal
+    adjacent: ["murmansk", "arctic_sea"]
+    special_features:
+      - type: research_lab           # bonus: unlocks special units/tech
+    strategic_importance: moderate
+```
+
+**Progress and regression:**
+
+The world map is not a one-way march to victory. The LLM drives territory changes based on battle outcomes *and* narrative arc:
+
+- **Win a mission** → territory typically advances. The LLM decides how much — a minor victory might push one region forward, a decisive rout might cascade into capturing two or three.
+- **Lose a mission** → the enemy pushes in. The LLM decides the severity — a narrow loss might mean holding the line but losing influence, while a collapse means the enemy sweeps through multiple regions.
+- **Pyrrhic victory** → you won, but at what cost? The LLM might advance your territory but weaken your forces so severely that the next mission is a desperate defense.
+
+But it's not a mechanical formula. The LLM is a **narrative director**, not a spreadsheet. It mixes battle results with story:
+
+- **Recovery arcs:** You've lost three missions. Your territory has shrunk to a handful of regions. Things look hopeless — and then the LLM introduces a breakthrough. Maybe your engineers develop a new superweapon. Maybe a neutral faction defects to your side. Maybe a brutal winter slows the enemy advance and buys you time. The recovery feels earned because it follows real setbacks.
+- **Deus ex machina:** Rarely, the LLM creates a dramatic reversal — an earthquake destroys the enemy's main base, a rogue commander switches sides, an intelligence coup reveals the enemy's plans. These are narratively justified and infrequent enough to feel special.
+- **Escalation:** You're winning too easily? The LLM introduces complications — a second front opens, the enemy deploys experimental weapons, an ally betrays you. The world map shifts to reflect the new threat.
+- **Inevitable defeat:** Sometimes there's no rescue. If the player keeps losing badly and the narrative can't credibly save them, the campaign ends in defeat. The LLM builds to a dramatic conclusion — a last stand, a desperate evacuation, a bitter retreat — rather than just showing "Game Over."
+
+The key insight: **the player's agency is in the RTS battles.** How well you fight determines the raw material the LLM works with. Win well and consistently, and the narrative carries you forward. Fight poorly, and the LLM builds a story of struggle and potential collapse. But the LLM always has latitude to shape the pacing — it's telling a war story, not just calculating territory percentages.
+
+**Force persistence across the map:**
+
+Units aren't disposable between battles. The world domination mode uses a **per-region force pool**:
+
+- Each region the player controls has a garrison (force pool). The player deploys from these forces when attacking from or defending that region.
+- Casualties in battle reduce the garrison. Reinforcements arrive as the narrative progresses (based on controlled factories, resource income, and narrative events).
+- Veteran units from previous battles remain — a region with battle-hardened veterans is harder to defeat than one with fresh recruits.
+- Named characters (D038 Named Characters) can be assigned to regions. Moving them to a front gives bonuses but risks their death.
+- D021's roster persistence and carryover apply within the campaign — the "roster" is the regional garrison.
+
+**Mission generation from campaign state:**
+
+The LLM generates each mission from the **strategic situation** — it's not picking from a random pool, it's reading the state of the world and crafting a battle that makes sense:
+
+| Input                       | How it affects the mission                                                             |
+| --------------------------- | -------------------------------------------------------------------------------------- |
+| **Region terrain type**     | Map terrain (urban streets, arctic tundra, rural farmland, desert, mountain pass)      |
+| **Attacker's force pool**   | Player's starting units (drawn from the garrison)                                      |
+| **Defender's force pool**   | Enemy's garrison strength (affects enemy unit count and quality)                       |
+| **Fortification level**     | Defender gets pre-built structures, mines, walls                                       |
+| **Campaign progression**    | Tech level escalation — later in the campaign unlocks higher-tier units                |
+| **Adjacent region bonuses** | Airfield = air support; factory = reinforcements mid-mission; radar = revealed shroud  |
+| **Special features**        | Research lab = experimental units; port = naval elements                               |
+| **Battle history**          | Regions fought over multiple times get war-torn terrain (destroyed buildings, craters) |
+| **Narrative arc**           | Briefing, character dialogue, story events, turning points, named objectives           |
+| **Player battle results**   | Previous performance shapes difficulty, tone, and stakes of the next mission           |
+
+Without an LLM, missions are generated from **templates** — the system picks a template matching the terrain type and action type (urban assault, rural defense, naval landing, etc.) and populates it with forces from the strategic state. With an LLM, the missions are crafted: the briefing tells a story, characters react to what you did last mission, the objectives reflect the narrative the LLM is building.
+
+**The world map between missions:**
+
+Between missions, the player sees the world map — the D038 World Map intermission template, elevated into the primary campaign interface. The map shows the story so far: where you've been, what you control, and where the narrative is taking you next.
+
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│  WORLD DOMINATION — Operation Iron Tide          Mission 14  Soviet   │
+│                                                                        │
+│  ┌────────────────────────────────────────────────────────────────┐    │
+│  │                                                                │    │
+│  │           ██ MURMANSK                                          │    │
+│  │          ░░░░                                                  │    │
+│  │    ██ STOCKHOLM    ██ LENINGRAD                                │    │
+│  │      ░░░░░        ████████                                     │    │
+│  │  ▓▓ LONDON    ▓▓ BERLIN   ██ MOSCOW    Legend:                 │    │
+│  │  ▓▓▓▓▓▓▓▓   ░░░░░░░░   ████████████   ██ Soviet (You)        │    │
+│  │  ▓▓ PARIS    ▓▓ PRAGUE   ██ KIEV       ▓▓ Allied (Enemy)      │    │
+│  │  ▓▓▓▓▓▓▓▓   ░░ VIENNA   ██ STALINGRAD ░░ Contested           │    │
+│  │  ▓▓ ROME     ░░ BUDAPEST ██ MINSK      ▒▒ Neutral             │    │
+│  │              ▒▒ ISTANBUL                                       │    │
+│  │              ▒▒ CAIRO                                          │    │
+│  │                                                                │    │
+│  └────────────────────────────────────────────────────────────────┘    │
+│                                                                        │
+│  Territory: 12/28 regions (43%)                                        │
+│                                                                        │
+│  ┌─ BRIEFING ────────────────────────────────────────────────────┐    │
+│  │  General Volkov has ordered an advance into Central Europe.   │    │
+│  │  Berlin is contested — Allied forces are dug in. Our victory  │    │
+│  │  at Warsaw has opened the road west, but intelligence reports │    │
+│  │  a counterattack forming from Hamburg.                        │    │
+│  │                                                                │    │
+│  │  "We push now, or we lose the initiative." — Col. Petrov      │    │
+│  └───────────────────────────────────────────────────────────────┘    │
+│                                                                        │
+│  [BEGIN MISSION: Battle for Berlin]                  [Save & Quit]    │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+The map is the campaign. The player sees their progress and regression at a glance — territory expanding and contracting as the war ebbs and flows. The LLM presents the next mission through narrative briefing, not through a strategy game menu. Sometimes the LLM offers a choice ("Reinforce the eastern front or press the western advance?") — but the choices are narrative, not board-game actions.
+
+**Comparison to narrative campaigns:**
+
+| Aspect             | Narrative Campaign (fixed/open-ended)      | World Domination                                   |
+| ------------------ | ------------------------------------------ | -------------------------------------------------- |
+| **Structure**      | Linear/branching mission graph             | LLM-driven narrative across a world map            |
+| **Mission order**  | Determined by story arc                    | Determined by LLM based on map state + results     |
+| **Progress model** | Mission completion advances the story      | Territory changes visualize campaign progress      |
+| **Regression**     | Rarely (defeat branches to different path) | Frequent — battles lost = territory lost           |
+| **Recovery**       | Fixed by story branches                    | LLM-driven: new tech, allies, events, or defeat    |
+| **Player agency**  | Choose outcomes within missions            | Fight well in RTS battles; LLM shapes consequences |
+| **LLM role**       | Story arc, characters, narrative pacing    | Narrative director — drives the entire campaign    |
+| **Without LLM**    | Requires shared/imported campaign          | Playable with templates (loses narrative richness) |
+| **Replayability**  | Different branches                         | Different narrative every time                     |
+| **Inspired by**    | C&C campaign structure + Total War         | C&C campaign feel + dynamic world map              |
+
+**World domination without LLM:**
+
+World Domination is **playable without an LLM**, though it loses its defining feature. Without the LLM, the system falls back to template-generated missions — pick a template matching the terrain and action type, populate it with forces from the strategic state. Territory advances/retreats follow mechanical rules (win = advance, lose = retreat) instead of narrative-driven pacing. There are no recovery arcs, no turning points, no deus ex machina — just a deterministic strategic layer. It still works as a campaign, but it's closer to a Risk-style conquest game than the narrative experience the LLM provides. The LLM is what makes World Domination feel like a *war story* rather than a *board game*.
+
+**Strategic AI for non-player factions (no-LLM fallback):**
+
+When the LLM drives the campaign, non-player factions behave according to the narrative — the LLM decides when and where the enemy attacks, retreats, or introduces surprises. Without an LLM, a mechanical **strategic AI** controls non-player faction behavior on the world map:
+
+- Each AI faction has an `ai_personality` (D043 preset): `aggressive` (expands toward player), `defensive` (holds territory, counter-attacks only), `opportunistic` (attacks weakened regions), `strategic` (balances expansion and defense).
+- The AI evaluates regions by adjacency, garrison strength, and strategic importance. It prioritizes attacking weak borders and reinforcing threatened ones.
+- If the player pushes hard on one front, the AI opens a second front on an undefended border — simple but effective strategic pressure.
+- The AI's behavior is deterministic given the campaign state, ensuring consistent replay behavior.
+
+This strategic AI is separate from the tactical RTS AI (D043) — it operates on the world map layer, not within individual missions. The tactical AI still controls enemy units during RTS battles.
+
+#### World Map Assets
+
+World maps are **game-module-provided and moddable assets** — not hardcoded. A world map can represent anything: Cold War Europe, the entire globe, a fictional continent, an alien planet, a galactic star map, a subway network — whatever fits the game or mod. The engine doesn't care what the map *is*, only that it has regions with connections. Each game module ships with default world maps, and modders can create their own for any setting they imagine.
+
+**World map definition:**
+
+```yaml
+# World map asset — shipped with the game module or created by modders
+world_map:
+  id: "europe_1953"
+  display_name: "Europe 1953"
+  game_module: red_alert              # which game module this map is for
+  
+  # Visual asset — the actual map image
+  # Supports multiple render modes (D048): sprite, vector, or 3D globe
+  visual:
+    base_image: "maps/world/europe_1953.png"    # background image
+    region_overlays: "maps/world/europe_1953_regions.png"  # color-coded regions
+    faction_colors: true                         # color regions by controlling faction
+    animation: frontline_glow                    # animated frontlines between factions
+  
+  # Region definitions (see region YAML above)
+  regions:
+    # ... region definitions with adjacency, terrain, resources, etc.
+  
+  # Starting configurations (selectable in setup)
+  scenarios:
+    - id: "cold_war_heats_up"
+      description: "Classical East vs. West. Soviets hold Eastern Europe, Allies hold the West."
+      faction_assignments:
+        soviet: ["moscow", "leningrad", "stalingrad", "kiev", "minsk", "warsaw"]
+        allied: ["london", "paris", "rome", "berlin", "madrid"]
+        neutral: ["stockholm", "bern", "ankara", "cairo", "istanbul"]
+    - id: "last_stand"
+      description: "Soviets control most of Europe. Allies hold only Britain and France."
+      faction_assignments:
+        soviet: ["moscow", "leningrad", "stalingrad", "kiev", "minsk", "warsaw", "berlin", "prague", "vienna", "budapest", "rome"]
+        allied: ["london", "paris"]
+        neutral: ["stockholm", "bern", "ankara", "cairo", "istanbul"]
+```
+
+**Game-module world maps:**
+
+Each game module provides at least one default world map:
+
+| Game module   | Default world map | Description                                     |
+| ------------- | ----------------- | ----------------------------------------------- |
+| Red Alert     | `europe_1953`     | Cold War Europe — Soviets vs. Allies            |
+| Tiberian Dawn | `gdi_nod_global`  | Global map — GDI vs. Nod, Tiberium spread zones |
+| (Community)   | Anything          | The map is whatever the modder wants it to be   |
+
+Community world map examples (the kind of thing modders could create):
+
+- **Pacific Theater** — island-hopping across the Pacific; naval-heavy campaigns
+- **Entire globe** — six continents, dozens of regions, full world war
+- **Fictional continent** — Westeros, Middle-earth, or an original fantasy setting
+- **Galactic star map** — planets as regions, fleets as garrisons, a sci-fi total conversion
+- **Single city** — district-by-district urban warfare; each "region" is a city block or neighborhood
+- **Underground network** — cavern systems, bunker complexes, tunnel connections
+- **Alternate history** — what if the Roman Empire never fell? What if the Cold War went hot in 1962?
+- **Abstract/non-geographic** — a network of space stations, a corporate org chart, whatever the mod needs
+
+The world map is a YAML + image asset, loadable from any source: game module defaults, Workshop (D030), or local mod folders. The Campaign Editor (D038) includes a world map editor for creating and editing regions, adjacencies, and starting scenarios.
+
+**World maps as Workshop resources:**
+
+World maps are a first-class Workshop resource category (`category: world-map`). This makes them discoverable, installable, version-tracked, and composable like any other Workshop content:
+
+```yaml
+# Workshop manifest for a world map package
+package:
+  name: "galactic-conquest-map"
+  publisher: "scifi-modding-collective"
+  version: "2.1.0"
+  license: "CC-BY-SA-4.0"
+  description: "A 40-region galactic star map for sci-fi total conversions"
+  category: world-map
+  game_module: any                     # or a specific module
+  engine_version: "^0.3.0"
+  
+  tags: ["sci-fi", "galactic", "space", "large"]
+  ai_usage: allow                       # LLM can select this map for generated campaigns
+  
+  dependencies:
+    - id: "scifi-modding-collective/space-faction-pack"
+      version: "^1.0"                  # faction definitions this map references
+
+files:
+  world_map.yaml: { sha256: "..." }   # region definitions, adjacency, scenarios
+  assets/galaxy_background.png: { sha256: "..." }
+  assets/region_overlays.png: { sha256: "..." }
+  assets/faction_icons/: {}            # per-faction marker icons
+  preview.png: { sha256: "..." }       # Workshop listing thumbnail
+```
+
+Workshop world maps support the full Workshop lifecycle:
+
+- **Discovery** — browse/search by game module, region count, theme tags, rating. Filter by "maps with 20+ regions" or "fantasy setting" or "historical."
+- **One-click install** — download the `.icpkg`, world map appears in the campaign setup screen under "Community Maps."
+- **Dependency resolution** — a world map can depend on faction packs, terrain packs, or sprite sets. Workshop resolves and installs dependencies automatically.
+- **Versioning** — semver; breaking changes (region ID renames, adjacency changes) require major version bumps. Saved campaigns pin the world map version they were started with.
+- **Forking** — any published world map can be forked. "I like that galactic map but I want to add a wormhole network" → fork, edit in Campaign Editor, republish as a derivative (license permitting).
+- **LLM integration** — world maps with `ai_usage: allow` can be discovered by the LLM during campaign generation. The LLM reads region metadata (terrain types, strategic values, flavor text) to generate contextually appropriate missions. A rich, well-annotated world map gives the LLM more material to work with.
+- **Composition** — a world map can reference other Workshop resources. Faction packs define the factions. Terrain packs provide the visual assets. Music packs set the atmosphere. The world map is the strategic skeleton; other Workshop resources flesh it out.
+- **Rating and reviews** — community rates world maps on balance, visual quality, replayability. High-rated maps surface in "Featured" listings.
+
+**World map as an engine feature, not a campaign feature:**
+
+The world map renderer is in `ic-ui` — it's a general-purpose interactive map component. The World Domination campaign mode uses it as its primary interface, but the same component powers:
+
+- The "World Map" intermission template in D038 (for non-domination campaigns that want a mission-select map)
+- Strategic overview displays in Game Master mode
+- Multiplayer lobby map selection (showing region-based game modes)
+- Mod-defined strategic layers (e.g., a Generals mod with a global war on terror, a Star Wars mod with a galactic conquest, a fantasy mod with a continent map)
+
+The engine imposes no assumptions about what the map represents. Regions are abstract nodes with connections, properties, and an image overlay. Whether those nodes are countries, planets, city districts, or dungeon rooms is entirely up to the content creator. The engine provides the map renderer; the game module and mods provide the map data.
+
+Because world maps are Workshop resources, the community can build a library of strategic maps independently of the engine team. A thriving Workshop means a player launching World Domination for the first time can browse dozens of community-created maps — historical, fictional, fantastical — and start a campaign on any of them without the modder needing to ship a full game module.
+
+#### Workshop Resource Integration
+
+The LLM doesn't generate everything from scratch. It draws on the player's configured Workshop sources (D030) for maps, terrain packs, music, and other assets — the same pipeline described in § LLM-Driven Resource Discovery above.
+
+**How this works in campaign generation:**
+
+1. The LLM plans a mission: "Arctic base assault in a fjord."
+2. The generation system searches Workshop: `tags=["arctic", "fjord", "base"], ai_usage=Allow`.
+3. If a suitable map exists → use it as the terrain base, generate objectives/triggers/briefing on top.
+4. If no map exists → generate the map from scratch (YAML terrain definition).
+5. Music, ambient audio, and voice packs from Workshop enhance the atmosphere — the LLM selects thematically appropriate resources from those available.
+
+This makes generative campaigns richer in communities with active Workshop content creators. A well-stocked Workshop full of diverse maps and assets becomes a palette the LLM paints from. Resource attribution is tracked: the campaign's `mod.yaml` lists all Workshop dependencies, crediting the original creators.
+
+#### No LLM? Campaign Still Works
+
+The generative campaign system follows the core D016 principle: **LLM is for creation, not for play.**
+
+- A player with an LLM generates a campaign → plays it → it's saved as standard D021.
+- A player without an LLM → imports and plays a shared campaign from Workshop. No different from playing a hand-crafted campaign.
+- A player starts a generative campaign, generates 12/24 missions, then loses LLM access → the 12 generated missions are fully playable. The campaign is "shorter than planned" but complete up to that point. When LLM access returns, generation resumes from mission 12.
+- A community member takes a generated 24-mission campaign, opens it in the Campaign Editor, and hand-edits missions 15–24 to improve them. No LLM needed for editing.
+
+The LLM is a tool in the content creation pipeline — the same pipeline that includes the Scenario Editor, Campaign Editor, and hand-authored YAML. Generated campaigns are first-class citizens of the same content ecosystem.
+
+#### Multiplayer & Co-op Generative Campaigns
+
+Everything described above — narrative campaigns, open-ended campaigns, world domination, cinematic generation — works in multiplayer. The generative campaign system builds on D038's co-op infrastructure (Player Slots, Co-op Mission Modes, Per-Player Objectives) and the D010 snapshottable sim. These are the multiplayer modes the generative system supports:
+
+**Co-op generative campaigns:**
+
+Two or more players share a generative campaign. They play together, the LLM generates for all of them, and the campaign adapts to their combined performance.
+
+```yaml
+# Co-op generative campaign setup
+campaign_parameters:
+  mode: generative
+  player_count: 2                      # 2-4 players
+  co_op_mode: allied_factions          # each player controls their own faction
+  # Alternative modes from D038:
+  # shared_command — both control the same army
+  # commander_ops — one builds, one fights
+  # split_objectives — different goals on the same map
+  # asymmetric — one RTS player, one GM/support
+
+  faction_player_1: soviet
+  faction_player_2: allied             # co-op doesn't mean same faction
+  difficulty: hard
+  campaign_type: narrative             # or open_ended, world_domination
+  length: 16
+  tone: serious
+```
+
+**What the LLM generates differently for co-op:**
+
+The LLM knows it's generating for multiple players. This changes mission design:
+
+| Aspect                   | Single-player                  | Co-op                                                                      |
+| ------------------------ | ------------------------------ | -------------------------------------------------------------------------- |
+| **Map layout**           | One base, one frontline        | Multiple bases or sectors per player                                       |
+| **Objectives**           | Unified objective list         | Per-player objectives + shared goals                                       |
+| **Briefings**            | One briefing                   | Per-player briefings (different intel, different roles)                    |
+| **Radar comms**          | Addressed to "Commander"       | Addressed to specific players by role/faction                              |
+| **Dialogue choices**     | One player decides             | Each player gets their own choices; disagreements create narrative tension |
+| **Character assignment** | All characters with the player | Named characters distributed across players                                |
+| **Mission difficulty**   | Scaled for one                 | Scaled for combined player power + coordination challenge                  |
+| **Narrative**            | One protagonist's story        | Interweaving storylines that converge at key moments                       |
+
+**Player disagreements as narrative fuel:**
+
+The most interesting co-op feature: **what happens when players disagree.** In a single-player campaign, the player makes all dialogue choices. In co-op, each player makes their own choices in intermissions and mid-mission dialogues. The LLM uses disagreements as narrative material:
+
+- Player 1 wants to spare the prisoner. Player 2 wants to execute them. The LLM generates a confrontation scene between the players' commanding officers, then resolves based on a configurable rule: majority wins, mission commander decides (rotating role), or the choice splits into two consequences.
+- Player 1 wants to attack the eastern front. Player 2 wants to defend the west. In World Domination mode, they can split — each player tackles a different region simultaneously (parallel missions at the same point in the campaign).
+- Persistent disagreements shift character loyalties — an NPC commander who keeps getting overruled becomes resentful, potentially defecting (Campaign Event Patterns).
+
+**Saving, pausing, and resuming co-op campaigns:**
+
+Co-op campaigns are long. Players can't always finish in one sitting. The system supports **pause, save, and resume** for multiplayer campaigns:
+
+```
+┌────────────────────────────────────────────────────────────────┐
+│                  Co-op Campaign Session Flow                    │
+│                                                                │
+│  1. Player A creates a co-op generative campaign               │
+│     └── Campaign saved to Player A's local storage             │
+│                                                                │
+│  2. Player A invites Player B (friend list, lobby code, link)  │
+│     └── Player B receives campaign metadata + join token       │
+│                                                                │
+│  3. Both players play missions together                        │
+│     └── Campaign state synced: both have a local copy          │
+│                                                                │
+│  4. Mid-campaign: players want to stop                         │
+│     ├── Either player can request pause                        │
+│     ├── Current mission: standard multiplayer save (D010)      │
+│     │   └── Full sim snapshot + order history + campaign state  │
+│     └── Campaign state saved: mission progress, roster, flags  │
+│                                                                │
+│  5. Resume later (hours, days, weeks)                          │
+│     ├── Player A loads campaign from "My Campaigns"            │
+│     ├── Player A re-invites Player B                           │
+│     ├── Player B's client receives the campaign state delta    │
+│     └── Resume from exactly where they left off                │
+│                                                                │
+│  6. Player B unavailable? Options:                             │
+│     ├── Wait for Player B                                      │
+│     ├── AI takes Player B's slot (temporary)                   │
+│     ├── Invite Player C to take over (with B's consent)        │
+│     └── Continue solo (B's faction runs on AI)                 │
+└────────────────────────────────────────────────────────────────┘
+```
+
+**How multiplayer save works (technically):**
+
+- **Mid-mission save:** Uses D010 — full sim snapshot. Both players receive the snapshot. Either player can host the resume session. The save file is a standard `.icsave` containing the sim snapshot, order history, and campaign state.
+- **Between-mission save:** The natural pause point. Campaign state (D021) is serialized — roster, flags, mission graph position, world map state (if World Domination). No sim snapshot needed — the next mission hasn't started yet.
+- **Campaign ownership:** The campaign is "owned" by the creating player but the save state is portable. If Player A disappears, Player B has a full local copy and can resume solo or with a new partner.
+
+**Co-op World Domination:**
+
+World Domination campaigns with multiple human players — each controlling a faction on the world map. The LLM generates missions for all players, weaving their actions into a shared narrative. Two modes:
+
+| Mode                  | Description                                                                                                                                                                                | Example                                                        |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------- |
+| **Allied co-op**      | Players share a team against AI factions. They coordinate attacks on different fronts simultaneously. One player attacks Berlin while the other defends Moscow.                            | 2 players (Soviet team) vs. AI (Allied + Neutral)              |
+| **Competitive co-op** | Players are rival factions on the same map. Each plays their own campaign missions. When players' territories are adjacent, they fight each other. An AI faction provides a shared threat. | Player 1 (Soviet) vs. Player 2 (Allied) vs. AI (Rogue faction) |
+
+Allied co-op World Domination is particularly compelling — two friends on voice chat, splitting their forces across a continent, coordinating strategy: "I'll push into Scandinavia if you hold the Polish border." The LLM generates missions for both fronts simultaneously, with narrative crossover: "Intelligence reports your ally has broken through in Norway. Allied forces are retreating south — expect increased resistance on your front."
+
+**Asynchronous campaign play:**
+
+Not every multiplayer session needs to be real-time. For players in different time zones or with unpredictable schedules, the system supports **asynchronous play** in competitive World Domination campaigns:
+
+```yaml
+async_config:
+  mode: async_competitive              # players play their campaigns asynchronously
+  move_deadline: 48h                   # max time before AI plays your next mission
+  notification: true                   # notify when the other player has completed a mission
+  ai_fallback_on_deadline: true        # AI plays your mission if you don't show up
+```
+
+How it works:
+
+1. Player A logs in, sees the world map. The LLM (or template system) presents their next mission — an attack, defense, or narrative event.
+2. Player A plays the RTS mission in real-time. The mission resolves. The campaign state updates. Notification sent to Player B.
+3. Player B logs in hours/days later. They see how the map changed based on Player A's results. The LLM presents Player B's next mission based on the updated state.
+4. Player B plays their mission. The map updates again. Notification sent to Player A.
+
+The RTS missions are fully real-time (you play a complete battle). The asynchronous part is *when* each player sits down to play — not what they do when they're playing. The LLM (or strategic AI fallback) generates narrative that acknowledges the asynchronous pacing — no urgent "the enemy is attacking NOW!" when the other player won't see it for 12 hours.
+
+**Generative challenge campaigns:**
+
+The LLM generates short, self-contained challenges that the community can attempt and compete on:
+
+| Challenge type       | Description                                                                                        | Competitive element                  |
+| -------------------- | -------------------------------------------------------------------------------------------------- | ------------------------------------ |
+| **Weekly challenge** | A generated 3-mission mini-campaign with a leaderboard. Same seed = same campaign for all players. | Score (time, casualties, objectives) |
+| **Ironman run**      | A generated campaign with permadeath — no save/reload. Campaign ends when you lose.                | How far you get (mission count)      |
+| **Speed campaign**   | Generated campaign optimized for speed — short missions, tight timers.                             | Total completion time                |
+| **Impossible odds**  | Generated campaign where the LLM deliberately creates unfair scenarios.                            | Binary: did you survive?             |
+| **Community vote**   | Players vote on campaign parameters. The LLM generates one campaign that everyone plays.           | Score leaderboard                    |
+
+Weekly challenges reuse the same seed and LLM output — the campaign is generated once, published to the community, and everyone plays the identical missions. This is fair because the content is deterministic once generated. Leaderboards are per-challenge, stored via the community server (D052) with signed credential records.
+
+**Spectator and observer mode:**
+
+Live campaigns (especially co-op and competitive World Domination) can be observed:
+
+- **Live spectator** — watch a co-op campaign in progress (delay configurable for competitive fairness). See both players' perspectives.
+- **Replay spectator** — watch a completed campaign, switching between player perspectives. The replay includes all dialogue choices, intermission decisions, and world map actions.
+- **Commentary mode** — a spectator can record voice commentary over a replay, creating a "let's play" package sharable on Workshop.
+- **Campaign streaming** — the campaign state can be broadcast to a spectator server. Community members watch the world map update in real-time during community events.
+- **Author-guided camera** — scenario authors place Spectator Bookmark modules (D038) at key map locations and wire them to triggers. Spectators cycle bookmarks with hotkeys; replays auto-cut to bookmarks at dramatic moments. Free camera remains available — bookmarks are hints, not constraints.
+- **Spectator appeal as design input** — Among Us became a cultural phenomenon through streaming because social dynamics are more entertaining to *watch* than many games are to play. Modes like Mystery (accusation moments), Nemesis (escalating rivalry), and Defection (betrayal) are inherently watchable — LLM-generated dialogue, character reactions, and dramatic pivots create spectator-friendly narrative beats. This is a validation of the existing spectator infrastructure, not a new feature: the commentary mode, War Dispatches, and replay system already capture these moments. When the LLM generates campaign content, it should mark **spectator-highlight moments** (accusations, betrayals, nemesis confrontations, moral dilemmas) in the campaign save so replays can auto-cut to them.
+
+**Co-op resilience (eliminated player engagement):**
+
+In any co-op campaign, a critical question: what happens when one player's forces are devastated mid-mission? Among Us's insight is that eliminated players keep playing — dead crewmates complete tasks and observe. IC applies this principle: a player whose army is destroyed doesn't sit idle. Options compose from existing systems:
+
+- **Intelligence/advisor role** — the eliminated player transitions to managing the intermission-layer intelligence network (Espionage mode) or providing strategic guidance through the shared chat. They see the full battlefield (observer perspective) and can ping locations, mark threats, and coordinate with the surviving player.
+- **Reinforcement controller** — the eliminated player controls reinforcement timing and positioning for the surviving partner. They decide *when* and *where* reserve units deploy, adding a cooperative command layer.
+- **Rebuild mission** — the eliminated player receives a smaller side-mission to re-establish from a secondary base or rally point. Success in the side-mission provides reinforcements to the surviving player's main mission.
+- **Game Master lite** — using the scenario's reserve pool, the eliminated player places emergency supply drops, triggers scripted reinforcements, or activates defensive structures. A subset of Game Master (D038) powers, scoped to assist rather than control.
+
+The specific role available depends on the campaign mode and scenario design. The key principle: **no player should ever watch an empty screen in a co-op campaign**. Even total military defeat is a phase transition, not an ejection.
+
+**Generative multiplayer scenarios (non-campaign):**
+
+Beyond campaigns, the LLM generates one-off multiplayer scenarios:
+
+- **Generated skirmish maps** — "Generate a 4-player free-for-all map with lots of chokepoints and limited resources." The LLM creates a balanced multiplayer map.
+- **Generated team scenarios** — "Create a 2v2 co-op defense mission against waves of enemies." The LLM generates a PvE scenario with scaling difficulty.
+- **Generated party modes** — "Make a king-of-the-hill map where the hill moves every 5 minutes." Creative game modes generated on demand.
+- **Tournament map packs** — "Generate 7 balanced 1v1 maps for a tournament, varied terrain, no water." A set of maps with consistent quality and design language.
+
+These generate as standard IC content — the same maps and scenarios that human designers create. They can be played immediately, saved, edited, or published to Workshop.
+
+#### Persistent Heroes & Named Squads
+
+The infrastructure for hero-centric, squad-based campaigns with long-term character development is fully supported by existing systems — no new engine features required. Everything described below composes from D021 (persistent rosters), D016 (character construction + CharacterState), D029 (component library), the veterancy system, and YAML/Lua modding.
+
+**What the engine already provides:**
+
+| Capability                            | Source                                         | How it applies                                                                                                                                                                                                           |
+| ------------------------------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Named units persist across missions   | D021 carryover modes                           | A hero unit that survives mission 3 is the *same entity* in mission 15 — same health, same veterancy, same kill count                                                                                                    |
+| Veterancy accumulates permanently     | D021 + veterancy system                        | A commando who kills 50 enemies across 10 missions earns promotions that change their stats, voice lines, and visual appearance                                                                                          |
+| Permanent death                       | D021 + CharacterState                          | If Volkov dies in mission 7, `CharacterStatus::Dead` — he's gone forever. The campaign adapts around his absence. No reloading in Iron Man mode.                                                                         |
+| Character personality persists        | D016 CharacterState                            | MBTI type, speech style, flaw/desire/fear, loyalty, relationship — all tracked and evolved by the LLM across the full campaign                                                                                           |
+| Characters react to their own history | D016 battle reports + narrative threads        | A hero who was nearly killed in mission 5 develops caution. One who was betrayed develops trust issues. The LLM reads `notable_events` and adjusts behavior.                                                             |
+| Squad composition matters             | D021 roster + D029 components                  | A hand-picked 5-unit squad with complementary abilities (commando + engineer + sniper + medic + demolitions) plays differently than a conventional army. Equipment captured in one mission equips the squad in the next. |
+| Upgrades and equipment persist        | D021 equipment carryover + D029 upgrade system | A hero's captured experimental weapon, earned battlefield upgrades, and scavenged equipment carry forward permanently                                                                                                    |
+| Customizable unit identity            | YAML unit definitions + Lua                    | Named units can have custom names, visual markings (kill tallies, custom insignia via Lua), and unique voice lines                                                                                                       |
+
+**Campaign modes this enables:**
+
+**Commando campaign ("Tanya Mode"):** A series of behind-enemy-lines missions with 1–3 hero units and no base building. Every mission is a commando operation. The heroes accumulate kills, earn abilities, and develop personality through LLM-generated briefing dialogue. Losing your commando ends the campaign (Iron Man) or branches to a rescue mission (standard). The LLM generates increasingly personal rivalry between your commando and an enemy commander who's hunting them.
+
+**Squad campaign ("Band of Brothers"):** A persistent squad of 5–12 named soldiers. Each squad member has an MBTI personality, a role specialization, and a relationship to the others. Between missions, the LLM generates squad interactions — arguments, bonding moments, confessions, humor — driven by MBTI dynamics and recent battle events. A medic (ISFJ) who saved the sniper (INTJ) in mission 4 develops a protective bond. The demolitions expert (ESTP) and the squad leader (ISTJ) clash over tactics. When a squad member dies, the LLM writes the other characters' grief responses consistent with their personalities and relationships. Replacements arrive — but they're new personalities who have to earn the squad's trust.
+
+**Hero army campaign ("Generals"):** A conventional campaign where 3–5 hero units lead a full army. Heroes are special units with unique abilities, voice lines, and narrative arcs. They appear in briefings, issue orders to the player, argue with each other about strategy, and can be sent on solo objectives within larger missions. Losing a hero doesn't end the campaign but permanently changes it — the army loses a capability, the other heroes react, and the enemy adapts.
+
+**Cross-campaign hero persistence ("Legacy"):** Heroes from a completed campaign carry over to the next campaign. A veteran commando from "Soviet Campaign" appears as a grizzled mentor in "Soviet Campaign 2" — with their full history, personality evolution, and kill count. `CharacterState` serializes to campaign save files and can be imported. The LLM reads the imported history and writes the character accordingly — a war hero is treated like a war hero.
+
+**Iron Man integration:** All hero modes compose with Iron Man (no save/reload). Death is permanent. The campaign adapts. This is where the character investment pays off most intensely — the player who nursed a hero through 15 missions has real emotional stakes when that hero is sent into a dangerous situation. The LLM knows this and uses it: "Volkov volunteers for the suicide mission. He's your best commando. But if he goes in alone, he won't come back."
+
+**Modding support:** All of this is achievable through YAML + Lua (Tier 1-2 modding). A modder defines named hero units in YAML with custom stats, abilities, and visual markings. Lua scripts handle special hero abilities ("Volkov plants the charges — 30-second timer"), squad interaction triggers, and custom carryover rules. The LLM's character construction system works with any modder-defined units — the MBTI framework and flaw/desire/fear triangle apply regardless of the game module. A Total Conversion mod in a fantasy setting could have a persistent party of heroes with swords instead of guns — the personality simulation works the same way.
+
+#### Extended Generative Campaign Modes
+
+The three core generative modes — **Narrative** (fixed-length), **Open-Ended** (condition-driven), and **World Domination** (world map + LLM narrative director) — are the structural foundations. But the LLM's expressive range and IC's compositional architecture enable a much wider vocabulary of campaign experiences. Each mode below composes from existing systems (D021 branching, CharacterState, MBTI dynamics, battle reports, roster persistence, story flags, world map renderer, Workshop resources) — no new engine changes required.
+
+These modes are drawn from the deepest wells of human storytelling: philosophy, cinema, literature, military history, game design, and the universal experiences that make stories resonate across cultures. The test for each: **does it make the toy soldiers come alive in a way no other mode does?**
+
+---
+
+**The Long March (Survival Exodus)**
+
+*Inspired by: Battlestar Galactica, FTL: Faster Than Light, the Biblical Exodus, Xenophon's Anabasis, the real Long March, Oregon Trail, refugee crises throughout history.*
+
+You're not conquering — you're surviving. Your army has been shattered, your homeland overrun. You must lead what remains of your people across hostile territory to safety. Every mission is a waypoint on a desperate journey. The world map shows your route — not territory you hold, but ground you must cross.
+
+The LLM generates waypoint encounters: ambushes at river crossings, abandoned supply depots (trap or salvation?), hostile garrisons blocking mountain passes, civilian populations who might shelter you or sell you out. The defining tension is **resource scarcity** — you can't replace what you lose. A tank destroyed in mission 4 is gone forever. A hero killed at the third river crossing never reaches the promised land. Every engagement forces a calculation: fight (risk losses), sneak (risk detection), or negotiate (risk betrayal).
+
+What makes this profoundly different from conquest modes: the emotional arc is inverted. In a normal campaign, the player grows stronger. Here, the player holds on. Victory isn't domination — it's survival. The LLM tracks the convoy's dwindling strength and generates missions that match: early missions are organized retreats with rear-guard actions; mid-campaign missions are desperate scavenging operations; late missions are harrowing last stands at chokepoints. The finale isn't assaulting the enemy capital — it's crossing the final border with whatever you have left.
+
+Every unit that makes it to the end feels earned. A veteran tank that survived 20 missions of running battles, ambushes, and near-misses isn't just a unit — it's a story.
+
+| Aspect        | Solo                                        | Multiplayer                                                                                                                            |
+| ------------- | ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| **Structure** | One player leads the exodus                 | Co-op: each player commands part of the convoy. Split up to cover more ground (faster but weaker) or stay together (slower but safer). |
+| **Tension**   | Resource triage — what do you leave behind? | Social triage — whose forces protect the rear guard? Who gets the last supply drop?                                                    |
+| **Failure**   | Convoy destroyed or starved                 | One player's column is wiped out — the other must continue without their forces. Or go back for them.                                  |
+
+---
+
+**Cold War Espionage (The Intelligence Campaign)**
+
+*Inspired by: John le Carré (The Spy Who Came in from the Cold, Tinker Tailor Soldier Spy), The Americans (TV), Bridge of Spies, Metal Gear Solid, the real Cold War intelligence apparatus.*
+
+The war is fought with purpose. Every mission is a full RTS engagement — Extract→Build→Amass→Crush — but the *objectives* are intelligence-driven. You assault a fortified compound to extract a defecting scientist before the enemy can evacuate them. You defend a relay station for 15 minutes while your signals team intercepts a critical transmission. You raid a convoy to capture communications equipment that reveals the next enemy offensive. The LLM generates these intelligence-flavored objectives, but what the player actually *does* is build bases, train armies, and fight battles.
+
+Between missions, the player manages an intelligence network in the intermission layer. The LLM generates a web of agents, double agents, handlers, and informants, each with MBTI-driven motivations that determine when they cooperate, when they lie, and when they defect. Each recruited agent has a loyalty score, a personality type, and a price. An ISFJ agent spies out of duty but breaks under moral pressure. An ENTP agent spies for the thrill but gets bored with routine operations. The LLM uses these personality models to simulate when an agent provides good intelligence, when they feed disinformation (intentionally or under duress), and when they get burned.
+
+Intelligence gathered between missions shapes the next battle. Good intel reveals enemy base locations, unlocks alternative starting positions, weakens enemy forces through pre-mission sabotage, or provides reinforcement timelines. Bad intel — from burned agents or double agents feeding disinformation — sends the player into missions with false intelligence: the enemy base isn't where your agent said it was, the "lightly defended" outpost is a trap, the reinforcements that were supposed to arrive don't exist. The campaign's strategic metagame is information quality; the moment-to-moment gameplay is commanding armies.
+
+The MBTI interaction system drives the intermission layer: every agent conversation is a negotiation, every character is potentially lying, and reading people's personalities correctly determines the quality of intel you bring into battle. Petrov (ISTJ) can be trusted because duty-bound types don't betray without extreme cause. Sonya (ENTJ) is useful but dangerous — her ambition makes her a powerful asset and an unpredictable risk. The LLM simulates these dynamics through dialogue that reveals (or conceals) character intentions based on their personality models.
+
+| Aspect                | Solo                                                                    | Multiplayer                                                                                                                        |
+| --------------------- | ----------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| **Structure**         | RTS missions with intelligence-driven objectives; agent network between | Adversarial: two players run competing spy networks between missions. Better intel = battlefield advantage in the next engagement. |
+| **Tension**           | Is your intel good — or did a burned agent just send you into a trap?   | Your best double agent might be feeding your opponent better intel than you. The battlefield reveals who was lied to.              |
+| **Async multiplayer** | N/A                                                                     | Espionage metagame is inherently asynchronous. Plant an operation between missions, see the results on the next battlefield.       |
+
+---
+
+**The Defection (Two Wars in One)**
+
+*Inspired by: The Americans, Metal Gear Solid 3: Snake Eater, Bridge of Spies, real Cold War defection stories (Oleg Gordievsky, Aldrich Ames), Star Wars: The Force Awakens (Finn's defection).*
+
+Act 1: You fight for one side. You know your commanders. You trust (or distrust) your team. You fight the enemy as defined by your faction. Then something happens — an order you can't follow, a truth you can't ignore, an atrocity that changes everything. Act 2: You defect. Everything inverts. Your former allies hunt you with the tactics you taught them. Your new allies don't trust you. The characters you built relationships with in Act 1 react to your betrayal according to their MBTI types — the ISTJ commander feels personally betrayed, the ESTP commando grudgingly respects your courage, the ENTJ intelligence officer was expecting it and already has a contingency plan.
+
+What makes this structurally unique: the same CharacterState instances exist in both acts, but their `allegiance` and `relationship_to_player` values flip. The LLM generates Act 2 dialogue where former friends reference specific events from Act 1 — "I trusted you at the bridge, Commander. I won't make that mistake again." The personality system ensures each character's reaction to the defection is psychologically consistent: some hunt you with rage, some with sorrow, some with professional detachment.
+
+The defection trigger can be player-chosen (a moral crisis) or narrative-driven (you discover your faction's war crimes). The LLM builds toward it across Act 1 — uncomfortable orders, suspicious intelligence, moral gray areas — so it feels earned, not arbitrary. The `hidden_agenda` field and `loyalty` score track the player's growing doubts through story flags.
+
+| Aspect             | Solo                                                                       | Multiplayer                                                                                                                   |
+| ------------------ | -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| **Structure**      | One player, two acts, two factions                                         | Co-op: both players defect, or one defects and the other doesn't — the campaign splits. Former co-op partners become enemies. |
+| **Tension**        | Your knowledge of your old faction is your weapon — and your vulnerability | The betrayal is social, not just narrative. Your co-op partner didn't expect you to switch sides.                             |
+| **Emotional core** | "Were we ever fighting for the right side?"                                | "Can I trust someone who's already betrayed one allegiance?"                                                                  |
+
+---
+
+**Nemesis (The Personal War)**
+
+*Inspired by: Shadow of Mordor's Nemesis system, Captain Ahab and the white whale (Moby-Dick), Holmes/Moriarty, Batman/Joker, Heat (Mann), the primal human experience of rivalry.*
+
+The entire campaign is structured around a single, escalating rivalry with an enemy commander who adapts, learns, remembers, and grows. The Nemesis isn't a scripted boss — they're a fully realized CharacterState with an MBTI personality, their own flaw/desire/fear triangle, and a relationship to the player that evolves based on actual battle outcomes.
+
+The LLM reads every battle report and updates the Nemesis's behavior. Player loves tank rushes? The Nemesis develops anti-armor obsession — mines every approach, builds AT walls, taunts the player about predictability. Player won convincingly in mission 5? The Nemesis retreats to rebuild, and the LLM generates 2-3 missions of fragile peace before the Nemesis returns with a new strategy and a grudge. Player barely wins? The Nemesis respects the challenge and begins treating the war as a personal duel rather than a strategic campaign.
+
+What separates this from the existing "Rival commander" pattern: the Nemesis IS the campaign. Not a subplot — the main plot. The arc follows the classical rivalry structure: introduction (missions 1-3), first confrontation (4-5), escalation (6-12), reversal (the Nemesis wins one — 13-14), obsession (15-18), and final reckoning (19-24). Both characters are changed by the end. The LLM generates the Nemesis's personal narrative — their own setbacks, alliances, and moral evolution — and delivers fragments through intercepted communications, captured intel, and enemy officer interrogations.
+
+The deepest philosophical parallel: the Nemesis is a mirror. Their MBTI type is deliberately chosen as the player's faction's shadow — strategically complementary, personally incompatible. An INTJ strategic mastermind opposing the player's blunt-force army creates a "brains vs. brawn" struggle. An ENFP charismatic rebel opposing the player's disciplined advance creates "heart vs. machine." The LLM makes the Nemesis compelling enough that defeating them feels bittersweet.
+
+| Aspect         | Solo                                                                                                                | Multiplayer                                                                                |
+| -------------- | ------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| **Structure**  | Player vs. LLM-driven Nemesis                                                                                       | Symmetric: each player IS the other's Nemesis. Your victories write their villain's story. |
+| **Adaptation** | The Nemesis learns from your battle reports                                                                         | Both players adapt simultaneously — a genuine arms race with narrative weight.             |
+| **Climax**     | Final confrontation after 20+ missions of escalation                                                                | The players meet in a final battle that their entire campaign has been building toward.    |
+| **Export**     | After finishing, export your Nemesis as a Workshop character — other players face the villain YOUR campaign created | Post-campaign, challenge a friend: "Can you beat the commander who almost beat me?"        |
+
+---
+
+**Moral Complexity Parameter (Tactical Dilemmas)**
+
+*Inspired by: Spec Ops: The Line (tonal caution), Papers Please (systemic moral choices), the trolley problem (Philippa Foot), Walzer's "Just and Unjust Wars," the enduring human interest in difficult decisions under pressure.*
+
+Moral complexity is not a standalone campaign mode — it's a **parameter available on any generative campaign mode**. It controls how often the LLM generates tactical dilemmas with no clean answer, and how much character personality drives the fallout. Three levels:
+
+- **Low** (default): Straightforward tactical choices. The mission has a clear objective; characters react to victory and defeat but not to moral ambiguity. Standard C&C fare — good guys, bad guys, blow stuff up.
+- **Medium**: Tactical trade-offs with character consequences. Occasional missions present two valid approaches with different costs. Destroy the bridge to cut off enemy reinforcements, or leave it intact so civilians can evacuate? The choice affects the next mission's conditions AND how your MBTI-typed commanders view your leadership. No wrong answer — but each choice shifts character loyalty.
+- **High**: Genuine moral weight with long-tail consequences. The LLM generates dilemmas where both options have defensible logic and painful costs. Tactical, not gratuitous — these stay within the toy-soldier abstraction of C&C:
+  - A fortified enemy position is using a civilian structure as cover. Shelling it ends the siege quickly but your ISFJ field commander loses respect for your methods. Flanking costs time and units but preserves your team's trust.
+  - You've intercepted intelligence that an enemy officer wants to defect — but extracting them requires diverting forces from a critical defensive position. Commit to the extraction (gain a valuable asset, risk the defense) or hold the line (lose the defector, secure the front).
+  - Two allied positions are under simultaneous attack. You can only reinforce one in time. The LLM ensures both positions have named characters the player has built relationships with. Whoever you don't reinforce takes heavy casualties — and remembers.
+
+The LLM tracks choices in campaign story flags and generates **long-tail consequences**. A choice from mission 3 might resurface in mission 15 — the officer you extracted becomes a critical ally, or the position you didn't reinforce never fully trusts your judgment again. Characters react according to their MBTI type: TJ types evaluate consequences; FP types evaluate intent; SJ types evaluate duty; NP types evaluate principle. Loyalty shifts based on personality-consistent moral frameworks, not a universal morality scale.
+
+At **High** in co-op campaigns, both players must agree on dilemma choices — creating genuine social negotiation. "Do we divert for the extraction or hold the line?" becomes a real conversation between real people with different strategic instincts.
+
+This parameter composes with every mode: a Nemesis campaign at High moral complexity generates dilemmas where the Nemesis exploits the player's past choices. A Generational Saga at High carries moral consequences across generations — Generation 3 lives with Generation 1's trade-offs. A Mystery campaign at Medium lets the traitor steer the player toward choices that look reasonable but serve enemy interests.
+
+---
+
+**Generational Saga (The Hundred-Year War)**
+
+*Inspired by: Crusader Kings (Paradox), Foundation (Asimov), Dune (Herbert), The Godfather trilogy, Fire Emblem (permadeath + inheritance), the lived experience of generational trauma and inherited conflict.*
+
+The war spans three generations. Each generation is ~8 missions. Characters age, retire, die of old age or in combat. Young lieutenants from Generation 1 are old generals in Generation 3. The decisions of grandparents shape the world their grandchildren inherit.
+
+Generation 1 establishes the conflict. The player's commanders are young, idealistic, sometimes reckless. Their victories and failures set the starting conditions for everything that follows. The LLM generates the world state that Generation 2 inherits: borders drawn by Generation 1's campaigns, alliances forged by their diplomacy, grudges created by their atrocities, technology unlocked by their captured facilities.
+
+Generation 2 lives in their predecessors' shadow. The LLM generates characters who are the children or proteges of Generation 1's heroes — with inherited MBTIs modified by upbringing. A legendary commander's daughter might be an ENTJ like her father... or an INFP who rejects everything he stood for. The Nemesis from Generation 1 might be dead, but their successor inherited their grudge and their tactical files. "Your father destroyed my father's army at Stalingrad. I've spent 20 years studying how."
+
+Generation 3 brings resolution. The war's original cause may be forgotten — the LLM tracks how meaning shifts across generations. What started as liberation becomes occupation becomes tradition becomes identity. The final generation must either find peace or perpetuate a war that nobody remembers starting. The LLM generates characters who question why they're fighting — and the MBTI system determines who accepts "it's always been this way" (SJ types) and who demands "but why?" (NP types).
+
+Cross-campaign hero persistence (Legacy mode) provides the technical infrastructure. CharacterState serializes between generations. Veterancy, notable events, and relationship history persist in the save. The LLM writes Generation 3's dialogue with explicit callbacks to Generation 1's battles — events the *player* remembers but the *characters* only know as stories.
+
+| Aspect         | Solo                                                                      | Multiplayer                                                                                                            |
+| -------------- | ------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| **Structure**  | One player, three eras, one evolving war                                  | Two dynasties: each player leads a family across three generations. Your grandfather's enemy's grandson is your rival. |
+| **Investment** | Watching characters age and pass the torch                                | Shared 20+ year fictional history between two real players                                                             |
+| **Climax**     | Generation 3 resolves (or doesn't) the conflict that Generation 1 started | The final generation can negotiate peace — or realize they've become exactly what Generation 1 fought against          |
+
+---
+
+**Parallel Timelines (The Chronosphere Fracture)**
+
+*Inspired by: Sliding Doors (film), Everything Everywhere All at Once, Bioshock Infinite, the Many-Worlds interpretation of quantum mechanics, the universal human experience of "what if I'd chosen differently?"*
+
+This mode is uniquely suited to Red Alert's lore — the Chronosphere is literally a time machine. A Chronosphere malfunction fractures reality into two parallel timelines diverging from a single critical decision. The player alternates missions between Timeline A (where they made one choice) and Timeline B (where they made the opposite).
+
+The LLM generates both timelines from the same campaign skeleton but with diverging consequences. In Timeline A, you destroyed the bridge — the enemy can't advance, but your reinforcements can't reach you either. In Timeline B, you saved the bridge — the enemy pours across, but so do your reserves. The same characters exist in both timelines but develop differently based on divergent circumstances. Sonya (ENTJ) in Timeline A seizes power during the chaos; Sonya in Timeline B remains loyal because the bridge gave her the resources she needed. Same personality, different circumstances, different trajectory — the MBTI system ensures both versions are psychologically plausible.
+
+The player experiences both consequences simultaneously. Every 2 missions, the timeline switches. The LLM generates narrative parallels and contrasts — events that rhyme across timelines. Mission 6A is a desperate defense; Mission 6B is an easy victory. But the easy victory in B created a complacency that sets up a devastating ambush in 8B, while the desperate defense in A forged a harder, warier force that handles 8A better. The timelines teach different lessons.
+
+The climax: the timelines threaten to collapse into each other (Chronosphere overload). The player must choose which timeline becomes "real" — with full knowledge of what they're giving up. Or, in the boldest variant, the two timelines collide and the player must fight their way through a reality-fractured final mission where enemies and allies from both timelines coexist.
+
+| Aspect        | Solo                                                  | Multiplayer                                                                                                                        |
+| ------------- | ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| **Structure** | One player alternates between two timelines           | Each player IS a timeline. They can't communicate directly — but their timelines leak into each other (Chronosphere interference). |
+| **Tension**   | "Which timeline do I want to keep?"                   | "My partner's timeline is falling apart because of a choice I made in mine"                                                        |
+| **Lore fit**  | The Chronosphere is already RA's signature technology | Chronosphere multiplayer events: one player's Chronosphere experiment affects the other's battlefield                              |
+
+---
+
+**The Mystery (Whodunit at War)**
+
+*Inspired by: Agatha Christie, The Thing (Carpenter), Among Us, Clue, Knives Out, the universal human fascination with deduction and betrayal.*
+
+Someone in your own command structure is sabotaging operations. Missions keep going wrong in ways that can't be explained by bad luck — the enemy always knows your plans, supply convoys vanish, key systems fail at critical moments. The campaign is simultaneously a military campaign and a murder mystery. The player must figure out which of their named characters is the traitor — while still winning a war.
+
+The LLM randomly selects the traitor at campaign start from the named cast and plays that character's MBTI type *as if they were loyal* — because a good traitor acts normal. But the LLM plants clues in mission outcomes and character behavior. An ISFJ traitor might "accidentally" route supplies to the wrong location (duty-driven guilt creates mistakes). An ENTJ traitor might push too hard for a specific strategic decision that happens to benefit the enemy (ambition overrides subtlety). An ESTP traitor makes bold, impulsive moves that look like heroism but create exploitable vulnerabilities.
+
+The player gathers evidence through mission outcomes, character dialogue inconsistencies, and optional investigation objectives (hack a communications relay, interrogate a captured enemy, search a character's quarters). At various points the campaign offers "accuse" branching — name the traitor and take action. Accuse correctly → the conspiracy unravels and the campaign pivots to hunting the traitor's handlers. Accuse incorrectly → you've just purged a loyal officer, damaged morale, and the real traitor is still operating. The LLM generates the fallout either way.
+
+What makes this work with MBTI: each character type hides guilt differently, leaks information differently, and responds to suspicion differently. The LLM generates behavioral tells that are personality-consistent — learnable but not obvious. Repeat playthroughs with the same characters but a different traitor create genuinely different mystery experiences because the deception patterns change with the traitor's personality type.
+
+**Marination — trust before betrayal:** The LLM follows a deliberate escalation curve inspired by Among Us's best impostors. The traitor character performs *exceptionally well* in early missions — perhaps saving the player from a tough situation, providing critical intelligence, or volunteering for dangerous assignments. The first 30–40% of the campaign builds genuine trust. Clues begin appearing only after the player has formed a real attachment to every character (including the traitor). In co-op Traitor mode, divergent objectives start trivially small — capture a minor building that barely affects the mission outcome — and escalate gradually as the campaign progresses. This ensures the eventual reveal feels earned rather than random, and the player's "I trusted you" reaction has genuine emotional weight.
+
+| Aspect        | Solo                                                  | Multiplayer                                                                                                                                                                                                                                |
+| ------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Structure** | Player deduces the traitor from clues across missions | Co-op with explicit opt-in "Traitor" party mode: one player receives secret *divergent* objectives from the LLM (capture instead of destroy, let a specific unit escape, secure a specific building). Not sabotage — different priorities. |
+| **Tension**   | "Which of my commanders is lying to me?"              | "Is my co-op partner pursuing a different objective, or are we playing the same mission?" Subtle divergence, not griefing.                                                                                                                 |
+| **Climax**    | The accusation — right or wrong, the campaign changes | The reveal — when divergent objectives surface, the campaign's entire history is recontextualized. Both players were playing their own version of the war.                                                                                 |
+
+**Verifiable actions (trust economy):** In co-op Traitor mode, the system tracks **verifiable actions** — things that both players can confirm through shared battlefield data. "I defended the northern flank solo for 8 minutes" is system-confirmable from the replay. "I captured objective Alpha as requested" appears in the shared mission summary. A player building trust spends time on verifiable actions visible to their partner — but this diverts from optimal play or from pursuing secret divergent objectives. The traitor faces a genuine strategic choice: build trust through verifiable actions (slower divergent progress, safer cover) or pursue secret objectives aggressively (faster but riskier if the partner is watching closely). This creates an Among Us-style "visual tasks" dynamic where proving innocence has a real cost.
+
+**Intelligence review (structured suspicion moments):** In co-op Mystery campaigns, each intermission functions as an **intelligence review** — a structured moment where both players see a summary of mission outcomes and the LLM surfaces anomalies. "Objective Alpha was captured instead of destroyed — consistent with enemy priorities." "Forces were diverted from Sector 7 during the final push — 12% efficiency loss." The system generates this data automatically from divergent-objective tracking and presents it neutrally. Players discuss before the next mission — creating a natural accusation-or-trust moment without pausing gameplay. This mirrors Among Us's emergency meeting mechanic: action stops, evidence is reviewed, and players must decide whether to confront suspicion or move on.
+
+**Asymmetric briefings (information asymmetry in all co-op modes):** Beyond Mystery, ALL co-op campaign modes benefit from a lesson Among Us teaches about information asymmetry: **each player's pre-mission briefing should include information the other player doesn't have**. Player A's intelligence report mentions an enemy weapons cache in the southeast; Player B's report warns of reinforcements arriving from the north. Neither briefing is wrong — they're simply incomplete. This creates natural "wait, what did YOUR briefing say?" conversations that build cooperative engagement. In Mystery co-op, asymmetric briefings also provide cover for the traitor's divergent objectives — they can claim "my briefing said to capture that building" and the other player can't immediately verify it. The LLM generates briefing splits based on each player's assigned intelligence network and agent roster.
+
+---
+
+#### Solo–Multiplayer Bridges
+
+The modes above work as standalone solo or multiplayer experiences. But the most interesting innovation is allowing **ideas to cross between solo and multiplayer** — things you create alone become part of someone else's experience, and vice versa. These bridges emerge naturally from IC's existing architecture (CharacterState serialization, Workshop sharing, D042 player behavioral profiles, campaign save portability):
+
+**Nemesis Export:** Complete a Nemesis campaign. Your nemesis — their MBTI personality, their adapted tactics (learned from your battle reports), their grudge, their dialogue patterns — serializes to a Workshop-sharable character file. Another player imports your nemesis into their own campaign. Now they're fighting a villain that was forged by YOUR gameplay. The nemesis "remembers" their history and references it: "The last commander who tried that tactic... I made them regret it." Community-curated nemesis libraries let players challenge themselves against the most compelling villain characters the community has generated.
+
+**Ghost Operations (Asynchronous Competition):** A solo player completes a campaign. Their campaign save — including every tactical decision, unit composition, timing, and outcome — becomes a "ghost." Another player plays the same campaign seed but races against the ghost's performance. Not a replay — a parallel run. The ghost's per-mission results appear as benchmark data: "The ghost completed this mission in 12 minutes with 3 casualties. Can you do better?" This transforms solo campaigns into asynchronous races. Weekly challenges already use fixed seeds; ghost operations extend this to full campaigns.
+
+**War Dispatches (Narrative Fragments):** A solo player's campaign generates "dispatches" — short, LLM-written narrative summaries of key campaign moments, formatted as fictional news reports, radio intercepts, or intelligence briefings. These dispatches are shareable. Other players can subscribe to a friend's campaign dispatches — following their war as a serialized story. A dispatch might say: "Reports confirm the destruction of the 3rd Allied Armored Division at the Rhine crossing. Soviet commander [player name] is advancing unchecked." The reader sees the story; the player lived it.
+
+**Community Front Lines (Persistent World):** Every solo player's World Domination campaign contributes to a shared community war map. Your victories advance your faction's front lines; your defeats push them back. Weekly aggregation: the community's collective Solo campaigns determine the global state. Weekly community briefings (LLM-generated from aggregate data) report on the state of the war. "The Allied front in Northern Europe has collapsed after 847 Soviet campaign victories this week. The community's attention shifts to the Pacific theater." This doesn't affect individual campaigns — it's a metagame visualization. But it creates the feeling that your solo campaign matters to something larger.
+
+**Tactical DNA (D042 Profile as Challenge):** Complete a campaign. Your D042 player behavioral profile — which tracks your strategic tendencies, unit preferences, micro patterns — exports as a "tactical DNA" file. An AI opponent can load your tactical DNA and play *as you*. Another player can challenge your tactical DNA: "Can you beat the AI version of Copilot? They love air rushes, never build naval, and always go for the tech tree." This creates asymmetric AI opponents that are genuinely personal — not generic difficulty levels, but specific human-like play patterns. Community members share and compete against each other's tactical DNA in skirmish mode.
+
+---
+
+All extended modes produce standard D021 campaigns. All are playable without an LLM once generated. All are saveable, shareable via Workshop, editable in the Campaign Editor, and replayable. The LLM provides the creative act; the engine provides the infrastructure. Modders can create new modes by combining the same building blocks differently — the modes above are a curated library, not an exhaustive list.
 
 ---
 
@@ -2407,6 +4018,33 @@ Critical for multiplayer: some toggles change game rules, others are purely cosm
 - **Multiplayer safety.** The sim/client split ensures determinism. Sim-affecting toggles are lobby settings (like game speed or starting cash). Client-only toggles are personal preferences (like enabling subtitles in any other game).
 - **Natural extension of D019 + D032.** Balance, theme, and behavior are three independent axes of experience customization. Together they let a player fully configure what "Red Alert" feels like to them.
 
+### UX Principle: No Dead-End Buttons
+
+**Never grey out or disable a button without telling the player why and how to fix it.** A greyed-out button is a dead end — the player sees a feature exists, knows they can't use it, and has no idea what to do about it. This is a universal UX anti-pattern.
+
+IC's rule: **every button is always clickable.** If a feature requires something the player hasn't configured, clicking the button opens an **inline guidance panel** that:
+
+1. **Explains what's needed** — a short, plain-language sentence (not a generic "feature unavailable")
+2. **Offers a direct link** to the relevant settings/configuration screen
+3. **Returns the player** to where they were after configuration, so they can continue seamlessly
+
+**Examples across the engine:**
+
+| Button Clicked                    | Missing Prerequisite           | Guidance Panel Shows                                                                                                                                                        |
+| --------------------------------- | ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| "New Generative Campaign"         | No LLM provider configured     | "Generative campaigns need an LLM provider to create missions. [Configure LLM Provider →] You can also browse pre-generated campaigns on the Workshop. [Browse Workshop →]" |
+| "3D View" render mode             | 3D mod not installed           | "3D rendering requires a render mod that provides 3D models. [Browse Workshop for 3D mods →]"                                                                               |
+| "HD" render mode                  | HD sprite pack not installed   | "HD mode requires an HD sprite resource pack. [Browse Workshop →] [Learn more about resource packs →]"                                                                      |
+| "Generate Assets" in Asset Studio | No LLM provider configured     | "Asset generation uses an LLM to create sprites, palettes, and other resources. [Configure LLM Provider →]"                                                                 |
+| "Publish to Workshop"             | No community server configured | "Publishing requires a community server account. [Set up community server →] [What is a community server? →]"                                                               |
+
+This principle applies to **every UI surface** — game menus, SDK tools, lobby, settings, Workshop browser. No exceptions. The guidance panel is a lightweight overlay (not a modal dialog that blocks interaction), styled to match the active UI theme (D032), and dismissible with Escape or clicking outside.
+
+**Why this matters:**
+- Players discover features by clicking things. A greyed-out button teaches them "this doesn't work" and they may never try again. A guidance panel teaches them "this works if you do X" and gets them there in one click.
+- Reduces support questions. Instead of "why is this button grey," the UI answers the question before it's asked.
+- Respects player intelligence. The player clicked the button because they wanted the feature — help them get it, don't just say no.
+
 **Alternatives considered:**
 - Hardcode one set of behaviors (rejected — this is what every other implementation does; we can do better)
 - Make QoL features mod-only (rejected — too important to bury behind modding; should be one click in settings, same as D019)
@@ -2988,41 +4626,42 @@ Modules are IC's equivalent of Eden Editor's 154 built-in modules — complex ga
 
 **Built-in module library (initial set):**
 
-| Category        | Module             | Parameters                                    | Logic                                                                                   |
-| --------------- | ------------------ | --------------------------------------------- | --------------------------------------------------------------------------------------- |
-| **Spawning**    | Wave Spawner       | waves[], interval, escalation, entry_points[] | Spawns enemy units in configurable waves                                                |
-| **Spawning**    | Reinforcements     | units[], entry_point, trigger, delay          | Sends units from map edge on trigger                                                    |
-| **Spawning**    | Probability Group  | units[], probability 0–100%                   | Group exists only if random roll passes (visual wrapper around Probability of Presence) |
-| **AI Behavior** | Patrol Route       | waypoints[], alert_radius, response           | Units cycle waypoints, engage if threat detected                                        |
-| **AI Behavior** | Guard Position     | position, radius, priority                    | Units defend location; peel to attack nearby threats (OFP Guard/Guarded By pattern)     |
-| **AI Behavior** | Hunt and Destroy   | area, unit_types[], aggression                | AI actively searches for and engages enemies in area                                    |
-| **AI Behavior** | Harvest Zone       | area, harvesters, refinery                    | AI harvests resources in designated zone                                                |
-| **Objectives**  | Destroy Target     | target, description, optional                 | Player must destroy specific building/unit                                              |
-| **Objectives**  | Capture Building   | building, description, optional               | Player must engineer-capture building                                                   |
-| **Objectives**  | Defend Position    | area, duration, description                   | Player must keep faction presence in area for N ticks                                   |
-| **Objectives**  | Timed Objective    | target, time_limit, failure_consequence       | Objective with countdown timer                                                          |
-| **Objectives**  | Escort Convoy      | convoy_units[], route, description            | Protect moving units along a path                                                       |
-| **Events**      | Reveal Map Area    | area, trigger, delay                          | Removes shroud from an area                                                             |
-| **Events**      | Play Briefing      | text, audio_ref, portrait                     | Shows briefing panel with text and audio                                                |
-| **Events**      | Camera Pan         | from, to, duration, trigger                   | Cinematic camera movement on trigger                                                    |
-| **Events**      | Weather Change     | type, intensity, transition_time, trigger     | Changes weather on trigger activation                                                   |
-| **Events**      | Dialogue           | lines[], trigger                              | In-game dialogue sequence                                                               |
-| **Flow**        | Mission Timer      | duration, visible, warning_threshold          | Global countdown affecting mission end                                                  |
-| **Flow**        | Checkpoint         | trigger, save_state                           | Auto-save when trigger fires                                                            |
-| **Flow**        | Branch             | condition, true_path, false_path              | Campaign branching point (D021)                                                         |
-| **Flow**        | Difficulty Gate    | min_difficulty, entities[]                    | Entities only exist above threshold difficulty                                          |
-| **Effects**     | Explosion          | position, size, trigger                       | Cosmetic explosion on trigger                                                           |
-| **Effects**     | Sound Emitter      | sound_ref, trigger, loop, 3d                  | Play sound effect — positional (3D) or global                                           |
-| **Effects**     | Music Trigger      | track, trigger, fade_time                     | Change music track on trigger activation                                                |
-| **Media**       | Video Playback     | video_ref, trigger, display_mode, skippable   | Play video — fullscreen, radar_comm, or picture_in_picture (see 04-MODDING.md)          |
-| **Media**       | Cinematic Sequence | steps[], trigger, skippable                   | Chain camera pans + dialogue + music + video + letterbox into a scripted sequence       |
-| **Media**       | Ambient Sound Zone | region, sound_ref, volume, falloff            | Looping positional audio tied to a named region (forest, river, factory hum)            |
-| **Media**       | Music Playlist     | tracks[], mode, trigger                       | Set active playlist — sequential, shuffle, or dynamic (combat/ambient/tension)          |
-| **Media**       | Radar Comm         | portrait, audio_ref, text, duration, trigger  | RA2-style comm overlay in radar panel — portrait + voice + subtitle (no video required) |
-| **Media**       | EVA Notification   | event_type, text, audio_ref, trigger          | Play EVA-style notification with audio + text banner                                    |
-| **Media**       | Letterbox Mode     | trigger, duration, enter_time, exit_time      | Toggle cinematic letterbox bars — hides HUD, enters cinematic aspect ratio              |
-| **Multiplayer** | Spawn Point        | faction, position                             | Player starting location in MP scenarios                                                |
-| **Multiplayer** | Crate Drop         | position, trigger, contents                   | Random powerup/crate on trigger                                                         |
+| Category        | Module             | Parameters                                    | Logic                                                                                                                                                                                           |
+| --------------- | ------------------ | --------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Spawning**    | Wave Spawner       | waves[], interval, escalation, entry_points[] | Spawns enemy units in configurable waves                                                                                                                                                        |
+| **Spawning**    | Reinforcements     | units[], entry_point, trigger, delay          | Sends units from map edge on trigger                                                                                                                                                            |
+| **Spawning**    | Probability Group  | units[], probability 0–100%                   | Group exists only if random roll passes (visual wrapper around Probability of Presence)                                                                                                         |
+| **AI Behavior** | Patrol Route       | waypoints[], alert_radius, response           | Units cycle waypoints, engage if threat detected                                                                                                                                                |
+| **AI Behavior** | Guard Position     | position, radius, priority                    | Units defend location; peel to attack nearby threats (OFP Guard/Guarded By pattern)                                                                                                             |
+| **AI Behavior** | Hunt and Destroy   | area, unit_types[], aggression                | AI actively searches for and engages enemies in area                                                                                                                                            |
+| **AI Behavior** | Harvest Zone       | area, harvesters, refinery                    | AI harvests resources in designated zone                                                                                                                                                        |
+| **Objectives**  | Destroy Target     | target, description, optional                 | Player must destroy specific building/unit                                                                                                                                                      |
+| **Objectives**  | Capture Building   | building, description, optional               | Player must engineer-capture building                                                                                                                                                           |
+| **Objectives**  | Defend Position    | area, duration, description                   | Player must keep faction presence in area for N ticks                                                                                                                                           |
+| **Objectives**  | Timed Objective    | target, time_limit, failure_consequence       | Objective with countdown timer                                                                                                                                                                  |
+| **Objectives**  | Escort Convoy      | convoy_units[], route, description            | Protect moving units along a path                                                                                                                                                               |
+| **Events**      | Reveal Map Area    | area, trigger, delay                          | Removes shroud from an area                                                                                                                                                                     |
+| **Events**      | Play Briefing      | text, audio_ref, portrait                     | Shows briefing panel with text and audio                                                                                                                                                        |
+| **Events**      | Camera Pan         | from, to, duration, trigger                   | Cinematic camera movement on trigger                                                                                                                                                            |
+| **Events**      | Weather Change     | type, intensity, transition_time, trigger     | Changes weather on trigger activation                                                                                                                                                           |
+| **Events**      | Dialogue           | lines[], trigger                              | In-game dialogue sequence                                                                                                                                                                       |
+| **Flow**        | Mission Timer      | duration, visible, warning_threshold          | Global countdown affecting mission end                                                                                                                                                          |
+| **Flow**        | Checkpoint         | trigger, save_state                           | Auto-save when trigger fires                                                                                                                                                                    |
+| **Flow**        | Branch             | condition, true_path, false_path              | Campaign branching point (D021)                                                                                                                                                                 |
+| **Flow**        | Difficulty Gate    | min_difficulty, entities[]                    | Entities only exist above threshold difficulty                                                                                                                                                  |
+| **Effects**     | Explosion          | position, size, trigger                       | Cosmetic explosion on trigger                                                                                                                                                                   |
+| **Effects**     | Sound Emitter      | sound_ref, trigger, loop, 3d                  | Play sound effect — positional (3D) or global                                                                                                                                                   |
+| **Effects**     | Music Trigger      | track, trigger, fade_time                     | Change music track on trigger activation                                                                                                                                                        |
+| **Media**       | Video Playback     | video_ref, trigger, display_mode, skippable   | Play video — fullscreen, radar_comm, or picture_in_picture (see 04-MODDING.md)                                                                                                                  |
+| **Media**       | Cinematic Sequence | steps[], trigger, skippable                   | Chain camera pans + dialogue + music + video + letterbox into a scripted sequence                                                                                                               |
+| **Media**       | Ambient Sound Zone | region, sound_ref, volume, falloff            | Looping positional audio tied to a named region (forest, river, factory hum)                                                                                                                    |
+| **Media**       | Music Playlist     | tracks[], mode, trigger                       | Set active playlist — sequential, shuffle, or dynamic (combat/ambient/tension)                                                                                                                  |
+| **Media**       | Radar Comm         | portrait, audio_ref, text, duration, trigger  | RA2-style comm overlay in radar panel — portrait + voice + subtitle (no video required)                                                                                                         |
+| **Media**       | EVA Notification   | event_type, text, audio_ref, trigger          | Play EVA-style notification with audio + text banner                                                                                                                                            |
+| **Media**       | Letterbox Mode     | trigger, duration, enter_time, exit_time      | Toggle cinematic letterbox bars — hides HUD, enters cinematic aspect ratio                                                                                                                      |
+| **Multiplayer** | Spawn Point        | faction, position                             | Player starting location in MP scenarios                                                                                                                                                        |
+| **Multiplayer** | Crate Drop         | position, trigger, contents                   | Random powerup/crate on trigger                                                                                                                                                                 |
+| **Multiplayer** | Spectator Bookmark | position, label, trigger, camera_angle        | Author-defined camera bookmark for spectator/replay mode — marks key locations and dramatic moments. Spectators can cycle bookmarks with hotkeys. Replays auto-cut to bookmarks when triggered. |
 
 Modules connect to triggers and other entities via **visual connection lines** — same as OFP's synchronization system. A "Reinforcements" module connected to a trigger means the reinforcements arrive when the trigger fires. No scripting required.
 
@@ -3445,6 +5084,66 @@ Visually in the graph editor, weighted edges show their probability and use vary
 
 Mission pools are a natural fit for the persistent roster system — side missions that strengthen (or deplete) the player's forces before a major battle.
 
+#### Classic Globe Mission Select (RA1-Style)
+
+The original Red Alert featured a **globe screen** between certain missions — the camera zooms to a region, and the player chooses between 2-3 highlighted countries to attack next. "Do we strike Greece or Turkey?" Each choice leads to a different mission variant, and the unchosen mission is skipped. This was one of RA1's most memorable campaign features — the feeling that *you* decided where the war went next. It was also one of the things OpenRA never reproduced; OpenRA campaigns are strictly linear mission lists.
+
+IC supports this natively. It's not a special mode — it falls out of the existing building blocks:
+
+**How it works:** A campaign graph node has multiple outgoing edges. Instead of selecting the next mission via a text menu or automatic branching, the campaign uses a **World Map intermission** to present the choice visually. The player sees the map with highlighted regions, picks one, and that edge is taken.
+
+```yaml
+# Campaign graph — classic RA globe-style mission select
+nodes:
+  mission_5:
+    name: "Allies Regroup"
+    # After completing this mission, show the globe
+    post_intermission:
+      template: world-map
+      config:
+        zoom_to: "eastern_mediterranean"
+        choices:
+          - region: greece
+            label: "Strike Athens"
+            target_node: mission_6a_greece
+            briefing_preview: "Greek resistance is weak. Take the port city."
+          - region: turkey
+            label: "Assault Istanbul"
+            target_node: mission_6b_turkey
+            briefing_preview: "Istanbul controls the straits. High risk, strategic value."
+        display:
+          highlight_available: true      # glow effect on selectable regions
+          show_enemy_strength: true      # "Light/Medium/Heavy resistance"
+          camera_animation: globe_spin   # classic RA globe spin to region
+
+  mission_6a_greece:
+    name: "Mediterranean Assault"
+    # ... mission definition
+
+  mission_6b_turkey:
+    name: "Straits of War"
+    # ... mission definition
+```
+
+This is a **D021 branching campaign** with a **D038 World Map intermission** as the branch selector. The campaign graph has the branching structure; the world map is just the presentation layer for the player's choice. No strategic territory tracking, no force pools, no turn-based meta-layer — just a map that asks "where do you want to fight next?"
+
+**Comparison to World Domination:**
+
+| Aspect                 | Globe Mission Select (RA1-style)               | World Domination                   |
+| ---------------------- | ---------------------------------------------- | ---------------------------------- |
+| **Purpose**            | Choose between pre-authored mission variants   | Emergent strategic territory war   |
+| **Number of choices**  | 2-3 per decision point                         | All adjacent regions               |
+| **Missions**           | Pre-authored (designer-created)                | Generated from strategic state     |
+| **Map role**           | Presentation for a branch choice               | Primary campaign interface         |
+| **Territory tracking** | None — cosmetic only                           | Full (gains, losses, garrisons)    |
+| **Complexity**         | Simple — just a campaign graph + map UI        | Complex — full strategic layer     |
+| **OpenRA support**     | No                                             | No                                 |
+| **IC support**         | Yes — D021 graph + D038 World Map intermission | Yes — World Domination mode (D016) |
+
+The globe mission select is the **simplest** use of the world map component — a visual branch selector for hand-crafted campaigns. World Domination is the most complex — a full strategic meta-layer. Everything in between is supported too: a map that shows your progress through a linear campaign (locations lighting up as you complete them), a map with side-mission markers, a map that shows enemy territory shrinking as you advance.
+
+**RA1 game module default:** The Red Alert game module ships with a campaign that recreates the original RA1 globe-style mission select at the same decision points as the original game. When the original RA1 campaign asked "Greece or Turkey?", IC's RA1 campaign shows the same choice on the same map — but with IC's modern World Map renderer instead of the original 320×200 pre-rendered globe FMV.
+
 #### Persistent State Dashboard
 
 The biggest reason campaign creation is painful in every RTS editor: you can't see what state flows between missions. Story flags are set in Lua buried inside mission scripts. Roster carryover is configured in YAML you never visualize. Variables disappear between missions unless you manually manage them.
@@ -3487,16 +5186,16 @@ Between missions, the player sees an intermission — not just a text briefing, 
 
 **Built-in intermission templates:**
 
-| Template              | Layout                                                                        | Use Case                                   |
-| --------------------- | ----------------------------------------------------------------------------- | ------------------------------------------ |
-| **Briefing Only**     | Portrait + text + "Begin Mission" button                                      | Simple campaigns, classic RA style         |
-| **Roster Management** | Unit list with keep/dismiss, equipment assignment, formation arrangement      | OFP: Resistance style unit management      |
-| **Base Screen**       | Persistent base view — spend resources on upgrades that carry forward         | Between-mission base building (C&C3 style) |
-| **Shop / Armory**     | Campaign inventory + purchase panel + currency                                | RPG-style equipment management             |
-| **Dialogue**          | Portrait + branching text choices (see Dialogue Editor below)                 | Story-driven campaigns, RPG conversations  |
-| **World Map**         | Map with mission locations — player chooses next mission from available nodes | Non-linear campaigns, Total War style      |
-| **Debrief + Stats**   | Mission results, casualties, performance grade, story flag changes            | Post-mission feedback                      |
-| **Custom**            | Empty canvas — arrange any combination of panels via the layout editor        | Total creative freedom                     |
+| Template              | Layout                                                                                                                                                                                                          | Use Case                                   |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| **Briefing Only**     | Portrait + text + "Begin Mission" button                                                                                                                                                                        | Simple campaigns, classic RA style         |
+| **Roster Management** | Unit list with keep/dismiss, equipment assignment, formation arrangement                                                                                                                                        | OFP: Resistance style unit management      |
+| **Base Screen**       | Persistent base view — spend resources on upgrades that carry forward                                                                                                                                           | Between-mission base building (C&C3 style) |
+| **Shop / Armory**     | Campaign inventory + purchase panel + currency                                                                                                                                                                  | RPG-style equipment management             |
+| **Dialogue**          | Portrait + branching text choices (see Dialogue Editor below)                                                                                                                                                   | Story-driven campaigns, RPG conversations  |
+| **World Map**         | Map with mission locations — player chooses next mission from available nodes. In World Domination campaigns (D016), shows faction territories, frontlines, and the LLM-generated briefing for the next mission | Non-linear campaigns, World Domination     |
+| **Debrief + Stats**   | Mission results, casualties, performance grade, story flag changes                                                                                                                                              | Post-mission feedback                      |
+| **Custom**            | Empty canvas — arrange any combination of panels via the layout editor                                                                                                                                          | Total creative freedom                     |
 
 Intermissions are defined per campaign node (between "finish Mission 2" and "start Mission 3"). They can chain: debrief → roster management → briefing → begin mission.
 
@@ -3507,11 +5206,13 @@ Intermissions are defined per campaign node (between "finish Mission 2" and "sta
 - **Roster panel** — surviving units from previous mission. Player can dismiss, reorganize, assign equipment.
 - **Inventory panel** — campaign-wide items. Drag onto units to equip. Purchase from shop with campaign currency.
 - **Choice panel** — buttons that set story flags or campaign variables. "Execute the prisoner? [Yes] [No]" → sets `prisoner_executed` flag.
-- **Map panel** — shows campaign geography. Highlights available next missions if using mission pools.
+- **Map panel** — shows campaign geography. Highlights available next missions if using mission pools. In World Domination mode, renders the world map with faction-colored regions, animated frontlines, and narrative briefing panel. The LLM presents the next mission through the briefing; the player sees their territory and the story context, not a strategy game menu.
 - **Stats panel** — mission performance: time, casualties, objectives completed, units destroyed.
 - **Custom Lua panel** — advanced panel that runs arbitrary Lua to generate content dynamically.
 
 These panels compose freely. A "Base Screen" template is just a preset arrangement: roster panel on the left, inventory panel center, stats panel right, briefing text bottom. The Custom template starts empty and lets the designer arrange any combination.
+
+**Per-player intermission variants:** In co-op campaigns, each intermission can optionally define per-player layouts. The intermission editor exposes a "Player Variant" selector: Default (all players see the same screen) or per-slot overrides (Player 1 sees layout A, Player 2 sees layout B). Per-player briefing text is always supported regardless of this setting. Per-player layouts go further — different panel arrangements, different choice options, different map highlights per player slot. This is what makes co-op campaigns feel like each player has a genuine role, not just a shared screen. Variant layouts share the same panel library; only the arrangement and content differ.
 
 #### Dialogue Editor
 
@@ -4278,11 +5979,11 @@ The Asset Studio understands multiple C&C format families and can convert betwee
 
 **Decision:** Extend the `NetworkModel`/`Pathfinder`/`SpatialIndex` trait-abstraction pattern to five additional engine subsystems that carry meaningful risk of regret if hardcoded: **AI strategy, fog of war, damage resolution, ranking/matchmaking, and order validation**. Each gets a formal trait in the engine, a default implementation in the RA1 game module, and the same "costs near-zero now, prevents rewrites later" guarantee.
 
-**Context:** The engine already trait-abstracts 13 subsystems (see inventory below). These were designed individually — some as architectural invariants (D006 networking, D013 pathfinding), others as consequences of multi-game extensibility (D018 `GameModule`, `Renderable`, `FormatRegistry`). But several critical *algorithm-level* concerns remain hardcoded in RA1's system implementations. For data-driven concerns (weather, campaigns, achievements, themes), YAML+Lua modding provides sufficient flexibility — no trait needed. For *algorithmic* concerns, the resolution logic itself is what varies between game types and modding ambitions.
+**Context:** The engine already trait-abstracts 14 subsystems (see inventory below, including Transport added by D054). These were designed individually — some as architectural invariants (D006 networking, D013 pathfinding), others as consequences of multi-game extensibility (D018 `GameModule`, `Renderable`, `FormatRegistry`). But several critical *algorithm-level* concerns remain hardcoded in RA1's system implementations. For data-driven concerns (weather, campaigns, achievements, themes), YAML+Lua modding provides sufficient flexibility — no trait needed. For *algorithmic* concerns, the resolution logic itself is what varies between game types and modding ambitions.
 
 **The principle:** Abstract the *algorithm*, not the *data*. If a modder can change behavior through YAML values or Lua scripts, a trait is unnecessary overhead. If changing behavior requires replacing the *logic* — the decision-making process, the computation pipeline, the scoring formula — that's where a trait prevents a future rewrite.
 
-### Inventory: Already Trait-Abstracted (13)
+### Inventory: Already Trait-Abstracted (14)
 
 | Trait                             | Crate                              | Decision  | Phase  |
 | --------------------------------- | ---------------------------------- | --------- | ------ |
@@ -4299,6 +6000,7 @@ The Asset Studio understands multiple C&C format families and can convert betwee
 | `FormatRegistry` / `FormatLoader` | ra-formats                         | D018      | 0      |
 | `SimReconciler`                   | ic-net                             | D011      | Future |
 | `CommunityBridge`                 | ic-net                             | D011      | Future |
+| `Transport`                       | ic-net                             | D054      | 5      |
 
 ### New Trait Abstractions (5)
 
@@ -4702,6 +6404,7 @@ The distinction: **traits abstract algorithms; YAML/Lua abstracts data and behav
 - Supports D028 (damage pipeline) by abstracting the resolution step
 - Supports D029 (shield system) by allowing shield-first damage resolution
 - Supports future fog-authoritative server (D006 future architecture)
+- Extended by D054 (Transport trait, SignatureScheme enum, SnapshotCodec version dispatch) — one additional trait and two version-dispatched mechanisms identified by architecture switchability audit
 
 **Phase:** Trait definitions exist from the phase each subsystem ships (Phase 2–5). Alternative implementations are future work.
 
@@ -6351,12 +8054,12 @@ Settings → Graphics → Render Mode
 │ ● Classic — Original pixel art, integer-scaled│
 │ ● HD — High-definition sprites (requires      │
 │         HD sprite pack)                       │
-│ ○ 3D View — Full 3D (requires 3D RA mod)     │
-│              [Not installed — Browse Workshop] │
+│ ● 3D View — Full 3D (requires 3D RA mod)     │
+│              [Browse Workshop →]              │
 └───────────────────────────────────────────────┘
 ```
 
-Modes whose required resource packs or mods aren't installed appear grayed out with an install/browse link.
+Modes whose required resource packs or mods aren't installed remain clickable — selecting one opens a guidance panel explaining what's needed and linking directly to Workshop or settings (see D033 § "UX Principle: No Dead-End Buttons"). No greyed-out entries.
 
 ### How the Switch Works (Runtime)
 
@@ -9028,3 +10731,369 @@ But it's **not authoritarian**. Players who want casual, open, unverified games 
 - **Phase 3:** Basic profile (display name, avatar, bio, local storage, lobby display). Friends list (platform-backed via `PlatformServices`).
 - **Phase 5:** Community-backed profiles (SCR-verified ratings, achievements, memberships). IC friends (community-based mutual friend requests). Presence system. Profile cards in lobby. Trusted communities configuration. Trust-based matchmaking filtering. Profile verification UI (signed proof sheet). Game browser trust filters.
 - **Phase 6a:** Workshop creator profiles. Full achievement showcase. Custom profile elements. Privacy controls UI. Profile viewing in game browser. Cross-community trust discovery.
+
+---
+
+## D054: Extended Switchability — Transport, Cryptographic Signatures, and Snapshot Serialization
+
+|                |                                                                                                                                                 |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Status**     | Accepted                                                                                                                                        |
+| **Driver**     | Architecture switchability audit identified three subsystems that are currently hardcoded but carry meaningful risk of regret within 5–10 years |
+| **Depends on** | D006 (NetworkModel), D010 (Snapshottable sim), D041 (Trait-abstracted subsystems), D052 (Community Servers & SCR)                               |
+
+### Problem
+
+The engine already trait-abstracts 23 subsystems (D041 inventory) and data-drives 7 more through YAML/Lua. But an architecture switchability audit identified three remaining subsystems where the *implementation* is hardcoded below an existing abstraction layer, creating risks that are cheap to mitigate now but expensive to fix later:
+
+1. **Transport layer** — `NetworkModel` abstracts the logical protocol (lockstep vs. rollback) but not the transport beneath it. Raw UDP is hardcoded. WASM builds cannot use raw UDP sockets at all — browser multiplayer is blocked until this is abstracted. WebTransport and QUIC are maturing rapidly and may supersede raw UDP for game transport within the engine's lifetime.
+
+2. **Cryptographic signature scheme** — Ed25519 is hardcoded in ~15 callsites across the codebase: SCR records (D052), replay signature chains, Workshop index signing, `CertifiedMatchResult`, key rotation records, and community identity. Ed25519 is excellent today (128-bit security, fast, compact), but NIST's post-quantum transition timeline (ML-DSA standardized 2024, recommended migration by ~2035) means the engine may need to swap signature algorithms without breaking every signed record in existence.
+
+3. **Snapshot serialization codec** — `SimSnapshot` is serialized with bincode + LZ4, hardcoded in the save/load path. Bincode is not self-describing — schema changes (adding a field, reordering an enum) silently produce corrupt deserialization rather than a clean error. Cross-version save compatibility requires codec-version awareness that doesn't currently exist.
+
+Each uses the right abstraction mechanism for its specific situation: **Transport** gets a trait (open-ended, third-party implementations expected, hot path where monomorphization matters), **SignatureScheme** gets an enum (closed set of 2–3 algorithms, runtime dispatch needed for mixed-version verification), and **SnapshotCodec** gets version-tagged dispatch (internal versioning, no pluggability needed). The total cost is ~80 lines of definitions. The benefit is that none of these becomes a rewrite-required bottleneck when reality changes.
+
+### The Principle (from D041)
+
+Abstract the *transport mechanism*, not the *data*. If the concern is "which bytes go over which wire" or "which algorithm signs these bytes" or "which codec serializes this struct" — that's a mechanism that can change independently of the logic above it. The logic (lockstep protocol, credential verification, snapshot semantics) stays identical regardless of which mechanism implements it.
+
+### 1. `Transport` — Network Transport Abstraction
+
+**Risk level: HIGH.** Browser multiplayer (Invariant #10: platform-agnostic) is blocked without this. WASM cannot open raw UDP sockets — it's a platform API limitation, not a library gap. Every browser RTS (Chrono Divide, OpenRA-web experiments) solves this by abstracting transport. We already abstract the protocol layer (`NetworkModel`); failing to abstract the transport layer below it is an inconsistency.
+
+**Current state:** The connection establishment flow in `03-NETCODE.md` shows transport as a concern "below" `NetworkModel`:
+
+```
+Discovery → Connection establishment → NetworkModel constructed → Game loop
+```
+
+But connection establishment hardcodes UDP. A `Transport` trait makes this explicit.
+
+**Trait definition:**
+
+```rust
+/// Abstracts a single bidirectional network channel beneath NetworkModel.
+/// Each Transport instance represents ONE connection (to a relay, or to a
+/// single peer in P2P). NetworkModel manages multiple Transport instances
+/// for multi-peer P2P; relay mode uses a single Transport to the relay.
+///
+/// Lives in ic-net. NetworkModel implementations are generic over Transport.
+///
+/// Design: point-to-point, not connectionless. No endpoint parameter in
+/// send/recv — the Transport IS the connection. For UDP, this maps to a
+/// connected socket (UdpSocket::connect()). For WebSocket/QUIC, this is
+/// the natural model. Multi-peer routing is NetworkModel's concern.
+///
+/// All transports expose datagram/message semantics. The protocol layer
+/// (NetworkModel) always runs its own reliability and ordering — sequence
+/// numbers, retransmission, frame resend (§ Frame Data Resilience). On
+/// reliable transports (WebSocket), these mechanisms become no-ops at
+/// runtime (retransmit timers never fire). This eliminates conditional
+/// branches in NetworkModel and keeps a single code path and test matrix.
+pub trait Transport: Send + Sync {
+    /// Send a datagram/message to the connected peer. Non-blocking or
+    /// returns WouldBlock. Data is a complete message (not a byte stream).
+    fn send(&self, data: &[u8]) -> Result<(), TransportError>;
+
+    /// Receive the next available message, if any. Non-blocking.
+    /// Returns the number of bytes written to `buf`, or None if no
+    /// message is available.
+    fn recv(&self, buf: &mut [u8]) -> Result<Option<usize>, TransportError>;
+
+    /// Maximum payload size for a single send() call.
+    /// UdpTransport returns ~476 (MTU-safe). WebSocketTransport returns ~64KB.
+    fn max_payload(&self) -> usize;
+
+    /// Establish the connection to the target endpoint.
+    fn connect(&mut self, target: &Endpoint) -> Result<(), TransportError>;
+
+    /// Tear down the connection.
+    fn disconnect(&mut self);
+}
+```
+
+**Default implementations:**
+
+| Implementation       | Backing                               | Platform         | Phase  | Notes                                                                                                                                                                                              |
+| -------------------- | ------------------------------------- | ---------------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `UdpTransport`       | `std::net::UdpSocket`                 | Desktop, Server  | 5      | Default. Raw UDP, MTU-aware, same as current hardcoded behavior.                                                                                                                                   |
+| `WebSocketTransport` | `tungstenite` / browser WebSocket API | WASM, Fallback   | 5      | Enables browser multiplayer. Reliable + ordered (NetworkModel's retransmit logic becomes a no-op — single code path, zero conditional branches). Higher latency than UDP but functional.           |
+| `WebTransportImpl`   | WebTransport API                      | WASM (future)    | Future | Unreliable datagrams over QUIC. Best of both worlds — UDP-like semantics in the browser. Spec still maturing (W3C Working Draft).                                                                  |
+| `QuicTransport`      | `quinn`                               | Desktop (future) | Future | Stream multiplexing, built-in encryption, 0-RTT reconnects. Candidate to replace raw UDP + custom reliability when QUIC ecosystem matures.                                                         |
+| `MemoryTransport`    | `crossbeam` channel                   | Testing          | 2      | Zero-latency, zero-loss in-process transport. Already implied by `LocalNetwork` — this makes it explicit as a `Transport`. NetworkModel manages a `Vec<T>` of these for multi-peer test scenarios. |
+
+**Relationship to `NetworkModel`:**
+
+```rust
+/// NetworkModel becomes generic over Transport.
+/// Existing code that constructs LockstepNetwork or RelayLockstepNetwork
+/// now specifies a Transport. For desktop builds, this is UdpTransport.
+/// For WASM builds, this is WebSocketTransport.
+///
+/// Relay mode: single Transport to the relay server.
+/// P2P mode: Vec<T> — one Transport per peer connection.
+pub struct LockstepNetwork<T: Transport> {
+    transport: T,       // relay mode: connection to relay
+    // ... existing fields unchanged
+}
+
+pub struct P2PLockstepNetwork<T: Transport> {
+    peers: Vec<T>,      // one connection per peer
+    // ... existing fields unchanged
+}
+
+impl<T: Transport> NetworkModel for LockstepNetwork<T> {
+    // All existing logic unchanged. send()/recv() calls go through
+    // self.transport instead of directly calling UdpSocket methods.
+    // Reliability layer (sequence numbers, retransmit, frame resend)
+    // runs identically regardless of transport — on reliable transports,
+    // retransmit timers simply never fire.
+}
+```
+
+**What does NOT change:** The wire format (delta-compressed TLV), the `OrderCodec` trait, the `NetworkModel` trait API, connection discovery (join codes, tracking servers), or the relay server protocol. Transport is purely "how bytes move," not "what bytes mean."
+
+**Why no `is_reliable()` method?** Adding reliability awareness to `Transport` would create conditional branches in `NetworkModel` — one code path for unreliable transports (full retransmit logic) and another for reliable ones (skip retransmit). This doubles the test matrix and creates subtle behavioral differences between deployment targets. Instead, `NetworkModel` always runs its full reliability layer. On reliable transports (WebSocket), retransmit timers never fire and the redundancy costs nothing at runtime. One code path, one test matrix, zero conditional complexity. This is the same approach used by ENet, Valve's GameNetworkingSockets, and most serious game networking libraries.
+
+**Why not abstract this earlier (D006/D041)?** At D006 design time, browser multiplayer was a distant future target and raw UDP was the obvious choice. Invariant #10 (platform-agnostic) was added later, making the gap visible. D041 explicitly listed the transport layer in its inventory of *already-abstracted* concerns via `NetworkModel` — but `NetworkModel` abstracts the protocol, not the transport. This decision corrects that conflation.
+
+### 2. `SignatureScheme` — Cryptographic Algorithm Abstraction
+
+**Risk level: HIGH.** Ed25519 is hardcoded in ~15 callsites. NIST standardized ML-DSA (post-quantum signatures) in 2024 and recommends migration by ~2035. The engine's 10+ year lifespan means a signature algorithm swap is probable, not speculative. More immediately: different deployment contexts may want different algorithms (Ed448 for higher security margin, ML-DSA-65 for post-quantum compliance).
+
+**Current state:** D052's SCR format deliberately has "No algorithm field. Always Ed25519." — this was the right call to prevent JWT's algorithm confusion vulnerability (CVE-2015-9235). But the solution isn't "hardcode one algorithm forever" — it's "the version field implies the algorithm, and the verifier looks up the algorithm from the version, never from attacker-controlled input."
+
+**Why enum dispatch, not a trait?** The set of signature algorithms is small and closed — realistically 2–3 over the engine's entire lifetime (Ed25519 now, ML-DSA-65 later, possibly one more). This makes it fundamentally different from `Transport` (which is open-ended — anyone can write a new transport). A trait would introduce design tension: associated types (`PublicKey`, `SecretKey`, `Signature`) are not object-safe with `Clone`, meaning `dyn SignatureScheme` won't compile. But runtime dispatch is *required* — a player's credential file contains mixed-version SCRs (version 1 Ed25519 alongside future version 2 ML-DSA), and the verifier must handle both in the same loop. Workarounds exist (erase types to `Vec<u8>`, or drop `Clone`) but they sacrifice type safety that was the supposed benefit of the trait.
+
+Enum dispatch resolves all of these tensions: exhaustive `match` with no default arm (compiler catches missing variants), `Clone`/`Copy` for free, zero vtable overhead, and idiomatic Rust for small closed sets. Adding a third algorithm someday means adding one enum variant — the compiler then flags every callsite that needs updating.
+
+**Enum definition:**
+
+```rust
+/// Signature algorithm selection for all signed records.
+/// Lives in ic-net (signing + verification are I/O concerns; ic-sim
+/// never signs or verifies anything — Invariant #1).
+///
+/// NOT a trait. The algorithm set is small and closed (2–3 variants
+/// over the engine's lifetime). Enum dispatch gives:
+/// - Exhaustive match (compiler catches missing variants on addition)
+/// - Clone/Copy for free
+/// - Zero vtable overhead
+/// - Runtime dispatch without object-safety headaches
+///
+/// Third-party signature algorithms are out of scope — cryptographic
+/// agility is a security risk (see JWT CVE-2015-9235). The engine
+/// controls which algorithms it trusts.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SignatureScheme {
+    Ed25519,
+    // MlDsa65,  // future: post-quantum (NIST FIPS 204)
+}
+
+impl SignatureScheme {
+    /// Sign a message. Returns the signature bytes.
+    pub fn sign(&self, sk: &[u8], msg: &[u8]) -> Vec<u8> {
+        match self {
+            Self::Ed25519 => ed25519_sign(sk, msg),
+            // Self::MlDsa65 => ml_dsa_65_sign(sk, msg),
+        }
+    }
+
+    /// Verify a signature against a public key and message.
+    pub fn verify(&self, pk: &[u8], msg: &[u8], sig: &[u8]) -> bool {
+        match self {
+            Self::Ed25519 => ed25519_verify(pk, msg, sig),
+            // Self::MlDsa65 => ml_dsa_65_verify(pk, msg, sig),
+        }
+    }
+
+    /// Generate a new keypair. Returns (public_key, secret_key).
+    pub fn generate_keypair(&self) -> (Vec<u8>, Vec<u8>) {
+        match self {
+            Self::Ed25519 => ed25519_generate_keypair(),
+            // Self::MlDsa65 => ml_dsa_65_generate_keypair(),
+        }
+    }
+
+    /// Public key size in bytes. Determines SCR binary format layout.
+    pub fn public_key_len(&self) -> usize {
+        match self {
+            Self::Ed25519 => 32,
+            // Self::MlDsa65 => 1952,
+        }
+    }
+
+    /// Signature size in bytes. Determines SCR binary format layout.
+    pub fn signature_len(&self) -> usize {
+        match self {
+            Self::Ed25519 => 64,
+            // Self::MlDsa65 => 3309,
+        }
+    }
+}
+```
+
+**Algorithm variants:**
+
+| Variant   | Algorithm | Key Size   | Sig Size   | Phase  | Notes                                                                      |
+| --------- | --------- | ---------- | ---------- | ------ | -------------------------------------------------------------------------- |
+| `Ed25519` | Ed25519   | 32 bytes   | 64 bytes   | 5      | Default. Current behavior. 128-bit security. Fast, compact, battle-tested. |
+| `MlDsa65` | ML-DSA-65 | 1952 bytes | 3309 bytes | Future | Post-quantum. NIST FIPS 204. Larger keys/sigs but quantum-resistant.       |
+
+**Version-implies-algorithm (preserving D052's anti-confusion guarantee):**
+
+D052's SCR format already has a `version` byte (currently `0x01`). The version-to-algorithm mapping is hardcoded in the *verifier*, never read from the record itself:
+
+```rust
+/// Version → SignatureScheme mapping.
+/// This is the verifier's lookup table, NOT a field in the signed record.
+/// Preserves D052's guarantee: no algorithm negotiation, no attacker-controlled
+/// algorithm selection. The version byte is set by the issuer at signing time;
+/// the verifier uses it to select the correct verification algorithm.
+///
+/// Returns Result, not panic — version bytes come from user-provided files
+/// (credential stores, replays, save files) and must fail gracefully.
+fn scheme_for_version(version: u8) -> Result<SignatureScheme, CredentialError> {
+    match version {
+        0x01 => Ok(SignatureScheme::Ed25519),
+        // 0x02 => Ok(SignatureScheme::MlDsa65),
+        _ => Err(CredentialError::UnknownVersion(version)),
+    }
+}
+```
+
+**What changes in the SCR binary format:** Nothing structurally. The `version` byte already exists. What changes is the *interpretation*:
+
+- **Before (D052):** "Version is for format evolution. Algorithm is always Ed25519."
+- **After (D054):** "Version implies both format layout AND algorithm. Version 1 = Ed25519 (32-byte keys, 64-byte sigs). Version 2 = ML-DSA-65 (1952-byte keys, 3309-byte sigs). The verifier dispatches on version, never on an attacker-controlled field."
+
+The variable-length fields (`community_key`, `player_key`, `signature`) are already length-implied by `version` — version 1 readers know key=32, sig=64. Version 2 readers know key=1952, sig=3309. No length prefix needed because the version fully determines the layout.
+
+**Backward compatibility:** A version 1 SCR issued by a community running Ed25519 remains valid forever. A community migrating to ML-DSA-65 issues version 2 SCRs. Both can coexist in a player's credential file. Version 1 SCRs don't expire or become invalid — they just can't be *newly issued* once the community upgrades.
+
+**Affected callsites (all change from direct `ed25519_dalek` calls to `SignatureScheme` enum method calls):**
+
+- SCR record signing/verification (D052 — community servers + client)
+- Replay signature chain (`TickSignature` in `05-FORMATS.md`)
+- Workshop index signing (D049 — CI signing pipeline)
+- `CertifiedMatchResult` (D052 — relay server)
+- Key rotation records (D052 — community servers)
+- Player identity keypairs (D052/D053)
+
+**Why not a `version` field in each signature?** Because that's exactly JWT's `alg` header vulnerability. The version lives in the *container* (SCR record header, replay file header, Workshop index header) — not in the signature itself. The container's version is written by the issuer and verified structurally (known offset, not parsed from attacker-controlled payload). This is the same defense D052 already uses; D054 just extends it to support future algorithms.
+
+### 3. `SnapshotCodec` — Save/Replay Serialization Versioning
+
+**Risk level: MEDIUM.** Bincode is fast and compact but not self-describing — if any field in `SimSnapshot` is added, removed, or reordered, deserialization silently produces garbage or panics. The save format header already has a `version: u16` field (`05-FORMATS.md`), but no code dispatches on it. Today, version is always 1 and the codec is always bincode + LZ4. This works until the first schema change — which is inevitable as the sim evolves through Phase 2–7.
+
+**This is NOT a trait in `ic-sim`.** Snapshot serialization is I/O — it belongs in `ic-game` (save/load) and `ic-net` (snapshot transfer for late-join). The sim produces/consumes `SimSnapshot` as an in-memory struct. How that struct becomes bytes is the codec's concern.
+
+**Codec dispatch (version → codec):**
+
+```rust
+/// Version-to-codec dispatch for SimSnapshot serialization.
+/// Lives in ic-game (save/load path) and ic-net (snapshot transfer).
+///
+/// NOT a trait — there's no pluggability need here. Game modules don't
+/// provide custom codecs. This is internal versioning, not extensibility.
+/// A match statement is simpler, more explicit, and easier to audit than
+/// a trait registry.
+pub fn encode_snapshot(
+    snapshot: &SimSnapshot,
+    version: u16,
+) -> Result<Vec<u8>, CodecError> {
+    let serialized = match version {
+        1 => bincode::serialize(snapshot)
+            .map_err(|e| CodecError::Serialize(e.to_string()))?,
+        2 => postcard::to_allocvec(snapshot)
+            .map_err(|e| CodecError::Serialize(e.to_string()))?,
+        _ => return Err(CodecError::UnknownVersion(version)),
+    };
+    Ok(lz4_flex::compress_prepend_size(&serialized))
+}
+
+pub fn decode_snapshot(
+    data: &[u8],
+    version: u16,
+) -> Result<SimSnapshot, CodecError> {
+    let decompressed = lz4_flex::decompress_size_prepended(data)
+        .map_err(|e| CodecError::Decompress(e.to_string()))?;
+    match version {
+        1 => bincode::deserialize(&decompressed)
+            .map_err(|e| CodecError::Deserialize(e.to_string())),
+        2 => postcard::from_bytes(&decompressed)
+            .map_err(|e| CodecError::Deserialize(e.to_string())),
+        _ => Err(CodecError::UnknownVersion(version)),
+    }
+}
+
+/// Errors from snapshot/replay codec operations. Surfaced in UI as
+/// "incompatible save file" or "corrupted replay" — never a panic.
+#[derive(Debug)]
+pub enum CodecError {
+    UnknownVersion(u16),
+    Serialize(String),
+    Deserialize(String),
+    Decompress(String),
+}
+```
+
+**Why postcard as the likely version 2?**
+
+| Property          | bincode (v1)               | postcard (v2 candidate)                                                                                                                                     |
+| ----------------- | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Self-describing   | No                         | Yes (with `postcard-schema`)                                                                                                                                |
+| Varint integers   | No (fixed-width)           | Yes (smaller payloads)                                                                                                                                      |
+| Schema evolution  | Field add = silent corrupt | Field append = `#[serde(default)]` compatible (same as bincode); structural mismatch = detected and rejected at load time (vs. bincode's silent corruption) |
+| `#[serde]` compat | Yes                        | Yes                                                                                                                                                         |
+| `no_std` support  | Limited                    | Full (embedded-friendly)                                                                                                                                    |
+| Speed             | Very fast                  | Very fast (within 5%)                                                                                                                                       |
+| WASM support      | Yes                        | Yes (designed for it)                                                                                                                                       |
+
+The version 1 → 2 migration path: saves with version 1 headers decode via bincode. New saves write version 2 headers and encode via postcard. Old saves remain loadable forever. The `SimSnapshot` struct itself doesn't change — only the codec that serializes it.
+
+**Why NOT a trait?** Unlike Transport and SignatureScheme, snapshot codecs have zero pluggability requirement. No game module, mod, or community server needs to provide a custom snapshot serializer. This is purely internal version dispatch — a `match` statement is the right abstraction, not a trait. D041's principle: "abstract the *algorithm*, not the *data*." Snapshot serialization is data marshaling with no algorithmic variation — the right tool is version-tagged dispatch, not trait polymorphism.
+
+**Relationship to replay format:** The replay file format (`05-FORMATS.md`) also has a `version: u16` in its header. The same version-to-codec dispatch applies to replay tick frames (`ReplayTickFrame` serialization). Replay version 1 uses bincode + LZ4 block compression. A future version 2 could use postcard + LZ4. The replay header version and the save header version evolve independently — a replay viewer doesn't need to understand save files and vice versa.
+
+### What Still Does NOT Need Abstraction
+
+This audit explicitly confirmed that the following remain correctly un-abstracted (extending D041's "What Does NOT Need a Trait" table):
+
+| Subsystem                  | Why No Abstraction Needed                                                                                                         |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| YAML parser (`serde_yaml`) | Parser crate is a Cargo dependency swap — no trait needed, no code change beyond `Cargo.toml`.                                    |
+| Lua runtime (`mlua`)       | Deeply integrated via `ic-script`. Switching Lua impls is a rewrite regardless of traits. The scripting *API* is the abstraction. |
+| WASM runtime (`wasmtime`)  | Same — the WASM API is the abstraction, not the runtime binary.                                                                   |
+| Compression (LZ4)          | Used in exactly two places (snapshot, replay). Swapping is a one-line change. No trait overhead justified.                        |
+| Bevy                       | The engine framework. Abstracting Bevy is abstracting gravity. If Bevy is replaced, everything is rewritten.                      |
+| State hash algorithm       | SHA-256 Merkle tree. Changing this requires coordinated protocol version bump across all clients — a trait wouldn't help.         |
+| RNG (`DeterministicRng`)   | Already deterministic and internal to `ic-sim`. Swapping PRNG algorithms is a single-struct replacement. No polymorphism needed.  |
+
+### Alternatives Considered
+
+- **Abstract everything now** (rejected — violates D015's "no speculative abstractions"; the 7 items above don't carry meaningful regret risk)
+- **Abstract nothing, handle it later** (rejected — Transport blocks WASM multiplayer *now*; SignatureScheme's 15 hardcoded callsites grow with every feature; SnapshotCodec's first schema change will force an emergency versioning retrofit)
+- **Use `dyn` trait objects instead of generics for Transport** (rejected — `dyn Transport` adds vtable overhead on every `send()`/`recv()` in the hot network path; monomorphized generics are zero-cost. `Transport` is used in tight loops — static dispatch is correct here)
+- **Make SignatureScheme a trait with associated types** (rejected — associated types are not object-safe with `Clone`, but runtime dispatch is required for mixed-version SCR verification. Erasing types to `Vec<u8>` sacrifices the type safety that was the supposed benefit. Enum dispatch gives exhaustive match, `Clone`/`Copy`, zero vtable, and compiler-enforced completeness when adding variants)
+- **Make SignatureScheme a trait with `&[u8]` params (object-safe)** (rejected — works technically, but the algorithm set is small and closed. A trait implies open extensibility; the engine deliberately controls which algorithms it trusts. Enum is the idiomatic Rust pattern for closed dispatch)
+- **Add algorithm negotiation to SCR** (rejected — this IS JWT's `alg` header. Version-implies-algorithm is strictly safer and already fits D052's format)
+- **Use protobuf/flatbuffers for snapshot serialization** (rejected — adds external IDL dependency, `.proto` file maintenance, code generation step. Postcard gives schema stability within the `serde` ecosystem IC already uses)
+- **Make SnapshotCodec a trait** (rejected — no pluggability requirement exists. A `match` statement is simpler and more auditable than a trait registry for internal version dispatch)
+- **Add `is_reliable()` to Transport** (rejected — would create conditional branches in NetworkModel: one code path for unreliable transports with full retransmit, another for reliable transports that skips it. Doubles the test matrix. Instead, NetworkModel always runs its reliability layer; on reliable transports the retransmit timers simply never fire. Zero runtime cost, one code path)
+- **Connectionless (endpoint-addressed) Transport API** (rejected — creates impedance mismatch: UDP is connectionless but WebSocket/QUIC are connection-oriented. Point-to-point model fits all transports naturally. For UDP, use connected sockets. Multi-peer routing is NetworkModel's concern, not Transport's)
+
+### Relationship to Existing Decisions
+
+- **D006 (NetworkModel):** `Transport` lives below `NetworkModel`. The connection establishment flow becomes: Discovery → Transport::connect() → NetworkModel constructed over Transport → Game loop. `NetworkModel` gains a `T: Transport` type parameter.
+- **D010 (Snapshottable sim):** Snapshot encoding/decoding is the I/O layer around D010's `SimSnapshot`. D010 defines the struct; D054 defines how it becomes bytes.
+- **D041 (Trait-abstracted subsystems):** `Transport` is added to D041's inventory table. `SignatureScheme` uses enum dispatch (not a trait) — it belongs in the "closed set" category alongside `SnapshotCodec`'s version dispatch. Both are version-tagged, exhaustive, and compiler-enforced. Neither needs the open extensibility that traits provide.
+- **D052 (Community Servers & SCR):** The `version` byte in SCR format now implies the signature algorithm. D052's anti-algorithm-confusion guarantee is preserved — the defense shifts from "hardcode one algorithm" to "version determines algorithm, verifier never reads algorithm from attacker input."
+- **Invariant #10 (Platform-agnostic):** `Transport` trait directly enables WASM multiplayer, the primary platform gap.
+
+### Phase
+
+- **Phase 2:** `MemoryTransport` for testing (already implied by `LocalNetwork`; making it explicit as a `Transport`). `SnapshotCodec` version dispatch (v1 = bincode + LZ4, matching current behavior).
+- **Phase 5:** `UdpTransport`, `WebSocketTransport` (matching current hardcoded behavior — the trait boundary exists, the implementation is unchanged). `SignatureScheme::Ed25519` enum variant wired into all D052 SCR code, replacing direct `ed25519_dalek` calls.
+- **Future:** `WebTransportImpl` (when spec stabilizes), `QuicTransport` (when ecosystem matures), `SignatureScheme::MlDsa65` variant (when post-quantum migration timeline firms up), `SnapshotCodec` v2 (postcard, when first `SimSnapshot` schema change occurs).
