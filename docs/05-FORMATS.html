@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-621aaeb8.js";
+            window.path_to_searchindex_js = "searchindex-1e3146b6.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-678cb19b.js"></script>
@@ -936,7 +936,7 @@ impl CoordTransform {
 }
 </code></pre>
 <h3 id="payload"><a class="header" href="#payload">Payload</a></h3>
-<p>The payload is a <code>SimSnapshot</code> serialized via <code>serde</code> (bincode format for compactness) and compressed with LZ4 (fast decompression, good ratio for game state data). LZ4 was chosen over LZO (used by original RA) for its better Rust ecosystem support (<code>lz4_flex</code> crate) and superior decompression speed.</p>
+<p>The payload is a <code>SimSnapshot</code> serialized via <code>serde</code> (bincode format for compactness) and compressed with LZ4 (fast decompression, good ratio for game state data). LZ4 was chosen over LZO (used by original RA) for its better Rust ecosystem support (<code>lz4_flex</code> crate) and superior decompression speed. The save file header’s <code>version</code> field selects the codec — version 1 uses bincode + LZ4 (current), future versions may use postcard + LZ4 for schema-stable serialization. See <code>09-DECISIONS.md</code> § D054 for the full version-to-codec dispatch design.</p>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>pub struct SimSnapshot {
@@ -1021,7 +1021,7 @@ pub struct ReplayTickFrame {
 <p>Frames are serialized with bincode and compressed in blocks (LZ4 block compression): every 256 ticks form a compression block. This enables seeking — jump to any 256-tick boundary by decompressing just that block, then fast-forward within the block.</p>
 <p><strong>Streaming write:</strong> During a live game, replay frames are appended incrementally (not buffered in memory). The replay file is valid at any point — if the game crashes, the replay up to that point is usable.</p>
 <h3 id="signature-chain-relay-certified-replays"><a class="header" href="#signature-chain-relay-certified-replays">Signature Chain (Relay-Certified Replays)</a></h3>
-<p>For ranked/tournament matches, the relay server signs each tick’s state hash:</p>
+<p>For ranked/tournament matches, the relay server signs each tick’s state hash. The signature algorithm is determined by the replay header version — version 1 uses Ed25519 (current), future versions may use post-quantum algorithms via the <code>SignatureScheme</code> enum (D054):</p>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>pub struct ReplaySignature {

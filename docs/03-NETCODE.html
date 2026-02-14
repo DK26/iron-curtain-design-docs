@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-621aaeb8.js";
+            window.path_to_searchindex_js = "searchindex-1e3146b6.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-678cb19b.js"></script>
@@ -670,10 +670,11 @@ pub struct NetworkSimConfig {
 <h2 id="connection-establishment"><a class="header" href="#connection-establishment">Connection Establishment</a></h2>
 <p>Connection method is a concern <em>below</em> the <code>NetworkModel</code>. By the time a <code>NetworkModel</code> is constructed, transport is already established. The discovery/connection flow:</p>
 <pre><code>Discovery (tracking server / join code / direct IP / QR)
-  → Connection establishment (hole-punch / direct TCP+UDP)
-    → NetworkModel constructed (LockstepNetwork or RelayLockstepNetwork)
+  → Transport::connect() (UdpTransport, WebSocketTransport, etc.)
+    → NetworkModel constructed over Transport (LockstepNetwork&lt;T&gt; or RelayLockstepNetwork&lt;T&gt;)
       → Game loop runs — sim doesn't know or care how connection happened
 </code></pre>
+<p>The transport layer is abstracted behind a <code>Transport</code> trait (D054). Each <code>Transport</code> instance represents a single bidirectional channel (point-to-point). <code>NetworkModel</code> implementations are generic over <code>Transport</code> — relay mode uses one <code>Transport</code> to the relay, P2P mode uses one <code>Transport</code> per peer. This enables different physical transports per platform — raw UDP (connected socket) on desktop, WebSocket in the browser, <code>MemoryTransport</code> in tests — without conditional branches in <code>NetworkModel</code>. The protocol layer always runs its own reliability; on reliable transports the retransmit logic becomes a no-op. See <code>09-DECISIONS.md</code> § D054 for the full trait definition and implementation inventory.</p>
 <h3 id="direct-ip"><a class="header" href="#direct-ip">Direct IP</a></h3>
 <p>Classic approach. Host shares <code>IP:port</code>, other player connects.</p>
 <ul>

@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-621aaeb8.js";
+            window.path_to_searchindex_js = "searchindex-1e3146b6.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-678cb19b.js"></script>
@@ -274,7 +274,7 @@
 <li><strong>Cross-game component library (D029):</strong> Mind control, carrier/spawner, teleport networks, shield system, upgrade system, delayed weapons (7 first-party systems)</li>
 <li>Fixed-point coordinate system (no floats in sim)</li>
 <li>Deterministic RNG</li>
-<li>Pathfinding: <code>Pathfinder</code> trait + <code>IcPathfinder</code> multi-layer hybrid (D013), <code>RemastersPathfinder</code> and <code>OpenRaPathfinder</code> ported from GPL sources (D045)</li>
+<li>Pathfinding: <code>Pathfinder</code> trait + <code>IcFlowfieldPathfinder</code> (D013), <code>RemastersPathfinder</code> and <code>OpenRaPathfinder</code> ported from GPL sources (D045)</li>
 <li>Order system: Player inputs → Orders → deterministic sim application</li>
 <li><code>LocalNetwork</code> and <code>ReplayPlayback</code> NetworkModel implementations</li>
 <li>Sim snapshot/restore for save games and future rollback</li>
@@ -347,7 +347,7 @@
 <ul>
 <li>Lua-based scripting for mission scripts</li>
 <li>WASM mod runtime (basic)</li>
-<li>Basic skirmish AI: priority-based manager hierarchy (D043) with harvester management, share-based unit production, influence-map building placement, tick-gated evaluation, and fuzzy engagement logic — target quality: better than EA RA, comparable to OpenRA</li>
+<li>Basic skirmish AI: harvest, build, attack patterns</li>
 <li>Campaign mission loading (OpenRA mission format)</li>
 <li><strong>Branching campaign graph engine (D021):</strong> campaigns as directed graphs of missions with named outcomes, multiple paths, and convergence points</li>
 <li><strong>Persistent campaign state:</strong> unit roster carryover, veterancy across missions, equipment persistence, story flags — serializable for save games</li>
@@ -364,8 +364,6 @@
 <h3 id="key-architecture-work-3"><a class="header" href="#key-architecture-work-3">Key Architecture Work</a></h3>
 <ul>
 <li>Lua sandbox with engine bindings</li>
-<li><strong>Lua AI scripting primitives:</strong> <code>Ai</code> global exposing force composition targets, resource collection ratios, patrol/attack commands — enabling Tier 2 modders to write custom AI behaviors without Tier 3 WASM (Stratagus precedent, see <code>research/stratagus-stargus-opencraft-analysis.md</code> §4)</li>
-<li><strong>External AI socket interface (stretch goal):</strong> TCP/JSON protocol for ML/RL training — engine as environment, external process as agent. Stratagus has a working example (<code>AiProcessorSetup</code>); IC’s version targets structured state and async communication for <code>ic mod test --ai-harness</code></li>
 <li>WASM host API with capability system (see <code>06-SECURITY.md</code>)</li>
 <li>Campaign graph loader + validator: parse YAML campaign definitions, validate graph connectivity (no orphan nodes, all outcome targets exist)</li>
 <li><code>CampaignState</code> serialization: roster, flags, equipment, path taken — full snapshot support</li>
@@ -381,7 +379,7 @@
 <li>Campaign branches work: different mission outcomes lead to different next missions</li>
 <li>Unit roster persists across missions (surviving units, veterancy, equipment)</li>
 <li>Save/load works mid-campaign with full state preservation</li>
-<li>Skirmish AI provides a credible challenge: <strong>better than EA Red Alert, comparable to OpenRA</strong> — maintains economy (no idle harvesters, no power brownouts), builds a reasonable army composition, attacks at appropriate timing, and defends its base reactively (see D043 implementation architecture and <code>research/rts-ai-implementation-survey.md</code> §9 for target quality)</li>
+<li>Skirmish AI provides a basic challenge</li>
 </ul>
 <h2 id="phase-5-multiplayer-months-2026"><a class="header" href="#phase-5-multiplayer-months-2026">Phase 5: Multiplayer (Months 20–26)</a></h2>
 <p><strong>Goal:</strong> Deterministic lockstep multiplayer with competitive infrastructure. Not just “multiplayer works” — multiplayer that’s worth switching from OpenRA for.</p>
@@ -512,6 +510,8 @@
 <li>Difficulty scaling: same scenario at different challenge levels</li>
 <li>Mission sharing: rate, remix, publish generated missions</li>
 <li>Campaign generation: connected multi-mission storylines (experimental)</li>
+<li><strong>World Domination campaign mode (D016):</strong> LLM-driven narrative across a world map; world map renderer in <code>ic-ui</code> (region overlays, faction colors, frontline animation, briefing panel); mission generation from campaign state; template fallback without LLM; strategic AI for non-player WD factions; per-region force pool and garrison management</li>
+<li><strong>Template fallback system (D016):</strong> Built-in mission templates per terrain type and action type (urban assault, rural defense, naval landing, arctic recon, mountain pass, etc.); template selection from strategic state; force pool population; deterministic progression rules for no-LLM mode</li>
 <li>Adaptive difficulty: AI observes playstyle, generates targeted challenges (experimental)</li>
 <li><strong>LLM-driven Workshop resource discovery (D030):</strong> When LLM provider is configured, LLM can search Workshop by <code>llm_meta</code> tags, evaluate fitness, auto-pull resources as dependencies for generated content; license-aware filtering</li>
 <li><strong>LLM player-aware generation (D034):</strong> When LLM provider is configured, <code>ic-llm</code> reads local SQLite for player context — faction preferences, unit usage patterns, win/loss streaks, campaign roster state; generates personalized missions, adaptive briefings, post-match commentary, coaching suggestions, rivalry narratives</li>
