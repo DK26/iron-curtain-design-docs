@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-1e3146b6.js";
+            window.path_to_searchindex_js = "searchindex-fb30e59a.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-678cb19b.js"></script>
+        <script src="toc-1d51ffef.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -187,6 +187,7 @@
 <ul>
 <li><strong>Counter-Strike 2</strong> — sub-tick timestamps for order fairness</li>
 <li><strong>C&amp;C Generals/Zero Hour</strong> — adaptive run-ahead, frame resilience, delta-compressed wire format, disconnect handling</li>
+<li><strong>Valve GameNetworkingSockets (GNS)</strong> — ack vector reliability, message lanes with priority/weight, per-ack RTT measurement, pluggable signaling, transport encryption, Nagle-style batching (see <code>research/valve-github-analysis.md</code>)</li>
 <li><strong>OpenTTD</strong> — multi-level desync debugging, token-based liveness, reconnection via state transfer</li>
 <li><strong>Minetest</strong> — time-budget rate control (LagPool), half-open connection defense</li>
 <li><strong>OpenRA</strong> — what to avoid: TCP stalling, static order latency, shallow sync buffers</li>
@@ -257,6 +258,7 @@ impl TickOrders {
 <li>Validates order signatures and rate limits (see <code>06-SECURITY.md</code>)</li>
 </ul>
 <p>This design was validated by C&amp;C Generals/Zero Hour’s “packet router” — a client-side star topology where one player collected and rebroadcast all commands. Same concept, but our server-hosted version eliminates host advantage and adds neutral time authority. See <code>research/generals-zero-hour-netcode-analysis.md</code>.</p>
+<p>Further validated by Embark Studios’ <strong>Quilkin</strong> (1,510★, Apache 2.0, co-developed with Google Cloud Gaming) — a production UDP proxy for game servers built in Rust. Quilkin implements the relay as a <strong>composable filter chain</strong>: each packet passes through an ordered pipeline of filters (Capture → Firewall → RateLimit → TokenRouter → Timestamp → Debug), and filters can be added, removed, or reordered without touching routing logic. IC’s relay should adopt this composable architecture: order validation → sub-tick timestamps → replay recording → anti-cheat → forwarding, each implemented as an independent filter. See <code>research/embark-studios-rust-gamedev-analysis.md</code> § Quilkin.</p>
 <p>For small games (2-3 players) on LAN or with direct connectivity, the same netcode runs without a relay via P2P lockstep (see “The NetworkModel Trait” section below for deployment modes).</p>
 <h3 id="sub-tick-order-fairness-from-cs2"><a class="header" href="#sub-tick-order-fairness-from-cs2">Sub-Tick Order Fairness (from CS2)</a></h3>
 <p>Counter-Strike 2 introduced “sub-tick” architecture: instead of processing all actions at discrete tick boundaries, the client timestamps every input with sub-tick precision. The server collects inputs from all clients and processes them in chronological order within each tick window. The server still ticks at 64Hz, but events are ordered by their actual timestamps.</p>
@@ -288,6 +290,19 @@ pub struct ClientMetrics {
 <span class="boring">}</span></code></pre>
 <p>Why FPS matters: a player running at 15 FPS needs roughly 67ms to process and display each frame. If run-ahead is only 2 ticks (66ms at 30 tps), they have zero margin — any network jitter causes a stall. By incorporating FPS into the adaptive algorithm, we prevent slow machines from dragging down the experience for everyone.</p>
 <p>For the relay deployment, <code>ClientMetrics</code> informs the relay’s tick deadline calculation. For P2P lockstep, all clients agree on a shared run-ahead value (just like Generals’ synchronized <code>RUNAHEAD</code> command).</p>
+<h4 id="input-timing-feedback-from-ddnet"><a class="header" href="#input-timing-feedback-from-ddnet">Input Timing Feedback (from DDNet)</a></h4>
+<p>The relay server periodically reports order arrival timing <strong>back to each client</strong>, enabling client-side self-calibration. This pattern is proven by DDNet’s timing feedback system (see <code>research/veloren-hypersomnia-openbw-ddnet-netcode-analysis.md</code>) where the server reports how early/late each player’s input arrived:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Sent by the relay to each client after every N ticks (default: 30).
+/// Tells the client how its orders are arriving relative to the tick deadline.
+pub struct TimingFeedback {
+    pub avg_arrival_delta_us: i32,  // +N = arrived N μs before deadline, -N = late
+    pub late_count: u16,            // orders missed deadline in this window
+    pub jitter_us: u32,             // arrival time variance
+}
+<span class="boring">}</span></code></pre>
+<p>The client uses this feedback to adjust when it submits orders — if orders are consistently arriving just barely before the deadline, the client shifts submission earlier. If orders are arriving far too early (wasting buffer), the client can relax. This is a feedback loop that converges toward optimal submission timing without the relay needing to adjust global tick deadlines, reducing the number of late drops for marginal connections.</p>
 <h3 id="anti-lag-switch"><a class="header" href="#anti-lag-switch">Anti-Lag-Switch</a></h3>
 <p>The relay server owns the clock. If your orders don’t arrive within the tick deadline, they’re dropped — replaced with <code>PlayerOrder::Idle</code>. Lag switch only punishes the attacker:</p>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
@@ -348,7 +363,7 @@ impl OrderBudget {
 <li><strong>Idle timeout:</strong> 60 seconds for unauthenticated, 5 minutes for authenticated.</li>
 </ul>
 <p>These limits complement the order-level defenses — rate control handles abuse from established connections, connection limits prevent exhaustion of server resources before a game even starts.</p>
-<h3 id="frame-data-resilience-from-cc-generals"><a class="header" href="#frame-data-resilience-from-cc-generals">Frame Data Resilience (from C&amp;C Generals)</a></h3>
+<h3 id="frame-data-resilience-from-cc-generals--valve-gns"><a class="header" href="#frame-data-resilience-from-cc-generals--valve-gns">Frame Data Resilience (from C&amp;C Generals + Valve GNS)</a></h3>
 <p>UDP is unreliable — packets can arrive corrupted, duplicated, reordered, or not at all. Inspired by C&amp;C Generals’ <code>FrameDataManager</code> (see <code>research/generals-zero-hour-netcode-analysis.md</code>), our frame data handling uses a three-state readiness model rather than a simple ready/waiting binary:</p>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -360,16 +375,130 @@ impl OrderBudget {
 <span class="boring">}</span></code></pre>
 <p>When <code>Corrupted</code> is detected, the system automatically requests retransmission from the specific player (or relay). A circular buffer retains the last N ticks of sent frame data (Generals used 65 frames) so resend requests can be fulfilled without re-generating the data.</p>
 <p>This is strictly better than pure “missed deadline → Idle” fallback: a corrupted packet that arrives on time gets a second chance via resend rather than being silently replaced with no-op. The deadline-based Idle fallback remains as the last resort if resend also fails.</p>
+<h4 id="ack-vector-reliability-model-from-valve-gns"><a class="header" href="#ack-vector-reliability-model-from-valve-gns">Ack Vector Reliability Model (from Valve GNS)</a></h4>
+<p>The reliability layer uses <strong>ack vectors</strong> — a compact bitmask encoding which of the last N packets were received — rather than TCP-style cumulative acknowledgment or selective ACK (SACK). This approach is borrowed from Valve’s GameNetworkingSockets (which in turn draws from DCCP, RFC 4340). See <code>research/valve-github-analysis.md</code> § Part 1.</p>
+<p><strong>How it works:</strong> Every outgoing packet includes an ack vector — a bitmask where each bit represents a recently received packet from the peer. Bit 0 = the most recently received packet (identified by its sequence number in the header), bit 1 = the one before that, etc. A 64-bit ack vector covers the last 64 packets. The sender inspects incoming ack vectors to determine which of its sent packets were received and which were lost.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Included in every outgoing packet. Tells the peer which of their
+/// recent packets we received.
+pub struct AckVector {
+    /// Sequence number of the most recently received packet (bit 0).
+    pub latest_recv_seq: u32,
+    /// Bitmask: bit N = 1 means we received (latest_recv_seq - N).
+    /// 64 bits covers the last 64 packets at 30 tps ≈ ~2 seconds of history.
+    pub received_mask: u64,
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Why ack vectors over TCP-style cumulative ACKs:</strong></p>
+<ul>
+<li><strong>No head-of-line blocking.</strong> TCP’s cumulative ACK stalls retransmission decisions when a single early packet is lost but later packets arrive fine. Ack vectors give per-packet reception status instantly.</li>
+<li><strong>Sender-side retransmit decisions.</strong> The sender has full information about which packets were received and decides what to retransmit. The receiver never requests retransmission — it simply reports what it got. This keeps the receiver stateless with respect to reliability.</li>
+<li><strong>Natural fit for UDP.</strong> Ack vectors assume an unreliable, unordered transport — exactly what UDP provides. On reliable transports (WebSocket), the ack vector still works but retransmit timers never fire (same “always run reliability” principle from D054).</li>
+<li><strong>Compact.</strong> A 64-bit bitmask + 4-byte sequence number = 12 bytes per packet. TCP’s SACK option can be up to 40 bytes.</li>
+</ul>
+<p><strong>Retransmission:</strong> When the sender sees a gap in the ack vector (bit = 0 for a packet older than the latest ACK’d), it schedules retransmission. Retransmission uses exponential backoff per packet. The retransmit buffer is the same circular buffer used for frame resilience (last N ticks of sent data).</p>
+<h4 id="per-ack-rtt-measurement-from-valve-gns"><a class="header" href="#per-ack-rtt-measurement-from-valve-gns">Per-Ack RTT Measurement (from Valve GNS)</a></h4>
+<p>Each outgoing packet embeds a small <strong>delay field</strong> — the time elapsed between receiving the peer’s most recent packet and sending this response. The peer subtracts this processing delay from the observed round-trip to compute a precise one-way latency estimate:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Embedded in every packet header alongside the ack vector.
+pub struct PeerDelay {
+    /// Microseconds between receiving the peer's latest packet
+    /// and sending this packet. The peer uses this to compute RTT:
+    /// RTT = (time_since_we_sent_the_acked_packet) - peer_delay
+    pub delay_us: u16,
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Why this matters:</strong> Traditional RTT measurement requires dedicated ping/pong packets or timestamps that consume bandwidth. By embedding delay in every ack, RTT is measured continuously on every packet exchange — no separate ping packets needed. This provides smoother, more accurate latency data for adaptive run-ahead (see above) and removes the ~50ms ping interval overhead. The technique is standard in Valve’s GNS and is also used by QUIC (RFC 9000).</p>
+<h4 id="nagle-style-order-batching-from-valve-gns"><a class="header" href="#nagle-style-order-batching-from-valve-gns">Nagle-Style Order Batching (from Valve GNS)</a></h4>
+<p>Player orders are not sent immediately on input — they are batched within each tick window and flushed at tick boundaries:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Order batching within a tick window.
+/// Orders accumulate in a buffer and are flushed as a single packet
+/// at the tick boundary. This reduces packet count by ~5-10x during
+/// burst input (selecting and commanding multiple groups rapidly).
+pub struct OrderBatcher {
+    /// Orders accumulated since last flush.
+    pending: Vec&lt;TimestampedOrder&gt;,
+    /// Flush when the tick boundary arrives (external trigger from game loop).
+    /// Unlike TCP Nagle (which flushes on ACK), we flush on a fixed cadence
+    /// aligned to the sim tick rate — deterministic, predictable latency.
+    tick_rate: Duration,
+}
+<span class="boring">}</span></code></pre>
+<p>Unlike TCP’s Nagle algorithm (which flushes on receiving an ACK — coupling send timing to network conditions), IC flushes on a fixed tick cadence. This gives deterministic, predictable send timing: all orders within a tick window are batched into one packet, sent at the tick boundary. At 30 tps, this means at most ~33ms of batching delay — well within the adaptive run-ahead window and invisible to the player. The technique is validated by Valve’s GNS batching strategy (see <code>research/valve-github-analysis.md</code> § 1.7).</p>
 <h3 id="wire-format-delta-compressed-tlv-from-cc-generals"><a class="header" href="#wire-format-delta-compressed-tlv-from-cc-generals">Wire Format: Delta-Compressed TLV (from C&amp;C Generals)</a></h3>
 <p>Inspired by C&amp;C Generals’ <code>NetPacket</code> format (see <code>research/generals-zero-hour-netcode-analysis.md</code>), the native wire format uses delta-compressed tag-length-value (TLV) encoding:</p>
 <ul>
 <li><strong>Tag bytes</strong> — single ASCII byte identifies the field: <code>T</code>ype, <code>K</code>(tic<strong>K</strong>), <code>P</code>layer, <code>S</code>ub-tick, <code>D</code>ata</li>
 <li><strong>Delta encoding</strong> — fields are only written when they differ from the previous order in the same packet. If the same player sends 5 orders on the same tick, the player ID and tick number are written once.</li>
 <li><strong>Empty-tick compression</strong> — ticks with no orders compress to a single byte (Generals used <code>Z</code>). In a typical RTS, ~80% of ticks have zero orders from any given player.</li>
+<li><strong>Varint encoding</strong> — integer fields use variable-length encoding (LEB128) where applicable. Small values (tick deltas, player indices) compress to 1-2 bytes instead of fixed 4-8 bytes. Integers that are typically small (order counts, sub-tick offsets) benefit most; fixed-size fields (hashes, signatures) remain fixed.</li>
 <li><strong>MTU-aware packet sizing</strong> — packets stay under 476 bytes (single IP fragment, no UDP fragmentation). Fragmented UDP packets multiply loss probability — if any fragment is lost, the entire packet is dropped.</li>
+<li><strong>Transport-agnostic framing</strong> — the wire format is independent of the underlying transport (UDP, WebSocket, QUIC). The same TLV encoding works on all transports; only the packet delivery mechanism changes (D054). This follows GNS’s approach of transport-agnostic SNP (Steam Networking Protocol) frames (see <code>research/valve-github-analysis.md</code> § Part 1).</li>
 </ul>
 <p>For typical RTS traffic (0-2 orders per player per tick, long stretches of idle), this compresses wire traffic by roughly 5-10x compared to naively serializing every <code>TimestampedOrder</code>.</p>
 <p>For cross-engine play, the wire format is abstracted behind an <code>OrderCodec</code> trait — see <code>07-CROSS-ENGINE.md</code>.</p>
+<h3 id="message-lanes-from-valve-gns"><a class="header" href="#message-lanes-from-valve-gns">Message Lanes (from Valve GNS)</a></h3>
+<p>Not all network messages have equal priority. Valve’s GNS introduces <strong>lanes</strong> — independent logical streams within a single connection, each with configurable priority and weight. IC adopts this concept for its relay protocol to prevent low-priority traffic from delaying time-critical orders.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Message lanes — independent priority streams within a Transport connection.
+/// Each lane has its own send queue. The transport drains queues by priority
+/// (higher first) and weight (proportional bandwidth among same-priority lanes).
+///
+/// Lanes are a `NetworkModel` concern, not a `Transport` concern — Transport
+/// provides a single byte pipe; NetworkModel multiplexes lanes over it.
+/// This keeps Transport implementations simple (D054).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum MessageLane {
+    /// Tick orders — highest priority, real-time critical.
+    /// Delayed orders cause Idle substitution (anti-lag-switch).
+    Orders = 0,
+    /// Sync hashes, ack vectors, RTT measurements — protocol control.
+    /// Must arrive promptly for desync detection and adaptive run-ahead.
+    Control = 1,
+    /// Chat messages, player status updates, lobby state.
+    /// Important but not time-critical — can tolerate ~100ms extra delay.
+    Chat = 2,
+    /// Replay data, observer feeds, telemetry.
+    /// Lowest priority — uses spare bandwidth only.
+    Bulk = 3,
+}
+
+/// Lane configuration — priority and weight determine scheduling.
+pub struct LaneConfig {
+    /// Higher priority lanes are drained first (0 = highest).
+    pub priority: u8,
+    /// Weight for proportional bandwidth sharing among same-priority lanes.
+    /// E.g., two lanes at priority 1 with weights 3 and 1 get 75%/25% of
+    /// remaining bandwidth after higher-priority lanes are satisfied.
+    pub weight: u8,
+    /// Per-lane buffering limit (bytes). If exceeded, oldest messages
+    /// in the lane are dropped (unreliable lanes) or the lane stalls
+    /// (reliable lanes). Prevents low-priority bulk data from consuming
+    /// unbounded memory.
+    pub buffer_limit: usize,
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Default lane configuration:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Lane</th><th>Priority</th><th>Weight</th><th>Buffer</th><th>Reliability</th><th>Rationale</th></tr>
+</thead>
+<tbody>
+<tr><td><code>Orders</code></td><td>0</td><td>1</td><td>4 KB</td><td>Reliable</td><td>Orders must arrive; missed = Idle (deadline is the cap)</td></tr>
+<tr><td><code>Control</code></td><td>0</td><td>1</td><td>2 KB</td><td>Unreliable</td><td>Latest sync hash wins; stale hashes are useless</td></tr>
+<tr><td><code>Chat</code></td><td>1</td><td>1</td><td>8 KB</td><td>Reliable</td><td>Chat messages should arrive but can wait</td></tr>
+<tr><td><code>Bulk</code></td><td>2</td><td>1</td><td>64 KB</td><td>Unreliable</td><td>Telemetry/observer data uses spare bandwidth</td></tr>
+</tbody>
+</table>
+</div>
+<p>The Orders and Control lanes share the highest priority tier — both are drained before any Chat or Bulk data is sent. This ensures that a player spamming chat messages or a spectator feed generating bulk data never delays order delivery. The lane system is optional for <code>LocalNetwork</code> and <code>MemoryTransport</code> (where bandwidth is unlimited), but critical for the relay deployment where bandwidth to each client is finite.</p>
+<p><strong>Relay server poll groups:</strong> In a relay deployment serving multiple concurrent games, each game session’s connections are grouped into a <strong>poll group</strong> (terminology from GNS). The relay’s event loop polls all connections within a poll group together, processing messages for one game session in a batch before moving to the next. This improves cache locality (all state for one game is hot in cache during its processing window) and simplifies per-game rate limiting. The poll group concept is internal to the relay server — clients don’t know or care whether they share a relay with other games.</p>
 <h3 id="desync-detection--debugging"><a class="header" href="#desync-detection--debugging">Desync Detection &amp; Debugging</a></h3>
 <p>Desyncs are the hardest problem in lockstep netcode. OpenRA has 135+ desync issues in their tracker — they hash game state per frame (via <code>[VerifySync]</code> attribute) but their sync report buffer is only 7 frames deep, which often isn’t enough to capture the divergence point. Our architecture makes desyncs both <strong>detectable</strong> AND <strong>diagnosable</strong>, drawing on 20+ years of OpenTTD’s battle-tested desync debugging infrastructure.</p>
 <h4 id="dual-mode-state-hashing"><a class="header" href="#dual-mode-state-hashing">Dual-Mode State Hashing</a></h4>
@@ -435,6 +564,62 @@ pub enum DesyncDebugLevel {
 <p><strong>Level 1 — Order logging.</strong> Every order is logged to a structured binary file with the tick number and sync state at that tick. This enables <strong>order-log replay</strong>: load the initial state + replay orders, comparing logged sync state against replayed state at each tick. When they diverge, you’ve found the exact tick where the desync was introduced. OpenTTD has used this technique for 20+ years — it’s the most effective desync diagnosis tool ever built for lockstep games.</p>
 <p><strong>Level 2 — Cache validation.</strong> Systematic validation of derived/cached data against source-of-truth data every tick. The spatial hash, fog-of-war grid, pathfinding caches, and any other precomputed data are recomputed from authoritative ECS state and compared. A mismatch means a cache update was missed somewhere — a cache bug, not a sim bug. OpenTTD’s <code>CheckCaches()</code> function validates towns, companies, vehicles, and stations this way. This catches an entire class of bugs that full-state hashing misses (the cache diverges, but the authoritative state is still correct — until something reads the stale cache).</p>
 <p><strong>Level 3 — Periodic snapshots.</strong> Save full sim snapshots at a configurable interval (default: every 300 ticks, ~10 seconds). Snapshots are named <code>desync_{game_seed}_{tick}.snap</code> — sorting by seed groups snapshots from the same game, sorting by tick within a game enables binary search for the divergence point. This is OpenTTD’s <code>dmp_cmds_XXXXXXXX_YYYYYYYY.sav</code> pattern adapted for IC.</p>
+<h4 id="desync-log-transfer-protocol"><a class="header" href="#desync-log-transfer-protocol">Desync Log Transfer Protocol</a></h4>
+<p>When a desync is detected, debug data must be collected from <strong>all clients</strong> — comparing state from just one side tells you that the states differ, but not which client diverged (or whether both did). 0 A.D. highlighted this gap: their desync reports were one-sided, requiring manual coordination between players to share debug dumps (see <code>research/0ad-warzone2100-netcode-analysis.md</code>).</p>
+<p>IC automates cross-client desync data exchange through the relay:</p>
+<ol>
+<li><strong>Detection:</strong> Relay detects hash mismatch at tick T.</li>
+<li><strong>Collection request:</strong> Relay sends <code>DesyncDebugRequest { tick: T, level: DesyncDebugLevel }</code> to all clients.</li>
+<li><strong>Client response:</strong> Each client responds with a <code>DesyncDebugReport</code> containing its state hash, RNG state, Merkle node hashes (if Merkle tree is active), and optionally a compressed snapshot of the diverged archetype (identified by Merkle tree traversal).</li>
+<li><strong>Relay aggregation:</strong> Relay collects reports from all clients, computes a diff summary, and distributes the aggregated report back to all clients (or saves it for post-match analysis).</li>
+</ol>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct DesyncDebugReport {
+    pub player: PlayerId,
+    pub tick: u64,
+    pub state_hash: u64,
+    pub rng_state: u64,
+    pub merkle_nodes: Option&lt;Vec&lt;(ArchetypeLabel, u64)&gt;&gt;,  // if Merkle tree active
+    pub diverged_archetypes: Option&lt;Vec&lt;CompressedArchetypeSnapshot&gt;&gt;,
+    pub order_log_excerpt: Vec&lt;TimestampedOrder&gt;,  // orders around tick T
+}
+<span class="boring">}</span></code></pre>
+<p>In P2P mode, the host collects reports from all peers. For offline diagnosis, the report is written to <code>desync_report_{game_seed}_{tick}.json</code> alongside the snapshot files.</p>
+<h4 id="serialization-test-mode-determinism-verification"><a class="header" href="#serialization-test-mode-determinism-verification">Serialization Test Mode (Determinism Verification)</a></h4>
+<p>A development-only mode that runs <strong>two sim instances in parallel</strong>, both processing the same orders, and compares their state after every tick. If the states ever diverge, the sim has a non-deterministic code path. This pattern is used by 0 A.D.’s test infrastructure (see <code>research/0ad-warzone2100-netcode-analysis.md</code>):</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Debug mode: run dual sims to catch non-determinism.
+/// Enabled via `--dual-sim` flag. Debug builds only.
+#[cfg(debug_assertions)]
+pub struct DualSimVerifier {
+    pub primary: Simulation,
+    pub shadow: Simulation,  // cloned from primary at game start
+}
+
+#[cfg(debug_assertions)]
+impl DualSimVerifier {
+    pub fn tick(&amp;mut self, orders: &amp;TickOrders) {
+        self.primary.apply_tick(orders);
+        self.shadow.apply_tick(orders);
+        assert_eq!(
+            self.primary.state_hash(), self.shadow.state_hash(),
+            "Determinism violation at tick {}! Primary and shadow sims diverged.",
+            orders.tick
+        );
+    }
+}
+<span class="boring">}</span></code></pre>
+<p>This catches non-determinism immediately — no need to wait for a multiplayer desync report. Particularly valuable during development of new sim systems. The shadow sim doubles memory usage and CPU time, so this is <strong>never</strong> enabled in release builds or production. Running the test suite under dual-sim mode is a CI gate for Phase 2+.</p>
+<h4 id="adaptive-sync-frequency"><a class="header" href="#adaptive-sync-frequency">Adaptive Sync Frequency</a></h4>
+<p>The full state hash comparison frequency adapts based on game phase stability (inspired by the adaptive snapshot rate patterns observed across multiple engines):</p>
+<ul>
+<li><strong>High frequency (every 30 ticks, ~1 second):</strong> During the first 60 seconds of a match and immediately after any player reconnects — state divergence is most likely during transitions.</li>
+<li><strong>Normal frequency (every 120 ticks, ~4 seconds):</strong> Standard play. Sufficient to catch divergence within a few seconds.</li>
+<li><strong>Low frequency (every 300 ticks, ~10 seconds):</strong> Late-game with large unit counts, where the hash computation cost is non-trivial. The RNG sync check (near-zero cost) still runs every tick.</li>
+</ul>
+<p>The relay can also request an out-of-band sync check after specific events (e.g., a player reconnection completes, a mod hot-reloads script).</p>
 <h4 id="validation-purity-enforcement"><a class="header" href="#validation-purity-enforcement">Validation Purity Enforcement</a></h4>
 <p>Order validation (D012, <code>06-SECURITY.md</code> § Vulnerability 2) must have <strong>zero side effects</strong>. OpenTTD learned this the hard way — their “test run” of commands sometimes modified state, causing desyncs that took years to find. In debug builds, we enforce purity automatically:</p>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
@@ -480,6 +665,18 @@ fn validate_order_checked(&amp;mut self, player: PlayerId, order: &amp;PlayerOrd
 }
 <span class="boring">}</span></code></pre>
 <p>The relay server sends keepalive messages to the reconnecting client during download (prevents timeout) and queues that player’s slot as <code>PlayerOrder::Idle</code> until catchup completes. Other players experience no interruption — the game never pauses for a reconnection.</p>
+<p><strong>Frame consumption smoothing during catchup:</strong> When a reconnecting client is processing ticks at accelerated speed (<code>CatchingUp</code> state), it must balance sim catchup against rendering responsiveness. If the client devotes 100% of CPU to sim ticks, the screen freezes during catchup — the player sees a frozen frame for seconds, then suddenly jumps to the present. Spring Engine solved this with an 85/15 split: 85% of each frame’s time budget goes to sim catchup ticks, 15% goes to rendering the current state (see <code>research/spring-engine-netcode-analysis.md</code>). IC adopts a similar approach:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Controls how the client paces sim tick processing during reconnection.
+/// Higher values = faster catchup but choppier rendering.
+pub struct CatchupConfig {
+    pub sim_budget_pct: u8,    // % of frame time for sim ticks (default: 80)
+    pub render_budget_pct: u8, // % of frame time for rendering (default: 20)
+    pub max_ticks_per_frame: u32, // Hard cap on sim ticks per render frame (default: 30)
+}
+<span class="boring">}</span></code></pre>
+<p>The reconnecting player sees a fast-forward of the game (like a time-lapse replay) rather than a frozen screen followed by a jarring jump. The sim/render ratio can be tuned per platform — mobile clients may need a 70/30 split for acceptable visual feedback.</p>
 <p><strong>Timeout:</strong> If reconnection doesn’t complete within a configurable window (default: 60 seconds), the player is permanently dropped. This prevents a malicious player from cycling disconnect/reconnect to disrupt the game indefinitely.</p>
 <h3 id="visual-prediction-cosmetic-not-sim"><a class="header" href="#visual-prediction-cosmetic-not-sim">Visual Prediction (Cosmetic, Not Sim)</a></h3>
 <p>The render layer provides <strong>instant visual feedback</strong> on player input, before the order is confirmed by the network:</p>
@@ -504,6 +701,31 @@ fn on_move_order_issued(click_pos: WorldPos, selected_units: &amp;[Entity]) {
 }
 <span class="boring">}</span></code></pre>
 <p>This is purely cosmetic — the sim doesn’t advance until the confirmed order arrives. But it eliminates the <strong>perceived</strong> lag. The selection ring snaps, the unit rotates, the acknowledgment voice plays — all before the network round-trip completes.</p>
+<h4 id="cosmetic-rng-separation"><a class="header" href="#cosmetic-rng-separation">Cosmetic RNG Separation</a></h4>
+<p>Visual prediction and all render-side effects (particles, muzzle flash variation, shell casing scatter, smoke drift, death animations, idle fidgets, audio pitch variation) use a <strong>separate non-deterministic RNG</strong> — completely independent of the sim’s deterministic PRNG. This is a critical architectural boundary (validated by Hypersomnia’s dual-RNG design — see <code>research/veloren-hypersomnia-openbw-ddnet-netcode-analysis.md</code>):</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>// ic-sim: deterministic — advances identically on all clients
+pub struct SimRng(pub StdRng); // seeded once at game start, never re-seeded
+
+// ic-render: non-deterministic — each client generates different particles
+pub struct CosmeticRng(pub ThreadRng); // seeded from OS entropy per client
+<span class="boring">}</span></code></pre>
+<p><strong>Why this matters:</strong> If render code accidentally advances the sim RNG (e.g., a particle system calling <code>sim_rng.gen()</code> to randomize spawn positions), the sim desynchronizes — different clients render different particle counts, advancing the RNG by different amounts. This is an insidious desync source because the game <em>looks</em> correct but the RNG state has silently diverged. Separating the RNGs makes this bug <strong>structurally impossible</strong> — render code simply cannot access <code>SimRng</code>.</p>
+<p><strong>Predictability tiers for visual effects:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Tier</th><th>Determinism</th><th>Examples</th><th>RNG Source</th></tr>
+</thead>
+<tbody>
+<tr><td>Sim-coupled</td><td>Deterministic</td><td>Projectile impact position, scatter pattern, unit facing after movement</td><td><code>SimRng</code> (in <code>ic-sim</code>)</td></tr>
+<tr><td>Cosmetic-synced</td><td>Deterministic</td><td>Muzzle flash frame (affects gameplay readability)</td><td><code>SimRng</code> — because all clients must show the same visual cue</td></tr>
+<tr><td>Cosmetic-free</td><td>Non-deterministic</td><td>Smoke particles, shell casings, ambient dust, audio pitch variation</td><td><code>CosmeticRng</code> (in <code>ic-render</code>)</td></tr>
+</tbody>
+</table>
+</div>
+<p>Effects in the “cosmetic-free” tier can differ between clients without affecting gameplay — Player A sees 47 smoke particles, Player B sees 52, neither notices. Effects in “cosmetic-synced” are rare but exist when visual consistency matters for competitive readability (e.g., a Tesla coil’s charge-up animation must match across spectator views).</p>
 <h2 id="why-it-feels-faster-than-openra"><a class="header" href="#why-it-feels-faster-than-openra">Why It Feels Faster Than OpenRA</a></h2>
 <p>Every lockstep RTS has inherent input delay — the game must wait for all players’ orders before advancing. This is <strong>architectural</strong>, not a bug. But how much delay, and who pays for it, varies dramatically.</p>
 <h3 id="openras-stalling-model"><a class="header" href="#openras-stalling-model">OpenRA’s Stalling Model</a></h3>
@@ -612,6 +834,31 @@ fn on_move_order_issued(click_pos: WorldPos, selected_units: &amp;[Entity]) {
 Playback = feed TickOrders through Simulation via ReplayPlayback NetworkModel
 </code></pre>
 <p>Replays are signed by the relay server for tamper-proofing (see <code>06-SECURITY.md</code>).</p>
+<h3 id="background-replay-writer"><a class="header" href="#background-replay-writer">Background Replay Writer</a></h3>
+<p>During live games, the replay file is written by a <strong>background writer</strong> using a lock-free queue — the sim thread never blocks on I/O. This prevents disk write latency from causing frame hitches (a problem observed in 0 A.D.’s synchronous replay recording — see <code>research/0ad-warzone2100-netcode-analysis.md</code>):</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Non-blocking replay recorder. The sim thread pushes tick frames
+/// into a lock-free queue; a background thread drains and writes.
+pub struct BackgroundReplayWriter {
+    queue: crossbeam::channel::Sender&lt;ReplayTickFrame&gt;,
+    handle: std::thread::JoinHandle&lt;()&gt;,
+}
+
+impl BackgroundReplayWriter {
+    /// Called from the sim thread after each tick. Never blocks.
+    pub fn record_tick(&amp;self, frame: ReplayTickFrame) {
+        // crossbeam bounded channel — if the writer falls behind,
+        // oldest frames are still in memory (not dropped). The buffer
+        // is sized for ~10 seconds of ticks (300 frames at 30 tps).
+        let _ = self.queue.try_send(frame);
+    }
+}
+<span class="boring">}</span></code></pre>
+<blockquote>
+<p><strong>Security (V45):</strong> <code>try_send</code> silently drops frames when the channel is full — contradicting the code comment. Lost frames break the Ed25519 signature chain (V4). Mitigations: track frame loss count in replay header, use <code>send_timeout(frame, 5ms)</code> instead of <code>try_send</code>, mark replays with lost frames as <code>incomplete</code> (playable but not ranked-verifiable), handle signature chain gaps explicitly. See <code>06-SECURITY.md</code> § Vulnerability 45.</p>
+</blockquote>
+<p>The background thread writes frames incrementally — the <code>.icrep</code> file is always valid (see <code>05-FORMATS.md</code> § Replay File Format). If the game crashes, the replay up to the last flushed frame is recoverable. On game end, the writer flushes remaining frames, writes the final header (total ticks, final state hash), and closes the file.</p>
 <h2 id="future-architectures"><a class="header" href="#future-architectures">Future Architectures</a></h2>
 <p>The <code>NetworkModel</code> trait also keeps the door open for fundamentally different networking approaches in the future. These are NOT the same netcode — they are genuinely different architectures with different trade-offs. None are planned for initial development.</p>
 <h3 id="fog-authoritative-server-anti-maphack"><a class="header" href="#fog-authoritative-server-anti-maphack">Fog-Authoritative Server (anti-maphack)</a></h3>
@@ -670,11 +917,126 @@ pub struct NetworkSimConfig {
 <h2 id="connection-establishment"><a class="header" href="#connection-establishment">Connection Establishment</a></h2>
 <p>Connection method is a concern <em>below</em> the <code>NetworkModel</code>. By the time a <code>NetworkModel</code> is constructed, transport is already established. The discovery/connection flow:</p>
 <pre><code>Discovery (tracking server / join code / direct IP / QR)
-  → Transport::connect() (UdpTransport, WebSocketTransport, etc.)
-    → NetworkModel constructed over Transport (LockstepNetwork&lt;T&gt; or RelayLockstepNetwork&lt;T&gt;)
-      → Game loop runs — sim doesn't know or care how connection happened
+  → Signaling (pluggable — see below)
+    → Transport::connect() (UdpTransport, WebSocketTransport, etc.)
+      → NetworkModel constructed over Transport (LockstepNetwork&lt;T&gt; or RelayLockstepNetwork&lt;T&gt;)
+        → Game loop runs — sim doesn't know or care how connection happened
 </code></pre>
 <p>The transport layer is abstracted behind a <code>Transport</code> trait (D054). Each <code>Transport</code> instance represents a single bidirectional channel (point-to-point). <code>NetworkModel</code> implementations are generic over <code>Transport</code> — relay mode uses one <code>Transport</code> to the relay, P2P mode uses one <code>Transport</code> per peer. This enables different physical transports per platform — raw UDP (connected socket) on desktop, WebSocket in the browser, <code>MemoryTransport</code> in tests — without conditional branches in <code>NetworkModel</code>. The protocol layer always runs its own reliability; on reliable transports the retransmit logic becomes a no-op. See <code>09-DECISIONS.md</code> § D054 for the full trait definition and implementation inventory.</p>
+<h3 id="commit-reveal-game-seed"><a class="header" href="#commit-reveal-game-seed">Commit-Reveal Game Seed</a></h3>
+<p>The initial RNG seed that determines all stochastic outcomes (combat rolls, scatter patterns, AI decisions) must not be controllable by any single player. A host who chooses the seed can pre-compute favorable outcomes (e.g., “with seed 0xDEAD, my first tank shot always crits”). This is a known exploit in P2P games and was identified in Hypersomnia’s security analysis (see <code>research/veloren-hypersomnia-openbw-ddnet-netcode-analysis.md</code>).</p>
+<p>IC uses a <strong>commit-reveal protocol</strong> to generate the game seed collaboratively:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Phase 1: Each player generates a random contribution and commits its hash.
+/// All commitments must arrive before any reveal — prevents last-player advantage.
+pub struct SeedCommitment {
+    pub player: PlayerId,
+    pub commitment: [u8; 32],  // SHA-256(player_seed_contribution || nonce)
+}
+
+/// Phase 2: After all commitments are collected, each player reveals their contribution.
+/// The relay (or all peers in P2P) verify reveal matches commitment.
+pub struct SeedReveal {
+    pub player: PlayerId,
+    pub contribution: [u8; 32],  // The actual random bytes
+    pub nonce: [u8; 16],         // Nonce used in commitment
+}
+
+/// Final seed = XOR of all player contributions.
+/// No single player can control the outcome — they can only influence
+/// their own contribution, and the XOR of all contributions is
+/// uniform-random as long as at least one player is honest.
+fn compute_game_seed(reveals: &amp;[SeedReveal]) -&gt; u64 {
+    let mut combined = [0u8; 32];
+    for reveal in reveals {
+        for (i, byte) in reveal.contribution.iter().enumerate() {
+            combined[i] ^= byte;
+        }
+    }
+    u64::from_le_bytes(combined[..8].try_into().unwrap())
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Relay mode:</strong> The relay server collects all commitments, then broadcasts them, then collects all reveals, then broadcasts the final seed. A player who fails to reveal within the timeout is kicked (they were trying to abort after seeing others’ commitments).</p>
+<p><strong>P2P mode:</strong> All peers exchange commitments via the mesh, then reveals. The protocol is the same — just decentralized.</p>
+<p><strong>Single-player:</strong> Skip commit-reveal. The client generates the seed directly.</p>
+<h3 id="transport-encryption"><a class="header" href="#transport-encryption">Transport Encryption</a></h3>
+<p>All multiplayer connections are encrypted. The encryption layer sits between <code>Transport</code> and <code>NetworkModel</code> — transparent to both:</p>
+<ul>
+<li><strong>Key exchange:</strong> Curve25519 (X25519) for ephemeral key agreement. Each connection generates a fresh keypair; the shared secret is never reused across sessions.</li>
+<li><strong>Symmetric encryption:</strong> AES-256-GCM for authenticated encryption of all payload data. The GCM authentication tag detects tampering; no separate integrity check needed.</li>
+<li><strong>Sequence binding:</strong> The AES-GCM nonce incorporates the packet sequence number, binding encryption to the reliability layer’s sequence space. Replay attacks (resending a captured packet) fail because the nonce won’t match.</li>
+<li><strong>Identity binding:</strong> After key exchange, the connection is upgraded by signing the handshake transcript with the player’s Ed25519 identity key (D052). This binds the encrypted channel to a verified identity — a MITM cannot complete the handshake without the player’s private key.</li>
+</ul>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Transport encryption parameters. Negotiated during connection
+/// establishment, applied to all subsequent packets.
+pub struct TransportCrypto {
+    /// AES-256-GCM cipher state (derived from X25519 shared secret).
+    cipher: Aes256Gcm,
+    /// Nonce counter — incremented per packet, combined with session
+    /// salt to produce the GCM nonce. Overflow (at 2^32 packets ≈
+    /// 4 billion) triggers rekeying.
+    send_nonce: u32,
+    recv_nonce: u32,
+    /// Session salt — derived from handshake, ensures nonce uniqueness
+    /// even if sequence numbers are reused across sessions.
+    session_salt: [u8; 8],
+}
+<span class="boring">}</span></code></pre>
+<p>This follows the same encryption model as Valve’s GameNetworkingSockets (AES-GCM-256 + Curve25519) and DTLS 1.3 (key exchange + authenticated encryption + sequence binding). See <code>research/valve-github-analysis.md</code> § 1.5 and <code>06-SECURITY.md</code> for the full threat model. The <code>MemoryTransport</code> (testing) and <code>LocalNetwork</code> (single-player) skip encryption — there’s no network to protect.</p>
+<h3 id="pluggable-signaling-from-valve-gns"><a class="header" href="#pluggable-signaling-from-valve-gns">Pluggable Signaling (from Valve GNS)</a></h3>
+<p><strong>Signaling</strong> is the mechanism by which two peers exchange connection metadata (IP addresses, relay tokens, ICE candidates) before the transport connection is established. Valve’s GNS abstracts signaling behind <code>ISteamNetworkingConnectionSignaling</code> — a trait that decouples the connection establishment mechanism from the transport.</p>
+<p>IC adopts this pattern. Signaling is abstracted behind a trait in <code>ic-net</code>:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Abstraction for connection signaling — how peers exchange
+/// connection metadata before Transport is established.
+///
+/// Different deployment contexts use different signaling:
+/// - Relay mode: relay server brokers the introduction
+/// - P2P with rendezvous: lightweight rendezvous server
+/// - P2P direct: out-of-band (IP shared via join code, QR, etc.)
+/// - Browser (WASM): WebRTC signaling server
+///
+/// The trait is async — signaling involves network I/O and may take
+/// multiple round-trips (ICE candidate gathering, STUN/TURN).
+pub trait Signaling: Send + Sync {
+    /// Send a signaling message to the target peer.
+    fn send_signal(&amp;mut self, peer: &amp;PeerId, msg: &amp;SignalingMessage) -&gt; Result&lt;(), SignalingError&gt;;
+    /// Receive the next incoming signaling message, if any.
+    fn recv_signal(&amp;mut self) -&gt; Result&lt;Option&lt;(PeerId, SignalingMessage)&gt;, SignalingError&gt;;
+}
+
+/// Signaling messages exchanged during connection establishment.
+pub enum SignalingMessage {
+    /// Offer to connect — includes transport capabilities, public key.
+    Offer { transport_info: TransportInfo, identity_key: [u8; 32] },
+    /// Answer to an offer — includes selected transport, public key.
+    Answer { transport_info: TransportInfo, identity_key: [u8; 32] },
+    /// ICE candidate for NAT traversal (P2P only).
+    IceCandidate { candidate: String },
+    /// Connection rejected (lobby full, banned, etc.).
+    Reject { reason: String },
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Default implementations:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Implementation</th><th>Mechanism</th><th>When Used</th><th>Phase</th></tr>
+</thead>
+<tbody>
+<tr><td><code>RelaySignaling</code></td><td>Relay server brokers</td><td>Relay multiplayer (default)</td><td>5</td></tr>
+<tr><td><code>RendezvousSignaling</code></td><td>Lightweight rendezvous + punch</td><td>Join code / QR P2P</td><td>5</td></tr>
+<tr><td><code>DirectSignaling</code></td><td>Out-of-band (no server)</td><td>Direct IP, LAN</td><td>5</td></tr>
+<tr><td><code>WebRtcSignaling</code></td><td>WebRTC signaling server</td><td>Browser WASM P2P</td><td>Future</td></tr>
+<tr><td><code>MemorySignaling</code></td><td>In-process channels</td><td>Tests</td><td>2</td></tr>
+</tbody>
+</table>
+</div>
+<p>This decoupling means adding a new connection method (e.g., Steam P2P via Steamworks, Epic Online Services relay) requires only implementing <code>Signaling</code>, not modifying <code>NetworkModel</code> or <code>Transport</code>. The GNS precedent validates this — GNS users can plug in custom signaling for non-Steam platforms while keeping the same transport and reliability layer.</p>
 <h3 id="direct-ip"><a class="header" href="#direct-ip">Direct IP</a></h3>
 <p>Classic approach. Host shares <code>IP:port</code>, other player connects.</p>
 <ul>
@@ -749,9 +1111,13 @@ tracking_servers:
   - url: "https://track.ironcurtain.gg"    # official
   - url: "https://rts.myclan.com/track"     # clan server
   - url: "https://openra.net/master"        # OpenRA shared browser (Level 0 compat)
+  - url: "https://cncnet.org/master"        # CnCNet shared browser (Level 0 compat)
 </code></pre>
-<h3 id="openra-shared-browser"><a class="header" href="#openra-shared-browser">OpenRA Shared Browser</a></h3>
-<p>Implementing the OpenRA master server protocol means Iron Curtain games can appear in OpenRA’s game browser (and vice versa), tagged by engine. Players see the full community. This is the Level 0 cross-engine compatibility from <code>07-CROSS-ENGINE.md</code>.</p>
+<p><strong>Tracking server trust model (V28):</strong> All tracking server URLs must use HTTPS — plain HTTP is rejected. The game browser shows trust indicators: bundled sources (official, OpenRA, CnCNet) display a verified badge; user-added sources display “Community” or “Unverified.” Games listed from unverified sources connecting via unknown relays show “Unknown relay — first connection.” When connecting to any listing, the client performs a full protocol handshake (version check, encryption, identity verification) before revealing user data. Maximum 10 configured tracking servers to limit social engineering surface.</p>
+<h3 id="shared-browser-with-openra--cncnet"><a class="header" href="#shared-browser-with-openra--cncnet">Shared Browser with OpenRA &amp; CnCNet</a></h3>
+<p>Implementing community master server protocols means Iron Curtain games can appear in OpenRA’s and CnCNet’s game browsers (and vice versa), tagged by engine. Players see the full C&amp;C community in one place regardless of which client they use. This is the Level 0 cross-engine compatibility from <code>07-CROSS-ENGINE.md</code>.</p>
+<p>CnCNet is the community-run multiplayer platform for the original C&amp;C game executables (RA1, TD, TS, RA2, YR). It provides tunnel servers (UDP relay for NAT traversal), a master server / lobby, a client/launcher, ladder systems, and map distribution. CnCNet is where the classic C&amp;C competitive community lives — integration at the discovery layer ensures IC doesn’t fragment the existing community but instead makes it larger.</p>
+<p><strong>Integration scope:</strong> Shared game browser only. CnCNet’s tunnel servers are plain UDP proxies without IC’s time authority, signed match results, behavioral analysis, or desync diagnosis — so IC games use IC relay servers for actual gameplay. Rankings and ladders are also separate (different game balance, different anti-cheat, different match certification). The bridge is purely for community discovery and visibility.</p>
 <h3 id="tracking-server-implementation"><a class="header" href="#tracking-server-implementation">Tracking Server Implementation</a></h3>
 <p>The server itself is straightforward — a REST or WebSocket API backed by an in-memory store with TTL expiry. No database needed — listings are ephemeral and expire if the host stops sending heartbeats.</p>
 <blockquote>

@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-1e3146b6.js";
+            window.path_to_searchindex_js = "searchindex-fb30e59a.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-678cb19b.js"></script>
+        <script src="toc-1d51ffef.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -274,9 +274,22 @@ impl Simulation {
         self.tick += 1;
     }
 
-    /// Snapshot for rollback / desync debugging / save games
+    /// Snapshot for rollback / desync debugging / save games.
+    /// Uses crash-safe serialization: payload written first, header
+    /// updated atomically after fsync (Fossilize pattern — see D010).
     pub fn snapshot(&amp;self) -&gt; SimSnapshot { /* serialize everything */ }
     pub fn restore(&amp;mut self, snap: &amp;SimSnapshot) { /* deserialize */ }
+
+    /// Delta snapshot — encodes only components that changed since
+    /// `baseline`. ~10x smaller than full snapshot for typical gameplay.
+    /// Used for autosave, reconnection state transfer, and replay
+    /// keyframes. See D010 and `10-PERFORMANCE.md` § Delta Encoding.
+    pub fn delta_snapshot(&amp;self, baseline: &amp;SimSnapshot) -&gt; DeltaSnapshot {
+        /* property-level diff — only changed components serialized */
+    }
+    pub fn apply_delta(&amp;mut self, delta: &amp;DeltaSnapshot) {
+        /* merge delta into current state */
+    }
 
     /// Hash for desync detection
     pub fn state_hash(&amp;self) -&gt; u64 { /* hash critical state */ }
@@ -309,6 +322,24 @@ impl Simulation {
 <span class="boring">}</span></code></pre>
 <h2 id="ecs-design"><a class="header" href="#ecs-design">ECS Design</a></h2>
 <p>ECS is a natural fit for RTS: hundreds of units with composable behaviors.</p>
+<h3 id="external-entity-identity"><a class="header" href="#external-entity-identity">External Entity Identity</a></h3>
+<p>Bevy’s <code>Entity</code> IDs are internal — they can be recycled, and their numeric value is meaningless across save/load or network boundaries. Any external-facing system (replay files, Lua scripting, observer UI, debug tools) needs a stable entity identifier.</p>
+<p>IC uses <strong>generational unit tags</strong> — a pattern proven by SC2’s unit tag system (see <code>research/blizzard-github-analysis.md</code> § Part 1) and common in ECS engines:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>#[derive(Clone, Copy, Hash, Eq, PartialEq, Serialize, Deserialize)]
+pub struct UnitTag {
+    pub index: u16,     // slot in a fixed-size pool
+    pub generation: u16, // incremented each time the slot is reused
+}
+<span class="boring">}</span></code></pre>
+<ul>
+<li><strong>Index</strong> identifies the pool slot. Pool size is bounded by the game module’s max entity count (RA1: 2048 units + structures).</li>
+<li><strong>Generation</strong> disambiguates reuse. If a unit dies and a new unit takes the same slot, the new unit has a higher generation. Stale references (e.g., an attack order targeting a dead unit) are detected by comparing generations.</li>
+<li><strong>Replay and Lua stable:</strong> <code>UnitTag</code> values are deterministic — same game produces the same tags. Replay analysis can track a unit across its entire lifetime. Lua scripts reference units by <code>UnitTag</code>, never by Bevy <code>Entity</code>.</li>
+<li><strong>Network-safe:</strong> <code>UnitTag</code> is 4 bytes, cheap to include in <code>PlayerOrder</code>. Bevy <code>Entity</code> is never serialized into orders or replays.</li>
+</ul>
+<p>A <code>UnitPool</code> resource maps <code>UnitTag ↔ Entity</code> and manages slot allocation/recycling. All public-facing APIs (<code>Simulation::query_unit()</code>, order validation, Lua bindings) use <code>UnitTag</code>; Bevy <code>Entity</code> is an internal implementation detail.</p>
 <h3 id="component-model-mirrors-openra-traits"><a class="header" href="#component-model-mirrors-openra-traits">Component Model (mirrors OpenRA Traits)</a></h3>
 <p>OpenRA’s “traits” are effectively components. Map them directly. The table below shows the <strong>RA1 game module’s</strong> default components. Other game modules (RA2, TD) register additional components — the ECS is open for extension without modifying the engine core.</p>
 <p><strong>OpenRA vocabulary compatibility (D023):</strong> OpenRA trait names are accepted as YAML aliases. <code>Armament</code> and <code>combat</code> both resolve to the same component. This means existing OpenRA YAML definitions load without renaming.</p>
@@ -326,6 +357,7 @@ impl Simulation {
 <blockquote>
 <p><strong>These 9 components are the core set.</strong> The full RA1 game module registers ~50 additional components for gameplay systems (power, transport, capture, stealth, veterancy, etc.). See <a href="#extended-gameplay-systems-ra1-module">Extended Gameplay Systems</a> below for the complete component catalog. The component table in <code>AGENTS.md</code> lists only the core set as a quick reference.</p>
 </blockquote>
+<p><strong>Component group toggling (validated by Minecraft Bedrock):</strong> Bedrock’s entity system uses “component groups” — named bundles of components that can be added or removed by game events (e.g., <code>minecraft:angry</code> adds <code>AttackNearest</code> + <code>SpeedBoost</code> when a wolf is provoked). This is directly analogous to IC’s condition system (D028): a condition like “prone” or “low_power” grants/revokes a set of component modifiers. Bedrock’s JSON event system (<code>"add": { "component_groups": [...] }</code>) validates that event-driven component toggling scales to thousands of entity types and is intuitive for data-driven modding. See <code>research/mojang-wube-modding-analysis.md</code> § Bedrock.</p>
 <h3 id="system-execution-order-deterministic-configurable-per-game-module"><a class="header" href="#system-execution-order-deterministic-configurable-per-game-module">System Execution Order (deterministic, configurable per game module)</a></h3>
 <p>The <strong>RA1 game module</strong> registers this system execution order:</p>
 <pre><code>Per tick:
@@ -378,6 +410,39 @@ pub trait FogProvider: Send + Sync {
 }
 <span class="boring">}</span></code></pre>
 <p>RA1 registers <code>RadiusFogProvider</code> (circle-based, fast, matches original RA). RA2/TS would register <code>ElevationFogProvider</code> (raycasts against terrain heightmap). The future fog-authoritative <code>NetworkModel</code> reuses the same trait on the server side to determine which entities to send per client. See D041 in <code>09-DECISIONS.md</code> for full rationale.</p>
+<h4 id="entity-visibility-model"><a class="header" href="#entity-visibility-model">Entity Visibility Model</a></h4>
+<p>The <code>FogProvider</code> output determines how entities appear to each player. Following SC2’s proven model (see <code>research/blizzard-github-analysis.md</code> § 1.4), each entity observed by a player carries a <strong>visibility classification</strong> that controls which data fields are available:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Per-entity visibility state as seen by a specific player.
+/// Determines which component fields the player can observe.
+pub enum EntityVisibility {
+    /// Currently visible — all public fields available (health, position, orders for own units).
+    Visible,
+    /// Previously visible, now in fog — "ghost" of last-known state.
+    /// Position/type from when last seen; health, orders, and internal state are NOT available.
+    Snapshot,
+    /// Never seen or fully hidden — no data available to this player.
+    Hidden,
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Field filtering per visibility level:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Field</th><th>Visible (own)</th><th>Visible (enemy)</th><th>Snapshot</th><th>Hidden</th></tr>
+</thead>
+<tbody>
+<tr><td>Position, type, owner</td><td>Yes</td><td>Yes</td><td>Last-known</td><td>No</td></tr>
+<tr><td>Health / health_max</td><td>Yes</td><td>Yes</td><td>No</td><td>No</td></tr>
+<tr><td>Orders queue</td><td>Yes</td><td>No</td><td>No</td><td>No</td></tr>
+<tr><td>Cargo / passengers</td><td>Yes</td><td>No</td><td>No</td><td>No</td></tr>
+<tr><td>Buffs, weapon cooldown</td><td>Yes</td><td>No</td><td>No</td><td>No</td></tr>
+<tr><td>Build progress</td><td>Yes</td><td>Yes</td><td>Last-known</td><td>No</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Last-seen snapshot table:</strong> When a visible entity enters fog-of-war, the <code>FogProvider</code> stores a snapshot of its last-known position, type, owner, and build progress. The renderer displays this as a dimmed “ghost” unit. The snapshot is explicitly stale — the actual unit may have moved, morphed, or been destroyed. Snapshots are cleared when the position is re-explored and the unit is no longer there.</p>
 <h3 id="ordervalidator-trait-d041"><a class="header" href="#ordervalidator-trait-d041">OrderValidator Trait (D041)</a></h3>
 <p>The engine enforces that ALL orders pass validation before <code>apply_orders()</code> executes them. This formalizes D012’s anti-cheat guarantee — game modules cannot accidentally skip validation:</p>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
@@ -634,6 +699,24 @@ pub struct ProductionItem {
 }
 <span class="boring">}</span></code></pre>
 <p><strong><code>production_system()</code> logic:</strong> For each <code>ProductionQueue</code>: if not paused and not empty, advance front item. Deduct credits incrementally (one tick’s worth per tick — production slows when credits run out). When <code>remaining_time == 0</code>, spawn unit at building’s <code>Exit</code> position, send to <code>RallyPoint</code> if set.</p>
+<h4 id="production-model-diversity"><a class="header" href="#production-model-diversity">Production Model Diversity</a></h4>
+<p>The <code>ProductionQueue</code> above describes the classic C&amp;C sidebar model, but production is one of the most varied mechanics across RTS games — even within the OpenRA mod ecosystem. Analysis of six major OpenRA mods (see <code>research/openra-mod-architecture-analysis.md</code>) reveals at least five distinct production models:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Model</th><th>Game</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td>Global sidebar</td><td>RA1, TD</td><td>One queue per unit category, shared across all factories of that type</td></tr>
+<tr><td>Tabbed sidebar</td><td>RA2</td><td>Multiple parallel queues, one per factory building</td></tr>
+<tr><td>Per-building on-site</td><td>KKnD (OpenKrush)</td><td>Each building has its own queue and rally point; no sidebar</td></tr>
+<tr><td>Single-unit selection</td><td>Dune II (d2)</td><td>Select one building, build one item — no queue at all</td></tr>
+<tr><td>Colony-based</td><td>Swarm Assault (OpenSA)</td><td>Capture colony buildings for production; no construction yard</td></tr>
+</tbody>
+</table>
+</div>
+<p>The engine must not hardcode any of these. The <code>production_system()</code> described above is the RA1 game module’s implementation. Other game modules register their own production system via <code>GameModule::system_pipeline()</code>. The <code>ProductionQueue</code> component is defined by the game module, not the engine core. A KKnD-style module might define a <code>PerBuildingProductionQueue</code> component with different constraints; a Dune II module might omit queue mechanics entirely and use a <code>SingleItemProduction</code> component.</p>
+<p>This is a key validation of invariant #9 (engine core is game-agnostic): if a non-C&amp;C total conversion on our engine needs a fundamentally different production model, the engine should not resist it.</p>
 <h3 id="resource--ore-model"><a class="header" href="#resource--ore-model">Resource / Ore Model</a></h3>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -1088,6 +1171,40 @@ pub struct AmmoPool {
 }
 <span class="boring">}</span></code></pre>
 <p><strong>Army overlay:</strong> Bar chart of unit counts per player, grouped by type. <strong>Production overlay:</strong> List of active queues per player. <strong>Economy overlay:</strong> Income rate graph. These are render-only — no sim interaction. Observer UI is an <code>ic-ui</code> concern.</p>
+<h4 id="game-score--performance-metrics"><a class="header" href="#game-score--performance-metrics">Game Score / Performance Metrics</a></h4>
+<p>The sim tracks a comprehensive <code>GameScore</code> per player, updated every tick. This powers the observer economy overlay, post-game stats screen, and the replay analysis event stream (see <code>05-FORMATS.md</code> § “Analysis Event Stream”). Design informed by SC2’s <code>ScoreDetails</code> protobuf (see <code>research/blizzard-github-analysis.md</code> § Part 2).</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>#[derive(Clone, Serialize, Deserialize)]
+pub struct GameScore {
+    // Economy
+    pub total_collected: ResourceSet,      // lifetime resources harvested
+    pub total_spent: ResourceSet,          // lifetime resources committed
+    pub collection_rate: ResourceSet,      // current income per minute (fixed-point)
+    pub idle_harvester_ticks: u64,         // cumulative ticks harvesters spent idle
+
+    // Production
+    pub units_produced: u32,
+    pub structures_built: u32,
+    pub idle_production_ticks: u64,        // cumulative ticks factories spent idle
+
+    // Combat
+    pub units_killed: u32,
+    pub units_lost: u32,
+    pub structures_destroyed: u32,
+    pub structures_lost: u32,
+    pub killed_value: ResourceSet,         // total value of enemy assets destroyed
+    pub lost_value: ResourceSet,           // total value of own assets lost
+    pub damage_dealt: i64,                 // fixed-point cumulative
+    pub damage_received: i64,
+
+    // Activity
+    pub actions_per_minute: u32,           // APM (all orders)
+    pub effective_actions_per_minute: u32, // EPM (non-redundant orders only)
+}
+<span class="boring">}</span></code></pre>
+<p><strong>APM vs EPM:</strong> Following SC2’s distinction — APM counts every order, EPM filters duplicate/redundant commands (e.g., repeatedly right-clicking the same destination). EPM is a better measure of meaningful player activity.</p>
+<p><strong>Sim-side only:</strong> <code>GameScore</code> lives in <code>ic-sim</code> (it’s deterministic state, not rendering). Observer overlays in <code>ic-ui</code> read it through the standard <code>Simulation</code> query interface.</p>
 <h3 id="debug--developer-tools"><a class="header" href="#debug--developer-tools">Debug / Developer Tools</a></h3>
 <p>Developer mode (toggled in settings, not available in ranked):</p>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
@@ -1110,6 +1227,38 @@ pub struct AmmoPool {
 <li>Asset browser: preview sprites, sounds, palettes inline</li>
 </ul>
 <p>Developer cheats issue special orders validated only when <code>DeveloperMode</code> is active. In multiplayer, all players must agree to enable dev mode (prevents cheating).</p>
+<blockquote>
+<p><strong>Security (V44):</strong> The consensus mechanism for multiplayer dev mode must be specified: dev mode is sim state (not client-side), toggled exclusively via <code>PlayerOrder::SetDevMode</code> with unanimous lobby consent before game start. Dev mode orders use a distinct <code>PlayerOrder::DevCommand</code> variant rejected by the sim when dev mode is inactive. Disabled for ranked matchmaking. See <code>06-SECURITY.md</code> § Vulnerability 44.</p>
+</blockquote>
+<h4 id="debug-drawing-api"><a class="header" href="#debug-drawing-api">Debug Drawing API</a></h4>
+<p>A programmatic drawing API for rendering debug geometry. Inspired by SC2’s <code>DebugDraw</code> interface (see <code>research/blizzard-github-analysis.md</code> § Part 7) — text, lines, boxes, and spheres rendered as overlays:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub trait DebugDraw {
+    fn draw_text(&amp;mut self, pos: WorldPos, text: &amp;str, color: Color);
+    fn draw_line(&amp;mut self, start: WorldPos, end: WorldPos, color: Color);
+    fn draw_circle(&amp;mut self, center: WorldPos, radius: i32, color: Color);
+    fn draw_rect(&amp;mut self, min: WorldPos, max: WorldPos, color: Color);
+}
+<span class="boring">}</span></code></pre>
+<p>Used by AI visualization, pathfinding debug, weapon range display, and Lua/WASM debug scripts. All debug geometry is cleared each frame — callers re-submit every tick. Lives in <code>ic-render</code> (render concern, not sim).</p>
+<h4 id="debug-unit-manipulation"><a class="header" href="#debug-unit-manipulation">Debug Unit Manipulation</a></h4>
+<p>Developer mode supports direct entity manipulation for testing:</p>
+<ul>
+<li><strong>Spawn unit:</strong> Create any unit type at a position, owned by any player</li>
+<li><strong>Kill unit:</strong> Instantly destroy selected entities</li>
+<li><strong>Set resources:</strong> Override player credit balance</li>
+<li><strong>Modify health:</strong> Set HP to any value</li>
+</ul>
+<p>These operations are implemented as special <code>PlayerOrder</code> variants validated only when <code>DeveloperMode</code> is active. They flow through the normal order pipeline — deterministic across all clients.</p>
+<h4 id="fault-injection-testing-only"><a class="header" href="#fault-injection-testing-only">Fault Injection (Testing Only)</a></h4>
+<p>For automated stability testing — not exposed in release builds:</p>
+<ul>
+<li><strong>Hang simulation:</strong> Simulate tick timeout (verifies watchdog recovery)</li>
+<li><strong>Crash process:</strong> Controlled exit (verifies crash reporting pipeline)</li>
+<li><strong>Desync injection:</strong> Flip a bit in sim state (verifies desync detection and diagnosis)</li>
+</ul>
+<p>These follow SC2’s <code>DebugTestProcess</code> pattern for CI/CD reliability testing.</p>
 <h3 id="localization-framework"><a class="header" href="#localization-framework">Localization Framework</a></h3>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -1219,6 +1368,123 @@ impl&lt;N: NetworkModel, I: InputSource&gt; GameLoop&lt;N, I&gt; {
 }
 <span class="boring">}</span></code></pre>
 <p><strong>Key property:</strong> <code>GameLoop</code> is generic over <code>N: NetworkModel</code> and <code>I: InputSource</code>. It has zero knowledge of whether it’s running single-player or multiplayer, or whether input comes from a mouse, touchscreen, or gamepad. This is the central architectural guarantee.</p>
+<h3 id="game-lifecycle-state-machine"><a class="header" href="#game-lifecycle-state-machine">Game Lifecycle State Machine</a></h3>
+<p>The game application transitions through a fixed set of states. Design informed by SC2’s protocol state machine (see <code>research/blizzard-github-analysis.md</code> § Part 1), adapted for IC’s architecture:</p>
+<pre><code>┌──────────┐     ┌───────────┐     ┌─────────┐     ┌───────────┐
+│ Launched │────▸│ InMenus   │────▸│ Loading │────▸│ InGame    │
+└──────────┘     └───────────┘     └─────────┘     └───────────┘
+                   ▲     │                            │       │
+                   │     │                            │       │
+                   │     ▼                            ▼       │
+                   │   ┌───────────┐          ┌───────────┐   │
+                   │   │ InReplay  │◂─────────│ GameEnded │   │
+                   │   └───────────┘          └───────────┘   │
+                   │         │                    │           │
+                   └─────────┴────────────────────┘           │
+                                                              ▼
+                                                        ┌──────────┐
+                                                        │ Shutdown │
+                                                        └──────────┘
+</code></pre>
+<ul>
+<li><strong>Launched → InMenus:</strong> Engine initialization, asset loading, mod registration</li>
+<li><strong>InMenus → Loading:</strong> Player starts a game or joins a lobby; map and rules are loaded</li>
+<li><strong>Loading → InGame:</strong> All assets loaded, <code>NetworkModel</code> connected, sim initialized</li>
+<li><strong>InGame → GameEnded:</strong> Victory/defeat condition met or player surrenders</li>
+<li><strong>GameEnded → InMenus:</strong> Return to main menu (post-game stats shown during transition)</li>
+<li><strong>GameEnded → InReplay:</strong> Watch the just-finished game (replay file already recorded)</li>
+<li><strong>InMenus → InReplay:</strong> Load a saved replay file</li>
+<li><strong>InReplay → InMenus:</strong> Exit replay viewer</li>
+<li><strong>InGame → Shutdown:</strong> Application exit (snapshot saved for resume on platforms that require it)</li>
+</ul>
+<p>State transitions are events in Bevy’s event system — plugins react to transitions without polling. The sim exists only during <code>InGame</code> and <code>InReplay</code>; all other states are menu/UI-only.</p>
+<h2 id="state-recording--replay-infrastructure"><a class="header" href="#state-recording--replay-infrastructure">State Recording &amp; Replay Infrastructure</a></h2>
+<p>The sim’s snapshottable design (D010) enables a <strong>StateRecorder/Replayer</strong> pattern for asynchronous background recording — inspired by Valve’s Source Engine <code>StateRecorder</code>/<code>StateReplayer</code> pattern (see <code>research/valve-github-analysis.md</code> § 2.2). The game loop records orders and periodic state snapshots to a background writer; the replay system replays them through the same <code>Simulation::apply_tick()</code> path.</p>
+<h3 id="staterecorder-recording-side"><a class="header" href="#staterecorder-recording-side">StateRecorder (Recording Side)</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Asynchronous background recording of game state.
+/// Records orders every tick and full/delta snapshots periodically.
+/// Runs on a background thread — zero impact on game loop latency.
+///
+/// Lives in ic-game (I/O concern, not sim concern — Invariant #1).
+pub struct StateRecorder {
+    /// Background thread that receives snapshots/orders via channel
+    /// and writes them to the replay file. Crash-safe: payload is
+    /// written first, header updated atomically after fsync (Fossilize
+    /// pattern — see D010).
+    writer: JoinHandle&lt;()&gt;,
+    /// Channel to send tick orders to the writer.
+    order_tx: Sender&lt;RecordedTick&gt;,
+    /// Interval for full snapshot keyframes (default: every 300 ticks).
+    snapshot_interval: u64,
+}
+
+pub struct RecordedTick {
+    pub tick: u64,
+    pub orders: TickOrders,
+    /// Full snapshot at keyframe intervals; delta snapshot otherwise.
+    /// Delta snapshots encode only changed components (see below).
+    pub snapshot: Option&lt;SnapshotType&gt;,
+}
+
+pub enum SnapshotType {
+    Full(SimSnapshot),
+    Delta(DeltaSnapshot),
+}
+<span class="boring">}</span></code></pre>
+<h3 id="per-field-change-tracking-from-source-engine-cnetworkvar"><a class="header" href="#per-field-change-tracking-from-source-engine-cnetworkvar">Per-Field Change Tracking (from Source Engine CNetworkVar)</a></h3>
+<p>To support delta snapshots efficiently, the sim uses <strong>per-field change tracking</strong> — inspired by Source Engine’s <code>CNetworkVar</code> system (see <code>research/valve-github-analysis.md</code> § 2.2). Each ECS component that participates in snapshotting is annotated with a <code>#[track_changes]</code> derive macro. The macro generates a companion bitfield that records which fields changed since the last snapshot. Delta serialization then skips unchanged fields entirely.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Derive macro that generates per-field change tracking for a component.
+/// Each field gets a corresponding bit in a compact `ChangeMask` bitfield.
+/// When a field is modified through its setter, the bit is set.
+/// Delta serialization reads the mask to skip unchanged fields.
+///
+/// Components with SPROP_CHANGES_OFTEN (position, health, facing) are
+/// checked first during delta computation — improves cache locality
+/// by touching hot data before cold data. See `10-PERFORMANCE.md`.
+#[derive(Component, Serialize, Deserialize, TrackChanges)]
+pub struct Mobile {
+    pub position: WorldPos,        // changes every tick during movement
+    pub facing: FixedAngle,        // changes every tick during turning
+    pub speed: FixedPoint,         // changes occasionally
+    pub locomotor_type: Locomotor, // rarely changes
+}
+
+// Generated by #[derive(TrackChanges)]:
+// impl Mobile {
+//     pub fn set_position(&amp;mut self, val: WorldPos) {
+//         self.position = val;
+//         self.change_mask |= 0b0001;
+//     }
+//     pub fn change_mask(&amp;self) -&gt; u8 { self.change_mask }
+//     pub fn clear_changes(&amp;mut self) { self.change_mask = 0; }
+// }
+<span class="boring">}</span></code></pre>
+<p><strong>SPROP_CHANGES_OFTEN priority (from Source Engine):</strong> Components that change frequently (position, health, ammunition) are tagged and processed first during delta encoding. This isn’t a correctness concern — it’s a cache locality optimization. By processing high-churn components first, the delta encoder touches frequently-modified memory regions while they’re still in L1/L2 cache. See <code>10-PERFORMANCE.md</code> for performance impact analysis.</p>
+<h3 id="crash-time-state-capture"><a class="header" href="#crash-time-state-capture">Crash-Time State Capture</a></h3>
+<p>When a desync is detected (hash mismatch via <code>report_sync_hash()</code>), the system automatically captures a full state snapshot before any error handling or recovery:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Called by NetworkModel when a sync hash mismatch is detected.
+/// Captures full state immediately — before the sim advances further —
+/// so the exact divergence point is preserved for offline analysis.
+fn on_desync_detected(sim: &amp;Simulation, tick: u64, local_hash: u64, remote_hash: u64) {
+    // 1. Immediate full snapshot
+    let snapshot = sim.snapshot();
+    // 2. Write to crash dump file (same Fossilize append-safe pattern)
+    write_crash_dump(tick, local_hash, remote_hash, &amp;snapshot);
+    // 3. If Merkle tree is available, capture the tree for
+    //    logarithmic desync localization (see 03-NETCODE.md)
+    if let Some(tree) = sim.merkle_tree() {
+        write_merkle_dump(tick, &amp;tree);
+    }
+    // 4. Continue with normal desync handling (reconnect, notify user, etc.)
+}
+<span class="boring">}</span></code></pre>
+<p>This ensures desync debugging always has a snapshot at the exact point of divergence — not N ticks later when the developer gets around to analyzing it. The pattern comes from Valve’s Fossilize (crash-safe state capture, see <code>research/valve-github-analysis.md</code> § 3.1) and OpenTTD’s periodic desync snapshot naming convention (<code>desync_{seed}_{tick}.snap</code>).</p>
 <h2 id="pathfinding--spatial-queries"><a class="header" href="#pathfinding--spatial-queries">Pathfinding &amp; Spatial Queries</a></h2>
 <p><strong>Decision:</strong> Pathfinding and spatial queries are abstracted behind traits — like <code>NetworkModel</code>. A multi-layer hybrid pathfinder is the first implementation (RA1 game module). The engine core has no hardcoded assumption about grids vs. continuous space.</p>
 <p>OpenRA uses hierarchical A* which struggles with large unit groups and lacks local avoidance. A multi-layer approach (hierarchical sectors + JPS/flowfield tiles + ORCA-lite avoidance) handles both small-group and mass unit movement. But pathfinding is a game-module concern, not an engine-core assumption.</p>
@@ -1241,6 +1507,21 @@ pub trait Pathfinder: Send + Sync {
 
     /// Invalidate cached paths (e.g., building placed, bridge destroyed).
     fn invalidate_area(&amp;mut self, center: WorldPos, radius: SimCoord);
+
+    /// Query the path distance between two points without computing full waypoints.
+    /// Returns `None` if no path exists. Used by AI for target selection, threat assessment,
+    /// and build placement scoring.
+    fn path_distance(&amp;self, from: WorldPos, to: WorldPos, locomotor: LocomotorType) -&gt; Option&lt;SimCoord&gt;;
+
+    /// Batch distance queries — amortizes overhead when AI needs distances to many targets.
+    /// Returns distances in the same order as `targets`. `None` entries mean no path.
+    /// Design informed by SC2's batch `RequestQueryPathing` (see `research/blizzard-github-analysis.md` § Part 4).
+    fn batch_distances(
+        &amp;self,
+        from: WorldPos,
+        targets: &amp;[WorldPos],
+        locomotor: LocomotorType,
+    ) -&gt; Vec&lt;Option&lt;SimCoord&gt;&gt;;
 }
 <span class="boring">}</span></code></pre>
 <h3 id="spatialindex-trait"><a class="header" href="#spatialindex-trait">SpatialIndex Trait</a></h3>
@@ -1648,6 +1929,14 @@ pub trait GameModule {
     fn rule_schema(&amp;self) -&gt; RuleSchema;
 }
 <span class="boring">}</span></code></pre>
+<p><strong>Validation from OpenRA mod ecosystem:</strong> Analysis of six major OpenRA community mods (see <code>research/openra-mod-architecture-analysis.md</code>) confirms that every <code>GameModule</code> trait method addresses a real extension need:</p>
+<ul>
+<li><strong><code>register_format_loaders()</code></strong> — OpenKrush (KKnD on OpenRA) required 15+ custom binary format decoders (<code>.blit</code>, <code>.mobd</code>, <code>.mapd</code>, <code>.lvl</code>, <code>.son</code>, <code>.vbc</code>) that bear no resemblance to C&amp;C formats. TiberianDawnHD needed <code>RemasterSpriteSequence</code> for 128×128 HD tiles. Format extensibility is not optional for non-C&amp;C games.</li>
+<li><strong><code>system_pipeline()</code></strong> — OpenKrush replaced 16 complete mechanic modules (construction, production, oil economy, researching, bunkers, saboteurs, veterancy). OpenSA (Swarm Assault) added living-world systems (plant growth, creep spawners, colony capture). The pipeline cannot be fixed.</li>
+<li><strong><code>render_modes()</code></strong> — TiberianDawnHD is a pure render-only mod (zero gameplay changes) that adds HD sprite rendering with content source detection (Steam AppId, Origin registry, GOG paths). Render mode extensibility enables this cleanly.</li>
+<li><strong><code>pathfinder()</code></strong> — OpenSA needed <code>WaspLocomotor</code> (flying insect pathfinding); OpenRA/ra2 defines 8 locomotor types (Hover, Mech, Jumpjet, Teleport, etc). RA1’s JPS + flowfield is not universal.</li>
+<li><strong><code>fog_provider()</code> / <code>damage_resolver()</code></strong> — RA2 needs elevation-based LOS and shield-first damage; OpenHV needs a completely different resource flow model (Collector → Transporter → Receiver pipeline). Game-specific logic belongs in the module.</li>
+</ul>
 <h3 id="what-the-engine-provides-game-agnostic"><a class="header" href="#what-the-engine-provides-game-agnostic">What the engine provides (game-agnostic)</a></h3>
 <div class="table-wrapper">
 <table>

@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-1e3146b6.js";
+            window.path_to_searchindex_js = "searchindex-fb30e59a.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-678cb19b.js"></script>
+        <script src="toc-1d51ffef.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -217,7 +217,7 @@ Layer 1:  Data compatibility        (do they load same rules?)→ Very achievabl
     fn share_replay(&amp;self, replay: &amp;ReplayData) -&gt; Result&lt;()&gt;;
 }
 <span class="boring">}</span></code></pre>
-<p>Implement OpenRA’s master server protocol. Games show up in same browser. Your-engine players play your-engine players. Same community, different executables.</p>
+<p>Implement community master server protocols (OpenRA and CnCNet). IC games show up in both browsers, tagged by engine. Your-engine players play your-engine players. Same community, different executables. CnCNet is particularly important — it’s the home of the classic C&amp;C competitive community (RA1, TD, TS, RA2, YR) and has maintained multiplayer infrastructure for these games for over a decade. Appearing in CnCNet’s game browser ensures IC doesn’t fragment the existing community.</p>
 <h3 id="level-1-replay-compatibility-phase-5-6"><a class="header" href="#level-1-replay-compatibility-phase-5-6">Level 1: Replay Compatibility (Phase 5-6)</a></h3>
 <p>Decode OpenRA replay files via <code>OpenRACodec</code>, feed through your sim. They’ll desync eventually, but can watch most of a replay before drift. Useful and shippable.</p>
 <h3 id="level-2-casual-cross-play-with-periodic-resync-future"><a class="header" href="#level-2-casual-cross-play-with-periodic-resync-future">Level 2: Casual Cross-Play with Periodic Resync (Future)</a></h3>
@@ -268,6 +268,28 @@ pub enum ReconcileAction {
     Autonomous,                          // No authority — local sim is truth
 }
 <span class="boring">}</span></code></pre>
+<p><strong>Correction bounds (V35):</strong> <code>is_sane_correction()</code> validates every entity correction before applying it. Bounds prevent a malicious authority server from teleporting units or granting resources:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Maximum ticks since last sync before bounds stop growing.
+/// Prevents unbounded drift acceptance if sync messages stop arriving.
+const MAX_TICKS_SINCE_SYNC: u64 = 300; // 10 seconds at 30 tps
+
+/// Maximum resource correction per sync cycle (one harvester full load).
+const MAX_CREDIT_DELTA: i64 = 5000;
+
+fn is_sane_correction(correction: &amp;EntityCorrection, ticks_since_sync: u64) -&gt; bool {
+    let capped_ticks = ticks_since_sync.min(MAX_TICKS_SINCE_SYNC);
+    let max_pos_delta = MAX_UNIT_SPEED * capped_ticks as i64;
+    match correction {
+        EntityCorrection::Position(delta) =&gt; delta.magnitude() &lt;= max_pos_delta,
+        EntityCorrection::Credits(delta) =&gt; delta.abs() &lt;= MAX_CREDIT_DELTA,
+        EntityCorrection::Health(delta) =&gt; delta.abs() &lt;= 1000,
+        _ =&gt; true,
+    }
+}
+<span class="boring">}</span></code></pre>
+<p>If &gt;5 consecutive corrections are rejected, the reconciler escalates to <code>Resync</code> (full snapshot) or <code>Autonomous</code> (disconnect from authority).</p>
 <h3 id="protocoladapter-transparent-network-wrapping"><a class="header" href="#protocoladapter-transparent-network-wrapping">ProtocolAdapter: Transparent Network Wrapping</a></h3>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {

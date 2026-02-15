@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-1e3146b6.js";
+            window.path_to_searchindex_js = "searchindex-fb30e59a.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-678cb19b.js"></script>
+        <script src="toc-1d51ffef.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -251,6 +251,7 @@ Competitors like Warcraft used unit caps for balance and performance. Westwood r
 <h3 id="4-data-driven-everything"><a class="header" href="#4-data-driven-everything">4. Data-Driven Everything</a></h3>
 <p>The original C&amp;C stored all game values in INI files. Designers iterated without recompiling. The community discovered this and modding was born. OpenRA inherited this as MiniYAML. The Remastered Collection preserved it.</p>
 <p><strong>Rule:</strong> Game values belong in YAML, not Rust code. If a modder would want to change it, it shouldn’t require recompilation. This is the foundation of the tiered modding system (D003/D004/D005).</p>
+<p><strong>Validated by Factorio:</strong> Wube Software takes this principle to its logical extreme — Factorio’s <code>base/</code> directory defines the entire base game using the same <code>data:extend()</code> Lua API available to modders. The game itself is a mod. This “game is a mod” architecture (see <code>research/mojang-wube-modding-analysis.md</code>) is the strongest possible guarantee that the modding API is complete and stable: if the base game can’t do something without internal APIs, the modding API is incomplete. IC’s RA1 game module should aspire to the same standard — every system registered through <code>GameModule</code> trait (D018), no internal shortcuts unavailable to external modules.</p>
 <p><strong>Where this applies:</strong></p>
 <ul>
 <li>YAML rule system in <a href="04-MODDING.html">04-MODDING.md</a> — 80% of mods achievable with YAML alone</li>

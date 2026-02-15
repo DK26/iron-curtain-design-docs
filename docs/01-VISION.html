@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-1e3146b6.js";
+            window.path_to_searchindex_js = "searchindex-fb30e59a.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-678cb19b.js"></script>
+        <script src="toc-1d51ffef.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -319,11 +319,11 @@ OpenRA’s map editor handles terrain and actor placement but not mission logic 
 </ol>
 <p>Item 8 is the linchpin. If existing mods just work, migration cost drops to near zero.</p>
 <h2 id="competitive-play"><a class="header" href="#competitive-play">Competitive Play</a></h2>
-<p>Red Alert has a dedicated competitive community (primarily through OpenRA and CnCNet). CnCNet provides community ladders and tournament infrastructure, but there’s no integrated ranked system, no automated anti-cheat, and desyncs remain a persistent issue (135+ tracked in OpenRA’s issue tracker). This is a significant opportunity.</p>
+<p>Red Alert has a dedicated competitive community (primarily through OpenRA and CnCNet). CnCNet provides community ladders and tournament infrastructure, but there’s no integrated ranked system, no automated anti-cheat, and desyncs remain a persistent issue (135+ tracked in OpenRA’s issue tracker). This is a significant opportunity. IC’s <code>CommunityBridge</code> will integrate with both OpenRA’s and CnCNet’s game browsers (shared discovery, separate gameplay) so the C&amp;C community stays unified.</p>
 <h3 id="ranked-matchmaking"><a class="header" href="#ranked-matchmaking">Ranked Matchmaking</a></h3>
 <ul>
 <li><strong>Rating system:</strong> Glicko-2 (improvement over Elo — accounts for rating volatility and inactivity, used by Lichess, FIDE, many modern games)</li>
-<li><strong>Seasons:</strong> 3-month ranked seasons with placement matches (10 games), league tiers (Bronze → Silver → Gold → Platinum → Diamond → Master), end-of-season rewards</li>
+<li><strong>Seasons:</strong> 3-month ranked seasons with placement matches (10 games), YAML-configurable tier system (D055 — Cold War military ranks for RA: Conscript → Supreme Commander, 7+2 tiers × 3 divisions), end-of-season rewards</li>
 <li><strong>Queues:</strong> 1v1 (primary), 2v2 (team), FFA (experimental). Separate ratings per queue</li>
 <li><strong>Map pool:</strong> Curated competitive map pool per season, community-nominated and committee-voted. Ranked games use pool maps only</li>
 <li><strong>Balance preset locked:</strong> Ranked play uses a fixed balance preset per season (prevents mid-season rule changes from invalidating results)</li>
@@ -531,7 +531,7 @@ OpenRA’s map editor handles terrain and actor placement but not mission logic 
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="FOREWORD.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="OVERVIEW.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                             </a>
 
@@ -545,7 +545,7 @@ OpenRA’s map editor handles terrain and actor placement but not mission logic 
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="FOREWORD.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="OVERVIEW.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                     </a>
 

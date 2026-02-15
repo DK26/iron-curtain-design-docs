@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-1e3146b6.js";
+            window.path_to_searchindex_js = "searchindex-fb30e59a.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-678cb19b.js"></script>
+        <script src="toc-1d51ffef.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -390,8 +390,8 @@
 <li>Desync detection and server-side debugging tools (killer feature)</li>
 <li>Lobby system, game browser, NAT traversal via relay</li>
 <li>Replay system (already enabled by Phase 2 architecture)</li>
-<li><code>CommunityBridge</code> for shared server browser with OpenRA</li>
-<li><strong>Ranked matchmaking:</strong> Glicko-2 rating system, placement matches, league tiers, 3-month seasons</li>
+<li><code>CommunityBridge</code> for shared server browser with OpenRA and CnCNet</li>
+<li><strong>Ranked matchmaking (D055):</strong> Glicko-2 rating system (D041), 10 placement matches, YAML-configurable tier system (Cold War military ranks for RA: Conscript → Supreme Commander, 7+2 tiers × 3 divisions = 23 positions), 3-month seasons with soft reset, dual display (tier badge + rating number), faction-specific optional ratings, small-population matchmaking degradation, map veto system</li>
 <li><strong>Leaderboards:</strong> global, per-faction, per-map — with public profiles and replay links</li>
 <li><strong>Observer/spectator mode:</strong> connect to relay with configurable fog (full/player/none) and broadcast delay</li>
 <li><strong>Tournament mode:</strong> bracket API, relay-certified <code>CertifiedMatchResult</code>, server-side replay archive</li>
@@ -418,7 +418,7 @@
 <ul>
 <li>Two players can play a full game over the internet</li>
 <li>Desync, if it occurs, is automatically diagnosed to specific tick and entity</li>
-<li>Games appear in shared server browser alongside OpenRA games</li>
+<li>Games appear in shared server browser alongside OpenRA and CnCNet games</li>
 <li>Ranked 1v1 queue functional with ratings, placement, and leaderboard</li>
 <li>Spectator can watch a live game with broadcast delay</li>
 </ul>

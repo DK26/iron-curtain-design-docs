@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-1e3146b6.js";
+            window.path_to_searchindex_js = "searchindex-fb30e59a.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-678cb19b.js"></script>
+        <script src="toc-1d51ffef.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -639,11 +639,79 @@ pub enum RenderTier {
 <p>Telemetry is zero-cost when disabled (compile-time feature gate). Release builds intended for players ship without it. Tournament servers, AI training, and development builds enable it. See <code>09-DECISIONS.md</code> § D031 for full design.</p>
 <h3 id="profile-before-parallelize"><a class="header" href="#profile-before-parallelize">Profile Before Parallelize</a></h3>
 <p>Never add <code>par_iter()</code> without profiling first. Measure single-threaded. If a system takes &gt; 1ms, consider parallelizing. If it takes &lt; 0.1ms, sequential is faster (avoids coordination overhead).</p>
+<p><strong>Recommended profiling tool:</strong> Embark Studios’ <strong>puffin</strong> (1,674★, MIT/Apache-2.0) — a frame-based instrumentation profiler built for game loops. Puffin’s thread-local profiling streams have ~1ns overhead when disabled (atomic bool check, no allocation), making it safe to leave instrumentation in release builds. Key features validated by production use at Embark: frame-scoped profiling (maps directly to IC’s sim tick loop), remote TCP streaming for profiling headless servers (relay server profiling without local UI), and the <code>puffin_egui</code> viewer for real-time flame graphs in development builds via <code>bevy_egui</code>. IC’s <code>telemetry</code> feature flag (D031) should gate puffin’s collection, maintaining zero-cost when disabled. See <code>research/embark-studios-rust-gamedev-analysis.md</code> § puffin.</p>
+<h2 id="delta-encoding--change-tracking-performance"><a class="header" href="#delta-encoding--change-tracking-performance">Delta Encoding &amp; Change Tracking Performance</a></h2>
+<p>Snapshots (D010) are the foundation of save games, replays, desync debugging, and reconnection. Full snapshots of 1000 units are ~200-400KB (ECS-packed). At 15 tps, saving full snapshots every tick would cost ~3-6 MB/s — wasteful when most fields don’t change most ticks.</p>
+<h3 id="property-level-delta-encoding"><a class="header" href="#property-level-delta-encoding">Property-Level Delta Encoding</a></h3>
+<p>Instead of snapshotting entire components, track which specific fields changed (see <code>02-ARCHITECTURE.md</code> § “State Recording &amp; Replay Infrastructure” for the <code>#[derive(TrackChanges)]</code> macro and <code>ChangeMask</code> bitfield). Delta snapshots record only changed fields:</p>
+<pre><code>Full snapshot:  1000 units × ~300 bytes     = 300 KB
+Delta snapshot: 1000 units × ~30 bytes avg  =  30 KB  (10x reduction)
+</code></pre>
+<p>This pattern is validated by Source Engine’s <code>CNetworkVar</code> system (see <code>research/valve-github-analysis.md</code> § 2.2), which tracks per-field dirty flags and transmits only changed properties. The Source Engine achieves 10-20x bandwidth reduction through this approach — IC targets a similar ratio.</p>
+<h3 id="sprop_changes_often-priority-encoding"><a class="header" href="#sprop_changes_often-priority-encoding">SPROP_CHANGES_OFTEN Priority Encoding</a></h3>
+<p>Source Engine annotates frequently-changing properties with <code>SPROP_CHANGES_OFTEN</code>, which moves them to the front of the encoding order. The encoder checks these fields first, improving branch prediction and cache locality during delta computation:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Fields annotated with #[changes_often] are checked first during delta computation.
+/// This improves branch prediction (frequently-dirty fields are checked early) and
+/// cache locality (hot fields are contiguous in the diff buffer).
+///
+/// Typical priority ordering for a unit component:
+///   1. Position, Velocity        — change nearly every tick (movement)  
+///   2. Health, Facing            — change during combat
+///   3. Owner, UnitType, Armor    — rarely change (cold)
+<span class="boring">}</span></code></pre>
+<p>The encoder iterates priority groups in order: changes-often fields first, then remaining fields. For a 1000-unit game where ~200 units are moving, the encoder finds the first dirty field within 1-2 checks for moving units (position is priority 0) and within 0 checks for stationary units (nothing dirty). Without priority ordering, the encoder would scan all fields equally, hitting cold fields first and wasting branch predictor entries.</p>
+<h3 id="entity-baselines-from-quake-3"><a class="header" href="#entity-baselines-from-quake-3">Entity Baselines (from Quake 3)</a></h3>
+<p>Quake 3’s networking introduced <strong>entity baselines</strong> — a default state for each entity type that serves as the base for delta encoding (see <code>research/quake3-netcode-analysis.md</code>). Instead of encoding deltas against the previous snapshot (which requires both sender and receiver to track full state history), deltas are encoded against a well-known baseline that both sides already have. This eliminates the need to retransmit reference frames on packet loss.</p>
+<p>IC applies this concept to snapshot deltas:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Per-archetype baseline state. Registered at game module initialization.
+/// All delta encoding uses baseline as the reference when no prior
+/// snapshot is available (e.g., reconnection, first snapshot after load).
+pub struct EntityBaseline {
+    pub archetype: ArchetypeLabel,
+    pub default_components: Vec&lt;u8&gt;,  // Serialized default state for this archetype
+}
+
+/// When computing a delta:
+/// 1. If previous snapshot exists → delta against previous (normal case)
+/// 2. If no previous snapshot → delta against baseline
+///    Much smaller than a full snapshot because most fields
+///    (owner, unit_type, armor, max_health) match the baseline.
+<span class="boring">}</span></code></pre>
+<p><strong>Why baselines matter for reconnection:</strong> When a reconnecting client receives a snapshot, it has no previous state to delta against. Without baselines, the server must send a full uncompressed snapshot (~300KB for 1000 units). With baselines, the server sends deltas against the baseline — only fields that differ from the archetype’s default state (position, health, facing, orders). For a 1000-unit game, ~60% of fields match the baseline, reducing the reconnection snapshot to ~120KB.</p>
+<p><strong>Baseline registration:</strong> Each game module registers baselines for its archetypes during initialization (e.g., “Allied Rifle Infantry” has default health=50, armor=None, speed=4). The baseline is frozen at game start — it never changes during play. Both sides (sender and receiver) derive the same baseline from the same game module data.</p>
+<h3 id="performance-impact-by-use-case"><a class="header" href="#performance-impact-by-use-case">Performance Impact by Use Case</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Use Case</th><th>Full Snapshot</th><th>Delta Snapshot</th><th>Improvement</th></tr>
+</thead>
+<tbody>
+<tr><td>Autosave (every 30s)</td><td>300 KB per save</td><td>~30 KB per save</td><td>10x smaller</td></tr>
+<tr><td>Replay recording</td><td>4.5 MB/s</td><td>~450 KB/s</td><td>10x less IO</td></tr>
+<tr><td>Reconnection transfer</td><td>300 KB burst</td><td>30 KB + deltas</td><td>Faster join</td></tr>
+<tr><td>Desync diagnosis</td><td>Full state dump</td><td>Field-level diff</td><td>Pinpoints exact divergence</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="benchmarks"><a class="header" href="#benchmarks">Benchmarks</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>#[bench] fn bench_delta_snapshot_1000_units()  { delta_bench(1000); }
+#[bench] fn bench_delta_apply_1000_units()     { apply_delta_bench(1000); }
+#[bench] fn bench_change_tracking_overhead()   { tracking_overhead_bench(); }
+<span class="boring">}</span></code></pre>
+<p>The change tracking overhead (maintaining <code>ChangeMask</code> bitfields via setter functions) is measured separately. Target: &lt; 1% overhead on the movement system compared to direct field writes. The <code>#[derive(TrackChanges)]</code> macro generates setter functions that flip a bit — a single OR instruction per field write.</p>
 <h2 id="decision-record"><a class="header" href="#decision-record">Decision Record</a></h2>
 <h3 id="d015-performance--efficiency-first-not-thread-first"><a class="header" href="#d015-performance--efficiency-first-not-thread-first">D015: Performance — Efficiency-First, Not Thread-First</a></h3>
 <p><strong>Decision:</strong> Performance is achieved through algorithmic efficiency, cache-friendly data layout, adaptive workload, zero allocation, and amortized computation. Multi-core scaling is a bonus layer on top, not the foundation.</p>
 <p><strong>Principle:</strong> The engine must run a 500-unit battle smoothly on a 2-core, 4GB machine from 2012. Multi-core machines get higher unit counts as a natural consequence of the work-stealing scheduler.</p>
 <p><strong>Inspired by:</strong> Datadog Vector’s pipeline efficiency, Tokio’s work-stealing runtime, axum’s zero-overhead request handling. These systems are fast because they waste nothing, not because they use more hardware.</p>
+<h3 id="memory-allocator-selection"><a class="header" href="#memory-allocator-selection">Memory Allocator Selection</a></h3>
+<p>The default Rust allocator (<code>System</code> — usually glibc <code>malloc</code> on Linux, MSVC allocator on Windows) is not optimized for game workloads with many small, short-lived allocations (pathfinding nodes, order processing, per-tick temporaries). Embark Studios’ experience across multiple production Rust game projects shows measurable gains from specialized allocators. IC should benchmark with <strong>jemalloc</strong> (<code>tikv-jemallocator</code>) and <strong>mimalloc</strong> (<code>mimalloc-rs</code>) early in Phase 2 — Quilkin offers both as feature flags, confirming the pattern. This fits the efficiency pyramid: better algorithms first (levels 1-4), then allocator tuning (level 5) before reaching for parallelism (level 6). See <code>research/embark-studios-rust-gamedev-analysis.md</code> § Theme 6.</p>
 <p><strong>Anti-pattern:</strong> “Just parallelize it” as the answer to performance questions. Parallelism without algorithmic efficiency is like adding lanes to a highway with broken traffic lights.</p>
 
                     </main>

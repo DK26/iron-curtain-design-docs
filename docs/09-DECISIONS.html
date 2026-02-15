@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-1e3146b6.js";
+            window.path_to_searchindex_js = "searchindex-fb30e59a.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-678cb19b.js"></script>
+        <script src="toc-1d51ffef.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -229,6 +229,30 @@
 <li>Not isometric-specific → build isometric layer on Bevy’s 2D (still less work than raw wgpu)</li>
 <li>Performance concerns → Bevy uses rayon internally, <code>par_iter()</code> for data parallelism, and allows custom render passes and SIMD where needed</li>
 </ul>
+<p><strong>Alternatives considered:</strong></p>
+<p><em>Godot (rejected):</em></p>
+<p>Godot is a mature, MIT-licensed engine with excellent tooling (editor, GDScript, asset pipeline). However, it does not fit IC’s architecture:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Requirement</th><th>Bevy</th><th>Godot</th></tr>
+</thead>
+<tbody>
+<tr><td>Language (D001)</td><td>Rust-native — IC systems are Bevy systems, no boundary crossing</td><td>C++ engine. Rust logic via GDExtension adds a C ABI boundary on every engine call</td></tr>
+<tr><td>ECS for 500+ units</td><td>Flat archetypes, cache-friendly iteration, <code>par_iter()</code></td><td>Scene tree (node hierarchy). Hundreds of RTS units as Nodes fight cache coherence. No native ECS</td></tr>
+<tr><td>Deterministic sim (Invariant #1)</td><td><code>FixedUpdate</code> + <code>.chain()</code> — explicit, documented system ordering</td><td><code>_physics_process()</code> order depends on scene tree position — harder to guarantee across versions</td></tr>
+<tr><td>Headless server</td><td><code>MinimalPlugins</code> — zero rendering, zero GPU dependency</td><td>Can run headless but designed around rendering. Heavier baseline</td></tr>
+<tr><td>Crate structure</td><td>Each <code>ic-*</code> crate is a Bevy plugin. Clean <code>Cargo.toml</code> dependency graph</td><td>Each module would be a GDExtension shared library with C ABI marshalling overhead</td></tr>
+<tr><td>WASM browser target</td><td>Community-tested. Rust code compiles to WASM directly</td><td>WASM export includes the entire C++ runtime (~40 MB+)</td></tr>
+<tr><td>Modding (D005)</td><td>WASM mods call host functions directly. Lua via <code>mlua</code> in-process</td><td>GDExtension → C ABI → Rust → WASM chain. Extra indirection</td></tr>
+<tr><td>Fixed-point math (D009)</td><td>Systems operate on IC’s <code>i32</code>/<code>i64</code> types natively</td><td>Physics uses <code>float</code>/<code>double</code> internally. IC would bypass engine math entirely</td></tr>
+</tbody>
+</table>
+</div>
+<p>Using Godot would mean writing all simulation logic in Rust via GDExtension, bypassing Godot’s physics/math/networking, building a custom editor anyway (D038), and using none of GDScript. At that point Godot becomes expensive rendering middleware with a C ABI tax — Bevy provides the same rendering capabilities (wgpu) without the boundary. Godot’s strengths (mature editor, GDScript rapid prototyping, scene tree composition) serve adventure and platformer games well but are counterproductive for flat ECS simulation of hundreds of units.</p>
+<p>IC borrows interface design patterns from Godot — pluggable <code>MultiplayerAPI</code> validates IC’s <code>NetworkModel</code> trait (D006), “editor is the engine” validates <code>ic-editor</code> as a Bevy app (D038), and the separate proposals repository informs governance (D037) — but these are architectural lessons, not reasons to adopt Godot as a runtime. See <code>research/godot-o3de-engine-analysis.md</code> for the full analysis.</p>
+<p><em>Custom library stack — winit + wgpu + hecs (original decision, rejected):</em></p>
+<p>The original plan avoided framework lock-in by assembling individual crates. Rejected because 2-4 months of infrastructure work (sprite batching, cameras, audio, input, asset pipeline) delays the differentiating features (sim, netcode, modding). Bevy provides all of this with a compatible ECS architecture.</p>
 <hr>
 <h2 id="d003-data-format--real-yaml-not-miniyaml"><a class="header" href="#d003-data-format--real-yaml-not-miniyaml">D003: Data Format — Real YAML, Not MiniYAML</a></h2>
 <p><strong>Decision:</strong> Use standard spec-compliant YAML with <code>serde_yaml</code>. Not OpenRA’s MiniYAML.</p>
@@ -291,6 +315,7 @@
 <li>Players could choose model in lobby</li>
 </ul>
 <p><strong>Key invariant:</strong> <code>ic-sim</code> has zero imports from <code>ic-net</code>. They only share <code>ic-protocol</code>.</p>
+<p><strong>Cross-engine validation:</strong> Godot’s <code>MultiplayerAPI</code> trait follows the same pattern — an abstract multiplayer interface with a default <code>SceneMultiplayer</code> implementation and a null <code>OfflineMultiplayerPeer</code> for single-player/testing (which validates IC’s <code>LocalNetwork</code> concept). O3DE’s separate <code>AzNetworking</code> (transport layer: TCP, UDP, serialization) and <code>Multiplayer</code> Gem (game-level replication, authority, entity migration) validates IC’s <code>ic-net</code> / <code>ic-protocol</code> separation. Both engines prove that trait-abstracted networking with a null/offline implementation is the industry-standard pattern for testable game networking. See <code>research/godot-o3de-engine-analysis.md</code>.</p>
 <hr>
 <h2 id="d007-networking--relay-server-as-default"><a class="header" href="#d007-networking--relay-server-as-default">D007: Networking — Relay Server as Default</a></h2>
 <p><strong>Decision:</strong> Default multiplayer uses relay server with time authority, not pure P2P.</p>
@@ -303,7 +328,7 @@
 <li>Signed replays</li>
 <li>Cheap to run (doesn’t run sim, just forwards orders)</li>
 </ul>
-<p><strong>Validated by:</strong> C&amp;C Generals/Zero Hour’s “packet router” — a client-side star topology where one player collected and rebroadcast all commands. Same concept, but our server-hosted version eliminates host advantage and adds neutral time authority. See <code>research/generals-zero-hour-netcode-analysis.md</code>.</p>
+<p><strong>Validated by:</strong> C&amp;C Generals/Zero Hour’s “packet router” — a client-side star topology where one player collected and rebroadcast all commands. Same concept, but our server-hosted version eliminates host advantage and adds neutral time authority. See <code>research/generals-zero-hour-netcode-analysis.md</code>. Further validated by Valve’s GameNetworkingSockets (GNS), which defaults to relay (Valve SDR — Steam Datagram Relay) for all connections, including P2P-capable scenarios. GNS’s rationale mirrors ours: relay eliminates NAT traversal headaches, provides consistent latency measurement, and blocks IP-level attacks. The GNS architecture also validates encrypting all relay traffic (AES-GCM-256 + Curve25519) — see D054 § Transport encryption. See <code>research/valve-github-analysis.md</code>. Additionally validated by Embark Studios’ <strong>Quilkin</strong> — a production Rust UDP proxy for game servers (1,510★, Apache 2.0, co-developed with Google Cloud Gaming). Quilkin provides a concrete implementation of relay-as-filter-chain: session routing via token-based connection IDs, QCMP latency measurement for server selection, composable filter pipeline (Capture → Firewall → RateLimit → TokenRouter), and full OTEL observability. Quilkin’s production deployment on Tokio + tonic confirms that async Rust handles game relay traffic at scale. See <code>research/embark-studios-rust-gamedev-analysis.md</code>.</p>
 <p><strong>Alternatives available:</strong> Pure P2P lockstep, fog-authoritative server, rollback — all implementable as <code>NetworkModel</code> variants.</p>
 <hr>
 <h2 id="d008-sub-tick-timestamps-on-orders"><a class="header" href="#d008-sub-tick-timestamps-on-orders">D008: Sub-Tick Timestamps on Orders</a></h2>
@@ -336,6 +361,8 @@
 <li>Cross-engine reconciliation (restore from authoritative checkpoint)</li>
 <li>Automated testing (load known state, apply inputs, verify result)</li>
 </ul>
+<p><strong>Crash-safe serialization (from Valve Fossilize):</strong> Save files use an append-only write strategy with a final header update — the same pattern Valve uses in Fossilize (their pipeline cache serialization library, see <code>research/valve-github-analysis.md</code> § Part 3). The payload is written first into a temporary file; only after the full payload is fsynced does the header (containing checksum + payload length) get written atomically. If the process crashes mid-write, the incomplete temporary file is detected and discarded on next load — the previous valid save remains intact. This eliminates the “corrupted save file” failure mode that plagues games with naïve serialization.</p>
+<p><strong>Delta encoding for snapshots:</strong> Periodic full snapshots (for save games, desync debugging) are complemented by <strong>delta snapshots</strong> that encode only changed state since the last full snapshot. Delta encoding uses property-level diffing: each ECS component that changed since the last snapshot is serialized; unchanged components are omitted. For a 500-unit game where ~10% of components change per tick, a delta snapshot is ~10x smaller than a full snapshot. This reduces save file size, speeds up autosave, and makes periodic snapshot transmission (for late-join reconnection) bandwidth-efficient. Inspired by Source Engine’s <code>CNetworkVar</code> per-field change detection (see <code>research/valve-github-analysis.md</code> § 2.2) and the <code>SPROP_CHANGES_OFTEN</code> priority flag — components that change every tick (position, health) are checked first during delta computation, improving cache locality. See <code>10-PERFORMANCE.md</code> for the performance impact and <code>09-DECISIONS.md</code> § D054 for the <code>SnapshotCodec</code> version dispatch.</p>
 <hr>
 <h2 id="d011-cross-engine-play--community-layer-not-sim-layer"><a class="header" href="#d011-cross-engine-play--community-layer-not-sim-layer">D011: Cross-Engine Play — Community Layer, Not Sim Layer</a></h2>
 <p><strong>Decision:</strong> Cross-engine compatibility targets data/community layer. NOT bit-identical simulation.</p>
@@ -343,6 +370,8 @@
 <ul>
 <li>Bit-identical sim requires bug-for-bug reimplementation (that’s a port, not our engine)</li>
 <li>Community interop is valuable and achievable: shared server browser, maps, mod format</li>
+<li>Applies equally to OpenRA and CnCNet — both are <code>CommunityBridge</code> targets (shared game browser, community discovery)</li>
+<li>CnCNet integration is discovery-layer only: IC games use IC relay servers (not CnCNet tunnels), IC rankings are separate (different balance, anti-cheat, match certification)</li>
 <li>Architecture keeps the door open for deeper interop later (OrderCodec, SimReconciler, ProtocolAdapter)</li>
 <li>Progressive levels: shared lobby → replay viewing → casual cross-play → competitive cross-play</li>
 </ul>
@@ -356,6 +385,29 @@
 <li>Repeated rejections indicate cheating (loggable)</li>
 <li>No separate “anti-cheat” system — validation IS anti-cheat</li>
 </ul>
+<p><strong>Dual error reporting:</strong> Validation produces two categories of rejection, following the pattern used by SC2’s order system (see <code>research/blizzard-github-analysis.md</code> § Part 4):</p>
+<ol>
+<li>
+<p><strong>Immediate rejection</strong> — the order is structurally invalid or fails preconditions that can be checked at submission time (unit doesn’t exist, player doesn’t own the unit, ability on cooldown, insufficient resources). The sim rejects the order before it enters the execution pipeline. All clients agree on the rejection deterministically.</p>
+</li>
+<li>
+<p><strong>Late failure</strong> — the order was valid when submitted but fails during execution (target died between order and execution, path became blocked, build site was occupied by the time construction starts). The order entered the pipeline but the action could not complete. Late failures are normal gameplay, not cheating indicators.</p>
+</li>
+</ol>
+<p>Only <em>immediate rejections</em> count toward suspicious-activity tracking. Late failures happen to legitimate players constantly (e.g., two allies both target the same enemy, one kills it before the other’s attack lands). SC2 defines 214 distinct <code>ActionResult</code> codes for this taxonomy — IC uses a smaller set grouped by category:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub enum OrderRejectionCategory {
+    Ownership,      // unit doesn't belong to this player
+    Resources,      // can't afford
+    Prerequisites,  // tech tree not met
+    Targeting,      // invalid target type
+    Placement,      // can't build there
+    Cooldown,       // ability not ready
+    Transport,      // transport full / wrong passenger type
+    Custom,         // game-module-defined rejection
+}
+<span class="boring">}</span></code></pre>
 <hr>
 <h2 id="d013-pathfinding--trait-abstracted-multi-layer-hybrid-first"><a class="header" href="#d013-pathfinding--trait-abstracted-multi-layer-hybrid-first">D013: Pathfinding — Trait-Abstracted, Multi-Layer Hybrid First</a></h2>
 <p><strong>Decision:</strong> Pathfinding and spatial queries are abstracted behind traits (<code>Pathfinder</code>, <code>SpatialIndex</code>) in the engine core. The RA1 game module implements them with a multi-layer hybrid pathfinder and spatial hash. The engine core never calls algorithm-specific functions directly.</p>
@@ -370,7 +422,7 @@
 </ul>
 <p><strong>Concrete design:</strong></p>
 <ul>
-<li><code>Pathfinder</code> trait: <code>request_path()</code>, <code>get_path()</code>, <code>is_passable()</code>, <code>invalidate_area()</code></li>
+<li><code>Pathfinder</code> trait: <code>request_path()</code>, <code>get_path()</code>, <code>is_passable()</code>, <code>invalidate_area()</code>, <code>path_distance()</code>, <code>batch_distances()</code></li>
 <li><code>SpatialIndex</code> trait: <code>query_range()</code>, <code>update_position()</code>, <code>remove()</code></li>
 <li>RA1 module registers <code>IcPathfinder</code> (primary) + <code>GridSpatialHash</code>; D045 adds <code>RemastersPathfinder</code> and <code>OpenRaPathfinder</code> as additional <code>Pathfinder</code> implementations for movement feel presets</li>
 <li>All sim systems call the traits, never grid-specific data structures</li>
@@ -1954,6 +2006,7 @@ campaign_parameters:
 <li>Broadens the project’s audience and contributor base</li>
 <li>RA2 is the most-requested extension — community interest is proven (Chrono Divide exists)</li>
 <li>Shipping RA + TD from the start (like OpenRA) proves the game-agnostic design is real, not aspirational</li>
+<li><strong>Validated by Factorio’s “game is a mod” principle:</strong> Factorio’s <code>base/</code> directory uses the exact same <code>data:extend()</code> API available to external mods — the base game is literally a mod. This is the strongest possible validation of the game module architecture. IC’s RA1 module must use NO internal APIs unavailable to external game modules. Every system it uses — pathfinding, fog of war, damage resolution, format loading — should go through <code>GameModule</code> trait registration, not internal engine shortcuts. If the RA1 module needs a capability that external modules can’t access, that capability must be promoted to a public trait or API. See <code>research/mojang-wube-modding-analysis.md</code> § “The Game Is a Mod”</li>
 </ul>
 <p><strong>The <code>GameModule</code> trait:</strong></p>
 <p>Every game module implements <code>GameModule</code>, which bundles everything the engine needs to run that game:</p>
@@ -2173,7 +2226,14 @@ ic mod lint                # convention + llm: metadata checks
 ic mod update-engine       # bump engine version
 ic sdk                     # launch the visual SDK application (scenario editor, asset studio, campaign editor)
 ic sdk open [project]      # launch SDK with a specific mod/scenario
+ic replay parse [file]     # extract replay data to structured output (JSON/CSV) — enables community stats sites,
+                           #   tournament analysis, anti-cheat review (inspired by Valve's csgo-demoinfo)
+ic replay inspect [file]   # summary view: players, map, duration, outcome, desync status
+ic replay verify [file]    # verify relay signature chain + integrity (see 06-SECURITY.md)
 </code></pre>
+<blockquote>
+<p><strong>CLI design principle (from Fossilize):</strong> Each subcommand does one focused thing well — validate, convert, inspect, verify. Valve’s Fossilize toolchain (<code>fossilize-replay</code>, <code>fossilize-merge</code>, <code>fossilize-convert</code>, <code>fossilize-list</code>) demonstrates that a family of small, composable CLI tools is more useful than a monolithic Swiss Army knife. The <code>ic</code> CLI follows this pattern: <code>ic mod check</code> validates, <code>ic mod convert</code> converts formats, <code>ic replay parse</code> extracts data, <code>ic replay inspect</code> summarizes. Each subcommand is independently useful and composable via shell pipelines. See <code>research/valve-github-analysis.md</code> § 3.3 and § 6.2.</p>
+</blockquote>
 <p><strong>Mod templates (built-in):</strong></p>
 <ul>
 <li><code>data-mod</code> — YAML-only balance/cosmetic mods</li>
@@ -2530,6 +2590,26 @@ ic sdk open [project]      # launch SDK with a specific mod/scenario
 </tbody>
 </table>
 </div>
+<p><strong>Evidence from OpenRA mod ecosystem:</strong> Analysis of six major OpenRA community mods (see <code>research/openra-mod-architecture-analysis.md</code> and <code>research/openra-ra2-mod-architecture.md</code>) validates and extends this list. Cross-game component reuse is the most consistent pattern across mods — the same mechanics appear independently in 3–5 mods each:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Component</th><th>Mods Using It</th><th>Notes</th></tr>
+</thead>
+<tbody>
+<tr><td>Mind Control</td><td>RA2, Romanovs-Vengeance</td><td>MindController/MindControllable with capacity limits, DiscardOldest policy, ArcLaserZap visual</td></tr>
+<tr><td>Carrier/Spawner</td><td>RA2, OpenHV, OpenSA</td><td>BaseSpawnerParent→CarrierParent hierarchy; OpenHV uses for drone carriers; OpenSA for colony spawning</td></tr>
+<tr><td>Infection</td><td>RA2, Romanovs-Vengeance</td><td>InfectableInfo with damage/kill triggers</td></tr>
+<tr><td>Disguise/Mirage</td><td>RA2, Romanovs-Vengeance</td><td>MirageInfo with configurable reveal triggers (attack, damage, deploy, unload, infiltrate, heal)</td></tr>
+<tr><td>Temporal Weapons</td><td>RA2, Romanovs-Vengeance</td><td>ChronoVortexInfo with return-to-start mechanics</td></tr>
+<tr><td>Radiation</td><td>RA2</td><td>World-level TintedCellsLayer with sparse storage and logarithmic decay</td></tr>
+<tr><td>Hacking</td><td>OpenHV</td><td>HackerInfo with delay, condition grant on target</td></tr>
+<tr><td>Periodic Discharge</td><td>OpenHV</td><td>PeriodicDischargeInfo with damage/effects on timer</td></tr>
+<tr><td>Colony Capture</td><td>OpenSA</td><td>ColonyBit with conversion mechanics</td></tr>
+</tbody>
+</table>
+</div>
+<p>This validates that IC’s seven systems are necessary but reveals two additional patterns that appear cross-game: <strong>infection</strong> (delayed damage/conversion — distinct from “delayed weapons” in that the infected unit carries the effect) and <strong>disguise/mirage</strong> (appearance substitution with configurable reveal triggers). These are candidates for promotion from WASM-only to first-party components.</p>
 <p><strong>Rationale:</strong></p>
 <ul>
 <li>These aren’t CA-specific — they’re needed for RA2 (the likely second game module). Building them in Phase 2 means they’re available when RA2 development starts.</li>
@@ -2584,6 +2664,7 @@ ic sdk open [project]      # launch SDK with a specific mod/scenario
 </table>
 </div>
 <p>The Artifactory-level federation design is the end state, not the MVP. Ship simple, iterate toward complex. P2P delivery (D049) is integrated from Phase 3–4 because centralized hosting costs are a sustainability risk — better to solve early than retrofit. Workshop packages use the <code>.icpkg</code> format (ZIP with <code>manifest.yaml</code>) — see D049 for full specification.</p>
+<p><strong>Cross-engine validation:</strong> O3DE’s <strong>Gem system</strong> uses a declarative <code>gem.json</code> manifest with explicit dependency declarations, version constraints, and categorized tags — the same structure IC targets for Workshop packages. O3DE’s template system (<code>o3de register --template-path</code>) scaffolds new projects from standard templates, validating IC’s planned <code>ic mod init --template=...</code> CLI command. Factorio’s mod portal uses semver dependency ranges (e.g., <code>&gt;= 1.1.0</code>) with automatic resolution — the same model IC should use for Workshop package dependencies. See <code>research/godot-o3de-engine-analysis.md</code> § O3DE and <code>research/mojang-wube-modding-analysis.md</code> § Factorio.</p>
 <h3 id="resource-identity--versioning"><a class="header" href="#resource-identity--versioning">Resource Identity &amp; Versioning</a></h3>
 <p>Every Workshop resource gets a globally unique identifier: <code>publisher/name@version</code>.</p>
 <ul>
@@ -3385,6 +3466,7 @@ achievements:
 <li>Behavioral analysis (V12 anti-cheat) already collects APM, reaction times, and input entropy on the relay — OTEL is the natural export format for this data</li>
 <li>AI/LLM development needs training data: game telemetry (unit movements, build orders, engagement outcomes) is exactly the training corpus for <code>ic-ai</code> and <code>ic-llm</code></li>
 <li>Bevy already integrates with Rust’s <code>tracing</code> crate — OTEL export is a natural extension, not a foreign addition</li>
+<li><strong>Stack validated by production Rust game infrastructure:</strong> Embark Studios’ Quilkin (production game relay) uses the exact <code>tracing</code> + <code>prometheus</code> + OTEL stack IC targets, confirming it handles real game traffic at scale. Puffin (Embark’s frame-based profiler) complements OTEL for per-tick instrumentation with ~1ns disabled overhead. IC’s “zero cost when disabled” requirement is satisfied by puffin’s <code>AtomicBool</code> guard and tracing’s compile-time level filtering. See <code>research/embark-studios-rust-gamedev-analysis.md</code></li>
 <li>Desync debugging needs cross-client correlation — distributed tracing (trace IDs) lets you follow an order from input → network → sim → render across multiple clients and the relay server</li>
 <li>A single instrumentation approach (OTEL) avoids the mess of ad-hoc logging, custom metrics files, separate debug protocols, and incompatible formats</li>
 </ul>
@@ -5893,6 +5975,12 @@ WC3 Style    — Ctrl+T trigger editor, Ctrl+B triggers browser
 <li>Westwood’s philosophy was engine-first: the same engine technology powered vastly different games. IC follows this spirit</li>
 <li>Cancelled C&amp;C games (Tiberium FPS, Generals 2, C&amp;C Arena) and fan concepts exist in the space between “strictly C&amp;C” and “any RTS” — the community should be free to explore them</li>
 </ul>
+<p><strong>Validation from OpenRA mod ecosystem:</strong> Three OpenRA mods serve as acid tests for game-agnostic claims (see <code>research/openra-mod-architecture-analysis.md</code> for full analysis):</p>
+<ul>
+<li><strong>OpenKrush (KKnD):</strong> The most rigorous test. KKnD shares almost nothing with C&amp;C: different resource model (oil patches, not ore), per-building production (no sidebar), different veterancy (kills-based, not XP), different terrain, 15+ proprietary binary formats with zero C&amp;C overlap. OpenKrush replaces <strong>16 complete mechanic modules</strong> to make it work on OpenRA. In IC, every one of these would go through <code>GameModule</code> — validating that the trait covers the full range of game-specific concerns.</li>
+<li><strong>OpenSA (Swarm Assault):</strong> A non-RTS-shaped game on an RTS engine — living world simulation with plant growth, creep spawners, pirate ants, colony capture. No base building, no sidebar, no harvesting. Tests whether the engine gracefully handles the <em>absence</em> of C&amp;C systems, not just replacement.</li>
+<li><strong>d2 (Dune II):</strong> The C&amp;C ancestor, but with single-unit selection, concrete prerequisites, sandworm hazards, and starport variable pricing — mechanics so archaic they test backward-compatibility of the <code>GameModule</code> abstraction.</li>
+</ul>
 <p><strong>Alternatives considered:</strong></p>
 <ul>
 <li>C&amp;C-only scope (rejected — artificially limits what the community can create, while the architecture already supports broader use)</li>
@@ -6203,7 +6291,7 @@ pub struct MatchQuality {
 <span class="boring">}</span></code></pre>
 <p><strong>Key design points:</strong></p>
 <ul>
-<li>Default: <code>Glicko2Provider</code> — well-suited for 1v1 and small teams, proven in chess and competitive gaming.</li>
+<li>Default: <code>Glicko2Provider</code> — well-suited for 1v1 and small teams, proven in chess and competitive gaming. Validated by Valve’s CS Regional Standings (see <code>research/valve-github-analysis.md</code> § Part 4), which uses Glicko with RD fixed at 75 for team competitive play.</li>
 <li>Community operators provide alternatives: <code>EloProvider</code> (simpler), <code>TrueSkillProvider</code> (better team rating), or custom implementations.</li>
 <li><code>algorithm_id()</code> prevents mixing ratings from different algorithms — a Glicko-2 “1800” is not an Elo “1800”.</li>
 <li><code>CertifiedMatchResult</code> (from relay server, D007) is the input — no self-reported results.</li>
@@ -6211,6 +6299,40 @@ pub struct MatchQuality {
 <li>The official tracking server uses Glicko-2. Community tracking servers choose their own.</li>
 <li>Fixed-point ratings (matching sim math conventions) — no floating-point in the ranking pipeline.</li>
 </ul>
+<p><strong>Information content weighting (from Valve CS Regional Standings):</strong> The <code>match_quality()</code> method returns a <code>MatchQuality</code> struct that includes an <code>information_content</code> field (0–1000, fixed-point). This parameter scales how much a match affects rating changes — low-information matches (casual, heavily mismatched, very short duration) contribute less to rating updates, while high-information matches (ranked, well-matched, full-length) contribute more. This prevents rating inflation/deflation from low-quality matches. For IC, information content is derived from: (1) game mode (ranked vs. casual), (2) player count balance (1v1 is higher information than 3v1), (3) game duration (very short games may indicate disconnection, not skill), (4) map symmetry rating (if available). See <code>research/valve-github-analysis.md</code> § 4.2.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct MatchQuality {
+    pub fairness: i32,                // 0-1000 (fixed-point), higher = more balanced
+    pub estimated_draw_probability: i32,  // 0-1000 (fixed-point)
+    pub information_content: i32,     // 0-1000 (fixed-point), scales rating impact
+}
+<span class="boring">}</span></code></pre>
+<p><strong>New player seeding (from Valve CS Regional Standings):</strong> New players entering ranked play are seeded using a weighted combination of calibration performance and opponent quality — not placed at a flat default rating:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Seeding formula for new players completing calibration.
+/// Inspired by Valve's CS seeding (bounty, opponent network, LAN factor).
+/// IC adapts: no prize money, but the weighted-combination approach is sound.
+pub struct SeedingResult {
+    pub initial_rating: i64,       // Fixed-point, mapped into rating range
+    pub initial_deviation: i64,    // Higher than settled players (fast convergence)
+}
+
+/// Inputs to the seeding formula:
+/// - calibration_performance: win rate across calibration matches (0-1000)
+/// - opponent_quality: average rating of calibration opponents (fixed-point)
+/// - match_count: number of calibration matches played
+/// The seed is mapped into the rating range (e.g., 800–1800 for Glicko-2).
+<span class="boring">}</span></code></pre>
+<p>This prevents the cold-start problem where a skilled player placed at 1500 stomps their way through dozens of mismatched games before reaching their true rating. Valve’s system proved that even ~5–10 calibration matches with quality weighting produce a dramatically better initial placement.</p>
+<p><strong>Ranking visibility thresholds (from Valve CS Regional Standings):</strong></p>
+<ul>
+<li><strong>Minimum 5 matches</strong> to appear on leaderboards — prevents noise from one-game players.</li>
+<li><strong>Must have defeated at least 1 distinct opponent</strong> — prevents collusion (two friends repeatedly playing each other to inflate ratings).</li>
+<li><strong>RD decay for inactivity:</strong> <code>sqrt(rd² + C²*t)</code> where C=34.6, t=rating periods since last match. Inactive players’ ratings become less certain, naturally widening their matchmaking range until they play again.</li>
+</ul>
+<p><strong>Ranking model validation (from Valve CS Regional Standings):</strong> The <code>Glicko2Provider</code> implementation logs <strong>expected win probabilities alongside match results</strong> from day one. This enables post-hoc model validation using the methodology Valve describes: (1) bin expected win rates into 5% buckets, (2) compare expected vs. observed win rates within each bucket, (3) compute Spearman’s rank correlation (ρ). Valve achieved ρ = 0.98 — excellent. IC targets ρ ≥ 0.95 as a health threshold; below that triggers investigation of the rating model parameters. This data feeds into the OTEL telemetry pipeline (D031) and is visible on the Grafana dashboard for community server operators. See <code>research/valve-github-analysis.md</code> § 4.5.</p>
 <p><strong>What we build now:</strong> Only <code>Glicko2Provider</code>. The trait exists from Phase 5 (when competitive infrastructure ships). Alternative providers are community work.</p>
 <p><strong>Phase:</strong> Phase 5 (Multiplayer &amp; Competitive).</p>
 <h4 id="5-ordervalidator--explicit-per-module-order-validation"><a class="header" href="#5-ordervalidator--explicit-per-module-order-validation">5. <code>OrderValidator</code> — Explicit Per-Module Order Validation</a></h4>
@@ -7990,6 +8112,8 @@ render_modes:
     infohash: "btih:abc123def..."          # BitTorrent info hash (for P2P)
 </code></pre>
 <p>ZIP was chosen over tar.gz because: random access to individual files (no full decompression to read manifest.yaml), universal tooling, <code>.oramap</code> precedent, and Rust’s <code>zip</code> crate is mature.</p>
+<p><strong>VPK-style indexed manifest (from Valve Source Engine):</strong> The <code>.icpkg</code> manifest (manifest.yaml) is placed at the <strong>start</strong> of the archive, not at the end. This follows Valve’s VPK (Valve Pak) format design, where the directory/index appears at the beginning of the file — allowing tools to read metadata, file listings, and dependencies without downloading or decompressing the entire package. For Workshop browsing, the tracker can serve just the first ~4KB of a package (the manifest) to populate search results, preview images, and dependency resolution without fetching the full archive. ZIP’s central directory is at the <em>end</em> of the file, so ZIP-based <code>.icpkg</code> files include a redundant manifest at offset 0 (outside the ZIP structure, in a fixed-size header) for fast remote reads, with the canonical copy inside the ZIP for standard tooling compatibility. See <code>research/valve-github-analysis.md</code> § 6.4.</p>
+<p><strong>Content-addressed asset deduplication (from Valve Fossilize):</strong> Workshop asset storage uses <strong>content-addressed hashing</strong> for deduplication — each file is identified by <code>SHA-256(content)</code>, not by path or name. When a modder publishes a new version that changes only 2 of 50 files, only the 2 changed files are uploaded; the remaining 48 reference existing content hashes already in the Workshop. This reduces upload size, storage cost, and download time for updates. The pattern comes from Fossilize’s content hashing (FOSS_BLOB_HASH = SHA-256 of serialized data, see <code>research/valve-github-analysis.md</code> § 3.2) and is also used by Git (content-addressed object store), Docker (layer deduplication), and IPFS (CID-based storage). The per-file SHA-256 hashes already present in manifest.yaml serve as content addresses — no additional metadata needed.</p>
 <h3 id="p2p-distribution-bittorrentwebtorrent"><a class="header" href="#p2p-distribution-bittorrentwebtorrent">P2P Distribution (BitTorrent/WebTorrent)</a></h3>
 <p><strong>The cost problem:</strong> A popular 500MB mod downloaded 10,000 times generates 5TB of egress. At CDN rates ($0.01–0.09/GB), that’s $50–450/month — per mod. For a community project sustained by donations, centralized hosting is financially unsustainable at scale. A BitTorrent tracker VPS costs $5–20/month regardless of popularity.</p>
 <p><strong>The solution:</strong> Workshop distribution uses the <strong>BitTorrent protocol</strong> for large packages, with HTTP direct download as fallback. The Workshop server acts as both metadata registry (SQLite, lightweight) and BitTorrent tracker (peer coordination, lightweight). Actual content transfer happens peer-to-peer between players who have the package.</p>
@@ -8605,6 +8729,8 @@ to the engine source code itself.
 </div>
 <h3 id="phase-3"><a class="header" href="#phase-3">Phase</a></h3>
 <p>Resolved. The LICENSE file ships with the GPL v3 text plus the modding exception header from Phase 0 onward.</p>
+<h3 id="ci-enforcement-cargo-deny-for-license-compliance"><a class="header" href="#ci-enforcement-cargo-deny-for-license-compliance">CI Enforcement: cargo-deny for License Compliance</a></h3>
+<p>Embark Studios’ <strong>cargo-deny</strong> (2,204★, MIT/Apache-2.0) automates license compatibility checking across the entire dependency tree. IC should add <code>cargo-deny</code> to CI from Phase 0 with a GPL v3 compatibility allowlist — every <code>cargo deny check licenses</code> run verifies that no dependency introduces a license incompatible with GPL v3 (e.g., SSPL, proprietary, GPL-2.0-only without “or later”). For Workshop content (D030), the <code>spdx</code> crate (also from Embark, 140★) parses SPDX license expressions from resource manifests, enabling automated compatibility checks at publish time. See <code>research/embark-studios-rust-gamedev-analysis.md</code> § cargo-deny.</p>
 <h2 id="d052-community-servers-with-portable-signed-credentials"><a class="header" href="#d052-community-servers-with-portable-signed-credentials">D052: Community Servers with Portable Signed Credentials</a></h2>
 <p><strong>Decision:</strong> Multiplayer ranking, matchmaking, and competitive history are managed through <strong>Community Servers</strong> — self-hostable services that federate like Workshop sources (D030/D050). Player skill data is stored <strong>locally</strong> in a per-community SQLite credential file, with each record individually signed by the community server using Ed25519. The player presents the credential file when joining games; the server verifies its signature without needing to look up a central database. This is architecturally equivalent to JWT-style portable tokens, but uses a purpose-built binary format (<strong>Signed Credential Records</strong>, SCR) that eliminates the entire class of JWT vulnerabilities.</p>
 <p><strong>Rationale:</strong></p>
@@ -9672,6 +9798,13 @@ CREATE TABLE key_rotations (
 <li>The <code>expires_at</code> field on SCRs (default 7 days for ratings) provides a natural staleness bound, but point-of-use re-verification catches revocations within the validity window.</li>
 </ul>
 <p>This costs one Ed25519 signature check (~65μs) per verification — negligible even at thousands of verifications per second.</p>
+<p><strong>Cross-community rating display (V29):</strong></p>
+<p>Foreign credentials displayed in lobbies and profiles must be visually distinct from the current community’s ratings to prevent misrepresentation:</p>
+<ul>
+<li><strong>Full-color</strong> tier badge for the current community’s rating. <strong>Desaturated/outlined</strong> badge for credentials from other communities, with the issuing community name in small text.</li>
+<li>Matchmaking always uses the <strong>current community’s</strong> rating. Foreign ratings never influence matchmaking — a “Supreme Commander” from another server starts at default rating + placement deviation when joining a new community.</li>
+<li><strong>Optional seeding hint:</strong> Community operators MAY configure foreign credentials as a seeding signal during placement (weighted at 30% — a foreign 2400 seeds at ~1650, not 2400). Disabled by default. This is a convenience, not a trust assertion.</li>
+</ul>
 <p><strong>Leaderboards:</strong></p>
 <ul>
 <li>Each community maintains its own leaderboard, compiled from the rating SCRs it has issued.</li>
@@ -9873,7 +10006,9 @@ pub enum AvatarSource {
 <pre><code>┌──────────────────────────────────────────────────────┐
 │ 📊 Statistics — Official IC Community (RA1)          │
 │                                                      │
-│  Rating:    1823 ± 45 (Glicko-2)     Peak: 1891     │
+│  Rank:      ★ Commander I                            │
+│  Rating:    1971 ± 45 (Glicko-2)     Peak: 2023     │
+│  Season:    S3 2028  |  Peak Rank: Colonel III       │
 │  Matches:   342 played  |  W: 198  L: 131  D: 13    │
 │  Win Rate:  57.9%                                    │
 │  Streak:    W4 (current)  |  Best: W11               │
@@ -9885,6 +10020,7 @@ pub enum AvatarSource {
 └──────────────────────────────────────────────────────┘
 </code></pre>
 <ul>
+<li><strong>Rank tier badge (D055):</strong> Resolved from the game module’s <code>ranked-tiers.yaml</code> configuration. Shows current tier + division and peak tier this season. Icon and color from the tier definition.</li>
 <li><strong>Rating graph:</strong> Visual chart showing rating over time (last 50 matches). Rendered client-side from match SCR timestamps and rating deltas.</li>
 <li><strong>Faction distribution:</strong> Calculated from match SCRs. Displayed as a simple bar or pie.</li>
 <li><strong>Playtime:</strong> Estimated from match durations in local match history. Approximate — not a verified claim.</li>
@@ -10451,6 +10587,9 @@ impl&lt;T: Transport&gt; NetworkModel for LockstepNetwork&lt;T&gt; {
 <span class="boring">}</span></code></pre>
 <p><strong>What does NOT change:</strong> The wire format (delta-compressed TLV), the <code>OrderCodec</code> trait, the <code>NetworkModel</code> trait API, connection discovery (join codes, tracking servers), or the relay server protocol. Transport is purely “how bytes move,” not “what bytes mean.”</p>
 <p><strong>Why no <code>is_reliable()</code> method?</strong> Adding reliability awareness to <code>Transport</code> would create conditional branches in <code>NetworkModel</code> — one code path for unreliable transports (full retransmit logic) and another for reliable ones (skip retransmit). This doubles the test matrix and creates subtle behavioral differences between deployment targets. Instead, <code>NetworkModel</code> always runs its full reliability layer. On reliable transports (WebSocket), retransmit timers never fire and the redundancy costs nothing at runtime. One code path, one test matrix, zero conditional complexity. This is the same approach used by ENet, Valve’s GameNetworkingSockets, and most serious game networking libraries.</p>
+<p><strong>Message lanes (from GNS):</strong> <code>NetworkModel</code> multiplexes multiple logical streams (lanes) over a single <code>Transport</code> connection — each with independent priority and weight. Lanes are a protocol-layer concern, not a transport-layer concern: <code>Transport</code> provides raw byte delivery; <code>NetworkModel</code> handles lane scheduling, priority draining, and per-lane buffering. See <code>03-NETCODE.md</code> § Message Lanes for the lane definitions (<code>Orders</code>, <code>Control</code>, <code>Chat</code>, <code>Bulk</code>) and scheduling policy. The lane system ensures time-critical orders are never delayed by chat traffic or bulk data — a pattern validated by GNS’s configurable lane architecture (see <code>research/valve-github-analysis.md</code> § 1.4).</p>
+<p><strong>Transport encryption (from GNS):</strong> All multiplayer transports are encrypted with AES-256-GCM over an X25519 key exchange — the same cryptographic suite used by Valve’s GameNetworkingSockets and DTLS 1.3. Encryption sits between <code>Transport</code> and <code>NetworkModel</code>, transparent to both layers. Each connection generates an ephemeral Curve25519 keypair for forward secrecy; the symmetric key is never reused across sessions. After key exchange, the handshake is signed with the player’s Ed25519 identity key (D052) to bind the encrypted channel to a verified identity. The GCM nonce incorporates the packet sequence number, preventing replay attacks. See <code>03-NETCODE.md</code> § Transport Encryption for the full specification and <code>06-SECURITY.md</code> for the threat model. <code>MemoryTransport</code> (testing) and <code>LocalNetwork</code> (single-player) skip encryption.</p>
+<p><strong>Pluggable signaling (from GNS):</strong> Connection establishment is further decomposed into a <code>Signaling</code> trait — abstracting how peers exchange connection metadata (IP addresses, relay tokens, ICE candidates) before the <code>Transport</code> is established. This follows GNS’s <code>ISteamNetworkingConnectionSignaling</code> pattern. Different deployment contexts use different signaling: relay-brokered, rendezvous + hole-punch, direct IP, or WebRTC for browser builds. Adding a new connection method (e.g., Steamworks P2P, Epic Online Services) requires only a new <code>Signaling</code> implementation — no changes to <code>Transport</code> or <code>NetworkModel</code>. See <code>03-NETCODE.md</code> § Pluggable Signaling for trait definition and implementations.</p>
 <p><strong>Why not abstract this earlier (D006/D041)?</strong> At D006 design time, browser multiplayer was a distant future target and raw UDP was the obvious choice. Invariant #10 (platform-agnostic) was added later, making the gap visible. D041 explicitly listed the transport layer in its inventory of <em>already-abstracted</em> concerns via <code>NetworkModel</code> — but <code>NetworkModel</code> abstracts the protocol, not the transport. This decision corrects that conflation.</p>
 <h3 id="2-signaturescheme--cryptographic-algorithm-abstraction"><a class="header" href="#2-signaturescheme--cryptographic-algorithm-abstraction">2. <code>SignatureScheme</code> — Cryptographic Algorithm Abstraction</a></h3>
 <p><strong>Risk level: HIGH.</strong> Ed25519 is hardcoded in ~15 callsites. NIST standardized ML-DSA (post-quantum signatures) in 2024 and recommends migration by ~2035. The engine’s 10+ year lifespan means a signature algorithm swap is probable, not speculative. More immediately: different deployment contexts may want different algorithms (Ed448 for higher security margin, ML-DSA-65 for post-quantum compliance).</p>
@@ -10641,6 +10780,7 @@ pub enum CodecError {
 </table>
 </div>
 <p>The version 1 → 2 migration path: saves with version 1 headers decode via bincode. New saves write version 2 headers and encode via postcard. Old saves remain loadable forever. The <code>SimSnapshot</code> struct itself doesn’t change — only the codec that serializes it.</p>
+<p><strong>Migration strategy (from Factorio + DFU analysis):</strong> Mojang’s DataFixerUpper uses algebraic optics (profunctor-based type-safe transformations) for Minecraft save migration — academically elegant but massively over-engineered for practical use (see <code>research/mojang-wube-modding-analysis.md</code>). Factorio’s two-tier migration system is the better model: (1) <strong>Declarative renames</strong> — a YAML mapping of <code>old_field_name → new_field_name</code> per category, applied automatically by version number, and (2) <strong>Lua migration scripts</strong> — for complex structural transformations that can’t be expressed as simple renames. Scripts are ordered by version and applied sequentially. This avoids DFU’s complexity while handling real-world schema evolution. Additionally, every IC YAML rule file should include a <code>format_version</code> field (e.g., <code>format_version: "1.0.0"</code>) — following the pattern used by both Minecraft Bedrock (<code>"format_version": "1.26.0"</code> in every JSON entity file) and Factorio (<code>"factorio_version": "2.0"</code> in <code>info.json</code>). This enables the migration system to detect and transform old formats without guessing.</p>
 <p><strong>Why NOT a trait?</strong> Unlike Transport and SignatureScheme, snapshot codecs have zero pluggability requirement. No game module, mod, or community server needs to provide a custom snapshot serializer. This is purely internal version dispatch — a <code>match</code> statement is the right abstraction, not a trait. D041’s principle: “abstract the <em>algorithm</em>, not the <em>data</em>.” Snapshot serialization is data marshaling with no algorithmic variation — the right tool is version-tagged dispatch, not trait polymorphism.</p>
 <p><strong>Relationship to replay format:</strong> The replay file format (<code>05-FORMATS.md</code>) also has a <code>version: u16</code> in its header. The same version-to-codec dispatch applies to replay tick frames (<code>ReplayTickFrame</code> serialization). Replay version 1 uses bincode + LZ4 block compression. A future version 2 could use postcard + LZ4. The replay header version and the save header version evolve independently — a replay viewer doesn’t need to understand save files and vice versa.</p>
 <h3 id="what-still-does-not-need-abstraction"><a class="header" href="#what-still-does-not-need-abstraction">What Still Does NOT Need Abstraction</a></h3>
@@ -10688,6 +10828,297 @@ pub enum CodecError {
 <li><strong>Phase 5:</strong> <code>UdpTransport</code>, <code>WebSocketTransport</code> (matching current hardcoded behavior — the trait boundary exists, the implementation is unchanged). <code>SignatureScheme::Ed25519</code> enum variant wired into all D052 SCR code, replacing direct <code>ed25519_dalek</code> calls.</li>
 <li><strong>Future:</strong> <code>WebTransportImpl</code> (when spec stabilizes), <code>QuicTransport</code> (when ecosystem matures), <code>SignatureScheme::MlDsa65</code> variant (when post-quantum migration timeline firms up), <code>SnapshotCodec</code> v2 (postcard, when first <code>SimSnapshot</code> schema change occurs).</li>
 </ul>
+<h2 id="d055-ranked-tiers-seasons--matchmaking-queue"><a class="header" href="#d055-ranked-tiers-seasons--matchmaking-queue">D055: Ranked Tiers, Seasons &amp; Matchmaking Queue</a></h2>
+<p><strong>Status:</strong> Settled
+<strong>Phase:</strong> Phase 5 (Multiplayer &amp; Competitive)
+<strong>Depends on:</strong> D041 (RankingProvider), D052 (Community Servers), D053 (Player Profile), D037 (Competitive Governance), D034 (SQLite Storage), D019 (Balance Presets)</p>
+<h3 id="problem-2"><a class="header" href="#problem-2">Problem</a></h3>
+<p>The existing competitive infrastructure (D041’s <code>RankingProvider</code>, D052’s signed credentials, D053’s profile) provides the <em>foundational layer</em> — a pluggable rating algorithm, cryptographic verification, and display system. But it doesn’t define the <em>player-facing competitive experience</em>:</p>
+<ol>
+<li><strong>No rank tiers.</strong> <code>display_rating()</code> outputs “1500 ± 200” — useful for analytically-minded players but lacking the motivational milestones that named ranks provide. CS2’s transition from hidden MMR to visible CS Rating (with color bands) was universally praised but showed that even visible numbers benefit from tier mapping for casual engagement. SC2’s league system proved this for RTS specifically.</li>
+<li><strong>No season structure.</strong> Without seasons, leaderboards stagnate — top players stop playing and retain positions indefinitely, exactly the problem C&amp;C Remastered experienced (see <code>research/ranked-matchmaking-analysis.md</code> § 3.3).</li>
+<li><strong>No placement flow.</strong> D041 defines new-player seeding formula but doesn’t specify the user-facing placement match experience.</li>
+<li><strong>No small-population matchmaking degradation.</strong> RTS communities are 10–100× smaller than FPS/MOBA populations. The matchmaking queue must handle 100-player populations gracefully, not just 100,000-player populations.</li>
+<li><strong>No faction-specific rating.</strong> IC has asymmetric factions. A player who is strong with Allies may be weak with Soviets — one rating doesn’t capture this.</li>
+<li><strong>No map selection for ranked.</strong> Competitive map pool curation is mentioned in Phase 5 and D037 but the in-queue selection mechanism (veto/ban) isn’t defined.</li>
+</ol>
+<h3 id="solution"><a class="header" href="#solution">Solution</a></h3>
+<h4 id="tier-configuration-yaml-driven-per-game-module"><a class="header" href="#tier-configuration-yaml-driven-per-game-module">Tier Configuration (YAML-Driven, Per Game Module)</a></h4>
+<p>Rank tier names, thresholds, and visual assets are defined in the game module’s YAML configuration — not in engine code. The engine provides the tier resolution logic; the game module provides the theme.</p>
+<pre><code class="language-yaml"># ra/rules/ranked-tiers.yaml
+# Red Alert game module — Cold War military rank theme
+ranked_tiers:
+  format_version: "1.0.0"
+  divisions_per_tier: 3          # III → II → I within each tier
+  division_labels: ["III", "II", "I"]  # lowest to highest
+
+  tiers:
+    - name: Conscript
+      min_rating: 0
+      icon: "icons/ranks/conscript.png"
+      color: "#8B7355"            # Brown — raw recruit
+
+    - name: Private
+      min_rating: 1000
+      icon: "icons/ranks/private.png"
+      color: "#A0A0A0"            # Silver-grey
+
+    - name: Sergeant
+      min_rating: 1300
+      icon: "icons/ranks/sergeant.png"
+      color: "#FFD700"            # Gold chevrons
+
+    - name: Lieutenant
+      min_rating: 1550
+      icon: "icons/ranks/lieutenant.png"
+      color: "#4169E1"            # Royal blue — officer class
+
+    - name: Captain
+      min_rating: 1750
+      icon: "icons/ranks/captain.png"
+      color: "#9370DB"            # Purple — mid-officer
+
+    - name: Commander
+      min_rating: 1950
+      icon: "icons/ranks/commander.png"
+      color: "#DC143C"            # Crimson — senior officer
+
+    - name: Colonel
+      min_rating: 2150
+      icon: "icons/ranks/colonel.png"
+      color: "#FF4500"            # Red-orange — field commander
+
+  elite_tiers:
+    - name: General
+      min_rating: 2350
+      icon: "icons/ranks/general.png"
+      color: "#FFD700"            # Gold — general staff
+      show_rating: true           # Display actual rating number alongside tier
+
+    - name: Supreme Commander
+      type: top_n                 # Fixed top-N, not rating threshold
+      count: 200                  # Top 200 players per community server
+      icon: "icons/ranks/supreme_commander.png"
+      color: "#FFFFFF"            # White/platinum — pinnacle
+      show_rating: true
+      show_leaderboard_position: true
+</code></pre>
+<p><strong>Why military ranks for Red Alert:</strong></p>
+<ul>
+<li>Players literally command armies — military rank progression IS the core fantasy</li>
+<li>Cold War theme matches IC’s identity (the engine is named “Iron Curtain”)</li>
+<li>Immediately recognizable without explanation — everyone understands Private → General</li>
+<li>“Supreme Commander” as the pinnacle feels appropriately epic for a strategy game</li>
+</ul>
+<p><strong>Why 7 + 2 = 9 tiers (23 ranked positions):</strong></p>
+<ul>
+<li>SC2 proved 7+2 works for RTS community sizes (~100K peak, ~10K sustained)</li>
+<li>Fewer than LoL’s 10 tiers (designed for 100M+ players — IC won’t have that)</li>
+<li>More than AoE4’s 6 tiers (too few for meaningful progression)</li>
+<li>3 divisions per tier (matching SC2/AoE4/Valorant convention) provides intra-tier goals</li>
+<li>Elite tiers (General, Supreme Commander) create aspirational targets even with small populations</li>
+</ul>
+<p><strong>Game-module replaceability:</strong> Tiberian Dawn could use GDI/Nod themed rank names. A fantasy RTS mod can define completely different tier sets. Community mods define their own via YAML. The engine resolves <code>PlayerRating.rating → tier name + division</code> using whatever tier configuration the active game module provides.</p>
+<h4 id="dual-display-tier--rating"><a class="header" href="#dual-display-tier--rating">Dual Display: Tier + Rating</a></h4>
+<p>Every ranked player sees BOTH:</p>
+<ul>
+<li><strong>Tier badge:</strong> “Captain II” with icon and color — milestone-driven motivation</li>
+<li><strong>Rating number:</strong> “1847 ± 45” — transparency, eliminates “why didn’t I rank up?” frustration</li>
+</ul>
+<p>This follows the industry trend toward transparency: CS2’s shift from hidden MMR to visible CS Rating was universally praised, SC2 made MMR visible in 2020 to positive reception, and Dota 2 shows raw MMR at Immortal tier. IC does this from day one — no hidden intermediary layers (unlike LoL’s LP system, which creates MMR/LP disconnects that frustrate players).</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Tier resolution — lives in ic-ui, reads from game module YAML config.
+/// NOT in ic-sim (tiers are display-only, not gameplay).
+pub struct RankedTierDisplay {
+    pub tier_name: String,         // e.g., "Captain"
+    pub division: u8,              // e.g., 2 (for "Captain II")
+    pub division_label: String,    // e.g., "II"
+    pub icon_path: String,
+    pub color: [u8; 3],            // RGB
+    pub rating: i64,               // actual rating number (always shown)
+    pub deviation: i64,            // uncertainty (shown as ±)
+    pub is_elite: bool,            // General/Supreme Commander
+    pub leaderboard_position: Option&lt;u32&gt;,  // only for elite tiers
+    pub peak_tier: Option&lt;String&gt;, // highest tier this season (e.g., "Commander I")
+}
+<span class="boring">}</span></code></pre>
+<h4 id="season-structure"><a class="header" href="#season-structure">Season Structure</a></h4>
+<pre><code class="language-yaml"># Server configuration (community server operators can customize)
+season:
+  duration_days: 91              # ~3 months (matching SC2, CS2, AoE4)
+  placement_matches: 10          # Required before rank is assigned
+  soft_reset:
+    # At season start, compress all ratings toward default:
+    # new_rating = default + (old_rating - default) * compression_factor
+    compression_factor: 700       # 0-1000 fixed-point (0.7 = keep 70% of distance from default)
+    default_rating: 1500          # Center point
+    reset_deviation: true         # Set deviation to placement level (fast convergence)
+    placement_deviation: 350      # High deviation during placement (ratings move fast)
+  rewards:
+    # Per-tier season-end rewards (cosmetic only — no gameplay advantage)
+    enabled: true
+    # Specific rewards defined per-season by competitive committee (D037)
+  leaderboard:
+    min_matches: 5                # Minimum matches to appear on leaderboard
+    min_distinct_opponents: 5     # Must have played at least 5 different opponents (V26)
+</code></pre>
+<p><strong>Season lifecycle:</strong></p>
+<ol>
+<li><strong>Season start:</strong> All player ratings compressed toward 1500 (soft reset). Deviation set to placement level (350). Players lose their tier badge until placement completes.</li>
+<li><strong>Placement (10 matches):</strong> High deviation means rating moves fast. Uses D041’s seeding formula for brand-new players. Returning players converge quickly because their pre-reset rating provides a strong prior. <strong>Hidden matchmaking rating (V30):</strong> during placement, matchmaking searches near the player’s pre-reset rating (not the compressed value), preventing cross-skill mismatches in the first few days of each season. Placement also requires <strong>10 distinct opponents</strong> (soft requirement — degrades gracefully to <code>max(3, available * 0.5)</code> on small servers) to prevent win-trading (V26).</li>
+<li><strong>Active season:</strong> Normal Glicko-2 rating updates. Deviation decreases with more matches (rating stabilizes). Tier badge updates immediately after every match (no delayed batches — avoiding OW2’s mistake).</li>
+<li><strong>Season end:</strong> Peak tier badge saved to profile (D053). Season statistics archived. Season rewards distributed. Leaderboard frozen for display.</li>
+<li><strong>Inter-season:</strong> Short transition period (~1 week) with unranked competitive practice queue.</li>
+</ol>
+<p><strong>Why 3-month seasons:</strong></p>
+<ul>
+<li>Matches SC2’s proven cadence for RTS</li>
+<li>Long enough for ratings to stabilize and leaderboards to mature</li>
+<li>Short enough to prevent stagnation (the C&amp;C Remastered problem)</li>
+<li>Aligns naturally with quarterly balance patches and competitive map pool rotations</li>
+</ul>
+<h4 id="faction-specific-ratings-optional"><a class="header" href="#faction-specific-ratings-optional">Faction-Specific Ratings (Optional)</a></h4>
+<pre><code class="language-yaml"># Player opted into faction tracking:
+faction_ratings:
+  enabled: true                  # Player's choice — optional
+  # Separate rating tracked per faction played
+  # Matchmaking uses the rating for the selected faction
+  # Profile shows all faction ratings
+</code></pre>
+<p>Inspired by SC2’s per-race MMR. When enabled:</p>
+<ul>
+<li>Each faction (e.g., Allies, Soviets) has a separate <code>PlayerRating</code></li>
+<li>Matchmaking uses the rating for the faction the player queues with</li>
+<li>Profile displays all faction ratings (D053 statistics card)</li>
+<li>If disabled, one unified rating is used regardless of faction choice</li>
+</ul>
+<p><strong>Why optional:</strong> Some players want one rating that represents their overall skill. Others want per-faction tracking because they’re “Diamond Allies but Gold Soviets.” Making it opt-in respects both preferences without splitting the matchmaking pool (matchmaking always uses the relevant rating — either faction-specific or unified).</p>
+<h4 id="matchmaking-queue-design"><a class="header" href="#matchmaking-queue-design">Matchmaking Queue Design</a></h4>
+<p><strong>Queue modes:</strong></p>
+<ul>
+<li><strong>Ranked 1v1:</strong> Primary competitive mode. Map veto from seasonal pool.</li>
+<li><strong>Ranked Team:</strong> 2v2, 3v3 (match size defined by game module). Separate team rating. Party restrictions: maximum 1 tier difference between party members (anti-boosting, same as LoL’s duo restrictions).</li>
+<li><strong>Unranked Competitive:</strong> Same rules as ranked but no rating impact. For practice, warm-up, or playing with friends across wide skill gaps.</li>
+</ul>
+<p><strong>Map selection (ranked 1v1):</strong>
+Both players alternately ban maps from the competitive map pool (curated per-season by competitive committee, D037). The remaining map is played — similar to CS2 Premier’s pick/ban system but adapted for 1v1 RTS.</p>
+<p><strong>Anonymous veto (V27):</strong> During the veto sequence, opponents are shown as “Opponent” — no username, rating, or tier badge. Identity is revealed only after the final map is determined and both players confirm ready. Leaving during the veto sequence counts as a loss (escalating cooldown: 5min → 30min → 2hr). This prevents identity-based queue dodging while preserving strategic map bans.</p>
+<pre><code>Seasonal pool: 7 maps
+Player A bans 1 → 6 remain
+Player B bans 1 → 5 remain
+Player A bans 1 → 4 remain
+Player B bans 1 → 3 remain
+Player A bans 1 → 2 remain
+Player B bans 1 → 1 remains → this map is played
+</code></pre>
+<p><strong>Small-population matchmaking degradation:</strong></p>
+<p>Critical for RTS communities. The queue must work with 50 players as well as 5,000.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Matchmaking search parameters — widen over time.
+/// These are server-configurable defaults.
+pub struct MatchmakingConfig {
+    /// Initial rating search range (one-sided).
+    /// A player at 1500 searches 1500 ± initial_range.
+    pub initial_range: i64,           // default: 100
+
+    /// Range widens by this amount every `widen_interval` seconds.
+    pub widen_step: i64,              // default: 50
+
+    /// How often (seconds) to widen the search range.
+    pub widen_interval_secs: u32,     // default: 30
+
+    /// Maximum search range before matching with anyone available.
+    pub max_range: i64,               // default: 500
+
+    /// After this many seconds, match with any available player.
+    /// Only activates if ≥3 players are in queue (V31).
+    pub desperation_timeout_secs: u32, // default: 300 (5 minutes)
+
+    /// Minimum match quality (fairness score from D041).
+    /// Matches below this threshold are not created even at desperation (V30).
+    pub min_match_quality: f64,       // default: 0.3
+}
+<span class="boring">}</span></code></pre>
+<p>The UI displays estimated queue time based on current population and the player’s rating position. At low population, the UI shows “~2 min (12 players in queue)” transparently rather than hiding the reality.</p>
+<p><strong>New account anti-smurf measures:</strong></p>
+<ul>
+<li>First 10 ranked matches have high deviation (fast convergence to true skill)</li>
+<li>New accounts with extremely high win rates in placement are fast-tracked to higher ratings (D041 seeding formula)</li>
+<li>Relay server behavioral analysis (Phase 5 anti-cheat) detects mechanical skill inconsistent with account age</li>
+<li>Optional: phone verification for ranked queue access (configurable by community server operator)</li>
+<li>Diminishing <code>information_content</code> for repeated pairings: <code>weight = base * 0.5^(n-1)</code> where n = recent rematches within 30 days (V26)</li>
+<li>Desperation matches (created after search widening) earn reduced rating change proportional to skill gap (V31)</li>
+<li>Collusion detection: accounts with &gt;50% matches against the same opponent in a 14-day window are flagged for review (V26)</li>
+</ul>
+<h4 id="peak-rank-display"><a class="header" href="#peak-rank-display">Peak Rank Display</a></h4>
+<p>Each player’s profile (D053) shows:</p>
+<ul>
+<li><strong>Current rank:</strong> The tier + division where the player stands right now</li>
+<li><strong>Peak rank (this season):</strong> The highest tier achieved this season — never decreases within a season</li>
+</ul>
+<p>This is inspired by Valorant’s act rank and Dota 2’s medal system. It answers “what’s the best I reached?” without the full one-way-medal problem (Dota 2’s medals never drop, making them meaningless by season end). IC’s approach: current rank is always accurate, but peak rank is preserved as an achievement.</p>
+<h3 id="community-replaceability"><a class="header" href="#community-replaceability">Community Replaceability</a></h3>
+<p>Per D052’s federated model, ranked matchmaking is <strong>community-owned:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Component</th><th>Official IC default</th><th>Community can customize?</th></tr>
+</thead>
+<tbody>
+<tr><td>Rating algorithm</td><td>Glicko-2 (<code>Glicko2Provider</code>)</td><td>Yes — <code>RankingProvider</code> trait (D041)</td></tr>
+<tr><td>Tier names &amp; icons</td><td>Cold War military (RA module)</td><td>Yes — YAML per game module/mod</td></tr>
+<tr><td>Tier thresholds</td><td>Defined in <code>ranked-tiers.yaml</code></td><td>Yes — YAML per game module/community</td></tr>
+<tr><td>Number of tiers</td><td>7 + 2 elite = 9</td><td>Yes — YAML-configurable</td></tr>
+<tr><td>Season duration</td><td>91 days</td><td>Yes — server configuration</td></tr>
+<tr><td>Placement match count</td><td>10</td><td>Yes — server configuration</td></tr>
+<tr><td>Map pool</td><td>Curated by competitive committee</td><td>Yes — per-community</td></tr>
+<tr><td>Queue modes</td><td>1v1, team</td><td>Yes — game module defines available modes</td></tr>
+<tr><td>Anti-smurf measures</td><td>Behavioral analysis + fast convergence</td><td>Yes — server operator toggles</td></tr>
+<tr><td>Balance preset per queue</td><td>Classic RA (D019)</td><td>Yes — community chooses per-queue</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>What is NOT community-customizable</strong> (hard requirements):</p>
+<ul>
+<li>Match certification must use relay-signed <code>CertifiedMatchResult</code> (D007) — no self-reported results</li>
+<li>Rating records must use D052’s SCR format — portable credentials require standardized format</li>
+<li>Tier resolution logic is engine-provided — communities customize the YAML data, not the resolution code</li>
+</ul>
+<h3 id="alternatives-considered-13"><a class="header" href="#alternatives-considered-13">Alternatives Considered</a></h3>
+<ul>
+<li><strong>Raw rating only, no tiers</strong> (rejected — C&amp;C Remastered showed that numbers alone lack motivational hooks. The research clearly shows that named milestones drive engagement in every successful ranked system)</li>
+<li><strong>LoL-style LP system with promotion series</strong> (rejected — LP/MMR disconnect is the most complained-about feature in LoL. Promotion series were so unpopular that Riot removed them in 2024. IC should not repeat this error)</li>
+<li><strong>Dota 2-style one-way medals</strong> (rejected — medals that never decrease within a season become meaningless by season end. A “Divine” player who dropped to “Archon” MMR still shows Divine — misleading, not motivating)</li>
+<li><strong>OW2-style delayed rank updates</strong> (rejected — rank updating only after 5 wins or 15 losses was universally criticized. Players want immediate feedback after every match)</li>
+<li><strong>CS2-style per-map ranking</strong> (rejected for launch — fragments an already-small RTS population. Per-map statistics can be tracked without separate per-map ratings. Could be reconsidered if IC’s population is large enough)</li>
+<li><strong>Elo instead of Glicko-2</strong> (rejected as default — Glicko-2 handles uncertainty better, which is critical for players who play infrequently. D041’s <code>RankingProvider</code> trait allows communities to use Elo if they prefer)</li>
+<li><strong>10+ named tiers</strong> (rejected — too many tiers for expected RTS population size. Adjacent tiers become meaningless when population is small. 7+2 matches SC2’s proven structure)</li>
+<li><strong>Single global ranking across all community servers</strong> (rejected — violates D052’s federated model. Each community owns its rankings. Cross-community credential verification via SCR ensures portability without centralization)</li>
+<li><strong>Mandatory phone verification for ranked</strong> (rejected as mandatory — makes ranked inaccessible in regions without phone access, on WASM builds, and for privacy-conscious users. Available as opt-in toggle for community operators)</li>
+<li><strong>Performance-based rating adjustments</strong> (deferred — Valorant uses individual stats to adjust RR gains. For RTS this would be complex: which metrics predict skill beyond win/loss? Economy score, APM, unit efficiency? Risks encouraging stat-chasing over winning. Could be a future <code>RankingProvider</code> enhancement if the community wants it)</li>
+</ul>
+<h3 id="integration-with-existing-decisions"><a class="header" href="#integration-with-existing-decisions">Integration with Existing Decisions</a></h3>
+<ul>
+<li><strong>D041 (RankingProvider):</strong> <code>display_rating()</code> method implementations use the tier configuration YAML to resolve rating → tier name. The trait’s existing interface supports D055 without modification — tier resolution is a display concern in <code>ic-ui</code>, not a trait responsibility.</li>
+<li><strong>D052 (Community Servers):</strong> Each community server’s ranking authority stores tier configuration alongside its <code>RankingProvider</code> implementation. SCR records store the raw rating; tier resolution is display-side.</li>
+<li><strong>D053 (Player Profile):</strong> The statistics card (rating ± deviation, peak rating, match count, win rate, streak, faction distribution) now includes tier badge, peak tier this season, and season history.</li>
+<li><strong>D037 (Competitive Governance):</strong> The competitive committee curates the seasonal map pool, recommends tier threshold adjustments based on population distribution, and proposes balance preset selections for ranked queues.</li>
+<li><strong>D019 (Balance Presets):</strong> Ranked queues can be tied to specific balance presets — e.g., “Classic RA” ranked vs. “IC Balance” ranked as separate queues with separate ratings.</li>
+<li><strong>D036 (Achievements):</strong> Seasonal achievements: “Reach Captain,” “Place in top 100,” “Win 50 ranked matches this season,” etc.</li>
+<li><strong>D034 (SQLite Storage):</strong> <code>MatchmakingStorage</code> trait’s existing methods (<code>update_rating()</code>, <code>record_match()</code>, <code>get_leaderboard()</code>) handle all ranked data persistence. Season history added as new tables.</li>
+</ul>
+<h3 id="relationship-to-researchranked-matchmaking-analysismd"><a class="header" href="#relationship-to-researchranked-matchmaking-analysismd">Relationship to <code>research/ranked-matchmaking-analysis.md</code></a></h3>
+<p>This decision is informed by cross-game analysis of CS2/CSGO, StarCraft 2, League of Legends, Valorant, Dota 2, Overwatch 2, Age of Empires IV, and C&amp;C Remastered Collection’s competitive systems. Key takeaways incorporated:</p>
+<ol>
+<li><strong>Transparency trend</strong> (§ 4.2): dual display of tier + rating from day one</li>
+<li><strong>Tier count sweet spot</strong> (§ 4.3): 7+2 = 9 tiers for RTS population sizes</li>
+<li><strong>3-month seasons</strong> (§ 4.4): RTS community standard (SC2), prevents stagnation</li>
+<li><strong>Small-population design</strong> (§ 4.5): graceful matchmaking degradation, configurable widening</li>
+<li><strong>C&amp;C Remastered lessons</strong> (§ 3.4): community server ownership, named milestones &gt; raw numbers, seasonal structure prevents stagnation</li>
+<li><strong>Faction-specific ratings</strong> (§ 2.1): SC2’s per-race MMR adapted for IC’s faction system</li>
+</ol>
 
                     </main>
 
