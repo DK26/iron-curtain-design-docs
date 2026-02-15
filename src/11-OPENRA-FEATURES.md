@@ -1254,6 +1254,8 @@ IC's replay system extends OpenRA's infrastructure with two features informed by
 
 **Replay versioning:** Replay files include a `base_build` number and a `data_version` hash (following SC2's dual-version scheme). The `base_build` identifies the protocol format; `data_version` identifies the game rules state. A replay is playable if the engine supports its `base_build` protocol, even if minor game data changes occurred between versions.
 
+**Foreign replay import (D056):** IC can directly play back OpenRA `.orarep` files and Remastered Collection replay recordings via `ForeignReplayPlayback` — a `NetworkModel` implementation that decodes foreign replay formats through `ra-formats`, translates orders via `ForeignReplayCodec`, and feeds them to IC's sim. Playback will diverge from the original sim (D011), but a `DivergenceTracker` monitors and surfaces drift in the UI. Foreign replays can also be converted to `.icrep` via `ic replay import` for archival and analysis tooling. The foreign replay corpus doubles as an automated behavioral regression test suite — detecting gross bugs like units walking through walls or harvesters ignoring ore. See `05-FORMATS.md` § "Foreign Replay Decoders" and `09-DECISIONS.md` § D056.
+
 ---
 
 ## 34. Lobby System

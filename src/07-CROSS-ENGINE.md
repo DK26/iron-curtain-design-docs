@@ -50,7 +50,11 @@ Implement community master server protocols (OpenRA and CnCNet). IC games show u
 
 ### Level 1: Replay Compatibility (Phase 5-6)
 
-Decode OpenRA replay files via `OpenRACodec`, feed through your sim. They'll desync eventually, but can watch most of a replay before drift. Useful and shippable.
+Decode OpenRA `.orarep` and Remastered Collection replay files via `ra-formats` decoders (`OpenRAReplayDecoder`, `RemasteredReplayDecoder`), translate orders via `ForeignReplayCodec`, feed through IC's sim via `ForeignReplayPlayback` NetworkModel. They'll desync eventually (different sim — D011), but the `DivergenceTracker` monitors and surfaces drift in the UI. Players can watch most of a replay before visible divergence. Optionally convert to `.icrep` for archival and analysis tooling.
+
+This is also the foundation for **automated behavioral regression testing** — running foreign replay corpora headlessly through IC's sim to catch gross behavioral bugs (units walking through walls, harvesters ignoring ore). Not bit-identical verification, but "does this look roughly right?" sanity checks.
+
+Full architecture: see `09-DECISIONS.md` § D056.
 
 ### Level 2: Casual Cross-Play with Periodic Resync (Future)
 

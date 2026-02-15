@@ -345,6 +345,7 @@ The full agent rules live in `AGENTS.md` § "Working With This Codebase." This s
 2. **Integration tests.** These are different from unit tests. Unit tests verify a component in isolation. Integration tests verify that two or more components work together correctly:
    - Sim + LocalNetwork: orders go in, state comes out, hashes match
    - Sim + ReplayPlayback: replay file produces identical state sequence
+   - Sim + ForeignReplayPlayback (D056): foreign replays complete without panics; order rejection rate and divergence tick tracked for regression
    - Sim + Renderer: state changes produce correct visual updates
    - Sim + AI: AI generates valid orders, sim accepts them
 

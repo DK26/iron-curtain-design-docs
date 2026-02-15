@@ -1111,6 +1111,57 @@ impl NetworkModel for ReplayPlayback {
 
 **Playback features:** Variable speed (0.5x to 8x), pause, scrub to any tick (requires re-simulating from nearest snapshot or start). `SimSnapshot` can be taken at intervals during recording for fast seeking.
 
+### Foreign Replay Decoders (D056)
+
+`ra-formats` includes decoders for foreign replay file formats, enabling direct playback and conversion to `.icrep`:
+
+| Format                | Extension                      | Structure                                                        | Decoder                   | Source Documentation                                                |
+| --------------------- | ------------------------------ | ---------------------------------------------------------------- | ------------------------- | ------------------------------------------------------------------- |
+| OpenRA                | `.orarep`                      | ZIP archive (order stream + `metadata.yaml` + `sync.bin`)        | `OpenRAReplayDecoder`     | OpenRA source: `ReplayUtils.cs`, `ReplayConnection.cs`              |
+| Remastered Collection | Binary (no standard extension) | `Save_Recording_Values()` header + per-frame `EventClass` DoList | `RemasteredReplayDecoder` | EA GPL source: `QUEUE.CPP` §§ `Queue_Record()` / `Queue_Playback()` |
+
+Both decoders produce a `ForeignReplay` struct (defined in `09-DECISIONS.md` § D056) — a normalized intermediate representation with `ForeignFrame` / `ForeignOrder` types. This IR is translated to IC's `TimestampedOrder` by `ForeignReplayCodec` in `ic-protocol`, then fed to either `ForeignReplayPlayback` (direct viewing) or the `ic replay import` CLI (conversion to `.icrep`).
+
+**Remastered replay header** (from `Save_Recording_Values()` in `REDALERT/INIT.CPP`):
+
+```rust
+/// Header fields written by Save_Recording_Values().
+/// Parsed by RemasteredReplayDecoder.
+pub struct RemasteredReplayHeader {
+    pub session: SessionValues,       // MaxAhead, FrameSendRate, DesiredFrameRate
+    pub build_level: u32,
+    pub debug_unshroud: bool,
+    pub random_seed: u32,             // Deterministic replay seed
+    pub scenario: [u8; 44],           // Scenario identifier
+    pub scenario_name: [u8; 44],
+    pub whom: u32,                    // Player perspective
+    pub special: SpecialFlags,
+    pub options: GameOptions,
+}
+```
+
+**Remastered per-frame format** (from `Queue_Record()` in `QUEUE.CPP`):
+
+```rust
+/// Per-frame recording: count of events, then that many EventClass structs.
+/// Each EventClass is a fixed-size C struct (sizeof(EventClass) bytes).
+pub struct RemasteredRecordedFrame {
+    pub event_count: u32,
+    pub events: Vec<RemasteredEventClass>,  // event_count entries
+}
+```
+
+**OpenRA `.orarep` structure:**
+
+```
+game.orarep (ZIP archive)
+├── metadata.yaml          # MiniYAML: players, map, mod, version, outcome
+├── orders                  # Binary order stream (per-tick Order objects)
+└── sync                    # Per-tick state hashes (u64 CRC values)
+```
+
+The `sync` stream enables partial divergence detection — IC can compare its own `state_hash()` against OpenRA's recorded sync values to estimate when the simulations diverged.
+
 ### ra-formats Write Support
 
 `ra-formats` currently focuses on reading C&C file formats. Write support extends the crate for the Asset Studio (D040) and mod toolchain:

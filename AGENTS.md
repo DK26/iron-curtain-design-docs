@@ -121,6 +121,7 @@ These are settled. Don't re-litigate unless the user explicitly wants to revisit
 | D053 | Player Profile system                         | Identity expression, achievement showcase, verified statistics, friends list, community memberships; all reputation data SCR-backed (D052); local-first SQLite storage                                                                                  |
 | D054 | Extended switchability                        | Transport trait (WASM multiplayer), SignatureScheme enum (post-quantum crypto), SnapshotCodec version dispatch (cross-version saves)                                                                                                                    |
 | D055 | Ranked tiers, seasons & matchmaking queue     | YAML-configurable tiers (Cold War military ranks for RA); 3-month seasons with soft reset; 10 placement matches; dual display (tier + rating); faction-specific ratings; small-population matchmaking degradation; community-customizable via D041/D052 |
+| D056 | Foreign replay import (OpenRA & Remastered)   | Decode `.orarep` and Remastered replay files via `ra-formats`; direct playback via `ForeignReplayPlayback` NetworkModel; convert to `.icrep` via CLI; automated behavioral regression testing against foreign replay corpus; divergence tracking UI     |
 
 ## Pending Decisions
 

@@ -205,6 +205,7 @@ Units moving, shooting, dying — headless sim + rendered. Record replay file. P
 - Lobby system, game browser, NAT traversal via relay
 - Replay system (already enabled by Phase 2 architecture)
 - `CommunityBridge` for shared server browser with OpenRA and CnCNet
+- **Foreign replay import (D056):** `OpenRAReplayDecoder` and `RemasteredReplayDecoder` in `ra-formats`; `ForeignReplayPlayback` NetworkModel; `ic replay import` CLI converter; divergence tracking UI; automated behavioral regression testing against foreign replay corpus
 - **Ranked matchmaking (D055):** Glicko-2 rating system (D041), 10 placement matches, YAML-configurable tier system (Cold War military ranks for RA: Conscript → Supreme Commander, 7+2 tiers × 3 divisions = 23 positions), 3-month seasons with soft reset, dual display (tier badge + rating number), faction-specific optional ratings, small-population matchmaking degradation, map veto system
 - **Leaderboards:** global, per-faction, per-map — with public profiles and replay links
 - **Observer/spectator mode:** connect to relay with configurable fog (full/player/none) and broadcast delay
