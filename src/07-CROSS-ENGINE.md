@@ -46,7 +46,7 @@ pub trait CommunityBridge {
 }
 ```
 
-Implement OpenRA's master server protocol. Games show up in same browser. Your-engine players play your-engine players. Same community, different executables.
+Implement community master server protocols (OpenRA and CnCNet). IC games show up in both browsers, tagged by engine. Your-engine players play your-engine players. Same community, different executables. CnCNet is particularly important — it's the home of the classic C&C competitive community (RA1, TD, TS, RA2, YR) and has maintained multiplayer infrastructure for these games for over a decade. Appearing in CnCNet's game browser ensures IC doesn't fragment the existing community.
 
 ### Level 1: Replay Compatibility (Phase 5-6)
 
@@ -108,6 +108,30 @@ pub enum ReconcileAction {
     Autonomous,                          // No authority — local sim is truth
 }
 ```
+
+**Correction bounds (V35):** `is_sane_correction()` validates every entity correction before applying it. Bounds prevent a malicious authority server from teleporting units or granting resources:
+
+```rust
+/// Maximum ticks since last sync before bounds stop growing.
+/// Prevents unbounded drift acceptance if sync messages stop arriving.
+const MAX_TICKS_SINCE_SYNC: u64 = 300; // 10 seconds at 30 tps
+
+/// Maximum resource correction per sync cycle (one harvester full load).
+const MAX_CREDIT_DELTA: i64 = 5000;
+
+fn is_sane_correction(correction: &EntityCorrection, ticks_since_sync: u64) -> bool {
+    let capped_ticks = ticks_since_sync.min(MAX_TICKS_SINCE_SYNC);
+    let max_pos_delta = MAX_UNIT_SPEED * capped_ticks as i64;
+    match correction {
+        EntityCorrection::Position(delta) => delta.magnitude() <= max_pos_delta,
+        EntityCorrection::Credits(delta) => delta.abs() <= MAX_CREDIT_DELTA,
+        EntityCorrection::Health(delta) => delta.abs() <= 1000,
+        _ => true,
+    }
+}
+```
+
+If >5 consecutive corrections are rejected, the reconciler escalates to `Resync` (full snapshot) or `Autonomous` (disconnect from authority).
 
 ### ProtocolAdapter: Transparent Network Wrapping
 

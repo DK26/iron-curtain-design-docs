@@ -271,6 +271,18 @@ OpenRA's core architecture uses a **trait system** — essentially a component-e
 | `FreeActor`                      | Spawns free actors                           |
 | `FreeActorWithDelivery`          | Spawns free actors with delivery animation   |
 
+**Production model diversity across mods:** Analysis of six major OpenRA community mods (see `research/openra-mod-architecture-analysis.md`) reveals that production is one of the most varied mechanics across RTS games — even the 13 traits above only cover the C&C family. Community mods demonstrate at least five fundamentally different production models:
+
+| Model                 | Mod                     | IC Implication                                                                                 |
+| --------------------- | ----------------------- | ---------------------------------------------------------------------------------------------- |
+| Global sidebar queue  | RA1, TD (OpenRA core)   | `ClassicProductionQueue` — IC's RA1 default                                                    |
+| Tabbed parallel queue | RA2, Romanovs-Vengeance | `ClassicParallelProductionQueue` — one queue per factory                                       |
+| Per-building on-site  | OpenKrush (KKnD)        | Replaced `ProductionQueue` entirely with custom `SelfConstructing` + per-building rally points |
+| Single-unit selection | d2 (Dune II)            | No queue at all — select building, click one unit, wait                                        |
+| Colony-based          | OpenSA (Swarm Assault)  | Capture colony buildings for production; no construction yard, no sidebar                      |
+
+IC must treat production as a game-module concern, not an engine assumption. The `ProductionQueue` component is defined by the game module, not the engine core (see `02-ARCHITECTURE.md` § "Production Model Diversity").
+
 ### Prerequisite System
 | Trait                                 | Purpose                             |
 | ------------------------------------- | ----------------------------------- |
@@ -365,6 +377,8 @@ Multipliers modify numeric values on actors. All are conditional traits.
 | `GravityBomb` | Dropped bomb with gravity                                     |
 | `NukeLaunch`  | Nuclear missile (special trajectory)                          |
 
+**Mod-defined projectile types:** RA2 mods add at least one custom projectile type not in OpenRA core: `ElectricBolt` (procedurally generated segmented lightning bolts with configurable width, distortion, and segment length — see `research/openra-ra2-mod-architecture.md` § "Tesla Bolt / ElectricBolt System"). The `ArcLaserZap` projectile used for mind control links is another RA2-specific type. IC's projectile system must support registration of custom projectile types via WASM (Tier 3) or game module `system_pipeline()`.
+
 ---
 
 ## 7. Warhead System (15 types)
@@ -388,6 +402,8 @@ Warheads define what happens when a weapon hits. Multiple warheads per weapon.
 | `GrantExternalConditionWarhead` | Grants condition to targets            |
 | `LeaveSmudgeWarhead`            | Creates terrain smudges                |
 | `ShakeScreenWarhead`            | Screen shake on impact                 |
+
+**Warhead extensibility evidence:** RA2 mods extend this list with `RadiationWarhead` (creates persistent radiation cells in the world-level `TintedCellsLayer` — not target damage, but environmental contamination), and community mods like Romanovs-Vengeance add temporal displacement, infection, and terrain-modifying warheads. OpenHV adds `PeriodicDischargeWarhead` (damage over time). IC needs a `WarheadRegistry` that accepts game-module and WASM-registered warhead types, not just the 15 built-in types.
 
 ---
 
@@ -761,6 +777,15 @@ Key Locomotor features:
 | `DamagedByTerrain`            | Terrain damage (tiberium, etc.)         |
 | `ChangesTerrain`              | Actor modifies terrain                  |
 | `SeedsResource`               | Creates new resources                   |
+
+**Terrain is never just tiles — evidence from mods:** Analysis of four OpenRA community mods (see `research/openra-mod-architecture-analysis.md` and `research/openra-ra2-mod-architecture.md`) reveals that terrain is one of the deepest extension points:
+
+- **RA2 radiation:** World-level `TintedCellsLayer` — sparse `Dictionary<CPos, TintedCell>` with configurable decay (linear, logarithmic, half-life). Radiation isn't a visual effect; it's a persistent terrain overlay that damages units standing in it. IC needs a `WorldLayer` abstraction for similar persistent cell-level state.
+- **OpenHV floods:** `LaysTerrain` trait — actors can permanently transform terrain type at runtime (e.g., flooding a valley changes passability and visual tiles). This breaks the assumption that terrain is static after map load.
+- **OpenSA plant growth:** Living terrain that spreads autonomously. `SpreadsCondition` creates expanding zones that modify pathability and visual appearance over time.
+- **OpenKrush oil patches:** Entirely different resource terrain model — fixed oil positions (not harvestable ore fields), per-patch depletion, no regrowth.
+
+IC's terrain system must support runtime terrain modification, world-level cell layers (for radiation, weather effects, etc.), and game-module-defined resource models — not just the RA1 ore/gem model.
 
 ### Tile Sets (RA mod example)
 - `snow` — Snow terrain
@@ -1218,6 +1243,16 @@ Configured via `Notifications:` section referencing YAML files that map event na
 - Observer mode with full visibility
 - Speed control during playback
 - Metadata: players, map, mod version, duration, outcome
+
+### IC Enhancements
+
+IC's replay system extends OpenRA's infrastructure with two features informed by SC2's replay architecture (see `research/blizzard-github-analysis.md` § Part 5):
+
+**Analysis event stream:** A separate data stream alongside the order stream, recording structured gameplay events (unit births, deaths, position samples, resource collection, production events). Not required for playback — purely for post-game analysis, community statistics, and tournament casting tools. See `05-FORMATS.md` § "Analysis Event Stream" for the event taxonomy.
+
+**Per-player score tracking:** `GameScore` structs (see `02-ARCHITECTURE.md` § "Game Score / Performance Metrics") are snapshotted periodically into the replay file. This enables post-game economy graphs, APM timelines, and comparative player performance overlays — the same kind of post-game analysis screen that SC2 popularized. OpenRA's replay stores only raw orders; extracting statistics requires re-simulating the entire game. IC's approach stores the computed metrics at regular intervals for instant post-game display.
+
+**Replay versioning:** Replay files include a `base_build` number and a `data_version` hash (following SC2's dual-version scheme). The `base_build` identifies the protocol format; `data_version` identifies the game rules state. A replay is playable if the engine supports its `base_build` protocol, even if minor game data changes occurred between versions.
 
 ---
 

@@ -451,3 +451,85 @@ Based on CA's custom C# requirements and Remastered's features, IC should includ
 7. **Dual Asset Rendering** — Runtime-switchable asset quality (classic/HD) per entity
 
 These seven systems serve both case studies, all future C&C game modules (RA2, TS, C&C3), and the broader RTS modding community.
+
+---
+
+## Case Study 3: OpenKrush (KKnD) — Total Conversion Acid Test
+
+### What OpenKrush Is
+
+[OpenKrush](https://github.com/IceReaper/OpenKrush) (116★) is a recreation of KKnD (Krush Kill 'n' Destroy) on the OpenRA engine. It is the most extreme test of game-agnostic claims because KKnD shares almost nothing with C&C at the mechanics level. For full technical analysis, see `research/openra-mod-architecture-analysis.md`.
+
+### What Makes OpenKrush Architecturally Significant
+
+OpenKrush replaces **16 complete mechanic modules** from OpenRA's C&C-oriented defaults:
+
+| Module              | What OpenKrush Replaces                                                        | IC Design Implication                                                      |
+| ------------------- | ------------------------------------------------------------------------------ | -------------------------------------------------------------------------- |
+| Construction system | `SelfConstructing` + `TechBunker` (not C&C-style MCV)                          | `GameModule::system_pipeline()` must accept arbitrary construction systems |
+| Production system   | Per-building production with local rally points, no sidebar                    | `ProductionQueue` is a game-module component, not an engine type           |
+| Resource model      | Oil patches (fixed positions, no regrowth, per-patch depletion)                | `ResourceCell` assumptions (growth_rate, max_amount) don't apply           |
+| Veterancy           | Kills-based (not XP points), custom promotion thresholds                       | Veterancy system must be trait-abstracted or YAML-configurable             |
+| Fog of war          | Modified fog behavior                                                          | `FogProvider` trait validates                                              |
+| AI system           | Custom AI modules (7 replacement bot modules)                                  | `AiStrategy` trait validates                                               |
+| UI chrome           | Custom sidebar, production panels, minimap                                     | `ic-ui` layout profiles must be fully swappable per game module            |
+| Format loaders      | 15+ custom binary decoders (`.blit`, `.mobd`, `.mapd`, `.lvl`, `.son`, `.vbc`) | `FormatRegistry` + WASM format loaders are not optional for non-C&C        |
+| Map format          | `.lvl` terrain format (not `.oramap`)                                          | Map loading must go through game module, not hardcoded                     |
+| Audio format        | `.son`/`.soun` (not `.aud`)                                                    | Audio pipeline must accept game-module format loaders                      |
+| Sprite format       | `.blit`/`.mobd` (not `.shp`)                                                   | Sprite pipeline must accept game-module format loaders                     |
+| Research system     | Tech research per building (not prerequisite tree)                             | Prerequisite model is game-module-defined                                  |
+| Bunker system       | Capturable tech bunkers with unique unlocks                                    | Capture/garrison mechanics vary per game                                   |
+| Docking system      | Oil derrick docking (not refinery docking)                                     | Dock types are game-module-defined                                         |
+| Saboteur system     | Saboteur infiltration/destruction                                              | Spy/saboteur mechanics vary per game                                       |
+| Power system        | No power (KKnD has no power grid)                                              | Power system must be optional, not assumed                                 |
+
+### What This Validates in IC's Architecture
+
+OpenKrush is the strongest evidence that **invariant #9 (engine core is game-agnostic)** is not aspirational — it's required. Every `GameModule` trait method that IC defines maps to a real replacement that OpenKrush needed:
+
+- `register_format_loaders()` → 15+ custom format decoders
+- `system_pipeline()` → 16 replaced mechanic systems
+- `pathfinder()` → modified pathfinding for different terrain model
+- `render_modes()` → different sprite pipeline for `.blit`/`.mobd` formats
+- `rule_schema()` → different unit/building/research YAML structure
+
+**IC design lesson:** If a KKnD total conversion doesn't work on IC without engine modifications, the `GameModule` abstraction has failed. OpenKrush is the acid test.
+
+---
+
+## Case Study 4: OpenSA (Swarm Assault) — Non-C&C Genre Test
+
+### What OpenSA Is
+
+[OpenSA](https://github.com/Walkman-Mirror/OpenSA) (114★) is a recreation of Swarm Assault on the OpenRA engine. It represents an even more extreme departure from C&C than OpenKrush — it's not just a different RTS, it's a fundamentally different game structure built on RTS infrastructure.
+
+### What Makes OpenSA Architecturally Significant
+
+OpenSA tests whether the engine can handle the **absence** of core C&C systems, not just their replacement:
+
+| C&C System             | OpenSA Equivalent                            | IC Design Implication                               |
+| ---------------------- | -------------------------------------------- | --------------------------------------------------- |
+| Construction yard      | None — no base building                      | Engine must not assume a construction system exists |
+| Sidebar/build queue    | None — production via colony capture         | Engine must not assume a sidebar UI exists          |
+| Harvesting/resources   | None — no resource gathering                 | Engine must not assume a resource model exists      |
+| Tech tree              | None — no prerequisites                      | Engine must not assume a tech tree exists           |
+| Power grid             | None — no power                              | Already optional (see OpenKrush)                    |
+| Infantry/vehicle split | Insects with custom locomotors               | Unit categories are game-module-defined             |
+| Static defenses        | Colony buildings (capturable, not buildable) | Defense structures vary per game                    |
+
+### Custom Systems OpenSA Adds
+
+| System                  | Description                                                 | IC Design Implication                                            |
+| ----------------------- | ----------------------------------------------------------- | ---------------------------------------------------------------- |
+| Plant growth            | Living terrain: plants spread, creating cover and resources | `WorldLayer` abstraction for cell-level autonomous behavior      |
+| Creep spawners          | Map hazards that periodically spawn hostile creatures       | World-level entity spawning system (not just player production)  |
+| Pirate ants             | Neutral hostile faction with autonomous behavior            | AI-controlled neutral factions as a first-class concept          |
+| Colony capture          | Take over colony buildings to gain production capability    | Capture-to-produce is a different model than build-to-produce    |
+| `WaspLocomotor`         | Flying insect movement (not aircraft, not helicopter)       | Custom locomotors via game module (validates `Pathfinder` trait) |
+| Per-building production | Each colony produces its own unit type                      | Further validates production-as-game-module pattern              |
+
+### What This Validates in IC's Architecture
+
+OpenSA demonstrates that a viable game module might use **none** of IC's RA1 systems — no sidebar, no construction, no harvesting, no tech tree, no power. The engine must function as pure infrastructure (ECS, rendering, networking, input, audio) with all gameplay systems provided by the game module.
+
+**IC design lesson:** The `GameModule` trait must be sufficient for games that share almost nothing with C&C except the underlying engine. If OpenSA-style games require engine modifications, the abstraction is too thin. The engine core provides: tick management, order dispatch, fog of war interface, pathfinding interface, rendering pipeline, networking, and modding infrastructure. Everything else — including "core RTS features" like base building and resource gathering — is a game module concern.

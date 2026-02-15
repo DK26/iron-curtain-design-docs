@@ -481,6 +481,85 @@ Telemetry is zero-cost when disabled (compile-time feature gate). Release builds
 
 Never add `par_iter()` without profiling first. Measure single-threaded. If a system takes > 1ms, consider parallelizing. If it takes < 0.1ms, sequential is faster (avoids coordination overhead).
 
+**Recommended profiling tool:** Embark Studios' **puffin** (1,674★, MIT/Apache-2.0) — a frame-based instrumentation profiler built for game loops. Puffin's thread-local profiling streams have ~1ns overhead when disabled (atomic bool check, no allocation), making it safe to leave instrumentation in release builds. Key features validated by production use at Embark: frame-scoped profiling (maps directly to IC's sim tick loop), remote TCP streaming for profiling headless servers (relay server profiling without local UI), and the `puffin_egui` viewer for real-time flame graphs in development builds via `bevy_egui`. IC's `telemetry` feature flag (D031) should gate puffin's collection, maintaining zero-cost when disabled. See `research/embark-studios-rust-gamedev-analysis.md` § puffin.
+
+## Delta Encoding & Change Tracking Performance
+
+Snapshots (D010) are the foundation of save games, replays, desync debugging, and reconnection. Full snapshots of 1000 units are ~200-400KB (ECS-packed). At 15 tps, saving full snapshots every tick would cost ~3-6 MB/s — wasteful when most fields don't change most ticks.
+
+### Property-Level Delta Encoding
+
+Instead of snapshotting entire components, track which specific fields changed (see `02-ARCHITECTURE.md` § "State Recording & Replay Infrastructure" for the `#[derive(TrackChanges)]` macro and `ChangeMask` bitfield). Delta snapshots record only changed fields:
+
+```
+Full snapshot:  1000 units × ~300 bytes     = 300 KB
+Delta snapshot: 1000 units × ~30 bytes avg  =  30 KB  (10x reduction)
+```
+
+This pattern is validated by Source Engine's `CNetworkVar` system (see `research/valve-github-analysis.md` § 2.2), which tracks per-field dirty flags and transmits only changed properties. The Source Engine achieves 10-20x bandwidth reduction through this approach — IC targets a similar ratio.
+
+### SPROP_CHANGES_OFTEN Priority Encoding
+
+Source Engine annotates frequently-changing properties with `SPROP_CHANGES_OFTEN`, which moves them to the front of the encoding order. The encoder checks these fields first, improving branch prediction and cache locality during delta computation:
+
+```rust
+/// Fields annotated with #[changes_often] are checked first during delta computation.
+/// This improves branch prediction (frequently-dirty fields are checked early) and
+/// cache locality (hot fields are contiguous in the diff buffer).
+///
+/// Typical priority ordering for a unit component:
+///   1. Position, Velocity        — change nearly every tick (movement)  
+///   2. Health, Facing            — change during combat
+///   3. Owner, UnitType, Armor    — rarely change (cold)
+```
+
+The encoder iterates priority groups in order: changes-often fields first, then remaining fields. For a 1000-unit game where ~200 units are moving, the encoder finds the first dirty field within 1-2 checks for moving units (position is priority 0) and within 0 checks for stationary units (nothing dirty). Without priority ordering, the encoder would scan all fields equally, hitting cold fields first and wasting branch predictor entries.
+
+### Entity Baselines (from Quake 3)
+
+Quake 3's networking introduced **entity baselines** — a default state for each entity type that serves as the base for delta encoding (see `research/quake3-netcode-analysis.md`). Instead of encoding deltas against the previous snapshot (which requires both sender and receiver to track full state history), deltas are encoded against a well-known baseline that both sides already have. This eliminates the need to retransmit reference frames on packet loss.
+
+IC applies this concept to snapshot deltas:
+
+```rust
+/// Per-archetype baseline state. Registered at game module initialization.
+/// All delta encoding uses baseline as the reference when no prior
+/// snapshot is available (e.g., reconnection, first snapshot after load).
+pub struct EntityBaseline {
+    pub archetype: ArchetypeLabel,
+    pub default_components: Vec<u8>,  // Serialized default state for this archetype
+}
+
+/// When computing a delta:
+/// 1. If previous snapshot exists → delta against previous (normal case)
+/// 2. If no previous snapshot → delta against baseline
+///    Much smaller than a full snapshot because most fields
+///    (owner, unit_type, armor, max_health) match the baseline.
+```
+
+**Why baselines matter for reconnection:** When a reconnecting client receives a snapshot, it has no previous state to delta against. Without baselines, the server must send a full uncompressed snapshot (~300KB for 1000 units). With baselines, the server sends deltas against the baseline — only fields that differ from the archetype's default state (position, health, facing, orders). For a 1000-unit game, ~60% of fields match the baseline, reducing the reconnection snapshot to ~120KB.
+
+**Baseline registration:** Each game module registers baselines for its archetypes during initialization (e.g., "Allied Rifle Infantry" has default health=50, armor=None, speed=4). The baseline is frozen at game start — it never changes during play. Both sides (sender and receiver) derive the same baseline from the same game module data.
+
+### Performance Impact by Use Case
+
+| Use Case              | Full Snapshot   | Delta Snapshot   | Improvement                |
+| --------------------- | --------------- | ---------------- | -------------------------- |
+| Autosave (every 30s)  | 300 KB per save | ~30 KB per save  | 10x smaller                |
+| Replay recording      | 4.5 MB/s        | ~450 KB/s        | 10x less IO                |
+| Reconnection transfer | 300 KB burst    | 30 KB + deltas   | Faster join                |
+| Desync diagnosis      | Full state dump | Field-level diff | Pinpoints exact divergence |
+
+### Benchmarks
+
+```rust
+#[bench] fn bench_delta_snapshot_1000_units()  { delta_bench(1000); }
+#[bench] fn bench_delta_apply_1000_units()     { apply_delta_bench(1000); }
+#[bench] fn bench_change_tracking_overhead()   { tracking_overhead_bench(); }
+```
+
+The change tracking overhead (maintaining `ChangeMask` bitfields via setter functions) is measured separately. Target: < 1% overhead on the movement system compared to direct field writes. The `#[derive(TrackChanges)]` macro generates setter functions that flip a bit — a single OR instruction per field write.
+
 ## Decision Record
 
 ### D015: Performance — Efficiency-First, Not Thread-First
@@ -490,5 +569,9 @@ Never add `par_iter()` without profiling first. Measure single-threaded. If a sy
 **Principle:** The engine must run a 500-unit battle smoothly on a 2-core, 4GB machine from 2012. Multi-core machines get higher unit counts as a natural consequence of the work-stealing scheduler.
 
 **Inspired by:** Datadog Vector's pipeline efficiency, Tokio's work-stealing runtime, axum's zero-overhead request handling. These systems are fast because they waste nothing, not because they use more hardware.
+
+### Memory Allocator Selection
+
+The default Rust allocator (`System` — usually glibc `malloc` on Linux, MSVC allocator on Windows) is not optimized for game workloads with many small, short-lived allocations (pathfinding nodes, order processing, per-tick temporaries). Embark Studios' experience across multiple production Rust game projects shows measurable gains from specialized allocators. IC should benchmark with **jemalloc** (`tikv-jemallocator`) and **mimalloc** (`mimalloc-rs`) early in Phase 2 — Quilkin offers both as feature flags, confirming the pattern. This fits the efficiency pyramid: better algorithms first (levels 1-4), then allocator tuning (level 5) before reaching for parallelism (level 6). See `research/embark-studios-rust-gamedev-analysis.md` § Theme 6.
 
 **Anti-pattern:** "Just parallelize it" as the answer to performance questions. Parallelism without algorithmic efficiency is like adding lanes to a highway with broken traffic lights.

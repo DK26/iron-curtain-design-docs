@@ -19,6 +19,12 @@ Power      ▼
 
 Each tier is optional. A modder who wants to change tank cost never sees code. A modder building a total conversion uses WASM.
 
+**Tier coverage validated by OpenRA mods:** Analysis of six major OpenRA community mods (see `research/openra-mod-architecture-analysis.md`) confirms the 80/20 split and reveals precise boundaries between tiers. YAML (Tier 1) covers unit stats, weapon definitions, faction variants, inheritance overrides, and prerequisite trees. But every mod that goes beyond stat changes — even faction reskins — eventually needs code (C# in OpenRA, WASM in IC). The validated breakdown:
+
+- **60–80% YAML** — Values, inheritance trees, faction variants, prerequisite DAGs, veterancy tables, weapon definitions, visual sequences. Some mods (Romanovs-Vengeance) achieve substantial new content purely through YAML template extension.
+- **15–30% code** — Custom mechanics (mind control, temporal weapons, mirage disguise, new locomotors), custom format loaders, replacement production systems, and world-level systems (radiation layers, weather). In IC, this is Tier 2 (Lua for scripting) and Tier 3 (WASM for mechanics).
+- **5–10% engine patches** — OpenRA mods sometimes require forking the engine (e.g., OpenKrush replaces 16 complete mechanic modules). IC's Tier 3 WASM modules + trait abstraction (D041) are designed to eliminate this need entirely — no fork, ever.
+
 ## Tier 1: Data-Driven (YAML Rules)
 
 ### Decision: Real YAML, Not MiniYAML
@@ -69,6 +75,51 @@ units:
     combat:
       weapon: m1_carbine
       attack_sequence: shoot
+```
+
+#### Unit Definition Features
+
+The YAML unit definition system supports several patterns informed by SC2's data model (see `research/blizzard-github-analysis.md` § Part 2):
+
+**Stable IDs:** Every unit type, weapon, ability, and upgrade has a stable numeric ID in addition to its string name. Stable IDs are assigned at mod-load time from a deterministic hash of the string name. Replays, network orders, and the analysis event stream reference entities by stable ID for compactness. When a mod renames a unit, backward compatibility is maintained via an explicit `aliases` list:
+
+```yaml
+units:
+  medium_tank:
+    id: 0x1A3F   # optional: override auto-assigned stable ID
+    aliases: [med_tank, medium]  # old names still resolve
+```
+
+**Multi-weapon units:** Units can mount multiple weapons with independent targeting, cooldowns, and target filters — matching C&C's original design where units like the Cruiser have separate anti-ground and anti-air weapons:
+
+```yaml
+combat:
+  weapons:
+    - weapon: cruiser_cannon
+      turret: primary
+      target_filter: [ground, structure]
+    - weapon: aa_flak
+      turret: secondary
+      target_filter: [air]
+```
+
+**Attribute tags:** Units carry attribute tags that affect damage calculations via versus tables. Tags are open-ended strings — game modules define their own sets. The RA1 module uses tags modeled on both C&C's original armor types and SC2's attribute system:
+
+```yaml
+attributes: [armored, mechanical]  # used by damage bonus lookups
+```
+
+Weapons can declare per-attribute damage bonuses:
+
+```yaml
+weapons:
+  at_missile:
+    damage: 60
+    damage_bonuses:
+      - attribute: armored
+        bonus: 30   # +30 damage vs armored targets
+      - attribute: light
+        bonus: -10  # reduced damage vs light targets
 ```
 
 ### Inheritance System
@@ -225,6 +276,10 @@ ic mod import /path/to/openra-mod/ --output ./my-ic-mod/
 
 Sections like `Rules`, `Sequences`, `Weapons`, `Maps`, `Voices`, `Music` are mapped to IC equivalents. `Assemblies` (C# DLLs) are flagged as warnings — units using unavailable traits get placeholder rendering.
 
+**OpenRA mod composition patterns and IC's alternative:** OpenRA mods compose functionality by stacking C# DLL assemblies. Romanovs-Vengeance loads **five DLLs simultaneously** (Common, Cnc, D2k, RA2, AttacqueSuperior) to combine cross-game components. OpenKrush uses `Include:` directives to compose modular content directories, each with their own rules, sequences, and assets. This DLL-stacking approach works but creates fragile version dependencies — a new OpenRA release can break all mods simultaneously.
+
+IC's mod composition replaces DLL stacking with a layered mod dependency system (see Mod Load Order below) combined with WASM modules for new mechanics. Instead of stacking opaque DLLs, mods declare explicit dependencies and the engine resolves load order deterministically. Cross-game component reuse (D029) works through the engine's first-party component library — no need to import foreign game module DLLs just to access a carrier/spawner system or mind control mechanic.
+
 ### Why Not TOML / RON / JSON?
 
 | Format | Verdict | Reason                                               |
@@ -237,6 +292,14 @@ Sections like `Rules`, `Sequences`, `Weapons`, `Maps`, `Voices`, `Music` are map
 ### Mod Load Order & Conflict Resolution
 
 When multiple mods modify the same game data, deterministic load order and explicit conflict handling are essential. Bethesda taught the modding world this lesson: Skyrim's 200+ mod setups are only viable because community tools (LOOT, xEdit, Bashed Patches) compensate for Bethesda's vague native load order. IC builds deterministic conflict resolution into the engine from day one — no third-party tools required.
+
+**Three-phase data loading (from Factorio):** Factorio's mod loading uses three sequential phases — `data.lua` (define new prototypes), `data-updates.lua` (modify prototypes defined by other mods), `data-final-fixes.lua` (final overrides that run after all mods) — which eliminates load-order conflicts for the vast majority of mod interactions. IC should adopt an analogous three-phase approach for YAML/Lua mod loading:
+
+1. **Define phase:** Mods declare new actors, weapons, and rules (additive only — no overrides)
+2. **Modify phase:** Mods modify definitions from earlier mods (explicit dependency required)
+3. **Final-fixes phase:** Balance patches and compatibility layers apply last-wins overrides
+
+This structure means a mod that defines new units and a mod that rebalances existing units don't conflict — they run in different phases by design. Factorio's 8,000+ mod ecosystem validates that three-phase loading scales to massive mod counts. See `research/mojang-wube-modding-analysis.md` § Factorio.
 
 **Load order rules:**
 
@@ -345,6 +408,24 @@ Iron Curtain's Lua API is a **strict superset** of OpenRA's 16 global objects. A
 
 Each actor reference exposes properties matching its components (`.Health`, `.Location`, `.Owner`, `.Move()`, `.Attack()`, `.Stop()`, `.Guard()`, `.Deploy()`, etc.) — identical to OpenRA's actor property groups.
 
+**In-game command system (inspired by Mojang's Brigadier):** Mojang's Brigadier parser (3,668★, MIT) defines commands as a typed tree where each node is an argument with a parser, suggestions, and permission checks. This architecture — tree-based, type-safe, permission-aware, with mod-injected commands — is the model for IC's in-game console and chat commands. Mods should be able to register custom commands (e.g., `/spawn`, `/weather`, `/teleport` for mission scripting) using the same tree-based architecture, with tab-completion suggestions generated from the command tree. See `research/mojang-wube-modding-analysis.md` § Brigadier.
+
+### API Design Principle: Runtime-Independent API Surface
+
+The Lua API is defined as an **engine-level abstraction**, independent of the Lua VM implementation. This lesson comes from Valve's Source Engine VScript architecture (see `research/valve-github-analysis.md` § 2.3): VScript defined a scripting API abstraction layer so the same mod scripts work across Squirrel, Lua, and Python backends — the *API surface* is the stable contract, not the VM runtime.
+
+For IC, this means:
+
+1. **The API specification is the contract.** The 16 OpenRA-compatible globals and IC extensions are defined by their function signatures, parameter types, return types, and side effects — not by `mlua` implementation details. A mod that calls `Actor.Create("tank", pos)` depends on the API spec, not on how `mlua` dispatches the call.
+
+2. **`mlua` is an implementation detail, not an API boundary.** The `mlua` crate is deeply integrated and switching Lua VM implementations (LuaJIT, Luau, or a future alternative) would be a substantial engineering effort. But mod scripts should never need to change when the VM implementation changes — they interact with the API surface, which is stable.
+
+3. **WASM mods use the same API.** Tier 3 WASM modules access the equivalent API through host functions (see WASM Host API below). The function names, parameters, and semantics are identical. A mission modder can prototype in Lua (Tier 2) and port to WASM (Tier 3) by translating syntax, not by learning a different API.
+
+4. **The API surface is testable independently.** Integration tests define expected behavior per-function ("`Actor.Create` with valid parameters returns an actor reference; with invalid parameters returns nil and logs a warning"). These tests validate any VM backend — they test the specification, not `mlua` internals.
+
+This principle ensures the modding ecosystem survives VM transitions, just as VScript mods survived Valve's backend switches. The API is the asset; the runtime is replaceable.
+
 ### Lua API Examples
 
 ```lua
@@ -367,6 +448,16 @@ Hooks.OnUnitCreated("ChronoTank", function(unit)
       PlayEffect("chrono_flash", target_cell)
     end
   })
+end)
+
+-- Idle unit automation (inspired by SC2's OnUnitIdle callback —
+-- see research/blizzard-github-analysis.md § Part 6)
+Hooks.OnUnitIdle("Harvester", function(unit)
+  -- Automatically send idle harvesters back to the nearest ore field
+  local ore = Map.FindClosestResource(unit.position, "ore")
+  if ore then
+    unit:Harvest(ore)
+  end
 end)
 ```
 
@@ -437,6 +528,8 @@ impl Default for LuaExecutionLimits {
 
 **Mod authors can request higher limits** via their mod manifest, same as WASM mods. The lobby displays requested limits and players can accept or reject. Campaign/mission scripts bundled with the game use elevated limits since they are trusted first-party content.
 
+> **Security (V39):** Three edge cases in Lua limit enforcement: `string.rep` memory amplification (allocates before limit fires), coroutine instruction counter resets at yield/resume, and `pcall` suppressing limit violation errors. Mitigations: intercept `string.rep` with pre-allocation size check, verify instruction counting spans coroutines, make limit violations non-catchable (fatal to script context, not Lua errors). See `06-SECURITY.md` § Vulnerability 39.
+
 ## Tier 3: WASM Modules
 
 ### Rationale
@@ -488,6 +581,8 @@ pub enum NetworkAccess {
     // NEVER unrestricted
 }
 ```
+
+> **Security (V43):** Domain-based `AllowList` is vulnerable to DNS rebinding — an approved domain can be re-pointed to `127.0.0.1` or `192.168.x.x` after capability review. Mitigations: block RFC 1918/loopback/link-local IP ranges after DNS resolution, pin DNS at mod load time, validate resolved IP on every request. See `06-SECURITY.md` § Vulnerability 43.
 
 ### WASM Execution Resource Limits
 
@@ -792,6 +887,49 @@ pub struct AiEventEntry {
 **Performance:** AI mods share the `WasmExecutionLimits` fuel budget. The `tick_budget_hint()` return value is advisory — the engine uses it for scheduling but enforces the fuel limit regardless. A community AI that exceeds its budget mid-tick gets truncated deterministically.
 
 **Phase:** WASM AI API ships in Phase 6a. Built-in AI (`PersonalityDrivenAi` + behavior presets from D043) ships in Phase 4 as native Rust.
+
+### WASM Format Loader API Surface
+
+Tier 3 WASM mods can register custom asset format loaders via the `FormatRegistry`. This is critical for total conversions that use non-C&C asset formats — analysis of OpenRA mods (see `research/openra-mod-architecture-analysis.md`) shows that non-C&C games on the engine require extensive custom format support:
+
+- **OpenKrush (KKnD):** 15+ custom binary format decoders — `.blit` (sprites), `.mobd` (animations), `.mapd` (terrain), `.lvl` (levels), `.son`/`.soun` (audio), `.vbc` (video). None of these resemble C&C formats.
+- **d2 (Dune II):** 6 distinct sprite formats (`.icn`, `.cps`, `.wsa`, `.shp` variant), custom map format, `.adl` music.
+- **OpenHV:** Uses standard PNG/WAV/OGG — no proprietary binary formats at all.
+
+The engine provides a `FormatLoader` WASM API surface that lets mods register custom decoders:
+
+```rust
+// === Format Loader Host API (ic_format_* namespace) ===
+// Available only to mods with ModCapabilities.format_loading = true
+
+/// Register a custom format loader for a file extension.
+/// When the engine encounters a file with this extension, it calls
+/// the mod's exported decode function instead of the built-in loader.
+#[wasm_host_fn] fn ic_format_register_loader(
+    extension: &str, loader_id: &str
+);
+
+/// Report decoded sprite data back to the engine.
+#[wasm_host_fn] fn ic_format_emit_sprite(
+    sprite_id: u32, width: u32, height: u32,
+    pixel_data: &[u8], palette: Option<&[u8]>
+);
+
+/// Report decoded audio data back to the engine.
+#[wasm_host_fn] fn ic_format_emit_audio(
+    audio_id: u32, sample_rate: u32, channels: u8,
+    pcm_data: &[u8]
+);
+
+/// Read raw bytes from an archive or file (engine handles archive mounting).
+#[wasm_host_fn] fn ic_format_read_bytes(
+    path: &str, offset: u32, length: u32
+) -> Option<Vec<u8>>;
+```
+
+**Security:** Format loading occurs at asset load time, not during simulation ticks. Format loader mods have file read access (through the engine's archive abstraction) but cannot issue orders, access game state, or call render functions. They decode bytes into engine-standard pixel/audio/mesh data — nothing else.
+
+**Phase:** WASM format loader API ships in Phase 6a alongside the broader mod testing framework. Built-in C&C format loaders (`ra-formats`) ship in Phase 0.
 
 ### Mod Testing Framework
 
@@ -2194,6 +2332,8 @@ LLM generates:
 ```
 
 The template/scene system makes this tractable — the LLM composes from known building blocks rather than generating raw code. Campaign graphs are validated at load time (no orphan nodes, all outcomes have targets).
+
+> **Security (V40):** LLM-generated content (YAML rules, Lua scripts, briefing text) must pass through the `ic mod check` validation pipeline before execution — same as Workshop submissions. Additional defenses: cumulative mission-lifetime resource limits, content filter for generated text, sandboxed preview mode. LLM output is treated as untrusted Tier 2 mod content, never trusted first-party. See `06-SECURITY.md` § Vulnerability 40.
 
 ### Configurable Workshop Server
 

@@ -53,6 +53,41 @@ The Asset Studio (D040) converts in both directions. See `09-DECISIONS.md` § D0
 6. Useful as standalone crate (builds project credibility)
 7. Released open source early (Phase 0 deliverable, read-only; write support added Phase 6a)
 
+### Non-C&C Format Landscape
+
+The `ra-formats` crate covers the C&C format family, but the engine (D039) supports non-C&C games via the `FormatRegistry` and WASM format loaders (see `04-MODDING.md` § WASM Format Loader API Surface). Analysis of six major OpenRA community mods (see `research/openra-mod-architecture-analysis.md`) reveals the scope of formats that non-C&C total conversions require:
+
+| Game (Mod)             | Custom Formats Required                                                   | Notes                                                     |
+| ---------------------- | ------------------------------------------------------------------------- | --------------------------------------------------------- |
+| KKnD (OpenKrush)       | `.blit`, `.mobd`, `.mapd`, `.lvl`, `.son`, `.soun`, `.vbc` (15+ decoders) | Entirely proprietary format family; zero overlap with C&C |
+| Dune II (d2)           | `.icn`, `.cps`, `.wsa`, `.shp` variant, `.adl`, custom map format (6+)    | Different `.shp` than C&C; incompatible parsers           |
+| Swarm Assault (OpenSA) | Custom creature sprites, terrain tiles                                    | Format details vary by content source                     |
+| Tiberian Dawn HD       | MegV3 archives, 128×128 HD tiles (`RemasterSpriteSequence`)               | Different archive format than `.mix`                      |
+| OpenHV                 | None — uses PNG/WAV/OGG exclusively                                       | Original game content avoids legacy formats entirely      |
+
+**Key insight:** Non-C&C games on the engine need 0–15+ custom format decoders, and there is zero format overlap with C&C. This validates the `FormatRegistry` design — the engine cannot hardcode any format assumption. `ra-formats` is one format loader plugin among potentially many.
+
+**Cross-engine validation:** Godot's `ResourceFormatLoader` follows the same pattern — a pluggable interface where any module registers format handlers (recognized extensions, type specializations, caching modes) and the engine dispatches to the correct loader at runtime. Godot's implementation includes threaded loading, load caching (reuse/ignore/replace), and recursive dependency resolution for complex assets. IC's `FormatRegistry` via Bevy's asset system should support the same capabilities: threaded background loading, per-format caching policy, and declared dependencies between assets (e.g., a sprite sheet depends on a palette). See `research/godot-o3de-engine-analysis.md` § Asset Pipeline.
+
+### Content Source Detection
+
+Games use different distribution platforms, and each stores assets in different locations. Analysis of TiberianDawnHD (see `research/openra-mod-architecture-analysis.md`) shows a robust pattern for detecting installed game content:
+
+```rust
+/// Content sources — where game assets are installed.
+/// Each game module defines which sources it supports.
+pub enum ContentSource {
+    Steam { app_id: u32 },           // e.g., Steam AppId 2229870 (TD Remastered)
+    Origin { registry_key: String }, // Windows registry path to install dir
+    Gog { game_id: String },         // GOG Galaxy game identifier
+    Directory { path: PathBuf },     // Manual install / disc copy
+}
+```
+
+TiberianDawnHD detects Steam via AppId, Origin via Windows registry key, and GOG via standard install paths. IC should implement a `ContentDetector` that probes all known sources for each supported game and presents the user with detected installations at first run. This handles the critical UX question "where are your game assets?" without requiring manual path entry — the same approach used by OpenRA, CorsixTH, and other reimplementation projects.
+
+**Phase:** Content detection ships in Phase 0 as part of `ra-formats` (for C&C assets). Game module content detection in Phase 1.
+
 ## Binary Format Codec Reference (EA Source Code)
 
 > All struct definitions in this section are taken verbatim from the GPL v3 EA source code repositories:
@@ -232,6 +267,8 @@ LCW decompression processes a source stream and produces output by copying liter
 Where `w₁`, `w₂` are little-endian 16-bit words and `b₁` is a single byte.
 
 **Key detail:** Short copies use *relative* backward references (from current output position), while medium and long copies use *absolute* offsets from the start of the output buffer. This dual addressing is a distinctive feature of LCW.
+
+> **Security (V38):** All `ra-formats` decompressors (LCW, LZ4, ADPCM) must enforce decompression ratio caps (256:1), absolute output size limits, and loop iteration counters. Every format parser must have a `cargo-fuzz` target. Archive extraction (`.oramap` ZIP) must use `strict-path` `PathBoundary` to prevent Zip Slip. See `06-SECURITY.md` § Vulnerability 38.
 
 #### IFF Chunk ID Macro
 
@@ -832,6 +869,8 @@ pub struct SaveHeader {
 }
 ```
 
+> **Security (V42):** Shared `.icsave` files are an attack surface. Enforce: max decompressed size 64 MB, JSON metadata cap 1 MB, schema validation of deserialized `SimSnapshot` (entity count, position bounds, valid components). Save directory sandboxed via `strict-path` `PathBoundary`. See `06-SECURITY.md` § Vulnerability 42.
+
 ### Metadata (JSON)
 
 Human-readable metadata for the save browser UI. Stored as JSON (not the binary sim format) so the client can display save info without deserializing the full snapshot.
@@ -897,7 +936,8 @@ iron_curtain_replay_v1.icrep  (file extension: .icrep)
 ├── Header (fixed-size, uncompressed)
 ├── Metadata (JSON, uncompressed)
 ├── Tick Order Stream (framed, LZ4-compressed)
-└── Signature Chain (Ed25519 hash chain, optional)
+├── Signature Chain (Ed25519 hash chain, optional)
+└── Embedded Resources (map + mod manifest, optional)
 ```
 
 ### Header (48 bytes, fixed)
@@ -966,6 +1006,43 @@ Frames are serialized with bincode and compressed in blocks (LZ4 block compressi
 
 **Streaming write:** During a live game, replay frames are appended incrementally (not buffered in memory). The replay file is valid at any point — if the game crashes, the replay up to that point is usable.
 
+### Analysis Event Stream
+
+Alongside the order stream (which enables deterministic replay), IC replays include a separate **analysis event stream** — derived events sampled from the simulation state during recording. This stream enables replay analysis tools (stats sites, tournament review, community analytics) to extract rich data **without re-simulating the entire game**.
+
+This design follows SC2's separation of `replay.game.events` (orders for playback) from `replay.tracker.events` (analytical data for post-game tools). See `research/blizzard-github-analysis.md` § 5.2–5.3.
+
+**Event taxonomy:**
+
+```rust
+/// Analysis events derived from simulation state during recording.
+/// These are NOT inputs — they are sampled observations for tooling.
+pub enum AnalysisEvent {
+    /// Unit fully created (spawned or construction completed).
+    UnitCreated { tick: u64, tag: EntityTag, unit_type: UnitTypeId, owner: PlayerId, pos: WorldPos },
+    /// Building/unit construction started.
+    ConstructionStarted { tick: u64, tag: EntityTag, unit_type: UnitTypeId, owner: PlayerId, pos: WorldPos },
+    /// Building/unit construction completed (pairs with ConstructionStarted).
+    ConstructionCompleted { tick: u64, tag: EntityTag },
+    /// Unit destroyed.
+    UnitDestroyed { tick: u64, tag: EntityTag, killer_tag: Option<EntityTag>, killer_owner: Option<PlayerId> },
+    /// Periodic position sample for combat-active units (delta-encoded, max 256 per event).
+    UnitPositionSample { tick: u64, positions: Vec<(EntityTag, WorldPos)> },
+    /// Periodic per-player economy/military snapshot.
+    PlayerStatSnapshot { tick: u64, player: PlayerId, stats: PlayerStats },
+    /// Resource harvested.
+    ResourceCollected { tick: u64, player: PlayerId, resource_type: ResourceType, amount: i32 },
+    /// Upgrade completed.
+    UpgradeCompleted { tick: u64, player: PlayerId, upgrade_id: UpgradeId },
+}
+```
+
+**Design properties:**
+- **Not required for playback** — the order stream alone is sufficient for deterministic replay. Analysis events are a convenience cache.
+- **Compact position sampling** — `UnitPositionSample` uses delta-encoded unit indices and includes only units that have inflicted or taken damage recently (following SC2's tracker event model). This keeps the stream compact even in large battles.
+- **Fixed-point stat values** — `PlayerStatSnapshot` uses fixed-point integers (matching the sim), not floats.
+- **Independent compression** — the analysis stream is LZ4-compressed in its own block, separate from the order stream. Tools that only need orders skip it; tools that only need stats skip the orders.
+
 ### Signature Chain (Relay-Certified Replays)
 
 For ranked/tournament matches, the relay server signs each tick's state hash. The signature algorithm is determined by the replay header version — version 1 uses Ed25519 (current), future versions may use post-quantum algorithms via the `SignatureScheme` enum (D054):
@@ -986,6 +1063,37 @@ pub struct TickSignature {
 The signature chain is a linked hash chain — each signature includes the hash of the previous signature. Tampering with any tick invalidates all subsequent signatures. Only relay-hosted games produce signed replays. Unsigned replays are fully functional for playback — signatures add trust, not capability.
 
 **Selective tick verification via Merkle paths:** When the sim uses Merkle tree state hashing (see `03-NETCODE.md` § Merkle Tree State Hashing), each `TickSignature` can include the Merkle root rather than a flat hash. This enables **selective verification**: a tournament official can verify that tick 5,000 is authentic without replaying ticks 1–4,999 — just by checking the Merkle path from the tick's root to the signature chain. The signature chain itself forms a hash chain (each entry includes the previous entry's hash), so verifying any single tick also proves the integrity of the chain up to that point. This is the same principle as SPV (Simplified Payment Verification) in Bitcoin — prove a specific item belongs to a signed set without downloading the full set. Useful for dispute resolution ("did this specific moment really happen?") without replaying or transmitting the entire match.
+
+### Embedded Resources (Self-Contained Replays)
+
+A frequent complaint in RTS replay communities is that replays become unplayable when a required mod or map version is unavailable. 0 A.D. and Warzone 2100 both suffer from this — replays reference external map files by name/hash, and if the map is missing, the replay is dead (see `research/0ad-warzone2100-netcode-analysis.md`).
+
+IC replays can optionally embed the resources needed for playback directly in the `.icrep` file:
+
+```rust
+/// Optional embedded resources section. When present, the replay is
+/// self-contained — playable without the original mod/map installed.
+pub struct EmbeddedResources {
+    pub map_data: Option<Vec<u8>>,           // Complete map file (LZ4-compressed)
+    pub mod_manifest: Option<ModManifest>,    // Mod versions + rule snapshots
+    pub balance_preset: Option<String>,       // Which balance preset was active
+    pub initial_state: Option<Vec<u8>>,       // Full sim snapshot at tick 0
+}
+```
+
+**Embedding modes (controlled by a replay header flag):**
+
+| Mode            | Map                 | Mod Rules           | Size Impact | Use Case                                     |
+| --------------- | ------------------- | ------------------- | ----------- | -------------------------------------------- |
+| `Minimal`       | Hash reference only | Version IDs only    | +0 KB       | Normal replays (mods installed locally)      |
+| `MapEmbedded`   | Full map data       | Version IDs only    | +50-200 KB  | Sharing replays of custom maps               |
+| `SelfContained` | Full map data       | Rule YAML snapshots | +200-500 KB | Tournament archives, historical preservation |
+
+**Tournament archives** use `SelfContained` mode — a replay from 2028 remains playable in 2035 even if the mod has been updated 50 times. The embedded rule snapshots are read-only and cannot override locally installed mods during normal play.
+
+**Size trade-off:** A `Minimal` replay for a 60-minute game is ~2-5 MB (order stream + signatures). A `SelfContained` replay adds ~200-500 KB for embedded resources — a small overhead for permanent playability. Maps larger than 1 MB (rare) use external references instead of embedding.
+
+> **Security (V41):** `SelfContained` embedded resources bypass Workshop moderation and publisher trust tiers. Mitigations: consent prompt before loading embedded content from unknown sources, Lua/WASM never embedded (map data and rule YAML only), diff display against installed mod version, extraction sandboxed via `strict-path` `PathBoundary`. See `06-SECURITY.md` § Vulnerability 41.
 
 ### Playback
 

@@ -204,8 +204,8 @@ Units moving, shooting, dying — headless sim + rendered. Record replay file. P
 - Desync detection and server-side debugging tools (killer feature)
 - Lobby system, game browser, NAT traversal via relay
 - Replay system (already enabled by Phase 2 architecture)
-- `CommunityBridge` for shared server browser with OpenRA
-- **Ranked matchmaking:** Glicko-2 rating system, placement matches, league tiers, 3-month seasons
+- `CommunityBridge` for shared server browser with OpenRA and CnCNet
+- **Ranked matchmaking (D055):** Glicko-2 rating system (D041), 10 placement matches, YAML-configurable tier system (Cold War military ranks for RA: Conscript → Supreme Commander, 7+2 tiers × 3 divisions = 23 positions), 3-month seasons with soft reset, dual display (tier badge + rating number), faction-specific optional ratings, small-population matchmaking degradation, map veto system
 - **Leaderboards:** global, per-faction, per-map — with public profiles and replay links
 - **Observer/spectator mode:** connect to relay with configurable fog (full/player/none) and broadcast delay
 - **Tournament mode:** bracket API, relay-certified `CertifiedMatchResult`, server-side replay archive
@@ -230,7 +230,7 @@ Units moving, shooting, dying — headless sim + rendered. Record replay file. P
 ### Exit Criteria
 - Two players can play a full game over the internet
 - Desync, if it occurs, is automatically diagnosed to specific tick and entity
-- Games appear in shared server browser alongside OpenRA games
+- Games appear in shared server browser alongside OpenRA and CnCNet games
 - Ranked 1v1 queue functional with ratings, placement, and leaderboard
 - Spectator can watch a live game with broadcast delay
 

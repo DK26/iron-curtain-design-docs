@@ -88,6 +88,8 @@ The original C&C stored all game values in INI files. Designers iterated without
 
 **Rule:** Game values belong in YAML, not Rust code. If a modder would want to change it, it shouldn't require recompilation. This is the foundation of the tiered modding system (D003/D004/D005).
 
+**Validated by Factorio:** Wube Software takes this principle to its logical extreme — Factorio's `base/` directory defines the entire base game using the same `data:extend()` Lua API available to modders. The game itself is a mod. This "game is a mod" architecture (see `research/mojang-wube-modding-analysis.md`) is the strongest possible guarantee that the modding API is complete and stable: if the base game can't do something without internal APIs, the modding API is incomplete. IC's RA1 game module should aspire to the same standard — every system registered through `GameModule` trait (D018), no internal shortcuts unavailable to external modules.
+
 **Where this applies:**
 - YAML rule system in [04-MODDING.md](04-MODDING.md) — 80% of mods achievable with YAML alone
 - OpenRA vocabulary compatibility (D023) — `Armament` in OpenRA YAML routes to IC's combat component

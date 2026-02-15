@@ -159,12 +159,12 @@ Item 8 is the linchpin. If existing mods just work, migration cost drops to near
 
 ## Competitive Play
 
-Red Alert has a dedicated competitive community (primarily through OpenRA and CnCNet). CnCNet provides community ladders and tournament infrastructure, but there's no integrated ranked system, no automated anti-cheat, and desyncs remain a persistent issue (135+ tracked in OpenRA's issue tracker). This is a significant opportunity.
+Red Alert has a dedicated competitive community (primarily through OpenRA and CnCNet). CnCNet provides community ladders and tournament infrastructure, but there's no integrated ranked system, no automated anti-cheat, and desyncs remain a persistent issue (135+ tracked in OpenRA's issue tracker). This is a significant opportunity. IC's `CommunityBridge` will integrate with both OpenRA's and CnCNet's game browsers (shared discovery, separate gameplay) so the C&C community stays unified.
 
 ### Ranked Matchmaking
 
 - **Rating system:** Glicko-2 (improvement over Elo — accounts for rating volatility and inactivity, used by Lichess, FIDE, many modern games)
-- **Seasons:** 3-month ranked seasons with placement matches (10 games), league tiers (Bronze → Silver → Gold → Platinum → Diamond → Master), end-of-season rewards
+- **Seasons:** 3-month ranked seasons with placement matches (10 games), YAML-configurable tier system (D055 — Cold War military ranks for RA: Conscript → Supreme Commander, 7+2 tiers × 3 divisions), end-of-season rewards
 - **Queues:** 1v1 (primary), 2v2 (team), FFA (experimental). Separate ratings per queue
 - **Map pool:** Curated competitive map pool per season, community-nominated and committee-voted. Ranked games use pool maps only
 - **Balance preset locked:** Ranked play uses a fixed balance preset per season (prevents mid-season rule changes from invalidating results)
