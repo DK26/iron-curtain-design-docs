@@ -122,6 +122,7 @@ These are settled. Don't re-litigate unless the user explicitly wants to revisit
 | D054 | Extended switchability                        | Transport trait (WASM multiplayer), SignatureScheme enum (post-quantum crypto), SnapshotCodec version dispatch (cross-version saves)                                                                                                                    |
 | D055 | Ranked tiers, seasons & matchmaking queue     | YAML-configurable tiers (Cold War military ranks for RA); 3-month seasons with soft reset; 10 placement matches; dual display (tier + rating); faction-specific ratings; small-population matchmaking degradation; community-customizable via D041/D052 |
 | D056 | Foreign replay import (OpenRA & Remastered)   | Decode `.orarep` and Remastered replay files via `ra-formats`; direct playback via `ForeignReplayPlayback` NetworkModel; convert to `.icrep` via CLI; automated behavioral regression testing against foreign replay corpus; divergence tracking UI     |
+| D057 | LLM Skill Library — lifelong learning         | Persistent, semantically-indexed store of verified LLM outputs (AI strategies + generation patterns); SQLite+FTS5 storage; optional embedding similarity; verification→promotion pipeline; Workshop-shareable; BYOLLM embedding; Voyager-inspired       |
 
 ## Pending Decisions
 

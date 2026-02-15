@@ -1399,6 +1399,8 @@ The LLM doesn't need to generate everything from scratch. It can:
 
 This is dramatically more reliable than raw generation. The template constrains the LLM's output to valid parameter space, and the schema validates it. The LLM becomes a smart form-filler, not an unconstrained code generator.
 
+> **Lifelong learning (D057):** Proven template parameter combinations — which `ambush` location choices, `defend_position` wave compositions, and multi-scene sequences produce missions that players rate highly — are stored in the **skill library** (`09-DECISIONS.md` § D057) and retrieved as few-shot examples for future generation. The template library provides the valid output space; the skill library provides accumulated knowledge about what works within that space.
+
 ### Scene Templates (Composable Building Blocks)
 
 Inspired by Operation Flashpoint / ArmA's mission editor: scene templates are **sub-mission components** — reusable, pre-scripted building blocks that snap together inside a mission. Each scene template has its own trigger logic, AI behavior, and Lua scripts already written and tested. The user or LLM only fills in parameters.
