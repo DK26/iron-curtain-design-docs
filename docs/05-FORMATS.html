@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-fb30e59a.js";
+            window.path_to_searchindex_js = "searchindex-72ec874a.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-1d51ffef.js"></script>
@@ -999,16 +999,17 @@ impl CoordTransform {
 ├── Header (fixed-size, uncompressed)
 ├── Metadata (JSON, uncompressed)
 ├── Tick Order Stream (framed, LZ4-compressed)
+├── Voice Stream (per-player Opus tracks, optional — D059)
 ├── Signature Chain (Ed25519 hash chain, optional)
 └── Embedded Resources (map + mod manifest, optional)
 </code></pre>
-<h3 id="header-48-bytes-fixed"><a class="header" href="#header-48-bytes-fixed">Header (48 bytes, fixed)</a></h3>
+<h3 id="header-56-bytes-fixed"><a class="header" href="#header-56-bytes-fixed">Header (56 bytes, fixed)</a></h3>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>pub struct ReplayHeader {
     pub magic: [u8; 4],           // b"ICRP" — "Iron Curtain Replay"
     pub version: u16,             // Replay format version (1)
-    pub flags: u16,               // Bit flags (compressed, signed, has_events)
+    pub flags: u16,               // Bit flags (compressed, signed, has_events, has_voice)
     pub metadata_offset: u32,
     pub metadata_length: u32,
     pub orders_offset: u32,
@@ -1017,8 +1018,11 @@ impl CoordTransform {
     pub signature_length: u32,
     pub total_ticks: u64,         // Total ticks in the replay
     pub final_state_hash: u64,    // state_hash() of the last tick (integrity)
+    pub voice_offset: u32,        // 0 if no voice stream (D059)
+    pub voice_length: u32,        // Compressed length of voice stream
 }
 <span class="boring">}</span></code></pre>
+<p>The <code>flags</code> field includes a <code>HAS_VOICE</code> bit (bit 3). When set, the voice stream section contains per-player Opus audio tracks recorded with player consent. See <code>09-DECISIONS.md</code> § D059 for the voice consent model, storage costs, and replay playback integration.</p>
 <h3 id="metadata-json-1"><a class="header" href="#metadata-json-1">Metadata (JSON)</a></h3>
 <pre><code class="language-json">{
   "replay_id": "a3f7c2d1-...",
@@ -1085,10 +1089,45 @@ pub enum AnalysisEvent {
     ResourceCollected { tick: u64, player: PlayerId, resource_type: ResourceType, amount: i32 },
     /// Upgrade completed.
     UpgradeCompleted { tick: u64, player: PlayerId, upgrade_id: UpgradeId },
+
+    // --- Competitive analysis events (Phase 5+) ---
+
+    /// Periodic camera position sample — where each player is looking.
+    /// Sampled at 2 Hz (~8 bytes per player per sample). Enables coaching
+    /// tools ("you weren't watching your base during the drop"), replay
+    /// heatmaps, and attention analysis. See D059 § Integration.
+    CameraPositionSample { tick: u64, player: PlayerId, viewport_center: WorldPos, zoom_level: u16 },
+    /// Player selection changed — what the player is controlling.
+    /// Delta-encoded: only records additions/removals from the previous selection.
+    /// Enables micro/macro analysis and attention tracking.
+    SelectionChanged { tick: u64, player: PlayerId, added: Vec&lt;EntityTag&gt;, removed: Vec&lt;EntityTag&gt; },
+    /// Control group assignment or recall.
+    ControlGroupEvent { tick: u64, player: PlayerId, group: u8, action: ControlGroupAction },
+    /// Ability or superweapon activation.
+    AbilityUsed { tick: u64, player: PlayerId, ability_id: AbilityId, target: Option&lt;WorldPos&gt; },
+    /// Game pause/unpause event.
+    PauseEvent { tick: u64, player: PlayerId, paused: bool },
+    /// Match ended — captures the end reason for analysis tools.
+    MatchEnded { tick: u64, outcome: MatchOutcome },
+    /// Vote lifecycle event — proposal, ballot, and resolution.
+    /// See `03-NETCODE.md` § "In-Match Vote Framework" for the full vote system.
+    VoteEvent { tick: u64, event: VoteAnalysisEvent },
+}
+
+/// Control group action types for ControlGroupEvent.
+pub enum ControlGroupAction {
+    Assign,   // player set this control group
+    Append,   // player added to this control group (shift+assign)
+    Recall,   // player pressed the control group hotkey to select
 }
 <span class="boring">}</span></code></pre>
-<p><strong>Design properties:</strong></p>
+<p><strong>Competitive analysis rationale:</strong></p>
 <ul>
+<li><strong>CameraPositionSample:</strong> SC2 and AoE2 replays both include camera tracking. Coaches review where a player was looking (“you weren’t watching your expansion when the attack came”). At 2 Hz with 8 bytes per player, a 20-minute 2-player game adds ~19 KB — negligible. Combines powerfully with voice-in-replay (D059): hearing what a player said while seeing what they were looking at.</li>
+<li><strong>SelectionChanged / ControlGroupEvent:</strong> SC2’s <code>replay.game.events</code> includes selection deltas. Control group usage frequency and response time are key skill metrics that distinguish player brackets. Delta-encoded selections are compact (~12 bytes per change).</li>
+<li><strong>AbilityUsed:</strong> Superweapon timing, chronosphere accuracy, iron curtain placement decisions. Critical for tournament review.</li>
+<li><strong>PauseEvent / MatchEnded:</strong> Structural events that analysis tools need without re-simulating. See <code>03-NETCODE.md</code> § Match Lifecycle for the full pause and surrender specifications.</li>
+<li><strong>VoteEvent:</strong> Records vote proposals, individual ballots, and resolutions for post-match review and behavioral analysis. Tournament admins can audit vote patterns (e.g., excessive failed kick votes). See <code>03-NETCODE.md</code> § “In-Match Vote Framework.”</li>
 <li><strong>Not required for playback</strong> — the order stream alone is sufficient for deterministic replay. Analysis events are a convenience cache.</li>
 <li><strong>Compact position sampling</strong> — <code>UnitPositionSample</code> uses delta-encoded unit indices and includes only units that have inflicted or taken damage recently (following SC2’s tracker event model). This keeps the stream compact even in large battles.</li>
 <li><strong>Fixed-point stat values</strong> — <code>PlayerStatSnapshot</code> uses fixed-point integers (matching the sim), not floats.</li>
@@ -1156,6 +1195,54 @@ pub struct EmbeddedResources {
 }
 <span class="boring">}</span></code></pre>
 <p><strong>Playback features:</strong> Variable speed (0.5x to 8x), pause, scrub to any tick (requires re-simulating from nearest snapshot or start). <code>SimSnapshot</code> can be taken at intervals during recording for fast seeking.</p>
+<h3 id="foreign-replay-decoders-d056"><a class="header" href="#foreign-replay-decoders-d056">Foreign Replay Decoders (D056)</a></h3>
+<p><code>ra-formats</code> includes decoders for foreign replay file formats, enabling direct playback and conversion to <code>.icrep</code>:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Format</th><th>Extension</th><th>Structure</th><th>Decoder</th><th>Source Documentation</th></tr>
+</thead>
+<tbody>
+<tr><td>OpenRA</td><td><code>.orarep</code></td><td>ZIP archive (order stream + <code>metadata.yaml</code> + <code>sync.bin</code>)</td><td><code>OpenRAReplayDecoder</code></td><td>OpenRA source: <code>ReplayUtils.cs</code>, <code>ReplayConnection.cs</code></td></tr>
+<tr><td>Remastered Collection</td><td>Binary (no standard extension)</td><td><code>Save_Recording_Values()</code> header + per-frame <code>EventClass</code> DoList</td><td><code>RemasteredReplayDecoder</code></td><td>EA GPL source: <code>QUEUE.CPP</code> §§ <code>Queue_Record()</code> / <code>Queue_Playback()</code></td></tr>
+</tbody>
+</table>
+</div>
+<p>Both decoders produce a <code>ForeignReplay</code> struct (defined in <code>09-DECISIONS.md</code> § D056) — a normalized intermediate representation with <code>ForeignFrame</code> / <code>ForeignOrder</code> types. This IR is translated to IC’s <code>TimestampedOrder</code> by <code>ForeignReplayCodec</code> in <code>ic-protocol</code>, then fed to either <code>ForeignReplayPlayback</code> (direct viewing) or the <code>ic replay import</code> CLI (conversion to <code>.icrep</code>).</p>
+<p><strong>Remastered replay header</strong> (from <code>Save_Recording_Values()</code> in <code>REDALERT/INIT.CPP</code>):</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Header fields written by Save_Recording_Values().
+/// Parsed by RemasteredReplayDecoder.
+pub struct RemasteredReplayHeader {
+    pub session: SessionValues,       // MaxAhead, FrameSendRate, DesiredFrameRate
+    pub build_level: u32,
+    pub debug_unshroud: bool,
+    pub random_seed: u32,             // Deterministic replay seed
+    pub scenario: [u8; 44],           // Scenario identifier
+    pub scenario_name: [u8; 44],
+    pub whom: u32,                    // Player perspective
+    pub special: SpecialFlags,
+    pub options: GameOptions,
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Remastered per-frame format</strong> (from <code>Queue_Record()</code> in <code>QUEUE.CPP</code>):</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Per-frame recording: count of events, then that many EventClass structs.
+/// Each EventClass is a fixed-size C struct (sizeof(EventClass) bytes).
+pub struct RemasteredRecordedFrame {
+    pub event_count: u32,
+    pub events: Vec&lt;RemasteredEventClass&gt;,  // event_count entries
+}
+<span class="boring">}</span></code></pre>
+<p><strong>OpenRA <code>.orarep</code> structure:</strong></p>
+<pre><code>game.orarep (ZIP archive)
+├── metadata.yaml          # MiniYAML: players, map, mod, version, outcome
+├── orders                  # Binary order stream (per-tick Order objects)
+└── sync                    # Per-tick state hashes (u64 CRC values)
+</code></pre>
+<p>The <code>sync</code> stream enables partial divergence detection — IC can compare its own <code>state_hash()</code> against OpenRA’s recorded sync values to estimate when the simulations diverged.</p>
 <h3 id="ra-formats-write-support"><a class="header" href="#ra-formats-write-support">ra-formats Write Support</a></h3>
 <p><code>ra-formats</code> currently focuses on reading C&amp;C file formats. Write support extends the crate for the Asset Studio (D040) and mod toolchain:</p>
 <div class="table-wrapper">

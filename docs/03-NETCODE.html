@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-fb30e59a.js";
+            window.path_to_searchindex_js = "searchindex-72ec874a.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-1d51ffef.js"></script>
@@ -463,9 +463,12 @@ pub enum MessageLane {
     /// Chat messages, player status updates, lobby state.
     /// Important but not time-critical — can tolerate ~100ms extra delay.
     Chat = 2,
+    /// Voice-over-IP frames (Opus-encoded). Real-time but best-effort —
+    /// dropped frames use Opus PLC, not retransmit. See D059.
+    Voice = 3,
     /// Replay data, observer feeds, telemetry.
     /// Lowest priority — uses spare bandwidth only.
-    Bulk = 3,
+    Bulk = 4,
 }
 
 /// Lane configuration — priority and weight determine scheduling.
@@ -493,11 +496,12 @@ pub struct LaneConfig {
 <tr><td><code>Orders</code></td><td>0</td><td>1</td><td>4 KB</td><td>Reliable</td><td>Orders must arrive; missed = Idle (deadline is the cap)</td></tr>
 <tr><td><code>Control</code></td><td>0</td><td>1</td><td>2 KB</td><td>Unreliable</td><td>Latest sync hash wins; stale hashes are useless</td></tr>
 <tr><td><code>Chat</code></td><td>1</td><td>1</td><td>8 KB</td><td>Reliable</td><td>Chat messages should arrive but can wait</td></tr>
+<tr><td><code>Voice</code></td><td>1</td><td>2</td><td>16 KB</td><td>Unreliable</td><td>Real-time voice; dropped frames use Opus PLC (D059)</td></tr>
 <tr><td><code>Bulk</code></td><td>2</td><td>1</td><td>64 KB</td><td>Unreliable</td><td>Telemetry/observer data uses spare bandwidth</td></tr>
 </tbody>
 </table>
 </div>
-<p>The Orders and Control lanes share the highest priority tier — both are drained before any Chat or Bulk data is sent. This ensures that a player spamming chat messages or a spectator feed generating bulk data never delays order delivery. The lane system is optional for <code>LocalNetwork</code> and <code>MemoryTransport</code> (where bandwidth is unlimited), but critical for the relay deployment where bandwidth to each client is finite.</p>
+<p>The Orders and Control lanes share the highest priority tier — both are drained before any Chat or Bulk data is sent. Chat and Voice share priority tier 1 with a 2:1 weight ratio (voice gets more bandwidth because it’s time-sensitive). This ensures that a player spamming chat messages, voice traffic, or a spectator feed generating bulk data never delays order delivery. The lane system is optional for <code>LocalNetwork</code> and <code>MemoryTransport</code> (where bandwidth is unlimited), but critical for the relay deployment where bandwidth to each client is finite. See <code>09-DECISIONS.md</code> § D059 for the full VoIP architecture.</p>
 <p><strong>Relay server poll groups:</strong> In a relay deployment serving multiple concurrent games, each game session’s connections are grouped into a <strong>poll group</strong> (terminology from GNS). The relay’s event loop polls all connections within a poll group together, processing messages for one game session in a batch before moving to the next. This improves cache locality (all state for one game is hot in cache during its processing window) and simplifies per-game rate limiting. The poll group concept is internal to the relay server — clients don’t know or care whether they share a relay with other games.</p>
 <h3 id="desync-detection--debugging"><a class="header" href="#desync-detection--debugging">Desync Detection &amp; Debugging</a></h3>
 <p>Desyncs are the hardest problem in lockstep netcode. OpenRA has 135+ desync issues in their tracker — they hash game state per frame (via <code>[VerifySync]</code> attribute) but their sync report buffer is only 7 frames deep, which often isn’t enough to capture the divergence point. Our architecture makes desyncs both <strong>detectable</strong> AND <strong>diagnosable</strong>, drawing on 20+ years of OpenTTD’s battle-tested desync debugging infrastructure.</p>
@@ -1283,6 +1287,644 @@ relay:
 </tbody>
 </table>
 </div>
+<h2 id="match-lifecycle"><a class="header" href="#match-lifecycle">Match Lifecycle</a></h2>
+<p>The network architecture supports the full competitive match lifecycle — from the moment a match is found to the final result. These mechanics are generic (they work in casual, ranked, and tournament modes) but gain additional constraints in ranked/tournament contexts (see <code>09-DECISIONS.md</code> § D055).</p>
+<h3 id="ready-check--match-start"><a class="header" href="#ready-check--match-start">Ready-Check &amp; Match Start</a></h3>
+<p>When matchmaking finds a match (or all lobby players click “ready”), the system runs a ready-check protocol before loading:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Relay-managed ready-check sequence.
+pub enum ReadyCheckState {
+    /// Match found, waiting for all players to accept (30s timeout).
+    WaitingForAccept { deadline: Instant, accepted: HashSet&lt;PlayerId&gt; },
+    /// All accepted → map veto phase (ranked only, D055).
+    MapVeto { veto_state: VetoState },
+    /// Veto complete or casual → loading.
+    Loading { map: MapId, loading_progress: HashMap&lt;PlayerId, u8&gt; },
+    /// All loaded → countdown (3s) → game start.
+    Countdown { remaining_secs: u8 },
+    /// Game is live.
+    InProgress,
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Ready-check flow:</strong></p>
+<ol>
+<li><strong>Match found → Accept/Decline (30s).</strong> All matched players must accept. Declining or timing out returns everyone to the queue. The declining player receives a short queue cooldown (escalating: 1min → 5min → 15min per 24hr window). Non-declining players are re-queued instantly with priority.</li>
+<li><strong>Map veto (ranked only, D055).</strong> Anonymous alternating bans. Leaving during veto = loss + cooldown.</li>
+<li><strong>Loading phase.</strong> Relay collects loading progress from each client (0-100%). UI shows per-player loading bars. If any player fails to load within 120 seconds, the match is cancelled — no penalty for anyone (the failing player receives a “check your installation” message).</li>
+<li><strong>Countdown (3 seconds).</strong> Brief freeze with countdown overlay. Deterministic sim starts at tick 0 when countdown reaches 0.</li>
+</ol>
+<p><strong>Why 30 seconds for accept:</strong> Long enough for players to hear the notification and return from AFK. Short enough to not waste the other player’s time. Matches SC2’s accept timeout.</p>
+<h3 id="game-pause"><a class="header" href="#game-pause">Game Pause</a></h3>
+<p>The game supports a deterministic pause mechanism — the pause state is part of the sim, so all clients agree on exactly which ticks are paused.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Pause request — submitted as a PlayerOrder, processed by the sim.
+pub enum PauseOrder {
+    /// Request to pause. Includes a reason for the observer feed.
+    RequestPause { reason: PauseReason },
+    /// Request to unpause. Only the pausing player or opponent (after grace period).
+    RequestUnpause,
+}
+
+pub enum PauseReason {
+    PlayerRequest,     // manual pause
+    TechnicalIssue,    // player reported technical problem
+    // Tournament organizers can add custom reasons via lobby configuration
+}
+
+/// Pause rules — configurable per lobby, with ranked/tournament defaults.
+pub struct PauseConfig {
+    /// Maximum number of pauses per player per game.
+    pub max_pauses_per_player: u8,       // Default: 2 (ranked), unlimited (casual)
+    /// Maximum total pause duration per player (seconds).
+    pub max_pause_duration_secs: u32,    // Default: 120 (ranked), 300 (casual)
+    /// Grace period before opponent can unpause (seconds).
+    pub unpause_grace_secs: u32,         // Default: 30
+    /// Whether spectators see the game during pause.
+    pub spectator_visible_during_pause: bool,  // Default: true
+    /// Minimum game time before pause is allowed (prevents early-game stalling).
+    pub min_game_time_for_pause_secs: u32,     // Default: 30
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Pause behavior:</strong></p>
+<ul>
+<li><strong>Initiating:</strong> A player submits <code>PauseOrder::RequestPause</code>. The sim freezes at the end of the current tick (all clients process the same tick, then stop). Replay records the pause event with timestamp.</li>
+<li><strong>During pause:</strong> No ticks advance. Chat remains active. VoIP continues (D059 § Competitive Voice Rules). The pause timer counts down in the UI (“Player A paused — 90s remaining”).</li>
+<li><strong>Unpause:</strong> The pausing player can unpause at any time. The opponent can unpause after the grace period (30s default). A 3-second countdown precedes resumption so neither player is caught off-guard.</li>
+<li><strong>Expiry:</strong> If the pause timer expires, the game auto-unpauses with a 3-second countdown.</li>
+<li><strong>Tracking:</strong> Pause events are recorded in the replay analysis stream and visible to observers. A player who exhausts all pauses cannot pause again. Excessive pausing in ranked generates a behavioral flag (informational, not automatic penalty).</li>
+</ul>
+<p><strong>Why 2 pauses × 120 seconds per player (ranked):</strong></p>
+<ul>
+<li>Matches SC2’s proven system (2 pauses of non-configurable length, opponent can unpause after ~30s)</li>
+<li>Enough for genuine technical issues (reconnect a controller, answer the door)</li>
+<li>Short enough to prevent stalling as a tactic</li>
+<li>Tournament organizers can override via <code>PauseConfig</code> in lobby settings</li>
+</ul>
+<h3 id="surrender--concede"><a class="header" href="#surrender--concede">Surrender / Concede</a></h3>
+<p>Players can end the game before total defeat via a surrender mechanic. This is a <code>PlayerOrder</code>, not a UI-only action — the sim must process it deterministically.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub enum PlayerOrder {
+    // ... existing orders ...
+
+    /// Player surrenders. In team games, triggers a surrender vote.
+    Surrender,
+}
+<span class="boring">}</span></code></pre>
+<p><strong>1v1 surrender:</strong></p>
+<ul>
+<li>A player submits <code>PlayerOrder::Surrender</code>. The sim immediately transitions to <code>GameEnded</code> state with the surrendering player as loser. No confirmation dialog — if you type <code>/gg</code> or click “Surrender”, it’s final. This matches SC2 and every competitive RTS: surrendering is an irreversible commitment.</li>
+</ul>
+<p><strong>Team game surrender:</strong></p>
+<ul>
+<li>A player submits <code>PlayerOrder::Surrender</code>, which initiates a <strong>surrender vote</strong> visible only to their team:
+<ul>
+<li>2v2: Both teammates must agree (unanimous)</li>
+<li>3v3: 2 of 3 must agree (⅔ majority)</li>
+<li>4v4: 3 of 4 must agree (¾ majority)</li>
+</ul>
+</li>
+<li>Vote lasts 30 seconds. If the threshold is met, the team surrenders. If not, the vote fails and a 3-minute cooldown applies before another vote.</li>
+<li><strong>Minimum game time:</strong> No surrender before 5 minutes of game time (prevents rage-quit cycles in team games). Configurable in lobby.</li>
+<li>A player who disconnects in a team game and doesn’t reconnect within the timeout (§ Reconnection, 60s) is treated as having voted “yes” on any pending surrender vote. Their units are distributed to remaining teammates.</li>
+</ul>
+<p><strong>Replay recording:</strong> Surrender events are recorded as <code>AnalysisEvent::MatchEnded</code> with an explicit <code>MatchEndReason::Surrender { player }</code> or <code>MatchEndReason::TeamSurrender { team, vote_results }</code>. The <code>CertifiedMatchResult</code> distinguishes surrender from destruction-based victory.</p>
+<h3 id="disconnect--abandon-penalties-ranked"><a class="header" href="#disconnect--abandon-penalties-ranked">Disconnect &amp; Abandon Penalties (Ranked)</a></h3>
+<p>Disconnection handling exists at two layers: the <strong>network layer</strong> (§ Reconnection — snapshot transfer, 60s timeout) and the <strong>competitive layer</strong> (this section — penalties for leaving ranked games).</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Match completion status — included in CertifiedMatchResult.
+pub enum MatchOutcome {
+    /// Normal game completion (one side eliminated or surrenders).
+    Completed { winner: PlayerId, reason: MatchEndReason },
+    /// A player disconnected and did not reconnect.
+    Abandoned { leaver: PlayerId, tick: u64 },
+    /// Mutual agreement (rare — both players agree to end without result).
+    Draw,
+    /// Desync forced termination.
+    DesyncTerminated { first_divergence_tick: u64 },
+}
+
+pub enum MatchEndReason {
+    Elimination,                   // all opposing structures/units destroyed
+    Surrender { player: PlayerId },
+    TeamSurrender { team: TeamId, vote_results: Vec&lt;(PlayerId, bool)&gt; },
+    ObjectiveCompleted,            // scenario-specific victory condition
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Ranked penalty framework:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Scenario</th><th>Rating Impact</th><th>Queue Cooldown</th><th>Notes</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Disconnect + reconnect within 60s</strong></td><td>None</td><td>None</td><td>Successful reconnection = no penalty. Network blips happen.</td></tr>
+<tr><td><strong>Disconnect + no reconnect (abandon)</strong></td><td>Full loss</td><td>5 min (1st in 24hr), 30 min (2nd), 2 hr (3rd+)</td><td>Escalating cooldown resets after 24 hours without abandoning.</td></tr>
+<tr><td><strong>Process termination (rage quit)</strong></td><td>Full loss</td><td>Same as abandon</td><td>Relay detects immediate connection drop vs. gradual timeout. No distinction — both are abandons.</td></tr>
+<tr><td><strong>Repeated abandons (3+ in 7 days)</strong></td><td>Full loss + extra deviation increase</td><td>24 hr</td><td>Deviation increase means faster rating change — habitual leavers converge to their “real” rating faster if they’re also avoiding games they’d lose.</td></tr>
+<tr><td><strong>Desync (not the player’s fault)</strong></td><td>No rating change</td><td>None</td><td>Desyncs are engine bugs, not player behavior. Both players are returned to queue. See <code>06-SECURITY.md</code> § V25 for desync abuse prevention.</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Grace period:</strong> If a player abandons within the first 2 minutes of game time AND the game was less than 5% complete (minimal orders submitted), the match is voided — no rating change for either player, minimal cooldown (1 min). This handles lobby mistakes, misclicks, and “I queued into the wrong mode.”</p>
+<p><strong>Team game abandon:</strong> In team games, if a player abandons, remaining teammates can choose to:</p>
+<ol>
+<li><strong>Play on</strong> — the leaver’s units are distributed. If they win, full rating gain. If they lose, reduced rating loss (scaled by time played at disadvantage).</li>
+<li><strong>Surrender</strong> — the surrender vote threshold is reduced by one (the leaver counts as “yes”). Surrendering after an abandon applies reduced rating loss.</li>
+</ol>
+<h3 id="live-spectator-delay"><a class="header" href="#live-spectator-delay">Live Spectator Delay</a></h3>
+<p>Live spectating of in-progress games uses a configurable delay to prevent stream-sniping and live coaching:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Spectator feed configuration — set per lobby or server-wide.
+pub struct SpectatorConfig {
+    /// Whether live spectating is allowed for this match.
+    pub allow_live_spectators: bool,     // Default: true (casual), configurable (ranked)
+    /// Delay in ticks before spectators see game state.
+    pub spectator_delay_ticks: u64,      // Default: 90 (~3 seconds casual), 900 (~30s ranked)
+    /// Maximum spectators per match (relay bandwidth management).
+    pub max_spectators: u32,             // Default: 50 (relay), unlimited (local)
+    /// Whether spectators can see both team's views (false = assigned perspective).
+    pub full_visibility: bool,           // Default: true (casual), false (ranked team games)
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Delay tiers:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Context</th><th>Default Delay</th><th>Rationale</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Casual / unranked</strong></td><td>3 seconds (90 ticks)</td><td>Minimal delay — enough to prevent frame-perfect info leaks, short enough for engaging spectating</td></tr>
+<tr><td><strong>Ranked</strong></td><td>2 minutes (3,600 ticks)</td><td>Anti-stream-sniping. CS2 uses 90s-2min; SC2 uses 3min. 2 minutes is the sweet spot for RTS (long enough to prevent scouting info exploitation, short enough for spectators to follow the action)</td></tr>
+<tr><td><strong>Tournament</strong></td><td>Configurable (0s–10min)</td><td>Organizer controls. 0s delay for offline LAN events. 5-10 min for online tournaments with dedicated observer casters</td></tr>
+<tr><td><strong>Replay</strong></td><td>0s</td><td>No delay — the game is already finished</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Anti-coaching:</strong> In ranked team games, spectators are assigned to one team’s perspective (<code>full_visibility: false</code>) and cannot switch mid-game. This prevents a friend from spectating and relaying enemy information via external voice. The relay enforces this — it simply doesn’t send the opposing team’s orders to biased spectators until the delay expires.</p>
+<p><strong>Player control:</strong> Players can disable live spectating for their matches via a preference (<code>/set allow_spectators false</code>). In ranked, the server’s spectator policy overrides individual preference (e.g., “all ranked games allow delayed spectating for anti-cheat review”).</p>
+<h3 id="post-game-flow"><a class="header" href="#post-game-flow">Post-Game Flow</a></h3>
+<p>After the sim transitions to <code>GameEnded</code>, the network layer manages the post-game sequence:</p>
+<ol>
+<li><strong>Match result broadcast.</strong> The relay computes the <code>CertifiedMatchResult</code> and broadcasts it to all participants and spectators.</li>
+<li><strong>Post-game lobby (30 seconds).</strong> Players remain connected. Chat stays active (both teams can talk). Statistics screen displays (see <code>02-ARCHITECTURE.md</code> § GameScore). Players can:
+<ul>
+<li>View detailed stats (economy graph, production timeline, combat events)</li>
+<li>Watch the game-ending moment in instant replay (last 30 seconds, auto-saved)</li>
+<li>Report opponent (D052 community moderation)</li>
+<li>Save replay (if not auto-saved)</li>
+<li>Re-queue (returns to matchmaking immediately)</li>
+<li>Leave (returns to main menu)</li>
+</ul>
+</li>
+<li><strong>Rating update display.</strong> For ranked games, the rating change is shown within the post-game lobby: “Captain II → Captain I (+32 rating)”. The SCR is delivered to the client during this window.</li>
+<li><strong>Lobby timeout.</strong> After 5 minutes, the post-game lobby auto-closes. Resources are released.</li>
+</ol>
+<h3 id="in-match-vote-framework-callvote-system"><a class="header" href="#in-match-vote-framework-callvote-system">In-Match Vote Framework (Callvote System)</a></h3>
+<p>The match lifecycle events above — surrender, pause, and post-game — include individual voting mechanics (team surrender vote, pause consent). This section defines the <strong>generic vote framework</strong> that all in-match votes use, plus additional vote types beyond surrender and pause. For cross-game research and design rationale, see <code>research/vote-callvote-system-analysis.md</code>.</p>
+<h4 id="why-a-generic-framework"><a class="header" href="#why-a-generic-framework">Why a Generic Framework</a></h4>
+<p>The surrender vote in § “Surrender / Concede” above works but is hand-rolled — its threshold logic, team scoping, cooldown timer, and replay recording are bespoke code paths. A generic framework:</p>
+<ul>
+<li>Eliminates duplication between surrender, kick, remake, draw, and modder-defined vote types</li>
+<li>Gives modders a single API to add custom votes (YAML for data, Lua/WASM for complex resolution logic)</li>
+<li>Ensures consistent anti-abuse protections across all vote types</li>
+<li>Makes the system testable — the framework can be validated with mock vote types</li>
+<li>Aligns with D037’s governance philosophy: transparent, rule-based, community-configurable</li>
+</ul>
+<h4 id="architecture-sim-processed-with-relay-assistance"><a class="header" href="#architecture-sim-processed-with-relay-assistance">Architecture: Sim-Processed with Relay Assistance</a></h4>
+<p>All votes flow through the deterministic order pipeline as <code>PlayerOrder::Vote</code> variants. The sim maintains vote state (active votes, ballots, expiry), ensuring all clients agree on vote outcomes. For votes that affect the connection layer (kick, remake), the relay performs the network-level action <em>after</em> the sim resolves the vote.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Vote orders — submitted as PlayerOrder variants, processed deterministically.
+pub enum VoteOrder {
+    /// Propose a new vote. Creates an active vote visible to the audience.
+    Propose {
+        vote_type: VoteType,
+        /// Proposer is implicit (the player who submitted the order).
+    },
+    /// Cast a ballot on an active vote. Only eligible voters can cast.
+    Cast {
+        vote_id: VoteId,
+        choice: VoteChoice,
+    },
+    /// Cancel a vote you proposed (before it resolves).
+    Cancel {
+        vote_id: VoteId,
+    },
+}
+
+/// All built-in vote types. Game modules can register additional types via YAML.
+pub enum VoteType {
+    /// Team surrenders the game.
+    /// Resolves to GameEnded with MatchEndReason::TeamSurrender.
+    /// See § "Surrender / Concede" above for full semantics.
+    Surrender,
+
+    /// Remove a teammate from the game. Team games only.
+    /// Kicked player's units are redistributed to remaining teammates.
+    Kick { target: PlayerId, reason: KickReason },
+
+    /// Void the match — no rating change for anyone.
+    /// Available only in the first few minutes (configurable).
+    Remake,
+
+    /// Mutual agreement to end without a winner.
+    /// Requires cross-team unanimous agreement.
+    Draw,
+
+    /// Modder-defined vote type (registered via YAML + optional Lua/WASM callback).
+    /// The engine provides the voting mechanics; the mod provides the resolution logic.
+    Custom { type_id: String },
+}
+
+pub enum VoteChoice {
+    Yes,
+    No,
+}
+
+pub enum KickReason {
+    Afk,
+    Griefing,
+    AbusiveCommunication,
+    Other,
+}
+
+/// Opaque vote identifier. Monotonically increasing within a match.
+pub struct VoteId(u32);
+<span class="boring">}</span></code></pre>
+<p><strong>Why sim-side, not relay-side:</strong> If votes were relay-side, a race condition could occur where the relay resolves a kick vote but some clients haven’t processed the kick yet — desyncing the sim. By processing votes in the sim, all clients resolve the vote at the same tick. The relay assists by performing network-level actions (disconnecting a kicked player, voiding a remade match) after it observes the sim’s deterministic resolution.</p>
+<h4 id="vote-lifecycle"><a class="header" href="#vote-lifecycle">Vote Lifecycle</a></h4>
+<pre><code>Propose → Active (30s timer) → Resolved (passed/failed/cancelled)
+              ↑                         ↓
+         Cast (yes/no)          Execute effect (sim or relay)
+</code></pre>
+<ol>
+<li><strong>Propose:</strong> A player submits <code>VoteOrder::Propose</code>. The sim validates (eligible to propose? vote type enabled? cooldown expired? no active vote?). If valid, creates <code>ActiveVote</code> state visible to the vote’s audience.</li>
+<li><strong>Active:</strong> Vote is live. Eligible voters see the vote UI (center-screen overlay, like CS2). The proposer’s vote is automatically “yes.” Timer counts down.</li>
+<li><strong>Cast:</strong> Eligible voters submit <code>VoteOrder::Cast</code>. Each player can cast once. Non-voters are counted as “no” when the timer expires (default-deny).</li>
+<li><strong>Resolved:</strong> The vote resolves when either:
+<ul>
+<li>The threshold is met (pass) — the effect is applied immediately</li>
+<li>The threshold becomes mathematically impossible (fail early) — no point waiting</li>
+<li>The timer expires (fail — non-voters counted as “no”)</li>
+<li>The proposer cancels (cancelled — no effect, cooldown still applies)</li>
+</ul>
+</li>
+<li><strong>Execute:</strong> On pass, the sim applies the vote’s effect. For connection-affecting votes (kick, remake), the relay observes the resolution and performs the network action.</li>
+</ol>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Active vote state maintained by the sim. Deterministic across all clients.
+pub struct ActiveVote {
+    pub id: VoteId,
+    pub vote_type: VoteType,
+    pub proposer: PlayerId,
+    pub audience: VoteAudience,
+    /// Eligible voters for this vote (determined at proposal time).
+    pub eligible_voters: Vec&lt;PlayerId&gt;,
+    /// Votes cast so far. Key = voter, value = choice.
+    pub ballots: HashMap&lt;PlayerId, VoteChoice&gt;,
+    /// Tick when the vote was proposed.
+    pub started_at: u64,
+    /// Tick when the vote expires (started_at + duration_ticks).
+    pub expires_at: u64,
+    /// The threshold required to pass.
+    pub threshold: VoteThreshold,
+}
+
+pub enum VoteAudience {
+    /// Only the proposer's team sees and votes on this.
+    /// Used by: Surrender, Kick.
+    Team(TeamId),
+    /// All players in the match vote.
+    /// Used by: Remake, Draw.
+    AllPlayers,
+}
+
+pub enum VoteThreshold {
+    /// Requires N out of eligible voters (e.g., ⅔ majority).
+    Fraction { required: u32, of: u32 },
+    /// Unanimous — all eligible voters must vote yes.
+    Unanimous,
+    /// Team-scaled thresholds (the existing surrender logic):
+    ///   2-player team: 2/2
+    ///   3-player team: 2/3
+    ///   4-player team: 3/4
+    TeamScaled,
+}
+
+/// Resolution outcome — emitted by the sim, consumed by UI and relay.
+pub enum VoteResolution {
+    Passed { vote: ActiveVote },
+    Failed { vote: ActiveVote, reason: VoteFailReason },
+    Cancelled { vote: ActiveVote },
+}
+
+pub enum VoteFailReason {
+    TimerExpired,
+    ThresholdImpossible,
+    ProposerLeft,
+}
+<span class="boring">}</span></code></pre>
+<h4 id="vote-configuration-yaml"><a class="header" href="#vote-configuration-yaml">Vote Configuration (YAML)</a></h4>
+<p>Each vote type’s parameters are defined in YAML, configurable per lobby, per server, and per game module. Tournament organizers override via lobby settings.</p>
+<pre><code class="language-yaml"># vote_config.yaml — defaults, overridable per lobby/server
+vote_framework:
+  # Global constraint: only one active vote at a time per team.
+  max_concurrent_votes_per_team: 1
+  
+  types:
+    surrender:
+      enabled: true
+      audience: team
+      threshold: team_scaled    # 2/2, 2/3, 3/4 based on team size
+      duration_secs: 30
+      cooldown_secs: 180        # 3 minutes between failed surrender votes
+      min_game_time_secs: 300   # no surrender before 5 minutes
+      max_per_player_per_game: ~  # unlimited (cooldown is sufficient)
+      confirmation_dialog: true   # "Are you sure?" before proposing
+
+    kick:
+      enabled: true
+      audience: team
+      threshold:
+        fraction: [2, 3]        # ⅔ majority (minimum 2 votes required)
+      duration_secs: 30
+      cooldown_secs: 300        # 5 minutes between failed kick votes
+      min_game_time_secs: 120   # no kick in first 2 minutes
+      max_per_player_per_game: 2
+      confirmation_dialog: true
+      # Kick-specific constraints:
+      require_reason: true                  # must select a KickReason
+      premade_consolidation: true           # premade group = 1 vote
+      protect_last_player: true             # can't kick the last teammate
+      army_value_protection_pct: 40         # can't kick player with &gt;40% team value
+      team_games_only: true                 # disabled in 1v1/FFA
+
+    remake:
+      enabled: true
+      audience: all_players
+      threshold:
+        fraction: [3, 4]        # ¾ of all players
+      duration_secs: 45         # longer — cross-team coordination takes time
+      cooldown_secs: 0          # no cooldown — one attempt per match
+      min_game_time_secs: 0     # available immediately
+      max_game_time_secs: 300   # only available in first 5 minutes
+      max_per_player_per_game: 1
+      confirmation_dialog: false  # no confirmation — urgency matters
+      # Remake-specific:
+      void_match: true          # no rating change for anyone
+
+    draw:
+      enabled: true
+      audience: all_players
+      threshold: unanimous      # everyone must agree
+      duration_secs: 60         # longer — gives both teams time to discuss
+      cooldown_secs: 300
+      min_game_time_secs: 600   # no draw before 10 minutes
+      max_per_player_per_game: 2
+      confirmation_dialog: false
+
+    # Example: mod-defined custom vote type
+    # ai_takeover:
+    #   enabled: true
+    #   audience: team
+    #   threshold: { fraction: [2, 3] }
+    #   duration_secs: 30
+    #   cooldown_secs: 120
+    #   min_game_time_secs: 60
+    #   # Lua callback resolves the vote:
+    #   on_pass: "scripts/votes/ai_takeover.lua"
+</code></pre>
+<p><strong>Server operator control (D052):</strong> Community server operators configure vote settings via their server’s <code>config.yaml</code>. The relay enforces these settings — clients cannot override them. Tournament operators can disable specific vote types entirely (e.g., no remake in tournament mode where admins handle disputes).</p>
+<h4 id="built-in-vote-types--detailed-semantics"><a class="header" href="#built-in-vote-types--detailed-semantics">Built-In Vote Types — Detailed Semantics</a></h4>
+<p><strong>Surrender</strong> is already specified in § “Surrender / Concede” above. The framework formalizes its ad-hoc threshold logic into the generic <code>VoteThreshold::TeamScaled</code> pattern. No behavioral change — same thresholds, same cooldown, same minimum game time.</p>
+<p><strong>Kick (Team Games Only)</strong></p>
+<p>When a teammate is AFK, griefing (building walls around ally bases, feeding units to the enemy, hoarding resources), or abusive, the team can vote to remove them.</p>
+<p>Resolution if passed:</p>
+<ol>
+<li>The sim emits <code>VoteResolution::Passed</code> with <code>VoteType::Kick { target }</code>.</li>
+<li>The kicked player’s units and structures are redistributed to remaining teammates (round-robin by player with fewest units, preserving unit ownership for scoring purposes).</li>
+<li>The kicked player’s <code>MatchOutcome</code> is <code>Abandoned</code> — full rating loss and queue cooldown (same penalties as voluntary abandon, § Disconnect &amp; Abandon Penalties).</li>
+<li>The relay disconnects the kicked player and adds them to the session’s kick list (preventing rejoin in the same role — adopted from WZ2100, see <code>research/0ad-warzone2100-netcode-analysis.md</code>).</li>
+<li>The kicked player may rejoin as a spectator (if spectating is enabled).</li>
+</ol>
+<p>Anti-abuse protections (configured in <code>vote_config.yaml</code>):</p>
+<ul>
+<li><strong>Premade consolidation:</strong> If the majority of a team are in the same party (premade), their combined kick vote counts as 1 consolidated vote, not individual votes. This prevents a premade group from unilaterally kicking the solo player(s). Examples: in a 4v4, a 3-stack’s combined vote counts as 1 (requiring the solo player to also agree); in a 3v3, a 2-stack’s combined vote counts as 1 (requiring the third player to also agree); in a 2v2, no consolidation is needed (each player has equal weight). The general rule: when a premade group would otherwise hold a majority of votes without any non-premade agreement, their votes consolidate. Configurable: community servers where all players know each other may disable this.</li>
+<li><strong>Army value protection:</strong> A kick vote cannot be initiated against a player whose combined army + structure value exceeds <code>army_value_protection_pct</code> (default 40%) of the team’s total value. Prevents kicking the best-performing player.</li>
+<li><strong>Last player protection:</strong> If kicking the target would leave only one player on the team, the kick vote is unavailable. You can resign, but you can’t force a teammate into a solo situation.</li>
+<li><strong>Reason required:</strong> The proposer selects from <code>KickReason</code> enum (AFK, Griefing, AbusiveCommunication, Other). Free-text reasons are <em>not</em> allowed — preventing the reason field from becoming a harassment vector. The reason is recorded in the replay’s analysis event stream.</li>
+</ul>
+<p><strong>Why include kick voting (not just post-game reports):</strong> IC is open-source with community-operated servers (D052). Unlike Valorant or OW2, there is no centralized ML moderation pipeline. Post-game reports are important but don’t solve the immediate problem: a griefer is ruining a 30-minute game right now. Kick voting is the pragmatic self-moderation tool for community-run infrastructure. The anti-abuse protections (premade consolidation, army value check, last-player protection) address the known failure modes from TF2 and early CS:GO. See <code>research/vote-callvote-system-analysis.md</code> § 3.3 “The Kick Vote Debate” for the full pro/con analysis.</p>
+<p><strong>Remake (Void Match)</strong></p>
+<p>Voiding a match in the early game when something has gone wrong — a player disconnected during loading, spawns are unfair, or a game-breaking bug occurred. Adopted from Valorant’s remake and LoL’s early remake vote.</p>
+<p>Constraints:</p>
+<ul>
+<li>Available only in the first <code>max_game_time_secs</code> (default 5 minutes).</li>
+<li>Requires ¾ of all players (cross-team, not team-only) — because voiding affects both teams.</li>
+<li>Once per match per player. No cooldown — if a remake vote fails, it fails.</li>
+<li>If a player has disconnected, their absence reduces the eligible voter count (they don’t count as “no”).</li>
+</ul>
+<p>Resolution if passed:</p>
+<ol>
+<li>The sim emits <code>VoteResolution::Passed</code> with <code>VoteType::Remake</code>.</li>
+<li>The match is terminated with <code>MatchOutcome::Draw</code> (no rating change for anyone).</li>
+<li>The relay marks the match as voided in the <code>CertifiedMatchResult</code>. No SCR is generated.</li>
+<li>All players are returned to the lobby/queue with no penalties.</li>
+</ol>
+<p><strong>Why cross-team majority (¾), not team-only:</strong> A team experiencing disconnection issues shouldn’t need the opponent’s permission to void a match that’s unfair for everyone. But requiring cross-team agreement prevents abuse: a team that’s losing early can’t unilaterally void the match. ¾ threshold means at least some players on both teams must agree.</p>
+<p><strong>Draw (Mutual Agreement)</strong></p>
+<p>Both teams agree the game is stalemated and wish to end without a winner. Adopted from FAF’s draw vote (see <code>research/vote-callvote-system-analysis.md</code> § 2.3).</p>
+<p>Constraints:</p>
+<ul>
+<li>Requires unanimous agreement from all remaining players (cross-team).</li>
+<li>Minimum 10 minutes of game time (prevents collusion to farm draw results).</li>
+<li>This is the only vote type with <code>threshold: unanimous</code> + <code>audience: all_players</code>.</li>
+</ul>
+<p>Resolution if passed:</p>
+<ol>
+<li>The sim emits <code>VoteResolution::Passed</code> with <code>VoteType::Draw</code>.</li>
+<li>The match ends with <code>MatchOutcome::Draw</code>. Minimal rating change (Glicko-2 treats draws as 0.5 result — deviation decreases without significant rating movement).</li>
+<li>Replay records <code>AnalysisEvent::MatchEnded</code> with <code>MatchEndReason::Draw { vote_results }</code>.</li>
+</ol>
+<p><strong>Why unanimous:</strong> A draw must be genuinely mutual. If even one player believes they can win, the game should continue. This prevents one team from pressuring the other into drawing a game they’re winning. In larger team games (4v4), unanimous cross-team agreement is intentionally difficult to achieve — this is by design, not a flaw. A draw should be rare and genuinely consensual. If the game feels stalemated but not everyone agrees, players should continue playing — the stalemate will resolve through gameplay or surrender.</p>
+<h4 id="tactical-polls-non-binding-coordination"><a class="header" href="#tactical-polls-non-binding-coordination">Tactical Polls (Non-Binding Coordination)</a></h4>
+<p>Beyond formal (binding) votes, the framework supports lightweight <strong>tactical polls</strong> for team coordination. These are non-binding — they don’t affect game state. They are a structured way to ask “should we?” questions.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Tactical poll — a lightweight coordination signal.
+/// Non-binding, no game state effect. Purely informational.
+pub enum PollOrder {
+    /// Propose a tactical question to teammates.
+    Propose { phrase_id: u16 },
+    /// Respond to an active poll.
+    Respond { poll_id: PollId, agree: bool },
+}
+
+pub struct ActivePoll {
+    pub id: PollId,
+    pub proposer: PlayerId,
+    pub phrase_id: u16,           // maps to chat_wheel_phrases.yaml
+    pub responses: HashMap&lt;PlayerId, bool&gt;,
+    pub expires_at: u64,          // 15 seconds after proposal
+}
+<span class="boring">}</span></code></pre>
+<p><strong>How it works:</strong></p>
+<ol>
+<li>A player holds the chat wheel key (default <code>V</code>) and selects a poll-eligible phrase (marked in <code>chat_wheel_phrases.yaml</code> with <code>poll: true</code>).</li>
+<li>The phrase appears in team chat with “Agree / Disagree” buttons (or keybinds: <code>F1</code>/<code>F2</code>, matching the vote UI).</li>
+<li>Teammates respond. Responses show as minimap icons (✓/✗) near the proposer’s units and as a brief summary in team chat (“Attack now! — 2 agreed, 1 disagreed”).</li>
+<li>After 15 seconds, the poll expires and the UI clears. No binding effect.</li>
+</ol>
+<p><strong>Poll-eligible phrases</strong> (added to D059’s <code>chat_wheel_phrases.yaml</code>):</p>
+<pre><code class="language-yaml">chat_wheel:
+  phrases:
+    # ... existing phrases ...
+
+    - id: 10
+      category: tactical
+      poll: true    # enables agree/disagree responses
+      label:
+        en: "Attack now?"
+        de: "Jetzt angreifen?"
+        ru: "Атакуем сейчас?"
+        zh: "现在进攻？"
+
+    - id: 11
+      category: tactical
+      poll: true
+      label:
+        en: "Should we expand?"
+        de: "Sollen wir expandieren?"
+        ru: "Расширяемся?"
+        zh: "要扩张吗？"
+
+    - id: 12
+      category: tactical
+      poll: true
+      label:
+        en: "Go all-in?"
+        de: "Alles riskieren?"
+        ru: "Ва-банк?"
+        zh: "全力出击？"
+
+    - id: 13
+      category: tactical
+      poll: true
+      label:
+        en: "Hold position?"
+        de: "Position halten?"
+        ru: "Удерживать позицию?"
+        zh: "坚守阵地？"
+
+    - id: 14
+      category: tactical
+      poll: true
+      label:
+        en: "Ready for push?"
+        de: "Bereit zum Angriff?"
+        ru: "Готовы к атаке?"
+        zh: "准备好进攻了吗？"
+
+    - id: 15
+      category: tactical
+      poll: true
+      label:
+        en: "Switch targets?"
+        de: "Ziel wechseln?"
+        ru: "Сменить цель?"
+        zh: "更换目标？"
+</code></pre>
+<p><strong>Why tactical polls, not just chat:</strong> Polls solve a specific problem: <strong>silent teammates</strong>. In team games, a player may propose “Attack now!” via chat wheel, but get no response — are teammates AFK? Do they disagree? Did they not see the message? A poll with explicit agree/disagree buttons forces a visible response. This is especially valuable in international matchmaking where language barriers prevent text discussion.</p>
+<p><strong>Rate limiting:</strong> Max 1 active poll at a time per team. Max 3 polls per player per 5 minutes. Polls share the ping rate limit bucket (D059 § 3), since they serve a similar purpose.</p>
+<p><strong>Concurrency with formal votes:</strong> Tactical polls and formal (binding) votes are <strong>independent</strong>. A team can have one active formal vote AND one active tactical poll simultaneously. Polls are non-binding coordination tools (lightweight, 15-second expiry); votes are binding governance actions with cooldowns and consequences. They use separate UI slots — the vote prompt appears center-screen with F1/F2 keybinds; the poll appears in the team chat area with smaller agree/disagree buttons. There is no interaction between the two: a poll cannot influence a vote, and a vote does not cancel active polls.</p>
+<h4 id="console-commands-d058-integration"><a class="header" href="#console-commands-d058-integration">Console Commands (D058 Integration)</a></h4>
+<p>The vote framework registers commands via the Brigadier command tree (D058):</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Command</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>/callvote &lt;type&gt; [args]</code></td><td>Propose a vote. Examples: <code>/callvote surrender</code>, <code>/callvote kick PlayerName griefing</code>, <code>/callvote remake</code>, <code>/callvote draw</code></td></tr>
+<tr><td><code>/vote yes</code> or <code>/vote y</code></td><td>Vote yes on the active vote (equivalent to pressing F1)</td></tr>
+<tr><td><code>/vote no</code> or <code>/vote n</code></td><td>Vote no on the active vote (equivalent to pressing F2)</td></tr>
+<tr><td><code>/vote cancel</code></td><td>Cancel a vote you proposed (before resolution)</td></tr>
+<tr><td><code>/vote status</code></td><td>Display the current active vote (if any)</td></tr>
+<tr><td><code>/poll &lt;phrase_id&gt;</code></td><td>Propose a tactical poll using phrase ID</td></tr>
+<tr><td><code>/poll agree</code> or <code>/poll yes</code></td><td>Agree with the active poll</td></tr>
+<tr><td><code>/poll disagree</code> or <code>/poll no</code></td><td>Disagree with the active poll</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Shorthand aliases:</strong> <code>/gg</code> maps to <code>/callvote surrender</code>. <code>/ff</code> also maps to <code>/callvote surrender</code> (adopted from LoL/Valorant convention). In 1v1, <code>/gg</code> bypasses the vote and surrenders immediately (no vote needed when there’s no team).</p>
+<h4 id="anti-abuse-protections"><a class="header" href="#anti-abuse-protections">Anti-Abuse Protections</a></h4>
+<p>The vote framework enforces these protections globally. Individual vote types can add type-specific protections (like kick’s premade consolidation).</p>
+<ol>
+<li><strong>Max one active vote per team.</strong> Prevents vote spam. A second proposal while a vote is active is rejected with “A vote is already in progress.”</li>
+<li><strong>Default-deny.</strong> Players who don’t cast a ballot before the timer expires are counted as “no.” This prevents AFK players from enabling votes to pass by absence. Explicit abstention is not available — you either vote or you’re counted as “no.”</li>
+<li><strong>Cooldown enforcement.</strong> Failed votes trigger a cooldown (per vote type). The sim tracks cooldown timers deterministically.</li>
+<li><strong>Behavioral tracking.</strong> The analysis event stream records all vote proposals, casts, and resolutions. Post-match analysis tools can identify patterns: a player who initiates 5 failed kick votes across 3 matches is exhibiting problematic behavior, even if no single instance is actionable. This feeds into the Lichess-inspired behavioral reputation system (<code>06-SECURITY.md</code>).</li>
+<li><strong>Minimum game time gates.</strong> Each vote type specifies the earliest tick at which it becomes available. Prevents first-second trolling.</li>
+<li><strong>Confirmation dialog.</strong> Irreversible votes (surrender, kick) show a brief confirmation prompt before the order is submitted. The prompt is client-side (does not affect determinism) and takes &lt;1 second.</li>
+<li><strong>Replay transparency.</strong> Every vote proposal, ballot, and resolution is recorded as an <code>AnalysisEvent::VoteEvent</code> in the replay analysis stream. Tournament admins and community moderators can review vote patterns. No secret votes.</li>
+</ol>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Analysis event for vote tracking in replays and post-match tools.
+pub enum VoteAnalysisEvent {
+    Proposed { vote_id: VoteId, vote_type: VoteType, proposer: PlayerId },
+    BallotCast { vote_id: VoteId, voter: PlayerId, choice: VoteChoice },
+    Resolved { vote_id: VoteId, resolution: VoteResolution },
+}
+<span class="boring">}</span></code></pre>
+<h4 id="ranked-specific-constraints"><a class="header" href="#ranked-specific-constraints">Ranked-Specific Constraints</a></h4>
+<p>In ranked matches (D055), vote behavior has additional constraints enforced by the relay:</p>
+<ul>
+<li><strong>Kick:</strong> Kicked player receives full loss + queue cooldown (same as abandon). The team continues with redistributed units.</li>
+<li><strong>Remake:</strong> Voided match — no rating change. Only available in first 5 minutes. If a player disconnected, the remake threshold is reduced (disconnected player doesn’t count as a “no”).</li>
+<li><strong>Draw:</strong> Treated as Glicko-2 draw result (0.5). Both players’ deviations decrease without significant rating movement.</li>
+<li><strong>Surrender:</strong> Standard ranked loss. No reduced penalty for surrendering (unlike reduced penalty for post-abandon surrender in § Disconnect &amp; Abandon Penalties).</li>
+</ul>
+<h4 id="mod-extensible-vote-types"><a class="header" href="#mod-extensible-vote-types">Mod-Extensible Vote Types</a></h4>
+<p>Game modules and mods register custom vote types via YAML (D004 tiered modding). Complex resolution logic uses Lua callbacks.</p>
+<p><strong>Example: AI Takeover vote</strong> (a teammate left — vote to replace them with AI instead of redistributing units):</p>
+<pre><code class="language-yaml"># mod_votes.yaml — registered by a game module or mod
+vote_framework:
+  types:
+    ai_takeover:
+      enabled: true
+      audience: team
+      threshold: { fraction: [2, 3] }
+      duration_secs: 30
+      cooldown_secs: 120
+      min_game_time_secs: 60
+      on_pass: "scripts/votes/ai_takeover.lua"
+</code></pre>
+<pre><code class="language-lua">-- scripts/votes/ai_takeover.lua
+-- Called when the ai_takeover vote passes.
+-- The Lua API provides access to the disconnected player's entities.
+function on_vote_passed(vote)
+    local target = vote.custom_data.disconnected_player
+    local entities = Player.GetEntities(target)
+    
+    -- Transfer to AI controller (D043 AI system)
+    local ai = AI.Create("skirmish_ai", {
+        difficulty = "medium",
+        team = Player.GetTeam(target),
+    })
+    AI.TransferEntities(ai, entities)
+    
+    Chat.SendSystem("AI has taken over " .. Player.GetName(target) .. "'s forces.")
+end
+</code></pre>
+<p><strong>Registration:</strong> Custom vote types are registered during game module initialization (<code>GameModule::register_vote_types()</code> in <code>ic-sim</code>). The framework validates the YAML configuration at load time and rejects invalid vote types (missing threshold, negative cooldown, etc.). Custom votes use the same UI, the same anti-abuse protections, and the same replay recording as built-in votes.</p>
+<p><strong>Phase:</strong> The generic framework (Vote orders, ActiveVote state, resolution logic) is Phase 5 (multiplayer). The surrender vote already exists in sim form and gets refactored to use the framework. Kick, remake, and draw are also Phase 5. Tactical polls are Phase 5 or 6a. Mod-extensible custom votes are Phase 6a (alongside full mod compatibility).</p>
 <h2 id="multi-player-scaling-beyond-2-players"><a class="header" href="#multi-player-scaling-beyond-2-players">Multi-Player Scaling (Beyond 2 Players)</a></h2>
 <p>The architecture supports N players with no structural changes. Every design element — deterministic lockstep, sub-tick ordering, relay server, desync detection — works for 2, 4, 8, or more players.</p>
 <h3 id="how-each-component-scales"><a class="header" href="#how-each-component-scales">How Each Component Scales</a></h3>

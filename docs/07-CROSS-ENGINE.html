@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-fb30e59a.js";
+            window.path_to_searchindex_js = "searchindex-72ec874a.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-1d51ffef.js"></script>
@@ -219,7 +219,9 @@ Layer 1:  Data compatibility        (do they load same rules?)→ Very achievabl
 <span class="boring">}</span></code></pre>
 <p>Implement community master server protocols (OpenRA and CnCNet). IC games show up in both browsers, tagged by engine. Your-engine players play your-engine players. Same community, different executables. CnCNet is particularly important — it’s the home of the classic C&amp;C competitive community (RA1, TD, TS, RA2, YR) and has maintained multiplayer infrastructure for these games for over a decade. Appearing in CnCNet’s game browser ensures IC doesn’t fragment the existing community.</p>
 <h3 id="level-1-replay-compatibility-phase-5-6"><a class="header" href="#level-1-replay-compatibility-phase-5-6">Level 1: Replay Compatibility (Phase 5-6)</a></h3>
-<p>Decode OpenRA replay files via <code>OpenRACodec</code>, feed through your sim. They’ll desync eventually, but can watch most of a replay before drift. Useful and shippable.</p>
+<p>Decode OpenRA <code>.orarep</code> and Remastered Collection replay files via <code>ra-formats</code> decoders (<code>OpenRAReplayDecoder</code>, <code>RemasteredReplayDecoder</code>), translate orders via <code>ForeignReplayCodec</code>, feed through IC’s sim via <code>ForeignReplayPlayback</code> NetworkModel. They’ll desync eventually (different sim — D011), but the <code>DivergenceTracker</code> monitors and surfaces drift in the UI. Players can watch most of a replay before visible divergence. Optionally convert to <code>.icrep</code> for archival and analysis tooling.</p>
+<p>This is also the foundation for <strong>automated behavioral regression testing</strong> — running foreign replay corpora headlessly through IC’s sim to catch gross behavioral bugs (units walking through walls, harvesters ignoring ore). Not bit-identical verification, but “does this look roughly right?” sanity checks.</p>
+<p>Full architecture: see <code>09-DECISIONS.md</code> § D056.</p>
 <h3 id="level-2-casual-cross-play-with-periodic-resync-future"><a class="header" href="#level-2-casual-cross-play-with-periodic-resync-future">Level 2: Casual Cross-Play with Periodic Resync (Future)</a></h3>
 <p>Both engines run their sim. Every N ticks, authoritative checkpoint broadcast. On desync, reconciler snaps entities to authoritative positions. Visible as slight rubber-banding. Acceptable for casual play.</p>
 <h3 id="level-3-competitive-cross-play-via-embedded-authority-future"><a class="header" href="#level-3-competitive-cross-play-via-embedded-authority-future">Level 3: Competitive Cross-Play via Embedded Authority (Future)</a></h3>

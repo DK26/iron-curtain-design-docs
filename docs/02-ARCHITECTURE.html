@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-fb30e59a.js";
+            window.path_to_searchindex_js = "searchindex-72ec874a.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-1d51ffef.js"></script>
@@ -1206,6 +1206,9 @@ pub struct GameScore {
 <p><strong>APM vs EPM:</strong> Following SC2’s distinction — APM counts every order, EPM filters duplicate/redundant commands (e.g., repeatedly right-clicking the same destination). EPM is a better measure of meaningful player activity.</p>
 <p><strong>Sim-side only:</strong> <code>GameScore</code> lives in <code>ic-sim</code> (it’s deterministic state, not rendering). Observer overlays in <code>ic-ui</code> read it through the standard <code>Simulation</code> query interface.</p>
 <h3 id="debug--developer-tools"><a class="header" href="#debug--developer-tools">Debug / Developer Tools</a></h3>
+<blockquote>
+<p>See also <code>09-DECISIONS.md</code> § D058 for the unified chat/command console, cvar system, and Brigadier-style command tree that provides the text-based interface to these developer tools.</p>
+</blockquote>
 <p>Developer mode (toggled in settings, not available in ranked):</p>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -1389,9 +1392,9 @@ impl&lt;N: NetworkModel, I: InputSource&gt; GameLoop&lt;N, I&gt; {
 <ul>
 <li><strong>Launched → InMenus:</strong> Engine initialization, asset loading, mod registration</li>
 <li><strong>InMenus → Loading:</strong> Player starts a game or joins a lobby; map and rules are loaded</li>
-<li><strong>Loading → InGame:</strong> All assets loaded, <code>NetworkModel</code> connected, sim initialized</li>
-<li><strong>InGame → GameEnded:</strong> Victory/defeat condition met or player surrenders</li>
-<li><strong>GameEnded → InMenus:</strong> Return to main menu (post-game stats shown during transition)</li>
+<li><strong>Loading → InGame:</strong> All assets loaded, <code>NetworkModel</code> connected, sim initialized. See <code>03-NETCODE.md</code> § “Match Lifecycle” for the ready-check and countdown protocol that governs this transition in multiplayer.</li>
+<li><strong>InGame → GameEnded:</strong> Victory/defeat condition met, player surrenders (<code>PlayerOrder::Surrender</code>), vote-driven resolution (kick, remake, draw via the In-Match Vote Framework), or match void. See <code>03-NETCODE.md</code> § “Match Lifecycle” for the surrender mechanic, team vote thresholds, and the generic callvote system.</li>
+<li><strong>GameEnded → InMenus:</strong> Return to main menu (post-game stats shown during transition). See <code>03-NETCODE.md</code> § “Post-Game Flow” for the 30-second post-game lobby with stats, rating display, and re-queue.</li>
 <li><strong>GameEnded → InReplay:</strong> Watch the just-finished game (replay file already recorded)</li>
 <li><strong>InMenus → InReplay:</strong> Load a saved replay file</li>
 <li><strong>InReplay → InMenus:</strong> Exit replay viewer</li>
@@ -1732,6 +1735,7 @@ pub enum ScreenClass {
 <li><strong>EVA voice system:</strong> Plays notification audio triggered by <code>notification_system()</code> events. Manages a priority queue — high-priority notifications (nuke launch, base under attack) interrupt low-priority ones. Respects per-notification cooldowns.</li>
 <li><strong>Music playback:</strong> Jukebox system with playlist management, track shuffle, and cross-fade. Supports <code>.aud</code> (original RA format via <code>ra-formats</code>) and modern formats (OGG, WAV via Bevy). Theme-specific intro tracks (D032 — Hell March for Classic theme).</li>
 <li><strong>Spatial audio:</strong> 3D positional audio for effects — explosions louder when camera is near. Uses Bevy’s spatial audio with listener at camera position.</li>
+<li><strong>VoIP playback:</strong> Decodes incoming Opus voice frames from <code>MessageLane::Voice</code> and mixes them into the audio output. Handles per-player volume, muting, and optional spatial panning (D059 § Spatial Audio). Voice replay playback syncs Opus frames to game ticks.</li>
 <li><strong>Ambient soundscapes:</strong> Per-biome ambient loops (waves for coastal maps, wind for snow maps). Weather system (D022) can modify ambient tracks.</li>
 </ul>
 <p><strong>Key types:</strong></p>
@@ -1925,6 +1929,12 @@ pub trait GameModule {
     /// List available render modes — Classic, HD, 3D, etc. (D048).
     fn render_modes(&amp;self) -&gt; Vec&lt;RenderMode&gt;;
 
+    /// Register game-module-specific commands into the Brigadier command tree (D058).
+    /// RA1 registers `/sell`, `/deploy`, `/stance`, etc. A total conversion registers
+    /// its own novel commands. The engine's built-in commands (chat, help, cvars) are
+    /// pre-registered before this method is called.
+    fn register_commands(&amp;self, dispatcher: &amp;mut CommandDispatcher);
+
     /// YAML rule schema for this game's unit definitions.
     fn rule_schema(&amp;self) -&gt; RuleSchema;
 }
@@ -1936,6 +1946,7 @@ pub trait GameModule {
 <li><strong><code>render_modes()</code></strong> — TiberianDawnHD is a pure render-only mod (zero gameplay changes) that adds HD sprite rendering with content source detection (Steam AppId, Origin registry, GOG paths). Render mode extensibility enables this cleanly.</li>
 <li><strong><code>pathfinder()</code></strong> — OpenSA needed <code>WaspLocomotor</code> (flying insect pathfinding); OpenRA/ra2 defines 8 locomotor types (Hover, Mech, Jumpjet, Teleport, etc). RA1’s JPS + flowfield is not universal.</li>
 <li><strong><code>fog_provider()</code> / <code>damage_resolver()</code></strong> — RA2 needs elevation-based LOS and shield-first damage; OpenHV needs a completely different resource flow model (Collector → Transporter → Receiver pipeline). Game-specific logic belongs in the module.</li>
+<li><strong><code>register_commands()</code></strong> — RA1 registers <code>/sell</code>, <code>/deploy</code>, <code>/stance</code>, superweapon commands. A Tiberian Dawn module registers different superweapon commands. A total conversion registers entirely novel commands. The engine cannot predefine game-specific commands (D058).</li>
 </ul>
 <h3 id="what-the-engine-provides-game-agnostic"><a class="header" href="#what-the-engine-provides-game-agnostic">What the engine provides (game-agnostic)</a></h3>
 <div class="table-wrapper">

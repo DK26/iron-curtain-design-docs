@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-fb30e59a.js";
+            window.path_to_searchindex_js = "searchindex-72ec874a.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-1d51ffef.js"></script>
@@ -539,6 +539,7 @@ Does NOT touch: ic-render, ic-net, ic-ui, ic-editor
 <ul>
 <li>Sim + LocalNetwork: orders go in, state comes out, hashes match</li>
 <li>Sim + ReplayPlayback: replay file produces identical state sequence</li>
+<li>Sim + ForeignReplayPlayback (D056): foreign replays complete without panics; order rejection rate and divergence tick tracked for regression</li>
 <li>Sim + Renderer: state changes produce correct visual updates</li>
 <li>Sim + AI: AI generates valid orders, sim accepts them</li>
 </ul>

@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-fb30e59a.js";
+            window.path_to_searchindex_js = "searchindex-72ec874a.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-1d51ffef.js"></script>
@@ -542,7 +542,7 @@ overrides:
 </table>
 </div>
 <p>Each actor reference exposes properties matching its components (<code>.Health</code>, <code>.Location</code>, <code>.Owner</code>, <code>.Move()</code>, <code>.Attack()</code>, <code>.Stop()</code>, <code>.Guard()</code>, <code>.Deploy()</code>, etc.) — identical to OpenRA’s actor property groups.</p>
-<p><strong>In-game command system (inspired by Mojang’s Brigadier):</strong> Mojang’s Brigadier parser (3,668★, MIT) defines commands as a typed tree where each node is an argument with a parser, suggestions, and permission checks. This architecture — tree-based, type-safe, permission-aware, with mod-injected commands — is the model for IC’s in-game console and chat commands. Mods should be able to register custom commands (e.g., <code>/spawn</code>, <code>/weather</code>, <code>/teleport</code> for mission scripting) using the same tree-based architecture, with tab-completion suggestions generated from the command tree. See <code>research/mojang-wube-modding-analysis.md</code> § Brigadier.</p>
+<p><strong>In-game command system (inspired by Mojang’s Brigadier):</strong> Mojang’s Brigadier parser (3,668★, MIT) defines commands as a typed tree where each node is an argument with a parser, suggestions, and permission checks. This architecture — tree-based, type-safe, permission-aware, with mod-injected commands — is the model for IC’s in-game console and chat commands. Mods should be able to register custom commands (e.g., <code>/spawn</code>, <code>/weather</code>, <code>/teleport</code> for mission scripting) using the same tree-based architecture, with tab-completion suggestions generated from the command tree. See <code>research/mojang-wube-modding-analysis.md</code> § Brigadier and <code>09-DECISIONS.md</code> § D058 for the full command console design.</p>
 <h3 id="api-design-principle-runtime-independent-api-surface"><a class="header" href="#api-design-principle-runtime-independent-api-surface">API Design Principle: Runtime-Independent API Surface</a></h3>
 <p>The Lua API is defined as an <strong>engine-level abstraction</strong>, independent of the Lua VM implementation. This lesson comes from Valve’s Source Engine VScript architecture (see <code>research/valve-github-analysis.md</code> § 2.3): VScript defined a scripting API abstraction layer so the same mod scripts work across Squirrel, Lua, and Python backends — the <em>API surface</em> is the stable contract, not the VM runtime.</p>
 <p>For IC, this means:</p>
@@ -1430,6 +1430,9 @@ pub fn render_mission_template(
 <li><strong>Compose</strong> — chain multiple scene and mission templates for campaigns (e.g., “3 missions: base building → bridge defense → final assault”)</li>
 </ol>
 <p>This is dramatically more reliable than raw generation. The template constrains the LLM’s output to valid parameter space, and the schema validates it. The LLM becomes a smart form-filler, not an unconstrained code generator.</p>
+<blockquote>
+<p><strong>Lifelong learning (D057):</strong> Proven template parameter combinations — which <code>ambush</code> location choices, <code>defend_position</code> wave compositions, and multi-scene sequences produce missions that players rate highly — are stored in the <strong>skill library</strong> (<code>09-DECISIONS.md</code> § D057) and retrieved as few-shot examples for future generation. The template library provides the valid output space; the skill library provides accumulated knowledge about what works within that space.</p>
+</blockquote>
 <h3 id="scene-templates-composable-building-blocks"><a class="header" href="#scene-templates-composable-building-blocks">Scene Templates (Composable Building Blocks)</a></h3>
 <p>Inspired by Operation Flashpoint / ArmA’s mission editor: scene templates are <strong>sub-mission components</strong> — reusable, pre-scripted building blocks that snap together inside a mission. Each scene template has its own trigger logic, AI behavior, and Lua scripts already written and tested. The user or LLM only fills in parameters.</p>
 <blockquote>

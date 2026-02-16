@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-fb30e59a.js";
+            window.path_to_searchindex_js = "searchindex-72ec874a.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-1d51ffef.js"></script>
@@ -198,7 +198,8 @@
 <li><strong>Switchable render modes.</strong> Toggle Classic/HD/3D mid-game (F1 key, like the Remastered Collection). Different players can use different render modes in the same multiplayer game.</li>
 <li><strong>Switchable AI opponents.</strong> Classic Westwood, OpenRA, or IC Default AI — selectable per AI slot. Two-axis difficulty (engine scaling + behavioral tuning). Mix different AI personalities and difficulties in the same match.</li>
 <li><strong>Five ways to find a game.</strong> Direct IP, Among Us-style room codes, QR codes (LAN/streaming), server browser, ranked matchmaking queue — plus Discord/Steam deep links.</li>
-<li><strong>Built-in voice and text chat.</strong> Push-to-talk voice (WebRTC P2P), text chat with team/all/whisper channels. Speaking indicators in lobby and in-game.</li>
+<li><strong>Built-in voice and text chat.</strong> Push-to-talk voice (Opus codec, relay-forwarded), text chat with team/all/whisper/observer channels. Contextual ping system (8 types + ping wheel), chat wheel with auto-translated phrases, minimap drawing, tactical markers. Voice optionally recorded in replays (opt-in). Speaking indicators in lobby and in-game.</li>
+<li><strong>Command console.</strong> Unified <code>/</code> command system — every GUI action has a console equivalent. Developer overlay, cvar system, tab completion with fuzzy matching. Hidden cheat codes (Cold War phrases) for single-player fun.</li>
 </ul>
 <hr>
 <h2 id="for-competitive-players"><a class="header" href="#for-competitive-players">For Competitive Players</a></h2>
@@ -210,6 +211,10 @@
 <li><strong>Tournament mode.</strong> Caster view (no fog), player-perspective spectating, configurable broadcast delay (1–5 min), bracket integration, server-side replay archive.</li>
 <li><strong>Sub-tick fairness.</strong> Orders processed in the order they happened, not the order packets arrived. Adapted from Counter-Strike 2’s sub-tick architecture.</li>
 <li><strong>Train against yourself.</strong> AI mimics a specific player’s style from their replays. “Challenge My Weakness” mode targets your weakest skills for focused practice.</li>
+<li><strong>Foreign replay import.</strong> Load and play back OpenRA and Remastered Collection replays directly. Convert to IC format for analysis. Automated behavioral regression testing against replay corpus.</li>
+<li><strong>Fair-play match controls.</strong> Ready-check before match start. In-match voting — kick griefers, remake broken games, mutual draw — with anti-abuse protections (premade consolidation, army-value checks). Pause and surrender with ranked penalty framework.</li>
+<li><strong>Disconnect handling.</strong> Grace period for brief disconnects, abandon penalties with escalating cooldowns, match voiding for early exits. Remaining teammates choose to play on (with AI substitute) or surrender.</li>
+<li><strong>Spectator anti-coaching.</strong> In ranked team games, live spectators are locked to one team’s perspective — the relay won’t send opposing orders until the broadcast delay expires.</li>
 </ul>
 <hr>
 <h2 id="for-modders"><a class="header" href="#for-modders">For Modders</a></h2>
@@ -227,6 +232,7 @@
 <li><strong>Federated and self-hostable.</strong> Official server, community mirrors, local directories, and Steam Workshop — all appear in one merged view. Offline bundles for LAN parties. No single point of failure.</li>
 <li><strong>Creator tools.</strong> Reputation scores, badges (Verified, Prolific, Foundation), download analytics, collections, ratings &amp; reviews, DMCA process with due process. LLM agents can discover and pull resources with author consent (<code>ai_usage</code> permission per resource).</li>
 <li><strong>Hot-reload.</strong> Change YAML or Lua, see it in-game immediately. No restart.</li>
+<li><strong>Console command extensibility.</strong> Register custom <code>/</code> commands via Lua or WASM — with typed arguments, tab completion, and permission levels. Publish reusable <code>.iccmd</code> command scripts to the Workshop.</li>
 </ul>
 <hr>
 <h2 id="for-content-creators--tournament-organizers"><a class="header" href="#for-content-creators--tournament-organizers">For Content Creators &amp; Tournament Organizers</a></h2>
@@ -256,6 +262,7 @@
 <li><strong>AI-generated missions and campaigns (BYOLLM).</strong> Describe a scenario, get a playable mission — or generate an entire branching campaign with recurring characters who evolve, betray, and die based on your choices. Choose a story style (C&amp;C Classic, Realistic Military, Political Thriller, and more). World Domination mode: conquer a strategic map region by region with garrison management and faction dynamics. Each mission reacts to how you actually played — the LLM reads your battle report and adapts the next mission’s narrative, difficulty, and objectives. Mid-mission radar comms, RPG-style dialogue choices, and cinematic moments are all generated. Every output is standard YAML + Lua, fully playable without the LLM after creation. Built-in mission templates provide a fallback without any LLM at all. Bring your own LLM; the engine never requires one. Phase 7.</li>
 <li><strong>LLM-enhanced AI (BYOLLM).</strong> Two modes: <code>LlmOrchestratorAi</code> wraps conventional AI with LLM strategic guidance, <code>LlmPlayerAi</code> lets the LLM play the game directly — designed for community entertainment streams (“GPT vs. Claude playing Red Alert”). Observable reasoning overlay for spectators. Neither mode allowed in ranked. Phase 7.</li>
 <li><strong>LLM coaching (BYOLLM).</strong> Post-match analysis, personalized improvement suggestions, and adaptive briefings based on your play history. Phase 7.</li>
+<li><strong>LLM Skill Library (BYOLLM).</strong> Persistent, semantically-indexed store of verified LLM outputs — AI strategies and generation patterns that improve over time. Verification-to-promotion pipeline ensures quality. Shareable via Workshop. Voyager-inspired lifelong learning. Phase 7.</li>
 <li><strong>Dynamic weather.</strong> Real-time transitions (sunny → rain → storm), terrain effects (frozen water, mud), snow accumulation. Deterministic weather state machine.</li>
 <li><strong>Advanced visuals for modders.</strong> Bevy’s wgpu stack gives modders access to bloom, dynamic lighting, GPU particles, shader effects, day/night, smooth zoom, and even full 3D rendering — while the base game stays classic isometric. Render modes are switchable mid-game (see above).</li>
 <li><strong>Switchable UI themes.</strong> Classic, Remastered, or Modern look — YAML-driven, community themes via Workshop.</li>
@@ -264,7 +271,7 @@
 </ul>
 <hr>
 <h2 id="how-this-was-designed"><a class="header" href="#how-this-was-designed">How This Was Designed</a></h2>
-<p>The networking design alone studied 20+ open-source codebases, 4 EA GPL source releases, and multiple academic papers — all at the source code level. Every major subsystem went through the same process. 55 design decisions with rationale. 19 research documents. ~35,000 lines of documentation across 100+ commits.</p>
+<p>The networking design alone studied 20+ open-source codebases, 4 EA GPL source releases, and multiple academic papers — all at the source code level. Every major subsystem went through the same process. 59 design decisions with rationale. 31 research documents. ~55,000 lines of documentation across 115+ commits.</p>
 <p>📖 <strong><a href="https://dk26.github.io/iron-curtain-design-docs/">Read the full design documentation →</a></strong></p>
 
                     </main>

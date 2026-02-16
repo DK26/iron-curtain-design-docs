@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-fb30e59a.js";
+            window.path_to_searchindex_js = "searchindex-72ec874a.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-1d51ffef.js"></script>
@@ -391,6 +391,7 @@
 <li>Lobby system, game browser, NAT traversal via relay</li>
 <li>Replay system (already enabled by Phase 2 architecture)</li>
 <li><code>CommunityBridge</code> for shared server browser with OpenRA and CnCNet</li>
+<li><strong>Foreign replay import (D056):</strong> <code>OpenRAReplayDecoder</code> and <code>RemasteredReplayDecoder</code> in <code>ra-formats</code>; <code>ForeignReplayPlayback</code> NetworkModel; <code>ic replay import</code> CLI converter; divergence tracking UI; automated behavioral regression testing against foreign replay corpus</li>
 <li><strong>Ranked matchmaking (D055):</strong> Glicko-2 rating system (D041), 10 placement matches, YAML-configurable tier system (Cold War military ranks for RA: Conscript → Supreme Commander, 7+2 tiers × 3 divisions = 23 positions), 3-month seasons with soft reset, dual display (tier badge + rating number), faction-specific optional ratings, small-population matchmaking degradation, map veto system</li>
 <li><strong>Leaderboards:</strong> global, per-faction, per-map — with public profiles and replay links</li>
 <li><strong>Observer/spectator mode:</strong> connect to relay with configurable fog (full/player/none) and broadcast delay</li>
