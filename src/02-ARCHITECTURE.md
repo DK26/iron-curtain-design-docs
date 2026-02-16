@@ -1111,6 +1111,8 @@ pub struct GameScore {
 
 ### Debug / Developer Tools
 
+> See also `09-DECISIONS.md` § D058 for the unified chat/command console, cvar system, and Brigadier-style command tree that provides the text-based interface to these developer tools.
+
 Developer mode (toggled in settings, not available in ranked):
 
 ```rust
@@ -1322,9 +1324,9 @@ The game application transitions through a fixed set of states. Design informed 
 
 - **Launched → InMenus:** Engine initialization, asset loading, mod registration
 - **InMenus → Loading:** Player starts a game or joins a lobby; map and rules are loaded
-- **Loading → InGame:** All assets loaded, `NetworkModel` connected, sim initialized
-- **InGame → GameEnded:** Victory/defeat condition met or player surrenders
-- **GameEnded → InMenus:** Return to main menu (post-game stats shown during transition)
+- **Loading → InGame:** All assets loaded, `NetworkModel` connected, sim initialized. See `03-NETCODE.md` § "Match Lifecycle" for the ready-check and countdown protocol that governs this transition in multiplayer.
+- **InGame → GameEnded:** Victory/defeat condition met, player surrenders (`PlayerOrder::Surrender`), vote-driven resolution (kick, remake, draw via the In-Match Vote Framework), or match void. See `03-NETCODE.md` § "Match Lifecycle" for the surrender mechanic, team vote thresholds, and the generic callvote system.
+- **GameEnded → InMenus:** Return to main menu (post-game stats shown during transition). See `03-NETCODE.md` § "Post-Game Flow" for the 30-second post-game lobby with stats, rating display, and re-queue.
 - **GameEnded → InReplay:** Watch the just-finished game (replay file already recorded)
 - **InMenus → InReplay:** Load a saved replay file
 - **InReplay → InMenus:** Exit replay viewer
@@ -1678,6 +1680,7 @@ Most crates are self-explanatory from the dependency graph, but three that appea
 - **EVA voice system:** Plays notification audio triggered by `notification_system()` events. Manages a priority queue — high-priority notifications (nuke launch, base under attack) interrupt low-priority ones. Respects per-notification cooldowns.
 - **Music playback:** Jukebox system with playlist management, track shuffle, and cross-fade. Supports `.aud` (original RA format via `ra-formats`) and modern formats (OGG, WAV via Bevy). Theme-specific intro tracks (D032 — Hell March for Classic theme).
 - **Spatial audio:** 3D positional audio for effects — explosions louder when camera is near. Uses Bevy's spatial audio with listener at camera position.
+- **VoIP playback:** Decodes incoming Opus voice frames from `MessageLane::Voice` and mixes them into the audio output. Handles per-player volume, muting, and optional spatial panning (D059 § Spatial Audio). Voice replay playback syncs Opus frames to game ticks.
 - **Ambient soundscapes:** Per-biome ambient loops (waves for coastal maps, wind for snow maps). Weather system (D022) can modify ambient tracks.
 
 **Key types:**
@@ -1892,6 +1895,12 @@ pub trait GameModule {
     /// List available render modes — Classic, HD, 3D, etc. (D048).
     fn render_modes(&self) -> Vec<RenderMode>;
 
+    /// Register game-module-specific commands into the Brigadier command tree (D058).
+    /// RA1 registers `/sell`, `/deploy`, `/stance`, etc. A total conversion registers
+    /// its own novel commands. The engine's built-in commands (chat, help, cvars) are
+    /// pre-registered before this method is called.
+    fn register_commands(&self, dispatcher: &mut CommandDispatcher);
+
     /// YAML rule schema for this game's unit definitions.
     fn rule_schema(&self) -> RuleSchema;
 }
@@ -1904,6 +1913,7 @@ pub trait GameModule {
 - **`render_modes()`** — TiberianDawnHD is a pure render-only mod (zero gameplay changes) that adds HD sprite rendering with content source detection (Steam AppId, Origin registry, GOG paths). Render mode extensibility enables this cleanly.
 - **`pathfinder()`** — OpenSA needed `WaspLocomotor` (flying insect pathfinding); OpenRA/ra2 defines 8 locomotor types (Hover, Mech, Jumpjet, Teleport, etc). RA1's JPS + flowfield is not universal.
 - **`fog_provider()` / `damage_resolver()`** — RA2 needs elevation-based LOS and shield-first damage; OpenHV needs a completely different resource flow model (Collector → Transporter → Receiver pipeline). Game-specific logic belongs in the module.
+- **`register_commands()`** — RA1 registers `/sell`, `/deploy`, `/stance`, superweapon commands. A Tiberian Dawn module registers different superweapon commands. A total conversion registers entirely novel commands. The engine cannot predefine game-specific commands (D058).
 
 ### What the engine provides (game-agnostic)
 

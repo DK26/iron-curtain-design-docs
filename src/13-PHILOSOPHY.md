@@ -302,6 +302,61 @@ IC's tiered modding architecture (D003/D004/D005) is explicitly designed with th
 - Game module trait design (D018) — `GameModule` should be flexible enough for non-RTS game types
 - Workshop discovery (D030) — total conversions and genre experiments deserve first-class visibility, not burial under "Maps" and "Balance Mods"
 
+### 20. Narrative Identity — Earnest Commitment, Never Ironic Distance
+
+> **Scoping note:** This principle synthesizes narrative aspects of Principle #14 (Asymmetric Faction Identity — factions as worldviews) and Principle #17 (Audio Drives Tempo — unit voice lines, EVA). Those principles focus on *gameplay identity* and *audio design*; this principle focuses on *narrative voice and tone* — how characters speak, how stories are told, how content reads and sounds. They are complementary layers, not redundant.
+
+Command & Conquer has one of the most distinctive narrative identities in gaming — and it was discovered by accident. Westwood hired Joe Kucan, a Las Vegas community theater actor, to direct FMV cutscenes because nobody on the team had film experience. He turned out to be perfect as Kane — a messianic cult leader who delivers monologues with absolute conviction, no winking, no self-consciousness. The other cast members were local talent and Westwood employees. The production values were modest. The performances were theatrical, intense, and utterly sincere. This accidental tone — maximum dramatic commitment with minimal resources — became the franchise's soul.
+
+**The core principle: C&C plays everything straight at maximum volume.** Stalin threatens you from a desk while a guard drags a man away. Kane declares "peace through power" while ordering genocide. Tim Curry escapes to "the one place that hasn't been corrupted by capitalism — SPACE!" Yuri mind-controls world leaders. Attack dolphins fight giant squid. A commando quips "That was left-handed!" after demolishing an entire base. Einstein erases Hitler from the timeline and accidentally creates a worse war.
+
+None of this is played ironically. Nobody winks at the camera. The actors commit fully — and that sincerity is exactly what makes it memorable instead of cringe. C&C occupies a rare tonal space: **simultaneously deadly serious and gloriously absurd, and the audience is in on it without being told they should laugh.** The drama is real. The stakes are real. The world is ridiculous. All of these are true at the same time.
+
+This is the opposite of ironic detachment, where creators signal "we know this is silly" to protect themselves from criticism. C&C never protects itself. Kane doesn't say "I know I sound like a Bond villain." Tanya doesn't apologize for her one-liners. The EVA doesn't make meta-commentary about being a video game. The world takes itself seriously — and the audience loves it *because* it does.
+
+**The C&C narrative pillars:**
+
+1. **Larger-than-life characters.** Every speaking role is a *personality*, not a role-filler. Commanders are charismatic or terrifying or both. Villains monologue. Heroes quip. Intelligence officers are suspiciously competent. Nobody delivers forgettable lines. If a character could be replaced with a generic text prompt, the character has failed.
+
+2. **Cold War as mythology.** The actual Cold War was bureaucratic brinksmanship. C&C's Cold War is mythological: superweapons, psychic warfare, time travel, doomsday devices, continent-spanning battles, secret brotherhoods, and ideological conflict rendered as literal warfare between archetypes. Historical accuracy is raw material, not a constraint.
+
+3. **Escalating absurdity with unwavering sincerity.** Each game escalated: nuclear missiles → chronosphere → psychic dominators → time travel. Each escalation was presented with complete seriousness. The escalation ladder should always go up — every act raises the stakes — and the presentation should never acknowledge the absurdity. The audience draws their own conclusions.
+
+4. **Quotable lines over realistic dialogue.** "Kirov reporting." "For the Union!" "Conscript reporting." "Rubber shoes in motion." "Insufficient funds." "Construction complete." "Silos needed." "Nuclear launch detected." These lines aren't naturalistic — they're *iconic*. They became memes, ringtones, inside jokes. Good C&C dialogue sacrifices realism for memorability every time.
+
+5. **The briefing is the covenant.** FMV briefings aren't skippable filler — they're the emotional contract between the game and the player. A good briefing makes you *want* to play the mission. It establishes stakes, introduces personality, and gives you someone to fight for or against. Whether it's a live-action commander staring into the camera, a radar comm portrait during gameplay, or a text-only tactical summary, the briefing sets the tone and the player carries that tone into battle.
+
+6. **Factions as worldviews, not just armies.** Allies aren't just "the good guys with tanks" — they represent Western liberal democratic values taken to their logical extreme (freedom through overwhelming technological superiority). Soviets aren't just "the bad guys with numbers" — they represent collectivist ideology rendered as raw industrial might. Nod isn't just "terrorists" — they represent charismatic revolutionary ideology. These worldviews infuse *everything*: unit names, building aesthetics, voice lines, music, briefing style, even the UI theme.
+
+7. **The camp is the canon.** Trained attack dolphins. Psychic squids. Chronosphere mishaps. Generals named after their obvious personality trait. Superweapons with ominous names. None of this is an embarrassment to be refined away in a "more serious" sequel — it *is* the franchise. Content that removes the camp removes the identity.
+
+**How this applies to IC:**
+
+This principle governs all IC-generated and IC-authored content — not just hand-crafted campaigns, but LLM generation prompts (D016), EVA voice line design, unit voice guidance for modders, cheat code naming and flavor (D058), campaign briefing authoring (D021/D038), and the default "C&C Classic" story style for generative campaigns. It also sets the bar for community content: Workshop resources that claim "C&C Classic" style should be evaluated against these pillars.
+
+**Specific content generation rules:**
+
+- **EVA lines** should be terse, authoritative, slightly ominous, and instantly recognizable. "Our base is under attack" is good. "Warning: hostile forces detected in proximity to primary installation" is bad.
+- **Unit voice lines** should express personality in 3 words or fewer. The unit *is* the line. A conscript sounds reluctant. A commando sounds cocky. A tank sounds professional. A Kirov sounds inevitable.
+- **Mission briefings** should make the player feel like something important is about to happen. Even routine missions get dramatic framing. "Secure the bridge" becomes "Commander, this bridge is the only thing between the enemy's armor column and our civilian evacuation corridor. Lose it, and 50,000 people die."
+- **Villain dialogue** should be quotable, not threatening. A villain who says "I will destroy you" is generic. A villain who says "I've already won, Commander — you just haven't realized it yet" is C&C.
+- **LLM system prompts** (D016) for "C&C Classic" style must include these pillars explicitly. The LLM should be instructed to produce characters who would be at home in a RA1 FMV cutscene — not characters from a Tom Clancy novel.
+- **Cheat codes** (D058) are named after Cold War phrases, C&C cultural moments, and franchise in-jokes — because even the hidden mechanisms carry the world's flavor.
+
+**The litmus test:** Read a generated briefing, a unit voice line, or a mission description aloud. Does it sound like it belongs in a C&C game? Would a fan recognize it? Would someone quote it to a friend? If the answer is no, the content needs more personality and less professionalism.
+
+**Rule:** When creating or reviewing narrative content for IC — whether human-authored, LLM-generated, or community-submitted — check it against the seven pillars above. C&C's identity is its narrative voice. A technically perfect RTS with generic storytelling is not a C&C game. The camp, the conviction, and the quotability are as much a part of the engine's identity as the ECS architecture or the fixed-point math.
+
+**Where this applies:**
+- LLM system prompts and story style presets ([09-DECISIONS.md](09-DECISIONS.md) § D016 — "C&C Classic" is the default because of this principle)
+- Campaign authoring guidelines ([09-DECISIONS.md](09-DECISIONS.md) § D021 — briefings, character voices, narrative arc)
+- Cheat code and console command naming ([09-DECISIONS.md](09-DECISIONS.md) § D058 — Cold War/franchise cultural references)
+- EVA voice line design guidance for `ic-audio` (Phase 3)
+- Unit voice design guidelines for modders ([04-MODDING.md](04-MODDING.md))
+- Scenario editor content templates ([09-DECISIONS.md](09-DECISIONS.md) § D038 — briefing authoring, character creation)
+- Workshop content review criteria ([09-DECISIONS.md](09-DECISIONS.md) § D030 — "C&C Classic" style validation)
+- The foreword, README, and all public-facing project communication — IC's own voice should reflect the franchise it serves (direct, confident, unpretentious)
+
 ---
 
 ## Engineering Methods
@@ -414,6 +469,7 @@ Key questions to ask during review:
 5. If this is a compromise, is it explicitly labeled and reversible?
 6. How does this affect the community — players, modders, server hosts, contributors? Does it address a known pain point or create a new one?
 7. If this touches the modding API, does it expose primitives that enable novel creations, or only parameterize existing behavior?
+8. If this involves narrative content (briefings, dialogue, EVA lines, cheat names, LLM prompts), does it follow the seven C&C narrative pillars? Would a fan recognize it as C&C?
 
 ### For Feature Proposals
 

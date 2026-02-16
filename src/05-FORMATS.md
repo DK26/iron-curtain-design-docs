@@ -936,17 +936,18 @@ iron_curtain_replay_v1.icrep  (file extension: .icrep)
 ├── Header (fixed-size, uncompressed)
 ├── Metadata (JSON, uncompressed)
 ├── Tick Order Stream (framed, LZ4-compressed)
+├── Voice Stream (per-player Opus tracks, optional — D059)
 ├── Signature Chain (Ed25519 hash chain, optional)
 └── Embedded Resources (map + mod manifest, optional)
 ```
 
-### Header (48 bytes, fixed)
+### Header (56 bytes, fixed)
 
 ```rust
 pub struct ReplayHeader {
     pub magic: [u8; 4],           // b"ICRP" — "Iron Curtain Replay"
     pub version: u16,             // Replay format version (1)
-    pub flags: u16,               // Bit flags (compressed, signed, has_events)
+    pub flags: u16,               // Bit flags (compressed, signed, has_events, has_voice)
     pub metadata_offset: u32,
     pub metadata_length: u32,
     pub orders_offset: u32,
@@ -955,8 +956,12 @@ pub struct ReplayHeader {
     pub signature_length: u32,
     pub total_ticks: u64,         // Total ticks in the replay
     pub final_state_hash: u64,    // state_hash() of the last tick (integrity)
+    pub voice_offset: u32,        // 0 if no voice stream (D059)
+    pub voice_length: u32,        // Compressed length of voice stream
 }
 ```
+
+The `flags` field includes a `HAS_VOICE` bit (bit 3). When set, the voice stream section contains per-player Opus audio tracks recorded with player consent. See `09-DECISIONS.md` § D059 for the voice consent model, storage costs, and replay playback integration.
 
 ### Metadata (JSON)
 
@@ -1034,10 +1039,45 @@ pub enum AnalysisEvent {
     ResourceCollected { tick: u64, player: PlayerId, resource_type: ResourceType, amount: i32 },
     /// Upgrade completed.
     UpgradeCompleted { tick: u64, player: PlayerId, upgrade_id: UpgradeId },
+
+    // --- Competitive analysis events (Phase 5+) ---
+
+    /// Periodic camera position sample — where each player is looking.
+    /// Sampled at 2 Hz (~8 bytes per player per sample). Enables coaching
+    /// tools ("you weren't watching your base during the drop"), replay
+    /// heatmaps, and attention analysis. See D059 § Integration.
+    CameraPositionSample { tick: u64, player: PlayerId, viewport_center: WorldPos, zoom_level: u16 },
+    /// Player selection changed — what the player is controlling.
+    /// Delta-encoded: only records additions/removals from the previous selection.
+    /// Enables micro/macro analysis and attention tracking.
+    SelectionChanged { tick: u64, player: PlayerId, added: Vec<EntityTag>, removed: Vec<EntityTag> },
+    /// Control group assignment or recall.
+    ControlGroupEvent { tick: u64, player: PlayerId, group: u8, action: ControlGroupAction },
+    /// Ability or superweapon activation.
+    AbilityUsed { tick: u64, player: PlayerId, ability_id: AbilityId, target: Option<WorldPos> },
+    /// Game pause/unpause event.
+    PauseEvent { tick: u64, player: PlayerId, paused: bool },
+    /// Match ended — captures the end reason for analysis tools.
+    MatchEnded { tick: u64, outcome: MatchOutcome },
+    /// Vote lifecycle event — proposal, ballot, and resolution.
+    /// See `03-NETCODE.md` § "In-Match Vote Framework" for the full vote system.
+    VoteEvent { tick: u64, event: VoteAnalysisEvent },
+}
+
+/// Control group action types for ControlGroupEvent.
+pub enum ControlGroupAction {
+    Assign,   // player set this control group
+    Append,   // player added to this control group (shift+assign)
+    Recall,   // player pressed the control group hotkey to select
 }
 ```
 
-**Design properties:**
+**Competitive analysis rationale:**
+- **CameraPositionSample:** SC2 and AoE2 replays both include camera tracking. Coaches review where a player was looking ("you weren't watching your expansion when the attack came"). At 2 Hz with 8 bytes per player, a 20-minute 2-player game adds ~19 KB — negligible. Combines powerfully with voice-in-replay (D059): hearing what a player said while seeing what they were looking at.
+- **SelectionChanged / ControlGroupEvent:** SC2's `replay.game.events` includes selection deltas. Control group usage frequency and response time are key skill metrics that distinguish player brackets. Delta-encoded selections are compact (~12 bytes per change).
+- **AbilityUsed:** Superweapon timing, chronosphere accuracy, iron curtain placement decisions. Critical for tournament review.
+- **PauseEvent / MatchEnded:** Structural events that analysis tools need without re-simulating. See `03-NETCODE.md` § Match Lifecycle for the full pause and surrender specifications.
+- **VoteEvent:** Records vote proposals, individual ballots, and resolutions for post-match review and behavioral analysis. Tournament admins can audit vote patterns (e.g., excessive failed kick votes). See `03-NETCODE.md` § "In-Match Vote Framework."
 - **Not required for playback** — the order stream alone is sufficient for deterministic replay. Analysis events are a convenience cache.
 - **Compact position sampling** — `UnitPositionSample` uses delta-encoded unit indices and includes only units that have inflicted or taken damage recently (following SC2's tracker event model). This keeps the stream compact even in large battles.
 - **Fixed-point stat values** — `PlayerStatSnapshot` uses fixed-point integers (matching the sim), not floats.

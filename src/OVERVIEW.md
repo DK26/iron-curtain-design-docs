@@ -18,7 +18,8 @@ Iron Curtain is a new open-source RTS engine built for the Command & Conquer com
 - **Switchable render modes.** Toggle Classic/HD/3D mid-game (F1 key, like the Remastered Collection). Different players can use different render modes in the same multiplayer game.
 - **Switchable AI opponents.** Classic Westwood, OpenRA, or IC Default AI — selectable per AI slot. Two-axis difficulty (engine scaling + behavioral tuning). Mix different AI personalities and difficulties in the same match.
 - **Five ways to find a game.** Direct IP, Among Us-style room codes, QR codes (LAN/streaming), server browser, ranked matchmaking queue — plus Discord/Steam deep links.
-- **Built-in voice and text chat.** Push-to-talk voice (WebRTC P2P), text chat with team/all/whisper channels. Speaking indicators in lobby and in-game.
+- **Built-in voice and text chat.** Push-to-talk voice (Opus codec, relay-forwarded), text chat with team/all/whisper/observer channels. Contextual ping system (8 types + ping wheel), chat wheel with auto-translated phrases, minimap drawing, tactical markers. Voice optionally recorded in replays (opt-in). Speaking indicators in lobby and in-game.
+- **Command console.** Unified `/` command system — every GUI action has a console equivalent. Developer overlay, cvar system, tab completion with fuzzy matching. Hidden cheat codes (Cold War phrases) for single-player fun.
 
 ---
 
@@ -31,6 +32,10 @@ Iron Curtain is a new open-source RTS engine built for the Command & Conquer com
 - **Tournament mode.** Caster view (no fog), player-perspective spectating, configurable broadcast delay (1–5 min), bracket integration, server-side replay archive.
 - **Sub-tick fairness.** Orders processed in the order they happened, not the order packets arrived. Adapted from Counter-Strike 2's sub-tick architecture.
 - **Train against yourself.** AI mimics a specific player's style from their replays. "Challenge My Weakness" mode targets your weakest skills for focused practice.
+- **Foreign replay import.** Load and play back OpenRA and Remastered Collection replays directly. Convert to IC format for analysis. Automated behavioral regression testing against replay corpus.
+- **Fair-play match controls.** Ready-check before match start. In-match voting — kick griefers, remake broken games, mutual draw — with anti-abuse protections (premade consolidation, army-value checks). Pause and surrender with ranked penalty framework.
+- **Disconnect handling.** Grace period for brief disconnects, abandon penalties with escalating cooldowns, match voiding for early exits. Remaining teammates choose to play on (with AI substitute) or surrender.
+- **Spectator anti-coaching.** In ranked team games, live spectators are locked to one team's perspective — the relay won't send opposing orders until the broadcast delay expires.
 
 ---
 
@@ -49,6 +54,7 @@ Iron Curtain is a new open-source RTS engine built for the Command & Conquer com
 - **Federated and self-hostable.** Official server, community mirrors, local directories, and Steam Workshop — all appear in one merged view. Offline bundles for LAN parties. No single point of failure.
 - **Creator tools.** Reputation scores, badges (Verified, Prolific, Foundation), download analytics, collections, ratings & reviews, DMCA process with due process. LLM agents can discover and pull resources with author consent (`ai_usage` permission per resource).
 - **Hot-reload.** Change YAML or Lua, see it in-game immediately. No restart.
+- **Console command extensibility.** Register custom `/` commands via Lua or WASM — with typed arguments, tab completion, and permission levels. Publish reusable `.iccmd` command scripts to the Workshop.
 
 ---
 
@@ -82,6 +88,7 @@ Iron Curtain is a new open-source RTS engine built for the Command & Conquer com
 - **AI-generated missions and campaigns (BYOLLM).** Describe a scenario, get a playable mission — or generate an entire branching campaign with recurring characters who evolve, betray, and die based on your choices. Choose a story style (C&C Classic, Realistic Military, Political Thriller, and more). World Domination mode: conquer a strategic map region by region with garrison management and faction dynamics. Each mission reacts to how you actually played — the LLM reads your battle report and adapts the next mission's narrative, difficulty, and objectives. Mid-mission radar comms, RPG-style dialogue choices, and cinematic moments are all generated. Every output is standard YAML + Lua, fully playable without the LLM after creation. Built-in mission templates provide a fallback without any LLM at all. Bring your own LLM; the engine never requires one. Phase 7.
 - **LLM-enhanced AI (BYOLLM).** Two modes: `LlmOrchestratorAi` wraps conventional AI with LLM strategic guidance, `LlmPlayerAi` lets the LLM play the game directly — designed for community entertainment streams ("GPT vs. Claude playing Red Alert"). Observable reasoning overlay for spectators. Neither mode allowed in ranked. Phase 7.
 - **LLM coaching (BYOLLM).** Post-match analysis, personalized improvement suggestions, and adaptive briefings based on your play history. Phase 7.
+- **LLM Skill Library (BYOLLM).** Persistent, semantically-indexed store of verified LLM outputs — AI strategies and generation patterns that improve over time. Verification-to-promotion pipeline ensures quality. Shareable via Workshop. Voyager-inspired lifelong learning. Phase 7.
 - **Dynamic weather.** Real-time transitions (sunny → rain → storm), terrain effects (frozen water, mud), snow accumulation. Deterministic weather state machine.
 - **Advanced visuals for modders.** Bevy's wgpu stack gives modders access to bloom, dynamic lighting, GPU particles, shader effects, day/night, smooth zoom, and even full 3D rendering — while the base game stays classic isometric. Render modes are switchable mid-game (see above).
 - **Switchable UI themes.** Classic, Remastered, or Modern look — YAML-driven, community themes via Workshop.
@@ -92,6 +99,6 @@ Iron Curtain is a new open-source RTS engine built for the Command & Conquer com
 
 ## How This Was Designed
 
-The networking design alone studied 20+ open-source codebases, 4 EA GPL source releases, and multiple academic papers — all at the source code level. Every major subsystem went through the same process. 55 design decisions with rationale. 19 research documents. ~35,000 lines of documentation across 100+ commits.
+The networking design alone studied 20+ open-source codebases, 4 EA GPL source releases, and multiple academic papers — all at the source code level. Every major subsystem went through the same process. 59 design decisions with rationale. 31 research documents. ~55,000 lines of documentation across 115+ commits.
 
 📖 **[Read the full design documentation →](https://dk26.github.io/iron-curtain-design-docs/)**

@@ -591,6 +591,13 @@ pub struct ProtocolLimits {
     pub max_file_transfer_size: usize,        // 64 KB — map files
     pub max_pending_data_per_peer: usize,     // 256 KB — total buffered per connection
     pub max_reassembled_command_size: usize,  // 64 KB — chunked/wrapper commands
+    // Voice/coordination limits (D059)
+    pub max_voice_packets_per_second: u32,    // 50 (1 per 20ms frame)
+    pub max_voice_packet_size: usize,         // 256 bytes (covers 64kbps Opus)
+    pub max_pings_per_interval: u32,          // 3 per 5 seconds
+    pub max_minimap_draw_points: usize,       // 32 per stroke
+    pub max_tactical_markers_per_player: u8,  // 10
+    pub max_tactical_markers_per_team: u8,    // 30
 }
 
 /// Command type dispatch uses exhaustive matching — unknown types return Err.
@@ -699,11 +706,12 @@ Our architecture prevents state saturation at three independent layers — see `
 /// Catches oversized orders that pass the order-count budget.
 
 /// Layer 3: Hard ceiling (ProtocolLimits). Absolute maximum regardless
-/// of budget/bandwidth — the last resort.
+/// of budget/bandwidth — the last resort. Single canonical definition —
+/// see V15 above for the full struct with all fields including D059 voice
+/// and coordination limits.
 pub struct ProtocolLimits {
-    pub max_orders_per_tick: usize,     // 256 — no player can flood the pipeline
-    pub max_order_size: usize,          // 4 KB — no single oversized order
-    pub max_pending_data_per_peer: usize, // 256 KB — total buffered per connection
+    // ... fields defined in V15 above (max_orders_per_tick, max_order_size,
+    // max_pending_data_per_peer, voice/coordination limits, etc.)
 }
 
 /// The relay server enforces all three layers.
