@@ -69,7 +69,7 @@ Every major system was designed by studying real, working implementations — no
 
 The networking design alone analyzed the source code of 20+ open-source games and multiple academic papers. Four EA GPL codebases (Generals/Zero Hour, Remastered Collection, Red Alert, Tiberian Dawn), open-source RTS engines (OpenRA, 0 A.D., Spring Engine, Warzone 2100, OpenTTD, and more), and non-RTS references (Quake 3, Minetest, Veloren, Lichess). The same methodology applies to AI, pathfinding, modding, and the workshop.
 
-Across the project: 59 design decisions with rationale and alternatives, 31 standalone research documents, 20+ codebases studied at the source code level, ~55,000 lines of structured documentation — all built through 115+ commits of iterative refinement. The LLM accelerated the research; the human directed every question and made every decision.
+Across the project: 60 design decisions with rationale and alternatives, 31 standalone research documents, 20+ codebases studied at the source code level, ~55,000 lines of structured documentation — all built through 115+ commits of iterative refinement. The LLM accelerated the research; the human directed every question and made every decision.
 
 📖 **[Read the methodology →](https://dk26.github.io/iron-curtain-design-docs/14-METHODOLOGY.html)**
 

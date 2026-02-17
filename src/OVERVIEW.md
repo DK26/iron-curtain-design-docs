@@ -99,6 +99,6 @@ Iron Curtain is a new open-source RTS engine built for the Command & Conquer com
 
 ## How This Was Designed
 
-The networking design alone studied 20+ open-source codebases, 4 EA GPL source releases, and multiple academic papers — all at the source code level. Every major subsystem went through the same process. 59 design decisions with rationale. 31 research documents. ~55,000 lines of documentation across 115+ commits.
+The networking design alone studied 20+ open-source codebases, 4 EA GPL source releases, and multiple academic papers — all at the source code level. Every major subsystem went through the same process. 60 design decisions with rationale. 31 research documents. ~55,000 lines of documentation across 115+ commits.
 
 📖 **[Read the full design documentation →](https://dk26.github.io/iron-curtain-design-docs/)**

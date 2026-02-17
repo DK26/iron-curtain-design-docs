@@ -88,6 +88,53 @@ TiberianDawnHD detects Steam via AppId, Origin via Windows registry key, and GOG
 
 **Phase:** Content detection ships in Phase 0 as part of `ra-formats` (for C&C assets). Game module content detection in Phase 1.
 
+### Browser Asset Storage
+
+The `ContentDetector` pattern above assumes filesystem access — probing Steam, Origin, GOG, and directory paths. None of this works in a browser build (WASM target). Browsers have no access to the user's real filesystem. IC needs a dedicated browser asset storage strategy.
+
+**Browser storage APIs** (in order of preference):
+
+- **OPFS (Origin Private File System):** The newest browser storage API (~2023). Provides a real private filesystem with file/directory operations and synchronous access from Web Workers. Best performance for large binary assets like `.mix` archives. Primary storage backend for IC's browser build.
+- **IndexedDB:** Async NoSQL database. Stores structured data and binary blobs. Typically 50MB–several GB (browser-dependent, user-prompted above quota). Wider browser support than OPFS. Fallback storage backend.
+- **localStorage:** Simple key-value string store, ~5-10MB limit, synchronous. Too small for game assets — suitable only for user preferences and settings.
+
+**Storage abstraction:**
+
+```rust
+/// Platform-agnostic asset storage.
+/// Native builds use the filesystem directly. Browser builds use OPFS/IndexedDB.
+pub trait AssetStore: Send + Sync {
+    fn read(&self, path: &VirtualPath) -> Result<Vec<u8>>;
+    fn write(&self, path: &VirtualPath, data: &[u8]) -> Result<()>;
+    fn exists(&self, path: &VirtualPath) -> bool;
+    fn list_dir(&self, path: &VirtualPath) -> Result<Vec<VirtualPath>>;
+    fn delete(&self, path: &VirtualPath) -> Result<()>;
+    fn available_space(&self) -> Result<u64>; // quota management
+}
+
+pub struct NativeStore { root: PathBuf }
+pub struct BrowserStore { /* OPFS primary, IndexedDB fallback */ }
+```
+
+**Browser first-run asset acquisition:**
+
+1. User opens IC in a browser tab. No game assets exist in browser storage yet.
+2. First-run wizard presents options: (a) drag-and-drop `.mix` files from a local RA installation, (b) paste a directory path to bulk-import, or (c) download a free content pack if legally available (e.g., freeware TD/RA releases).
+3. Imported files are stored in the OPFS virtual filesystem under a structured directory (similar to Chrono Divide's `📁 /` layout: game archives at root, mods in `mods/<modId>/`, maps in `maps/`, replays in `replays/`).
+4. Subsequent launches skip import — assets persist in OPFS across sessions.
+
+**Browser mod installation:**
+
+Mods are downloaded as archives (via Workshop HTTP API or direct URL), extracted in-browser (using a JS/WASM decompression library), and written to `mods/<modId>/` in the virtual filesystem. The in-game mod browser triggers download and extraction. Lobby auto-download (D030) works identically — the `AssetStore` trait abstracts the actual storage backend.
+
+**Storage quota management:**
+
+Browsers impose per-origin storage limits (typically 1-20GB depending on browser and available disk). IC's browser build should: (a) check `available_space()` before large downloads, (b) surface clear warnings when approaching quota, (c) provide a storage management UI (like Chrono Divide's "Options → Storage") showing per-mod and per-asset space usage, (d) allow selective deletion of cached assets.
+
+**Bevy integration:** Bevy's asset system already supports custom asset sources. The `BrowserStore` registers as a Bevy `AssetSource` so that `asset_server.load("ra2.mix")` transparently reads from OPFS on browser builds and from the filesystem on native builds. No game code changes required — the abstraction lives below Bevy's asset layer.
+
+**Phase:** `AssetStore` trait and `BrowserStore` implementation ship in Phase 7 (browser build). The trait definition should exist from Phase 0 so that `NativeStore` is used consistently — this prevents filesystem assumptions from leaking into game code. Chrono Divide's browser storage architecture (OPFS + IndexedDB, virtual directory structure, mod folder isolation) validates this approach.
+
 ## Binary Format Codec Reference (EA Source Code)
 
 > All struct definitions in this section are taken verbatim from the GPL v3 EA source code repositories:

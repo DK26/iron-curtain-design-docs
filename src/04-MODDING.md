@@ -540,6 +540,19 @@ impl Default for LuaExecutionLimits {
 - Modders write in Rust, C, Go, AssemblyScript, or even Python compiled to WASM
 - `wasmtime` or `wasmer` crates
 
+### Browser Build Limitation (WASM-on-WASM)
+
+When IC is compiled to WASM for the browser target (Phase 7), Tier 3 WASM mods present a fundamental problem: `wasmtime` does not compile to `wasm32-unknown-unknown`. The game itself is running as WASM in the browser — it cannot embed a full WASM runtime to run mod WASM modules inside itself.
+
+**Implications:**
+- **Browser builds support Tier 1 (YAML) and Tier 2 (Lua) mods only.** Lua via `mlua` compiles to WASM and executes as interpreted bytecode within the browser build. YAML is pure data.
+- **Tier 3 WASM mods are desktop/server-only** (native builds where `wasmtime` runs normally).
+- **Multiplayer between browser and desktop clients** is not affected by this limitation *for the base game* — the sim, networking, and all built-in systems are native Rust compiled to WASM. The limitation only matters when a lobby requires a Tier 3 mod; browser clients cannot join such lobbies.
+
+**Future mitigation:** A WASM interpreter written in pure Rust (e.g., `wasmi`) can itself compile to `wasm32-unknown-unknown`, enabling Tier 3 mods in the browser at reduced performance (~10-50x slower than native `wasmtime`). This is acceptable for lightweight WASM mods (AI strategies, format loaders) but likely too slow for complex pathfinder or render mods. When/if this becomes viable, the engine would use `wasmtime` on native builds and `wasmi` on browser builds — same mod binary, different execution speed. This is a Phase 7+ concern.
+
+**Lobby enforcement:** Servers advertise their Tier 3 support level. Browser clients filter the server browser to show only lobbies they can join. A lobby requiring a Tier 3 WASM mod displays a platform restriction badge.
+
 ### WASM Host API (Security Boundary)
 
 ```rust
@@ -764,6 +777,15 @@ mod:
 **Security:** Pathfinding host functions are gated by `ModCapabilities.pathfinding`. A pathfinder mod can read terrain and obstacle positions but cannot issue orders, read gameplay state (health, resources, fog), or access render functions. This is a narrower capability than gameplay mods — pathfinders compute routes, nothing else.
 
 **Determinism:** WASM pathfinder mods execute in the deterministic sim context. They use the same `WasmExecutionLimits` fuel budget as other WASM mods. All clients run the same WASM binary (verified by SHA-256 hash in the lobby) with the same inputs, producing identical paths. If the fuel budget is exceeded mid-path-request, the path is truncated deterministically — all clients truncate at the same point.
+
+**Pathfinder fuel budget concern:** Pathfinding has fundamentally different call patterns from other WASM mod types. An AI mod calls `ai_decide()` once per tick — one large computation. A pathfinder mod handles `pathfinder_request_path()` potentially hundreds of times per tick (once per moving unit). The flat `WasmExecutionLimits.fuel_per_tick` budget doesn't distinguish between these patterns: a pathfinder that spends 5,000 fuel per path request × 200 moving units = 1,000,000 fuel, consuming the entire default budget on pathfinding alone.
+
+**Mitigation — scaled fuel allocation for pathfinder mods:**
+- Pathfinder WASM modules receive a **separate, larger fuel allocation** (`pathfinder_fuel_per_tick`) that defaults to 5× the standard budget (5,000,000 fuel). This reflects the many-calls-per-tick reality of pathfinding workloads.
+- The per-request fuel is not individually capped — the total fuel across all path requests in a tick is bounded. This allows some paths to be expensive (complex terrain) as long as the aggregate stays within budget.
+- If the pathfinder exhausts its fuel mid-tick, remaining path requests for that tick return `PathResult::Deferred` — the engine queues them for the next tick(s). This is deterministic (all clients defer the same requests) and gracefully degrades under load rather than truncating individual paths.
+- The pathfinder fuel budget is separate from the mod's general `fuel_per_tick` (used for initialization, event handlers, etc.). A pathfinder mod that also handles events gets two budgets.
+- Mod manifests can request a custom `pathfinder_fuel_per_tick` value. The lobby displays this alongside other requested limits.
 
 **Multiplayer sync:** Because pathfinding is sim-affecting, all players must use the same pathfinder. The lobby validates that all clients have the same pathfinder WASM module (hash + version). A modded pathfinder is treated identically to a built-in preset for sync purposes.
 

@@ -161,17 +161,21 @@ The original plan avoided framework lock-in by assembling individual crates. Rej
 
 ## D007: Networking — Relay Server as Default
 
-**Decision:** Default multiplayer uses relay server with time authority, not pure P2P.
+**Decision:** Default multiplayer uses relay server with time authority, not pure P2P. The relay logic (`RelayCore`) is a library component in `ic-net` — it can be deployed as a standalone binary (dedicated server for hosting, server rooms, Raspberry Pi) or embedded inside a game client (listen server — "Host Game" button, zero external infrastructure). Clients connecting to either deployment use the same protocol and cannot distinguish between them.
 
 **Rationale:**
 - Blocks lag switches (server owns the clock)
 - Enables sub-tick chronological ordering (CS2 insight)
-- Handles NAT traversal (no port forwarding)
+- Handles NAT traversal (no port forwarding — dedicated server mode)
 - Enables order validation before broadcast (anti-cheat)
 - Signed replays
-- Cheap to run (doesn't run sim, just forwards orders)
+- Cheap to run (doesn't run sim, just forwards orders — ~2-10 KB memory per game)
+- **Listen server mode:** embedded relay lets any player host a game with full sub-tick ordering and anti-lag-switch, no external server needed. Host's own orders go through the same `RelayCore` pipeline — no host advantage in order processing.
+- **Dedicated server mode:** standalone binary for competitive/ranked play, community hosting, and multi-game capacity on cheap hardware.
 
-**Validated by:** C&C Generals/Zero Hour's "packet router" — a client-side star topology where one player collected and rebroadcast all commands. Same concept, but our server-hosted version eliminates host advantage and adds neutral time authority. See `research/generals-zero-hour-netcode-analysis.md`. Further validated by Valve's GameNetworkingSockets (GNS), which defaults to relay (Valve SDR — Steam Datagram Relay) for all connections, including P2P-capable scenarios. GNS's rationale mirrors ours: relay eliminates NAT traversal headaches, provides consistent latency measurement, and blocks IP-level attacks. The GNS architecture also validates encrypting all relay traffic (AES-GCM-256 + Curve25519) — see D054 § Transport encryption. See `research/valve-github-analysis.md`. Additionally validated by Embark Studios' **Quilkin** — a production Rust UDP proxy for game servers (1,510★, Apache 2.0, co-developed with Google Cloud Gaming). Quilkin provides a concrete implementation of relay-as-filter-chain: session routing via token-based connection IDs, QCMP latency measurement for server selection, composable filter pipeline (Capture → Firewall → RateLimit → TokenRouter), and full OTEL observability. Quilkin's production deployment on Tokio + tonic confirms that async Rust handles game relay traffic at scale. See `research/embark-studios-rust-gamedev-analysis.md`.
+**Trust boundary:** For ranked/competitive play, the matchmaking system requires connection to an official or community-verified dedicated relay (untrusted host can't be allowed relay authority). For casual/LAN/custom games, the embedded relay is preferred — zero setup, full relay quality.
+
+**Validated by:** C&C Generals/Zero Hour's "packet router" — a client-side star topology where one player collected and rebroadcast all commands. IC's embedded relay improves on this pattern: the host's orders go through `RelayCore`'s sub-tick pipeline like everyone else's (no peeking, no priority), eliminating the host advantage that Generals had. The dedicated server mode further eliminates any hosting-related advantage. See `research/generals-zero-hour-netcode-analysis.md`. Further validated by Valve's GameNetworkingSockets (GNS), which defaults to relay (Valve SDR — Steam Datagram Relay) for all connections, including P2P-capable scenarios. GNS's rationale mirrors ours: relay eliminates NAT traversal headaches, provides consistent latency measurement, and blocks IP-level attacks. The GNS architecture also validates encrypting all relay traffic (AES-GCM-256 + Curve25519) — see D054 § Transport encryption. See `research/valve-github-analysis.md`. Additionally validated by Embark Studios' **Quilkin** — a production Rust UDP proxy for game servers (1,510★, Apache 2.0, co-developed with Google Cloud Gaming). Quilkin provides a concrete implementation of relay-as-filter-chain: session routing via token-based connection IDs, QCMP latency measurement for server selection, composable filter pipeline (Capture → Firewall → RateLimit → TokenRouter), and full OTEL observability. Quilkin's production deployment on Tokio + tonic confirms that async Rust handles game relay traffic at scale. See `research/embark-studios-rust-gamedev-analysis.md`.
 
 **Alternatives available:** Pure P2P lockstep, fog-authoritative server, rollback — all implementable as `NetworkModel` variants.
 
@@ -2329,7 +2333,19 @@ profiles:
     description: "Recommended — classic balance with modern QoL and enhanced AI"
 ```
 
-Profiles are selectable in the lobby. Players can customize individual settings or pick a preset. Competitive modes lock the profile for fairness.
+Profiles are selectable in the lobby. Players can customize individual settings or pick a preset. Competitive modes lock the profile for fairness — specifically:
+
+| Profile Axis             | Locked in Ranked?                     | Rationale                                                                                                         |
+| ------------------------ | ------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| D019 Balance preset      | **Yes** — fixed per season per queue  | Sim-affecting; all players must use the same balance rules                                                        |
+| D033 QoL (sim-affecting) | **Yes** — fixed per ranked queue      | Sim-affecting toggles (production, commands, gameplay sections) are lobby settings; mismatch = connection refused |
+| D045 Pathfinding preset  | **Yes** — same impl required          | Sim-affecting; pathfinder WASM hash verified across all clients                                                   |
+| D043 AI preset           | **N/A** — not relevant for PvP ranked | AI presets only matter in PvE/skirmish; no competitive implication                                                |
+| D032 UI theme            | **No** — client-only cosmetic         | No sim impact; personal visual preference                                                                         |
+| D048 Render mode         | **No** — client-only cosmetic         | No sim impact; cross-view multiplayer is architecturally safe (see D048 § "Information Equivalence")              |
+| D033 QoL (client-only)   | **No** — per-player preferences       | Health bar display, selection glow, etc. — purely visual/UX, no competitive advantage                             |
+
+The locked axes collectively ensure that all ranked players share identical simulation rules. The unlocked axes are guaranteed to be information-equivalent (see D048 § "Information Equivalence" and D058 § "Visual Settings & Competitive Fairness").
 
 **Concrete changes (baked in from Phase 0):**
 1. `WorldPos` carries a Z coordinate from day one (RA1 sets z=0). `CellPos` is a game-module convenience for grid-based games, not an engine-core type.
@@ -8419,6 +8435,17 @@ This deserves emphasis because it's a feature no shipped C&C game has offered: *
 
 Cross-view also means **cross-view spectating**: an observer can watch a tournament match in 3D while the players compete in classic 2D. This creates unique content creation and broadcasting opportunities.
 
+### Information Equivalence Across Render Modes
+
+Cross-view multiplayer is competitively safe because all render modes display **identical game-state information:**
+
+- **Fog of war:** Visibility is computed by `FogProvider` in the sim. Every render mode receives the same `VisibilityGrid` — no mode can reveal fogged units or terrain that another mode hides.
+- **Unit visibility:** Cloaked, burrowed, and disguised units are shown/hidden based on sim-side detection state (`DetectCloaked`, `IgnoresDisguise`). The render mode determines *how* a shimmer or disguise looks, not *whether* the player sees it.
+- **Health bars, status indicators, minimap:** All driven by sim state. A unit at 50% health shows 50% health in every render mode. Minimap icons are derived from the same entity positions regardless of visual presentation.
+- **Selection and targeting:** Click hitboxes are defined per render mode via `ScreenToWorld`, but the available actions and information (tooltip, stats panel) are identical.
+
+If a future render mode creates an information asymmetry (e.g., 3D terrain occlusion that hides units behind buildings when the 2D mode shows them), the mode must equalize information display — either by adding a visibility indicator or by using the sim's visibility grid as the authority for what's shown. **The principle: render modes change how the game looks, never what the player knows.**
+
 ### Relationship to Existing Systems
 
 | System                   | Before D048                                          | After D048                                                                                           |
@@ -11653,6 +11680,11 @@ Inspired by SC2's per-race MMR. When enabled:
 **Map selection (ranked 1v1):**
 Both players alternately ban maps from the competitive map pool (curated per-season by competitive committee, D037). The remaining map is played — similar to CS2 Premier's pick/ban system but adapted for 1v1 RTS.
 
+**Map pool curation guidelines:** The competitive committee should evaluate maps for competitive suitability beyond layout and balance. Relevant considerations include:
+- **Weather sim effects (D022):** Maps with `sim_effects: true` introduce movement variance from dynamic weather (snow slowing units, ice enabling water crossing, mud bogging vehicles). The committee may include weather-active maps if the weather schedule is deterministic and strategically interesting, or exclude them if the variance is deemed unfair. Tournament organizers can override this via lobby settings.
+- **Map symmetry and spawn fairness:** Standard competitive map criteria — positional balance, resource distribution, rush distance equity.
+- **Performance impact:** Maps with extreme cell counts, excessive weather particles, or complex terrain should be tested against the 500-unit performance target (10-PERFORMANCE.md) before inclusion.
+
 **Anonymous veto (V27):** During the veto sequence, opponents are shown as "Opponent" — no username, rating, or tier badge. Identity is revealed only after the final map is determined and both players confirm ready. Leaving during the veto sequence counts as a loss (escalating cooldown: 5min → 30min → 2hr). This prevents identity-based queue dodging while preserving strategic map bans.
 
 ```
@@ -12756,6 +12788,16 @@ gameplay:
   control_group_steal: false
   auto_rally_harvesters: true
 
+net:
+  show_diagnostics: false       # toggle network overlay (latency, jitter, tick timing)
+  sync_frequency: 120           # ticks between full state hash checks (SERVER)
+  # DEV_ONLY parameters — debug builds only:
+  # desync_debug_level: 0       # 0-3, see 03-NETCODE.md § Debug Levels
+  # visual_prediction: true      # cosmetic prediction; disable for latency testing
+  # simulate_latency: 0          # artificial one-way latency (ms)
+  # simulate_loss: 0.0           # artificial packet loss (%)
+  # simulate_jitter: 0           # artificial jitter (ms)
+
 debug:
   show_fps: true
   show_network_stats: false
@@ -12923,17 +12965,17 @@ The design principle: **anything the GUI can do, the console can do.** Every but
 
 **Camera and navigation commands:**
 
-| Command                    | Description                                           |
-| -------------------------- | ----------------------------------------------------- |
-| `/camera <x,y>`            | Move camera to world position                         |
-| `/camera_follow [unit_id]` | Follow selected or specified unit                     |
-| `/camera_follow_stop`      | Stop following                                        |
-| `/bookmark_set <1-9>`      | Save current camera position to bookmark slot         |
-| `/bookmark <1-9>`          | Jump to bookmarked camera position                    |
-| `/zoom <in\|out\|level>`   | Adjust zoom (level: 0.5–4.0, default 1.0)             |
-| `/center`                  | Center camera on current selection                    |
-| `/base`                    | Center camera on construction yard                    |
-| `/alert`                   | Jump to last alert position (base under attack, etc.) |
+| Command                    | Description                                                                                                                |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `/camera <x,y>`            | Move camera to world position                                                                                              |
+| `/camera_follow [unit_id]` | Follow selected or specified unit                                                                                          |
+| `/camera_follow_stop`      | Stop following                                                                                                             |
+| `/bookmark_set <1-9>`      | Save current camera position to bookmark slot                                                                              |
+| `/bookmark <1-9>`          | Jump to bookmarked camera position                                                                                         |
+| `/zoom <in\|out\|level>`   | Adjust zoom (level: 0.5–4.0, default 1.0). In ranked/tournament, clamped to the competitive zoom range (default: 0.75–2.0) |
+| `/center`                  | Center camera on current selection                                                                                         |
+| `/base`                    | Center camera on construction yard                                                                                         |
+| `/alert`                   | Jump to last alert position (base under attack, etc.)                                                                      |
 
 **Game state commands:**
 
@@ -13124,6 +13166,17 @@ In a closed-source game (StarCraft 2, CS2, Valorant), the developer controls the
 - Deploy kernel-level anti-cheat (Warden, VAC, Vanguard) to detect modified clients
 - Ban players whose clients fail integrity checks
 - Update obfuscation faster than hackers can reverse-engineer
+
+**What commercial anti-cheat products actually do:**
+
+| Product                       | Technique                                          | How It Works                                                                                                                                                   | Why It Fails for Open-Source GPL                                                                                                                                                                                                                                                                                                                                                         |
+| ----------------------------- | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **VAC** (Valve Anti-Cheat)    | Memory scanning + process hashing                  | Scans client RAM for known cheat signatures; hashes game binaries to detect tampering; delayed bans to obscure detection vectors                               | Source is public — cheaters know exactly what memory layouts to avoid. Binary hashing is meaningless when every user compiles from source. Delayed bans rely on secrecy of detection methods; GPL eliminates that secrecy.                                                                                                                                                               |
+| **PunkBuster** (Even Balance) | Screenshot capture + hash checks + memory scanning | Takes periodic screenshots to detect overlays/wallhacks; hashes client files; scans process memory for known cheat DLLs                                        | Screenshots assume a single canonical renderer — IC's switchable render modes (D048) make "correct" screenshots undefined. Client file hashing fails when users compile their own binaries. GPL means the scanning logic itself is public, trivially bypassed.                                                                                                                           |
+| **EAC / BattlEye**            | Kernel-mode driver (ring-0)                        | Loads a kernel driver at boot that monitors all system calls, blocks known cheat tools from loading, detects memory manipulation from outside the game process | Kernel drivers are incompatible with Linux (where they'd need custom kernel modules), impossible on WASM, antithetical to user trust in open-source software, and unenforceable when users can simply remove the driver from source and recompile. Ring-0 access also creates security liability — EAC and BattlEye vulnerabilities have been exploited as privilege escalation vectors. |
+| **Vanguard** (Riot Games)     | Always-on kernel driver + client integrity         | Runs from system boot (not just during gameplay); deep system introspection; hardware fingerprinting; client binary attestation                                | The most invasive model — requires the developer to be more trusted than the user's OS. Fundamentally incompatible with GPL's guarantee that users control their own software. Also requires a dedicated security team maintaining driver compatibility across OS versions — organizations like Riot spend millions annually on this infrastructure.                                     |
+
+The common thread: every commercial anti-cheat product depends on **information asymmetry** (the developer knows things the cheater doesn't) or **privilege asymmetry** (the anti-cheat has deeper system access than the cheat). GPL v3 eliminates both. The source code is public. The user controls the binary. These are features, not flaws — but they make client-side anti-cheat a solved impossibility.
 
 None of these are available to IC:
 - The engine is GPL v3 (D051). The source code is public. There is nothing to reverse-engineer — anyone can read the protocol, the order format, and the sim logic directly.
@@ -13357,6 +13410,7 @@ Ranked matchmaking (D055) enforces additional constraints beyond casual play:
 - **Mod commands require ranked certification.** Community servers (D052) maintain a whitelist of mod commands approved for ranked play. Uncertified mod commands are rejected in ranked matches. The default: only engine-core commands are permitted; game-module commands (those registered by the built-in game module, e.g., RA1) are permitted; third-party mod commands require explicit whitelist entry.
 - **Order volume is recorded server-side.** The relay server counts orders per player per tick. This data is included in match certification (D055) and available for community review. It cannot be spoofed by modified clients.
 - **`autoexec.cfg` commands execute normally.** Cvar-setting commands (`/set`, `/get`, `/toggle`) from autoexec execute as preferences. Gameplay commands (`/build`, `/move`, etc.) from autoexec are rejected in ranked — `CommandOrigin::ConfigFile` is not a valid origin for sim-affecting orders in ranked mode. You can set your sensitivity in autoexec; you can't script your build order.
+- **Zoom range is clamped.** The competitive zoom range (default: 0.75–2.0) is enforced in ranked matches. This prevents extreme zoom-out from providing disproportionate map awareness. The default range is configured per ranked queue by the competitive committee (D037) and stored in the seasonal ranked configuration YAML. Tournament organizers can set their own zoom range via `TournamentConfig`. The `/zoom` command respects these bounds.
 
 ##### Tournament Mode
 
@@ -13373,6 +13427,22 @@ Tournament organizers (via community server administration, D052) can enable a s
 | **Workshop scripts (configurable)** | Organizer chooses: allow all, whitelist specific scripts, or disable all `.iccmd` scripts | Some tournaments embrace automation (FAF-style); others require pure manual play. Organizer's call |
 
 Tournament mode is a superset of ranked restrictions — it's ranked plus organizer-defined rules. The `CommandDispatcher` checks a `TournamentConfig` resource (if present) before executing any command.
+
+| Additional Tournament Option | Effect                                          | Default                   |
+| ---------------------------- | ----------------------------------------------- | ------------------------- |
+| **Zoom range override**      | Custom min/max zoom bounds                      | Same as ranked (0.75–2.0) |
+| **Resolution cap**           | Maximum horizontal resolution for game viewport | Disabled (no cap)         |
+| **Weather sim effects**      | Force `sim_effects: false` on all maps          | Off (use map's setting)   |
+
+##### Visual Settings & Competitive Fairness
+
+Client-side visual settings — `/weather_fx`, `/shadows`, graphics quality presets, and render quality tiers — can affect battlefield visibility. A player who disables weather particles sees more clearly during a storm; a player on Low shadows has cleaner unit silhouettes.
+
+This is a **conscious design choice, not an oversight.** Nearly every competitive game exhibits this pattern: CS2 players play on low settings for visibility, SC2 players minimize effects for performance. The access is symmetric (every player can toggle the same settings), the tradeoff is aesthetics vs. clarity, and restricting visual preferences would be hostile to players on lower-end hardware who *need* reduced effects to maintain playable frame rates.
+
+**Resolution and aspect ratio** follow the same principle. A 32:9 ultrawide player sees more horizontal area than a 16:9 player. In an isometric RTS, this advantage is modest — the sidebar and minimap consume significant screen space, and the critical information (unit positions, fog of war) is available to all players via the minimap regardless of viewport size. Restricting resolution would punish players for their hardware. Tournament organizers can set resolution caps via `TournamentConfig` if their ruleset demands hardware parity, but engine-level ranked play does not restrict this.
+
+**Principle:** Visual settings that are universally accessible, symmetrically available, and involve a meaningful aesthetic tradeoff are not restricted. Settings that provide information not available to other players (hypothetical: a shader that reveals cloaked units) would be restricted. The line is **information equivalence**, not visual equivalence.
 
 ##### What We Explicitly Do NOT Do
 
@@ -13391,6 +13461,9 @@ Tournament mode is a superset of ranked restrictions — it's ranked plus organi
 - **D037 (Community Governance):** Communities define their own competitive norms via RFCs. APM policies, script policies, and tournament rules are community decisions, not engine-enforced mandates.
 - **D052 (Community Servers):** Server operators configure ranked restrictions, tournament mode, and mod command whitelists.
 - **D055 (Ranked Tiers):** Ranked mode automatically applies the competitive integrity restrictions described above.
+- **D048 (Render Modes):** Information equivalence guarantee — all render modes display identical game-state information. See D048 § "Information Equivalence Across Render Modes."
+- **D022 (Weather):** Weather sim effects on ranked maps are a map pool curation concern — see D055 § "Map pool curation guidelines."
+- **D018 (Experience Profiles):** Profile locking table specifies which axes are fixed in ranked. See D018 § profile locking table.
 
 #### Classic Cheat Codes (Single-Player Easter Egg)
 
@@ -15380,4 +15453,114 @@ The meta-pattern across all three systems is **adaptive quality degradation** �
 | **Replay**         | Storage                   | `Minimal` embedding mode (no map/assets)       | `SelfContained` when storage allows    |
 
 All five responses share the same trigger signal (`ConnectionQuality`), the same reaction pattern (reduce → adapt → recover), and the same design philosophy (D015's efficiency pyramid — better algorithms before more resources). Building them on shared infrastructure ensures they cooperate rather than compete.
+
+---
+
+## D060: Netcode Parameter Philosophy — Automate Everything, Expose Almost Nothing
+
+**Status:** Settled  
+**Decided:** 2026-02  
+**Scope:** `ic-net`, `ic-game` (lobby), D058 (console)  
+**Phase:** Phase 5 (Multiplayer)
+
+### Context
+
+Every lockstep RTS has tunable netcode parameters: tick rate, command delay (run-ahead), game speed, sync check frequency, stall policy, and more. The question is which parameters to expose to players, which to expose to server admins, and which to keep as fixed engine constants.
+
+This decision was informed by a cross-game survey of configurable netcode parameters — covering both RTS (C&C Generals, StarCraft/Brood War, Spring Engine, 0 A.D., OpenTTD, Factorio, Age of Empires II, original Red Alert) and FPS (Counter-Strike 2) — plus analysis of IC's own sub-tick and adaptive run-ahead systems.
+
+### The Pattern: Successful Games Automate
+
+Every commercially successful game in the survey converged on the same answer: **automate netcode parameters, expose almost nothing to players.**
+
+| Game / Engine            | Player-Facing Netcode Controls                        | Automatic Systems                                                                            | Outcome                                                                       |
+| ------------------------ | ----------------------------------------------------- | -------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| **C&C Generals/ZH**      | Game speed only                                       | Adaptive run-ahead (200-sample rolling RTT + FPS), synchronized `RUNAHEAD` command           | Players never touch latency settings; game adapts silently                    |
+| **Factorio**             | None (game speed implicit)                            | Latency hiding (always-on since 0.14.0, toggle removed), server never waits for slow clients | Removed the only toggle because "always on" was always better                 |
+| **Counter-Strike 2**     | None                                                  | Sub-tick always-on; fixed 64 Hz tick (removed 64/128 choice from CS:GO)                      | Removed tick rate choice because sub-tick made it irrelevant                  |
+| **AoE II: DE**           | Game speed only                                       | Auto-adapts command delay based on connection quality                                        | No exposed latency controls in ranked                                         |
+| **Original Red Alert**   | Game speed only                                       | MaxAhead adapts automatically every 128 frames via host `TIMING` events                      | Players never interact with MaxAhead; formula-driven                          |
+| **StarCraft: Brood War** | Game speed + latency setting (Low/High/Extra High)    | None (static command delay per setting)                                                      | Latency setting confuses new players; competitive play mandates "Low Latency" |
+| **Spring Engine**        | Game speed (host) + LagProtection mode (server admin) | Dynamic speed adjustment based on CPU reporting; two speed control modes                     | More controls → more community complaints about netcode                       |
+| **0 A.D.**               | None                                                  | None (hardcoded 200ms turns, no adaptive run-ahead, stalls for everyone)                     | Least adaptive → most stalling complaints                                     |
+
+**The correlation is clear:** games that expose fewer netcode controls and invest in automatic adaptation have fewer player complaints and better perceived netcode quality. Games that expose latency settings (BW) or lack automatic adaptation (0 A.D.) have worse player experiences.
+
+### Decision
+
+IC adopts a **three-tier exposure model** for netcode parameters:
+
+#### Tier 1: Player-Facing (Lobby GUI)
+
+| Setting        | Values                                       | Default          | Who Sets     | Scope                |
+| -------------- | -------------------------------------------- | ---------------- | ------------ | -------------------- |
+| **Game Speed** | Slowest / Slower / Normal / Faster / Fastest | Slower (~15 tps) | Host (lobby) | Synced — all clients |
+
+One setting. Game speed is the only parameter where player preference is legitimate ("I like slower, more strategic games" vs. "I prefer fast-paced gameplay"). In ranked play, game speed is server-enforced and not configurable.
+
+Game speed affects only the interval between sim ticks — system behavior is tick-count-based, so all game logic works identically at any speed. Single-player can change speed mid-game; multiplayer sets it in lobby. This matches how every C&C game handled speed (see `02-ARCHITECTURE.md` § Game Speed).
+
+#### Tier 2: Advanced / Console (Power Users, D058)
+
+Available via console commands or `config.yaml`. Not in the main GUI. Flagged with appropriate cvar flags:
+
+| Cvar                     | Type  | Default | Flags        | What It Does                                                                       |
+| ------------------------ | ----- | ------- | ------------ | ---------------------------------------------------------------------------------- |
+| `net.sync_frequency`     | int   | 120     | `SERVER`     | Ticks between full state hash checks                                               |
+| `net.desync_debug_level` | int   | 0       | `DEV_ONLY`   | 0-3, controls desync diagnosis overhead (see `03-NETCODE.md` § Debug Levels)       |
+| `net.show_diagnostics`   | bool  | false   | `PERSISTENT` | Toggle network overlay (latency, jitter, packet loss, tick timing)                 |
+| `net.visual_prediction`  | bool  | true    | `DEV_ONLY`   | Client-side visual prediction; disabling useful only for testing perceived latency |
+| `net.simulate_latency`   | int   | 0       | `DEV_ONLY`   | Artificial one-way latency in ms (debug builds only)                               |
+| `net.simulate_loss`      | float | 0.0     | `DEV_ONLY`   | Artificial packet loss percentage (debug builds only)                              |
+| `net.simulate_jitter`    | int   | 0       | `DEV_ONLY`   | Artificial jitter in ms (debug builds only)                                        |
+
+These are diagnostic and testing tools, not gameplay knobs. The `DEV_ONLY` flag prevents them from affecting ranked play. The `SERVER` flag on `sync_frequency` ensures all clients use the same value.
+
+#### Tier 3: Engine Constants (Not Configurable at Runtime)
+
+| Parameter              | Value                                 | Why Fixed                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| ---------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Sim tick rate**      | 30 tps (33ms/tick)                    | In lockstep, ticks are synchronization barriers (collect orders → process → advance sim → exchange hashes), not just simulation steps. Higher rates multiply CPU cost (full ECS update per tick for 500+ units), network overhead (more sync barriers, larger run-ahead in ticks), and late-arrival risk — with no gameplay benefit. RTS units move cell-to-cell, not sub-millimeter. Visual interpolation makes 30 tps smooth at 60+ FPS render. Game speed multiplies the tick *interval*, not the tick *rate*. See `03-NETCODE.md` § "Why Sub-Tick Instead of a Higher Tick Rate" |
+| **Sub-tick ordering**  | Always on                             | Zero cost (~4 bytes/order + one sort of ≤5 items); produces visibly fairer outcomes in simultaneous-action edge cases; CS2 proved universal acceptance; no reason to toggle                                                                                                                                                                                                                                                                                                                                                                                                          |
+| **Adaptive run-ahead** | Always on                             | Generals proved this works over 20 years; adapts to both RTT and FPS; synchronized via network command                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| **Timing feedback**    | Always on                             | Client self-calibrates order submission timing based on relay feedback; DDNet-proven pattern                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| **Stall policy**       | Never stall (relay drops late orders) | Core architectural decision; stalling punishes honest players for one player's bad connection                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| **Anti-lag-switch**    | Always on                             | Relay owns the clock; non-negotiable for competitive integrity                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| **Visual prediction**  | Always on                             | Factorio lesson — removed the toggle in 0.14.0 because always-on was always better; cosmetic only (sim unchanged)                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+
+### Sub-Tick Is Not Optional
+
+Sub-tick order fairness (D008) is **always-on** — not a configurable feature:
+
+- **Cost:** ~4 bytes per order (`sub_tick_time: u32`) + one stable sort per tick of the orders array (typically 0-5 orders — negligible).
+- **Benefit:** Fairer resolution of simultaneous events (engineer races, crate grabs, simultaneous attacks). "I clicked first, I won" matches player intuition.
+- **Player experience:** The mechanism is automatic (players don't configure timestamps), but the outcome is **very visible** — who wins the engineer race, who grabs the contested crate, whose attack order resolves first. These moments define close games. Without sub-tick, ties are broken by player ID (always unfair to higher-numbered players) or packet arrival order (network-dependent randomness). With sub-tick, the player who acted first wins. That's a gameplay experience players notice and care about.
+- **If made optional:** Would require two code paths in the sim (sorted vs. unsorted order processing), a deterministic fallback that's always unfair to higher-numbered players (player ID tiebreak), and a lobby setting nobody understands. Ranked would mandate one mode anyway. CS2 faced zero community backlash — no one asked for "the old random tie-breaking."
+
+### Rationale
+
+**Netcode parameters are not like graphics settings.** Graphics preferences are subjective (some players prefer performance over visual quality). Netcode parameters have objectively correct values — or correct adaptive algorithms. Exposing the knob creates confusion:
+
+1. **Support burden:** "My game feels laggy" → "What's your tick rate set to?" → "I changed some settings and now I don't know which one broke it."
+2. **False blame:** Players blame netcode settings when the real issue is their WiFi or ISP. Exposing knobs gives them something to fiddle with instead of addressing the root cause.
+3. **Competitive fragmentation:** If netcode parameters are configurable, tournaments must mandate specific values. Different communities pick different values. Replays from one community don't feel the same on another's settings.
+4. **Testing matrix explosion:** Every configurable parameter multiplies the QA matrix. Sub-tick on/off × 5 sync frequencies × 3 debug levels = 30 configurations to test.
+
+The games that got this right — Generals, Factorio, CS2 — all converged on the same philosophy: **invest in adaptive algorithms, not exposed knobs.**
+
+### Alternatives Considered
+
+- **Expose tick rate as a lobby setting** (rejected — unlike game speed, tick rate affects CPU cost, bandwidth, and netcode timing in ways players can't reason about. If 30 tps causes issues on low-end hardware, that's a game speed problem (lower speed = lower effective tps), not a tick rate problem.)
+- **Expose latency setting like StarCraft BW** (rejected — BW's Low/High/Extra High was necessary because the game had no adaptive run-ahead. IC has adaptive run-ahead from Generals. The manual setting is replaced by a better automatic system.)
+- **Expose sub-tick as a toggle** (rejected — see analysis above. Zero-cost, always-fairer, produces visibly better outcomes in contested actions, CS2 precedent.)
+- **Expose everything in "Advanced Network Settings" panel** (rejected — the Spring Engine approach. More controls correlate with more complaints, not fewer.)
+
+### Integration with Existing Decisions
+
+- **D006 (Pluggable Networking):** The `NetworkModel` trait encapsulates all netcode behavior. Parameters are internal to each implementation, not exposed through the trait interface. `LocalNetwork` ignores network parameters entirely (zero delay, no adaptation needed). `RelayLockstepNetwork` manages run-ahead, timing feedback, and anti-lag-switch internally.
+- **D007 (Relay Server):** The relay's tick deadline, strike thresholds, and session limits are server admin configuration, not player settings. These map to relay config files, not lobby GUI.
+- **D008 (Sub-Tick Timestamps):** Explicitly non-optional per this decision.
+- **D015 (Efficiency-First Performance):** Adaptive algorithms (run-ahead, timing feedback) are the "better algorithms" tier of the efficiency pyramid — they solve the problem before reaching for brute-force approaches.
+- **D033 (Toggleable QoL):** Game speed is the one netcode-adjacent setting that fits D033's toggle model. All other netcode parameters are engineering constants, not user preferences.
+- **D058 (Console):** The `net.*` cvars defined above follow D058's cvar system with appropriate flags. The diagnostic overlay (`net_diag`) is a console command, not a GUI setting.
 

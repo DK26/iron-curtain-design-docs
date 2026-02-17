@@ -168,6 +168,36 @@ let game = GameLoop::new(sim, renderer, adapted);
 // GameLoop is identical. Zero changes.
 ```
 
+## Known Behavioral Divergences Registry
+
+IC is not bug-for-bug compatible with OpenRA (Invariant #7, D011). The sim is a clean-sheet implementation that loads the same data but processes it differently. Modders migrating from OpenRA need a structured list of **what behaves differently and why** — not a vague "results may vary" disclaimer.
+
+This registry is maintained as implementation proceeds (Phase 2+). Each entry documents:
+
+| Field               | Description                                                                 |
+| ------------------- | --------------------------------------------------------------------------- |
+| **System**          | Which subsystem diverges (pathfinding, damage, fog, production, etc.)       |
+| **OpenRA behavior** | What OpenRA does, with trait/class reference                                |
+| **IC behavior**     | What IC does differently                                                    |
+| **Rationale**       | Why IC diverges (bug fix, performance, design choice, Remastered alignment) |
+| **Mod impact**      | What breaks for modders, and how to adapt                                   |
+| **Severity**        | Cosmetic / Minor gameplay / Major gameplay / Balance-affecting              |
+
+**Planned divergence categories** (populated during Phase 2 implementation):
+
+- **Pathfinding:** IC's multi-layer hybrid (JPS + flow field + ORCA-lite) produces different routes than OpenRA's A* with custom heuristics. Group movement patterns differ. Tie-breaking order differs (Rust `HashMap` vs C# `Dictionary` iteration). Units may take different paths to the same destination.
+- **Damage model:** Rounding differences in fixed-point arithmetic. IC uses the EA source code's integer math as reference (D009) — OpenRA may round differently in edge cases.
+- **Fog of war:** Reveal radius computation, edge-of-vision behavior, shroud update timing may differ between IC's implementation and OpenRA's `Shroud`/`FogVisibility` traits.
+- **Production queue:** Build time calculations, queue prioritization, and multi-factory bonus computation may produce slightly different timings.
+- **RNG:** Different PRNG algorithm and advancement order. Scatter patterns, miss chances, and random delays will differ even with the same seed.
+- **System execution order:** IC's Bevy `FixedUpdate` schedule vs OpenRA's `World.Tick()` ordering. Movement-before-combat vs combat-before-movement produces different outcomes in edge cases.
+
+**Modder-facing output:** The divergence registry is published as part of the modding documentation and queryable via `ic mod check --divergences` (lists known divergences relevant to a mod's used features). The D056 foreign replay import system also surfaces divergences empirically — when an OpenRA replay diverges during IC playback, the `DivergenceTracker` can pinpoint which system caused the drift.
+
+**Relationship to D023 (vocabulary compatibility):** D023 ensures OpenRA trait *names* are accepted as YAML aliases. This registry addresses the harder problem: even when the names match, the *behavior* may differ. A mod that depends on specific OpenRA rounding behavior or pathfinding quirks needs to know.
+
+**Phase:** Registry structure defined in Phase 2 (when sim implementation begins and concrete divergences are discovered). Populated incrementally throughout Phase 2-5. Published alongside `11-OPENRA-FEATURES.md` gap analysis.
+
 ## What to Build Now (Phase 0) to Keep the Door Open
 
 Costs almost nothing today, enables everything later:
