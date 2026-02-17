@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-72ec874a.js";
+            window.path_to_searchindex_js = "searchindex-ae4c627c.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-1d51ffef.js"></script>
@@ -379,7 +379,7 @@
 </ul>
 <hr>
 <h2 id="how-this-was-designed"><a class="header" href="#how-this-was-designed">How This Was Designed</a></h2>
-<p>The networking design alone studied 20+ open-source codebases, 4 EA GPL source releases, and multiple academic papers — all at the source code level. Every major subsystem went through the same process. 59 design decisions with rationale. 31 research documents. ~55,000 lines of documentation across 115+ commits.</p>
+<p>The networking design alone studied 20+ open-source codebases, 4 EA GPL source releases, and multiple academic papers — all at the source code level. Every major subsystem went through the same process. 60 design decisions with rationale. 31 research documents. ~55,000 lines of documentation across 115+ commits.</p>
 <p>📖 <strong><a href="https://dk26.github.io/iron-curtain-design-docs/">Read the full design documentation →</a></strong></p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="01--vision--competitive-landscape"><a class="header" href="#01--vision--competitive-landscape">01 — Vision &amp; Competitive Landscape</a></h1>
@@ -777,7 +777,43 @@ OpenRA’s map editor handles terrain and actor placement but not mission logic 
 <li><strong>Fixed-point math:</strong> <code>i32</code>/<code>i64</code> with known scale (never <code>f32</code>/<code>f64</code> in sim)</li>
 <li><strong>Snapshottable:</strong> Full state serializable for replays, save games, desync debugging, rollback, campaign state persistence (D021)</li>
 <li><strong>Headless-capable:</strong> Can run without renderer (dedicated servers, AI training, automated testing)</li>
+<li><strong>Library-first:</strong> <code>ic-sim</code> is a Rust library crate usable by external projects — not just an internal dependency of <code>ic-game</code></li>
 </ul>
+<h3 id="external-sim-api-bot-development--research"><a class="header" href="#external-sim-api-bot-development--research">External Sim API (Bot Development &amp; Research)</a></h3>
+<p><code>ic-sim</code> is explicitly designed as a <strong>public library</strong> for external consumers: bot developers, AI researchers, tournament automation, and testing infrastructure. The sim’s purity (no I/O, no rendering, no network awareness) makes it naturally embeddable.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>// External bot developer's Cargo.toml:
+// [dependencies]
+// ic-sim = "0.x"
+// ic-protocol = "0.x"
+
+use ic_sim::{Simulation, SimConfig};
+use ic_protocol::{PlayerOrder, TimestampedOrder};
+
+// Create a headless game
+let config = SimConfig::from_yaml("rules.yaml")?;
+let mut sim = Simulation::new(config, map, players, seed);
+
+// Game loop: inject orders, step, read state
+loop {
+    let state = sim.query_state();  // read visible game state
+    let orders = my_bot.decide(&amp;state);  // bot logic
+    sim.inject_orders(&amp;orders);  // submit orders for this tick
+    sim.step();  // advance one tick
+    if sim.is_finished() { break; }
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Use cases:</strong></p>
+<ul>
+<li><strong>AI bot tournaments:</strong> Run headless matches between community-submitted bots. Same pattern as BWAPI’s SSCAIT (StarCraft) and Chrono Divide’s <code>@chronodivide/game-api</code>. The Workshop hosts bot leaderboards; <code>ic mod test</code> provides headless match execution (see <code>04-MODDING.md</code>).</li>
+<li><strong>Academic research:</strong> Reinforcement learning, multi-agent systems, game balance analysis. Researchers embed <code>ic-sim</code> in their training harness without pulling in rendering or networking.</li>
+<li><strong>Automated testing:</strong> CI pipelines create deterministic game scenarios, inject specific order sequences, and assert on outcomes. Already used internally for regression testing.</li>
+<li><strong>Replay analysis tools:</strong> Third-party tools load replay files and step through the sim to extract statistics, generate heatmaps, or compute player metrics.</li>
+</ul>
+<p><strong>API stability:</strong> The external sim API surface (<code>Simulation::new</code>, <code>step</code>, <code>inject_orders</code>, <code>query_state</code>, <code>snapshot</code>, <code>restore</code>) follows the same versioning guarantees as the mod API (see <code>04-MODDING.md</code> § “Mod API Versioning &amp; Stability”). Breaking changes require a major version bump with migration guide.</p>
+<p><strong>Distinction from <code>AiStrategy</code> trait:</strong> The <code>AiStrategy</code> trait (D041) is for in-engine AI that runs inside the sim’s tick loop as a WASM sandbox. The external sim API is for out-of-process consumers that drive the sim from the outside. Both are valid — <code>AiStrategy</code> has lower latency (no serialization boundary), the external API has more flexibility (any language, any tooling, full process isolation).</p>
+<p><strong>Phase:</strong> The external API surface crystallizes in Phase 2 when the sim is functional. Bot tournament infrastructure ships in Phase 4-5. Formal API stability guarantees begin when <code>ic-sim</code> reaches 1.0.</p>
 <h3 id="simulation-core-types"><a class="header" href="#simulation-core-types">Simulation Core Types</a></h3>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -2261,7 +2297,7 @@ pub enum ScreenClass {
 <pre><code>ic-protocol  (shared types: PlayerOrder, TimestampedOrder)
     ↑
     ├── ic-sim      (depends on: ic-protocol, ra-formats)
-    ├── ic-net      (depends on: ic-protocol)
+    ├── ic-net      (depends on: ic-protocol; contains RelayCore library + relay-server binary)
     ├── ra-formats  (standalone — .mix, .shp, .pal, YAML)
     ├── ic-render   (depends on: ic-sim for reading state)
     ├── ic-ui       (depends on: ic-sim, ic-render; reads SQLite for player analytics — D034)
@@ -2438,7 +2474,14 @@ pub struct WasmInstance {
     pub mod_id: ModId,
 }
 <span class="boring">}</span></code></pre>
-<p><strong>Determinism guarantee:</strong> Both Lua and WASM execute at a fixed point in the system pipeline (<code>trigger_system()</code> step). All clients run the same mod code with the same game state at the same tick. Lua’s string hash seed is fixed. WASM is inherently deterministic. <code>math.random()</code> is replaced with the sim’s deterministic PRNG.</p>
+<p><strong>Determinism guarantee:</strong> Both Lua and WASM execute at a fixed point in the system pipeline (<code>trigger_system()</code> step). All clients run the same mod code with the same game state at the same tick. Lua’s string hash seed is fixed. <code>math.random()</code> is replaced with the sim’s deterministic PRNG.</p>
+<p><strong>WASM determinism nuance:</strong> WASM execution is deterministic for integer and fixed-point operations, but the WASM spec permits non-determinism in floating-point NaN bit patterns. If a WASM mod uses <code>f32</code>/<code>f64</code> internally (which is legal — the sim’s fixed-point invariant applies to <code>ic-sim</code> Rust code, not to mod-internal computation), different CPU architectures may produce different NaN payloads, causing deterministic divergence (desync). Mitigations:</p>
+<ul>
+<li><strong>Runtime mandate:</strong> IC uses <code>wasmtime</code> exclusively. All clients use the same <code>wasmtime</code> version (engine-pinned). <code>wasmtime</code> canonicalizes NaN outputs for WASM arithmetic operations, which eliminates NaN bit-pattern divergence across platforms.</li>
+<li><strong>Defensive recommendation for mod authors:</strong> Mod development docs recommend using integer/fixed-point arithmetic for any computation whose results feed back into <code>PlayerOrder</code>s or are returned to host functions. Floats are safe for mod-internal scratch computation that is consumed and discarded within the same call (e.g., heuristic scoring, weight calculations that produce an integer output).</li>
+<li><strong>Hash verification:</strong> All clients verify the WASM binary hash (SHA-256) before game start. Combined with <code>wasmtime</code>’s NaN canonicalization and identical inputs, this provides a strong determinism guarantee — but it is not formally proven the way <code>ic-sim</code>’s integer-only invariant is. WASM mod desync is tracked as a distinct diagnosis path in the desync debugger.</li>
+</ul>
+<p><strong>Browser builds:</strong> Tier 3 WASM mods are desktop/server-only. The browser build (WASM target) cannot embed <code>wasmtime</code> — see <code>04-MODDING.md</code> § “Browser Build Limitation (WASM-on-WASM)” for the full analysis and future mitigation path (<code>wasmi</code> interpreter fallback).</p>
 <p><strong>Phase:</strong> Lua runtime in Phase 4. WASM runtime in Phase 4-5. Mod API versioning in Phase 6a.</p>
 <h2 id="multi-game-extensibility-game-modules"><a class="header" href="#multi-game-extensibility-game-modules">Multi-Game Extensibility (Game Modules)</a></h2>
 <p>The engine is designed as a <strong>game-agnostic RTS framework</strong> (D039) that ships with Red Alert (default) and Tiberian Dawn as built-in game modules. The same engine can run RA2, Dune 2000, or an original game as additional game modules — like OpenRA runs TD, RA, and D2K on one engine.</p>
@@ -2510,7 +2553,7 @@ pub trait GameModule {
 <tr><td><strong>Fog of war</strong></td><td><code>FogProvider</code> trait</td><td>Radius fog (RA1), elevation LOS (RA2/TS), no fog (sandbox)</td></tr>
 <tr><td><strong>Damage</strong></td><td><code>DamageResolver</code> trait</td><td>Standard pipeline (RA1), shield-first (RA2), sub-object (Generals)</td></tr>
 <tr><td><strong>Validation</strong></td><td><code>OrderValidator</code> trait (engine-enforced)</td><td>Per-module validation rules (ownership, affordability, placement, etc.)</td></tr>
-<tr><td><strong>Networking</strong></td><td><code>NetworkModel</code> trait, relay server, lockstep, replays</td><td><code>PlayerOrder</code> variants (game-specific commands)</td></tr>
+<tr><td><strong>Networking</strong></td><td><code>NetworkModel</code> trait, <code>RelayCore</code> library, relay server binary, lockstep, replays</td><td><code>PlayerOrder</code> variants (game-specific commands)</td></tr>
 <tr><td><strong>Rendering</strong></td><td>Camera, sprite batching, UI framework; post-FX pipeline available to modders</td><td>Sprite renderer (RA1), voxel renderer (RA2), mesh renderer (3D mod/future)</td></tr>
 <tr><td><strong>Modding</strong></td><td>YAML loader, Lua runtime, WASM sandbox, workshop</td><td>Rule schemas, API surface exposed to scripts</td></tr>
 <tr><td><strong>Formats</strong></td><td>Archive loading, format registry</td><td><code>.mix</code>/<code>.shp</code> (RA1), <code>.vxl</code>/<code>.hva</code> (RA2), <code>.big</code>/<code>.w3d</code> (future), map format</td></tr>
@@ -2718,6 +2761,56 @@ impl TickOrders {
 <p>This design was validated by C&amp;C Generals/Zero Hour’s “packet router” — a client-side star topology where one player collected and rebroadcast all commands. Same concept, but our server-hosted version eliminates host advantage and adds neutral time authority. See <code>research/generals-zero-hour-netcode-analysis.md</code>.</p>
 <p>Further validated by Embark Studios’ <strong>Quilkin</strong> (1,510★, Apache 2.0, co-developed with Google Cloud Gaming) — a production UDP proxy for game servers built in Rust. Quilkin implements the relay as a <strong>composable filter chain</strong>: each packet passes through an ordered pipeline of filters (Capture → Firewall → RateLimit → TokenRouter → Timestamp → Debug), and filters can be added, removed, or reordered without touching routing logic. IC’s relay should adopt this composable architecture: order validation → sub-tick timestamps → replay recording → anti-cheat → forwarding, each implemented as an independent filter. See <code>research/embark-studios-rust-gamedev-analysis.md</code> § Quilkin.</p>
 <p>For small games (2-3 players) on LAN or with direct connectivity, the same netcode runs without a relay via P2P lockstep (see “The NetworkModel Trait” section below for deployment modes).</p>
+<h3 id="relaycore-library-not-just-a-binary"><a class="header" href="#relaycore-library-not-just-a-binary">RelayCore: Library, Not Just a Binary</a></h3>
+<p>The relay logic — order collection, sub-tick sorting, time authority, anti-lag-switch, token liveness — lives as a library component (<code>RelayCore</code>) inside <code>ic-net</code>, not only as a standalone server binary. This enables three deployment modes for the same relay functionality:</p>
+<pre><code>ic-net/
+├── relay_core       ← The relay logic: order collection, sub-tick sorting,
+│                       time authority, anti-lag-switch, token liveness,
+│                       replay signing, composable filter chain
+├── relay_server     ← Standalone binary wraps RelayCore (multi-game, headless)
+└── embedded_relay   ← Game client wraps RelayCore (single game, host plays)
+</code></pre>
+<p><strong><code>RelayCore</code></strong> is a pure-logic component — no I/O, no networking. It accepts incoming order packets, sorts them by sub-tick timestamp, produces canonical <code>TickOrders</code>, and runs the composable filter chain. The embedding layer (standalone binary or game client) handles actual network I/O and feeds packets into <code>RelayCore</code>.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// The relay engine. Embedding-agnostic — works identically whether
+/// hosted in a standalone binary or inside a game client.
+pub struct RelayCore {
+    tick: u64,
+    pending_orders: Vec&lt;TimestampedOrder&gt;,
+    filter_chain: Vec&lt;Box&lt;dyn RelayFilter&gt;&gt;,
+    liveness_tokens: HashMap&lt;PlayerId, LivenessToken&gt;,
+    // ... anti-lag-switch state, replay signer, etc.
+}
+
+impl RelayCore {
+    /// Feed an incoming order packet. Called by the network layer.
+    pub fn receive_order(&amp;mut self, player: PlayerId, order: TimestampedOrder) { ... }
+    
+    /// Produce the canonical TickOrders for this tick.
+    /// Sub-tick sorts, runs filter chain, advances tick counter.
+    pub fn finalize_tick(&amp;mut self) -&gt; TickOrders { ... }
+    
+    /// Generate liveness token for the next frame.
+    pub fn next_liveness_token(&amp;mut self, player: PlayerId) -&gt; u32 { ... }
+}
+<span class="boring">}</span></code></pre>
+<p>This creates three relay deployment modes:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Mode</th><th>Who Runs RelayCore</th><th>Who Plays</th><th>Relay Quality</th><th>Use Case</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Dedicated server</strong></td><td>Standalone binary (<code>relay-server</code>)</td><td>All clients connect remotely</td><td>Full sub-tick, multi-game, neutral authority</td><td>Server rooms, Pi, competitive, ranked</td></tr>
+<tr><td><strong>Listen server</strong></td><td>Game client embeds it (<code>EmbeddedRelayNetwork</code>)</td><td>Host plays + others connect</td><td>Full sub-tick, single game, host plays</td><td>Casual, community, “Host Game” button</td></tr>
+<tr><td><strong>P2P direct</strong></td><td>Nobody — no relay</td><td>All clients peer directly</td><td>No time authority, client-side sorting</td><td>LAN, ≤3 players</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Listen server vs. Generals’ star topology.</strong> C&amp;C Generals used a star topology where the host player collected and rebroadcast orders — but the host had <strong>host advantage</strong>: zero self-latency, ability to peek at orders before broadcasting. With IC’s embedded <code>RelayCore</code>, the host’s own orders go through the same <code>RelayCore</code> pipeline as everyone else’s. Sub-tick timestamps are set by each client’s local clock <em>before</em> submission. The relay orders by timestamp, not arrival. The host doesn’t peek, doesn’t get priority.</p>
+<p><strong>Trust boundary for ranked play.</strong> An embedded relay runs inside the host’s process — a malicious host could theoretically modify <code>RelayCore</code> behavior (drop opponents’ orders, manipulate timestamps). For <strong>ranked/competitive</strong> play, the matchmaking system requires connection to an official or community-verified relay server (standalone binary on trusted infrastructure). For <strong>casual, LAN, and custom games</strong>, the embedded relay is perfect — zero setup, “Host Game” button just works, no external server needed.</p>
+<p><strong>Connecting clients can’t tell the difference.</strong> Both the standalone binary and the embedded relay present the same protocol. <code>RelayLockstepNetwork</code> on the client side connects identically — it doesn’t know or care whether the relay is a dedicated server or running inside another player’s game client. This is a deployment concern, not a protocol concern.</p>
 <h3 id="sub-tick-order-fairness-from-cs2"><a class="header" href="#sub-tick-order-fairness-from-cs2">Sub-Tick Order Fairness (from CS2)</a></h3>
 <p>Counter-Strike 2 introduced “sub-tick” architecture: instead of processing all actions at discrete tick boundaries, the client timestamps every input with sub-tick precision. The server collects inputs from all clients and processes them in chronological order within each tick window. The server still ticks at 64Hz, but events are ordered by their actual timestamps.</p>
 <p>For an RTS, the core idea — <strong>timestamped orders processed in chronological order within a tick</strong> — produces fairer results for edge cases:</p>
@@ -2727,6 +2820,24 @@ impl TickOrders {
 <li>Simultaneous attack orders → processed in actual order, not arrival order</li>
 </ul>
 <p><strong>What’s NOT relevant from CS2:</strong> CS2 is client-server authoritative with prediction and interpolation. An RTS with hundreds of units can’t afford server-authoritative simulation — the bandwidth would be enormous. We stay with deterministic lockstep (clients run identical sims), so CS2’s prediction/reconciliation doesn’t apply.</p>
+<h4 id="why-sub-tick-instead-of-a-higher-tick-rate"><a class="header" href="#why-sub-tick-instead-of-a-higher-tick-rate">Why Sub-Tick Instead of a Higher Tick Rate</a></h4>
+<p>In client-server FPS (CS2, Overwatch), a tick is just a simulation step — the server runs alone and sends corrections. In <strong>lockstep</strong>, a tick is a <strong>synchronization barrier</strong>: every tick requires collecting all players’ orders (or hitting the deadline), processing them deterministically, advancing the full ECS simulation, and exchanging sync hashes. Each tick is a coordination point between all players.</p>
+<p>This means higher tick rates have multiplicative cost in lockstep:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Approach</th><th>Sim Cost</th><th>Network Cost</th><th>Fairness Outcome</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>30 tps + sub-tick</strong></td><td>30 full sim updates/sec</td><td>30 sync barriers/sec, 3-tick run-ahead for 100ms buffer</td><td>Fair — orders sorted by timestamp within each tick</td></tr>
+<tr><td><strong>128 tps, no sub-tick</strong></td><td>128 full sim updates/sec (4.3×)</td><td>128 sync barriers/sec, ~13-tick run-ahead for same 100ms buffer</td><td>Unfair — ties within 8ms windows still broken by player ID or arrival order</td></tr>
+<tr><td><strong>128 tps + sub-tick</strong></td><td>128 full sim updates/sec (4.3×)</td><td>128 sync barriers/sec</td><td>Fair — but at enormous cost for zero additional benefit</td></tr>
+</tbody>
+</table>
+</div>
+<p>At 128 tps, you’re running all pathfinding, spatial queries, combat resolution, fog updates, and economy for 500+ units 128 times per second instead of 30. That’s a 4× CPU increase with no gameplay benefit — RTS units move cell-to-cell, not sub-millimeter. Visual interpolation already makes 30 tps look smooth at 60+ FPS render.</p>
+<p>Critically, <strong>128 tps doesn’t even eliminate the problem sub-tick solves.</strong> Two orders landing in the same 8ms window still need a tiebreaker. You’ve paid 4× the cost and still need sub-tick logic (or unfair player-ID tiebreaking) for simultaneous orders.</p>
+<p>Sub-tick <strong>decouples order fairness from simulation rate.</strong> That’s why it’s the right tool: it solves the fairness problem without paying the simulation cost. A tick’s purpose in lockstep is synchronization, and you want the <em>fewest</em> synchronization barriers that still produce good gameplay — not the most.</p>
 <h3 id="adaptive-run-ahead-from-cc-generals"><a class="header" href="#adaptive-run-ahead-from-cc-generals">Adaptive Run-Ahead (from C&amp;C Generals)</a></h3>
 <p>Every lockstep RTS has inherent input delay — the game schedules your order a few ticks into the future so remote players’ orders have time to arrive:</p>
 <pre><code>Local input at tick 50 → scheduled for tick 53 (3-tick delay)
@@ -3254,7 +3365,7 @@ pub struct CosmeticRng(pub ThreadRng); // seeded from OS entropy per client
 }
 <span class="boring">}</span></code></pre>
 <h3 id="deployment-modes"><a class="header" href="#deployment-modes">Deployment Modes</a></h3>
-<p>The same netcode runs in four modes. The first two are utility adapters (no network involved). The last two are real multiplayer deployments of the same protocol:</p>
+<p>The same netcode runs in five modes. The first two are utility adapters (no network involved). The last three are real multiplayer deployments of the same protocol:</p>
 <div class="table-wrapper">
 <table>
 <thead>
@@ -3263,13 +3374,20 @@ pub struct CosmeticRng(pub ThreadRng); // seeded from OS entropy per client
 <tbody>
 <tr><td><code>LocalNetwork</code></td><td>Pass-through — orders go straight to sim</td><td>Single player, automated tests</td><td>Phase 2</td></tr>
 <tr><td><code>ReplayPlayback</code></td><td>File reader — feeds saved orders into sim</td><td>Watching replays</td><td>Phase 2</td></tr>
-<tr><td><code>LockstepNetwork</code></td><td>P2P deployment (same protocol, no relay)</td><td>LAN, ≤3 players, direct IP</td><td>Phase 5</td></tr>
-<tr><td><code>RelayLockstepNetwork</code></td><td>Relay deployment (recommended for online)</td><td>Internet multiplayer, ranked</td><td>Phase 5</td></tr>
+<tr><td><code>LockstepNetwork</code></td><td>P2P deployment (no relay)</td><td>LAN, ≤3 players, direct IP</td><td>Phase 5</td></tr>
+<tr><td><code>EmbeddedRelayNetwork</code></td><td>Listen server — host embeds <code>RelayCore</code> and plays</td><td>Casual, community, “Host Game” button</td><td>Phase 5</td></tr>
+<tr><td><code>RelayLockstepNetwork</code></td><td>Dedicated relay (recommended for online)</td><td>Internet multiplayer, ranked</td><td>Phase 5</td></tr>
 </tbody>
 </table>
 </div>
-<p><code>LockstepNetwork</code> and <code>RelayLockstepNetwork</code> implement the same netcode. The difference is topology: P2P uses direct connections (full mesh for 2-3 players, star topology for 4+), while relay routes everything through a neutral server. Both use adaptive run-ahead, frame resilience, delta-compressed TLV, and Ed25519 signing.</p>
-<p><strong>Sub-tick ordering in P2P:</strong> Without a neutral relay, there is no central time authority. Instead, each client sorts orders deterministically by <code>(sub_tick_time, player_id)</code> — the player ID tiebreaker ensures all clients produce the same canonical order even with identical timestamps. This is slightly less fair than relay ordering (clock skew between peers can bias who “clicked first”), but acceptable for LAN/small-group play where latencies are low. The relay deployment eliminates this issue entirely with neutral time authority, and additionally provides lag-switch protection, NAT traversal, and signed replays.</p>
+<p><code>LockstepNetwork</code>, <code>EmbeddedRelayNetwork</code>, and <code>RelayLockstepNetwork</code> implement the same netcode. The differences are topology and trust:</p>
+<ul>
+<li><strong><code>LockstepNetwork</code></strong> — P2P direct connections (full mesh for 2-3 players). No relay, no time authority. Simplest, best for LAN.</li>
+<li><strong><code>EmbeddedRelayNetwork</code></strong> — the host’s game client runs <code>RelayCore</code> (see above) as a listen server. Other players connect to the host. Full sub-tick ordering, anti-lag-switch, and replay signing — same as a dedicated relay. The host plays normally while serving. Ideal for casual/community play: “Host Game” button, zero external infrastructure.</li>
+<li><strong><code>RelayLockstepNetwork</code></strong> — clients connect to a standalone relay server on trusted infrastructure. Required for ranked/competitive play (host can’t be trusted with relay authority). Recommended for internet play.</li>
+</ul>
+<p>All three use adaptive run-ahead, frame resilience, delta-compressed TLV, and Ed25519 signing. The two relay-based modes (<code>EmbeddedRelayNetwork</code> and <code>RelayLockstepNetwork</code>) share identical <code>RelayCore</code> logic — connecting clients use <code>RelayLockstepNetwork</code> in both cases and cannot distinguish between them.</p>
+<p><strong>Sub-tick ordering in P2P:</strong> Without a neutral relay, there is no central time authority. Instead, each client sorts orders deterministically by <code>(sub_tick_time, player_id)</code> — the player ID tiebreaker ensures all clients produce the same canonical order even with identical timestamps. This is slightly less fair than relay ordering (clock skew between peers can bias who “clicked first”), but acceptable for LAN/small-group play where latencies are low. The relay-based modes (embedded or dedicated) eliminate this issue entirely with neutral time authority, and additionally provide lag-switch protection, NAT traversal, and signed replays.</p>
 <h3 id="single-player-zero-delay"><a class="header" href="#single-player-zero-delay">Single-Player: Zero Delay</a></h3>
 <p><code>LocalNetwork</code> processes orders on the very next tick with zero scheduling delay:</p>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
@@ -3376,6 +3494,25 @@ pub struct NetworkSimConfig {
 <li><strong>Latency graph</strong> — per-player RTT history (rolling 60 ticks). Shows jitter, trends, and spikes.</li>
 </ul>
 <p>The overlay is toggled via debug console (<code>net_diag 1</code>) and compiled out of release builds. It uses the same data already collected by <code>NetworkDiagnostics</code> — no additional overhead.</p>
+<h3 id="netcode-parameter-philosophy-d060"><a class="header" href="#netcode-parameter-philosophy-d060">Netcode Parameter Philosophy (D060)</a></h3>
+<p>Netcode parameters are <strong>not</strong> like graphics settings. Graphics preferences are subjective; netcode parameters have objectively correct values — or correct adaptive algorithms. A cross-game survey (C&amp;C Generals, StarCraft/BW, Spring Engine, 0 A.D., OpenTTD, Factorio, CS2, AoE II:DE, original Red Alert) confirms that games which expose fewer netcode controls and invest in automatic adaptation have fewer player complaints and better perceived netcode quality.</p>
+<p>IC follows a three-tier exposure model:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Tier</th><th>Player-Facing Examples</th><th>Exposure</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Tier 1: Lobby GUI</strong></td><td>Game speed (Slowest–Fastest)</td><td>One setting. The only parameter where player preference is legitimate.</td></tr>
+<tr><td><strong>Tier 2: Console</strong></td><td><code>net.sync_frequency</code>, <code>net.show_diagnostics</code>, <code>net.desync_debug_level</code>, <code>net.simulate_latency/loss/jitter</code></td><td>Power users only. Flagged <code>DEV_ONLY</code> or <code>SERVER</code> in the cvar system (D058).</td></tr>
+<tr><td><strong>Tier 3: Engine constants</strong></td><td>Tick rate (30 tps), sub-tick ordering, adaptive run-ahead, timing feedback, stall policy (never stall), anti-lag-switch, visual prediction</td><td>Fixed. These are correct engineering solutions, not preferences.</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Sub-tick ordering (D008) is always-on.</strong> Cost: ~4 bytes per order + one sort of typically ≤5 items per tick. The mechanism is automatic, but the outcome is player-facing — who wins the engineer race, who grabs the contested crate, whose attack resolves first. These moments define close games. Making it optional would require two sim code paths, a deterministic fallback that’s inherently unfair (player ID tiebreak), and a lobby setting nobody understands.</p>
+<p><strong>Adaptive run-ahead is always-on.</strong> Generals proved this over 20 years. Manual latency settings (StarCraft BW’s Low/High/Extra High) were necessary only because BW lacked adaptive run-ahead. IC’s adaptive system replaces the manual knob with a better automatic one.</p>
+<p><strong>Visual prediction is always-on.</strong> Factorio originally offered a “latency hiding” toggle. They removed it in 0.14.0 because always-on was always better — there was no situation where the player benefited from seeing raw lockstep delay.</p>
+<p>Full rationale, cross-game evidence table, and alternatives considered: see <code>09-DECISIONS.md</code> § D060.</p>
 <h2 id="connection-establishment"><a class="header" href="#connection-establishment">Connection Establishment</a></h2>
 <p>Connection method is a concern <em>below</em> the <code>NetworkModel</code>. By the time a <code>NetworkModel</code> is constructed, transport is already established. The discovery/connection flow:</p>
 <pre><code>Discovery (tracking server / join code / direct IP / QR)
@@ -3713,13 +3850,14 @@ relay:
       replicas: 1
 </code></pre>
 <h3 id="cost-profile"><a class="header" href="#cost-profile">Cost Profile</a></h3>
-<p>Both services are lightweight — they forward small order packets, not game state:</p>
+<p>Both services are lightweight — they forward small order packets, not game state. The relay does zero simulation: each game session costs ~2-10 KB of memory (buffered orders, liveness tokens, filter state) and ~5-20 µs of CPU per tick. This is pure packet routing, not game logic.</p>
 <div class="table-wrapper">
 <table>
 <thead>
 <tr><th>Deployment</th><th>Cost</th><th>Serves</th><th>Requires</th></tr>
 </thead>
 <tbody>
+<tr><td>Embedded relay (listen server)</td><td>Free</td><td>1 game (host plays too)</td><td>Port forwarding</td></tr>
 <tr><td>Home PC / spare laptop</td><td>Free (electricity)</td><td>~50 concurrent games</td><td>Port forwarding</td></tr>
 <tr><td>Raspberry Pi</td><td>~€50 one-time</td><td>~50 concurrent games</td><td>Port forwarding</td></tr>
 <tr><td>Single VPS (community)</td><td>€5-10/month</td><td>~200 concurrent games</td><td>Nothing special</td></tr>
@@ -3728,9 +3866,15 @@ relay:
 </tbody>
 </table>
 </div>
-<p>The relay server is the heavier service (per-game session state, UDP forwarding) but still tiny — each game session is a few KB of buffered orders. A single pod handles ~100 concurrent games easily.</p>
+<p>The relay server is the heavier service (per-game session state, UDP forwarding) but still tiny — each game session is a few KB of buffered orders. A single pod handles ~100 concurrent games easily. The ~50 game estimates for home/Pi deployments are conservative practical guidance, not resource limits — the relay’s per-game cost is so low that hardware I/O and network bandwidth are the actual ceilings.</p>
 <h3 id="backend-language"><a class="header" href="#backend-language">Backend Language</a></h3>
-<p>The tracking and relay servers are standalone Rust binaries (not Bevy — no ECS needed). They share <code>ic-protocol</code> for order serialization. The relay server implements the relay-side of <code>RelayLockstepNetwork</code>. Both are simple enough to be developed in Phase 5 alongside the multiplayer client code.</p>
+<p>The tracking server is a standalone Rust binary (not Bevy — no ECS needed). It shares <code>ic-protocol</code> for order serialization.</p>
+<p>The relay logic lives as a library (<code>RelayCore</code>) in <code>ic-net</code>. This library is used in two contexts:</p>
+<ul>
+<li><strong><code>relay-server</code> binary</strong> — standalone headless process that hosts multiple concurrent games. Not Bevy, no ECS. Uses <code>RelayCore</code> + async I/O (tokio). This is the “dedicated server” for community hosting, server rooms, and Raspberry Pis.</li>
+<li><strong>Game client</strong> — <code>EmbeddedRelayNetwork</code> wraps <code>RelayCore</code> inside the game process. The host player runs the relay and plays simultaneously. Uses Bevy’s async task system for I/O. This is the “Host Game” button.</li>
+</ul>
+<p>Both share <code>ic-protocol</code> for order serialization. Both are developed in Phase 5 alongside the multiplayer client code.</p>
 <h3 id="failure-modes"><a class="header" href="#failure-modes">Failure Modes</a></h3>
 <div class="table-wrapper">
 <table>
@@ -4402,26 +4546,37 @@ end
 </table>
 </div>
 <h3 id="p2p-topology-for-multi-player"><a class="header" href="#p2p-topology-for-multi-player">P2P Topology for Multi-Player</a></h3>
-<p>Direct P2P lockstep with 2-3 players uses a full mesh (everyone connects to everyone). Beyond that, use a star topology where one player acts as host:</p>
-<pre><code>2-3 players: full mesh (every client sends to every other)
+<p>Direct P2P lockstep with 2-3 players uses a full mesh (everyone connects to everyone). Beyond that, use the embedded relay (listen server) or a dedicated relay:</p>
+<pre><code>2-3 players: full mesh (P2P, no relay)
   A ↔ B ↔ C ↔ A
 
-4+ players: star via host (one player collects and rebroadcasts)
-  B → A ← C        A = host, collects orders, broadcasts canonical tick
-      ↑
+4+ players: embedded relay (listen server — host runs RelayCore and plays)
+  B → A ← C        A = host + RelayCore, full sub-tick ordering
+      ↑             Host's orders go through same pipeline as everyone's
       D
 
-4+ players: relay server (recommended)
-  B → R ← C        R = relay, all benefits of relay deployment
-      ↑
+4+ players: dedicated relay server (recommended for competitive)
+  B → R ← C        R = standalone relay binary, trusted infrastructure
+      ↑             No player has hosting advantage
       D
 </code></pre>
-<p>For 4+ players, the relay server is strongly recommended. It solves:</p>
+<p>For 4+ players, a relay (embedded or dedicated) is strongly recommended. Both modes solve:</p>
 <ul>
-<li>NAT traversal for all players (not just host)</li>
-<li>Lag-switch protection for all players (not just host-enforced)</li>
-<li>No single player has hosting advantage (relay is neutral authority)</li>
-<li>Sub-tick ordering is globally fair</li>
+<li>Sub-tick ordering with neutral time authority</li>
+<li>Lag-switch protection for all players</li>
+<li>Replay signing</li>
+</ul>
+<p>The <strong>dedicated relay</strong> additionally provides:</p>
+<ul>
+<li>NAT traversal for all players (no port forwarding needed)</li>
+<li>No player has any hosting advantage (relay is on neutral infrastructure)</li>
+<li>Required for ranked/competitive play (untrusted host can’t manipulate relay)</li>
+</ul>
+<p>The <strong>embedded relay</strong> (listen server) additionally provides:</p>
+<ul>
+<li>Zero external infrastructure — “Host Game” button just works</li>
+<li>Full <code>RelayCore</code> pipeline (no host advantage in order processing — host’s orders go through sub-tick sorting like everyone else’s)</li>
+<li>Port forwarding required (same as any self-hosted server)</li>
 </ul>
 <h3 id="the-real-scaling-limit-sim-cost-not-network"><a class="header" href="#the-real-scaling-limit-sim-cost-not-network">The Real Scaling Limit: Sim Cost, Not Network</a></h3>
 <p>With N players, the sim has more units, more orders, and more state to process. This is a <strong>sim performance</strong> concern, not a network concern:</p>
@@ -4941,6 +5096,16 @@ impl Default for LuaExecutionLimits {
 <li>Modders write in Rust, C, Go, AssemblyScript, or even Python compiled to WASM</li>
 <li><code>wasmtime</code> or <code>wasmer</code> crates</li>
 </ul>
+<h3 id="browser-build-limitation-wasm-on-wasm"><a class="header" href="#browser-build-limitation-wasm-on-wasm">Browser Build Limitation (WASM-on-WASM)</a></h3>
+<p>When IC is compiled to WASM for the browser target (Phase 7), Tier 3 WASM mods present a fundamental problem: <code>wasmtime</code> does not compile to <code>wasm32-unknown-unknown</code>. The game itself is running as WASM in the browser — it cannot embed a full WASM runtime to run mod WASM modules inside itself.</p>
+<p><strong>Implications:</strong></p>
+<ul>
+<li><strong>Browser builds support Tier 1 (YAML) and Tier 2 (Lua) mods only.</strong> Lua via <code>mlua</code> compiles to WASM and executes as interpreted bytecode within the browser build. YAML is pure data.</li>
+<li><strong>Tier 3 WASM mods are desktop/server-only</strong> (native builds where <code>wasmtime</code> runs normally).</li>
+<li><strong>Multiplayer between browser and desktop clients</strong> is not affected by this limitation <em>for the base game</em> — the sim, networking, and all built-in systems are native Rust compiled to WASM. The limitation only matters when a lobby requires a Tier 3 mod; browser clients cannot join such lobbies.</li>
+</ul>
+<p><strong>Future mitigation:</strong> A WASM interpreter written in pure Rust (e.g., <code>wasmi</code>) can itself compile to <code>wasm32-unknown-unknown</code>, enabling Tier 3 mods in the browser at reduced performance (~10-50x slower than native <code>wasmtime</code>). This is acceptable for lightweight WASM mods (AI strategies, format loaders) but likely too slow for complex pathfinder or render mods. When/if this becomes viable, the engine would use <code>wasmtime</code> on native builds and <code>wasmi</code> on browser builds — same mod binary, different execution speed. This is a Phase 7+ concern.</p>
+<p><strong>Lobby enforcement:</strong> Servers advertise their Tier 3 support level. Browser clients filter the server browser to show only lobbies they can join. A lobby requiring a Tier 3 WASM mod displays a platform restriction badge.</p>
 <h3 id="wasm-host-api-security-boundary"><a class="header" href="#wasm-host-api-security-boundary">WASM Host API (Security Boundary)</a></h3>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -5147,6 +5312,15 @@ mod:
 </code></pre>
 <p><strong>Security:</strong> Pathfinding host functions are gated by <code>ModCapabilities.pathfinding</code>. A pathfinder mod can read terrain and obstacle positions but cannot issue orders, read gameplay state (health, resources, fog), or access render functions. This is a narrower capability than gameplay mods — pathfinders compute routes, nothing else.</p>
 <p><strong>Determinism:</strong> WASM pathfinder mods execute in the deterministic sim context. They use the same <code>WasmExecutionLimits</code> fuel budget as other WASM mods. All clients run the same WASM binary (verified by SHA-256 hash in the lobby) with the same inputs, producing identical paths. If the fuel budget is exceeded mid-path-request, the path is truncated deterministically — all clients truncate at the same point.</p>
+<p><strong>Pathfinder fuel budget concern:</strong> Pathfinding has fundamentally different call patterns from other WASM mod types. An AI mod calls <code>ai_decide()</code> once per tick — one large computation. A pathfinder mod handles <code>pathfinder_request_path()</code> potentially hundreds of times per tick (once per moving unit). The flat <code>WasmExecutionLimits.fuel_per_tick</code> budget doesn’t distinguish between these patterns: a pathfinder that spends 5,000 fuel per path request × 200 moving units = 1,000,000 fuel, consuming the entire default budget on pathfinding alone.</p>
+<p><strong>Mitigation — scaled fuel allocation for pathfinder mods:</strong></p>
+<ul>
+<li>Pathfinder WASM modules receive a <strong>separate, larger fuel allocation</strong> (<code>pathfinder_fuel_per_tick</code>) that defaults to 5× the standard budget (5,000,000 fuel). This reflects the many-calls-per-tick reality of pathfinding workloads.</li>
+<li>The per-request fuel is not individually capped — the total fuel across all path requests in a tick is bounded. This allows some paths to be expensive (complex terrain) as long as the aggregate stays within budget.</li>
+<li>If the pathfinder exhausts its fuel mid-tick, remaining path requests for that tick return <code>PathResult::Deferred</code> — the engine queues them for the next tick(s). This is deterministic (all clients defer the same requests) and gracefully degrades under load rather than truncating individual paths.</li>
+<li>The pathfinder fuel budget is separate from the mod’s general <code>fuel_per_tick</code> (used for initialization, event handlers, etc.). A pathfinder mod that also handles events gets two budgets.</li>
+<li>Mod manifests can request a custom <code>pathfinder_fuel_per_tick</code> value. The lobby displays this alongside other requested limits.</li>
+</ul>
 <p><strong>Multiplayer sync:</strong> Because pathfinding is sim-affecting, all players must use the same pathfinder. The lobby validates that all clients have the same pathfinder WASM module (hash + version). A modded pathfinder is treated identically to a built-in preset for sync purposes.</p>
 <p><strong>Phase:</strong> WASM pathfinding API ships in Phase 6a alongside the mod testing framework and Workshop. Built-in pathfinder presets (D045) ship in Phase 2 as native Rust implementations.</p>
 <h3 id="wasm-ai-strategy-api-surface"><a class="header" href="#wasm-ai-strategy-api-surface">WASM AI Strategy API Surface</a></h3>
@@ -7923,6 +8097,44 @@ pub enum ContentSource {
 <span class="boring">}</span></code></pre>
 <p>TiberianDawnHD detects Steam via AppId, Origin via Windows registry key, and GOG via standard install paths. IC should implement a <code>ContentDetector</code> that probes all known sources for each supported game and presents the user with detected installations at first run. This handles the critical UX question “where are your game assets?” without requiring manual path entry — the same approach used by OpenRA, CorsixTH, and other reimplementation projects.</p>
 <p><strong>Phase:</strong> Content detection ships in Phase 0 as part of <code>ra-formats</code> (for C&amp;C assets). Game module content detection in Phase 1.</p>
+<h3 id="browser-asset-storage"><a class="header" href="#browser-asset-storage">Browser Asset Storage</a></h3>
+<p>The <code>ContentDetector</code> pattern above assumes filesystem access — probing Steam, Origin, GOG, and directory paths. None of this works in a browser build (WASM target). Browsers have no access to the user’s real filesystem. IC needs a dedicated browser asset storage strategy.</p>
+<p><strong>Browser storage APIs</strong> (in order of preference):</p>
+<ul>
+<li><strong>OPFS (Origin Private File System):</strong> The newest browser storage API (~2023). Provides a real private filesystem with file/directory operations and synchronous access from Web Workers. Best performance for large binary assets like <code>.mix</code> archives. Primary storage backend for IC’s browser build.</li>
+<li><strong>IndexedDB:</strong> Async NoSQL database. Stores structured data and binary blobs. Typically 50MB–several GB (browser-dependent, user-prompted above quota). Wider browser support than OPFS. Fallback storage backend.</li>
+<li><strong>localStorage:</strong> Simple key-value string store, ~5-10MB limit, synchronous. Too small for game assets — suitable only for user preferences and settings.</li>
+</ul>
+<p><strong>Storage abstraction:</strong></p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Platform-agnostic asset storage.
+/// Native builds use the filesystem directly. Browser builds use OPFS/IndexedDB.
+pub trait AssetStore: Send + Sync {
+    fn read(&amp;self, path: &amp;VirtualPath) -&gt; Result&lt;Vec&lt;u8&gt;&gt;;
+    fn write(&amp;self, path: &amp;VirtualPath, data: &amp;[u8]) -&gt; Result&lt;()&gt;;
+    fn exists(&amp;self, path: &amp;VirtualPath) -&gt; bool;
+    fn list_dir(&amp;self, path: &amp;VirtualPath) -&gt; Result&lt;Vec&lt;VirtualPath&gt;&gt;;
+    fn delete(&amp;self, path: &amp;VirtualPath) -&gt; Result&lt;()&gt;;
+    fn available_space(&amp;self) -&gt; Result&lt;u64&gt;; // quota management
+}
+
+pub struct NativeStore { root: PathBuf }
+pub struct BrowserStore { /* OPFS primary, IndexedDB fallback */ }
+<span class="boring">}</span></code></pre>
+<p><strong>Browser first-run asset acquisition:</strong></p>
+<ol>
+<li>User opens IC in a browser tab. No game assets exist in browser storage yet.</li>
+<li>First-run wizard presents options: (a) drag-and-drop <code>.mix</code> files from a local RA installation, (b) paste a directory path to bulk-import, or (c) download a free content pack if legally available (e.g., freeware TD/RA releases).</li>
+<li>Imported files are stored in the OPFS virtual filesystem under a structured directory (similar to Chrono Divide’s <code>📁 /</code> layout: game archives at root, mods in <code>mods/&lt;modId&gt;/</code>, maps in <code>maps/</code>, replays in <code>replays/</code>).</li>
+<li>Subsequent launches skip import — assets persist in OPFS across sessions.</li>
+</ol>
+<p><strong>Browser mod installation:</strong></p>
+<p>Mods are downloaded as archives (via Workshop HTTP API or direct URL), extracted in-browser (using a JS/WASM decompression library), and written to <code>mods/&lt;modId&gt;/</code> in the virtual filesystem. The in-game mod browser triggers download and extraction. Lobby auto-download (D030) works identically — the <code>AssetStore</code> trait abstracts the actual storage backend.</p>
+<p><strong>Storage quota management:</strong></p>
+<p>Browsers impose per-origin storage limits (typically 1-20GB depending on browser and available disk). IC’s browser build should: (a) check <code>available_space()</code> before large downloads, (b) surface clear warnings when approaching quota, (c) provide a storage management UI (like Chrono Divide’s “Options → Storage”) showing per-mod and per-asset space usage, (d) allow selective deletion of cached assets.</p>
+<p><strong>Bevy integration:</strong> Bevy’s asset system already supports custom asset sources. The <code>BrowserStore</code> registers as a Bevy <code>AssetSource</code> so that <code>asset_server.load("ra2.mix")</code> transparently reads from OPFS on browser builds and from the filesystem on native builds. No game code changes required — the abstraction lives below Bevy’s asset layer.</p>
+<p><strong>Phase:</strong> <code>AssetStore</code> trait and <code>BrowserStore</code> implementation ship in Phase 7 (browser build). The trait definition should exist from Phase 0 so that <code>NativeStore</code> is used consistently — this prevents filesystem assumptions from leaking into game code. Chrono Divide’s browser storage architecture (OPFS + IndexedDB, virtual directory structure, mod folder isolation) validates this approach.</p>
 <h2 id="binary-format-codec-reference-ea-source-code"><a class="header" href="#binary-format-codec-reference-ea-source-code">Binary Format Codec Reference (EA Source Code)</a></h2>
 <blockquote>
 <p>All struct definitions in this section are taken verbatim from the GPL v3 EA source code repositories:</p>
@@ -9310,6 +9522,69 @@ pub enum AntiCheatAction {
 }
 <span class="boring">}</span></code></pre>
 <p><strong>Key insight from Lichess:</strong> Neither model alone is sufficient. Statistical analysis catches sophisticated bots that mimic human timing but play at superhuman decision quality. Behavioral analysis catches crude automation that makes human-quality decisions but with inhuman input patterns. Together, false positive rates are dramatically reduced — Lichess processes millions of games with very few false bans.</p>
+<h4 id="smart-analysis-triggers"><a class="header" href="#smart-analysis-triggers">Smart Analysis Triggers</a></h4>
+<p>Not every match warrants post-hoc statistical analysis — running replays through an AI evaluator is computationally expensive. IC adapts Lichess’s smart game selection heuristics (see <code>research/minetest-lichess-analysis.md</code> § “Smart Game Selection for Anti-Cheat Analysis”) to determine which matches to prioritize:</p>
+<p><strong>Always analyze:</strong></p>
+<ul>
+<li><strong>Ranked upset:</strong> Winner’s rating is 250+ points below the loser’s stable rating. Large upsets are the highest-value target for cheat detection.</li>
+<li><strong>Tournament matches:</strong> All matches in community tournaments (D052) and season-end ladder stages (D055). Stakes justify the compute cost.</li>
+<li><strong>Titled / top-tier players:</strong> Any match involving a player in the top tier (D055) or holding a community recognition title. High-visibility matches must be trustworthy.</li>
+<li><strong>Community reports:</strong> Any match flagged by an opponent via the in-game reporting system. Player reports feed into suspicion scoring even when behavioral metrics alone wouldn’t trigger analysis.</li>
+</ul>
+<p><strong>Analyze with probability:</strong></p>
+<ul>
+<li><strong>New player wins</strong> (&lt; 40 rated games, 75% chance): A new account beating established players is a classic smurf/cheat signal. Analyzing most — but not all — conserves resources while catching the majority of alt accounts.</li>
+<li><strong>Rapid rating climb</strong> (80+ rating gain in a session, 90% chance): Sudden improvement beyond normal learning curve.</li>
+<li><strong>Relay behavioral flag</strong> (100% if <code>behavioral_score &gt; 0.4</code>): When the real-time relay-side analysis (Kaladin pattern) flags suspicious input timing, always follow up with post-hoc statistical analysis.</li>
+</ul>
+<p><strong>Skip (do not analyze):</strong></p>
+<ul>
+<li><strong>Unrated / custom games:</strong> No competitive impact. Players can do whatever they want in casual matches.</li>
+<li><strong>Games shorter than 2 minutes:</strong> Too little data for meaningful statistical analysis. Quick surrenders and rushes produce noisy results.</li>
+<li><strong>Games older than 6 months:</strong> Stale data isn’t worth the compute. Behavioral patterns may have changed.</li>
+<li><strong>Games from non-assessable sources:</strong> Friend matches, private lobbies (unless tournament-flagged), AI-only matches.</li>
+</ul>
+<p><strong>Resource budgeting:</strong> The ranking server maintains an analysis queue with configurable throughput. During high-load periods (season resets, tournament days), the “analyze with probability” triggers can have their percentages reduced to maintain queue depth. The “always analyze” triggers are never throttled.</p>
+<pre><code class="language-yaml"># analysis-triggers.yaml (ranking authority configuration)
+analysis_triggers:
+  always:
+    ranked_upset_threshold: 250     # rating difference
+    tournament_matches: true
+    top_tier_matches: true
+    community_reports: true
+  probabilistic:
+    new_player_win: { max_games: 40, chance: 0.75 }
+    rapid_rating_climb: { min_gain: 80, chance: 0.90 }
+    relay_behavioral_flag: { min_score: 0.4, chance: 1.0 }
+  skip:
+    unrated: true
+    min_duration_secs: 120
+    max_age_months: 6
+    non_assessable_sources: [friend, private, ai_only]
+  budget:
+    max_queue_depth: 1000
+    degrade_probabilistic_at: 800   # reduce probabilities when queue exceeds this
+</code></pre>
+<h4 id="open-source-anti-cheat-reference-projects"><a class="header" href="#open-source-anti-cheat-reference-projects">Open-Source Anti-Cheat Reference Projects</a></h4>
+<p>IC’s behavioral analysis draws from the most successful open-source competitive platforms. This is the consolidated reference list for implementers — each project demonstrates a technique IC adapts.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Project</th><th>License</th><th>Repo</th><th>What It Teaches IC</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Lichess / lila</strong></td><td>AGPL-3.0</td><td><a href="https://github.com/lichess-org/lila">lichess-org/lila</a></td><td>Full anti-cheat pipeline at scale: auto-analysis triggers, <code>SuspCoefVariation</code> timing analysis, player flagging workflow, moderator review queue, appeal process, <code>lame</code> player segregation in matchmaking. Proves server-side-only detection works for 100M+ games.</td></tr>
+<tr><td><strong>Lichess / irwin</strong></td><td>AGPL-3.0</td><td><a href="https://github.com/lichess-org/irwin">lichess-org/irwin</a></td><td>Neural network cheat detection (“Irwin” model). Compares player decisions against engine-optimal play. IC adapts this for post-hoc replay analysis — comparing player orders against AI advisor recommendations.</td></tr>
+<tr><td><strong>DDNet antibot</strong></td><td>Closed plugin / open ABI</td><td><a href="https://github.com/ddnet/ddnet">ddnet/ddnet</a> — <code>IEngineAntibot</code> interface</td><td>Swappable server-side behavioral analysis plugin with a stable ABI. IC’s relay server should support a similar pluggable analysis architecture — the ABI is public, implementations can be private per community server.</td></tr>
+<tr><td><strong>Minetest</strong></td><td>LGPL-2.1</td><td><a href="https://github.com/minetest/minetest">minetest/minetest</a></td><td>Two relevant patterns: (1) <strong>LagPool</strong> time-budget rate limiting — server grants each player a time budget that recharges at a fixed rate, preventing burst automation without hard APM caps. (2) <strong>CSM restriction flags</strong> — server tells client which client-side mod capabilities are allowed, enforced server-side.</td></tr>
+<tr><td><strong>Mindustry</strong></td><td>GPL-3.0</td><td><a href="https://github.com/Anuken/Mindustry">Anuken/Mindustry</a></td><td>Open-source game with server-side validation and admin tools. Demonstrates community-governed anti-cheat at moderate scale — server operators choose enforcement policy. Validates the D037 community governance model.</td></tr>
+<tr><td><strong>0 A.D. / Pyrogenesis</strong></td><td>GPL-2.0+</td><td><a href="https://github.com/0ad/0ad">0ad/0ad</a></td><td>Out-of-sync (OOS) detection with state hash comparison. IC already uses hash-based desync detection, but 0 A.D.’s approach to per-component hashing for desync attribution is worth studying for V36’s trust boundary implementation.</td></tr>
+<tr><td><strong>Spring Engine</strong></td><td>GPL-2.0+</td><td><a href="https://github.com/spring/spring">spring/spring</a></td><td>Minimal order validation with community-enforced norms. Cautionary example — Spring’s lack of server-side behavioral analysis means competitive integrity relies entirely on player reporting and replays. IC’s relay-side analysis is the architectural improvement.</td></tr>
+<tr><td><strong>FAF (Forged Alliance Forever)</strong></td><td>Various</td><td><a href="https://github.com/FAForever">FAForever</a></td><td>Community-managed competitive platform for SupCom. Lobby-visible mod lists, community trust system, replay-based dispute resolution. Demonstrates that <strong>transparency + community governance</strong> scales for competitive RTS without any client-side anti-cheat.</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Key pattern across all projects:</strong> No successful open-source competitive platform uses client-side anti-cheat. Every one converges on the same architecture: server-side behavioral analysis + replay evidence + community governance + transparent tooling. IC’s four-part strategy (D058 § Competitive Integrity) is this consensus, formalized.</p>
 <h2 id="vulnerability-13-match-result-fraud"><a class="header" href="#vulnerability-13-match-result-fraud">Vulnerability 13: Match Result Fraud</a></h2>
 <h3 id="the-problem-12"><a class="header" href="#the-problem-12">The Problem</a></h3>
 <p>In competitive/ranked play, match results determine ratings. A dishonest client could claim a false result, or colluding players could submit fake results to manipulate rankings.</p>
@@ -10495,6 +10770,36 @@ let adapted = ProtocolAdapter {
 let game = GameLoop::new(sim, renderer, adapted);
 // GameLoop is identical. Zero changes.
 <span class="boring">}</span></code></pre>
+<h2 id="known-behavioral-divergences-registry"><a class="header" href="#known-behavioral-divergences-registry">Known Behavioral Divergences Registry</a></h2>
+<p>IC is not bug-for-bug compatible with OpenRA (Invariant #7, D011). The sim is a clean-sheet implementation that loads the same data but processes it differently. Modders migrating from OpenRA need a structured list of <strong>what behaves differently and why</strong> — not a vague “results may vary” disclaimer.</p>
+<p>This registry is maintained as implementation proceeds (Phase 2+). Each entry documents:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Field</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>System</strong></td><td>Which subsystem diverges (pathfinding, damage, fog, production, etc.)</td></tr>
+<tr><td><strong>OpenRA behavior</strong></td><td>What OpenRA does, with trait/class reference</td></tr>
+<tr><td><strong>IC behavior</strong></td><td>What IC does differently</td></tr>
+<tr><td><strong>Rationale</strong></td><td>Why IC diverges (bug fix, performance, design choice, Remastered alignment)</td></tr>
+<tr><td><strong>Mod impact</strong></td><td>What breaks for modders, and how to adapt</td></tr>
+<tr><td><strong>Severity</strong></td><td>Cosmetic / Minor gameplay / Major gameplay / Balance-affecting</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Planned divergence categories</strong> (populated during Phase 2 implementation):</p>
+<ul>
+<li><strong>Pathfinding:</strong> IC’s multi-layer hybrid (JPS + flow field + ORCA-lite) produces different routes than OpenRA’s A* with custom heuristics. Group movement patterns differ. Tie-breaking order differs (Rust <code>HashMap</code> vs C# <code>Dictionary</code> iteration). Units may take different paths to the same destination.</li>
+<li><strong>Damage model:</strong> Rounding differences in fixed-point arithmetic. IC uses the EA source code’s integer math as reference (D009) — OpenRA may round differently in edge cases.</li>
+<li><strong>Fog of war:</strong> Reveal radius computation, edge-of-vision behavior, shroud update timing may differ between IC’s implementation and OpenRA’s <code>Shroud</code>/<code>FogVisibility</code> traits.</li>
+<li><strong>Production queue:</strong> Build time calculations, queue prioritization, and multi-factory bonus computation may produce slightly different timings.</li>
+<li><strong>RNG:</strong> Different PRNG algorithm and advancement order. Scatter patterns, miss chances, and random delays will differ even with the same seed.</li>
+<li><strong>System execution order:</strong> IC’s Bevy <code>FixedUpdate</code> schedule vs OpenRA’s <code>World.Tick()</code> ordering. Movement-before-combat vs combat-before-movement produces different outcomes in edge cases.</li>
+</ul>
+<p><strong>Modder-facing output:</strong> The divergence registry is published as part of the modding documentation and queryable via <code>ic mod check --divergences</code> (lists known divergences relevant to a mod’s used features). The D056 foreign replay import system also surfaces divergences empirically — when an OpenRA replay diverges during IC playback, the <code>DivergenceTracker</code> can pinpoint which system caused the drift.</p>
+<p><strong>Relationship to D023 (vocabulary compatibility):</strong> D023 ensures OpenRA trait <em>names</em> are accepted as YAML aliases. This registry addresses the harder problem: even when the names match, the <em>behavior</em> may differ. A mod that depends on specific OpenRA rounding behavior or pathfinding quirks needs to know.</p>
+<p><strong>Phase:</strong> Registry structure defined in Phase 2 (when sim implementation begins and concrete divergences are discovered). Populated incrementally throughout Phase 2-5. Published alongside <code>11-OPENRA-FEATURES.md</code> gap analysis.</p>
 <h2 id="what-to-build-now-phase-0-to-keep-the-door-open"><a class="header" href="#what-to-build-now-phase-0-to-keep-the-door-open">What to Build Now (Phase 0) to Keep the Door Open</a></h2>
 <p>Costs almost nothing today, enables everything later:</p>
 <ol>
@@ -11023,17 +11328,20 @@ let game = GameLoop::new(sim, renderer, adapted);
 <p><strong>Cross-engine validation:</strong> Godot’s <code>MultiplayerAPI</code> trait follows the same pattern — an abstract multiplayer interface with a default <code>SceneMultiplayer</code> implementation and a null <code>OfflineMultiplayerPeer</code> for single-player/testing (which validates IC’s <code>LocalNetwork</code> concept). O3DE’s separate <code>AzNetworking</code> (transport layer: TCP, UDP, serialization) and <code>Multiplayer</code> Gem (game-level replication, authority, entity migration) validates IC’s <code>ic-net</code> / <code>ic-protocol</code> separation. Both engines prove that trait-abstracted networking with a null/offline implementation is the industry-standard pattern for testable game networking. See <code>research/godot-o3de-engine-analysis.md</code>.</p>
 <hr>
 <h2 id="d007-networking--relay-server-as-default"><a class="header" href="#d007-networking--relay-server-as-default">D007: Networking — Relay Server as Default</a></h2>
-<p><strong>Decision:</strong> Default multiplayer uses relay server with time authority, not pure P2P.</p>
+<p><strong>Decision:</strong> Default multiplayer uses relay server with time authority, not pure P2P. The relay logic (<code>RelayCore</code>) is a library component in <code>ic-net</code> — it can be deployed as a standalone binary (dedicated server for hosting, server rooms, Raspberry Pi) or embedded inside a game client (listen server — “Host Game” button, zero external infrastructure). Clients connecting to either deployment use the same protocol and cannot distinguish between them.</p>
 <p><strong>Rationale:</strong></p>
 <ul>
 <li>Blocks lag switches (server owns the clock)</li>
 <li>Enables sub-tick chronological ordering (CS2 insight)</li>
-<li>Handles NAT traversal (no port forwarding)</li>
+<li>Handles NAT traversal (no port forwarding — dedicated server mode)</li>
 <li>Enables order validation before broadcast (anti-cheat)</li>
 <li>Signed replays</li>
-<li>Cheap to run (doesn’t run sim, just forwards orders)</li>
+<li>Cheap to run (doesn’t run sim, just forwards orders — ~2-10 KB memory per game)</li>
+<li><strong>Listen server mode:</strong> embedded relay lets any player host a game with full sub-tick ordering and anti-lag-switch, no external server needed. Host’s own orders go through the same <code>RelayCore</code> pipeline — no host advantage in order processing.</li>
+<li><strong>Dedicated server mode:</strong> standalone binary for competitive/ranked play, community hosting, and multi-game capacity on cheap hardware.</li>
 </ul>
-<p><strong>Validated by:</strong> C&amp;C Generals/Zero Hour’s “packet router” — a client-side star topology where one player collected and rebroadcast all commands. Same concept, but our server-hosted version eliminates host advantage and adds neutral time authority. See <code>research/generals-zero-hour-netcode-analysis.md</code>. Further validated by Valve’s GameNetworkingSockets (GNS), which defaults to relay (Valve SDR — Steam Datagram Relay) for all connections, including P2P-capable scenarios. GNS’s rationale mirrors ours: relay eliminates NAT traversal headaches, provides consistent latency measurement, and blocks IP-level attacks. The GNS architecture also validates encrypting all relay traffic (AES-GCM-256 + Curve25519) — see D054 § Transport encryption. See <code>research/valve-github-analysis.md</code>. Additionally validated by Embark Studios’ <strong>Quilkin</strong> — a production Rust UDP proxy for game servers (1,510★, Apache 2.0, co-developed with Google Cloud Gaming). Quilkin provides a concrete implementation of relay-as-filter-chain: session routing via token-based connection IDs, QCMP latency measurement for server selection, composable filter pipeline (Capture → Firewall → RateLimit → TokenRouter), and full OTEL observability. Quilkin’s production deployment on Tokio + tonic confirms that async Rust handles game relay traffic at scale. See <code>research/embark-studios-rust-gamedev-analysis.md</code>.</p>
+<p><strong>Trust boundary:</strong> For ranked/competitive play, the matchmaking system requires connection to an official or community-verified dedicated relay (untrusted host can’t be allowed relay authority). For casual/LAN/custom games, the embedded relay is preferred — zero setup, full relay quality.</p>
+<p><strong>Validated by:</strong> C&amp;C Generals/Zero Hour’s “packet router” — a client-side star topology where one player collected and rebroadcast all commands. IC’s embedded relay improves on this pattern: the host’s orders go through <code>RelayCore</code>‘s sub-tick pipeline like everyone else’s (no peeking, no priority), eliminating the host advantage that Generals had. The dedicated server mode further eliminates any hosting-related advantage. See <code>research/generals-zero-hour-netcode-analysis.md</code>. Further validated by Valve’s GameNetworkingSockets (GNS), which defaults to relay (Valve SDR — Steam Datagram Relay) for all connections, including P2P-capable scenarios. GNS’s rationale mirrors ours: relay eliminates NAT traversal headaches, provides consistent latency measurement, and blocks IP-level attacks. The GNS architecture also validates encrypting all relay traffic (AES-GCM-256 + Curve25519) — see D054 § Transport encryption. See <code>research/valve-github-analysis.md</code>. Additionally validated by Embark Studios’ <strong>Quilkin</strong> — a production Rust UDP proxy for game servers (1,510★, Apache 2.0, co-developed with Google Cloud Gaming). Quilkin provides a concrete implementation of relay-as-filter-chain: session routing via token-based connection IDs, QCMP latency measurement for server selection, composable filter pipeline (Capture → Firewall → RateLimit → TokenRouter), and full OTEL observability. Quilkin’s production deployment on Tokio + tonic confirms that async Rust handles game relay traffic at scale. See <code>research/embark-studios-rust-gamedev-analysis.md</code>.</p>
 <p><strong>Alternatives available:</strong> Pure P2P lockstep, fog-authoritative server, rollback — all implementable as <code>NetworkModel</code> variants.</p>
 <hr>
 <h2 id="d008-sub-tick-timestamps-on-orders"><a class="header" href="#d008-sub-tick-timestamps-on-orders">D008: Sub-Tick Timestamps on Orders</a></h2>
@@ -13032,7 +13340,24 @@ campaign_parameters:
     render_mode: hd         # D048 — HD sprites if available, else classic
     description: "Recommended — classic balance with modern QoL and enhanced AI"
 </code></pre>
-<p>Profiles are selectable in the lobby. Players can customize individual settings or pick a preset. Competitive modes lock the profile for fairness.</p>
+<p>Profiles are selectable in the lobby. Players can customize individual settings or pick a preset. Competitive modes lock the profile for fairness — specifically:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Profile Axis</th><th>Locked in Ranked?</th><th>Rationale</th></tr>
+</thead>
+<tbody>
+<tr><td>D019 Balance preset</td><td><strong>Yes</strong> — fixed per season per queue</td><td>Sim-affecting; all players must use the same balance rules</td></tr>
+<tr><td>D033 QoL (sim-affecting)</td><td><strong>Yes</strong> — fixed per ranked queue</td><td>Sim-affecting toggles (production, commands, gameplay sections) are lobby settings; mismatch = connection refused</td></tr>
+<tr><td>D045 Pathfinding preset</td><td><strong>Yes</strong> — same impl required</td><td>Sim-affecting; pathfinder WASM hash verified across all clients</td></tr>
+<tr><td>D043 AI preset</td><td><strong>N/A</strong> — not relevant for PvP ranked</td><td>AI presets only matter in PvE/skirmish; no competitive implication</td></tr>
+<tr><td>D032 UI theme</td><td><strong>No</strong> — client-only cosmetic</td><td>No sim impact; personal visual preference</td></tr>
+<tr><td>D048 Render mode</td><td><strong>No</strong> — client-only cosmetic</td><td>No sim impact; cross-view multiplayer is architecturally safe (see D048 § “Information Equivalence”)</td></tr>
+<tr><td>D033 QoL (client-only)</td><td><strong>No</strong> — per-player preferences</td><td>Health bar display, selection glow, etc. — purely visual/UX, no competitive advantage</td></tr>
+</tbody>
+</table>
+</div>
+<p>The locked axes collectively ensure that all ranked players share identical simulation rules. The unlocked axes are guaranteed to be information-equivalent (see D048 § “Information Equivalence” and D058 § “Visual Settings &amp; Competitive Fairness”).</p>
 <p><strong>Concrete changes (baked in from Phase 0):</strong></p>
 <ol>
 <li><code>WorldPos</code> carries a Z coordinate from day one (RA1 sets z=0). <code>CellPos</code> is a game-module convenience for grid-based games, not an engine-core type.</li>
@@ -18904,6 +19229,15 @@ render_modes:
 <h3 id="cross-view-multiplayer"><a class="header" href="#cross-view-multiplayer">Cross-View Multiplayer</a></h3>
 <p>This deserves emphasis because it’s a feature no shipped C&amp;C game has offered: <strong>players using different visual presentations in the same multiplayer match.</strong> The sim/render split (Invariant #1, #9) makes this free. A competitive player who prefers classic pixel clarity plays against someone using 3D — same rules, same sim, same balance, different eyes.</p>
 <p>Cross-view also means <strong>cross-view spectating</strong>: an observer can watch a tournament match in 3D while the players compete in classic 2D. This creates unique content creation and broadcasting opportunities.</p>
+<h3 id="information-equivalence-across-render-modes"><a class="header" href="#information-equivalence-across-render-modes">Information Equivalence Across Render Modes</a></h3>
+<p>Cross-view multiplayer is competitively safe because all render modes display <strong>identical game-state information:</strong></p>
+<ul>
+<li><strong>Fog of war:</strong> Visibility is computed by <code>FogProvider</code> in the sim. Every render mode receives the same <code>VisibilityGrid</code> — no mode can reveal fogged units or terrain that another mode hides.</li>
+<li><strong>Unit visibility:</strong> Cloaked, burrowed, and disguised units are shown/hidden based on sim-side detection state (<code>DetectCloaked</code>, <code>IgnoresDisguise</code>). The render mode determines <em>how</em> a shimmer or disguise looks, not <em>whether</em> the player sees it.</li>
+<li><strong>Health bars, status indicators, minimap:</strong> All driven by sim state. A unit at 50% health shows 50% health in every render mode. Minimap icons are derived from the same entity positions regardless of visual presentation.</li>
+<li><strong>Selection and targeting:</strong> Click hitboxes are defined per render mode via <code>ScreenToWorld</code>, but the available actions and information (tooltip, stats panel) are identical.</li>
+</ul>
+<p>If a future render mode creates an information asymmetry (e.g., 3D terrain occlusion that hides units behind buildings when the 2D mode shows them), the mode must equalize information display — either by adding a visibility indicator or by using the sim’s visibility grid as the authority for what’s shown. <strong>The principle: render modes change how the game looks, never what the player knows.</strong></p>
 <h3 id="relationship-to-existing-systems"><a class="header" href="#relationship-to-existing-systems">Relationship to Existing Systems</a></h3>
 <div class="table-wrapper">
 <table>
@@ -21931,6 +22265,12 @@ faction_ratings:
 </ul>
 <p><strong>Map selection (ranked 1v1):</strong>
 Both players alternately ban maps from the competitive map pool (curated per-season by competitive committee, D037). The remaining map is played — similar to CS2 Premier’s pick/ban system but adapted for 1v1 RTS.</p>
+<p><strong>Map pool curation guidelines:</strong> The competitive committee should evaluate maps for competitive suitability beyond layout and balance. Relevant considerations include:</p>
+<ul>
+<li><strong>Weather sim effects (D022):</strong> Maps with <code>sim_effects: true</code> introduce movement variance from dynamic weather (snow slowing units, ice enabling water crossing, mud bogging vehicles). The committee may include weather-active maps if the weather schedule is deterministic and strategically interesting, or exclude them if the variance is deemed unfair. Tournament organizers can override this via lobby settings.</li>
+<li><strong>Map symmetry and spawn fairness:</strong> Standard competitive map criteria — positional balance, resource distribution, rush distance equity.</li>
+<li><strong>Performance impact:</strong> Maps with extreme cell counts, excessive weather particles, or complex terrain should be tested against the 500-unit performance target (10-PERFORMANCE.md) before inclusion.</li>
+</ul>
 <p><strong>Anonymous veto (V27):</strong> During the veto sequence, opponents are shown as “Opponent” — no username, rating, or tier badge. Identity is revealed only after the final map is determined and both players confirm ready. Leaving during the veto sequence counts as a loss (escalating cooldown: 5min → 30min → 2hr). This prevents identity-based queue dodging while preserving strategic map bans.</p>
 <pre><code>Seasonal pool: 7 maps
 Player A bans 1 → 6 remain
@@ -22949,6 +23289,16 @@ gameplay:
   control_group_steal: false
   auto_rally_harvesters: true
 
+net:
+  show_diagnostics: false       # toggle network overlay (latency, jitter, tick timing)
+  sync_frequency: 120           # ticks between full state hash checks (SERVER)
+  # DEV_ONLY parameters — debug builds only:
+  # desync_debug_level: 0       # 0-3, see 03-NETCODE.md § Debug Levels
+  # visual_prediction: true      # cosmetic prediction; disable for latency testing
+  # simulate_latency: 0          # artificial one-way latency (ms)
+  # simulate_loss: 0.0           # artificial packet loss (%)
+  # simulate_jitter: 0           # artificial jitter (ms)
+
 debug:
   show_fps: true
   show_network_stats: false
@@ -23173,7 +23523,7 @@ debug:
 <tr><td><code>/camera_follow_stop</code></td><td>Stop following</td></tr>
 <tr><td><code>/bookmark_set &lt;1-9&gt;</code></td><td>Save current camera position to bookmark slot</td></tr>
 <tr><td><code>/bookmark &lt;1-9&gt;</code></td><td>Jump to bookmarked camera position</td></tr>
-<tr><td><code>/zoom &lt;in|out|level&gt;</code></td><td>Adjust zoom (level: 0.5–4.0, default 1.0)</td></tr>
+<tr><td><code>/zoom &lt;in|out|level&gt;</code></td><td>Adjust zoom (level: 0.5–4.0, default 1.0). In ranked/tournament, clamped to the competitive zoom range (default: 0.75–2.0)</td></tr>
 <tr><td><code>/center</code></td><td>Center camera on current selection</td></tr>
 <tr><td><code>/base</code></td><td>Center camera on construction yard</td></tr>
 <tr><td><code>/alert</code></td><td>Jump to last alert position (base under attack, etc.)</td></tr>
@@ -23401,6 +23751,21 @@ Commands.register("spawn_reinforcements", {
 <li>Ban players whose clients fail integrity checks</li>
 <li>Update obfuscation faster than hackers can reverse-engineer</li>
 </ul>
+<p><strong>What commercial anti-cheat products actually do:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Product</th><th>Technique</th><th>How It Works</th><th>Why It Fails for Open-Source GPL</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>VAC</strong> (Valve Anti-Cheat)</td><td>Memory scanning + process hashing</td><td>Scans client RAM for known cheat signatures; hashes game binaries to detect tampering; delayed bans to obscure detection vectors</td><td>Source is public — cheaters know exactly what memory layouts to avoid. Binary hashing is meaningless when every user compiles from source. Delayed bans rely on secrecy of detection methods; GPL eliminates that secrecy.</td></tr>
+<tr><td><strong>PunkBuster</strong> (Even Balance)</td><td>Screenshot capture + hash checks + memory scanning</td><td>Takes periodic screenshots to detect overlays/wallhacks; hashes client files; scans process memory for known cheat DLLs</td><td>Screenshots assume a single canonical renderer — IC’s switchable render modes (D048) make “correct” screenshots undefined. Client file hashing fails when users compile their own binaries. GPL means the scanning logic itself is public, trivially bypassed.</td></tr>
+<tr><td><strong>EAC / BattlEye</strong></td><td>Kernel-mode driver (ring-0)</td><td>Loads a kernel driver at boot that monitors all system calls, blocks known cheat tools from loading, detects memory manipulation from outside the game process</td><td>Kernel drivers are incompatible with Linux (where they’d need custom kernel modules), impossible on WASM, antithetical to user trust in open-source software, and unenforceable when users can simply remove the driver from source and recompile. Ring-0 access also creates security liability — EAC and BattlEye vulnerabilities have been exploited as privilege escalation vectors.</td></tr>
+<tr><td><strong>Vanguard</strong> (Riot Games)</td><td>Always-on kernel driver + client integrity</td><td>Runs from system boot (not just during gameplay); deep system introspection; hardware fingerprinting; client binary attestation</td><td>The most invasive model — requires the developer to be more trusted than the user’s OS. Fundamentally incompatible with GPL’s guarantee that users control their own software. Also requires a dedicated security team maintaining driver compatibility across OS versions — organizations like Riot spend millions annually on this infrastructure.</td></tr>
+</tbody>
+</table>
+</div>
+<p>The common thread: every commercial anti-cheat product depends on <strong>information asymmetry</strong> (the developer knows things the cheater doesn’t) or <strong>privilege asymmetry</strong> (the anti-cheat has deeper system access than the cheat). GPL v3 eliminates both. The source code is public. The user controls the binary. These are features, not flaws — but they make client-side anti-cheat a solved impossibility.</p>
 <p>None of these are available to IC:</p>
 <ul>
 <li>The engine is GPL v3 (D051). The source code is public. There is nothing to reverse-engineer — anyone can read the protocol, the order format, and the sim logic directly.</li>
@@ -23615,6 +23980,7 @@ Commands.register("spawn_reinforcements", {
 <li><strong>Mod commands require ranked certification.</strong> Community servers (D052) maintain a whitelist of mod commands approved for ranked play. Uncertified mod commands are rejected in ranked matches. The default: only engine-core commands are permitted; game-module commands (those registered by the built-in game module, e.g., RA1) are permitted; third-party mod commands require explicit whitelist entry.</li>
 <li><strong>Order volume is recorded server-side.</strong> The relay server counts orders per player per tick. This data is included in match certification (D055) and available for community review. It cannot be spoofed by modified clients.</li>
 <li><strong><code>autoexec.cfg</code> commands execute normally.</strong> Cvar-setting commands (<code>/set</code>, <code>/get</code>, <code>/toggle</code>) from autoexec execute as preferences. Gameplay commands (<code>/build</code>, <code>/move</code>, etc.) from autoexec are rejected in ranked — <code>CommandOrigin::ConfigFile</code> is not a valid origin for sim-affecting orders in ranked mode. You can set your sensitivity in autoexec; you can’t script your build order.</li>
+<li><strong>Zoom range is clamped.</strong> The competitive zoom range (default: 0.75–2.0) is enforced in ranked matches. This prevents extreme zoom-out from providing disproportionate map awareness. The default range is configured per ranked queue by the competitive committee (D037) and stored in the seasonal ranked configuration YAML. Tournament organizers can set their own zoom range via <code>TournamentConfig</code>. The <code>/zoom</code> command respects these bounds.</li>
 </ul>
 <h5 id="tournament-mode"><a class="header" href="#tournament-mode">Tournament Mode</a></h5>
 <p>Tournament organizers (via community server administration, D052) can enable a stricter <strong>tournament mode</strong> in the lobby:</p>
@@ -23635,6 +24001,23 @@ Commands.register("spawn_reinforcements", {
 </table>
 </div>
 <p>Tournament mode is a superset of ranked restrictions — it’s ranked plus organizer-defined rules. The <code>CommandDispatcher</code> checks a <code>TournamentConfig</code> resource (if present) before executing any command.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Additional Tournament Option</th><th>Effect</th><th>Default</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Zoom range override</strong></td><td>Custom min/max zoom bounds</td><td>Same as ranked (0.75–2.0)</td></tr>
+<tr><td><strong>Resolution cap</strong></td><td>Maximum horizontal resolution for game viewport</td><td>Disabled (no cap)</td></tr>
+<tr><td><strong>Weather sim effects</strong></td><td>Force <code>sim_effects: false</code> on all maps</td><td>Off (use map’s setting)</td></tr>
+</tbody>
+</table>
+</div>
+<h5 id="visual-settings--competitive-fairness"><a class="header" href="#visual-settings--competitive-fairness">Visual Settings &amp; Competitive Fairness</a></h5>
+<p>Client-side visual settings — <code>/weather_fx</code>, <code>/shadows</code>, graphics quality presets, and render quality tiers — can affect battlefield visibility. A player who disables weather particles sees more clearly during a storm; a player on Low shadows has cleaner unit silhouettes.</p>
+<p>This is a <strong>conscious design choice, not an oversight.</strong> Nearly every competitive game exhibits this pattern: CS2 players play on low settings for visibility, SC2 players minimize effects for performance. The access is symmetric (every player can toggle the same settings), the tradeoff is aesthetics vs. clarity, and restricting visual preferences would be hostile to players on lower-end hardware who <em>need</em> reduced effects to maintain playable frame rates.</p>
+<p><strong>Resolution and aspect ratio</strong> follow the same principle. A 32:9 ultrawide player sees more horizontal area than a 16:9 player. In an isometric RTS, this advantage is modest — the sidebar and minimap consume significant screen space, and the critical information (unit positions, fog of war) is available to all players via the minimap regardless of viewport size. Restricting resolution would punish players for their hardware. Tournament organizers can set resolution caps via <code>TournamentConfig</code> if their ruleset demands hardware parity, but engine-level ranked play does not restrict this.</p>
+<p><strong>Principle:</strong> Visual settings that are universally accessible, symmetrically available, and involve a meaningful aesthetic tradeoff are not restricted. Settings that provide information not available to other players (hypothetical: a shader that reveals cloaked units) would be restricted. The line is <strong>information equivalence</strong>, not visual equivalence.</p>
 <h5 id="what-we-explicitly-do-not-do"><a class="header" href="#what-we-explicitly-do-not-do">What We Explicitly Do NOT Do</a></h5>
 <ul>
 <li><strong>No kernel anti-cheat.</strong> Warden, VAC, Vanguard, EasyAntiCheat — none of these are compatible with GPL, Linux, community trust, or open-source principles. We accept that the client cannot be trusted and design our competitive integrity around server-side verification and community governance instead.</li>
@@ -23652,6 +24035,9 @@ Commands.register("spawn_reinforcements", {
 <li><strong>D037 (Community Governance):</strong> Communities define their own competitive norms via RFCs. APM policies, script policies, and tournament rules are community decisions, not engine-enforced mandates.</li>
 <li><strong>D052 (Community Servers):</strong> Server operators configure ranked restrictions, tournament mode, and mod command whitelists.</li>
 <li><strong>D055 (Ranked Tiers):</strong> Ranked mode automatically applies the competitive integrity restrictions described above.</li>
+<li><strong>D048 (Render Modes):</strong> Information equivalence guarantee — all render modes display identical game-state information. See D048 § “Information Equivalence Across Render Modes.”</li>
+<li><strong>D022 (Weather):</strong> Weather sim effects on ranked maps are a map pool curation concern — see D055 § “Map pool curation guidelines.”</li>
+<li><strong>D018 (Experience Profiles):</strong> Profile locking table specifies which axes are fixed in ranked. See D018 § profile locking table.</li>
 </ul>
 <h4 id="classic-cheat-codes-single-player-easter-egg"><a class="header" href="#classic-cheat-codes-single-player-easter-egg">Classic Cheat Codes (Single-Player Easter Egg)</a></h4>
 <p><strong>Phase:</strong> Phase 3+ (requires command system; trivial to implement once <code>CheatCodeHandler</code> and <code>PlayerOrder::CheatCode</code> exist — each cheat reuses existing dev command effects).</p>
@@ -25551,6 +25937,116 @@ pub enum QualityTier {
 </table>
 </div>
 <p>All five responses share the same trigger signal (<code>ConnectionQuality</code>), the same reaction pattern (reduce → adapt → recover), and the same design philosophy (D015’s efficiency pyramid — better algorithms before more resources). Building them on shared infrastructure ensures they cooperate rather than compete.</p>
+<hr>
+<h2 id="d060-netcode-parameter-philosophy--automate-everything-expose-almost-nothing"><a class="header" href="#d060-netcode-parameter-philosophy--automate-everything-expose-almost-nothing">D060: Netcode Parameter Philosophy — Automate Everything, Expose Almost Nothing</a></h2>
+<p><strong>Status:</strong> Settled<br><strong>Decided:</strong> 2026-02<br><strong>Scope:</strong> <code>ic-net</code>, <code>ic-game</code> (lobby), D058 (console)<br><strong>Phase:</strong> Phase 5 (Multiplayer)</p>
+<h3 id="context-1"><a class="header" href="#context-1">Context</a></h3>
+<p>Every lockstep RTS has tunable netcode parameters: tick rate, command delay (run-ahead), game speed, sync check frequency, stall policy, and more. The question is which parameters to expose to players, which to expose to server admins, and which to keep as fixed engine constants.</p>
+<p>This decision was informed by a cross-game survey of configurable netcode parameters — covering both RTS (C&amp;C Generals, StarCraft/Brood War, Spring Engine, 0 A.D., OpenTTD, Factorio, Age of Empires II, original Red Alert) and FPS (Counter-Strike 2) — plus analysis of IC’s own sub-tick and adaptive run-ahead systems.</p>
+<h3 id="the-pattern-successful-games-automate"><a class="header" href="#the-pattern-successful-games-automate">The Pattern: Successful Games Automate</a></h3>
+<p>Every commercially successful game in the survey converged on the same answer: <strong>automate netcode parameters, expose almost nothing to players.</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Game / Engine</th><th>Player-Facing Netcode Controls</th><th>Automatic Systems</th><th>Outcome</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>C&amp;C Generals/ZH</strong></td><td>Game speed only</td><td>Adaptive run-ahead (200-sample rolling RTT + FPS), synchronized <code>RUNAHEAD</code> command</td><td>Players never touch latency settings; game adapts silently</td></tr>
+<tr><td><strong>Factorio</strong></td><td>None (game speed implicit)</td><td>Latency hiding (always-on since 0.14.0, toggle removed), server never waits for slow clients</td><td>Removed the only toggle because “always on” was always better</td></tr>
+<tr><td><strong>Counter-Strike 2</strong></td><td>None</td><td>Sub-tick always-on; fixed 64 Hz tick (removed 64/128 choice from CS:GO)</td><td>Removed tick rate choice because sub-tick made it irrelevant</td></tr>
+<tr><td><strong>AoE II: DE</strong></td><td>Game speed only</td><td>Auto-adapts command delay based on connection quality</td><td>No exposed latency controls in ranked</td></tr>
+<tr><td><strong>Original Red Alert</strong></td><td>Game speed only</td><td>MaxAhead adapts automatically every 128 frames via host <code>TIMING</code> events</td><td>Players never interact with MaxAhead; formula-driven</td></tr>
+<tr><td><strong>StarCraft: Brood War</strong></td><td>Game speed + latency setting (Low/High/Extra High)</td><td>None (static command delay per setting)</td><td>Latency setting confuses new players; competitive play mandates “Low Latency”</td></tr>
+<tr><td><strong>Spring Engine</strong></td><td>Game speed (host) + LagProtection mode (server admin)</td><td>Dynamic speed adjustment based on CPU reporting; two speed control modes</td><td>More controls → more community complaints about netcode</td></tr>
+<tr><td><strong>0 A.D.</strong></td><td>None</td><td>None (hardcoded 200ms turns, no adaptive run-ahead, stalls for everyone)</td><td>Least adaptive → most stalling complaints</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>The correlation is clear:</strong> games that expose fewer netcode controls and invest in automatic adaptation have fewer player complaints and better perceived netcode quality. Games that expose latency settings (BW) or lack automatic adaptation (0 A.D.) have worse player experiences.</p>
+<h3 id="decision-10"><a class="header" href="#decision-10">Decision</a></h3>
+<p>IC adopts a <strong>three-tier exposure model</strong> for netcode parameters:</p>
+<h4 id="tier-1-player-facing-lobby-gui"><a class="header" href="#tier-1-player-facing-lobby-gui">Tier 1: Player-Facing (Lobby GUI)</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Setting</th><th>Values</th><th>Default</th><th>Who Sets</th><th>Scope</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Game Speed</strong></td><td>Slowest / Slower / Normal / Faster / Fastest</td><td>Slower (~15 tps)</td><td>Host (lobby)</td><td>Synced — all clients</td></tr>
+</tbody>
+</table>
+</div>
+<p>One setting. Game speed is the only parameter where player preference is legitimate (“I like slower, more strategic games” vs. “I prefer fast-paced gameplay”). In ranked play, game speed is server-enforced and not configurable.</p>
+<p>Game speed affects only the interval between sim ticks — system behavior is tick-count-based, so all game logic works identically at any speed. Single-player can change speed mid-game; multiplayer sets it in lobby. This matches how every C&amp;C game handled speed (see <code>02-ARCHITECTURE.md</code> § Game Speed).</p>
+<h4 id="tier-2-advanced--console-power-users-d058"><a class="header" href="#tier-2-advanced--console-power-users-d058">Tier 2: Advanced / Console (Power Users, D058)</a></h4>
+<p>Available via console commands or <code>config.yaml</code>. Not in the main GUI. Flagged with appropriate cvar flags:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Cvar</th><th>Type</th><th>Default</th><th>Flags</th><th>What It Does</th></tr>
+</thead>
+<tbody>
+<tr><td><code>net.sync_frequency</code></td><td>int</td><td>120</td><td><code>SERVER</code></td><td>Ticks between full state hash checks</td></tr>
+<tr><td><code>net.desync_debug_level</code></td><td>int</td><td>0</td><td><code>DEV_ONLY</code></td><td>0-3, controls desync diagnosis overhead (see <code>03-NETCODE.md</code> § Debug Levels)</td></tr>
+<tr><td><code>net.show_diagnostics</code></td><td>bool</td><td>false</td><td><code>PERSISTENT</code></td><td>Toggle network overlay (latency, jitter, packet loss, tick timing)</td></tr>
+<tr><td><code>net.visual_prediction</code></td><td>bool</td><td>true</td><td><code>DEV_ONLY</code></td><td>Client-side visual prediction; disabling useful only for testing perceived latency</td></tr>
+<tr><td><code>net.simulate_latency</code></td><td>int</td><td>0</td><td><code>DEV_ONLY</code></td><td>Artificial one-way latency in ms (debug builds only)</td></tr>
+<tr><td><code>net.simulate_loss</code></td><td>float</td><td>0.0</td><td><code>DEV_ONLY</code></td><td>Artificial packet loss percentage (debug builds only)</td></tr>
+<tr><td><code>net.simulate_jitter</code></td><td>int</td><td>0</td><td><code>DEV_ONLY</code></td><td>Artificial jitter in ms (debug builds only)</td></tr>
+</tbody>
+</table>
+</div>
+<p>These are diagnostic and testing tools, not gameplay knobs. The <code>DEV_ONLY</code> flag prevents them from affecting ranked play. The <code>SERVER</code> flag on <code>sync_frequency</code> ensures all clients use the same value.</p>
+<h4 id="tier-3-engine-constants-not-configurable-at-runtime"><a class="header" href="#tier-3-engine-constants-not-configurable-at-runtime">Tier 3: Engine Constants (Not Configurable at Runtime)</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Parameter</th><th>Value</th><th>Why Fixed</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Sim tick rate</strong></td><td>30 tps (33ms/tick)</td><td>In lockstep, ticks are synchronization barriers (collect orders → process → advance sim → exchange hashes), not just simulation steps. Higher rates multiply CPU cost (full ECS update per tick for 500+ units), network overhead (more sync barriers, larger run-ahead in ticks), and late-arrival risk — with no gameplay benefit. RTS units move cell-to-cell, not sub-millimeter. Visual interpolation makes 30 tps smooth at 60+ FPS render. Game speed multiplies the tick <em>interval</em>, not the tick <em>rate</em>. See <code>03-NETCODE.md</code> § “Why Sub-Tick Instead of a Higher Tick Rate”</td></tr>
+<tr><td><strong>Sub-tick ordering</strong></td><td>Always on</td><td>Zero cost (~4 bytes/order + one sort of ≤5 items); produces visibly fairer outcomes in simultaneous-action edge cases; CS2 proved universal acceptance; no reason to toggle</td></tr>
+<tr><td><strong>Adaptive run-ahead</strong></td><td>Always on</td><td>Generals proved this works over 20 years; adapts to both RTT and FPS; synchronized via network command</td></tr>
+<tr><td><strong>Timing feedback</strong></td><td>Always on</td><td>Client self-calibrates order submission timing based on relay feedback; DDNet-proven pattern</td></tr>
+<tr><td><strong>Stall policy</strong></td><td>Never stall (relay drops late orders)</td><td>Core architectural decision; stalling punishes honest players for one player’s bad connection</td></tr>
+<tr><td><strong>Anti-lag-switch</strong></td><td>Always on</td><td>Relay owns the clock; non-negotiable for competitive integrity</td></tr>
+<tr><td><strong>Visual prediction</strong></td><td>Always on</td><td>Factorio lesson — removed the toggle in 0.14.0 because always-on was always better; cosmetic only (sim unchanged)</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="sub-tick-is-not-optional"><a class="header" href="#sub-tick-is-not-optional">Sub-Tick Is Not Optional</a></h3>
+<p>Sub-tick order fairness (D008) is <strong>always-on</strong> — not a configurable feature:</p>
+<ul>
+<li><strong>Cost:</strong> ~4 bytes per order (<code>sub_tick_time: u32</code>) + one stable sort per tick of the orders array (typically 0-5 orders — negligible).</li>
+<li><strong>Benefit:</strong> Fairer resolution of simultaneous events (engineer races, crate grabs, simultaneous attacks). “I clicked first, I won” matches player intuition.</li>
+<li><strong>Player experience:</strong> The mechanism is automatic (players don’t configure timestamps), but the outcome is <strong>very visible</strong> — who wins the engineer race, who grabs the contested crate, whose attack order resolves first. These moments define close games. Without sub-tick, ties are broken by player ID (always unfair to higher-numbered players) or packet arrival order (network-dependent randomness). With sub-tick, the player who acted first wins. That’s a gameplay experience players notice and care about.</li>
+<li><strong>If made optional:</strong> Would require two code paths in the sim (sorted vs. unsorted order processing), a deterministic fallback that’s always unfair to higher-numbered players (player ID tiebreak), and a lobby setting nobody understands. Ranked would mandate one mode anyway. CS2 faced zero community backlash — no one asked for “the old random tie-breaking.”</li>
+</ul>
+<h3 id="rationale-2"><a class="header" href="#rationale-2">Rationale</a></h3>
+<p><strong>Netcode parameters are not like graphics settings.</strong> Graphics preferences are subjective (some players prefer performance over visual quality). Netcode parameters have objectively correct values — or correct adaptive algorithms. Exposing the knob creates confusion:</p>
+<ol>
+<li><strong>Support burden:</strong> “My game feels laggy” → “What’s your tick rate set to?” → “I changed some settings and now I don’t know which one broke it.”</li>
+<li><strong>False blame:</strong> Players blame netcode settings when the real issue is their WiFi or ISP. Exposing knobs gives them something to fiddle with instead of addressing the root cause.</li>
+<li><strong>Competitive fragmentation:</strong> If netcode parameters are configurable, tournaments must mandate specific values. Different communities pick different values. Replays from one community don’t feel the same on another’s settings.</li>
+<li><strong>Testing matrix explosion:</strong> Every configurable parameter multiplies the QA matrix. Sub-tick on/off × 5 sync frequencies × 3 debug levels = 30 configurations to test.</li>
+</ol>
+<p>The games that got this right — Generals, Factorio, CS2 — all converged on the same philosophy: <strong>invest in adaptive algorithms, not exposed knobs.</strong></p>
+<h3 id="alternatives-considered-18"><a class="header" href="#alternatives-considered-18">Alternatives Considered</a></h3>
+<ul>
+<li><strong>Expose tick rate as a lobby setting</strong> (rejected — unlike game speed, tick rate affects CPU cost, bandwidth, and netcode timing in ways players can’t reason about. If 30 tps causes issues on low-end hardware, that’s a game speed problem (lower speed = lower effective tps), not a tick rate problem.)</li>
+<li><strong>Expose latency setting like StarCraft BW</strong> (rejected — BW’s Low/High/Extra High was necessary because the game had no adaptive run-ahead. IC has adaptive run-ahead from Generals. The manual setting is replaced by a better automatic system.)</li>
+<li><strong>Expose sub-tick as a toggle</strong> (rejected — see analysis above. Zero-cost, always-fairer, produces visibly better outcomes in contested actions, CS2 precedent.)</li>
+<li><strong>Expose everything in “Advanced Network Settings” panel</strong> (rejected — the Spring Engine approach. More controls correlate with more complaints, not fewer.)</li>
+</ul>
+<h3 id="integration-with-existing-decisions-5"><a class="header" href="#integration-with-existing-decisions-5">Integration with Existing Decisions</a></h3>
+<ul>
+<li><strong>D006 (Pluggable Networking):</strong> The <code>NetworkModel</code> trait encapsulates all netcode behavior. Parameters are internal to each implementation, not exposed through the trait interface. <code>LocalNetwork</code> ignores network parameters entirely (zero delay, no adaptation needed). <code>RelayLockstepNetwork</code> manages run-ahead, timing feedback, and anti-lag-switch internally.</li>
+<li><strong>D007 (Relay Server):</strong> The relay’s tick deadline, strike thresholds, and session limits are server admin configuration, not player settings. These map to relay config files, not lobby GUI.</li>
+<li><strong>D008 (Sub-Tick Timestamps):</strong> Explicitly non-optional per this decision.</li>
+<li><strong>D015 (Efficiency-First Performance):</strong> Adaptive algorithms (run-ahead, timing feedback) are the “better algorithms” tier of the efficiency pyramid — they solve the problem before reaching for brute-force approaches.</li>
+<li><strong>D033 (Toggleable QoL):</strong> Game speed is the one netcode-adjacent setting that fits D033’s toggle model. All other netcode parameters are engineering constants, not user preferences.</li>
+<li><strong>D058 (Console):</strong> The <code>net.*</code> cvars defined above follow D058’s cvar system with appropriate flags. The diagnostic overlay (<code>net_diag</code>) is a console command, not a GUI setting.</li>
+</ul>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="10--performance-philosophy--strategy"><a class="header" href="#10--performance-philosophy--strategy">10 — Performance Philosophy &amp; Strategy</a></h1>
 <h2 id="core-principle-efficiency-not-brute-force"><a class="header" href="#core-principle-efficiency-not-brute-force">Core Principle: Efficiency, Not Brute Force</a></h2>

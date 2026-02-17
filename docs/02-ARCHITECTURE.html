@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-72ec874a.js";
+            window.path_to_searchindex_js = "searchindex-ae4c627c.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-1d51ffef.js"></script>
@@ -228,7 +228,43 @@
 <li><strong>Fixed-point math:</strong> <code>i32</code>/<code>i64</code> with known scale (never <code>f32</code>/<code>f64</code> in sim)</li>
 <li><strong>Snapshottable:</strong> Full state serializable for replays, save games, desync debugging, rollback, campaign state persistence (D021)</li>
 <li><strong>Headless-capable:</strong> Can run without renderer (dedicated servers, AI training, automated testing)</li>
+<li><strong>Library-first:</strong> <code>ic-sim</code> is a Rust library crate usable by external projects — not just an internal dependency of <code>ic-game</code></li>
 </ul>
+<h3 id="external-sim-api-bot-development--research"><a class="header" href="#external-sim-api-bot-development--research">External Sim API (Bot Development &amp; Research)</a></h3>
+<p><code>ic-sim</code> is explicitly designed as a <strong>public library</strong> for external consumers: bot developers, AI researchers, tournament automation, and testing infrastructure. The sim’s purity (no I/O, no rendering, no network awareness) makes it naturally embeddable.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>// External bot developer's Cargo.toml:
+// [dependencies]
+// ic-sim = "0.x"
+// ic-protocol = "0.x"
+
+use ic_sim::{Simulation, SimConfig};
+use ic_protocol::{PlayerOrder, TimestampedOrder};
+
+// Create a headless game
+let config = SimConfig::from_yaml("rules.yaml")?;
+let mut sim = Simulation::new(config, map, players, seed);
+
+// Game loop: inject orders, step, read state
+loop {
+    let state = sim.query_state();  // read visible game state
+    let orders = my_bot.decide(&amp;state);  // bot logic
+    sim.inject_orders(&amp;orders);  // submit orders for this tick
+    sim.step();  // advance one tick
+    if sim.is_finished() { break; }
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Use cases:</strong></p>
+<ul>
+<li><strong>AI bot tournaments:</strong> Run headless matches between community-submitted bots. Same pattern as BWAPI’s SSCAIT (StarCraft) and Chrono Divide’s <code>@chronodivide/game-api</code>. The Workshop hosts bot leaderboards; <code>ic mod test</code> provides headless match execution (see <code>04-MODDING.md</code>).</li>
+<li><strong>Academic research:</strong> Reinforcement learning, multi-agent systems, game balance analysis. Researchers embed <code>ic-sim</code> in their training harness without pulling in rendering or networking.</li>
+<li><strong>Automated testing:</strong> CI pipelines create deterministic game scenarios, inject specific order sequences, and assert on outcomes. Already used internally for regression testing.</li>
+<li><strong>Replay analysis tools:</strong> Third-party tools load replay files and step through the sim to extract statistics, generate heatmaps, or compute player metrics.</li>
+</ul>
+<p><strong>API stability:</strong> The external sim API surface (<code>Simulation::new</code>, <code>step</code>, <code>inject_orders</code>, <code>query_state</code>, <code>snapshot</code>, <code>restore</code>) follows the same versioning guarantees as the mod API (see <code>04-MODDING.md</code> § “Mod API Versioning &amp; Stability”). Breaking changes require a major version bump with migration guide.</p>
+<p><strong>Distinction from <code>AiStrategy</code> trait:</strong> The <code>AiStrategy</code> trait (D041) is for in-engine AI that runs inside the sim’s tick loop as a WASM sandbox. The external sim API is for out-of-process consumers that drive the sim from the outside. Both are valid — <code>AiStrategy</code> has lower latency (no serialization boundary), the external API has more flexibility (any language, any tooling, full process isolation).</p>
+<p><strong>Phase:</strong> The external API surface crystallizes in Phase 2 when the sim is functional. Bot tournament infrastructure ships in Phase 4-5. Formal API stability guarantees begin when <code>ic-sim</code> reaches 1.0.</p>
 <h3 id="simulation-core-types"><a class="header" href="#simulation-core-types">Simulation Core Types</a></h3>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -1712,7 +1748,7 @@ pub enum ScreenClass {
 <pre><code>ic-protocol  (shared types: PlayerOrder, TimestampedOrder)
     ↑
     ├── ic-sim      (depends on: ic-protocol, ra-formats)
-    ├── ic-net      (depends on: ic-protocol)
+    ├── ic-net      (depends on: ic-protocol; contains RelayCore library + relay-server binary)
     ├── ra-formats  (standalone — .mix, .shp, .pal, YAML)
     ├── ic-render   (depends on: ic-sim for reading state)
     ├── ic-ui       (depends on: ic-sim, ic-render; reads SQLite for player analytics — D034)
@@ -1889,7 +1925,14 @@ pub struct WasmInstance {
     pub mod_id: ModId,
 }
 <span class="boring">}</span></code></pre>
-<p><strong>Determinism guarantee:</strong> Both Lua and WASM execute at a fixed point in the system pipeline (<code>trigger_system()</code> step). All clients run the same mod code with the same game state at the same tick. Lua’s string hash seed is fixed. WASM is inherently deterministic. <code>math.random()</code> is replaced with the sim’s deterministic PRNG.</p>
+<p><strong>Determinism guarantee:</strong> Both Lua and WASM execute at a fixed point in the system pipeline (<code>trigger_system()</code> step). All clients run the same mod code with the same game state at the same tick. Lua’s string hash seed is fixed. <code>math.random()</code> is replaced with the sim’s deterministic PRNG.</p>
+<p><strong>WASM determinism nuance:</strong> WASM execution is deterministic for integer and fixed-point operations, but the WASM spec permits non-determinism in floating-point NaN bit patterns. If a WASM mod uses <code>f32</code>/<code>f64</code> internally (which is legal — the sim’s fixed-point invariant applies to <code>ic-sim</code> Rust code, not to mod-internal computation), different CPU architectures may produce different NaN payloads, causing deterministic divergence (desync). Mitigations:</p>
+<ul>
+<li><strong>Runtime mandate:</strong> IC uses <code>wasmtime</code> exclusively. All clients use the same <code>wasmtime</code> version (engine-pinned). <code>wasmtime</code> canonicalizes NaN outputs for WASM arithmetic operations, which eliminates NaN bit-pattern divergence across platforms.</li>
+<li><strong>Defensive recommendation for mod authors:</strong> Mod development docs recommend using integer/fixed-point arithmetic for any computation whose results feed back into <code>PlayerOrder</code>s or are returned to host functions. Floats are safe for mod-internal scratch computation that is consumed and discarded within the same call (e.g., heuristic scoring, weight calculations that produce an integer output).</li>
+<li><strong>Hash verification:</strong> All clients verify the WASM binary hash (SHA-256) before game start. Combined with <code>wasmtime</code>’s NaN canonicalization and identical inputs, this provides a strong determinism guarantee — but it is not formally proven the way <code>ic-sim</code>’s integer-only invariant is. WASM mod desync is tracked as a distinct diagnosis path in the desync debugger.</li>
+</ul>
+<p><strong>Browser builds:</strong> Tier 3 WASM mods are desktop/server-only. The browser build (WASM target) cannot embed <code>wasmtime</code> — see <code>04-MODDING.md</code> § “Browser Build Limitation (WASM-on-WASM)” for the full analysis and future mitigation path (<code>wasmi</code> interpreter fallback).</p>
 <p><strong>Phase:</strong> Lua runtime in Phase 4. WASM runtime in Phase 4-5. Mod API versioning in Phase 6a.</p>
 <h2 id="multi-game-extensibility-game-modules"><a class="header" href="#multi-game-extensibility-game-modules">Multi-Game Extensibility (Game Modules)</a></h2>
 <p>The engine is designed as a <strong>game-agnostic RTS framework</strong> (D039) that ships with Red Alert (default) and Tiberian Dawn as built-in game modules. The same engine can run RA2, Dune 2000, or an original game as additional game modules — like OpenRA runs TD, RA, and D2K on one engine.</p>
@@ -1961,7 +2004,7 @@ pub trait GameModule {
 <tr><td><strong>Fog of war</strong></td><td><code>FogProvider</code> trait</td><td>Radius fog (RA1), elevation LOS (RA2/TS), no fog (sandbox)</td></tr>
 <tr><td><strong>Damage</strong></td><td><code>DamageResolver</code> trait</td><td>Standard pipeline (RA1), shield-first (RA2), sub-object (Generals)</td></tr>
 <tr><td><strong>Validation</strong></td><td><code>OrderValidator</code> trait (engine-enforced)</td><td>Per-module validation rules (ownership, affordability, placement, etc.)</td></tr>
-<tr><td><strong>Networking</strong></td><td><code>NetworkModel</code> trait, relay server, lockstep, replays</td><td><code>PlayerOrder</code> variants (game-specific commands)</td></tr>
+<tr><td><strong>Networking</strong></td><td><code>NetworkModel</code> trait, <code>RelayCore</code> library, relay server binary, lockstep, replays</td><td><code>PlayerOrder</code> variants (game-specific commands)</td></tr>
 <tr><td><strong>Rendering</strong></td><td>Camera, sprite batching, UI framework; post-FX pipeline available to modders</td><td>Sprite renderer (RA1), voxel renderer (RA2), mesh renderer (3D mod/future)</td></tr>
 <tr><td><strong>Modding</strong></td><td>YAML loader, Lua runtime, WASM sandbox, workshop</td><td>Rule schemas, API surface exposed to scripts</td></tr>
 <tr><td><strong>Formats</strong></td><td>Archive loading, format registry</td><td><code>.mix</code>/<code>.shp</code> (RA1), <code>.vxl</code>/<code>.hva</code> (RA2), <code>.big</code>/<code>.w3d</code> (future), map format</td></tr>

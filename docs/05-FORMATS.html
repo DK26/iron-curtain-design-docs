@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-72ec874a.js";
+            window.path_to_searchindex_js = "searchindex-ae4c627c.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-1d51ffef.js"></script>
@@ -278,6 +278,44 @@ pub enum ContentSource {
 <span class="boring">}</span></code></pre>
 <p>TiberianDawnHD detects Steam via AppId, Origin via Windows registry key, and GOG via standard install paths. IC should implement a <code>ContentDetector</code> that probes all known sources for each supported game and presents the user with detected installations at first run. This handles the critical UX question “where are your game assets?” without requiring manual path entry — the same approach used by OpenRA, CorsixTH, and other reimplementation projects.</p>
 <p><strong>Phase:</strong> Content detection ships in Phase 0 as part of <code>ra-formats</code> (for C&amp;C assets). Game module content detection in Phase 1.</p>
+<h3 id="browser-asset-storage"><a class="header" href="#browser-asset-storage">Browser Asset Storage</a></h3>
+<p>The <code>ContentDetector</code> pattern above assumes filesystem access — probing Steam, Origin, GOG, and directory paths. None of this works in a browser build (WASM target). Browsers have no access to the user’s real filesystem. IC needs a dedicated browser asset storage strategy.</p>
+<p><strong>Browser storage APIs</strong> (in order of preference):</p>
+<ul>
+<li><strong>OPFS (Origin Private File System):</strong> The newest browser storage API (~2023). Provides a real private filesystem with file/directory operations and synchronous access from Web Workers. Best performance for large binary assets like <code>.mix</code> archives. Primary storage backend for IC’s browser build.</li>
+<li><strong>IndexedDB:</strong> Async NoSQL database. Stores structured data and binary blobs. Typically 50MB–several GB (browser-dependent, user-prompted above quota). Wider browser support than OPFS. Fallback storage backend.</li>
+<li><strong>localStorage:</strong> Simple key-value string store, ~5-10MB limit, synchronous. Too small for game assets — suitable only for user preferences and settings.</li>
+</ul>
+<p><strong>Storage abstraction:</strong></p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Platform-agnostic asset storage.
+/// Native builds use the filesystem directly. Browser builds use OPFS/IndexedDB.
+pub trait AssetStore: Send + Sync {
+    fn read(&amp;self, path: &amp;VirtualPath) -&gt; Result&lt;Vec&lt;u8&gt;&gt;;
+    fn write(&amp;self, path: &amp;VirtualPath, data: &amp;[u8]) -&gt; Result&lt;()&gt;;
+    fn exists(&amp;self, path: &amp;VirtualPath) -&gt; bool;
+    fn list_dir(&amp;self, path: &amp;VirtualPath) -&gt; Result&lt;Vec&lt;VirtualPath&gt;&gt;;
+    fn delete(&amp;self, path: &amp;VirtualPath) -&gt; Result&lt;()&gt;;
+    fn available_space(&amp;self) -&gt; Result&lt;u64&gt;; // quota management
+}
+
+pub struct NativeStore { root: PathBuf }
+pub struct BrowserStore { /* OPFS primary, IndexedDB fallback */ }
+<span class="boring">}</span></code></pre>
+<p><strong>Browser first-run asset acquisition:</strong></p>
+<ol>
+<li>User opens IC in a browser tab. No game assets exist in browser storage yet.</li>
+<li>First-run wizard presents options: (a) drag-and-drop <code>.mix</code> files from a local RA installation, (b) paste a directory path to bulk-import, or (c) download a free content pack if legally available (e.g., freeware TD/RA releases).</li>
+<li>Imported files are stored in the OPFS virtual filesystem under a structured directory (similar to Chrono Divide’s <code>📁 /</code> layout: game archives at root, mods in <code>mods/&lt;modId&gt;/</code>, maps in <code>maps/</code>, replays in <code>replays/</code>).</li>
+<li>Subsequent launches skip import — assets persist in OPFS across sessions.</li>
+</ol>
+<p><strong>Browser mod installation:</strong></p>
+<p>Mods are downloaded as archives (via Workshop HTTP API or direct URL), extracted in-browser (using a JS/WASM decompression library), and written to <code>mods/&lt;modId&gt;/</code> in the virtual filesystem. The in-game mod browser triggers download and extraction. Lobby auto-download (D030) works identically — the <code>AssetStore</code> trait abstracts the actual storage backend.</p>
+<p><strong>Storage quota management:</strong></p>
+<p>Browsers impose per-origin storage limits (typically 1-20GB depending on browser and available disk). IC’s browser build should: (a) check <code>available_space()</code> before large downloads, (b) surface clear warnings when approaching quota, (c) provide a storage management UI (like Chrono Divide’s “Options → Storage”) showing per-mod and per-asset space usage, (d) allow selective deletion of cached assets.</p>
+<p><strong>Bevy integration:</strong> Bevy’s asset system already supports custom asset sources. The <code>BrowserStore</code> registers as a Bevy <code>AssetSource</code> so that <code>asset_server.load("ra2.mix")</code> transparently reads from OPFS on browser builds and from the filesystem on native builds. No game code changes required — the abstraction lives below Bevy’s asset layer.</p>
+<p><strong>Phase:</strong> <code>AssetStore</code> trait and <code>BrowserStore</code> implementation ship in Phase 7 (browser build). The trait definition should exist from Phase 0 so that <code>NativeStore</code> is used consistently — this prevents filesystem assumptions from leaking into game code. Chrono Divide’s browser storage architecture (OPFS + IndexedDB, virtual directory structure, mod folder isolation) validates this approach.</p>
 <h2 id="binary-format-codec-reference-ea-source-code"><a class="header" href="#binary-format-codec-reference-ea-source-code">Binary Format Codec Reference (EA Source Code)</a></h2>
 <blockquote>
 <p>All struct definitions in this section are taken verbatim from the GPL v3 EA source code repositories:</p>

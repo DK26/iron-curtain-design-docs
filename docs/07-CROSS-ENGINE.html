@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-72ec874a.js";
+            window.path_to_searchindex_js = "searchindex-ae4c627c.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-1d51ffef.js"></script>
@@ -321,6 +321,36 @@ let adapted = ProtocolAdapter {
 let game = GameLoop::new(sim, renderer, adapted);
 // GameLoop is identical. Zero changes.
 <span class="boring">}</span></code></pre>
+<h2 id="known-behavioral-divergences-registry"><a class="header" href="#known-behavioral-divergences-registry">Known Behavioral Divergences Registry</a></h2>
+<p>IC is not bug-for-bug compatible with OpenRA (Invariant #7, D011). The sim is a clean-sheet implementation that loads the same data but processes it differently. Modders migrating from OpenRA need a structured list of <strong>what behaves differently and why</strong> — not a vague “results may vary” disclaimer.</p>
+<p>This registry is maintained as implementation proceeds (Phase 2+). Each entry documents:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Field</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>System</strong></td><td>Which subsystem diverges (pathfinding, damage, fog, production, etc.)</td></tr>
+<tr><td><strong>OpenRA behavior</strong></td><td>What OpenRA does, with trait/class reference</td></tr>
+<tr><td><strong>IC behavior</strong></td><td>What IC does differently</td></tr>
+<tr><td><strong>Rationale</strong></td><td>Why IC diverges (bug fix, performance, design choice, Remastered alignment)</td></tr>
+<tr><td><strong>Mod impact</strong></td><td>What breaks for modders, and how to adapt</td></tr>
+<tr><td><strong>Severity</strong></td><td>Cosmetic / Minor gameplay / Major gameplay / Balance-affecting</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Planned divergence categories</strong> (populated during Phase 2 implementation):</p>
+<ul>
+<li><strong>Pathfinding:</strong> IC’s multi-layer hybrid (JPS + flow field + ORCA-lite) produces different routes than OpenRA’s A* with custom heuristics. Group movement patterns differ. Tie-breaking order differs (Rust <code>HashMap</code> vs C# <code>Dictionary</code> iteration). Units may take different paths to the same destination.</li>
+<li><strong>Damage model:</strong> Rounding differences in fixed-point arithmetic. IC uses the EA source code’s integer math as reference (D009) — OpenRA may round differently in edge cases.</li>
+<li><strong>Fog of war:</strong> Reveal radius computation, edge-of-vision behavior, shroud update timing may differ between IC’s implementation and OpenRA’s <code>Shroud</code>/<code>FogVisibility</code> traits.</li>
+<li><strong>Production queue:</strong> Build time calculations, queue prioritization, and multi-factory bonus computation may produce slightly different timings.</li>
+<li><strong>RNG:</strong> Different PRNG algorithm and advancement order. Scatter patterns, miss chances, and random delays will differ even with the same seed.</li>
+<li><strong>System execution order:</strong> IC’s Bevy <code>FixedUpdate</code> schedule vs OpenRA’s <code>World.Tick()</code> ordering. Movement-before-combat vs combat-before-movement produces different outcomes in edge cases.</li>
+</ul>
+<p><strong>Modder-facing output:</strong> The divergence registry is published as part of the modding documentation and queryable via <code>ic mod check --divergences</code> (lists known divergences relevant to a mod’s used features). The D056 foreign replay import system also surfaces divergences empirically — when an OpenRA replay diverges during IC playback, the <code>DivergenceTracker</code> can pinpoint which system caused the drift.</p>
+<p><strong>Relationship to D023 (vocabulary compatibility):</strong> D023 ensures OpenRA trait <em>names</em> are accepted as YAML aliases. This registry addresses the harder problem: even when the names match, the <em>behavior</em> may differ. A mod that depends on specific OpenRA rounding behavior or pathfinding quirks needs to know.</p>
+<p><strong>Phase:</strong> Registry structure defined in Phase 2 (when sim implementation begins and concrete divergences are discovered). Populated incrementally throughout Phase 2-5. Published alongside <code>11-OPENRA-FEATURES.md</code> gap analysis.</p>
 <h2 id="what-to-build-now-phase-0-to-keep-the-door-open"><a class="header" href="#what-to-build-now-phase-0-to-keep-the-door-open">What to Build Now (Phase 0) to Keep the Door Open</a></h2>
 <p>Costs almost nothing today, enables everything later:</p>
 <ol>

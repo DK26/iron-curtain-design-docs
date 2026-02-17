@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-72ec874a.js";
+            window.path_to_searchindex_js = "searchindex-ae4c627c.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-1d51ffef.js"></script>
@@ -581,6 +581,69 @@ pub enum AntiCheatAction {
 }
 <span class="boring">}</span></code></pre>
 <p><strong>Key insight from Lichess:</strong> Neither model alone is sufficient. Statistical analysis catches sophisticated bots that mimic human timing but play at superhuman decision quality. Behavioral analysis catches crude automation that makes human-quality decisions but with inhuman input patterns. Together, false positive rates are dramatically reduced — Lichess processes millions of games with very few false bans.</p>
+<h4 id="smart-analysis-triggers"><a class="header" href="#smart-analysis-triggers">Smart Analysis Triggers</a></h4>
+<p>Not every match warrants post-hoc statistical analysis — running replays through an AI evaluator is computationally expensive. IC adapts Lichess’s smart game selection heuristics (see <code>research/minetest-lichess-analysis.md</code> § “Smart Game Selection for Anti-Cheat Analysis”) to determine which matches to prioritize:</p>
+<p><strong>Always analyze:</strong></p>
+<ul>
+<li><strong>Ranked upset:</strong> Winner’s rating is 250+ points below the loser’s stable rating. Large upsets are the highest-value target for cheat detection.</li>
+<li><strong>Tournament matches:</strong> All matches in community tournaments (D052) and season-end ladder stages (D055). Stakes justify the compute cost.</li>
+<li><strong>Titled / top-tier players:</strong> Any match involving a player in the top tier (D055) or holding a community recognition title. High-visibility matches must be trustworthy.</li>
+<li><strong>Community reports:</strong> Any match flagged by an opponent via the in-game reporting system. Player reports feed into suspicion scoring even when behavioral metrics alone wouldn’t trigger analysis.</li>
+</ul>
+<p><strong>Analyze with probability:</strong></p>
+<ul>
+<li><strong>New player wins</strong> (&lt; 40 rated games, 75% chance): A new account beating established players is a classic smurf/cheat signal. Analyzing most — but not all — conserves resources while catching the majority of alt accounts.</li>
+<li><strong>Rapid rating climb</strong> (80+ rating gain in a session, 90% chance): Sudden improvement beyond normal learning curve.</li>
+<li><strong>Relay behavioral flag</strong> (100% if <code>behavioral_score &gt; 0.4</code>): When the real-time relay-side analysis (Kaladin pattern) flags suspicious input timing, always follow up with post-hoc statistical analysis.</li>
+</ul>
+<p><strong>Skip (do not analyze):</strong></p>
+<ul>
+<li><strong>Unrated / custom games:</strong> No competitive impact. Players can do whatever they want in casual matches.</li>
+<li><strong>Games shorter than 2 minutes:</strong> Too little data for meaningful statistical analysis. Quick surrenders and rushes produce noisy results.</li>
+<li><strong>Games older than 6 months:</strong> Stale data isn’t worth the compute. Behavioral patterns may have changed.</li>
+<li><strong>Games from non-assessable sources:</strong> Friend matches, private lobbies (unless tournament-flagged), AI-only matches.</li>
+</ul>
+<p><strong>Resource budgeting:</strong> The ranking server maintains an analysis queue with configurable throughput. During high-load periods (season resets, tournament days), the “analyze with probability” triggers can have their percentages reduced to maintain queue depth. The “always analyze” triggers are never throttled.</p>
+<pre><code class="language-yaml"># analysis-triggers.yaml (ranking authority configuration)
+analysis_triggers:
+  always:
+    ranked_upset_threshold: 250     # rating difference
+    tournament_matches: true
+    top_tier_matches: true
+    community_reports: true
+  probabilistic:
+    new_player_win: { max_games: 40, chance: 0.75 }
+    rapid_rating_climb: { min_gain: 80, chance: 0.90 }
+    relay_behavioral_flag: { min_score: 0.4, chance: 1.0 }
+  skip:
+    unrated: true
+    min_duration_secs: 120
+    max_age_months: 6
+    non_assessable_sources: [friend, private, ai_only]
+  budget:
+    max_queue_depth: 1000
+    degrade_probabilistic_at: 800   # reduce probabilities when queue exceeds this
+</code></pre>
+<h4 id="open-source-anti-cheat-reference-projects"><a class="header" href="#open-source-anti-cheat-reference-projects">Open-Source Anti-Cheat Reference Projects</a></h4>
+<p>IC’s behavioral analysis draws from the most successful open-source competitive platforms. This is the consolidated reference list for implementers — each project demonstrates a technique IC adapts.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Project</th><th>License</th><th>Repo</th><th>What It Teaches IC</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Lichess / lila</strong></td><td>AGPL-3.0</td><td><a href="https://github.com/lichess-org/lila">lichess-org/lila</a></td><td>Full anti-cheat pipeline at scale: auto-analysis triggers, <code>SuspCoefVariation</code> timing analysis, player flagging workflow, moderator review queue, appeal process, <code>lame</code> player segregation in matchmaking. Proves server-side-only detection works for 100M+ games.</td></tr>
+<tr><td><strong>Lichess / irwin</strong></td><td>AGPL-3.0</td><td><a href="https://github.com/lichess-org/irwin">lichess-org/irwin</a></td><td>Neural network cheat detection (“Irwin” model). Compares player decisions against engine-optimal play. IC adapts this for post-hoc replay analysis — comparing player orders against AI advisor recommendations.</td></tr>
+<tr><td><strong>DDNet antibot</strong></td><td>Closed plugin / open ABI</td><td><a href="https://github.com/ddnet/ddnet">ddnet/ddnet</a> — <code>IEngineAntibot</code> interface</td><td>Swappable server-side behavioral analysis plugin with a stable ABI. IC’s relay server should support a similar pluggable analysis architecture — the ABI is public, implementations can be private per community server.</td></tr>
+<tr><td><strong>Minetest</strong></td><td>LGPL-2.1</td><td><a href="https://github.com/minetest/minetest">minetest/minetest</a></td><td>Two relevant patterns: (1) <strong>LagPool</strong> time-budget rate limiting — server grants each player a time budget that recharges at a fixed rate, preventing burst automation without hard APM caps. (2) <strong>CSM restriction flags</strong> — server tells client which client-side mod capabilities are allowed, enforced server-side.</td></tr>
+<tr><td><strong>Mindustry</strong></td><td>GPL-3.0</td><td><a href="https://github.com/Anuken/Mindustry">Anuken/Mindustry</a></td><td>Open-source game with server-side validation and admin tools. Demonstrates community-governed anti-cheat at moderate scale — server operators choose enforcement policy. Validates the D037 community governance model.</td></tr>
+<tr><td><strong>0 A.D. / Pyrogenesis</strong></td><td>GPL-2.0+</td><td><a href="https://github.com/0ad/0ad">0ad/0ad</a></td><td>Out-of-sync (OOS) detection with state hash comparison. IC already uses hash-based desync detection, but 0 A.D.’s approach to per-component hashing for desync attribution is worth studying for V36’s trust boundary implementation.</td></tr>
+<tr><td><strong>Spring Engine</strong></td><td>GPL-2.0+</td><td><a href="https://github.com/spring/spring">spring/spring</a></td><td>Minimal order validation with community-enforced norms. Cautionary example — Spring’s lack of server-side behavioral analysis means competitive integrity relies entirely on player reporting and replays. IC’s relay-side analysis is the architectural improvement.</td></tr>
+<tr><td><strong>FAF (Forged Alliance Forever)</strong></td><td>Various</td><td><a href="https://github.com/FAForever">FAForever</a></td><td>Community-managed competitive platform for SupCom. Lobby-visible mod lists, community trust system, replay-based dispute resolution. Demonstrates that <strong>transparency + community governance</strong> scales for competitive RTS without any client-side anti-cheat.</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Key pattern across all projects:</strong> No successful open-source competitive platform uses client-side anti-cheat. Every one converges on the same architecture: server-side behavioral analysis + replay evidence + community governance + transparent tooling. IC’s four-part strategy (D058 § Competitive Integrity) is this consensus, formalized.</p>
 <h2 id="vulnerability-13-match-result-fraud"><a class="header" href="#vulnerability-13-match-result-fraud">Vulnerability 13: Match Result Fraud</a></h2>
 <h3 id="the-problem-12"><a class="header" href="#the-problem-12">The Problem</a></h3>
 <p>In competitive/ranked play, match results determine ratings. A dishonest client could claim a false result, or colluding players could submit fake results to manipulate rankings.</p>

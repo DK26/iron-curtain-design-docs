@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-72ec874a.js";
+            window.path_to_searchindex_js = "searchindex-ae4c627c.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-1d51ffef.js"></script>
@@ -671,6 +671,16 @@ impl Default for LuaExecutionLimits {
 <li>Modders write in Rust, C, Go, AssemblyScript, or even Python compiled to WASM</li>
 <li><code>wasmtime</code> or <code>wasmer</code> crates</li>
 </ul>
+<h3 id="browser-build-limitation-wasm-on-wasm"><a class="header" href="#browser-build-limitation-wasm-on-wasm">Browser Build Limitation (WASM-on-WASM)</a></h3>
+<p>When IC is compiled to WASM for the browser target (Phase 7), Tier 3 WASM mods present a fundamental problem: <code>wasmtime</code> does not compile to <code>wasm32-unknown-unknown</code>. The game itself is running as WASM in the browser — it cannot embed a full WASM runtime to run mod WASM modules inside itself.</p>
+<p><strong>Implications:</strong></p>
+<ul>
+<li><strong>Browser builds support Tier 1 (YAML) and Tier 2 (Lua) mods only.</strong> Lua via <code>mlua</code> compiles to WASM and executes as interpreted bytecode within the browser build. YAML is pure data.</li>
+<li><strong>Tier 3 WASM mods are desktop/server-only</strong> (native builds where <code>wasmtime</code> runs normally).</li>
+<li><strong>Multiplayer between browser and desktop clients</strong> is not affected by this limitation <em>for the base game</em> — the sim, networking, and all built-in systems are native Rust compiled to WASM. The limitation only matters when a lobby requires a Tier 3 mod; browser clients cannot join such lobbies.</li>
+</ul>
+<p><strong>Future mitigation:</strong> A WASM interpreter written in pure Rust (e.g., <code>wasmi</code>) can itself compile to <code>wasm32-unknown-unknown</code>, enabling Tier 3 mods in the browser at reduced performance (~10-50x slower than native <code>wasmtime</code>). This is acceptable for lightweight WASM mods (AI strategies, format loaders) but likely too slow for complex pathfinder or render mods. When/if this becomes viable, the engine would use <code>wasmtime</code> on native builds and <code>wasmi</code> on browser builds — same mod binary, different execution speed. This is a Phase 7+ concern.</p>
+<p><strong>Lobby enforcement:</strong> Servers advertise their Tier 3 support level. Browser clients filter the server browser to show only lobbies they can join. A lobby requiring a Tier 3 WASM mod displays a platform restriction badge.</p>
 <h3 id="wasm-host-api-security-boundary"><a class="header" href="#wasm-host-api-security-boundary">WASM Host API (Security Boundary)</a></h3>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -877,6 +887,15 @@ mod:
 </code></pre>
 <p><strong>Security:</strong> Pathfinding host functions are gated by <code>ModCapabilities.pathfinding</code>. A pathfinder mod can read terrain and obstacle positions but cannot issue orders, read gameplay state (health, resources, fog), or access render functions. This is a narrower capability than gameplay mods — pathfinders compute routes, nothing else.</p>
 <p><strong>Determinism:</strong> WASM pathfinder mods execute in the deterministic sim context. They use the same <code>WasmExecutionLimits</code> fuel budget as other WASM mods. All clients run the same WASM binary (verified by SHA-256 hash in the lobby) with the same inputs, producing identical paths. If the fuel budget is exceeded mid-path-request, the path is truncated deterministically — all clients truncate at the same point.</p>
+<p><strong>Pathfinder fuel budget concern:</strong> Pathfinding has fundamentally different call patterns from other WASM mod types. An AI mod calls <code>ai_decide()</code> once per tick — one large computation. A pathfinder mod handles <code>pathfinder_request_path()</code> potentially hundreds of times per tick (once per moving unit). The flat <code>WasmExecutionLimits.fuel_per_tick</code> budget doesn’t distinguish between these patterns: a pathfinder that spends 5,000 fuel per path request × 200 moving units = 1,000,000 fuel, consuming the entire default budget on pathfinding alone.</p>
+<p><strong>Mitigation — scaled fuel allocation for pathfinder mods:</strong></p>
+<ul>
+<li>Pathfinder WASM modules receive a <strong>separate, larger fuel allocation</strong> (<code>pathfinder_fuel_per_tick</code>) that defaults to 5× the standard budget (5,000,000 fuel). This reflects the many-calls-per-tick reality of pathfinding workloads.</li>
+<li>The per-request fuel is not individually capped — the total fuel across all path requests in a tick is bounded. This allows some paths to be expensive (complex terrain) as long as the aggregate stays within budget.</li>
+<li>If the pathfinder exhausts its fuel mid-tick, remaining path requests for that tick return <code>PathResult::Deferred</code> — the engine queues them for the next tick(s). This is deterministic (all clients defer the same requests) and gracefully degrades under load rather than truncating individual paths.</li>
+<li>The pathfinder fuel budget is separate from the mod’s general <code>fuel_per_tick</code> (used for initialization, event handlers, etc.). A pathfinder mod that also handles events gets two budgets.</li>
+<li>Mod manifests can request a custom <code>pathfinder_fuel_per_tick</code> value. The lobby displays this alongside other requested limits.</li>
+</ul>
 <p><strong>Multiplayer sync:</strong> Because pathfinding is sim-affecting, all players must use the same pathfinder. The lobby validates that all clients have the same pathfinder WASM module (hash + version). A modded pathfinder is treated identically to a built-in preset for sync purposes.</p>
 <p><strong>Phase:</strong> WASM pathfinding API ships in Phase 6a alongside the mod testing framework and Workshop. Built-in pathfinder presets (D045) ship in Phase 2 as native Rust implementations.</p>
 <h3 id="wasm-ai-strategy-api-surface"><a class="header" href="#wasm-ai-strategy-api-surface">WASM AI Strategy API Surface</a></h3>

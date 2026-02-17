@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-72ec874a.js";
+            window.path_to_searchindex_js = "searchindex-ae4c627c.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-1d51ffef.js"></script>
@@ -260,6 +260,56 @@ impl TickOrders {
 <p>This design was validated by C&amp;C Generals/Zero Hour’s “packet router” — a client-side star topology where one player collected and rebroadcast all commands. Same concept, but our server-hosted version eliminates host advantage and adds neutral time authority. See <code>research/generals-zero-hour-netcode-analysis.md</code>.</p>
 <p>Further validated by Embark Studios’ <strong>Quilkin</strong> (1,510★, Apache 2.0, co-developed with Google Cloud Gaming) — a production UDP proxy for game servers built in Rust. Quilkin implements the relay as a <strong>composable filter chain</strong>: each packet passes through an ordered pipeline of filters (Capture → Firewall → RateLimit → TokenRouter → Timestamp → Debug), and filters can be added, removed, or reordered without touching routing logic. IC’s relay should adopt this composable architecture: order validation → sub-tick timestamps → replay recording → anti-cheat → forwarding, each implemented as an independent filter. See <code>research/embark-studios-rust-gamedev-analysis.md</code> § Quilkin.</p>
 <p>For small games (2-3 players) on LAN or with direct connectivity, the same netcode runs without a relay via P2P lockstep (see “The NetworkModel Trait” section below for deployment modes).</p>
+<h3 id="relaycore-library-not-just-a-binary"><a class="header" href="#relaycore-library-not-just-a-binary">RelayCore: Library, Not Just a Binary</a></h3>
+<p>The relay logic — order collection, sub-tick sorting, time authority, anti-lag-switch, token liveness — lives as a library component (<code>RelayCore</code>) inside <code>ic-net</code>, not only as a standalone server binary. This enables three deployment modes for the same relay functionality:</p>
+<pre><code>ic-net/
+├── relay_core       ← The relay logic: order collection, sub-tick sorting,
+│                       time authority, anti-lag-switch, token liveness,
+│                       replay signing, composable filter chain
+├── relay_server     ← Standalone binary wraps RelayCore (multi-game, headless)
+└── embedded_relay   ← Game client wraps RelayCore (single game, host plays)
+</code></pre>
+<p><strong><code>RelayCore</code></strong> is a pure-logic component — no I/O, no networking. It accepts incoming order packets, sorts them by sub-tick timestamp, produces canonical <code>TickOrders</code>, and runs the composable filter chain. The embedding layer (standalone binary or game client) handles actual network I/O and feeds packets into <code>RelayCore</code>.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// The relay engine. Embedding-agnostic — works identically whether
+/// hosted in a standalone binary or inside a game client.
+pub struct RelayCore {
+    tick: u64,
+    pending_orders: Vec&lt;TimestampedOrder&gt;,
+    filter_chain: Vec&lt;Box&lt;dyn RelayFilter&gt;&gt;,
+    liveness_tokens: HashMap&lt;PlayerId, LivenessToken&gt;,
+    // ... anti-lag-switch state, replay signer, etc.
+}
+
+impl RelayCore {
+    /// Feed an incoming order packet. Called by the network layer.
+    pub fn receive_order(&amp;mut self, player: PlayerId, order: TimestampedOrder) { ... }
+    
+    /// Produce the canonical TickOrders for this tick.
+    /// Sub-tick sorts, runs filter chain, advances tick counter.
+    pub fn finalize_tick(&amp;mut self) -&gt; TickOrders { ... }
+    
+    /// Generate liveness token for the next frame.
+    pub fn next_liveness_token(&amp;mut self, player: PlayerId) -&gt; u32 { ... }
+}
+<span class="boring">}</span></code></pre>
+<p>This creates three relay deployment modes:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Mode</th><th>Who Runs RelayCore</th><th>Who Plays</th><th>Relay Quality</th><th>Use Case</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Dedicated server</strong></td><td>Standalone binary (<code>relay-server</code>)</td><td>All clients connect remotely</td><td>Full sub-tick, multi-game, neutral authority</td><td>Server rooms, Pi, competitive, ranked</td></tr>
+<tr><td><strong>Listen server</strong></td><td>Game client embeds it (<code>EmbeddedRelayNetwork</code>)</td><td>Host plays + others connect</td><td>Full sub-tick, single game, host plays</td><td>Casual, community, “Host Game” button</td></tr>
+<tr><td><strong>P2P direct</strong></td><td>Nobody — no relay</td><td>All clients peer directly</td><td>No time authority, client-side sorting</td><td>LAN, ≤3 players</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Listen server vs. Generals’ star topology.</strong> C&amp;C Generals used a star topology where the host player collected and rebroadcast orders — but the host had <strong>host advantage</strong>: zero self-latency, ability to peek at orders before broadcasting. With IC’s embedded <code>RelayCore</code>, the host’s own orders go through the same <code>RelayCore</code> pipeline as everyone else’s. Sub-tick timestamps are set by each client’s local clock <em>before</em> submission. The relay orders by timestamp, not arrival. The host doesn’t peek, doesn’t get priority.</p>
+<p><strong>Trust boundary for ranked play.</strong> An embedded relay runs inside the host’s process — a malicious host could theoretically modify <code>RelayCore</code> behavior (drop opponents’ orders, manipulate timestamps). For <strong>ranked/competitive</strong> play, the matchmaking system requires connection to an official or community-verified relay server (standalone binary on trusted infrastructure). For <strong>casual, LAN, and custom games</strong>, the embedded relay is perfect — zero setup, “Host Game” button just works, no external server needed.</p>
+<p><strong>Connecting clients can’t tell the difference.</strong> Both the standalone binary and the embedded relay present the same protocol. <code>RelayLockstepNetwork</code> on the client side connects identically — it doesn’t know or care whether the relay is a dedicated server or running inside another player’s game client. This is a deployment concern, not a protocol concern.</p>
 <h3 id="sub-tick-order-fairness-from-cs2"><a class="header" href="#sub-tick-order-fairness-from-cs2">Sub-Tick Order Fairness (from CS2)</a></h3>
 <p>Counter-Strike 2 introduced “sub-tick” architecture: instead of processing all actions at discrete tick boundaries, the client timestamps every input with sub-tick precision. The server collects inputs from all clients and processes them in chronological order within each tick window. The server still ticks at 64Hz, but events are ordered by their actual timestamps.</p>
 <p>For an RTS, the core idea — <strong>timestamped orders processed in chronological order within a tick</strong> — produces fairer results for edge cases:</p>
@@ -269,6 +319,24 @@ impl TickOrders {
 <li>Simultaneous attack orders → processed in actual order, not arrival order</li>
 </ul>
 <p><strong>What’s NOT relevant from CS2:</strong> CS2 is client-server authoritative with prediction and interpolation. An RTS with hundreds of units can’t afford server-authoritative simulation — the bandwidth would be enormous. We stay with deterministic lockstep (clients run identical sims), so CS2’s prediction/reconciliation doesn’t apply.</p>
+<h4 id="why-sub-tick-instead-of-a-higher-tick-rate"><a class="header" href="#why-sub-tick-instead-of-a-higher-tick-rate">Why Sub-Tick Instead of a Higher Tick Rate</a></h4>
+<p>In client-server FPS (CS2, Overwatch), a tick is just a simulation step — the server runs alone and sends corrections. In <strong>lockstep</strong>, a tick is a <strong>synchronization barrier</strong>: every tick requires collecting all players’ orders (or hitting the deadline), processing them deterministically, advancing the full ECS simulation, and exchanging sync hashes. Each tick is a coordination point between all players.</p>
+<p>This means higher tick rates have multiplicative cost in lockstep:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Approach</th><th>Sim Cost</th><th>Network Cost</th><th>Fairness Outcome</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>30 tps + sub-tick</strong></td><td>30 full sim updates/sec</td><td>30 sync barriers/sec, 3-tick run-ahead for 100ms buffer</td><td>Fair — orders sorted by timestamp within each tick</td></tr>
+<tr><td><strong>128 tps, no sub-tick</strong></td><td>128 full sim updates/sec (4.3×)</td><td>128 sync barriers/sec, ~13-tick run-ahead for same 100ms buffer</td><td>Unfair — ties within 8ms windows still broken by player ID or arrival order</td></tr>
+<tr><td><strong>128 tps + sub-tick</strong></td><td>128 full sim updates/sec (4.3×)</td><td>128 sync barriers/sec</td><td>Fair — but at enormous cost for zero additional benefit</td></tr>
+</tbody>
+</table>
+</div>
+<p>At 128 tps, you’re running all pathfinding, spatial queries, combat resolution, fog updates, and economy for 500+ units 128 times per second instead of 30. That’s a 4× CPU increase with no gameplay benefit — RTS units move cell-to-cell, not sub-millimeter. Visual interpolation already makes 30 tps look smooth at 60+ FPS render.</p>
+<p>Critically, <strong>128 tps doesn’t even eliminate the problem sub-tick solves.</strong> Two orders landing in the same 8ms window still need a tiebreaker. You’ve paid 4× the cost and still need sub-tick logic (or unfair player-ID tiebreaking) for simultaneous orders.</p>
+<p>Sub-tick <strong>decouples order fairness from simulation rate.</strong> That’s why it’s the right tool: it solves the fairness problem without paying the simulation cost. A tick’s purpose in lockstep is synchronization, and you want the <em>fewest</em> synchronization barriers that still produce good gameplay — not the most.</p>
 <h3 id="adaptive-run-ahead-from-cc-generals"><a class="header" href="#adaptive-run-ahead-from-cc-generals">Adaptive Run-Ahead (from C&amp;C Generals)</a></h3>
 <p>Every lockstep RTS has inherent input delay — the game schedules your order a few ticks into the future so remote players’ orders have time to arrive:</p>
 <pre><code>Local input at tick 50 → scheduled for tick 53 (3-tick delay)
@@ -796,7 +864,7 @@ pub struct CosmeticRng(pub ThreadRng); // seeded from OS entropy per client
 }
 <span class="boring">}</span></code></pre>
 <h3 id="deployment-modes"><a class="header" href="#deployment-modes">Deployment Modes</a></h3>
-<p>The same netcode runs in four modes. The first two are utility adapters (no network involved). The last two are real multiplayer deployments of the same protocol:</p>
+<p>The same netcode runs in five modes. The first two are utility adapters (no network involved). The last three are real multiplayer deployments of the same protocol:</p>
 <div class="table-wrapper">
 <table>
 <thead>
@@ -805,13 +873,20 @@ pub struct CosmeticRng(pub ThreadRng); // seeded from OS entropy per client
 <tbody>
 <tr><td><code>LocalNetwork</code></td><td>Pass-through — orders go straight to sim</td><td>Single player, automated tests</td><td>Phase 2</td></tr>
 <tr><td><code>ReplayPlayback</code></td><td>File reader — feeds saved orders into sim</td><td>Watching replays</td><td>Phase 2</td></tr>
-<tr><td><code>LockstepNetwork</code></td><td>P2P deployment (same protocol, no relay)</td><td>LAN, ≤3 players, direct IP</td><td>Phase 5</td></tr>
-<tr><td><code>RelayLockstepNetwork</code></td><td>Relay deployment (recommended for online)</td><td>Internet multiplayer, ranked</td><td>Phase 5</td></tr>
+<tr><td><code>LockstepNetwork</code></td><td>P2P deployment (no relay)</td><td>LAN, ≤3 players, direct IP</td><td>Phase 5</td></tr>
+<tr><td><code>EmbeddedRelayNetwork</code></td><td>Listen server — host embeds <code>RelayCore</code> and plays</td><td>Casual, community, “Host Game” button</td><td>Phase 5</td></tr>
+<tr><td><code>RelayLockstepNetwork</code></td><td>Dedicated relay (recommended for online)</td><td>Internet multiplayer, ranked</td><td>Phase 5</td></tr>
 </tbody>
 </table>
 </div>
-<p><code>LockstepNetwork</code> and <code>RelayLockstepNetwork</code> implement the same netcode. The difference is topology: P2P uses direct connections (full mesh for 2-3 players, star topology for 4+), while relay routes everything through a neutral server. Both use adaptive run-ahead, frame resilience, delta-compressed TLV, and Ed25519 signing.</p>
-<p><strong>Sub-tick ordering in P2P:</strong> Without a neutral relay, there is no central time authority. Instead, each client sorts orders deterministically by <code>(sub_tick_time, player_id)</code> — the player ID tiebreaker ensures all clients produce the same canonical order even with identical timestamps. This is slightly less fair than relay ordering (clock skew between peers can bias who “clicked first”), but acceptable for LAN/small-group play where latencies are low. The relay deployment eliminates this issue entirely with neutral time authority, and additionally provides lag-switch protection, NAT traversal, and signed replays.</p>
+<p><code>LockstepNetwork</code>, <code>EmbeddedRelayNetwork</code>, and <code>RelayLockstepNetwork</code> implement the same netcode. The differences are topology and trust:</p>
+<ul>
+<li><strong><code>LockstepNetwork</code></strong> — P2P direct connections (full mesh for 2-3 players). No relay, no time authority. Simplest, best for LAN.</li>
+<li><strong><code>EmbeddedRelayNetwork</code></strong> — the host’s game client runs <code>RelayCore</code> (see above) as a listen server. Other players connect to the host. Full sub-tick ordering, anti-lag-switch, and replay signing — same as a dedicated relay. The host plays normally while serving. Ideal for casual/community play: “Host Game” button, zero external infrastructure.</li>
+<li><strong><code>RelayLockstepNetwork</code></strong> — clients connect to a standalone relay server on trusted infrastructure. Required for ranked/competitive play (host can’t be trusted with relay authority). Recommended for internet play.</li>
+</ul>
+<p>All three use adaptive run-ahead, frame resilience, delta-compressed TLV, and Ed25519 signing. The two relay-based modes (<code>EmbeddedRelayNetwork</code> and <code>RelayLockstepNetwork</code>) share identical <code>RelayCore</code> logic — connecting clients use <code>RelayLockstepNetwork</code> in both cases and cannot distinguish between them.</p>
+<p><strong>Sub-tick ordering in P2P:</strong> Without a neutral relay, there is no central time authority. Instead, each client sorts orders deterministically by <code>(sub_tick_time, player_id)</code> — the player ID tiebreaker ensures all clients produce the same canonical order even with identical timestamps. This is slightly less fair than relay ordering (clock skew between peers can bias who “clicked first”), but acceptable for LAN/small-group play where latencies are low. The relay-based modes (embedded or dedicated) eliminate this issue entirely with neutral time authority, and additionally provide lag-switch protection, NAT traversal, and signed replays.</p>
 <h3 id="single-player-zero-delay"><a class="header" href="#single-player-zero-delay">Single-Player: Zero Delay</a></h3>
 <p><code>LocalNetwork</code> processes orders on the very next tick with zero scheduling delay:</p>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
@@ -918,6 +993,25 @@ pub struct NetworkSimConfig {
 <li><strong>Latency graph</strong> — per-player RTT history (rolling 60 ticks). Shows jitter, trends, and spikes.</li>
 </ul>
 <p>The overlay is toggled via debug console (<code>net_diag 1</code>) and compiled out of release builds. It uses the same data already collected by <code>NetworkDiagnostics</code> — no additional overhead.</p>
+<h3 id="netcode-parameter-philosophy-d060"><a class="header" href="#netcode-parameter-philosophy-d060">Netcode Parameter Philosophy (D060)</a></h3>
+<p>Netcode parameters are <strong>not</strong> like graphics settings. Graphics preferences are subjective; netcode parameters have objectively correct values — or correct adaptive algorithms. A cross-game survey (C&amp;C Generals, StarCraft/BW, Spring Engine, 0 A.D., OpenTTD, Factorio, CS2, AoE II:DE, original Red Alert) confirms that games which expose fewer netcode controls and invest in automatic adaptation have fewer player complaints and better perceived netcode quality.</p>
+<p>IC follows a three-tier exposure model:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Tier</th><th>Player-Facing Examples</th><th>Exposure</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Tier 1: Lobby GUI</strong></td><td>Game speed (Slowest–Fastest)</td><td>One setting. The only parameter where player preference is legitimate.</td></tr>
+<tr><td><strong>Tier 2: Console</strong></td><td><code>net.sync_frequency</code>, <code>net.show_diagnostics</code>, <code>net.desync_debug_level</code>, <code>net.simulate_latency/loss/jitter</code></td><td>Power users only. Flagged <code>DEV_ONLY</code> or <code>SERVER</code> in the cvar system (D058).</td></tr>
+<tr><td><strong>Tier 3: Engine constants</strong></td><td>Tick rate (30 tps), sub-tick ordering, adaptive run-ahead, timing feedback, stall policy (never stall), anti-lag-switch, visual prediction</td><td>Fixed. These are correct engineering solutions, not preferences.</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Sub-tick ordering (D008) is always-on.</strong> Cost: ~4 bytes per order + one sort of typically ≤5 items per tick. The mechanism is automatic, but the outcome is player-facing — who wins the engineer race, who grabs the contested crate, whose attack resolves first. These moments define close games. Making it optional would require two sim code paths, a deterministic fallback that’s inherently unfair (player ID tiebreak), and a lobby setting nobody understands.</p>
+<p><strong>Adaptive run-ahead is always-on.</strong> Generals proved this over 20 years. Manual latency settings (StarCraft BW’s Low/High/Extra High) were necessary only because BW lacked adaptive run-ahead. IC’s adaptive system replaces the manual knob with a better automatic one.</p>
+<p><strong>Visual prediction is always-on.</strong> Factorio originally offered a “latency hiding” toggle. They removed it in 0.14.0 because always-on was always better — there was no situation where the player benefited from seeing raw lockstep delay.</p>
+<p>Full rationale, cross-game evidence table, and alternatives considered: see <code>09-DECISIONS.md</code> § D060.</p>
 <h2 id="connection-establishment"><a class="header" href="#connection-establishment">Connection Establishment</a></h2>
 <p>Connection method is a concern <em>below</em> the <code>NetworkModel</code>. By the time a <code>NetworkModel</code> is constructed, transport is already established. The discovery/connection flow:</p>
 <pre><code>Discovery (tracking server / join code / direct IP / QR)
@@ -1255,13 +1349,14 @@ relay:
       replicas: 1
 </code></pre>
 <h3 id="cost-profile"><a class="header" href="#cost-profile">Cost Profile</a></h3>
-<p>Both services are lightweight — they forward small order packets, not game state:</p>
+<p>Both services are lightweight — they forward small order packets, not game state. The relay does zero simulation: each game session costs ~2-10 KB of memory (buffered orders, liveness tokens, filter state) and ~5-20 µs of CPU per tick. This is pure packet routing, not game logic.</p>
 <div class="table-wrapper">
 <table>
 <thead>
 <tr><th>Deployment</th><th>Cost</th><th>Serves</th><th>Requires</th></tr>
 </thead>
 <tbody>
+<tr><td>Embedded relay (listen server)</td><td>Free</td><td>1 game (host plays too)</td><td>Port forwarding</td></tr>
 <tr><td>Home PC / spare laptop</td><td>Free (electricity)</td><td>~50 concurrent games</td><td>Port forwarding</td></tr>
 <tr><td>Raspberry Pi</td><td>~€50 one-time</td><td>~50 concurrent games</td><td>Port forwarding</td></tr>
 <tr><td>Single VPS (community)</td><td>€5-10/month</td><td>~200 concurrent games</td><td>Nothing special</td></tr>
@@ -1270,9 +1365,15 @@ relay:
 </tbody>
 </table>
 </div>
-<p>The relay server is the heavier service (per-game session state, UDP forwarding) but still tiny — each game session is a few KB of buffered orders. A single pod handles ~100 concurrent games easily.</p>
+<p>The relay server is the heavier service (per-game session state, UDP forwarding) but still tiny — each game session is a few KB of buffered orders. A single pod handles ~100 concurrent games easily. The ~50 game estimates for home/Pi deployments are conservative practical guidance, not resource limits — the relay’s per-game cost is so low that hardware I/O and network bandwidth are the actual ceilings.</p>
 <h3 id="backend-language"><a class="header" href="#backend-language">Backend Language</a></h3>
-<p>The tracking and relay servers are standalone Rust binaries (not Bevy — no ECS needed). They share <code>ic-protocol</code> for order serialization. The relay server implements the relay-side of <code>RelayLockstepNetwork</code>. Both are simple enough to be developed in Phase 5 alongside the multiplayer client code.</p>
+<p>The tracking server is a standalone Rust binary (not Bevy — no ECS needed). It shares <code>ic-protocol</code> for order serialization.</p>
+<p>The relay logic lives as a library (<code>RelayCore</code>) in <code>ic-net</code>. This library is used in two contexts:</p>
+<ul>
+<li><strong><code>relay-server</code> binary</strong> — standalone headless process that hosts multiple concurrent games. Not Bevy, no ECS. Uses <code>RelayCore</code> + async I/O (tokio). This is the “dedicated server” for community hosting, server rooms, and Raspberry Pis.</li>
+<li><strong>Game client</strong> — <code>EmbeddedRelayNetwork</code> wraps <code>RelayCore</code> inside the game process. The host player runs the relay and plays simultaneously. Uses Bevy’s async task system for I/O. This is the “Host Game” button.</li>
+</ul>
+<p>Both share <code>ic-protocol</code> for order serialization. Both are developed in Phase 5 alongside the multiplayer client code.</p>
 <h3 id="failure-modes"><a class="header" href="#failure-modes">Failure Modes</a></h3>
 <div class="table-wrapper">
 <table>
@@ -1944,26 +2045,37 @@ end
 </table>
 </div>
 <h3 id="p2p-topology-for-multi-player"><a class="header" href="#p2p-topology-for-multi-player">P2P Topology for Multi-Player</a></h3>
-<p>Direct P2P lockstep with 2-3 players uses a full mesh (everyone connects to everyone). Beyond that, use a star topology where one player acts as host:</p>
-<pre><code>2-3 players: full mesh (every client sends to every other)
+<p>Direct P2P lockstep with 2-3 players uses a full mesh (everyone connects to everyone). Beyond that, use the embedded relay (listen server) or a dedicated relay:</p>
+<pre><code>2-3 players: full mesh (P2P, no relay)
   A ↔ B ↔ C ↔ A
 
-4+ players: star via host (one player collects and rebroadcasts)
-  B → A ← C        A = host, collects orders, broadcasts canonical tick
-      ↑
+4+ players: embedded relay (listen server — host runs RelayCore and plays)
+  B → A ← C        A = host + RelayCore, full sub-tick ordering
+      ↑             Host's orders go through same pipeline as everyone's
       D
 
-4+ players: relay server (recommended)
-  B → R ← C        R = relay, all benefits of relay deployment
-      ↑
+4+ players: dedicated relay server (recommended for competitive)
+  B → R ← C        R = standalone relay binary, trusted infrastructure
+      ↑             No player has hosting advantage
       D
 </code></pre>
-<p>For 4+ players, the relay server is strongly recommended. It solves:</p>
+<p>For 4+ players, a relay (embedded or dedicated) is strongly recommended. Both modes solve:</p>
 <ul>
-<li>NAT traversal for all players (not just host)</li>
-<li>Lag-switch protection for all players (not just host-enforced)</li>
-<li>No single player has hosting advantage (relay is neutral authority)</li>
-<li>Sub-tick ordering is globally fair</li>
+<li>Sub-tick ordering with neutral time authority</li>
+<li>Lag-switch protection for all players</li>
+<li>Replay signing</li>
+</ul>
+<p>The <strong>dedicated relay</strong> additionally provides:</p>
+<ul>
+<li>NAT traversal for all players (no port forwarding needed)</li>
+<li>No player has any hosting advantage (relay is on neutral infrastructure)</li>
+<li>Required for ranked/competitive play (untrusted host can’t manipulate relay)</li>
+</ul>
+<p>The <strong>embedded relay</strong> (listen server) additionally provides:</p>
+<ul>
+<li>Zero external infrastructure — “Host Game” button just works</li>
+<li>Full <code>RelayCore</code> pipeline (no host advantage in order processing — host’s orders go through sub-tick sorting like everyone else’s)</li>
+<li>Port forwarding required (same as any self-hosted server)</li>
 </ul>
 <h3 id="the-real-scaling-limit-sim-cost-not-network"><a class="header" href="#the-real-scaling-limit-sim-cost-not-network">The Real Scaling Limit: Sim Cost, Not Network</a></h3>
 <p>With N players, the sim has more units, more orders, and more state to process. This is a <strong>sim performance</strong> concern, not a network concern:</p>
