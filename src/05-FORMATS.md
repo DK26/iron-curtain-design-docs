@@ -1196,7 +1196,7 @@ impl NetworkModel for ReplayPlayback {
 }
 ```
 
-**Playback features:** Variable speed (0.5x to 8x), pause, scrub to any tick (requires re-simulating from nearest snapshot or start). `SimSnapshot` can be taken at intervals during recording for fast seeking.
+**Playback features:** Variable speed (0.5x to 8x), pause, scrub to any tick (re-simulates from nearest keyframe). The recorder takes a `SimSnapshot` keyframe every 300 ticks (~10 seconds at 30 tps) and stores it in the `.icrep` file. A 60-minute replay contains ~360 keyframes (~3-6 MB overhead depending on game state size), enabling sub-second seeking to any point. Keyframes are mandatory — the recorder always writes them.
 
 ### Foreign Replay Decoders (D056)
 
@@ -1248,6 +1248,73 @@ game.orarep (ZIP archive)
 ```
 
 The `sync` stream enables partial divergence detection — IC can compare its own `state_hash()` against OpenRA's recorded sync values to estimate when the simulations diverged.
+
+## Backup Archive Format (D061)
+
+`ic backup create` produces a standard ZIP archive containing the player's data directory. The archive is not a custom format — any ZIP tool can extract it.
+
+### Structure
+
+```
+ic-backup-2027-03-15.zip
+├── manifest.json                    # Backup metadata (see below)
+├── config.yaml                      # Engine settings
+├── profile.db                       # Player identity (VACUUM INTO copy)
+├── achievements.db                  # Achievement collection (VACUUM INTO copy)
+├── gameplay.db                      # Event log, catalogs (VACUUM INTO copy)
+├── keys/
+│   └── identity.key                 # Ed25519 private key
+├── communities/
+│   ├── official-ic.db               # Community credentials (VACUUM INTO copy)
+│   └── clan-wolfpack.db
+├── saves/                           # Save game files (copied as-is)
+│   └── *.icsave
+├── replays/                         # Replay files (copied as-is)
+│   └── *.icrep
+└── screenshots/                     # Screenshot images (copied as-is)
+    └── *.png
+```
+
+**Manifest:**
+
+```json
+{
+  "backup_version": 1,
+  "created_at": "2027-03-15T14:30:00Z",
+  "engine_version": "0.5.0",
+  "platform": "windows",
+  "categories_included": ["keys", "profile", "communities", "achievements", "config", "saves", "replays", "screenshots", "gameplay"],
+  "categories_excluded": ["workshop", "mods", "maps"],
+  "file_count": 347,
+  "total_uncompressed_bytes": 524288000
+}
+```
+
+**Key implementation details:**
+
+- SQLite databases are backed up via `VACUUM INTO` — produces a consistent, compacted single-file copy without closing the database. WAL files are folded in.
+- Already-compressed files (`.icsave`, `.icrep`) are stored in the ZIP without additional compression (ZIP `Store` method).
+- `ic backup verify <archive>` checks ZIP integrity and validates that all SQLite files in the archive are well-formed.
+- `ic backup restore` preserves directory structure and prompts on conflicts (suppress with `--overwrite`).
+- `--exclude` and `--only` filter by category (keys, profile, communities, achievements, config, saves, replays, screenshots, gameplay, workshop, mods, maps). See `09-DECISIONS.md` § D061 for category sizes and criticality.
+
+## Screenshot Format (D061)
+
+Screenshots are standard PNG images with IC-specific metadata in PNG `tEXt` chunks. Any image viewer displays the screenshot; IC's screenshot browser reads the metadata for filtering and organization.
+
+### PNG tEXt Metadata Keys
+
+| Key                | Example Value                               | Description                            |
+| ------------------ | ------------------------------------------- | -------------------------------------- |
+| `IC:EngineVersion` | `"0.5.0"`                                   | Engine version at capture time         |
+| `IC:GameModule`    | `"ra1"`                                     | Active game module                     |
+| `IC:MapName`       | `"Arena"`                                   | Map being played                       |
+| `IC:Timestamp`     | `"2027-03-15T15:45:32Z"`                    | UTC capture timestamp                  |
+| `IC:Players`       | `"CommanderZod (Soviet) vs alice (Allied)"` | Player names and factions              |
+| `IC:GameTick`      | `"18432"`                                   | Sim tick at capture                    |
+| `IC:ReplayFile`    | `"2027-03-15-ranked-1v1.icrep"`             | Associated replay file (if applicable) |
+
+**Filename convention:** `<data_dir>/screenshots/<YYYY-MM-DD>-<HHMMSS>.png` (UTC timestamp). The screenshot hotkey is configurable in `config.yaml`.
 
 ### ra-formats Write Support
 

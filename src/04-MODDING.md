@@ -344,7 +344,34 @@ overrides:
 
 This is the manual equivalent of Bethesda's Bashed Patches — but declarative, version-controlled, and shareable.
 
-**Phase:** Load order engine support in Phase 2 (part of YAML rule loading). Conflict detection CLI in Phase 4 (with `ic` CLI). In-game mod manager in Phase 6a.
+### Mod Profiles & Virtual Asset Namespace (D062)
+
+The load order, active mod set, conflict resolutions, and experience settings (D033) compose into a **mod profile** — a named, hashable, switchable YAML file that captures a complete mod configuration:
+
+```yaml
+# <data_dir>/profiles/tournament-s5.yaml
+profile:
+  name: "Tournament Season 5"
+  game_module: ra1
+sources:
+  - id: "official/tournament-balance"
+    version: "=1.3.0"
+  - id: "official/hd-sprites"
+    version: "=2.0.1"
+conflicts:
+  - unit: heavy_tank
+    field: health.max
+    use_source: "official/tournament-balance"
+experience:
+  balance: classic
+  theme: remastered
+  pathfinding: ic_default
+fingerprint: null  # computed at activation
+```
+
+When a profile is activated, the engine builds a **virtual asset namespace** — a resolved lookup table mapping every logical asset path to a content-addressed blob (D049 local CAS) and every YAML rule to its merged value. The namespace fingerprint (SHA-256 of sorted entries) serves as a single-value compatibility check in multiplayer lobbies and replay playback. See `09-DECISIONS.md` § D062 for the full design: namespace struct, Bevy `AssetSource` integration, lobby fingerprint verification, editor hot-swap, and the relationship between local profiles and published modpacks (D030).
+
+**Phase:** Load order engine support in Phase 2 (part of YAML rule loading). `VirtualNamespace` struct and fingerprinting in Phase 2. `ic profile` CLI in Phase 4. Lobby fingerprint verification in Phase 5. Conflict detection CLI in Phase 4 (with `ic` CLI). In-game mod manager with profile dropdown in Phase 6a.
 
 ## Tier 2: Lua Scripting
 
@@ -857,9 +884,16 @@ Tier 3 WASM mods can provide custom `AiStrategy` trait implementations (D041, D0
 #[wasm_host_fn] fn ic_ai_scratch_alloc(bytes: u32) -> *mut u8;
 #[wasm_host_fn] fn ic_ai_scratch_free(ptr: *mut u8, bytes: u32);
 
+/// String table lookups — resolve u32 type IDs to human-readable names.
+/// Called once at game start or on-demand; results cached WASM-side.
+/// This avoids per-tick String allocation across the WASM boundary.
+#[wasm_host_fn] fn ic_ai_get_type_name(type_id: u32) -> String;
+#[wasm_host_fn] fn ic_ai_get_event_description(event_code: u32) -> String;
+#[wasm_host_fn] fn ic_ai_get_type_count() -> u32;  // total registered unit types
+
 pub struct AiUnitInfo {
     pub entity_id: u32,
-    pub unit_type: String,
+    pub unit_type_id: u32,    // interned type ID (see ic_ai_get_type_name() for string lookup)
     pub position: WorldPos,
     pub health: i32,
     pub max_health: i32,
@@ -870,7 +904,7 @@ pub struct AiUnitInfo {
 pub struct AiEventEntry {
     pub tick: u64,
     pub event_type: u32,      // mapped from AiEventType enum
-    pub description: String,  // human/LLM-readable summary
+    pub event_code: u32,      // interned event description ID (see ic_ai_get_event_description())
     pub entity_id: Option<u32>,
     pub related_entity_id: Option<u32>,
 }
@@ -1164,7 +1198,7 @@ mod:
 
 **Multiplayer sync:** All players must use the same pathfinder — the WASM binary hash is validated in the lobby, same as any sim-affecting mod. If a player is missing the pathfinder mod, the engine auto-downloads it from the Workshop (CS:GO-style, per D030).
 
-**Performance contract:** Pathfinder mods share the same `WasmExecutionLimits` fuel budget as other WASM mods. The engine monitors per-tick pathfinding time. If a community pathfinder consistently exceeds the budget, the lobby warns players. The engine never falls back silently to a different pathfinder — determinism means all clients must agree on every path.
+**Performance contract:** Pathfinder mods share the same `WasmExecutionLimits` fuel budget as other WASM mods. The engine monitors per-tick pathfinding time. If a community pathfinder consistently exceeds the budget, the lobby warns players. The engine never falls back silently to a different pathfinder — determinism means all clients must agree on every path. If a WASM pathfinder exhausts its fuel mid-computation, the requesting unit retains its last-known heading for one tick (zero-cost "continue straight" fallback) and the path request is re-queued for the next tick with a shorter search horizon. This prevents unit freezing without breaking determinism.
 
 **Phase:** WASM pathfinder mods in Phase 6a. The three built-in pathfinder presets (D045) ship as native Rust in Phase 2.
 
@@ -2957,6 +2991,8 @@ The in-game browser is how most players interact with the Workshop. It queries t
 ### Modpacks as First-Class Workshop Resources (D030)
 
 A **modpack** is a Workshop resource that bundles a curated set of mods with pinned versions, load order, and configuration — published as a single installable resource. This is the lesson from Minecraft's CurseForge and Modrinth: modpacks solve the three hardest problems in modding ecosystems — discovery ("what mods should I use?"), compatibility ("do these mods work together?"), and onboarding ("how do I install all of this?").
+
+**Modpacks are published snapshots of mod profiles (D062).** Curators build and test mod profiles locally (`ic profile save`, `ic profile inspect`, `ic profile diff`), then publish the working result via `ic mod publish-profile`. Workshop modpacks import as local profiles via `ic profile import`. This makes the curator workflow reproducible — no manual reconstruction of the mod configuration each session.
 
 ```yaml
 # mod.yaml for a modpack

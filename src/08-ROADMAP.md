@@ -45,6 +45,11 @@ Phase 0 (Foundation)
 - `deny.toml` + `cargo deny check licenses` in CI pipeline
 - DCO signed-off-by enforcement in CI
 
+### Player Data Foundation (D061)
+- Define and document the `<data_dir>` directory layout (stable structure for saves, replays, screenshots, profiles, keys, communities, workshop, backups)
+- Platform-specific `<data_dir>` resolution (Windows: `%APPDATA%\IronCurtain`, macOS: `~/Library/Application Support/IronCurtain`, Linux: `$XDG_DATA_HOME/iron-curtain/`)
+- `IC_DATA_DIR` environment variable and `--data-dir` CLI flag override support
+
 ### Release
 Open source `ra-formats` early. Useful standalone, builds credibility and community interest.
 
@@ -111,8 +116,13 @@ Open source `ra-formats` early. Useful standalone, builds credibility and commun
 - **`NetworkModel` trait defined and proven** with at least `LocalNetwork` implementation
 - **System execution order documented and fixed**
 - **State hashing for desync detection**
-- **Engine telemetry foundation (D031):** `tracing` span instrumentation on sim systems; per-system tick timing; gameplay event stream (`GameplayEvent` enum) behind `telemetry` feature flag; zero-cost when disabled
+- **Engine telemetry foundation (D031):** Unified `telemetry_events` SQLite schema shared by all components; `tracing` span instrumentation on sim systems; per-system tick timing; gameplay event stream (`GameplayEvent` enum) behind `telemetry` feature flag; `/analytics status/inspect/export/clear` console commands; zero-cost engine instrumentation when disabled
 - **Client-side SQLite storage (D034):** Replay catalog, save game index, gameplay event log, asset index — embedded SQLite for local metadata; queryable without OTEL stack
+- **`ic backup` CLI (D061):** `ic backup create/restore/list/verify` — ZIP archive with SQLite `VACUUM INTO` for consistent database copies; `--exclude`/`--only` category filtering; ships alongside save/load system
+- **Automatic daily critical snapshots (D061):** Rotating 3-day `auto-critical-N.zip` files (~5 MB) containing keys, profile, community credentials, achievements, config — created silently on first launch of the day; protects all players regardless of cloud sync status
+- **Screenshot capture with metadata (D061):** PNG screenshots with IC-specific `tEXt` chunks (engine version, map, players, tick, replay link); timestamped filenames in `<data_dir>/screenshots/`
+- **Mnemonic seed recovery (D061):** BIP-39-inspired 24-word recovery phrase generated alongside Ed25519 identity key; `ic identity seed show` / `ic identity seed verify` / `ic identity recover` CLI commands; deterministic key derivation via PBKDF2-HMAC-SHA512 — zero infrastructure, zero cost, identity recoverable from a piece of paper
+- **Virtual asset namespace (D062):** `VirtualNamespace` struct — resolved lookup table mapping logical asset paths to content-addressed blobs (D049 CAS); built at load time from the active mod set; SHA-256 fingerprint computed and recorded in replays; implicit default profile (no user-facing profile concept yet)
 
 ### Release
 Units moving, shooting, dying — headless sim + rendered. Record replay file. Play it back.
@@ -154,12 +164,17 @@ Units moving, shooting, dying — headless sim + rendered. Record replay file. P
 - Feels like Red Alert to someone who's played it before
 
 **Stretch goals (target Phase 3, can slip to early Phase 4 without blocking):**
+- **Screenshot browser (D061):** In-game screenshot gallery with metadata filtering (map, mode, date), thumbnail grid, and "Watch replay" linking via `IC:ReplayFile` metadata
+- **Data & Backup settings panel (D061):** In-game Settings → Data & Backup with Data Health summary (identity/sync/backup status), backup create/restore buttons, backup file list, cloud sync status, and Export & Portability section
+- **First-launch identity + backup prompt (D061):** New player flow after D032 theme selection — identity creation with recovery phrase display, cloud sync offer (Steam/GOG), backup recommendation for non-cloud installs; returning player flow includes mnemonic recovery option alongside backup restore
+- **Post-milestone backup nudges (D061):** Main menu toasts after first ranked match, campaign completion, tier promotion; same toast system as D030 Workshop cleanup; max one nudge per session; three dismissals = never again
 - **Chart component in `ic-ui`:** Lightweight Bevy 2D chart renderer (line, bar, pie, heatmap, stacked area) for post-game and career screens
 - **Post-game stats screen (D034):** Unit production timeline, resource curves, combat heatmap, APM graph, head-to-head comparison — all from SQLite `gameplay_events`
 - **Career stats page (D034):** Win rate by faction/map/opponent, rating history graph, session history with replay links — from SQLite `matches` + `match_players`
 - **Achievement infrastructure (D036):** SQLite achievement tables, engine-defined campaign/exploration achievements, Lua trigger API for mod-defined achievements, Steam achievement sync for Steam builds
+- **Product analytics local recording (D031):** Comprehensive client event taxonomy — GUI interactions (screen navigation, clicks, hotkeys, sidebar, minimap, build placement), RTS input patterns (selection, control groups, orders, camera), match flow (pace snapshots every 60s with APM/resources/army value, first build, first combat, surrender point), session lifecycle, settings changes, onboarding steps, errors, performance sampling; all offline in local `telemetry.db`; `/analytics export` for voluntary bug report attachment; detailed enough for UX analysis, gameplay pattern discovery, and troubleshooting
 
-> **Note:** Phase 3's hard goal is "feels like Red Alert" — sidebar, audio, selection, build placement. The stats screens, chart component, and achievement infrastructure are high-value polish but depend on accumulated gameplay data, so they can mature alongside Phase 4 without blocking the "playable" milestone.
+> **Note:** Phase 3's hard goal is "feels like Red Alert" — sidebar, audio, selection, build placement. The stats screens, chart component, achievement infrastructure, and analytics recording are high-value polish but depend on accumulated gameplay data, so they can mature alongside Phase 4 without blocking the "playable" milestone.
 
 ## Phase 4: AI & Single Player (Months 16–20)
 
@@ -191,6 +206,7 @@ Units moving, shooting, dying — headless sim + rendered. Record replay file. P
 - Veterancy persistence across missions
 - Mission select UI with campaign graph visualization and difficulty indicators
 - **`ic` CLI prototype:** `ic mod init`, `ic mod check`, `ic mod run` — early tooling for Lua script development (full SDK in Phase 6a)
+- **`ic profile` CLI (D062):** `ic profile save/list/activate/inspect/diff` — named mod compositions with switchable experience settings; modpack curators can save and compare configurations; profile fingerprint enables replay verification
 - **Minimal Workshop (D030 early delivery):** Central IC Workshop server + `ic mod publish` + `ic mod install` + basic in-game browser + auto-download on lobby join. Simple HTTP REST API, SQLite-backed. No federation, no replication, no promotion channels yet — those are Phase 6a
 
 ### Exit Criteria
@@ -236,8 +252,14 @@ Units moving, shooting, dying — headless sim + rendered. Record replay file. P
 - `CertifiedMatchResult` with Ed25519 relay signatures
 - Spectator feed: relay forwards tick orders to observers with configurable delay
 - Behavioral analysis pipeline on relay server
-- **Backend OTEL telemetry (D031):** relay + tracking + workshop servers emit metrics/traces/logs via OpenTelemetry; `/healthz`, `/readyz`, `/metrics` endpoints; distributed trace IDs for desync debugging across clients and relay; pre-built Grafana dashboards; optional `docker-compose.observability.yaml` overlay for self-hosters
+- **Server-side SQLite telemetry (D031):** Relay, tracking, and workshop servers record structured events to local `telemetry.db` using unified schema; server event taxonomy (game lifecycle, player join/leave, per-tick processing, desync detection, lag switch detection, behavioral analysis, listing lifecycle, dependency resolution); `/analytics` commands on servers; same export/inspect workflow as client; no OTEL infrastructure required for basic server observability
+- **Optional OTEL export layer (D031):** Server operators can additionally enable OTEL export for real-time Grafana/Prometheus/Jaeger dashboards; `/healthz`, `/readyz`, `/metrics` endpoints; distributed trace IDs for cross-component desync debugging; pre-built Grafana dashboards; `docker-compose.observability.yaml` overlay for self-hosters
 - **Backend SQLite storage (D034):** Relay server persists match results, desync reports, behavioral profiles; matchmaking server persists player ratings, match history, seasonal data — all in embedded SQLite, no external database
+- **`ic profile export` (D061):** JSON profile export with embedded SCRs for GDPR data portability; self-verifying credentials import on any IC install
+- **Platform cloud sync (D061):** Optional sync of critical data (identity key, profile, community credentials, config, latest autosave) via `PlatformCloudSync` trait (Steam Cloud, GOG Galaxy); ~5–20 MB footprint; sync on launch/exit/match-complete
+- **First-launch restore flow (D061):** Returning player detection — cloud data auto-detection with restore offer (shows identity, rating, match count); manual restore from backup ZIP, data folder copy, or mnemonic seed recovery; SCR verification progress display during restore
+- **Backup & data console commands (D061/D058):** `/backup create`, `/backup restore`, `/backup list`, `/backup verify`, `/profile export`, `/identity seed show`, `/identity seed verify`, `/identity recover`, `/data health`, `/data folder`, `/cloud sync`, `/cloud status`
+- **Lobby fingerprint verification (D062):** Profile namespace fingerprint replaces per-mod version list comparison in lobby join; namespace diff view shows exact asset-level differences on mismatch; one-click resolution (download missing mods, update mismatched versions); `/profile` console commands
 
 ### Exit Criteria
 - Two players can play a full game over the internet
@@ -280,6 +302,8 @@ Units moving, shooting, dying — headless sim + rendered. Record replay file. P
 - **Creator reputation system (D030):** Trust scores from download counts, ratings, curation endorsements; tiered badges (New/Trusted/Verified/Featured); influences search ranking
 - **Content moderation & DMCA/takedown policy (D030):** Community reporting, automated scanning for known-bad content, 72-hour response window, due process with appeal path; Workshop moderator tooling
 - **Creator tipping & sponsorship (D035):** Optional tip links in resource metadata (Ko-fi/Patreon/GitHub Sponsors); IC never processes payments; no mandatory paywalls on mods
+- **Local CAS dedup (D049):** Content-addressed blob store for Workshop packages — files stored by SHA-256 hash, deduplicated across installed mods; `ic mod gc` garbage collection; upgrades from Phase 4–5 simple `.icpkg`-on-disk storage
+- **Mod profile publishing (D062):** `ic mod publish-profile` publishes a local mod profile as a Workshop modpack; `ic profile import` imports Workshop modpacks as local profiles; in-game mod manager gains profile dropdown for one-click switching; editor provenance tooltips and per-source hot-swap for sub-second rule iteration
 
 ### Exit Criteria
 - Someone ports an existing OpenRA mod (Tiberian Dawn, Dune 2000) and it runs

@@ -429,8 +429,11 @@ pub struct WarheadDef {
 
 /// ArmorType × WarheadType → percentage (100 = full damage)
 /// Loaded from YAML Versus table — identical format to OpenRA.
+/// Flat array indexed by ArmorType discriminant for O(1) lookup in the combat
+/// hot path — no per-hit HashMap overhead. ArmorType is a small enum (<16 variants)
+/// so the array fits in a single cache line.
 pub struct VersusTable {
-    pub modifiers: HashMap<ArmorType, i32>,
+    pub modifiers: [i32; ArmorType::COUNT],  // index = ArmorType as usize
 }
 ```
 
@@ -938,8 +941,10 @@ pub enum NotificationType {
 }
 
 /// Per-notification-type cooldown (avoid spam).
+/// Flat array indexed by NotificationType discriminant — small fixed enum,
+/// avoids HashMap overhead on a per-event check.
 pub struct NotificationCooldowns {
-    pub cooldowns: HashMap<NotificationType, u32>,  // ticks remaining
+    pub cooldowns: [u32; NotificationType::COUNT],  // ticks remaining, index = variant as usize
     pub default_cooldown: u32,                       // typically 150 ticks (~10 sec)
 }
 ```
@@ -1555,6 +1560,54 @@ The RA1 game module registers three `Pathfinder` implementations — `RemastersP
 
 The engine must not create obstacles for any platform. Desktop is the primary dev target, but every architectural choice must be portable to browser (WASM), mobile (Android/iOS), and consoles without rework.
 
+### Player Data Directory (D061)
+
+All player data lives under a single, self-contained directory. The structure is stable and documented — a manual copy of this directory is a valid (if crude) backup. The `ic backup` CLI provides a safer alternative using SQLite `VACUUM INTO` for consistent database copies. See `09-DECISIONS.md` § D061 for full rationale, backup categories, and cloud sync design.
+
+```
+<data_dir>/
+├── config.yaml              # Settings (D033 toggles, keybinds, render quality)
+├── profile.db               # Identity, friends, blocks, privacy (D053)
+├── achievements.db          # Achievement collection (D036)
+├── gameplay.db              # Event log, replay catalog, save index, map catalog (D034)
+├── telemetry.db             # Unified telemetry events (D031) — pruned at 100 MB
+├── keys/
+│   └── identity.key         # Ed25519 private key (D052) — recoverable via mnemonic seed phrase (D061)
+├── communities/             # Per-community credential stores (D052)
+│   ├── official-ic.db
+│   └── clan-wolfpack.db
+├── saves/                   # Save game files (.icsave)
+├── replays/                 # Replay files (.icrep)
+├── screenshots/             # PNG with IC metadata in tEXt chunks
+├── workshop/                # Downloaded Workshop content (D030)
+├── mods/                    # Locally installed mods
+├── maps/                    # Locally installed maps
+├── logs/                    # Engine log files (rotated)
+└── backups/                 # Created by `ic backup create`
+```
+
+**Platform-specific `<data_dir>` resolution:**
+
+| Platform       | Default Location                                                         |
+| -------------- | ------------------------------------------------------------------------ |
+| Windows        | `%APPDATA%\IronCurtain\`                                                 |
+| macOS          | `~/Library/Application Support/IronCurtain/`                             |
+| Linux          | `$XDG_DATA_HOME/iron-curtain/` (default: `~/.local/share/iron-curtain/`) |
+| Browser (WASM) | OPFS virtual filesystem (see `05-FORMATS.md` § Browser Storage)          |
+| Mobile         | App sandbox (platform-managed)                                           |
+
+Override with `IC_DATA_DIR` environment variable or `--data-dir` CLI flag. All asset loading goes through Bevy's asset system (rule 5 below) — the data directory is for player-generated content, not game assets.
+
+### Data & Backup UI (D061)
+
+The in-game **Settings → Data & Backup** panel exposes backup, restore, cloud sync, and profile export — the GUI equivalent of the `ic backup` CLI. A **Data Health** summary shows identity key status, sync recency, backup age, and data folder size. Critical data is automatically protected by rotating daily snapshots (`auto-critical-N.zip`, 3-day retention) and optional platform cloud sync (Steam Cloud / GOG Galaxy).
+
+**First-launch flow** integrates with D032's experience profile selection:
+1. New player: identity created automatically → 24-word recovery phrase displayed → cloud sync offer → backup reminder prompt
+2. Returning player on new machine: cloud data detected → restore offer showing identity, rating, match count; or mnemonic seed recovery (enter 24 words); or manual restore from backup ZIP / data folder copy
+
+Post-milestone toasts (same system as D030's Workshop cleanup prompts) nudge players without cloud sync to back up after ranked matches, campaign completion, or tier promotions. See `09-DECISIONS.md` § D061 "Player Experience" for full UX mockups and scenario walkthroughs.
+
 ### Portability Design Rules
 
 1. **Input is abstracted behind a trait.** `InputSource` produces `PlayerOrder`s — it knows nothing about mice, keyboards, touchscreens, or gamepads. The game loop consumes orders, not raw input events. Each platform provides its own `InputSource` implementation.
@@ -1683,6 +1736,8 @@ Toggles are categorized as **sim-affecting** (production rules, unit commands �
 ### Experience Profiles
 
 D019 (balance), D032 (theme), D033 (behavior), D043 (AI behavior), D045 (pathfinding feel), and D048 (render mode) are six independent axes that compose into **experience profiles**. Selecting "Vanilla RA" sets all six to classic in one click. Selecting "Iron Curtain" sets classic balance + modern theme + best QoL + enhanced AI + modern movement + HD graphics. After selecting a profile, any individual setting can still be overridden.
+
+**Mod profiles (D062)** are a superset of experience profiles: they bundle the six experience axes WITH the active mod set and conflict resolutions into a single named, hashable object. A mod profile answers "what mods am I running AND how is the game configured?" in one saved YAML file. The profile's fingerprint (SHA-256 of the resolved virtual asset namespace) enables single-hash compatibility checking in multiplayer lobbies. Switching profiles reconfigures both the mod set and experience settings in one action. Publishing a local mod profile via `ic mod publish-profile` creates a Workshop modpack (D030). See `09-DECISIONS.md` § D062.
 
 See `09-DECISIONS.md` § D033 for the full toggle catalog, YAML schema, and sim/client split details. See D043 for AI behavior presets, D045 for pathfinding behavior presets, and D048 for switchable render modes.
 

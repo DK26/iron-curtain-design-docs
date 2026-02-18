@@ -47,11 +47,14 @@ pub struct TickOrders {
 }
 
 impl TickOrders {
-    /// CS2-style: process in chronological order within the tick
-    pub fn chronological(&self) -> impl Iterator<Item = &TimestampedOrder> {
-        let mut sorted = self.orders.clone();
-        sorted.sort_by_key(|o| o.sub_tick_time);
-        sorted.into_iter()
+    /// CS2-style: process in chronological order within the tick.
+    /// Uses a caller-provided scratch buffer to avoid per-tick heap allocation.
+    /// The buffer is cleared and reused each tick (see TickScratch pattern in 10-PERFORMANCE.md).
+    pub fn chronological<'a>(&'a self, scratch: &'a mut Vec<&'a TimestampedOrder>) -> &'a [&'a TimestampedOrder] {
+        scratch.clear();
+        scratch.extend(self.orders.iter());
+        scratch.sort_by_key(|o| o.sub_tick_time);
+        scratch.as_slice()
     }
 }
 ```

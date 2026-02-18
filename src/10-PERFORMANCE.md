@@ -575,3 +575,20 @@ The change tracking overhead (maintaining `ChangeMask` bitfields via setter func
 The default Rust allocator (`System` — usually glibc `malloc` on Linux, MSVC allocator on Windows) is not optimized for game workloads with many small, short-lived allocations (pathfinding nodes, order processing, per-tick temporaries). Embark Studios' experience across multiple production Rust game projects shows measurable gains from specialized allocators. IC should benchmark with **jemalloc** (`tikv-jemallocator`) and **mimalloc** (`mimalloc-rs`) early in Phase 2 — Quilkin offers both as feature flags, confirming the pattern. This fits the efficiency pyramid: better algorithms first (levels 1-4), then allocator tuning (level 5) before reaching for parallelism (level 6). See `research/embark-studios-rust-gamedev-analysis.md` § Theme 6.
 
 **Anti-pattern:** "Just parallelize it" as the answer to performance questions. Parallelism without algorithmic efficiency is like adding lanes to a highway with broken traffic lights.
+
+## Cross-Document Performance Invariants
+
+The following performance patterns are established across the design docs. They are not optional — violating them is a bug.
+
+| Pattern                                            | Location               | Rationale                                                                                   |
+| -------------------------------------------------- | ---------------------- | ------------------------------------------------------------------------------------------- |
+| `TickOrders::chronological()` uses scratch buffer  | `03-NETCODE.md`        | Zero per-tick heap allocation — reusable `Vec<&TimestampedOrder>` instead of `.clone()`     |
+| `VersusTable` is a flat `[i32; COUNT]` array       | `02-ARCHITECTURE.md`   | O(1) combat damage lookup — no HashMap overhead in `projectile_system()` hot path           |
+| `NotificationCooldowns` is a flat array            | `02-ARCHITECTURE.md`   | Same pattern — fixed enum → flat array                                                      |
+| WASM AI API uses `u32` type IDs, not `String`      | `04-MODDING.md`        | No per-tick String allocation across WASM boundary; string table queried once at game start |
+| Replay keyframes every 300 ticks (mandatory)       | `05-FORMATS.md`        | Sub-second seeking without re-simulating from tick 0                                        |
+| `gameplay_events` denormalized indexed columns     | `09-DECISIONS.md` D034 | Avoids `json_extract()` scans during `PlayerStyleProfile` aggregation (D042)                |
+| All SQLite writes on dedicated I/O thread          | `09-DECISIONS.md` D031 | Ring buffer → batch transaction; game loop thread never touches SQLite                      |
+| Weather quadrant rotation (1/4 map per tick)       | `09-DECISIONS.md` D022 | Sim-only amortization — no camera dependency in deterministic sim                           |
+| `gameplay.db` mmap capped at 64 MB                 | `09-DECISIONS.md` D034 | 1.6% of 4 GB min-spec RAM; scaled up on systems with ≥8 GB                                  |
+| WASM pathfinder fuel exhaustion → continue heading | `04-MODDING.md` D045   | Zero-cost fallback prevents unit freezing without breaking determinism                      |
