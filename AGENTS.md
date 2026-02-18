@@ -219,6 +219,15 @@ The project requires a **Developer Certificate of Origin (DCO)** — contributor
 - **Third-party content disclaimer:** IC is not liable for Workshop content.
 - **DMCA safe harbor:** See `src/09-DECISIONS.md` § D030 for takedown process.
 
+### Legal Operational Milestones
+
+These are not design decisions — they are operational/legal tasks tied to specific development phases.
+
+- **Phase 0:** Establish `deny.toml` and `cargo deny check licenses` in CI. Add SPDX headers to all source files from first commit. DCO enforcement (signed-off-by CI check) active from first commit.
+- **Before Phase 5 (multiplayer + Workshop):** Form a legal entity (foundation, nonprofit, or LLC) to hold project assets and limit personal liability for server operations, user data, and DMCA obligations. Reference models: Godot Foundation, Blender Foundation, Software Freedom Conservancy.
+- **Before Phase 5 (Workshop launch):** Register a DMCA designated agent with the U.S. Copyright Office (required for safe harbor protection under 17 U.S.C. § 512 before accepting user uploads).
+- **Optional (before Phase 5):** Consider registering "Iron Curtain" as a trademark in software/games (USPTO Class 9/41). Not legally required — common law trademark rights accrue through use — but registration gives presumptive nationwide priority. "Iron Curtain" is a Cold War historical term (Churchill, 1946) with no existing EA trademark registration; the project name references the historical/thematic setting, not EA's in-game superweapon.
+
 ## Working With This Codebase
 
 ### Version Control
@@ -235,6 +244,8 @@ The project requires a **Developer Certificate of Origin (DCO)** — contributor
 - No floats in `ic-sim`. Fixed-point only.
 - Every public type in `ic-sim` must derive `Serialize, Deserialize` (for snapshots).
 - System execution order in `ic-sim` is fixed and documented. Adding a new system requires deciding where in the order it runs and documenting why.
+- **Every source file** must begin with an SPDX header: `// SPDX-License-Identifier: GPL-3.0-or-later` followed by `// Copyright (c) 2025–present Iron Curtain contributors`. Established from the first commit for consistency.
+- Run `cargo deny check licenses` in CI to catch GPL-incompatible transitive dependencies early. Add `deny.toml` to the repository root in Phase 0.
 
 ### When Adding a New Feature
 1. Check `src/09-DECISIONS.md` — has this been decided already?

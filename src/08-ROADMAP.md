@@ -40,6 +40,11 @@ Phase 0 (Foundation)
 - RFC process documented for major design decisions
 - License decision finalized (P006)
 
+### Legal & CI Infrastructure
+- SPDX license headers on all source files (`// SPDX-License-Identifier: GPL-3.0-or-later`)
+- `deny.toml` + `cargo deny check licenses` in CI pipeline
+- DCO signed-off-by enforcement in CI
+
 ### Release
 Open source `ra-formats` early. Useful standalone, builds credibility and community interest.
 
@@ -51,6 +56,7 @@ Open source `ra-formats` early. Useful standalone, builds credibility and commun
 - Can extract and display sprites from .mix archives
 - Can convert MiniYAML to standard YAML losslessly
 - Code of conduct and RFC process published (D037)
+- SPDX headers present on all source files; `cargo deny check licenses` passes
 
 ## Phase 1: Rendering Slice (Months 3–6)
 
@@ -215,6 +221,11 @@ Units moving, shooting, dying — headless sim + rendered. Record replay file. P
 - **"Train Against" opponent mode (D042):** With multiplayer match data, players can select any opponent from match history → pick a map → instantly play against `StyleDrivenAi` loaded with that opponent's aggregated behavioral profile; no scenario editor required
 - **Competitive governance (D037):** Competitive committee formation, seasonal map pool curation process, community representative elections
 - **Competitive achievements (D036):** Ranked placement, league promotion, season finish, tournament participation achievements
+
+### Legal & Operational Prerequisites
+- **Legal entity formed** (foundation, nonprofit, or LLC) before server infrastructure goes live — limits personal liability for user data, DMCA obligations, and server operations
+- **DMCA designated agent registered** with the U.S. Copyright Office (required for safe harbor under 17 U.S.C. § 512 before Workshop accepts user uploads)
+- **Optional:** Trademark registration for "Iron Curtain" (USPTO Class 9/41)
 
 ### Key Architecture Work
 - Sub-tick timestamped orders (CS2 insight)
