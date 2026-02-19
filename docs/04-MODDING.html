@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-7bc359dc.js";
+            window.path_to_searchindex_js = "searchindex-72fd73e9.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-1d51ffef.js"></script>
@@ -825,10 +825,13 @@ impl Default for WasmExecutionLimits {
 );
 
 pub enum CameraMode {
-    Isometric,          // fixed angle, zoom only
-    FreeLook,           // full 3D rotation
-    Orbital { target: WorldPos },  // orbit a point
+    Isometric,          // fixed angle, zoom via OrthographicProjection.scale
+    FreeLook,           // full 3D rotation, zoom via camera distance
+    Orbital { target: WorldPos },  // orbit a point, zoom via distance
 }
+// Zoom behavior is controlled by the GameCamera resource (02-ARCHITECTURE.md § Camera).
+// WASM render mods that provide a custom ScreenToWorld impl interpret the zoom value
+// appropriately for their camera type (orthographic scale vs. dolly distance vs. FOV).
 <span class="boring">}</span></code></pre>
 <p><strong>Render mod registration:</strong> A render mod implements the <code>Renderable</code> and <code>ScreenToWorld</code> traits (see <code>02-ARCHITECTURE.md</code> § “3D Rendering as a Mod”). It registers via <code>ic_render_register()</code> for each actor type it handles. Unregistered actor types fall through to the default sprite renderer. This allows <strong>partial</strong> render overrides — a mod can replace tank rendering with 3D meshes while leaving infantry as sprites.</p>
 <p><strong>Security:</strong> Render host functions are gated by <code>ModCapabilities.render</code>. A gameplay mod (AI, scripting) cannot access <code>ic_render_*</code> functions. Render mods cannot access <code>ic_host_issue_order()</code> — they draw, they don’t command. These capabilities are declared in the mod manifest and verified at load time.</p>

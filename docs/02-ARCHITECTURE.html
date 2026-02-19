@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-7bc359dc.js";
+            window.path_to_searchindex_js = "searchindex-72fd73e9.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-1d51ffef.js"></script>
@@ -479,6 +479,51 @@ pub enum EntityVisibility {
 </table>
 </div>
 <p><strong>Last-seen snapshot table:</strong> When a visible entity enters fog-of-war, the <code>FogProvider</code> stores a snapshot of its last-known position, type, owner, and build progress. The renderer displays this as a dimmed “ghost” unit. The snapshot is explicitly stale — the actual unit may have moved, morphed, or been destroyed. Snapshots are cleared when the position is re-explored and the unit is no longer there.</p>
+<h3 id="double-buffered-shared-state-tick-consistent-reads"><a class="header" href="#double-buffered-shared-state-tick-consistent-reads">Double-Buffered Shared State (Tick-Consistent Reads)</a></h3>
+<p>Multiple systems per tick need to read shared, expensive-to-compute data structures — fog visibility, influence maps, global condition modifiers (D028). The <code>FogProvider</code> output is the clearest example: <code>targeting_system()</code>, <code>ai_system()</code>, and <code>render</code> all need to answer “is this cell visible?” within the same tick. If <code>fog_system()</code> updates visibility mid-tick, some systems see old fog, others see new — a determinism violation.</p>
+<p>IC uses <strong>double buffering</strong> for any shared state that is written by one system and read by many systems within a tick:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Two copies of T — one for reading (current tick), one for writing (being rebuilt).
+/// Swap at tick boundary. All reads within a tick see a consistent snapshot.
+pub struct DoubleBuffered&lt;T&gt; {
+    /// Current tick — all systems read from this. Immutable during the tick.
+    read: T,
+    /// Next tick — one system writes to this during the current tick.
+    write: T,
+}
+
+impl&lt;T&gt; DoubleBuffered&lt;T&gt; {
+    /// Called exactly once per tick, at the tick boundary, before any systems run.
+    /// After swap, the freshly-computed write buffer becomes the new read buffer.
+    pub fn swap(&amp;mut self) {
+        std::mem::swap(&amp;mut self.read, &amp;mut self.write);
+    }
+
+    /// All systems call this to read — guaranteed consistent for the entire tick.
+    pub fn read(&amp;self) -&gt; &amp;T { &amp;self.read }
+
+    /// Only the owning system (e.g., fog_system) calls this to prepare the next tick.
+    pub fn write(&amp;mut self) -&gt; &amp;mut T { &amp;mut self.write }
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Where double buffering applies:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Data Structure</th><th>Writer System</th><th>Reader Systems</th><th>Why Not Single Buffer</th></tr>
+</thead>
+<tbody>
+<tr><td><code>FogProvider</code> output (visibility grid)</td><td><code>fog_system()</code> (step 21)</td><td><code>targeting_system()</code>, <code>ai_system()</code>, render</td><td>Targeting must see same visibility as AI — mid-tick update breaks determinism</td></tr>
+<tr><td>Influence maps (AI)</td><td><code>influence_map_system()</code></td><td><code>military_manager</code>, <code>economy_manager</code>, <code>building_placement</code></td><td>Multiple AI managers read influence data; rebuilding mid-decision corrupts scoring</td></tr>
+<tr><td>Global condition modifiers (D028)</td><td><code>condition_system()</code> (step 12)</td><td><code>damage_system()</code>, <code>movement_system()</code>, <code>production_system()</code></td><td>A “low power” modifier applied mid-tick means some systems use old damage values, others new</td></tr>
+<tr><td>Weather terrain effects (D022)</td><td><code>weather_system()</code> (step 16)</td><td><code>movement_system()</code>, <code>pathfinding</code>, render</td><td>Terrain surface state (mud, ice) affects movement cost; inconsistency causes desync</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Why not Bevy’s system ordering alone?</strong> Bevy’s scheduler can enforce that <code>fog_system()</code> runs before <code>targeting_system()</code>. But it cannot prevent a system scheduled <em>between</em> two readers from mutating shared state. Double buffering makes the guarantee structural: the read buffer is physically separate from the write buffer. No scheduling mistake can cause a reader to see partial writes.</p>
+<p><strong>Cost:</strong> One extra copy of each double-buffered data structure. For fog visibility (a bit array over map cells), this is ~32KB for a 512×512 map. For influence maps (a <code>[i32; CELLS]</code> array), it’s ~1MB for a 512×512 map. These are allocated once at game start and never reallocated — consistent with Layer 5’s zero-allocation principle.</p>
+<p><strong>Swap timing:</strong> <code>DoubleBuffered::swap()</code> is called in <code>Simulation::apply_tick()</code> before the system pipeline runs. This is a fixed point in the tick — step 0, before step 1 (<code>order_validation_system()</code>). The write buffer from the previous tick becomes the read buffer for the current tick. The swap is a pointer swap (<code>std::mem::swap</code>), not a copy — effectively free.</p>
 <h3 id="ordervalidator-trait-d041"><a class="header" href="#ordervalidator-trait-d041">OrderValidator Trait (D041)</a></h3>
 <p>The engine enforces that ALL orders pass validation before <code>apply_orders()</code> executes them. This formalizes D012’s anti-cheat guarantee — game modules cannot accidentally skip validation:</p>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
@@ -1118,6 +1163,178 @@ pub struct KeyCombo {
 <li><code>modern</code> — WASD camera, common RTS conventions</li>
 </ul>
 <p>Fully rebindable in settings UI. Categories: unit commands, production, control groups, camera, chat, debug. Hotkeys produce <code>PlayerOrder</code>s through <code>InputSource</code> — the sim never sees key codes.</p>
+<h3 id="camera-system"><a class="header" href="#camera-system">Camera System</a></h3>
+<p>The camera is a purely render-side concern — the sim has no camera concept (Invariant #1). Camera state lives as a Bevy <code>Resource</code> in <code>ic-render</code>, read by the rendering pipeline and <code>ic-ui</code> (minimap, spatial audio listener position). The <code>ScreenToWorld</code> trait (see § “Portability Design Rules”) converts screen coordinates to world positions; the camera system controls what region of the world is visible.</p>
+<h4 id="core-types"><a class="header" href="#core-types">Core Types</a></h4>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Central camera state — a Bevy Resource in ic-render.
+/// NOT part of the sim. Save/restore for save games is serialized separately
+/// (alongside other client-side state like UI layout and audio volume).
+#[derive(Resource)]
+pub struct GameCamera {
+    /// World position the camera is centered on (render-side f32, not sim fixed-point).
+    pub position: Vec2,
+    /// Current zoom level. 1.0 = default view. &lt;1.0 = zoomed out, &gt;1.0 = zoomed in.
+    pub zoom: f32,
+    /// Zoom limits — enforced every frame. Ranked/tournament modes clamp these further.
+    pub zoom_min: f32,  // default: 0.5 (see twice as much map)
+    pub zoom_max: f32,  // default: 4.0 (pixel-level inspection)
+    /// Map bounds in world coordinates — camera cannot scroll past these.
+    pub bounds: Rect,
+    /// Smooth interpolation factor for zoom (0.0–1.0 per frame, lerp toward target).
+    pub zoom_smoothing: f32,  // default: 0.15
+    /// Smooth interpolation factor for pan.
+    pub pan_smoothing: f32,   // default: 0.2
+    /// Internal: zoom target for smooth interpolation.
+    pub zoom_target: f32,
+    /// Internal: position target for smooth pan (e.g., centering on selection).
+    pub position_target: Vec2,
+    /// Edge scroll speed in world-units per second (scaled by current zoom).
+    pub edge_scroll_speed: f32,
+    /// Keyboard pan speed in world-units per second (scaled by current zoom).
+    pub keyboard_pan_speed: f32,
+    /// Follow mode: lock camera to a unit or player's view.
+    pub follow_target: Option&lt;FollowTarget&gt;,
+    /// Screen shake state (driven by explosions, nukes, superweapons).
+    pub shake: ScreenShake,
+}
+
+pub enum FollowTarget {
+    Unit(UnitTag),               // follow a specific unit (observer, cinematic)
+    Player(PlayerId),            // lock to a player's viewport (observer mode)
+}
+
+pub struct ScreenShake {
+    pub amplitude: f32,          // current intensity (decays over time)
+    pub decay_rate: f32,         // amplitude reduction per second
+    pub frequency: f32,          // oscillation speed
+    pub offset: Vec2,            // current frame's shake offset (applied to final transform)
+}
+<span class="boring">}</span></code></pre>
+<h4 id="zoom-behavior"><a class="header" href="#zoom-behavior">Zoom Behavior</a></h4>
+<p>Zoom modifies the <code>OrthographicProjection.scale</code> on the Bevy camera entity. A zoom of 1.0 maps to the default viewport size for the active render mode (D048). Zooming out (<code>zoom &lt; 1.0</code>) shows more of the map; zooming in (<code>zoom &gt; 1.0</code>) magnifies the view.</p>
+<p><strong>Input methods:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Input</th><th>Action</th><th>Platform</th></tr>
+</thead>
+<tbody>
+<tr><td>Mouse scroll wheel</td><td>Zoom toward/away from cursor position</td><td>Desktop</td></tr>
+<tr><td>+/- keys</td><td>Zoom toward/away from screen center</td><td>Desktop</td></tr>
+<tr><td>Pinch gesture</td><td>Zoom toward/away from pinch midpoint</td><td>Touch/mobile</td></tr>
+<tr><td><code>/zoom &lt;level&gt;</code> cmd</td><td>Set zoom to exact value (D058)</td><td>All</td></tr>
+<tr><td>Ctrl+scroll</td><td>Fine zoom (half step size)</td><td>Desktop</td></tr>
+<tr><td>Minimap scroll</td><td>Zoom the minimap’s own viewport independently</td><td>All</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Zoom-toward-cursor</strong> is the expected UX for isometric games (SC2, AoE2, OpenRA all do this). When the player scrolls the mouse wheel, the world point under the cursor stays fixed on screen — the camera position shifts to compensate for the scale change. This requires adjusting <code>position</code> alongside <code>zoom</code>:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>fn zoom_toward_cursor(camera: &amp;mut GameCamera, cursor_world: Vec2, scroll_delta: f32) {
+    let old_zoom = camera.zoom_target;
+    camera.zoom_target = (old_zoom + scroll_delta * ZOOM_STEP)
+        .clamp(camera.zoom_min, camera.zoom_max);
+    // Shift position so the cursor's world point stays at the same screen location.
+    let zoom_ratio = camera.zoom_target / old_zoom;
+    camera.position_target = cursor_world + (camera.position_target - cursor_world) * zoom_ratio;
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Smooth interpolation:</strong> The actual <code>zoom</code> and <code>position</code> values lerp toward their targets each frame:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>fn camera_interpolation(camera: &amp;mut GameCamera, dt: f32) {
+    let t_zoom = 1.0 - (1.0 - camera.zoom_smoothing).powf(dt * 60.0);
+    camera.zoom = camera.zoom.lerp(camera.zoom_target, t_zoom);
+    let t_pan = 1.0 - (1.0 - camera.pan_smoothing).powf(dt * 60.0);
+    camera.position = camera.position.lerp(camera.position_target, t_pan);
+}
+<span class="boring">}</span></code></pre>
+<p>This frame-rate-independent smoothing (exponential lerp) feels identical at 30 fps and 240 fps. The <code>powf()</code> call is once per frame, not per entity — negligible cost.</p>
+<p><strong>Discrete vs. continuous:</strong> Keyboard zoom (+/-) uses discrete steps (e.g., 0.25 increments). Mouse scroll uses finer steps (0.1). Both feed <code>zoom_target</code> and smooth toward it. There is NO “snap to integer zoom” constraint — smooth zoom is the default behavior. Classic render mode (D048) with integer scaling uses the same smooth zoom for camera movement but snaps the <code>OrthographicProjection.scale</code> to the nearest integer multiple when rendering, preventing sub-pixel shimmer on pixel art.</p>
+<h4 id="zoom-interaction-with-render-modes-d048"><a class="header" href="#zoom-interaction-with-render-modes-d048">Zoom Interaction with Render Modes (D048)</a></h4>
+<p>Different render modes have different zoom characteristics:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Render Mode</th><th>Default Zoom</th><th>Zoom Range</th><th>Scaling Behavior</th></tr>
+</thead>
+<tbody>
+<tr><td>Classic</td><td>1.0</td><td>0.5–3.0</td><td>Integer-scale snap for rendering; smooth camera movement</td></tr>
+<tr><td>HD</td><td>1.0</td><td>0.5–4.0</td><td>Fully smooth — no snap needed at any zoom level</td></tr>
+<tr><td>3D</td><td>1.0</td><td>0.25–6.0</td><td>Perspective FOV adjustment, not orthographic scale</td></tr>
+</tbody>
+</table>
+</div>
+<p>When a render mode switch occurs (F1 / D048), the camera system adjusts:</p>
+<ul>
+<li><code>zoom_min</code> / <code>zoom_max</code> to the new mode’s range</li>
+<li><code>zoom_target</code> is clamped to the new range (if current zoom exceeds new limits)</li>
+<li>Camera position is preserved — only the zoom behavior changes</li>
+</ul>
+<p>For 3D render modes, zoom maps to camera distance from the ground plane (dolly) rather than orthographic scale. The <code>ScreenToWorld</code> trait abstracts this — the camera system sets a <code>zoom</code> value, and the active <code>ScreenToWorld</code> implementation interprets it appropriately (orthographic scale for 2D, distance for 3D).</p>
+<h4 id="pan-scrolling"><a class="header" href="#pan-scrolling">Pan (Scrolling)</a></h4>
+<p>Four input methods, all producing the same result — a <code>position_target</code> update:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Method</th><th>Behavior</th></tr>
+</thead>
+<tbody>
+<tr><td>Edge scroll</td><td>Move cursor to screen edge → pan in that direction</td></tr>
+<tr><td>Keyboard (WASD/arrows)</td><td>Pan at <code>keyboard_pan_speed</code>, scaled by zoom (slower when zoomed in)</td></tr>
+<tr><td>Minimap click</td><td>Jump camera center to the clicked world position</td></tr>
+<tr><td>Middle-mouse drag</td><td>Pan by mouse delta (inverted — drag world under cursor)</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Speed scales with zoom:</strong> When zoomed out, pan speed increases proportionally so map traversal time feels consistent. When zoomed in, pan speed decreases for precision. The scaling is linear: <code>effective_speed = base_speed / zoom</code>.</p>
+<p><strong>Bounds clamping:</strong> Every frame, <code>position_target</code> is clamped so the viewport stays within <code>bounds</code> (map rectangle plus a configurable padding). The player cannot scroll to see void beyond the map edge. Bounds are set when the map loads and do not change during gameplay.</p>
+<h4 id="screen-shake"><a class="header" href="#screen-shake">Screen Shake</a></h4>
+<p>Triggered by game events (explosions, superweapons, building destruction) via Bevy events:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct CameraShakeEvent {
+    pub epicenter: WorldPos,   // world position of the explosion
+    pub intensity: f32,        // 0.0–1.0 (nuke = 1.0, tank shell = 0.05)
+    pub duration_secs: f32,    // how long the shake lasts
+}
+<span class="boring">}</span></code></pre>
+<p>The shake system calculates <code>amplitude</code> from intensity, attenuated by distance from the camera. Multiple concurrent shakes are additive (capped at a maximum amplitude). The <code>shake.offset</code> is applied to the final camera transform each frame — it never modifies <code>position</code> or <code>position_target</code>, so the shake doesn’t drift the view.</p>
+<p>Players can disable screen shake entirely via settings (<code>/camera_shake off</code> — D058) or reduce intensity with a slider. Accessibility concern: excessive screen shake can cause motion sickness.</p>
+<h4 id="camera-in-replays-and-save-games"><a class="header" href="#camera-in-replays-and-save-games">Camera in Replays and Save Games</a></h4>
+<ul>
+<li><strong>Save games:</strong> <code>GameCamera</code> state (position, zoom, follow target) is serialized alongside other client-side state. On load, the camera restores to where the player was looking.</li>
+<li><strong>Replays:</strong> <code>CameraPositionSample</code> events (see <code>05-FORMATS.md</code>) record each player’s viewport center and zoom level at 2 Hz. Replay viewers can follow any player’s camera or use free camera. The replay camera is independent of the recorded camera data — the viewer controls their own viewport.</li>
+<li><strong>Observer mode:</strong> Observers have independent camera control with no zoom restrictions (they can zoom out further than players for overview). The <code>follow_player</code> option (see <code>ObserverState</code>) syncs the observer’s camera to a player’s recorded <code>CameraPositionSample</code> stream.</li>
+</ul>
+<h4 id="camera-configuration-yaml"><a class="header" href="#camera-configuration-yaml">Camera Configuration (YAML)</a></h4>
+<p>Per-game-module camera defaults:</p>
+<pre><code class="language-yaml">camera:
+  zoom:
+    default: 1.0
+    min: 0.5
+    max: 4.0
+    step_scroll: 0.1       # mouse wheel increment
+    step_keyboard: 0.25    # +/- key increment
+    smoothing: 0.15        # lerp factor (0 = instant, 1 = no movement)
+    # Ranked override — competitive committee (D037) sets these per season
+    ranked_min: 0.75
+    ranked_max: 2.0
+  pan:
+    edge_scroll_speed: 1200.0   # world-units/sec at zoom 1.0
+    keyboard_speed: 1000.0
+    smoothing: 0.2
+    edge_scroll_zone: 8        # pixels from screen edge to trigger
+  shake:
+    max_amplitude: 12.0         # max pixel displacement
+    decay_rate: 8.0             # amplitude reduction per second
+    enabled: true               # default; player can override in settings
+  bounds_padding: 64            # extra world-units beyond map edges
+</code></pre>
+<p>This makes camera behavior fully data-driven (Principle 4 from <code>13-PHILOSOPHY.md</code>). A Tiberian Sun module can set different zoom ranges (its taller buildings need more zoom-out headroom). A total conversion can disable edge scrolling entirely if it uses a different camera paradigm.</p>
 <h3 id="game-speed"><a class="header" href="#game-speed">Game Speed</a></h3>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -1208,7 +1425,7 @@ pub struct AmmoPool {
     pub show_economy: bool,    // income rate, credits per player
     pub show_powers: bool,     // superweapon charge timers
     pub show_score: bool,      // strategic score tracker
-    pub follow_player: Option&lt;PlayerId&gt;,  // lock camera to player's view
+    pub follow_player: Option&lt;PlayerId&gt;,  // lock camera to player's view (writes GameCamera.follow_target)
 }
 <span class="boring">}</span></code></pre>
 <p><strong>Army overlay:</strong> Bar chart of unit counts per player, grouped by type. <strong>Production overlay:</strong> List of active queues per player. <strong>Economy overlay:</strong> Income rate graph. These are render-only — no sim interaction. Observer UI is an <code>ic-ui</code> concern.</p>
@@ -1822,7 +2039,7 @@ pub enum ScreenClass {
 <li><strong>Sound effects:</strong> Weapon fire, explosions, unit acknowledgments, UI clicks. Triggered by sim events (combat, production, movement) via Bevy observer systems.</li>
 <li><strong>EVA voice system:</strong> Plays notification audio triggered by <code>notification_system()</code> events. Manages a priority queue — high-priority notifications (nuke launch, base under attack) interrupt low-priority ones. Respects per-notification cooldowns.</li>
 <li><strong>Music playback:</strong> Jukebox system with playlist management, track shuffle, and cross-fade. Supports <code>.aud</code> (original RA format via <code>ra-formats</code>) and modern formats (OGG, WAV via Bevy). Theme-specific intro tracks (D032 — Hell March for Classic theme).</li>
-<li><strong>Spatial audio:</strong> 3D positional audio for effects — explosions louder when camera is near. Uses Bevy’s spatial audio with listener at camera position.</li>
+<li><strong>Spatial audio:</strong> 3D positional audio for effects — explosions louder when camera is near. Uses Bevy’s spatial audio with listener at <code>GameCamera.position</code> (see § “Camera System”).</li>
 <li><strong>VoIP playback:</strong> Decodes incoming Opus voice frames from <code>MessageLane::Voice</code> and mixes them into the audio output. Handles per-player volume, muting, and optional spatial panning (D059 § Spatial Audio). Voice replay playback syncs Opus frames to game ticks.</li>
 <li><strong>Ambient soundscapes:</strong> Per-biome ambient loops (waves for coastal maps, wind for snow maps). Weather system (D022) can modify ambient tracks.</li>
 </ul>

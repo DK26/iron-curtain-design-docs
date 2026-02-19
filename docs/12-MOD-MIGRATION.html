@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-7bc359dc.js";
+            window.path_to_searchindex_js = "searchindex-72fd73e9.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-1d51ffef.js"></script>
@@ -485,19 +485,29 @@ e1:
 </table>
 </div>
 <h4 id="camera-zoom"><a class="header" href="#camera-zoom">Camera Zoom</a></h4>
-<p>Standard Bevy camera parameter. The isometric renderer already needs to handle different view distances for the minimap and observer mode. Zoom is a single <code>f32</code> on the camera entity — trivial to expose as scroll-wheel or keybind.</p>
+<p>Full camera system designed in <code>02-ARCHITECTURE.md</code> § “Camera System.” The <code>GameCamera</code> resource tracks position, zoom level, smooth interpolation targets, bounds, screen shake, and follow mode. Key features:</p>
+<ul>
+<li><strong>Zoom-toward-cursor:</strong> scroll wheel zooms centered on the mouse position (standard RTS behavior — SC2, AoE2, OpenRA). The world point under the cursor stays fixed on screen.</li>
+<li><strong>Smooth interpolation:</strong> frame-rate-independent exponential lerp for both zoom and pan. Feels identical at 30 fps and 240 fps.</li>
+<li><strong>Render mode integration (D048):</strong> each render mode defines its own zoom range and integer-snap behavior. Classic mode snaps <code>OrthographicProjection.scale</code> to integer multiples for pixel-perfect rendering. HD mode allows fully smooth zoom. 3D mode maps zoom to camera dolly distance.</li>
+<li><strong>Pan speed scales with zoom:</strong> zoomed out = faster scrolling, zoomed in = precision. Linear: <code>effective_speed = base_speed / zoom</code>.</li>
+<li><strong>Competitive zoom clamping (D055/D058):</strong> ranked matches enforce a <code>0.75–2.0</code> zoom range. Tournament organizers can override via <code>TournamentConfig</code>.</li>
+<li><strong>YAML-configurable:</strong> per-game-module camera defaults (zoom range, pan speed, edge scroll zone, shake intensity). Fully data-driven.</li>
+</ul>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
-</span>fn camera_zoom(
-    input: Res&lt;Input&gt;,
-    mut camera: Query&lt;&amp;mut OrthographicProjection, With&lt;GameCamera&gt;&gt;,
-) {
-    let scroll = input.mouse_scroll_delta();
-    for mut proj in &amp;mut camera {
-        proj.scale = (proj.scale - scroll.y * 0.1).clamp(0.5, 3.0);
-    }
+</span>// Zoom-toward-cursor — the camera position shifts to keep the cursor's
+// world point fixed on screen. See 02-ARCHITECTURE.md for full implementation.
+fn zoom_toward_cursor(camera: &amp;mut GameCamera, cursor_world: Vec2, scroll_delta: f32) {
+    let old_zoom = camera.zoom_target;
+    camera.zoom_target = (old_zoom + scroll_delta * ZOOM_STEP)
+        .clamp(camera.zoom_min, camera.zoom_max);
+    let zoom_ratio = camera.zoom_target / old_zoom;
+    camera.position_target = cursor_world
+        + (camera.position_target - cursor_world) * zoom_ratio;
 }
 <span class="boring">}</span></code></pre>
+<p>This is a significant Remastered UX improvement — the original Remastered Collection only supports integer zoom levels (1×, 2×) with no smooth transitions.</p>
 <h4 id="modern-ui--sidebar"><a class="header" href="#modern-ui--sidebar">Modern UI / Sidebar</a></h4>
 <ul>
 <li>IC’s <code>ic-ui</code> crate uses Bevy UI — not locked to OpenRA’s widget system</li>

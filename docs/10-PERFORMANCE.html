@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-7bc359dc.js";
+            window.path_to_searchindex_js = "searchindex-72fd73e9.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-1d51ffef.js"></script>
@@ -378,6 +378,60 @@ impl TickScratch {
 <span class="boring">}</span></code></pre>
 <p><strong>Per-tick allocation target: zero bytes.</strong> All temporary data goes into pre-allocated scratch buffers. <code>clear()</code> resets without deallocating. The hot loop touches only warm memory.</p>
 <p>This is a fundamental advantage of Rust over C# for games. Idiomatic C# allocates many small objects per tick (iterators, LINQ results, temporary collections, event args), each of which contributes to GC pressure. Our engine targets zero per-tick allocations.</p>
+<h3 id="string-interning-compile-time-resolution-for-runtime-strings"><a class="header" href="#string-interning-compile-time-resolution-for-runtime-strings">String Interning (Compile-Time Resolution for Runtime Strings)</a></h3>
+<p>IC is string-heavy by design — YAML keys, trait names, mod identifiers, weapon names, locomotor types, condition names, asset paths, Workshop package IDs. Comparing these strings at runtime (byte-by-byte, potentially cache-cold) in every tick is wasteful when the set of valid strings is known at load time.</p>
+<p><strong>String interning</strong> resolves all YAML/mod strings to integer IDs once during loading. All runtime comparisons use the integer — a single CPU instruction instead of a variable-length byte scan.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Interned string handle — 4 bytes, Copy, Eq is a single integer comparison.
+/// Stable across save/load (the intern table is part of snapshot state, D010).
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct InternedId(u32);
+
+/// String intern table — built during YAML rule loading, immutable during gameplay.
+/// Part of the sim snapshot for deterministic save/resume.
+pub struct StringInterner {
+    id_to_string: Vec&lt;String&gt;,                  // index → string (display, debug, serialization)
+    string_to_id: HashMap&lt;String, InternedId&gt;,  // string → index (used at load time only)
+}
+
+impl StringInterner {
+    /// Resolve a string to its interned ID. Called during YAML loading — never in hot paths.
+    pub fn intern(&amp;mut self, s: &amp;str) -&gt; InternedId {
+        if let Some(&amp;id) = self.string_to_id.get(s) {
+            return id;
+        }
+        let id = InternedId(self.id_to_string.len() as u32);
+        self.id_to_string.push(s.to_owned());
+        self.string_to_id.insert(s.to_owned(), id);
+        id
+    }
+
+    /// Look up the original string for display/debug. Not used in hot paths.
+    pub fn resolve(&amp;self, id: InternedId) -&gt; &amp;str {
+        &amp;self.id_to_string[id.0 as usize]
+    }
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Where interning eliminates runtime string work:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>System</th><th>Without interning</th><th>With interning</th></tr>
+</thead>
+<tbody>
+<tr><td>Condition checks (D028)</td><td>String compare per condition per unit per tick</td><td><code>InternedId</code> == <code>InternedId</code> (1 instruction)</td></tr>
+<tr><td>Trait alias resolution (D023/D027)</td><td>HashMap lookup by string at rule evaluation</td><td>Pre-resolved at load time to canonical <code>InternedId</code></td></tr>
+<tr><td>WASM mod API boundary</td><td>String marshaling across host/guest (allocation + copy)</td><td><code>u32</code> type IDs — already designed this way in <code>04-MODDING.md</code></td></tr>
+<tr><td>Mod stacking namespace (D062)</td><td>String-keyed path lookups in the virtual namespace</td><td><code>InternedId</code>-keyed flat table</td></tr>
+<tr><td>Versus table keys</td><td>Armor/weapon type strings per damage calculation</td><td><code>InternedId</code> indices into flat <code>[i32; N]</code> array (already done for <code>VersusTable</code>)</td></tr>
+<tr><td>Notification dedup</td><td>String comparison for cooldown checks</td><td><code>InternedId</code> comparison</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Interning generalizes the <code>VersusTable</code> principle.</strong> The <code>VersusTable</code> flat array (documented above in Layer 2) already converts armor/weapon type enums to integer indices for O(1) lookup. String interning extends this approach to <em>every</em> string-keyed system — conditions, traits, mod paths, asset names — without requiring hardcoded enums. The <code>VersusTable</code> uses compile-time enum indices; <code>StringInterner</code> provides the same benefit for data-driven strings loaded from YAML.</p>
+<p><strong>What NOT to intern:</strong> Player-facing display strings (chat messages, player names, localization text). These are genuinely dynamic and not used in hot-path comparisons. Interning targets the <em>engine vocabulary</em> — the fixed set of identifiers that YAML rules, conditions, and mod APIs reference repeatedly.</p>
+<p><strong>Snapshot integration (D010):</strong> The <code>StringInterner</code> is part of the sim snapshot. When saving/loading, the intern table serializes alongside game state, ensuring that <code>InternedId</code> values remain stable across save/resume. Replays record the intern table at keyframes. This is the same approach Factorio uses for its prototype string IDs — resolved once during data loading, stable for the session lifetime.</p>
 <h2 id="layer-6-work-stealing-parallelism-bonus-scaling"><a class="header" href="#layer-6-work-stealing-parallelism-bonus-scaling">Layer 6: Work-Stealing Parallelism (Bonus Scaling)</a></h2>
 <p>After layers 1-5, the engine is already fast on a single core. Parallelism scales it further on better hardware.</p>
 <h3 id="how-bevy--rayon-work-stealing-operates"><a class="header" href="#how-bevy--rayon-work-stealing-operates">How Bevy + rayon Work-Stealing Operates</a></h3>
@@ -728,9 +782,17 @@ pub struct EntityBaseline {
 <tr><td>Replay keyframes every 300 ticks (mandatory)</td><td><code>05-FORMATS.md</code></td><td>Sub-second seeking without re-simulating from tick 0</td></tr>
 <tr><td><code>gameplay_events</code> denormalized indexed columns</td><td><code>09-DECISIONS.md</code> D034</td><td>Avoids <code>json_extract()</code> scans during <code>PlayerStyleProfile</code> aggregation (D042)</td></tr>
 <tr><td>All SQLite writes on dedicated I/O thread</td><td><code>09-DECISIONS.md</code> D031</td><td>Ring buffer → batch transaction; game loop thread never touches SQLite</td></tr>
+<tr><td>I/O ring buffer ≥1024 entries</td><td><code>09-DECISIONS.md</code> D031</td><td>Absorbs 500 ms HDD checkpoint stall at 600 events/s peak with 3.4× headroom</td></tr>
+<tr><td>WAL checkpoint suppressed during gameplay (HDD)</td><td><code>09-DECISIONS.md</code> D034</td><td>Random I/O checkpoint on spinning disk takes 200–500 ms; defer to safe points</td></tr>
+<tr><td>Autosave fsync on I/O thread, never game thread</td><td><code>09-DECISIONS.md</code> D010</td><td>HDD fsync takes 50–200 ms; game thread only produces DeltaSnapshot bytes</td></tr>
+<tr><td>Replay keyframe: snapshot on game thread, LZ4+I/O on background</td><td><code>05-FORMATS.md</code></td><td>~1 ms game thread cost every 300 ticks; compression + write async</td></tr>
 <tr><td>Weather quadrant rotation (1/4 map per tick)</td><td><code>09-DECISIONS.md</code> D022</td><td>Sim-only amortization — no camera dependency in deterministic sim</td></tr>
 <tr><td><code>gameplay.db</code> mmap capped at 64 MB</td><td><code>09-DECISIONS.md</code> D034</td><td>1.6% of 4 GB min-spec RAM; scaled up on systems with ≥8 GB</td></tr>
 <tr><td>WASM pathfinder fuel exhaustion → continue heading</td><td><code>04-MODDING.md</code> D045</td><td>Zero-cost fallback prevents unit freezing without breaking determinism</td></tr>
+<tr><td><code>StringInterner</code> resolves YAML strings to <code>InternedId</code> at load</td><td><code>10-PERFORMANCE.md</code></td><td>Condition checks, trait aliases, mod paths — integer compare instead of string compare</td></tr>
+<tr><td><code>DoubleBuffered&lt;T&gt;</code> for fog, influence maps, global modifiers</td><td><code>02-ARCHITECTURE.md</code></td><td>Tick-consistent reads — all systems see same fog/modifier state within a tick</td></tr>
+<tr><td>Connection lifecycle uses type state (<code>Connection&lt;S&gt;</code>)</td><td><code>03-NETCODE.md</code></td><td>Compile-time prevention of invalid state transitions — zero runtime cost via <code>PhantomData</code></td></tr>
+<tr><td>Camera zoom/pan interpolation once per frame, not per entity</td><td><code>02-ARCHITECTURE.md</code></td><td>Frame-rate-independent exponential lerp on <code>GameCamera</code> resource — <code>powf()</code> once per frame</td></tr>
 </tbody>
 </table>
 </div>

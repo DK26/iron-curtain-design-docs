@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-7bc359dc.js";
+            window.path_to_searchindex_js = "searchindex-72fd73e9.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-1d51ffef.js"></script>
@@ -1030,6 +1030,51 @@ pub enum EntityVisibility {
 </table>
 </div>
 <p><strong>Last-seen snapshot table:</strong> When a visible entity enters fog-of-war, the <code>FogProvider</code> stores a snapshot of its last-known position, type, owner, and build progress. The renderer displays this as a dimmed “ghost” unit. The snapshot is explicitly stale — the actual unit may have moved, morphed, or been destroyed. Snapshots are cleared when the position is re-explored and the unit is no longer there.</p>
+<h3 id="double-buffered-shared-state-tick-consistent-reads"><a class="header" href="#double-buffered-shared-state-tick-consistent-reads">Double-Buffered Shared State (Tick-Consistent Reads)</a></h3>
+<p>Multiple systems per tick need to read shared, expensive-to-compute data structures — fog visibility, influence maps, global condition modifiers (D028). The <code>FogProvider</code> output is the clearest example: <code>targeting_system()</code>, <code>ai_system()</code>, and <code>render</code> all need to answer “is this cell visible?” within the same tick. If <code>fog_system()</code> updates visibility mid-tick, some systems see old fog, others see new — a determinism violation.</p>
+<p>IC uses <strong>double buffering</strong> for any shared state that is written by one system and read by many systems within a tick:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Two copies of T — one for reading (current tick), one for writing (being rebuilt).
+/// Swap at tick boundary. All reads within a tick see a consistent snapshot.
+pub struct DoubleBuffered&lt;T&gt; {
+    /// Current tick — all systems read from this. Immutable during the tick.
+    read: T,
+    /// Next tick — one system writes to this during the current tick.
+    write: T,
+}
+
+impl&lt;T&gt; DoubleBuffered&lt;T&gt; {
+    /// Called exactly once per tick, at the tick boundary, before any systems run.
+    /// After swap, the freshly-computed write buffer becomes the new read buffer.
+    pub fn swap(&amp;mut self) {
+        std::mem::swap(&amp;mut self.read, &amp;mut self.write);
+    }
+
+    /// All systems call this to read — guaranteed consistent for the entire tick.
+    pub fn read(&amp;self) -&gt; &amp;T { &amp;self.read }
+
+    /// Only the owning system (e.g., fog_system) calls this to prepare the next tick.
+    pub fn write(&amp;mut self) -&gt; &amp;mut T { &amp;mut self.write }
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Where double buffering applies:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Data Structure</th><th>Writer System</th><th>Reader Systems</th><th>Why Not Single Buffer</th></tr>
+</thead>
+<tbody>
+<tr><td><code>FogProvider</code> output (visibility grid)</td><td><code>fog_system()</code> (step 21)</td><td><code>targeting_system()</code>, <code>ai_system()</code>, render</td><td>Targeting must see same visibility as AI — mid-tick update breaks determinism</td></tr>
+<tr><td>Influence maps (AI)</td><td><code>influence_map_system()</code></td><td><code>military_manager</code>, <code>economy_manager</code>, <code>building_placement</code></td><td>Multiple AI managers read influence data; rebuilding mid-decision corrupts scoring</td></tr>
+<tr><td>Global condition modifiers (D028)</td><td><code>condition_system()</code> (step 12)</td><td><code>damage_system()</code>, <code>movement_system()</code>, <code>production_system()</code></td><td>A “low power” modifier applied mid-tick means some systems use old damage values, others new</td></tr>
+<tr><td>Weather terrain effects (D022)</td><td><code>weather_system()</code> (step 16)</td><td><code>movement_system()</code>, <code>pathfinding</code>, render</td><td>Terrain surface state (mud, ice) affects movement cost; inconsistency causes desync</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Why not Bevy’s system ordering alone?</strong> Bevy’s scheduler can enforce that <code>fog_system()</code> runs before <code>targeting_system()</code>. But it cannot prevent a system scheduled <em>between</em> two readers from mutating shared state. Double buffering makes the guarantee structural: the read buffer is physically separate from the write buffer. No scheduling mistake can cause a reader to see partial writes.</p>
+<p><strong>Cost:</strong> One extra copy of each double-buffered data structure. For fog visibility (a bit array over map cells), this is ~32KB for a 512×512 map. For influence maps (a <code>[i32; CELLS]</code> array), it’s ~1MB for a 512×512 map. These are allocated once at game start and never reallocated — consistent with Layer 5’s zero-allocation principle.</p>
+<p><strong>Swap timing:</strong> <code>DoubleBuffered::swap()</code> is called in <code>Simulation::apply_tick()</code> before the system pipeline runs. This is a fixed point in the tick — step 0, before step 1 (<code>order_validation_system()</code>). The write buffer from the previous tick becomes the read buffer for the current tick. The swap is a pointer swap (<code>std::mem::swap</code>), not a copy — effectively free.</p>
 <h3 id="ordervalidator-trait-d041"><a class="header" href="#ordervalidator-trait-d041">OrderValidator Trait (D041)</a></h3>
 <p>The engine enforces that ALL orders pass validation before <code>apply_orders()</code> executes them. This formalizes D012’s anti-cheat guarantee — game modules cannot accidentally skip validation:</p>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
@@ -1669,6 +1714,178 @@ pub struct KeyCombo {
 <li><code>modern</code> — WASD camera, common RTS conventions</li>
 </ul>
 <p>Fully rebindable in settings UI. Categories: unit commands, production, control groups, camera, chat, debug. Hotkeys produce <code>PlayerOrder</code>s through <code>InputSource</code> — the sim never sees key codes.</p>
+<h3 id="camera-system"><a class="header" href="#camera-system">Camera System</a></h3>
+<p>The camera is a purely render-side concern — the sim has no camera concept (Invariant #1). Camera state lives as a Bevy <code>Resource</code> in <code>ic-render</code>, read by the rendering pipeline and <code>ic-ui</code> (minimap, spatial audio listener position). The <code>ScreenToWorld</code> trait (see § “Portability Design Rules”) converts screen coordinates to world positions; the camera system controls what region of the world is visible.</p>
+<h4 id="core-types"><a class="header" href="#core-types">Core Types</a></h4>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Central camera state — a Bevy Resource in ic-render.
+/// NOT part of the sim. Save/restore for save games is serialized separately
+/// (alongside other client-side state like UI layout and audio volume).
+#[derive(Resource)]
+pub struct GameCamera {
+    /// World position the camera is centered on (render-side f32, not sim fixed-point).
+    pub position: Vec2,
+    /// Current zoom level. 1.0 = default view. &lt;1.0 = zoomed out, &gt;1.0 = zoomed in.
+    pub zoom: f32,
+    /// Zoom limits — enforced every frame. Ranked/tournament modes clamp these further.
+    pub zoom_min: f32,  // default: 0.5 (see twice as much map)
+    pub zoom_max: f32,  // default: 4.0 (pixel-level inspection)
+    /// Map bounds in world coordinates — camera cannot scroll past these.
+    pub bounds: Rect,
+    /// Smooth interpolation factor for zoom (0.0–1.0 per frame, lerp toward target).
+    pub zoom_smoothing: f32,  // default: 0.15
+    /// Smooth interpolation factor for pan.
+    pub pan_smoothing: f32,   // default: 0.2
+    /// Internal: zoom target for smooth interpolation.
+    pub zoom_target: f32,
+    /// Internal: position target for smooth pan (e.g., centering on selection).
+    pub position_target: Vec2,
+    /// Edge scroll speed in world-units per second (scaled by current zoom).
+    pub edge_scroll_speed: f32,
+    /// Keyboard pan speed in world-units per second (scaled by current zoom).
+    pub keyboard_pan_speed: f32,
+    /// Follow mode: lock camera to a unit or player's view.
+    pub follow_target: Option&lt;FollowTarget&gt;,
+    /// Screen shake state (driven by explosions, nukes, superweapons).
+    pub shake: ScreenShake,
+}
+
+pub enum FollowTarget {
+    Unit(UnitTag),               // follow a specific unit (observer, cinematic)
+    Player(PlayerId),            // lock to a player's viewport (observer mode)
+}
+
+pub struct ScreenShake {
+    pub amplitude: f32,          // current intensity (decays over time)
+    pub decay_rate: f32,         // amplitude reduction per second
+    pub frequency: f32,          // oscillation speed
+    pub offset: Vec2,            // current frame's shake offset (applied to final transform)
+}
+<span class="boring">}</span></code></pre>
+<h4 id="zoom-behavior"><a class="header" href="#zoom-behavior">Zoom Behavior</a></h4>
+<p>Zoom modifies the <code>OrthographicProjection.scale</code> on the Bevy camera entity. A zoom of 1.0 maps to the default viewport size for the active render mode (D048). Zooming out (<code>zoom &lt; 1.0</code>) shows more of the map; zooming in (<code>zoom &gt; 1.0</code>) magnifies the view.</p>
+<p><strong>Input methods:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Input</th><th>Action</th><th>Platform</th></tr>
+</thead>
+<tbody>
+<tr><td>Mouse scroll wheel</td><td>Zoom toward/away from cursor position</td><td>Desktop</td></tr>
+<tr><td>+/- keys</td><td>Zoom toward/away from screen center</td><td>Desktop</td></tr>
+<tr><td>Pinch gesture</td><td>Zoom toward/away from pinch midpoint</td><td>Touch/mobile</td></tr>
+<tr><td><code>/zoom &lt;level&gt;</code> cmd</td><td>Set zoom to exact value (D058)</td><td>All</td></tr>
+<tr><td>Ctrl+scroll</td><td>Fine zoom (half step size)</td><td>Desktop</td></tr>
+<tr><td>Minimap scroll</td><td>Zoom the minimap’s own viewport independently</td><td>All</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Zoom-toward-cursor</strong> is the expected UX for isometric games (SC2, AoE2, OpenRA all do this). When the player scrolls the mouse wheel, the world point under the cursor stays fixed on screen — the camera position shifts to compensate for the scale change. This requires adjusting <code>position</code> alongside <code>zoom</code>:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>fn zoom_toward_cursor(camera: &amp;mut GameCamera, cursor_world: Vec2, scroll_delta: f32) {
+    let old_zoom = camera.zoom_target;
+    camera.zoom_target = (old_zoom + scroll_delta * ZOOM_STEP)
+        .clamp(camera.zoom_min, camera.zoom_max);
+    // Shift position so the cursor's world point stays at the same screen location.
+    let zoom_ratio = camera.zoom_target / old_zoom;
+    camera.position_target = cursor_world + (camera.position_target - cursor_world) * zoom_ratio;
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Smooth interpolation:</strong> The actual <code>zoom</code> and <code>position</code> values lerp toward their targets each frame:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>fn camera_interpolation(camera: &amp;mut GameCamera, dt: f32) {
+    let t_zoom = 1.0 - (1.0 - camera.zoom_smoothing).powf(dt * 60.0);
+    camera.zoom = camera.zoom.lerp(camera.zoom_target, t_zoom);
+    let t_pan = 1.0 - (1.0 - camera.pan_smoothing).powf(dt * 60.0);
+    camera.position = camera.position.lerp(camera.position_target, t_pan);
+}
+<span class="boring">}</span></code></pre>
+<p>This frame-rate-independent smoothing (exponential lerp) feels identical at 30 fps and 240 fps. The <code>powf()</code> call is once per frame, not per entity — negligible cost.</p>
+<p><strong>Discrete vs. continuous:</strong> Keyboard zoom (+/-) uses discrete steps (e.g., 0.25 increments). Mouse scroll uses finer steps (0.1). Both feed <code>zoom_target</code> and smooth toward it. There is NO “snap to integer zoom” constraint — smooth zoom is the default behavior. Classic render mode (D048) with integer scaling uses the same smooth zoom for camera movement but snaps the <code>OrthographicProjection.scale</code> to the nearest integer multiple when rendering, preventing sub-pixel shimmer on pixel art.</p>
+<h4 id="zoom-interaction-with-render-modes-d048"><a class="header" href="#zoom-interaction-with-render-modes-d048">Zoom Interaction with Render Modes (D048)</a></h4>
+<p>Different render modes have different zoom characteristics:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Render Mode</th><th>Default Zoom</th><th>Zoom Range</th><th>Scaling Behavior</th></tr>
+</thead>
+<tbody>
+<tr><td>Classic</td><td>1.0</td><td>0.5–3.0</td><td>Integer-scale snap for rendering; smooth camera movement</td></tr>
+<tr><td>HD</td><td>1.0</td><td>0.5–4.0</td><td>Fully smooth — no snap needed at any zoom level</td></tr>
+<tr><td>3D</td><td>1.0</td><td>0.25–6.0</td><td>Perspective FOV adjustment, not orthographic scale</td></tr>
+</tbody>
+</table>
+</div>
+<p>When a render mode switch occurs (F1 / D048), the camera system adjusts:</p>
+<ul>
+<li><code>zoom_min</code> / <code>zoom_max</code> to the new mode’s range</li>
+<li><code>zoom_target</code> is clamped to the new range (if current zoom exceeds new limits)</li>
+<li>Camera position is preserved — only the zoom behavior changes</li>
+</ul>
+<p>For 3D render modes, zoom maps to camera distance from the ground plane (dolly) rather than orthographic scale. The <code>ScreenToWorld</code> trait abstracts this — the camera system sets a <code>zoom</code> value, and the active <code>ScreenToWorld</code> implementation interprets it appropriately (orthographic scale for 2D, distance for 3D).</p>
+<h4 id="pan-scrolling"><a class="header" href="#pan-scrolling">Pan (Scrolling)</a></h4>
+<p>Four input methods, all producing the same result — a <code>position_target</code> update:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Method</th><th>Behavior</th></tr>
+</thead>
+<tbody>
+<tr><td>Edge scroll</td><td>Move cursor to screen edge → pan in that direction</td></tr>
+<tr><td>Keyboard (WASD/arrows)</td><td>Pan at <code>keyboard_pan_speed</code>, scaled by zoom (slower when zoomed in)</td></tr>
+<tr><td>Minimap click</td><td>Jump camera center to the clicked world position</td></tr>
+<tr><td>Middle-mouse drag</td><td>Pan by mouse delta (inverted — drag world under cursor)</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Speed scales with zoom:</strong> When zoomed out, pan speed increases proportionally so map traversal time feels consistent. When zoomed in, pan speed decreases for precision. The scaling is linear: <code>effective_speed = base_speed / zoom</code>.</p>
+<p><strong>Bounds clamping:</strong> Every frame, <code>position_target</code> is clamped so the viewport stays within <code>bounds</code> (map rectangle plus a configurable padding). The player cannot scroll to see void beyond the map edge. Bounds are set when the map loads and do not change during gameplay.</p>
+<h4 id="screen-shake"><a class="header" href="#screen-shake">Screen Shake</a></h4>
+<p>Triggered by game events (explosions, superweapons, building destruction) via Bevy events:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct CameraShakeEvent {
+    pub epicenter: WorldPos,   // world position of the explosion
+    pub intensity: f32,        // 0.0–1.0 (nuke = 1.0, tank shell = 0.05)
+    pub duration_secs: f32,    // how long the shake lasts
+}
+<span class="boring">}</span></code></pre>
+<p>The shake system calculates <code>amplitude</code> from intensity, attenuated by distance from the camera. Multiple concurrent shakes are additive (capped at a maximum amplitude). The <code>shake.offset</code> is applied to the final camera transform each frame — it never modifies <code>position</code> or <code>position_target</code>, so the shake doesn’t drift the view.</p>
+<p>Players can disable screen shake entirely via settings (<code>/camera_shake off</code> — D058) or reduce intensity with a slider. Accessibility concern: excessive screen shake can cause motion sickness.</p>
+<h4 id="camera-in-replays-and-save-games"><a class="header" href="#camera-in-replays-and-save-games">Camera in Replays and Save Games</a></h4>
+<ul>
+<li><strong>Save games:</strong> <code>GameCamera</code> state (position, zoom, follow target) is serialized alongside other client-side state. On load, the camera restores to where the player was looking.</li>
+<li><strong>Replays:</strong> <code>CameraPositionSample</code> events (see <code>05-FORMATS.md</code>) record each player’s viewport center and zoom level at 2 Hz. Replay viewers can follow any player’s camera or use free camera. The replay camera is independent of the recorded camera data — the viewer controls their own viewport.</li>
+<li><strong>Observer mode:</strong> Observers have independent camera control with no zoom restrictions (they can zoom out further than players for overview). The <code>follow_player</code> option (see <code>ObserverState</code>) syncs the observer’s camera to a player’s recorded <code>CameraPositionSample</code> stream.</li>
+</ul>
+<h4 id="camera-configuration-yaml"><a class="header" href="#camera-configuration-yaml">Camera Configuration (YAML)</a></h4>
+<p>Per-game-module camera defaults:</p>
+<pre><code class="language-yaml">camera:
+  zoom:
+    default: 1.0
+    min: 0.5
+    max: 4.0
+    step_scroll: 0.1       # mouse wheel increment
+    step_keyboard: 0.25    # +/- key increment
+    smoothing: 0.15        # lerp factor (0 = instant, 1 = no movement)
+    # Ranked override — competitive committee (D037) sets these per season
+    ranked_min: 0.75
+    ranked_max: 2.0
+  pan:
+    edge_scroll_speed: 1200.0   # world-units/sec at zoom 1.0
+    keyboard_speed: 1000.0
+    smoothing: 0.2
+    edge_scroll_zone: 8        # pixels from screen edge to trigger
+  shake:
+    max_amplitude: 12.0         # max pixel displacement
+    decay_rate: 8.0             # amplitude reduction per second
+    enabled: true               # default; player can override in settings
+  bounds_padding: 64            # extra world-units beyond map edges
+</code></pre>
+<p>This makes camera behavior fully data-driven (Principle 4 from <code>13-PHILOSOPHY.md</code>). A Tiberian Sun module can set different zoom ranges (its taller buildings need more zoom-out headroom). A total conversion can disable edge scrolling entirely if it uses a different camera paradigm.</p>
 <h3 id="game-speed"><a class="header" href="#game-speed">Game Speed</a></h3>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -1759,7 +1976,7 @@ pub struct AmmoPool {
     pub show_economy: bool,    // income rate, credits per player
     pub show_powers: bool,     // superweapon charge timers
     pub show_score: bool,      // strategic score tracker
-    pub follow_player: Option&lt;PlayerId&gt;,  // lock camera to player's view
+    pub follow_player: Option&lt;PlayerId&gt;,  // lock camera to player's view (writes GameCamera.follow_target)
 }
 <span class="boring">}</span></code></pre>
 <p><strong>Army overlay:</strong> Bar chart of unit counts per player, grouped by type. <strong>Production overlay:</strong> List of active queues per player. <strong>Economy overlay:</strong> Income rate graph. These are render-only — no sim interaction. Observer UI is an <code>ic-ui</code> concern.</p>
@@ -2373,7 +2590,7 @@ pub enum ScreenClass {
 <li><strong>Sound effects:</strong> Weapon fire, explosions, unit acknowledgments, UI clicks. Triggered by sim events (combat, production, movement) via Bevy observer systems.</li>
 <li><strong>EVA voice system:</strong> Plays notification audio triggered by <code>notification_system()</code> events. Manages a priority queue — high-priority notifications (nuke launch, base under attack) interrupt low-priority ones. Respects per-notification cooldowns.</li>
 <li><strong>Music playback:</strong> Jukebox system with playlist management, track shuffle, and cross-fade. Supports <code>.aud</code> (original RA format via <code>ra-formats</code>) and modern formats (OGG, WAV via Bevy). Theme-specific intro tracks (D032 — Hell March for Classic theme).</li>
-<li><strong>Spatial audio:</strong> 3D positional audio for effects — explosions louder when camera is near. Uses Bevy’s spatial audio with listener at camera position.</li>
+<li><strong>Spatial audio:</strong> 3D positional audio for effects — explosions louder when camera is near. Uses Bevy’s spatial audio with listener at <code>GameCamera.position</code> (see § “Camera System”).</li>
 <li><strong>VoIP playback:</strong> Decodes incoming Opus voice frames from <code>MessageLane::Voice</code> and mixes them into the audio output. Handles per-player volume, muting, and optional spatial panning (D059 § Spatial Audio). Voice replay playback syncs Opus frames to game ticks.</li>
 <li><strong>Ambient soundscapes:</strong> Per-biome ambient loops (waves for coastal maps, wind for snow maps). Weather system (D022) can modify ambient tracks.</li>
 </ul>
@@ -2868,6 +3085,71 @@ impl RelayCore {
 <p><strong>Listen server vs. Generals’ star topology.</strong> C&amp;C Generals used a star topology where the host player collected and rebroadcast orders — but the host had <strong>host advantage</strong>: zero self-latency, ability to peek at orders before broadcasting. With IC’s embedded <code>RelayCore</code>, the host’s own orders go through the same <code>RelayCore</code> pipeline as everyone else’s. Sub-tick timestamps are set by each client’s local clock <em>before</em> submission. The relay orders by timestamp, not arrival. The host doesn’t peek, doesn’t get priority.</p>
 <p><strong>Trust boundary for ranked play.</strong> An embedded relay runs inside the host’s process — a malicious host could theoretically modify <code>RelayCore</code> behavior (drop opponents’ orders, manipulate timestamps). For <strong>ranked/competitive</strong> play, the matchmaking system requires connection to an official or community-verified relay server (standalone binary on trusted infrastructure). For <strong>casual, LAN, and custom games</strong>, the embedded relay is perfect — zero setup, “Host Game” button just works, no external server needed.</p>
 <p><strong>Connecting clients can’t tell the difference.</strong> Both the standalone binary and the embedded relay present the same protocol. <code>RelayLockstepNetwork</code> on the client side connects identically — it doesn’t know or care whether the relay is a dedicated server or running inside another player’s game client. This is a deployment concern, not a protocol concern.</p>
+<h3 id="connection-lifecycle-type-state"><a class="header" href="#connection-lifecycle-type-state">Connection Lifecycle Type State</a></h3>
+<p>Network connections transition through a fixed lifecycle: <code>Connecting → Authenticated → InLobby → InGame → Disconnecting</code>. Calling the wrong method in the wrong state is a security risk — processing game orders from an unauthenticated connection, or sending lobby messages during gameplay, shouldn’t be possible to write accidentally.</p>
+<p>IC uses Rust’s <strong>type state pattern</strong> to make invalid state transitions a compile error instead of a runtime bug:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use std::marker::PhantomData;
+
+/// Marker types — zero-sized, exist only in the type system.
+pub struct Connecting;
+pub struct Authenticated;
+pub struct InLobby;
+pub struct InGame;
+
+/// A network connection whose valid operations are determined by its state `S`.
+/// `PhantomData&lt;S&gt;` is zero-sized — no runtime cost.
+pub struct Connection&lt;S&gt; {
+    stream: TcpStream,
+    player_id: Option&lt;PlayerId&gt;,
+    _state: PhantomData&lt;S&gt;,
+}
+
+impl Connection&lt;Connecting&gt; {
+    /// Verify credentials. Consumes the Connecting connection,
+    /// returns an Authenticated one. Can't be called twice.
+    pub fn authenticate(self, cred: &amp;Credential) -&gt; Result&lt;Connection&lt;Authenticated&gt;, AuthError&gt; {
+        // ... verify Ed25519 signature (D052), assign PlayerId
+    }
+    // send_order() doesn't exist here — won't compile.
+}
+
+impl Connection&lt;Authenticated&gt; {
+    /// Join a game lobby. Consumes Authenticated, returns InLobby.
+    pub fn join_lobby(self, room: RoomId) -&gt; Result&lt;Connection&lt;InLobby&gt;, LobbyError&gt; {
+        // ... register with lobby, send player list
+    }
+}
+
+impl Connection&lt;InLobby&gt; {
+    /// Transition to in-game when the lobby starts.
+    pub fn start_game(self, game_id: GameId) -&gt; Connection&lt;InGame&gt; {
+        // ... initialize per-connection game state
+    }
+
+    pub fn send_chat(&amp;self, msg: &amp;ChatMessage) { /* ... */ }
+    // send_order() doesn't exist here — won't compile.
+}
+
+impl Connection&lt;InGame&gt; {
+    /// Submit a game order. Only available during gameplay.
+    pub fn send_order(&amp;self, order: &amp;TimestampedOrder) { /* ... */ }
+
+    /// Return to lobby after match ends.
+    pub fn end_game(self) -&gt; Connection&lt;InLobby&gt; {
+        // ... cleanup per-connection game state
+    }
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Why this matters for IC:</strong></p>
+<ul>
+<li><strong>Security by construction.</strong> The relay server handles untrusted connections. A bug that processes game orders from a connection still in <code>Connecting</code> state is an exploitable vulnerability. Type state makes it a compile error — not a runtime check someone might forget.</li>
+<li><strong>Zero runtime cost.</strong> <code>PhantomData&lt;S&gt;</code> is zero-sized. The state transitions compile to the same machine code as passing a struct between functions. No enum discriminant, no match statement, no branch prediction miss.</li>
+<li><strong>Self-documenting API.</strong> The method signatures <em>are</em> the state machine documentation. If <code>send_order()</code> only exists on <code>Connection&lt;InGame&gt;</code>, no developer needs to check whether “Am I allowed to send orders here?” — the compiler already answered.</li>
+<li><strong>Ownership-driven transitions.</strong> Each transition <em>consumes</em> the old connection and returns a new one. You can’t accidentally keep a reference to the <code>Connecting</code> version after authentication. Rust’s move semantics enforce this automatically.</li>
+</ul>
+<p><strong>Where NOT to use type state:</strong> Game entities. Units change state constantly at runtime (idle → moving → attacking → dead) driven by data-dependent conditions — that’s a runtime state machine (<code>enum</code> + <code>match</code> with exhaustiveness checking), not a compile-time type state. Type state is for state machines with a fixed, known-at-compile-time set of transitions — like connection lifecycle, file handles (open/closed), or build pipeline stages.</p>
 <h3 id="sub-tick-order-fairness-from-cs2"><a class="header" href="#sub-tick-order-fairness-from-cs2">Sub-Tick Order Fairness (from CS2)</a></h3>
 <p>Counter-Strike 2 introduced “sub-tick” architecture: instead of processing all actions at discrete tick boundaries, the client timestamps every input with sub-tick precision. The server collects inputs from all clients and processes them in chronological order within each tick window. The server still ticks at 64Hz, but events are ordered by their actual timestamps.</p>
 <p>For an RTS, the core idea — <strong>timestamped orders processed in chronological order within a tick</strong> — produces fairer results for edge cases:</p>
@@ -5307,10 +5589,13 @@ impl Default for WasmExecutionLimits {
 );
 
 pub enum CameraMode {
-    Isometric,          // fixed angle, zoom only
-    FreeLook,           // full 3D rotation
-    Orbital { target: WorldPos },  // orbit a point
+    Isometric,          // fixed angle, zoom via OrthographicProjection.scale
+    FreeLook,           // full 3D rotation, zoom via camera distance
+    Orbital { target: WorldPos },  // orbit a point, zoom via distance
 }
+// Zoom behavior is controlled by the GameCamera resource (02-ARCHITECTURE.md § Camera).
+// WASM render mods that provide a custom ScreenToWorld impl interpret the zoom value
+// appropriately for their camera type (orthographic scale vs. dolly distance vs. FOV).
 <span class="boring">}</span></code></pre>
 <p><strong>Render mod registration:</strong> A render mod implements the <code>Renderable</code> and <code>ScreenToWorld</code> traits (see <code>02-ARCHITECTURE.md</code> § “3D Rendering as a Mod”). It registers via <code>ic_render_register()</code> for each actor type it handles. Unregistered actor types fall through to the default sprite renderer. This allows <strong>partial</strong> render overrides — a mod can replace tank rendering with 3D meshes while leaving infantry as sprites.</p>
 <p><strong>Security:</strong> Render host functions are gated by <code>ModCapabilities.render</code>. A gameplay mod (AI, scripting) cannot access <code>ic_render_*</code> functions. Render mods cannot access <code>ic_host_issue_order()</code> — they draw, they don’t command. These capabilities are declared in the mod manifest and verified at load time.</p>
@@ -9139,6 +9424,12 @@ pub struct EmbeddedResources {
 }
 <span class="boring">}</span></code></pre>
 <p><strong>Playback features:</strong> Variable speed (0.5x to 8x), pause, scrub to any tick (re-simulates from nearest keyframe). The recorder takes a <code>SimSnapshot</code> keyframe every 300 ticks (~10 seconds at 30 tps) and stores it in the <code>.icrep</code> file. A 60-minute replay contains ~360 keyframes (~3-6 MB overhead depending on game state size), enabling sub-second seeking to any point. Keyframes are mandatory — the recorder always writes them.</p>
+<p><strong>Keyframe serialization threading:</strong> Producing a replay keyframe involves two phases with different thread requirements:</p>
+<ol>
+<li><strong>ECS snapshot</strong> (game thread): <code>Simulation::delta_snapshot()</code> reads ECS state via <code>ChangeMask</code> iteration. This MUST run on the game thread because it reads live sim state. Cost: ~0.5–1 ms for 500 units (lightweight — bitfield scan + changed component serialization). Produces a <code>Vec&lt;u8&gt;</code> of serialized component data.</li>
+<li><strong>LZ4 compression + file write</strong> (background writer thread): The serialized bytes are sent through the replay writer’s crossbeam channel to the background thread, which performs LZ4 compression (~0.3–0.5 ms for ~200 KB → ~40–80 KB) and appends to the <code>.icrep</code> file. File I/O never touches the game thread.</li>
+</ol>
+<p>The game thread contributes ~1 ms every 300 ticks (~10 seconds) for keyframe production — well within the 33 ms tick budget. The LZ4 compression and disk write happen asynchronously on the background writer.</p>
 <h3 id="foreign-replay-decoders-d056"><a class="header" href="#foreign-replay-decoders-d056">Foreign Replay Decoders (D056)</a></h3>
 <p><code>ra-formats</code> includes decoders for foreign replay file formats, enabling direct playback and conversion to <code>.icrep</code>:</p>
 <div class="table-wrapper">
@@ -11564,6 +11855,7 @@ let game = GameLoop::new(sim, renderer, adapted);
 <li>Automated testing (load known state, apply inputs, verify result)</li>
 </ul>
 <p><strong>Crash-safe serialization (from Valve Fossilize):</strong> Save files use an append-only write strategy with a final header update — the same pattern Valve uses in Fossilize (their pipeline cache serialization library, see <code>research/valve-github-analysis.md</code> § Part 3). The payload is written first into a temporary file; only after the full payload is fsynced does the header (containing checksum + payload length) get written atomically. If the process crashes mid-write, the incomplete temporary file is detected and discarded on next load — the previous valid save remains intact. This eliminates the “corrupted save file” failure mode that plagues games with naïve serialization.</p>
+<p><strong>Autosave threading:</strong> Autosave (including <code>delta_snapshot()</code> serialization + LZ4 compression + fsync) MUST run on the dedicated I/O thread — never on the game loop thread. On a 5400 RPM HDD, the <code>fsync()</code> call alone takes 50–200 ms (waits for platters to physically commit). Even though delta saves are only ~30 KB, fsync latency dominates. The game thread’s only responsibility is to produce the <code>DeltaSnapshot</code> data (reading ECS state — fast, ~0.5–1 ms for 500 units via <code>ChangeMask</code> bitfield iteration). The serialized bytes are then sent to the I/O thread via the same ring buffer used for SQLite events. The I/O thread handles file I/O + fsync asynchronously. This prevents the guaranteed 50–200 ms HDD hitch that would otherwise occur every autosave interval.</p>
 <p><strong>Delta encoding for snapshots:</strong> Periodic full snapshots (for save games, desync debugging) are complemented by <strong>delta snapshots</strong> that encode only changed state since the last full snapshot. Delta encoding uses property-level diffing: each ECS component that changed since the last snapshot is serialized; unchanged components are omitted. For a 500-unit game where ~10% of components change per tick, a delta snapshot is ~10x smaller than a full snapshot. This reduces save file size, speeds up autosave, and makes periodic snapshot transmission (for late-join reconnection) bandwidth-efficient. Inspired by Source Engine’s <code>CNetworkVar</code> per-field change detection (see <code>research/valve-github-analysis.md</code> § 2.2) and the <code>SPROP_CHANGES_OFTEN</code> priority flag — components that change every tick (position, health) are checked first during delta computation, improving cache locality. See <code>10-PERFORMANCE.md</code> for the performance impact and <code>09-DECISIONS.md</code> § D054 for the <code>SnapshotCodec</code> version dispatch.</p>
 <hr>
 <h2 id="d011-cross-engine-play--community-layer-not-sim-layer"><a class="header" href="#d011-cross-engine-play--community-layer-not-sim-layer">D011: Cross-Engine Play — Community Layer, Not Sim Layer</a></h2>
@@ -14915,6 +15207,8 @@ CREATE TABLE telemetry_events (
     timestamp     TEXT    NOT NULL,        -- ISO 8601 with microsecond precision
     session_id    TEXT    NOT NULL,        -- random per-process-lifetime
     component     TEXT    NOT NULL,        -- 'client', 'relay', 'tracking', 'workshop'
+    game_module   TEXT,                    -- 'ra1', 'td', 'ra2', custom — set once per session (NULL on servers)
+    mod_fingerprint TEXT,                  -- D062 SHA-256 mod profile fingerprint — updated on profile switch
     category      TEXT    NOT NULL,        -- event domain (see taxonomy below)
     event         TEXT    NOT NULL,        -- specific event name
     severity      TEXT    NOT NULL DEFAULT 'info',  -- 'trace','debug','info','warn','error'
@@ -14927,10 +15221,24 @@ CREATE TABLE telemetry_events (
 CREATE INDEX idx_telemetry_ts          ON telemetry_events(timestamp);
 CREATE INDEX idx_telemetry_cat_event   ON telemetry_events(category, event);
 CREATE INDEX idx_telemetry_session     ON telemetry_events(session_id);
+CREATE INDEX idx_telemetry_game_module ON telemetry_events(game_module) WHERE game_module IS NOT NULL;
+CREATE INDEX idx_telemetry_mod_fp      ON telemetry_events(mod_fingerprint) WHERE mod_fingerprint IS NOT NULL;
 CREATE INDEX idx_telemetry_severity    ON telemetry_events(severity) WHERE severity IN ('warn', 'error');
 CREATE INDEX idx_telemetry_correlation ON telemetry_events(correlation) WHERE correlation IS NOT NULL;
 </code></pre>
 <p><strong>Why one schema everywhere?</strong> Aggregation scripts, debugging tools, and community analysis all work identically regardless of source. A relay operator can run the same <code>/analytics export</code> command as a player. Exported files from different components can be imported into a single SQLite database for cross-component analysis (desync debugging across client + relay). The aggregation tooling is a handful of SQL queries, not a specialized backend.</p>
+<p><strong>Mod-agnostic by design, mod-aware by context.</strong> The telemetry schema contains zero game-specific or mod-specific columns. Unit types, weapon names, building names, and resource types flow through as opaque strings — whatever the active mod’s YAML defines. A total conversion mod’s custom vocabulary (e.g., <code>unit_type: "Mammoth Mk.III"</code>) passes through unchanged without schema modification. The two denormalized context columns — <code>game_module</code> and <code>mod_fingerprint</code> — are set once per session on the client (updated on <code>ic profile activate</code> if the player switches mod profiles mid-session). On servers, these columns are populated per-game from lobby metadata. This means <strong>every analytical query can be trivially filtered by game module or mod combination</strong> without JOINing through <code>session.start</code>’s JSON payload:</p>
+<pre><code class="language-sql">-- Direct mod filtering — no JOINs needed
+SELECT event, COUNT(*) FROM telemetry_events
+WHERE game_module = 'ra1' AND category = 'input'
+GROUP BY event ORDER BY COUNT(*) DESC;
+
+-- Compare behavior across mod profiles
+SELECT mod_fingerprint, AVG(json_extract(data, '$.apm')) AS avg_apm
+FROM telemetry_events WHERE event = 'match.pace'
+GROUP BY mod_fingerprint;
+</code></pre>
+<p><strong>Relay servers</strong> set <code>game_module</code> and <code>mod_fingerprint</code> per-game from the lobby’s negotiated settings — all events for that game inherit the context. When the relay hosts multiple concurrent games with different mods, each game’s events carry the correct mod context independently.</p>
 <p><strong>OTEL is an optional export layer, not the primary sink.</strong> Server operators who want real-time dashboards (Grafana, Prometheus, Jaeger) can enable OTEL export — but it’s a “nice-to-have” for sophisticated deployments, not a dependency. A community member running a relay server on a spare machine doesn’t need to set up Prometheus. They get full telemetry in a SQLite file they can query with any SQL tool.</p>
 <p><strong>Retention and rotation:</strong> Each component’s <code>telemetry.db</code> has a configurable max size (default: 100 MB for client, 500 MB for servers). When the limit is reached, the oldest events are pruned. <code>/analytics export</code> exports a date range to a separate file before pruning. Servers can also configure time-based retention (e.g., <code>telemetry.retention_days = 30</code>).</p>
 <h3 id="three-telemetry-signals-otel-standard"><a class="header" href="#three-telemetry-signals-otel-standard">Three Telemetry Signals (OTEL Standard)</a></h3>
@@ -14985,7 +15293,7 @@ workshop.search.latency_ms            # histogram: search query time
 <tr><th>Event</th><th>JSON <code>data</code> Fields</th><th>Troubleshooting Value</th></tr>
 </thead>
 <tbody>
-<tr><td><code>relay.game.start</code></td><td><code>game_id</code>, <code>map</code>, <code>player_count</code>, <code>settings_hash</code>, <code>balance_preset</code></td><td>Which maps/settings are popular?</td></tr>
+<tr><td><code>relay.game.start</code></td><td><code>game_id</code>, <code>map</code>, <code>player_count</code>, <code>settings_hash</code>, <code>balance_preset</code>, <code>game_module</code>, <code>mod_profile_fingerprint</code></td><td>Which maps/settings/mods are popular?</td></tr>
 <tr><td><code>relay.game.end</code></td><td><code>game_id</code>, <code>duration_s</code>, <code>ticks</code>, <code>outcome</code>, <code>player_count</code></td><td>Match length distribution, completion vs. abandonment rates</td></tr>
 <tr><td><code>relay.player.join</code></td><td><code>game_id</code>, <code>slot</code>, <code>rtt_ms</code>, <code>mod_profile_fingerprint</code></td><td>Connection quality at join time, mod compatibility</td></tr>
 <tr><td><code>relay.player.leave</code></td><td><code>game_id</code>, <code>slot</code>, <code>reason</code> (quit/disconnect/kicked/timeout), <code>match_time_s</code></td><td>Why and when players leave — early ragequit vs. end-of-game</td></tr>
@@ -15158,7 +15466,7 @@ pub enum GameplayEvent {
 <tr><td><code>input.ctrl_group</code></td><td><code>group_number</code>, <code>action</code> (assign/recall/append/steal), <code>unit_count</code>, <code>unit_types[]</code></td><td>Control group adoption — which groups, how many units, reassignment frequency</td></tr>
 <tr><td><code>input.order</code></td><td><code>order_type</code> (move/attack/attack_move/guard/patrol/stop/force_fire/deploy), <code>target_type</code> (ground/unit/building/none), <code>unit_count</code>, <code>method</code> (right_click/hotkey/minimap/sidebar)</td><td>How players issue orders — right-click vs. hotkey vs. sidebar? What order types dominate?</td></tr>
 <tr><td><code>input.build_queue</code></td><td><code>item_type</code>, <code>action</code> (queue/cancel/hold/repeat), <code>method</code> (click/hotkey), <code>queue_depth</code>, <code>queue_position</code></td><td>Build queue management — do players queue in advance or build-on-demand?</td></tr>
-<tr><td><code>input.camera</code></td><td><code>method</code> (edge_scroll/keyboard/minimap_click/ctrl_group_recall/base_hotkey), <code>distance</code>, <code>duration_ms</code></td><td>Camera control habits — which method dominates? How far do players scroll?</td></tr>
+<tr><td><code>input.camera</code></td><td><code>method</code> (edge_scroll/keyboard/minimap_click/ctrl_group_recall/base_hotkey/zoom_scroll/zoom_keyboard/zoom_pinch), <code>distance</code>, <code>duration_ms</code>, <code>zoom_level</code></td><td>Camera control habits — which method dominates? How far do players scroll? What zoom levels are preferred?</td></tr>
 <tr><td><code>input.rally_point</code></td><td><code>building_type</code>, <code>position_type</code> (ground/unit/building), <code>distance_from_building</code></td><td>Rally point usage and placement patterns</td></tr>
 <tr><td><code>input.waypoint</code></td><td><code>waypoint_count</code>, <code>order_type</code>, <code>total_distance</code></td><td>Shift-queue / waypoint usage frequency and complexity</td></tr>
 </tbody>
@@ -15172,7 +15480,7 @@ pub enum GameplayEvent {
 <tr><th>Event</th><th>JSON <code>data</code> Fields</th><th>What It Reveals</th></tr>
 </thead>
 <tbody>
-<tr><td><code>match.start</code></td><td><code>mode</code>, <code>map</code>, <code>player_count</code>, <code>ai_count</code>, <code>ai_difficulty</code>, <code>balance_preset</code>, <code>render_mode</code>, <code>mod_profile_fingerprint</code></td><td>What people play — which modes, maps, settings</td></tr>
+<tr><td><code>match.start</code></td><td><code>mode</code>, <code>map</code>, <code>player_count</code>, <code>ai_count</code>, <code>ai_difficulty</code>, <code>balance_preset</code>, <code>render_mode</code>, <code>game_module</code>, <code>mod_profile_fingerprint</code></td><td>What people play — which modes, maps, mods, settings</td></tr>
 <tr><td><code>match.pace</code></td><td>Emitted every 60s: <code>tick</code>, <code>apm</code>, <code>credits</code>, <code>power_balance</code>, <code>unit_count</code>, <code>army_value</code>, <code>tech_tier</code>, <code>buildings_count</code>, <code>harvesters_active</code></td><td>Economic/military time-series — pacing, build order tendencies, when players peak</td></tr>
 <tr><td><code>match.end</code></td><td><code>duration_s</code>, <code>outcome</code> (win/loss/draw/disconnect/surrender), <code>units_built</code>, <code>units_lost</code>, <code>credits_harvested</code>, <code>credits_spent</code>, <code>peak_army_value</code>, <code>peak_unit_count</code></td><td>Win/loss context, game length, economic efficiency</td></tr>
 <tr><td><code>match.first_build</code></td><td><code>structure_type</code>, <code>time_s</code></td><td>Build order opening — first building timing (balance indicator)</td></tr>
@@ -15190,11 +15498,14 @@ pub enum GameplayEvent {
 </thead>
 <tbody>
 <tr><td><code>session.start</code></td><td><code>engine_version</code>, <code>os</code>, <code>display_resolution</code>, <code>game_module</code>, <code>mod_profile_fingerprint</code>, <code>session_number</code> (incrementing per install)</td><td>Environment context — OS distribution, screen sizes, how many times they’ve launched</td></tr>
+<tr><td><code>session.mod_manifest</code></td><td><code>game_module</code>, <code>mod_profile_fingerprint</code>, <code>unit_types[]</code>, <code>building_types[]</code>, <code>weapon_types[]</code>, <code>resource_types[]</code>, <code>faction_names[]</code>, <code>mod_sources[]</code></td><td>Self-describing type vocabulary — makes exported telemetry interpretable without the mod’s YAML files</td></tr>
+<tr><td><code>session.profile_switch</code></td><td><code>old_fingerprint</code>, <code>new_fingerprint</code>, <code>old_game_module</code>, <code>new_game_module</code>, <code>profile_name</code></td><td>Mid-session mod profile changes — boundary marker for analytics segmentation</td></tr>
 <tr><td><code>session.end</code></td><td><code>duration_s</code>, <code>reason</code> (quit/crash/update/system_sleep), <code>screens_visited[]</code>, <code>matches_played</code>, <code>features_used[]</code></td><td>Session shape — how long, what did they do, clean exit or crash?</td></tr>
 <tr><td><code>session.idle</code></td><td><code>screen_id</code>, <code>duration_s</code></td><td>Idle detection — was the player AFK on the main menu for 20 minutes?</td></tr>
 </tbody>
 </table>
 </div>
+<p><strong><code>session.mod_manifest</code> rationale:</strong> When telemetry records <code>unit_type: "HARV"</code> or <code>weapon: "Vulcan"</code>, these strings are meaningful only if you know the mod’s type catalog. Without context, exported <code>telemetry.db</code> files require the original mod’s YAML files to interpret event payloads. The <code>session.mod_manifest</code> event, emitted once per session (and again on <code>session.profile_switch</code>), captures the active mod’s full type vocabulary — every unit, building, weapon, resource, and faction name defined in the loaded YAML rules. This makes exported telemetry <strong>self-describing</strong>: an analyst receiving a community-submitted <code>telemetry.db</code> can identify what <code>"HARV"</code> means without installing the mod. The manifest is typically 2–10 KB of JSON — negligible overhead for one event per session.</p>
 <h4 id="settings--configuration-events"><a class="header" href="#settings--configuration-events">Settings &amp; Configuration Events</a></h4>
 <div class="table-wrapper">
 <table>
@@ -15426,6 +15737,7 @@ ORDER BY avg_p95_frame_ms DESC;
 </table>
 </div>
 <p>All writes happen on a dedicated I/O thread (or <code>spawn_blocking</code> task) — never on the game loop thread. The game loop thread only appends to a lock-free ring buffer; the I/O thread drains and commits. This guarantees that SQLite contention (including <code>busy_timeout</code> waits and WAL checkpoints) cannot cause frame drops.</p>
+<p><strong>Ring buffer sizing:</strong> The ring buffer must absorb all events generated during the worst-case I/O thread stall (WAL checkpoint on HDD: 200–500 ms). At peak event rates (~600 events/s during intense combat — gameplay events + telemetry + product analytics combined), a 500 ms stall generates ~300 events. <strong>Minimum ring buffer capacity: 1024 entries</strong> (3.4× headroom over worst-case). Each entry is a lightweight enum (~64–128 bytes), so the buffer occupies ~64–128 KB — negligible. If the buffer fills despite this sizing, events are dropped with a counter increment (same pattern as the replay writer’s <code>frames_lost</code> tracking in V45). The I/O thread logs a warning on drain if drops occurred. This is a last-resort safety net, not an expected operating condition.</p>
 <p><strong>Build configurations:</strong></p>
 <div class="table-wrapper">
 <table>
@@ -16084,11 +16396,14 @@ CREATE TABLE gameplay_events (
     tick            INTEGER NOT NULL,
     event_type      TEXT NOT NULL,       -- 'unit_built', 'unit_killed', 'building_placed', ...
     player          TEXT,
+    game_module     TEXT,                -- denormalized: 'ra1', 'td', 'ra2', custom (set once per session)
+    mod_fingerprint TEXT,                -- denormalized: D062 SHA-256 (updated on profile switch)
     unit_type_id    INTEGER,             -- denormalized: interned unit type (nullable for non-unit events)
     target_type_id  INTEGER,             -- denormalized: interned target type (nullable)
     data_json       TEXT NOT NULL        -- event-specific payload (full detail)
 );
 CREATE INDEX idx_ge_session_event ON gameplay_events(session_id, event_type);
+CREATE INDEX idx_ge_game_module ON gameplay_events(game_module) WHERE game_module IS NOT NULL;
 CREATE INDEX idx_ge_unit_type ON gameplay_events(unit_type_id) WHERE unit_type_id IS NOT NULL;
 
 -- Campaign state (D021 branching campaigns)
@@ -16223,13 +16538,51 @@ fn configure_connection(conn: &amp;Connection, config: &amp;DbConfig) -&gt; rusq
 <li>Server Workshop and Matchmaking at 128–256 MB: large registries and leaderboard scans benefit from mmap. Workshop search scans FTS5 index pages; matchmaking scans rating tables for top-N queries. Server hardware typically has ≥16 GB RAM.</li>
 <li>Write-dominated databases (<code>telemetry.db</code>) skip mmap entirely — the write path doesn’t benefit, and mmap can actually hinder WAL performance by creating contention between mapped reads and WAL writes.</li>
 </ul>
-<p><strong><code>wal_autocheckpoint</code> — tuned to write cadence:</strong></p>
+<p><strong><code>wal_autocheckpoint</code> — tuned to write cadence, with gameplay override:</strong></p>
 <ul>
 <li>Client <code>telemetry.db</code> at 4000 pages (≈16 MB WAL): telemetry writes are bursty during gameplay (potentially hundreds of events per second during intense combat). A large autocheckpoint threshold batches writes and defers the expensive checkpoint operation, preventing frame drops. The WAL file may grow to 16 MB during a match and get checkpointed during the post-game transition.</li>
 <li>Server <code>telemetry.db</code> at 8000 pages (≈32 MB WAL): relay servers handling multiple concurrent games need even larger write batches. The 32 MB WAL absorbs write bursts without checkpoint contention blocking game event recording.</li>
 <li><code>gameplay.db</code> at 2000 pages (≈8 MB WAL): moderate — gameplay_events arrive faster than profile updates but slower than telemetry. The 8 MB buffer handles end-of-match write bursts.</li>
 <li>Small databases at 100–500 pages: writes are rare; keep the WAL file small and tidy.</li>
 </ul>
+<p><strong>HDD-safe WAL checkpoint strategy:</strong> The <code>wal_autocheckpoint</code> thresholds above are tuned for SSDs. On a 5400 RPM HDD (common on the 2012 min-spec laptop), a WAL checkpoint transfers dirty pages back to the main database file at scattered offsets — <strong>random I/O</strong>. A 16 MB checkpoint can produce 4000 random 4 KB writes, taking 200–500+ ms on a spinning disk. If this triggers during gameplay, the I/O thread stalls, the ring buffer fills, and events are silently lost.</p>
+<p><strong>Mitigation: disable autocheckpoint during active gameplay, checkpoint at safe points.</strong></p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// During match load, disable automatic checkpointing on gameplay-active databases.
+/// The I/O thread calls this after opening connections.
+fn enter_gameplay_mode(conn: &amp;Connection) -&gt; rusqlite::Result&lt;()&gt; {
+    conn.pragma_update(None, "wal_autocheckpoint", 0)?; // 0 = disable auto
+    Ok(())
+}
+
+/// At safe points (loading screen, post-game stats, main menu, single-player pause),
+/// trigger a passive checkpoint that yields if it encounters contention.
+fn checkpoint_at_safe_point(conn: &amp;Connection) -&gt; rusqlite::Result&lt;()&gt; {
+    // PASSIVE: checkpoint pages that don't require blocking readers.
+    // Does not block, does not stall. May leave some pages un-checkpointed.
+    conn.pragma_update(None, "wal_checkpoint", "PASSIVE")?;
+    Ok(())
+}
+
+/// On match end or app exit, restore normal autocheckpoint thresholds.
+fn leave_gameplay_mode(conn: &amp;Connection, normal_threshold: u32) -&gt; rusqlite::Result&lt;()&gt; {
+    conn.pragma_update(None, "wal_autocheckpoint", normal_threshold)?;
+    // Full checkpoint now — we're in a loading/menu screen, stall is acceptable.
+    conn.pragma_update(None, "wal_checkpoint", "TRUNCATE")?;
+    Ok(())
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Safe checkpoint points</strong> (I/O thread triggers these, never the game thread):</p>
+<ul>
+<li>Match loading screen (before gameplay starts)</li>
+<li>Post-game stats screen (results displayed, no sim running)</li>
+<li>Main menu / lobby (no active sim)</li>
+<li>Single-player pause menu (sim is frozen — user is already waiting)</li>
+<li>App exit / minimize / suspend</li>
+</ul>
+<p><strong>WAL file growth during gameplay:</strong> With autocheckpoint disabled, the WAL grows unbounded during a match. Worst case for a 60-minute match at peak event rates: telemetry.db WAL may reach ~50–100 MB, gameplay.db WAL ~20–40 MB. On a 4 GB min-spec machine, this is ~2–3% of RAM — acceptable. The WAL is truncated on the post-game <code>TRUNCATE</code> checkpoint. Players on SSDs experience no difference — checkpoint takes &lt;50 ms regardless of timing.</p>
+<p><strong>Detection:</strong> The I/O thread queries storage type at startup via Bevy’s platform detection (or heuristic: sequential read bandwidth vs. random IOPS ratio). If HDD is detected (or cannot be determined — conservative default), gameplay WAL checkpoint suppression activates automatically. SSD users keep the normal <code>wal_autocheckpoint</code> thresholds. The <code>storage.assume_ssd</code> cvar overrides detection.</p>
 <p><strong><code>auto_vacuum</code> — only where deletions create waste:</strong></p>
 <ul>
 <li><code>INCREMENTAL</code> for <code>profile.db</code> (avatar/banner image replacements leave pages of dead BLOB data), <code>workshop/cache.db</code> (mod uninstalls remove metadata rows), and server Workshop (resource unpublish). Incremental mode marks freed pages for reuse without the full-table rewrite cost of <code>FULL</code> auto_vacuum. Reclamation happens via periodic <code>PRAGMA incremental_vacuum(N)</code> calls on background threads.</li>
@@ -19828,7 +20181,7 @@ CREATE TABLE llm_task_routing (
 </thead>
 <tbody>
 <tr><td><strong>Render backend</strong></td><td>Sprite renderer vs. mesh renderer vs. voxel renderer</td><td><code>Renderable</code> impl</td></tr>
-<tr><td><strong>Camera</strong></td><td>Isometric orthographic vs. free 3D perspective</td><td><code>ScreenToWorld</code> impl</td></tr>
+<tr><td><strong>Camera</strong></td><td>Isometric orthographic vs. free 3D perspective; zoom range</td><td><code>ScreenToWorld</code> impl + <code>CameraConfig</code></td></tr>
 <tr><td><strong>Resource packs</strong></td><td>Which asset set to use (classic <code>.shp</code>, HD sprites, GLTF models)</td><td>Resource pack selection</td></tr>
 <tr><td><strong>Visual config</strong></td><td>Scaling mode, palette handling, shadow style, post-FX preset</td><td><code>RenderSettings</code> subset</td></tr>
 </tbody>
@@ -19844,9 +20197,17 @@ CREATE TABLE llm_task_routing (
     pub display_name: String,              // "Classic (320×200)", "HD Sprites", "3D View"
     pub render_backend: RenderBackendId,   // Which Renderable impl to use
     pub camera: CameraMode,                // Isometric, Perspective, FreeRotate
+    pub camera_config: CameraConfig,       // Zoom range, pan speed (see 02-ARCHITECTURE.md § Camera)
     pub resource_pack_overrides: Vec&lt;ResourcePackRef&gt;, // Per-category pack selections
     pub visual_config: VisualConfig,       // Scaling, palette, shadow, post-FX
     pub keybind: Option&lt;KeyCode&gt;,          // Optional dedicated toggle key
+}
+
+pub struct CameraConfig {
+    pub zoom_min: f32,                     // minimum zoom (0.5 = zoomed way out)
+    pub zoom_max: f32,                     // maximum zoom (4.0 = close-up)
+    pub zoom_default: f32,                 // starting zoom level (1.0)
+    pub integer_snap: bool,                // snap to integer scale for pixel art (Classic mode)
 }
 
 pub struct VisualConfig {
@@ -19862,6 +20223,11 @@ pub struct VisualConfig {
     display_name: "Classic"
     render_backend: sprite
     camera: isometric
+    camera_config:
+      zoom_min: 0.5
+      zoom_max: 3.0
+      zoom_default: 1.0
+      integer_snap: true           # snap OrthographicProjection.scale to integer multiples
     resource_packs:
       sprites: classic-shp
       terrain: classic-tiles
@@ -19876,6 +20242,11 @@ pub struct VisualConfig {
     display_name: "HD"
     render_backend: sprite
     camera: isometric
+    camera_config:
+      zoom_min: 0.5
+      zoom_max: 4.0
+      zoom_default: 1.0
+      integer_snap: false          # smooth zoom at all levels
     resource_packs:
       sprites: hd-sprites         # Requires HD sprite resource pack
       terrain: hd-terrain
@@ -19893,6 +20264,11 @@ render_modes:
     display_name: "3D View"
     render_backend: mesh            # Provided by the WASM mod
     camera: free_rotate
+    camera_config:
+      zoom_min: 0.25               # 3D allows wider zoom range
+      zoom_max: 6.0
+      zoom_default: 1.0
+      integer_snap: false
     resource_packs:
       sprites: 3d-models           # GLTF meshes mapped to unit types
       terrain: 3d-terrain
@@ -19979,6 +20355,281 @@ render_modes:
 <li><strong>3D as a separate game module</strong> — Rejected. A “3D RA1” game module would duplicate all the rules, balance, and systems from the base RA1 module. The whole point is that the sim is unchanged.</li>
 <li><strong>No 2D↔3D toggle; 3D replaces 2D permanently when mod is active</strong> — Rejected. The Remastered Collection proved that <em>toggling</em> is the feature, not just having two visual options. Players love comparing. Content creators use it for dramatic effect. It’s also a safety net — if the 3D mod has rendering bugs, you can toggle back.</li>
 </ol>
+<h3 id="lessons-from-the-remastered-collection"><a class="header" href="#lessons-from-the-remastered-collection">Lessons from the Remastered Collection</a></h3>
+<p>The Remastered Collection’s F1 toggle is the gold-standard reference for this feature. Its architecture — recovered from the GPL source (<code>DLLInterface.cpp</code>) and our analysis (<code>research/remastered-collection-netcode-analysis.md</code> § 9) — reveals how Petroglyph achieved instant switching, and where IC can improve:</p>
+<p><strong>How the Remastered toggle works internally:</strong></p>
+<p>The Remastered Collection runs <strong>two rendering pipelines in parallel.</strong> The original C++ engine still software-renders every frame to <code>GraphicBufferClass</code> RAM buffers (palette-based 8-bit blitting) — exactly as in 1995. Simultaneously, <code>DLL_Draw_Intercept</code> captures every draw call as structured metadata (<code>CNCObjectStruct</code>: position, type, shape index, frame, palette, cloak state, health, selection) and forwards it to the C# GlyphX client via <code>CNC_Get_Game_State()</code>. The GlyphX layer renders the same scene using HD art and GPU acceleration. When the player presses Tab (their toggle key), the C# layer simply switches which final framebuffer is composited to screen — the classic software buffer or the HD GPU buffer. Both are always up-to-date because both render every frame.</p>
+<p><strong>Why dual-render works for Remastered but is wrong for IC:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Remastered approach</th><th>IC approach</th><th>Why different</th></tr>
+</thead>
+<tbody>
+<tr><td>Both pipelines render every frame</td><td>Only the active mode renders</td><td>The Remastered C++ engine is a sealed DLL — you can’t stop it rendering. IC owns both pipelines and can skip work. Rendering both wastes GPU budget.</td></tr>
+<tr><td>Classic renderer is software (CPU blit to RAM)</td><td>Both modes are GPU-based (wgpu via Bevy)</td><td>Classic-mode GPU sprites are cheap but not free. Dual GPU render passes halve available GPU budget for post-FX, particles, unit count.</td></tr>
+<tr><td>Switch is trivial: flip a “which buffer to present” flag</td><td>Switch swaps asset handles on live entities</td><td>Remastered pays for dual-render continuously to make the flip trivial. IC pays nothing continuously and does a one-frame swap at toggle time.</td></tr>
+<tr><td>Two codebases: C++ (classic) and C# (HD)</td><td>One codebase: same Bevy systems, different data</td><td>IC’s approach is fundamentally lighter — same draw call dispatch, different texture atlases.</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Key insight IC adopts:</strong> The Remastered Collection’s critical architectural win is that <strong>the sim is completely unaware of the render switch.</strong> The C++ sim DLL (<code>CNC_Advance_Instance</code>) has no knowledge of which visual mode is active — it advances identically in both cases. IC inherits this principle via Invariant #1 (sim is pure). The sim never imports from <code>ic-render</code>. Render mode is a purely client-side concern.</p>
+<p><strong>Key insight IC rejects:</strong> Dual-rendering every frame is wasteful when you own both pipelines. The Remastered Collection pays this cost because the C++ DLL cannot be told “don’t render this frame” — <code>DLL_Draw_Intercept</code> fires unconditionally. IC has no such constraint. Only the active render mode’s systems should run.</p>
+<h3 id="bevy-implementation-strategy"><a class="header" href="#bevy-implementation-strategy">Bevy Implementation Strategy</a></h3>
+<p>The render mode switch is implementable entirely within Bevy’s existing architecture — no custom render passes, no engine modifications. The key mechanisms are <strong><code>Visibility</code> component toggling</strong>, <strong><code>Handle</code> swapping on <code>Sprite</code>/<code>Mesh</code> components</strong>, and <strong>Bevy’s system set run conditions</strong>.</p>
+<h4 id="architecture-two-approaches-one-hybrid"><a class="header" href="#architecture-two-approaches-one-hybrid">Architecture: Two Approaches, One Hybrid</a></h4>
+<p><strong>Approach A: Entity-per-mode (rejected for same-backend switches)</strong></p>
+<p>Spawn separate sprite entities for classic and HD, toggle <code>Visibility</code>. Simple but doubles entity count (500 units × 2 = 1000 sprite entities) and doubles <code>Transform</code> sync work. Only justified for cross-backend switches (2D entity + 3D entity) where the components are structurally different.</p>
+<p><strong>Approach B: Handle-swap on shared entity (adopted for same-backend switches)</strong></p>
+<p>Each renderable entity has one <code>Sprite</code> component. On toggle, swap its <code>Handle&lt;Image&gt;</code> (or <code>TextureAtlas</code> index) from the classic atlas to the HD atlas. One entity, one transform, one visibility check — the sprite batch simply references different texture data. This is what <code>D029 Dual Asset</code> already designed.</p>
+<p><strong>Hybrid: same-backend swaps use handle-swap; cross-backend swaps use visibility-gated entity groups.</strong></p>
+<h4 id="core-ecs-components"><a class="header" href="#core-ecs-components">Core ECS Components</a></h4>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Marker resource: the currently active render mode.
+/// Changed via F1 keypress or settings UI.
+/// Bevy change detection (Res&lt;ActiveRenderMode&gt;.is_changed()) triggers swap systems.
+#[derive(Resource)]
+pub struct ActiveRenderMode {
+    pub current: RenderModeId,       // "classic", "hd", "3d"
+    pub cycle: Vec&lt;RenderModeId&gt;,    // Ordered list for F1 cycling
+    pub registry: HashMap&lt;RenderModeId, RenderModeConfig&gt;,
+}
+
+/// Per-entity component: maps this entity's render data for each available mode.
+/// Populated at spawn time from the game module's YAML asset mappings.
+#[derive(Component)]
+pub struct RenderModeAssets {
+    /// For same-backend modes (classic ↔ hd): alternative texture handles.
+    /// Key = render mode id, Value = handle to that mode's texture atlas.
+    pub sprite_handles: HashMap&lt;RenderModeId, Handle&lt;Image&gt;&gt;,
+    /// For same-backend modes: alternative atlas layout indices.
+    pub atlas_mappings: HashMap&lt;RenderModeId, TextureAtlasLayout&gt;,
+    /// For cross-backend modes (2D ↔ 3D): entity IDs of the alternative representations.
+    /// These entities exist but have Visibility::Hidden until their mode activates.
+    pub cross_backend_entities: HashMap&lt;RenderModeId, Entity&gt;,
+}
+
+/// System set that only runs when a render mode switch just occurred.
+/// Uses Bevy's run_if condition to avoid any per-frame cost when not switching.
+#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct RenderModeSwitchSet;
+<span class="boring">}</span></code></pre>
+<h4 id="the-toggle-system-f1-handler"><a class="header" href="#the-toggle-system-f1-handler">The Toggle System (F1 Handler)</a></h4>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Runs every frame (cheap: one key check).
+fn handle_render_mode_toggle(
+    input: Res&lt;ButtonInput&lt;KeyCode&gt;&gt;,
+    mut active: ResMut&lt;ActiveRenderMode&gt;,
+) {
+    if input.just_pressed(KeyCode::F1) {
+        let idx = active.cycle.iter()
+            .position(|id| *id == active.current)
+            .unwrap_or(0);
+        let next = (idx + 1) % active.cycle.len();
+        active.current = active.cycle[next].clone();
+        // Bevy change detection fires: active.is_changed() == true this frame.
+        // All systems in RenderModeSwitchSet will run exactly once.
+    }
+}
+<span class="boring">}</span></code></pre>
+<h4 id="same-backend-swap-classic--hd"><a class="header" href="#same-backend-swap-classic--hd">Same-Backend Swap (Classic ↔ HD)</a></h4>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Runs ONLY when ActiveRenderMode changes (run_if condition).
+/// Cost: iterates all renderable entities ONCE, swaps Handle + atlas.
+/// For 500 units + 200 buildings + terrain = ~1000 entities: &lt; 0.5ms.
+fn swap_sprite_handles(
+    active: Res&lt;ActiveRenderMode&gt;,
+    mut query: Query&lt;(&amp;RenderModeAssets, &amp;mut Sprite)&gt;,
+) {
+    let mode = &amp;active.current;
+    for (assets, mut sprite) in &amp;mut query {
+        if let Some(handle) = assets.sprite_handles.get(mode) {
+            sprite.image = handle.clone();
+        }
+        // Atlas layout swap happens similarly via TextureAtlas component
+    }
+}
+
+/// Swap camera and visual settings when render mode changes.
+/// Updates the GameCamera zoom range and the OrthographicProjection scaling mode.
+/// Camera position is preserved across switches — only zoom behavior changes.
+/// See 02-ARCHITECTURE.md § "Camera System" for the canonical GameCamera resource.
+fn swap_visual_config(
+    active: Res&lt;ActiveRenderMode&gt;,
+    mut game_camera: ResMut&lt;GameCamera&gt;,
+    mut camera_query: Query&lt;&amp;mut OrthographicProjection, With&lt;GameCameraMarker&gt;&gt;,
+) {
+    let config = &amp;active.registry[&amp;active.current];
+
+    // Update zoom range from the new render mode's camera config.
+    game_camera.zoom_min = config.camera_config.zoom_min;
+    game_camera.zoom_max = config.camera_config.zoom_max;
+    // Clamp current zoom to new range (e.g., 3D mode allows wider range than Classic).
+    game_camera.zoom_target = game_camera.zoom_target
+        .clamp(game_camera.zoom_min, game_camera.zoom_max);
+
+    for mut proj in &amp;mut camera_query {
+        proj.scaling_mode = match config.visual_config.scaling {
+            ScalingMode::IntegerNearest =&gt; bevy::render::camera::ScalingMode::Fixed {
+                width: 320.0, height: 200.0, // Classic RA viewport
+            },
+            ScalingMode::Native =&gt; bevy::render::camera::ScalingMode::AutoMin {
+                min_width: 1280.0, min_height: 720.0,
+            },
+            // ...
+        };
+    }
+}
+<span class="boring">}</span></code></pre>
+<h4 id="cross-backend-swap-2d--3d"><a class="header" href="#cross-backend-swap-2d--3d">Cross-Backend Swap (2D ↔ 3D)</a></h4>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// For cross-backend switches: toggle Visibility on entity groups.
+/// The 3D entities exist from the start but are Hidden.
+/// Swap cost: iterate entities, flip Visibility enum. Still &lt; 1ms.
+fn swap_render_backends(
+    active: Res&lt;ActiveRenderMode&gt;,
+    mut query: Query&lt;(&amp;RenderModeAssets, &amp;mut Visibility)&gt;,
+    mut cross_entities: Query&lt;&amp;mut Visibility, Without&lt;RenderModeAssets&gt;&gt;,
+) {
+    let mode = &amp;active.current;
+    let config = &amp;active.registry[mode];
+
+    for (assets, mut vis) in &amp;mut query {
+        // If this entity's backend matches the active mode, show it.
+        // Otherwise, hide it and show the cross-backend counterpart.
+        if assets.sprite_handles.contains_key(mode) {
+            *vis = Visibility::Inherited;
+            // Hide cross-backend counterparts
+            for (other_mode, &amp;entity) in &amp;assets.cross_backend_entities {
+                if *other_mode != *mode {
+                    if let Ok(mut other_vis) = cross_entities.get_mut(entity) {
+                        *other_vis = Visibility::Hidden;
+                    }
+                }
+            }
+        } else if let Some(&amp;entity) = assets.cross_backend_entities.get(mode) {
+            *vis = Visibility::Hidden;
+            if let Ok(mut other_vis) = cross_entities.get_mut(entity) {
+                *other_vis = Visibility::Inherited;
+            }
+        }
+    }
+}
+<span class="boring">}</span></code></pre>
+<h4 id="system-scheduling"><a class="header" href="#system-scheduling">System Scheduling</a></h4>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>impl Plugin for RenderModePlugin {
+    fn build(&amp;self, app: &amp;mut App) {
+        app.init_resource::&lt;ActiveRenderMode&gt;()
+           // F1 handler runs every frame — trivially cheap (one key check).
+           .add_systems(Update, handle_render_mode_toggle)
+           // Swap systems run ONLY on the frame when ActiveRenderMode changes.
+           .add_systems(Update, (
+               swap_sprite_handles,
+               swap_visual_config,
+               swap_render_backends,
+               swap_ui_theme,            // D032 theme pairing
+               swap_post_fx_pipeline,    // Post-processing preset
+               emit_render_mode_event,   // Telemetry: D031
+           ).in_set(RenderModeSwitchSet)
+            .run_if(resource_changed::&lt;ActiveRenderMode&gt;));
+    }
+}
+<span class="boring">}</span></code></pre>
+<h4 id="performance-characteristics"><a class="header" href="#performance-characteristics">Performance Characteristics</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Operation</th><th>Cost</th><th>When It Runs</th><th>Notes</th></tr>
+</thead>
+<tbody>
+<tr><td>F1 key check</td><td>~0 (one <code>HashMap</code> lookup)</td><td>Every frame</td><td>Bevy input system already processes keys; we just read</td></tr>
+<tr><td>Same-backend swap (classic ↔ hd)</td><td>~0.3–0.5 ms for 1000 entities</td><td>Once on toggle</td><td>Iterate entities, write <code>Handle&lt;Image&gt;</code>. No GPU work. Bevy batches texture changes automatically on next draw.</td></tr>
+<tr><td>Cross-backend swap (2D ↔ 3D)</td><td>~0.5–1 ms for 1000 entity pairs</td><td>Once on toggle</td><td>Toggle <code>Visibility</code>. Hidden entities are culled by Bevy’s visibility system — zero draw calls.</td></tr>
+<tr><td>3D asset first-load</td><td>50–500 ms (one-time)</td><td>First toggle to 3D</td><td>GLTF meshes + textures loaded async by Bevy’s asset server. Brief loading indicator. Cached thereafter.</td></tr>
+<tr><td>Steady-state (non-toggle frames)</td><td><strong>0 ms</strong></td><td>Every frame</td><td><code>run_if(resource_changed)</code> gates all swap systems. Zero per-frame overhead.</td></tr>
+<tr><td>VRAM usage</td><td>Classic atlas (~8 MB) + HD atlas (~64 MB)</td><td>Resident when loaded</td><td>Both atlases stay in VRAM. Modern GPUs: trivial. Min-spec 512 MB VRAM: still &lt;15%.</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Key property: zero per-frame cost.</strong> Bevy’s <code>resource_changed</code> run condition means the swap systems literally do not execute unless the player presses F1. Between toggles, the renderer treats the active atlas as the only atlas — standard sprite batching, standard draw calls, no branching.</p>
+<h4 id="asset-pre-loading-strategy"><a class="header" href="#asset-pre-loading-strategy">Asset Pre-Loading Strategy</a></h4>
+<p>The critical difference from the Remastered Collection: IC does NOT dual-render. Instead, it pre-loads both texture atlases into VRAM at match start (or lazily on first toggle):</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Called during match loading. Pre-loads all registered render mode assets.
+fn preload_render_mode_assets(
+    active: Res&lt;ActiveRenderMode&gt;,
+    asset_server: Res&lt;AssetServer&gt;,
+    mut preload_handles: ResMut&lt;RenderModePreloadHandles&gt;,
+) {
+    for (mode_id, config) in &amp;active.registry {
+        for pack_ref in &amp;config.resource_pack_overrides {
+            // Bevy's asset server loads asynchronously.
+            // We hold the Handle to keep the asset resident in memory.
+            let handle = asset_server.load(pack_ref.atlas_path());
+            preload_handles.retain.push(handle);
+        }
+    }
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Loading strategy by mode type:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Mode pair</th><th>Pre-load?</th><th>Memory cost</th><th>Rationale</th></tr>
+</thead>
+<tbody>
+<tr><td>Classic ↔ HD (same backend)</td><td>Yes, at match start</td><td>+64 MB VRAM for HD atlas</td><td>Both are texture atlases. Pre-loading makes F1 instant.</td></tr>
+<tr><td>2D ↔ 3D (cross backend)</td><td>Lazy, on first toggle</td><td>+100–300 MB for 3D meshes</td><td>3D assets are large. Don’t penalize 2D-only players. Loading indicator on first 3D toggle.</td></tr>
+<tr><td>Any ↔ Any (menu/lobby)</td><td>Active mode only</td><td>Minimal</td><td>No gameplay; loading time acceptable.</td></tr>
+</tbody>
+</table>
+</div>
+<h4 id="transform-synchronization-cross-backend-only"><a class="header" href="#transform-synchronization-cross-backend-only">Transform Synchronization (Cross-Backend Only)</a></h4>
+<p>When 2D and 3D entities coexist (one hidden), their <code>Transform</code> must stay in sync so the switch looks seamless. The sim writes to a <code>SimPosition</code> component (in world coordinates). Both the 2D sprite entity and the 3D mesh entity read from the same <code>SimPosition</code> and compute their own <code>Transform</code>:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Runs every frame for ALL visible renderable entities.
+/// Converts SimPosition → entity Transform using the active camera model.
+/// Hidden entities skip this (Bevy's visibility propagation prevents
+/// transform updates on Hidden entities from triggering GPU uploads).
+fn sync_render_transforms(
+    active: Res&lt;ActiveRenderMode&gt;,
+    mut query: Query&lt;(&amp;SimPosition, &amp;mut Transform), With&lt;Visibility&gt;&gt;,
+) {
+    let camera_model = &amp;active.registry[&amp;active.current].camera;
+    for (sim_pos, mut transform) in &amp;mut query {
+        *transform = camera_model.world_to_render(sim_pos);
+    }
+}
+<span class="boring">}</span></code></pre>
+<p>Bevy’s built-in visibility system already ensures that <code>Hidden</code> entities’ transforms aren’t uploaded to the GPU, so the 3D entity transforms are only computed when 3D mode is active.</p>
+<h4 id="comparison-remastered-vs-ic-render-switch"><a class="header" href="#comparison-remastered-vs-ic-render-switch">Comparison: Remastered vs. IC Render Switch</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Aspect</th><th>Remastered Collection</th><th>Iron Curtain</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Architecture</strong></td><td>Dual-render: both pipelines run every frame</td><td>Single-render: only active mode draws</td></tr>
+<tr><td><strong>Switch cost</strong></td><td>~0 (flip framebuffer pointer)</td><td>~0.5 ms (swap handles on ~1000 entities)</td></tr>
+<tr><td><strong>Steady-state cost</strong></td><td>Full classic render every frame (~2-5ms CPU) even when showing HD</td><td><strong>0 ms</strong> — inactive mode has zero cost</td></tr>
+<tr><td><strong>Why the trade-off</strong></td><td>C++ DLL can’t be told “don’t render”</td><td>IC owns both pipelines, can skip work</td></tr>
+<tr><td><strong>Memory</strong></td><td>Classic (RAM buffer) + HD (VRAM)</td><td>Both atlases in VRAM (unified GPU memory)</td></tr>
+<tr><td><strong>Cross-backend (2D↔3D)</strong></td><td>Not supported</td><td>Supported via visibility-gated entity groups</td></tr>
+<tr><td><strong>Multiplayer</strong></td><td>Both players must use same mode</td><td>Cross-view: each player picks independently</td></tr>
+<tr><td><strong>Camera</strong></td><td>Fixed isometric in both modes</td><td>Camera model switches with render mode</td></tr>
+<tr><td><strong>UI chrome</strong></td><td>Switches with graphics mode</td><td>Independently switchable (D032) but can be paired</td></tr>
+<tr><td><strong>Modder-extensible</strong></td><td>No</td><td>YAML registration + WASM render backends</td></tr>
+</tbody>
+</table>
+</div>
 <hr>
 <h2 id="d049-workshop-asset-formats--distribution--bevy-native-canonical-p2p-delivery"><a class="header" href="#d049-workshop-asset-formats--distribution--bevy-native-canonical-p2p-delivery">D049: Workshop Asset Formats &amp; Distribution — Bevy-Native Canonical, P2P Delivery</a></h2>
 <p><strong>Decision:</strong> The Workshop’s canonical asset formats are <strong>Bevy-native modern formats</strong> (OGG, PNG, WAV, WebM, KTX2, GLTF). C&amp;C legacy formats (.aud, .shp, .pal, .vqa, .mix) are fully supported for backward compatibility but are not the recommended distribution format for new content. Workshop delivery uses <strong>peer-to-peer distribution</strong> (BitTorrent/WebTorrent protocol) with HTTP fallback, reducing hosting costs from CDN-level to a lightweight tracker.</p>
@@ -22002,9 +22653,9 @@ pub enum AvatarSource {
 <pre><code>┌──────────────────────────────────────────────────────┐
 │ 📊 Statistics — Official IC Community (RA1)          │
 │                                                      │
-│  Rank:      ★ Commander I                            │
+│  Rank:      ★ Colonel I                                 │
 │  Rating:    1971 ± 45 (Glicko-2)     Peak: 2023     │
-│  Season:    S3 2028  |  Peak Rank: Colonel III       │
+│  Season:    S3 2028  |  Peak Rank: Brigadier III    │
 │  Matches:   342 played  |  W: 198  L: 131  D: 13    │
 │  Win Rate:  57.9%                                    │
 │  Streak:    W4 (current)  |  Best: W11               │
@@ -22849,44 +23500,44 @@ ranked_tiers:
   division_labels: ["III", "II", "I"]  # lowest to highest
 
   tiers:
-    - name: Conscript
+    - name: Cadet
       min_rating: 0
-      icon: "icons/ranks/conscript.png"
-      color: "#8B7355"            # Brown — raw recruit
-
-    - name: Private
-      min_rating: 1000
-      icon: "icons/ranks/private.png"
-      color: "#A0A0A0"            # Silver-grey
-
-    - name: Sergeant
-      min_rating: 1300
-      icon: "icons/ranks/sergeant.png"
-      color: "#FFD700"            # Gold chevrons
+      icon: "icons/ranks/cadet.png"
+      color: "#8B7355"            # Brown — officer trainee
 
     - name: Lieutenant
-      min_rating: 1550
+      min_rating: 1000
       icon: "icons/ranks/lieutenant.png"
-      color: "#4169E1"            # Royal blue — officer class
+      color: "#A0A0A0"            # Silver-grey — junior officer
 
     - name: Captain
-      min_rating: 1750
+      min_rating: 1250
       icon: "icons/ranks/captain.png"
-      color: "#9370DB"            # Purple — mid-officer
+      color: "#FFD700"            # Gold — company commander
 
-    - name: Commander
-      min_rating: 1950
-      icon: "icons/ranks/commander.png"
-      color: "#DC143C"            # Crimson — senior officer
+    - name: Major
+      min_rating: 1425
+      icon: "icons/ranks/major.png"
+      color: "#4169E1"            # Royal blue — battalion level
+
+    - name: Lt. Colonel
+      min_rating: 1575
+      icon: "icons/ranks/lt_colonel.png"
+      color: "#9370DB"            # Purple — senior field officer
 
     - name: Colonel
-      min_rating: 2150
+      min_rating: 1750
       icon: "icons/ranks/colonel.png"
-      color: "#FF4500"            # Red-orange — field commander
+      color: "#DC143C"            # Crimson — regimental command
+
+    - name: Brigadier
+      min_rating: 1975
+      icon: "icons/ranks/brigadier.png"
+      color: "#FF4500"            # Red-orange — brigade command
 
   elite_tiers:
     - name: General
-      min_rating: 2350
+      min_rating: 2250
       icon: "icons/ranks/general.png"
       color: "#FFD700"            # Gold — general staff
       show_rating: true           # Display actual rating number alongside tier
@@ -22894,17 +23545,17 @@ ranked_tiers:
     - name: Supreme Commander
       type: top_n                 # Fixed top-N, not rating threshold
       count: 200                  # Top 200 players per community server
-      icon: "icons/ranks/supreme_commander.png"
+      icon: "icons/ranks/supreme-commander.png"
       color: "#FFFFFF"            # White/platinum — pinnacle
       show_rating: true
       show_leaderboard_position: true
 </code></pre>
 <p><strong>Why military ranks for Red Alert:</strong></p>
 <ul>
-<li>Players literally command armies — military rank progression IS the core fantasy</li>
-<li>Cold War theme matches IC’s identity (the engine is named “Iron Curtain”)</li>
-<li>Immediately recognizable without explanation — everyone understands Private → General</li>
-<li>“Supreme Commander” as the pinnacle feels appropriately epic for a strategy game</li>
+<li>Players command armies — military rank progression IS the core fantasy</li>
+<li>All ranks are officer-grade (Cadet through General) because the player is always commanding, never a foot soldier</li>
+<li>Proper military hierarchy — every rank is real and in correct sequential order: Cadet → Lieutenant → Captain → Major → Lt. Colonel → Colonel → Brigadier → General</li>
+<li>“Supreme Commander” crowns the hierarchy — a title earned, not a rank given. It carries the weight of Cold War authority (STAVKA, NATO Supreme Allied Commander) and the unmistakable identity of the RTS genre itself</li>
 </ul>
 <p><strong>Why 7 + 2 = 9 tiers (23 ranked positions):</strong></p>
 <ul>
@@ -22912,6 +23563,7 @@ ranked_tiers:
 <li>Fewer than LoL’s 10 tiers (designed for 100M+ players — IC won’t have that)</li>
 <li>More than AoE4’s 6 tiers (too few for meaningful progression)</li>
 <li>3 divisions per tier (matching SC2/AoE4/Valorant convention) provides intra-tier goals</li>
+<li>Lt. Colonel fills the gap between Major and Colonel — the most natural compound rank, universally understood</li>
 <li>Elite tiers (General, Supreme Commander) create aspirational targets even with small populations</li>
 </ul>
 <p><strong>Game-module replaceability:</strong> Tiberian Dawn could use GDI/Nod themed rank names. A fantasy RTS mod can define completely different tier sets. Community mods define their own via YAML. The engine resolves <code>PlayerRating.rating → tier name + division</code> using whatever tier configuration the active game module provides.</p>
@@ -22936,9 +23588,253 @@ pub struct RankedTierDisplay {
     pub deviation: i64,            // uncertainty (shown as ±)
     pub is_elite: bool,            // General/Supreme Commander
     pub leaderboard_position: Option&lt;u32&gt;,  // only for elite tiers
-    pub peak_tier: Option&lt;String&gt;, // highest tier this season (e.g., "Commander I")
+    pub peak_tier: Option&lt;String&gt;, // highest tier this season (e.g., "Colonel I")
 }
 <span class="boring">}</span></code></pre>
+<h4 id="rating-details-panel-expanded-stats"><a class="header" href="#rating-details-panel-expanded-stats">Rating Details Panel (Expanded Stats)</a></h4>
+<p>The compact display (“Captain II — 1847 ± 45”) covers most players’ needs. But analytically-minded players — and anyone who watched a “What is Glicko-2?” explainer — want to inspect their full rating parameters. The <strong>Rating Details</strong> panel expands from the Statistics Card’s <code>[Rating Graph →]</code> link and provides complete transparency into every number the system tracks.</p>
+<pre><code>┌──────────────────────────────────────────────────────────────────┐
+│ 📈 Rating Details — Official IC Community (RA1)                  │
+│                                                                  │
+│  ┌─ Current Rating ────────────────────────────────────────┐     │
+│  │  ★ Colonel I                                           │     │
+│  │  Rating (μ):     1971          Peak: 2023 (S3 Week 5)  │     │
+│  │  Deviation (RD):   45          Range: 1881 – 2061       │     │
+│  │  Volatility (σ): 0.041         Trend: Stable ──         │     │
+│  └─────────────────────────────────────────────────────────┘     │
+│                                                                  │
+│  ┌─ What These Numbers Mean ───────────────────────────────┐     │
+│  │  Rating: Your estimated skill. Higher = stronger.       │     │
+│  │  Deviation: How certain the system is. Lower = more     │     │
+│  │    confident. Increases if you don't play for a while.  │     │
+│  │  Volatility: How consistent your results are. Low means │     │
+│  │    you perform predictably. High means recent upsets.   │     │
+│  │  Range: 95% confidence interval — your true skill is    │     │
+│  │    almost certainly between 1881 and 2061.              │     │
+│  └─────────────────────────────────────────────────────────┘     │
+│                                                                  │
+│  ┌─ Rating History (last 50 matches) ──────────────────────┐     │
+│  │  2050 ┤                                                 │     │
+│  │       │        ╭──╮                    ╭──╮             │     │
+│  │  2000 ┤   ╭──╮╯    ╰╮  ╭╮       ╭──╮╯    ╰──●         │     │
+│  │       │╭─╯           ╰──╯╰──╮╭─╯                       │     │
+│  │  1950 ┤                      ╰╯                         │     │
+│  │       │                                                 │     │
+│  │  1900 ┤─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─  │     │
+│  │       └──────────────────────────────────────── Match #  │     │
+│  │  [Confidence band] [Per-faction] [Deviation overlay]    │     │
+│  └─────────────────────────────────────────────────────────┘     │
+│                                                                  │
+│  ┌─ Recent Matches (rating impact) ────────────────────────┐     │
+│  │  #342  W  vs alice (1834)    Allies   +14  RD -1  │▓▓▓ │     │
+│  │  #341  W  vs bob (2103)      Soviet   +31  RD -2  │▓▓▓▓│     │
+│  │  #340  L  vs carol (1956)    Soviet   -18  RD -1  │▓▓  │     │
+│  │  #339  W  vs dave (1712)     Allies    +8  RD -1  │▓   │     │
+│  │  #338  L  vs eve (2201)      Soviet    -6  RD -2  │▓   │     │
+│  │                                                         │     │
+│  │  Rating impact depends on opponent strength:            │     │
+│  │    Beat alice (lower rated):  small gain (+14)          │     │
+│  │    Beat bob (higher rated):   large gain (+31)          │     │
+│  │    Lose to carol (similar):   moderate loss (-18)       │     │
+│  │    Lose to eve (much higher): small loss (-6)           │     │
+│  └─────────────────────────────────────────────────────────┘     │
+│                                                                  │
+│  ┌─ Faction Breakdown ─────────────────────────────────────┐     │
+│  │  ☭ Soviet:   1983 ± 52   (168 matches, 59% win rate)   │     │
+│  │  ★ Allied:   1944 ± 61   (154 matches, 56% win rate)   │     │
+│  │  ? Random:   ─            (20 matches, 55% win rate)    │     │
+│  │                                                         │     │
+│  │  (Faction ratings shown only if faction tracking is on) │     │
+│  └─────────────────────────────────────────────────────────┘     │
+│                                                                  │
+│  ┌─ Rating Distribution (your position) ───────────────────┐     │
+│  │  Players                                                │     │
+│  │  ▓▓▓                                                    │     │
+│  │  ▓▓▓▓▓▓                                                 │     │
+│  │  ▓▓▓▓▓▓▓▓▓▓▓                                            │     │
+│  │  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓                                     │     │
+│  │  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓                             │     │
+│  │  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓△▓▓▓▓▓                 │     │
+│  │  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓          │     │
+│  │  └──────────────────────────────────────────── Rating    │     │
+│  │  800   1000  1200  1400  1600  1800  △YOU  2200  2400   │     │
+│  │                                                         │     │
+│  │  You are in the top 5% of rated players.                │     │
+│  │  122 players are rated higher than you.                 │     │
+│  └─────────────────────────────────────────────────────────┘     │
+│                                                                  │
+│  [Export Rating History (CSV)]  [View Leaderboard]               │
+└──────────────────────────────────────────────────────────────────┘
+</code></pre>
+<p><strong>Panel components:</strong></p>
+<ol>
+<li>
+<p><strong>Current Rating box:</strong> All three Glicko-2 parameters displayed with plain names. The “Range” line shows the 95% confidence interval ($\mu \pm 2 \times RD$). The “Trend” indicator compares current volatility to the player’s 20-match average: ↑ Rising (recent upsets), ── Stable, ↓ Settling (consistent results).</p>
+</li>
+<li>
+<p><strong>Plain-language explainer:</strong> Collapsible on repeat visits (state stored in <code>preferences.db</code>). Uses no jargon — “how certain the system is” instead of “rating deviation.” Players who watch Glicko-2 explainer videos will recognize the terms; players who don’t will understand the meaning.</p>
+</li>
+<li>
+<p><strong>Rating history graph:</strong> Client-side chart (Bevy 2D line renderer) from match SCR data. Toggle overlays: confidence band (±2·RD as shaded region around the rating line), per-faction line split, deviation history. Hoverable data points show match details.</p>
+</li>
+<li>
+<p><strong>Recent matches with rating impact:</strong> Each match shows the rating delta, deviation change, and a bar indicating relative impact magnitude. Explanatory text contextualizes why gains/losses vary — teaching the player how Glicko-2 works through their own data.</p>
+</li>
+<li>
+<p><strong>Faction breakdown:</strong> Per-faction rating (if faction tracking is enabled, D055 § Faction-Specific Ratings). Shows each faction’s independent rating, deviation, match count, and win rate. Random-faction matches contribute to all faction ratings equally.</p>
+</li>
+<li>
+<p><strong>Rating distribution histogram:</strong> Shows where the player falls in the community’s population. The △ marker shows “you are here.” Population percentile and count of higher-rated players give concrete context. Data sourced from the community server’s leaderboard endpoint (cached locally, refreshed hourly).</p>
+</li>
+<li>
+<p><strong>CSV export:</strong> Exports full rating history (match date, opponent rating, result, rating change, deviation change, volatility) as a CSV file — consistent with the “player data is a platform” philosophy (D034). Community stat tools, spreadsheet analysts, and researchers can work with the raw data.</p>
+</li>
+</ol>
+<p><strong>Where this lives in the UI:</strong></p>
+<ul>
+<li><strong>In-game path:</strong> Main Menu → Profile → Statistics Card → <code>[Rating Graph →]</code> → Rating Details Panel</li>
+<li><strong>Post-game:</strong> The match result screen includes a compact rating change widget (“1957 → 1971, +14”) that links to the full panel</li>
+<li><strong>Tooltip:</strong> Hovering over anyone’s rank badge in lobbies, match results, or friends list shows a compact version (rating ± deviation, tier, percentile)</li>
+<li><strong>Console command:</strong> <code>/rating</code> or <code>/stats rating</code> opens the panel. <code>/rating &lt;player&gt;</code> shows another player’s public rating details.</li>
+</ul>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Data backing the Rating Details panel. Computed in ic-ui from local SQLite.
+/// NOT in ic-sim (display-only).
+pub struct RatingDetailsView {
+    pub current: RankedTierDisplay,
+    pub confidence_interval: (i64, i64),      // (lower, upper) = μ ± 2·RD
+    pub volatility: i64,                       // fixed-point Glicko-2 σ
+    pub volatility_trend: VolatilityTrend,
+    pub history: Vec&lt;RatingHistoryPoint&gt;,      // last N matches
+    pub faction_ratings: Option&lt;Vec&lt;FactionRating&gt;&gt;,
+    pub population_percentile: Option&lt;f32&gt;,    // 0.0–100.0, from cached leaderboard
+    pub players_above: Option&lt;u32&gt;,            // count of higher-rated players
+    pub season_peak: PeakRecord,
+    pub all_time_peak: PeakRecord,
+}
+
+pub struct RatingHistoryPoint {
+    pub match_id: String,
+    pub timestamp: u64,
+    pub opponent_rating: i64,
+    pub result: MatchResult,                   // Win, Loss, Draw
+    pub rating_before: i64,
+    pub rating_after: i64,
+    pub deviation_before: i64,
+    pub deviation_after: i64,
+    pub faction_played: String,
+    pub opponent_faction: String,
+    pub match_duration_ticks: u64,
+    pub information_content: i32,              // 0-1000, how much this match "counted"
+}
+
+pub struct FactionRating {
+    pub faction_id: String,
+    pub faction_name: String,
+    pub rating: i64,
+    pub deviation: i64,
+    pub matches_played: u32,
+    pub win_rate: i32,                         // 0-1000 fixed-point
+}
+
+pub struct PeakRecord {
+    pub rating: i64,
+    pub tier_name: String,
+    pub division: u8,
+    pub achieved_at: u64,                      // timestamp
+    pub match_id: Option&lt;String&gt;,              // the match where peak was reached
+}
+
+pub enum VolatilityTrend {
+    Rising,     // σ increased over last 20 matches — inconsistent results
+    Stable,     // σ roughly unchanged
+    Settling,   // σ decreased — consistent performance
+}
+<span class="boring">}</span></code></pre>
+<h4 id="glicko-2-rts-adaptations"><a class="header" href="#glicko-2-rts-adaptations">Glicko-2 RTS Adaptations</a></h4>
+<p>Standard Glicko-2 was designed for chess: symmetric, no map variance, no faction asymmetry, large populations, frequent play. IC’s competitive environment differs on every axis. The <code>Glicko2Provider</code> (D041) implements standard Glicko-2 with the following RTS-specific parameter tuning:</p>
+<p><strong>Parameter configuration (YAML-driven, per community server):</strong></p>
+<pre><code class="language-yaml"># Server-side Glicko-2 configuration
+glicko2:
+  # Standard Glicko-2 parameters
+  default_rating: 1500            # New player starting rating
+  default_deviation: 350          # New player RD (high = fast convergence)
+  system_constant_tau: 0.5        # Volatility constraint (standard range: 0.3–1.2)
+
+  # IC RTS adaptations
+  rd_floor: 45                    # Minimum RD — prevents rating "freezing"
+  rd_ceiling: 350                 # Maximum RD (equals placement-level uncertainty)
+  inactivity_c: 34.6              # RD growth constant for inactive players
+  rating_period_days: 0           # 0 = per-match updates (no batch periods)
+
+  # Match quality weighting
+  match_duration_weight:
+    min_ticks: 3600               # 2 minutes at 30 tps — below this, reduced weight
+    full_weight_ticks: 18000      # 10 minutes — at or above this, full weight
+    short_game_factor: 300        # 0-1000 fixed-point weight for games &lt; min_ticks
+  
+  # Team game handling (2v2, 3v3)
+  team_rating_method: "weighted_average"  # or "max_rating", "trueskill"
+  team_individual_share: true     # distribute rating change by contribution weight
+</code></pre>
+<p><strong>Adaptation 1 — RD floor (min deviation = 45):</strong></p>
+<p>Standard Glicko-2 allows RD to approach zero for highly active players, making their rating nearly immovable. This is problematic for competitive games where skill fluctuates with meta shifts, patch changes, and life circumstances. An RD floor of 45 ensures that even the most active player’s rating responds meaningfully to results.</p>
+<p>Why 45: Valve’s CS Regional Standings uses RD = 75 for 5v5 team play. In 1v1 RTS, each match provides more information per player (no teammates to attribute results to), so a lower floor is appropriate. At RD = 45, the 95% confidence interval is ±90 rating points — enough precision to distinguish skill while remaining responsive.</p>
+<p>The RD floor is enforced after each rating update: <code>rd = max(rd_floor, computed_rd)</code>. This is the simplest adaptation and has the largest impact on player experience.</p>
+<p><strong>Adaptation 2 — Per-match rating periods:</strong></p>
+<p>Standard Glicko-2 groups matches into “rating periods” (typically a fixed time window) and updates ratings once per period. This made sense for postal chess where you complete a few games per month. RTS players play 2–5 games per session and want immediate feedback.</p>
+<p>IC updates ratings after every individual match — each match is its own rating period with $m = 1$. This is mathematically equivalent to running Glicko-2 Step 1–8 with a single game per period. The deviation update (Step 3) and rating update (Step 7) reflect one result, then the new rating becomes the input for the next match.</p>
+<p>This means the post-game screen shows the exact rating change from that match, not a batched update. Players see “+14” or “-18” and understand immediately what happened.</p>
+<p><strong>Adaptation 3 — Information content weighting by match duration:</strong></p>
+<p>A 90-second game where one player disconnects during load provides almost no skill information. A 20-minute game with multiple engagements provides rich skill signal. Standard Glicko-2 treats all results equally.</p>
+<p>IC scales the rating impact of each match by an <code>information_content</code> factor (already defined in D041’s <code>MatchQuality</code>). Match duration is one input:</p>
+<ul>
+<li>Games shorter than <code>min_ticks</code> (2 minutes): weight = <code>short_game_factor</code> (default 0.3×)</li>
+<li>Games between <code>min_ticks</code> and <code>full_weight_ticks</code> (2–10 minutes): linearly interpolated</li>
+<li>Games at or above <code>full_weight_ticks</code> (10+ minutes): full weight (1.0×)</li>
+</ul>
+<p>Implementation: the <code>g(RD)</code> function in Glicko-2 Step 3 is not modified. Instead, the expected outcome $E$ is scaled by the information content factor before computing the rating update. This preserves the mathematical properties of Glicko-2 while reducing the impact of low-quality matches.</p>
+<p>Other <code>information_content</code> inputs (from D041): game mode weight (ranked = 1.0, casual = 0.5), player count balance (1v1 = 1.0, 1v2 = 0.3), and opponent rematching penalty (V26: <code>weight = base × 0.5^(n-1)</code> for repeated opponents).</p>
+<p><strong>Adaptation 4 — Inactivity RD growth targeting seasonal cadence:</strong></p>
+<p>Standard Glicko-2 increases RD over time when a player is inactive: $RD_{new} = \sqrt{RD^2 + c^2 \cdot t}$ where $c$ is calibrated and $t$ is the number of rating periods elapsed. IC tunes $c$ so that a player who is inactive for one full season (91 days) reaches RD ≈ 250 — high enough that their first few matches back converge quickly, but not reset to placement level (350).</p>
+<p>With <code>c = 34.6</code> and daily periods: after 91 days, $RD = \sqrt{45^2 + 34.6^2 \times 91} \approx 250$. This means returning players re-stabilize in ~5–10 matches rather than the 25+ that a full reset would require.</p>
+<p><strong>Adaptation 5 — Team game rating distribution:</strong></p>
+<p>Glicko-2 is designed for 1v1. For team games (2v2, 3v3), IC uses a weighted-average team rating for matchmaking quality assessment, then distributes rating changes individually based on the result:</p>
+<ul>
+<li>Team rating for matchmaking: weighted average of member ratings (weights = 1/RD, so more-certain players count more)</li>
+<li>Post-match: each player’s rating updates as if they played a 1v1 against the opposing team’s weighted average</li>
+<li>Deviation updates independently per player</li>
+</ul>
+<p>This is a pragmatic adaptation, not a theoretically optimal one. For communities that want better team rating, D041’s <code>RankingProvider</code> trait allows substituting TrueSkill (designed specifically for team games) or any custom algorithm.</p>
+<p><strong>What IC does NOT modify:</strong></p>
+<ul>
+<li><strong>Glicko-2 Steps 1–8 core algorithm:</strong> The mathematical update procedure is standard. No custom “performance bonus” adjustments for APM, eco score, or unit efficiency. Win/loss/draw is the only result input. This prevents metric-gaming (players optimizing for stats instead of winning) and keeps the system simple and auditable.</li>
+<li><strong>Volatility calculation:</strong> The iterative Illinois algorithm for computing new σ is unmodified. The <code>system_constant_tau</code> parameter controls sensitivity — community servers can tune this, but the formula is standard.</li>
+<li><strong>Rating scale:</strong> Standard Glicko-2 rating range (~800–2400, centered at 1500). No artificial scaling or normalization.</li>
+</ul>
+<h4 id="why-ranks-not-leagues"><a class="header" href="#why-ranks-not-leagues">Why Ranks, Not Leagues</a></h4>
+<p>IC uses <strong>military ranks</strong> (Cadet → Supreme Commander), not <strong>leagues</strong> (Bronze → Grandmaster). This is a deliberate thematic and structural choice.</p>
+<p><strong>Thematic alignment:</strong> Players command armies. Military rank progression <em>is</em> the fantasy — you’re not “placed in Gold league,” you <em>earned the rank of Colonel</em>. The Cold War military theme matches IC’s identity (the engine is named “Iron Curtain”). Every rank implies command authority: even Cadet (officer trainee) is on the path to leading troops, not a foot soldier following orders. The hierarchy follows actual military rank order through General — then transcends it: “Supreme Commander” isn’t a rank you’re promoted to, it’s a title you <em>earn</em> by being one of the top 200. Real military parallels exist (STAVKA’s Supreme Commander-in-Chief, NATO’s Supreme Allied Commander), and the name carries instant genre recognition.</p>
+<p><strong>Structural reasons:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Dimension</th><th>Ranks (IC approach)</th><th>Leagues (SC2 approach)</th></tr>
+</thead>
+<tbody>
+<tr><td>Assignment</td><td>Rating threshold → rank label</td><td>Placement → league group of ~100 players</td></tr>
+<tr><td>Population requirement</td><td>Works at any scale (50 or 50,000 players)</td><td>Needs thousands to fill meaningful groups</td></tr>
+<tr><td>Progression feel</td><td>Continuous — every match moves you toward the next rank</td><td>Grouped — you’re placed once per season, then grind within the group</td></tr>
+<tr><td>Identity language</td><td>“I’m a Colonel” (personal achievement)</td><td>“I’m in Diamond” (group membership)</td></tr>
+<tr><td>Demotion</td><td>Immediate if rating drops below threshold (honest)</td><td>Often delayed or hidden to avoid frustration (dishonest)</td></tr>
+<tr><td>Cross-community portability</td><td>Rating → rank mapping is deterministic from YAML config</td><td>League placement requires server-side group management</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>The naming decision:</strong> The tier names themselves carry weight. “Cadet” is where everyone starts — you’re an officer-in-training, unproven. “Major” means you’ve earned mid-level command authority. “Supreme Commander” is the pinnacle — a title that evokes both Cold War gravitas (the Supreme Commander-in-Chief of the Soviet Armed Forces was the head of STAVKA) and the RTS genre itself. These names are IC’s brand, not generic color bands.</p>
+<p>For other game modules, the rank names change to match the theme — Tiberian Dawn might use GDI/Nod military ranks, a fantasy mod might use feudal titles — but the <em>structure</em> (rating thresholds → named ranks × divisions) stays the same. The YAML configuration in <code>ranked-tiers.yaml</code> makes this trivially customizable.</p>
+<p><strong>Why not both?</strong> SC2’s system was technically a hybrid: leagues (groups of players) with tier labels (Bronze, Silver, Gold). IC’s approach is simpler: there are no player groups or league divisions. Your rank is a pure function of your rating — deterministic, portable, and verifiable from the YAML config alone. If you know the tier thresholds and your rating, you know your rank. No server-side group assignment needed. This is critical for D052’s federated model, where community servers may have different populations but should be able to resolve the same rating to the same rank label.</p>
 <h4 id="season-structure"><a class="header" href="#season-structure">Season Structure</a></h4>
 <pre><code class="language-yaml"># Server configuration (community server operators can customize)
 season:
@@ -23100,6 +23996,11 @@ pub struct MatchmakingConfig {
 <li><strong>Single global ranking across all community servers</strong> (rejected — violates D052’s federated model. Each community owns its rankings. Cross-community credential verification via SCR ensures portability without centralization)</li>
 <li><strong>Mandatory phone verification for ranked</strong> (rejected as mandatory — makes ranked inaccessible in regions without phone access, on WASM builds, and for privacy-conscious users. Available as opt-in toggle for community operators)</li>
 <li><strong>Performance-based rating adjustments</strong> (deferred — Valorant uses individual stats to adjust RR gains. For RTS this would be complex: which metrics predict skill beyond win/loss? Economy score, APM, unit efficiency? Risks encouraging stat-chasing over winning. Could be a future <code>RankingProvider</code> enhancement if the community wants it)</li>
+<li><strong>SC2-style leagues with player groups</strong> (rejected — SC2’s league system places players into divisions of ~100 who compete against each other within a tier. This requires thousands of concurrent players to fill meaningful groups. IC’s expected population — hundreds to low thousands — can’t sustain this. Ranks are pure rating thresholds: deterministic, portable across federated communities (D052), and functional with 50 players or 50,000. See § “Why Ranks, Not Leagues” above)</li>
+<li><strong>Color bands instead of named ranks</strong> (rejected — CS2 Premier uses color bands (Grey → Gold) which are universal but generic. Military rank names are IC’s thematic identity: “Colonel” means something in an RTS where you command armies. Color bands could be a community-provided alternative via YAML, but the default should carry the Cold War fantasy)</li>
+<li><strong>Enlisted ranks as lower tiers</strong> (rejected — having “Private” or “Corporal” as the lowest ranks breaks the RTS fantasy: the player is always commanding armies, not following orders as a foot soldier. All tiers are officer-grade because the player is always in a command role. “Cadet” as the lowest tier signals “unproven officer” rather than “infantry grunt”)</li>
+<li><strong>Naval rank names</strong> (rejected — “Commander” is a naval rank, not army. “Commodore” and “Admiral” belong at sea. IC’s default is an army hierarchy: Lieutenant → Captain → Major → Colonel → General. A naval mod could define its own tier names via YAML)</li>
+<li><strong>Modified Glicko-2 with performance bonuses</strong> (rejected — some systems (Valorant, CS2) adjust rating gains based on individual performance metrics like K/D or round impact. For RTS this creates perverse incentives: optimizing eco score or APM instead of winning. The result (Win/Loss/Draw) is the only input to Glicko-2. Match duration weighting through <code>information_content</code> is the extent of non-result adjustment)</li>
 </ul>
 <h4 id="ranked-match-lifecycle"><a class="header" href="#ranked-match-lifecycle">Ranked Match Lifecycle</a></h4>
 <p>D055 defines the rating system and matchmaking queue. The full competitive match lifecycle — ready-check, game pause, surrender, disconnect penalties, spectator delay, and post-game flow — is specified in <code>03-NETCODE.md</code> § “Match Lifecycle.” This separation is deliberate: the match lifecycle is a network protocol concern that applies to all game modes (with ranked-specific constraints), while D055 is specifically about the rating and tier system.</p>
@@ -23120,7 +24021,7 @@ pub struct MatchmakingConfig {
 <ul>
 <li><strong>D041 (RankingProvider):</strong> <code>display_rating()</code> method implementations use the tier configuration YAML to resolve rating → tier name. The trait’s existing interface supports D055 without modification — tier resolution is a display concern in <code>ic-ui</code>, not a trait responsibility.</li>
 <li><strong>D052 (Community Servers):</strong> Each community server’s ranking authority stores tier configuration alongside its <code>RankingProvider</code> implementation. SCR records store the raw rating; tier resolution is display-side.</li>
-<li><strong>D053 (Player Profile):</strong> The statistics card (rating ± deviation, peak rating, match count, win rate, streak, faction distribution) now includes tier badge, peak tier this season, and season history.</li>
+<li><strong>D053 (Player Profile):</strong> The statistics card (rating ± deviation, peak rating, match count, win rate, streak, faction distribution) now includes tier badge, peak tier this season, and season history. The <code>[Rating Graph →]</code> link opens the Rating Details panel — full Glicko-2 parameter visibility, rating history chart, faction breakdown, confidence interval, and population distribution.</li>
 <li><strong>D037 (Competitive Governance):</strong> The competitive committee curates the seasonal map pool, recommends tier threshold adjustments based on population distribution, and proposes balance preset selections for ranked queues.</li>
 <li><strong>D019 (Balance Presets):</strong> Ranked queues can be tied to specific balance presets — e.g., “Classic RA” ranked vs. “IC Balance” ranked as separate queues with separate ratings.</li>
 <li><strong>D036 (Achievements):</strong> Seasonal achievements: “Reach Captain,” “Place in top 100,” “Win 50 ranked matches this season,” etc.</li>
@@ -24257,7 +25158,7 @@ debug:
 <tr><td><code>/camera_follow_stop</code></td><td>Stop following</td></tr>
 <tr><td><code>/bookmark_set &lt;1-9&gt;</code></td><td>Save current camera position to bookmark slot</td></tr>
 <tr><td><code>/bookmark &lt;1-9&gt;</code></td><td>Jump to bookmarked camera position</td></tr>
-<tr><td><code>/zoom &lt;in|out|level&gt;</code></td><td>Adjust zoom (level: 0.5–4.0, default 1.0). In ranked/tournament, clamped to the competitive zoom range (default: 0.75–2.0)</td></tr>
+<tr><td><code>/zoom &lt;in|out|level&gt;</code></td><td>Adjust zoom (level: 0.5–4.0, default 1.0; see <code>02-ARCHITECTURE.md</code> § Camera). In ranked/tournament, clamped to the competitive zoom range (default: 0.75–2.0). Zoom-toward-cursor when used with mouse wheel; zoom-toward-center when used via command</td></tr>
 <tr><td><code>/center</code></td><td>Center camera on current selection</td></tr>
 <tr><td><code>/base</code></td><td>Center camera on construction yard</td></tr>
 <tr><td><code>/alert</code></td><td>Jump to last alert position (base under attack, etc.)</td></tr>
@@ -24714,7 +25615,7 @@ Commands.register("spawn_reinforcements", {
 <li><strong>Mod commands require ranked certification.</strong> Community servers (D052) maintain a whitelist of mod commands approved for ranked play. Uncertified mod commands are rejected in ranked matches. The default: only engine-core commands are permitted; game-module commands (those registered by the built-in game module, e.g., RA1) are permitted; third-party mod commands require explicit whitelist entry.</li>
 <li><strong>Order volume is recorded server-side.</strong> The relay server counts orders per player per tick. This data is included in match certification (D055) and available for community review. It cannot be spoofed by modified clients.</li>
 <li><strong><code>autoexec.cfg</code> commands execute normally.</strong> Cvar-setting commands (<code>/set</code>, <code>/get</code>, <code>/toggle</code>) from autoexec execute as preferences. Gameplay commands (<code>/build</code>, <code>/move</code>, etc.) from autoexec are rejected in ranked — <code>CommandOrigin::ConfigFile</code> is not a valid origin for sim-affecting orders in ranked mode. You can set your sensitivity in autoexec; you can’t script your build order.</li>
-<li><strong>Zoom range is clamped.</strong> The competitive zoom range (default: 0.75–2.0) is enforced in ranked matches. This prevents extreme zoom-out from providing disproportionate map awareness. The default range is configured per ranked queue by the competitive committee (D037) and stored in the seasonal ranked configuration YAML. Tournament organizers can set their own zoom range via <code>TournamentConfig</code>. The <code>/zoom</code> command respects these bounds.</li>
+<li><strong>Zoom range is clamped.</strong> The competitive zoom range (default: 0.75–2.0) overrides the render mode’s <code>CameraConfig.zoom_min/zoom_max</code> (see <code>02-ARCHITECTURE.md</code> § “Camera System”) in ranked matches. This prevents extreme zoom-out from providing disproportionate map awareness. The default range is configured per ranked queue by the competitive committee (D037) and stored in the seasonal ranked configuration YAML. Tournament organizers can set their own zoom range via <code>TournamentConfig</code>. The <code>/zoom</code> command respects these bounds.</li>
 </ul>
 <h5 id="tournament-mode"><a class="header" href="#tournament-mode">Tournament Mode</a></h5>
 <p>Tournament organizers (via community server administration, D052) can enable a stricter <strong>tournament mode</strong> in the lobby:</p>
@@ -27867,6 +28768,60 @@ impl TickScratch {
 <span class="boring">}</span></code></pre>
 <p><strong>Per-tick allocation target: zero bytes.</strong> All temporary data goes into pre-allocated scratch buffers. <code>clear()</code> resets without deallocating. The hot loop touches only warm memory.</p>
 <p>This is a fundamental advantage of Rust over C# for games. Idiomatic C# allocates many small objects per tick (iterators, LINQ results, temporary collections, event args), each of which contributes to GC pressure. Our engine targets zero per-tick allocations.</p>
+<h3 id="string-interning-compile-time-resolution-for-runtime-strings"><a class="header" href="#string-interning-compile-time-resolution-for-runtime-strings">String Interning (Compile-Time Resolution for Runtime Strings)</a></h3>
+<p>IC is string-heavy by design — YAML keys, trait names, mod identifiers, weapon names, locomotor types, condition names, asset paths, Workshop package IDs. Comparing these strings at runtime (byte-by-byte, potentially cache-cold) in every tick is wasteful when the set of valid strings is known at load time.</p>
+<p><strong>String interning</strong> resolves all YAML/mod strings to integer IDs once during loading. All runtime comparisons use the integer — a single CPU instruction instead of a variable-length byte scan.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Interned string handle — 4 bytes, Copy, Eq is a single integer comparison.
+/// Stable across save/load (the intern table is part of snapshot state, D010).
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct InternedId(u32);
+
+/// String intern table — built during YAML rule loading, immutable during gameplay.
+/// Part of the sim snapshot for deterministic save/resume.
+pub struct StringInterner {
+    id_to_string: Vec&lt;String&gt;,                  // index → string (display, debug, serialization)
+    string_to_id: HashMap&lt;String, InternedId&gt;,  // string → index (used at load time only)
+}
+
+impl StringInterner {
+    /// Resolve a string to its interned ID. Called during YAML loading — never in hot paths.
+    pub fn intern(&amp;mut self, s: &amp;str) -&gt; InternedId {
+        if let Some(&amp;id) = self.string_to_id.get(s) {
+            return id;
+        }
+        let id = InternedId(self.id_to_string.len() as u32);
+        self.id_to_string.push(s.to_owned());
+        self.string_to_id.insert(s.to_owned(), id);
+        id
+    }
+
+    /// Look up the original string for display/debug. Not used in hot paths.
+    pub fn resolve(&amp;self, id: InternedId) -&gt; &amp;str {
+        &amp;self.id_to_string[id.0 as usize]
+    }
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Where interning eliminates runtime string work:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>System</th><th>Without interning</th><th>With interning</th></tr>
+</thead>
+<tbody>
+<tr><td>Condition checks (D028)</td><td>String compare per condition per unit per tick</td><td><code>InternedId</code> == <code>InternedId</code> (1 instruction)</td></tr>
+<tr><td>Trait alias resolution (D023/D027)</td><td>HashMap lookup by string at rule evaluation</td><td>Pre-resolved at load time to canonical <code>InternedId</code></td></tr>
+<tr><td>WASM mod API boundary</td><td>String marshaling across host/guest (allocation + copy)</td><td><code>u32</code> type IDs — already designed this way in <code>04-MODDING.md</code></td></tr>
+<tr><td>Mod stacking namespace (D062)</td><td>String-keyed path lookups in the virtual namespace</td><td><code>InternedId</code>-keyed flat table</td></tr>
+<tr><td>Versus table keys</td><td>Armor/weapon type strings per damage calculation</td><td><code>InternedId</code> indices into flat <code>[i32; N]</code> array (already done for <code>VersusTable</code>)</td></tr>
+<tr><td>Notification dedup</td><td>String comparison for cooldown checks</td><td><code>InternedId</code> comparison</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Interning generalizes the <code>VersusTable</code> principle.</strong> The <code>VersusTable</code> flat array (documented above in Layer 2) already converts armor/weapon type enums to integer indices for O(1) lookup. String interning extends this approach to <em>every</em> string-keyed system — conditions, traits, mod paths, asset names — without requiring hardcoded enums. The <code>VersusTable</code> uses compile-time enum indices; <code>StringInterner</code> provides the same benefit for data-driven strings loaded from YAML.</p>
+<p><strong>What NOT to intern:</strong> Player-facing display strings (chat messages, player names, localization text). These are genuinely dynamic and not used in hot-path comparisons. Interning targets the <em>engine vocabulary</em> — the fixed set of identifiers that YAML rules, conditions, and mod APIs reference repeatedly.</p>
+<p><strong>Snapshot integration (D010):</strong> The <code>StringInterner</code> is part of the sim snapshot. When saving/loading, the intern table serializes alongside game state, ensuring that <code>InternedId</code> values remain stable across save/resume. Replays record the intern table at keyframes. This is the same approach Factorio uses for its prototype string IDs — resolved once during data loading, stable for the session lifetime.</p>
 <h2 id="layer-6-work-stealing-parallelism-bonus-scaling"><a class="header" href="#layer-6-work-stealing-parallelism-bonus-scaling">Layer 6: Work-Stealing Parallelism (Bonus Scaling)</a></h2>
 <p>After layers 1-5, the engine is already fast on a single core. Parallelism scales it further on better hardware.</p>
 <h3 id="how-bevy--rayon-work-stealing-operates"><a class="header" href="#how-bevy--rayon-work-stealing-operates">How Bevy + rayon Work-Stealing Operates</a></h3>
@@ -28217,9 +29172,17 @@ pub struct EntityBaseline {
 <tr><td>Replay keyframes every 300 ticks (mandatory)</td><td><code>05-FORMATS.md</code></td><td>Sub-second seeking without re-simulating from tick 0</td></tr>
 <tr><td><code>gameplay_events</code> denormalized indexed columns</td><td><code>09-DECISIONS.md</code> D034</td><td>Avoids <code>json_extract()</code> scans during <code>PlayerStyleProfile</code> aggregation (D042)</td></tr>
 <tr><td>All SQLite writes on dedicated I/O thread</td><td><code>09-DECISIONS.md</code> D031</td><td>Ring buffer → batch transaction; game loop thread never touches SQLite</td></tr>
+<tr><td>I/O ring buffer ≥1024 entries</td><td><code>09-DECISIONS.md</code> D031</td><td>Absorbs 500 ms HDD checkpoint stall at 600 events/s peak with 3.4× headroom</td></tr>
+<tr><td>WAL checkpoint suppressed during gameplay (HDD)</td><td><code>09-DECISIONS.md</code> D034</td><td>Random I/O checkpoint on spinning disk takes 200–500 ms; defer to safe points</td></tr>
+<tr><td>Autosave fsync on I/O thread, never game thread</td><td><code>09-DECISIONS.md</code> D010</td><td>HDD fsync takes 50–200 ms; game thread only produces DeltaSnapshot bytes</td></tr>
+<tr><td>Replay keyframe: snapshot on game thread, LZ4+I/O on background</td><td><code>05-FORMATS.md</code></td><td>~1 ms game thread cost every 300 ticks; compression + write async</td></tr>
 <tr><td>Weather quadrant rotation (1/4 map per tick)</td><td><code>09-DECISIONS.md</code> D022</td><td>Sim-only amortization — no camera dependency in deterministic sim</td></tr>
 <tr><td><code>gameplay.db</code> mmap capped at 64 MB</td><td><code>09-DECISIONS.md</code> D034</td><td>1.6% of 4 GB min-spec RAM; scaled up on systems with ≥8 GB</td></tr>
 <tr><td>WASM pathfinder fuel exhaustion → continue heading</td><td><code>04-MODDING.md</code> D045</td><td>Zero-cost fallback prevents unit freezing without breaking determinism</td></tr>
+<tr><td><code>StringInterner</code> resolves YAML strings to <code>InternedId</code> at load</td><td><code>10-PERFORMANCE.md</code></td><td>Condition checks, trait aliases, mod paths — integer compare instead of string compare</td></tr>
+<tr><td><code>DoubleBuffered&lt;T&gt;</code> for fog, influence maps, global modifiers</td><td><code>02-ARCHITECTURE.md</code></td><td>Tick-consistent reads — all systems see same fog/modifier state within a tick</td></tr>
+<tr><td>Connection lifecycle uses type state (<code>Connection&lt;S&gt;</code>)</td><td><code>03-NETCODE.md</code></td><td>Compile-time prevention of invalid state transitions — zero runtime cost via <code>PhantomData</code></td></tr>
+<tr><td>Camera zoom/pan interpolation once per frame, not per entity</td><td><code>02-ARCHITECTURE.md</code></td><td>Frame-rate-independent exponential lerp on <code>GameCamera</code> resource — <code>powf()</code> once per frame</td></tr>
 </tbody>
 </table>
 </div>
@@ -31167,19 +32130,29 @@ e1:
 </table>
 </div>
 <h4 id="camera-zoom"><a class="header" href="#camera-zoom">Camera Zoom</a></h4>
-<p>Standard Bevy camera parameter. The isometric renderer already needs to handle different view distances for the minimap and observer mode. Zoom is a single <code>f32</code> on the camera entity — trivial to expose as scroll-wheel or keybind.</p>
+<p>Full camera system designed in <code>02-ARCHITECTURE.md</code> § “Camera System.” The <code>GameCamera</code> resource tracks position, zoom level, smooth interpolation targets, bounds, screen shake, and follow mode. Key features:</p>
+<ul>
+<li><strong>Zoom-toward-cursor:</strong> scroll wheel zooms centered on the mouse position (standard RTS behavior — SC2, AoE2, OpenRA). The world point under the cursor stays fixed on screen.</li>
+<li><strong>Smooth interpolation:</strong> frame-rate-independent exponential lerp for both zoom and pan. Feels identical at 30 fps and 240 fps.</li>
+<li><strong>Render mode integration (D048):</strong> each render mode defines its own zoom range and integer-snap behavior. Classic mode snaps <code>OrthographicProjection.scale</code> to integer multiples for pixel-perfect rendering. HD mode allows fully smooth zoom. 3D mode maps zoom to camera dolly distance.</li>
+<li><strong>Pan speed scales with zoom:</strong> zoomed out = faster scrolling, zoomed in = precision. Linear: <code>effective_speed = base_speed / zoom</code>.</li>
+<li><strong>Competitive zoom clamping (D055/D058):</strong> ranked matches enforce a <code>0.75–2.0</code> zoom range. Tournament organizers can override via <code>TournamentConfig</code>.</li>
+<li><strong>YAML-configurable:</strong> per-game-module camera defaults (zoom range, pan speed, edge scroll zone, shake intensity). Fully data-driven.</li>
+</ul>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
-</span>fn camera_zoom(
-    input: Res&lt;Input&gt;,
-    mut camera: Query&lt;&amp;mut OrthographicProjection, With&lt;GameCamera&gt;&gt;,
-) {
-    let scroll = input.mouse_scroll_delta();
-    for mut proj in &amp;mut camera {
-        proj.scale = (proj.scale - scroll.y * 0.1).clamp(0.5, 3.0);
-    }
+</span>// Zoom-toward-cursor — the camera position shifts to keep the cursor's
+// world point fixed on screen. See 02-ARCHITECTURE.md for full implementation.
+fn zoom_toward_cursor(camera: &amp;mut GameCamera, cursor_world: Vec2, scroll_delta: f32) {
+    let old_zoom = camera.zoom_target;
+    camera.zoom_target = (old_zoom + scroll_delta * ZOOM_STEP)
+        .clamp(camera.zoom_min, camera.zoom_max);
+    let zoom_ratio = camera.zoom_target / old_zoom;
+    camera.position_target = cursor_world
+        + (camera.position_target - cursor_world) * zoom_ratio;
 }
 <span class="boring">}</span></code></pre>
+<p>This is a significant Remastered UX improvement — the original Remastered Collection only supports integer zoom levels (1×, 2×) with no smooth transitions.</p>
 <h4 id="modern-ui--sidebar"><a class="header" href="#modern-ui--sidebar">Modern UI / Sidebar</a></h4>
 <ul>
 <li>IC’s <code>ic-ui</code> crate uses Bevy UI — not locked to OpenRA’s widget system</li>

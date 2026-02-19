@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-7bc359dc.js";
+            window.path_to_searchindex_js = "searchindex-72fd73e9.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-1d51ffef.js"></script>
@@ -1233,6 +1233,12 @@ pub struct EmbeddedResources {
 }
 <span class="boring">}</span></code></pre>
 <p><strong>Playback features:</strong> Variable speed (0.5x to 8x), pause, scrub to any tick (re-simulates from nearest keyframe). The recorder takes a <code>SimSnapshot</code> keyframe every 300 ticks (~10 seconds at 30 tps) and stores it in the <code>.icrep</code> file. A 60-minute replay contains ~360 keyframes (~3-6 MB overhead depending on game state size), enabling sub-second seeking to any point. Keyframes are mandatory — the recorder always writes them.</p>
+<p><strong>Keyframe serialization threading:</strong> Producing a replay keyframe involves two phases with different thread requirements:</p>
+<ol>
+<li><strong>ECS snapshot</strong> (game thread): <code>Simulation::delta_snapshot()</code> reads ECS state via <code>ChangeMask</code> iteration. This MUST run on the game thread because it reads live sim state. Cost: ~0.5–1 ms for 500 units (lightweight — bitfield scan + changed component serialization). Produces a <code>Vec&lt;u8&gt;</code> of serialized component data.</li>
+<li><strong>LZ4 compression + file write</strong> (background writer thread): The serialized bytes are sent through the replay writer’s crossbeam channel to the background thread, which performs LZ4 compression (~0.3–0.5 ms for ~200 KB → ~40–80 KB) and appends to the <code>.icrep</code> file. File I/O never touches the game thread.</li>
+</ol>
+<p>The game thread contributes ~1 ms every 300 ticks (~10 seconds) for keyframe production — well within the 33 ms tick budget. The LZ4 compression and disk write happen asynchronously on the background writer.</p>
 <h3 id="foreign-replay-decoders-d056"><a class="header" href="#foreign-replay-decoders-d056">Foreign Replay Decoders (D056)</a></h3>
 <p><code>ra-formats</code> includes decoders for foreign replay file formats, enabling direct playback and conversion to <code>.icrep</code>:</p>
 <div class="table-wrapper">
