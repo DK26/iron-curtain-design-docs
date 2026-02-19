@@ -3,7 +3,7 @@
 ## Project: Rust-Native RTS Engine
 
 **Status:** Pre-development (design phase)  
-**Date:** 2026-02-06  
+**Date:** 2026-02-19  
 **Codename:** Iron Curtain  
 **Author:** David Krasnitsky  
 

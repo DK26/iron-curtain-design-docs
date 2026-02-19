@@ -35,6 +35,7 @@ Iron Curtain is a new open-source RTS engine built for the C&C community. Not a 
 - Full scenario editor with visual triggers, drag-and-drop logic modules, Game Master mode, and an asset studio
 - Workshop for any asset type — music, sprites, maps, balance presets, script libraries, full mods — each independently versioned with semver dependencies. Join a game, missing content downloads via P2P automatically
 - Reusable Lua script libraries publishable as Workshop resources — composable modding ecosystem instead of copy-paste
+- Mod profiles — save a named set of mods + experience settings as a shareable YAML file with one-hash lobby verification, like a modpack you can hand to a friend
 - CI/CD publishing, beta/release channels, federated mirrors, Steam Workshop integration, offline bundles for LAN, and a full local content manager with auto-cleanup
 - Hot-reload — change a value, see it in-game immediately
 
@@ -45,6 +46,7 @@ Iron Curtain is a new open-source RTS engine built for the C&C community. Not a 
 - Switchable experience presets — balance, AI behavior, pathfinding feel, QoL, UI theme, and render mode all selectable per lobby. Toggle Classic/HD/3D graphics mid-game (F1, like the Remastered Collection)
 - In-game communication — push-to-talk voice chat, contextual pings (8 types + ping wheel), auto-translated chat wheel phrases, minimap drawing, and tactical markers. Voice optionally recorded in replays
 - Unified command console — `/` prefix routes commands through a type-safe command tree. Developer overlay, cvar system, mod-registered commands via Lua/WASM, and Workshop-shareable `.iccmd` command scripts
+- Your data is yours — all player data stored locally in open SQLite files anyone can query. 24-word recovery phrase restores your identity on any machine, no account server needed. `ic backup` CLI for full backup/restore
 - Self-hostable relay, matchmaking, and workshop servers — federated, no single point of failure
 - Open source, community governance, modder recognition with reputation and optional tipping
 - Optional AI-generated missions and campaigns (BYOLLM) — describe a scenario, get a playable mission; or generate an entire branching campaign with recurring characters who evolve, betray, and die based on your choices. World Domination mode lets you conquer a strategic map region by region. Missions react to how you actually played — the LLM reads your battle report and adapts. Mid-mission radar comms, RPG-style dialogue choices, and cinematic moments are all generated. Every output is standard YAML + Lua, fully playable without the LLM after creation. Built-in mission templates provide a fallback without any LLM at all. Bring your own LLM; the engine never requires one
@@ -69,7 +71,7 @@ Every major system was designed by studying real, working implementations — no
 
 The networking design alone analyzed the source code of 20+ open-source games and multiple academic papers. Four EA GPL codebases (Generals/Zero Hour, Remastered Collection, Red Alert, Tiberian Dawn), open-source RTS engines (OpenRA, 0 A.D., Spring Engine, Warzone 2100, OpenTTD, and more), and non-RTS references (Quake 3, Minetest, Veloren, Lichess). The same methodology applies to AI, pathfinding, modding, and the workshop.
 
-Across the project: 60 design decisions with rationale and alternatives, 31 standalone research documents, 20+ codebases studied at the source code level, ~55,000 lines of structured documentation — all built through 115+ commits of iterative refinement. The LLM accelerated the research; the human directed every question and made every decision.
+Across the project: 62 design decisions with rationale and alternatives, 32 standalone research documents, 20+ codebases studied at the source code level, ~57,000 lines of structured documentation — all built through 120+ commits of iterative refinement. The LLM accelerated the research; the human directed every question and made every decision.
 
 📖 **[Read the methodology →](https://dk26.github.io/iron-curtain-design-docs/14-METHODOLOGY.html)**
 

@@ -20,6 +20,7 @@ Iron Curtain is a new open-source RTS engine built for the Command & Conquer com
 - **Five ways to find a game.** Direct IP, Among Us-style room codes, QR codes (LAN/streaming), server browser, ranked matchmaking queue — plus Discord/Steam deep links.
 - **Built-in voice and text chat.** Push-to-talk voice (Opus codec, relay-forwarded), text chat with team/all/whisper/observer channels. Contextual ping system (8 types + ping wheel), chat wheel with auto-translated phrases, minimap drawing, tactical markers. Voice optionally recorded in replays (opt-in). Speaking indicators in lobby and in-game.
 - **Command console.** Unified `/` command system — every GUI action has a console equivalent. Developer overlay, cvar system, tab completion with fuzzy matching. Hidden cheat codes (Cold War phrases) for single-player fun.
+- **Your data is yours.** All player data stored locally in open SQLite files — queryable by any tool that speaks SQL. 24-word recovery phrase restores your identity on any machine, no account server needed. Full backup/restore via `ic backup` CLI. Optional Steam Cloud / GOG Galaxy sync for critical data.
 
 ---
 
@@ -55,6 +56,7 @@ Iron Curtain is a new open-source RTS engine built for the Command & Conquer com
 - **Creator tools.** Reputation scores, badges (Verified, Prolific, Foundation), download analytics, collections, ratings & reviews, DMCA process with due process. LLM agents can discover and pull resources with author consent (`ai_usage` permission per resource).
 - **Hot-reload.** Change YAML or Lua, see it in-game immediately. No restart.
 - **Console command extensibility.** Register custom `/` commands via Lua or WASM — with typed arguments, tab completion, and permission levels. Publish reusable `.iccmd` command scripts to the Workshop.
+- **Mod profiles.** Save a named set of mods + experience settings as a shareable YAML file. One SHA-256 fingerprint replaces per-mod version checking in lobbies. `ic profile save/activate/inspect/diff` CLI. Publish profiles to the Workshop as modpacks.
 
 ---
 
@@ -99,6 +101,6 @@ Iron Curtain is a new open-source RTS engine built for the Command & Conquer com
 
 ## How This Was Designed
 
-The networking design alone studied 20+ open-source codebases, 4 EA GPL source releases, and multiple academic papers — all at the source code level. Every major subsystem went through the same process. 60 design decisions with rationale. 31 research documents. ~55,000 lines of documentation across 115+ commits.
+The networking design alone studied 20+ open-source codebases, 4 EA GPL source releases, and multiple academic papers — all at the source code level. Every major subsystem went through the same process. 62 design decisions with rationale. 32 research documents. ~57,000 lines of documentation across 120+ commits.
 
 📖 **[Read the full design documentation →](https://dk26.github.io/iron-curtain-design-docs/)**
