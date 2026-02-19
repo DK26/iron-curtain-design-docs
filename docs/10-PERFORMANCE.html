@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-ae4c627c.js";
+            window.path_to_searchindex_js = "searchindex-7bc359dc.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-1d51ffef.js"></script>
@@ -713,6 +713,27 @@ pub struct EntityBaseline {
 <h3 id="memory-allocator-selection"><a class="header" href="#memory-allocator-selection">Memory Allocator Selection</a></h3>
 <p>The default Rust allocator (<code>System</code> — usually glibc <code>malloc</code> on Linux, MSVC allocator on Windows) is not optimized for game workloads with many small, short-lived allocations (pathfinding nodes, order processing, per-tick temporaries). Embark Studios’ experience across multiple production Rust game projects shows measurable gains from specialized allocators. IC should benchmark with <strong>jemalloc</strong> (<code>tikv-jemallocator</code>) and <strong>mimalloc</strong> (<code>mimalloc-rs</code>) early in Phase 2 — Quilkin offers both as feature flags, confirming the pattern. This fits the efficiency pyramid: better algorithms first (levels 1-4), then allocator tuning (level 5) before reaching for parallelism (level 6). See <code>research/embark-studios-rust-gamedev-analysis.md</code> § Theme 6.</p>
 <p><strong>Anti-pattern:</strong> “Just parallelize it” as the answer to performance questions. Parallelism without algorithmic efficiency is like adding lanes to a highway with broken traffic lights.</p>
+<h2 id="cross-document-performance-invariants"><a class="header" href="#cross-document-performance-invariants">Cross-Document Performance Invariants</a></h2>
+<p>The following performance patterns are established across the design docs. They are not optional — violating them is a bug.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Pattern</th><th>Location</th><th>Rationale</th></tr>
+</thead>
+<tbody>
+<tr><td><code>TickOrders::chronological()</code> uses scratch buffer</td><td><code>03-NETCODE.md</code></td><td>Zero per-tick heap allocation — reusable <code>Vec&lt;&amp;TimestampedOrder&gt;</code> instead of <code>.clone()</code></td></tr>
+<tr><td><code>VersusTable</code> is a flat <code>[i32; COUNT]</code> array</td><td><code>02-ARCHITECTURE.md</code></td><td>O(1) combat damage lookup — no HashMap overhead in <code>projectile_system()</code> hot path</td></tr>
+<tr><td><code>NotificationCooldowns</code> is a flat array</td><td><code>02-ARCHITECTURE.md</code></td><td>Same pattern — fixed enum → flat array</td></tr>
+<tr><td>WASM AI API uses <code>u32</code> type IDs, not <code>String</code></td><td><code>04-MODDING.md</code></td><td>No per-tick String allocation across WASM boundary; string table queried once at game start</td></tr>
+<tr><td>Replay keyframes every 300 ticks (mandatory)</td><td><code>05-FORMATS.md</code></td><td>Sub-second seeking without re-simulating from tick 0</td></tr>
+<tr><td><code>gameplay_events</code> denormalized indexed columns</td><td><code>09-DECISIONS.md</code> D034</td><td>Avoids <code>json_extract()</code> scans during <code>PlayerStyleProfile</code> aggregation (D042)</td></tr>
+<tr><td>All SQLite writes on dedicated I/O thread</td><td><code>09-DECISIONS.md</code> D031</td><td>Ring buffer → batch transaction; game loop thread never touches SQLite</td></tr>
+<tr><td>Weather quadrant rotation (1/4 map per tick)</td><td><code>09-DECISIONS.md</code> D022</td><td>Sim-only amortization — no camera dependency in deterministic sim</td></tr>
+<tr><td><code>gameplay.db</code> mmap capped at 64 MB</td><td><code>09-DECISIONS.md</code> D034</td><td>1.6% of 4 GB min-spec RAM; scaled up on systems with ≥8 GB</td></tr>
+<tr><td>WASM pathfinder fuel exhaustion → continue heading</td><td><code>04-MODDING.md</code> D045</td><td>Zero-cost fallback prevents unit freezing without breaking determinism</td></tr>
+</tbody>
+</table>
+</div>
 
                     </main>
 

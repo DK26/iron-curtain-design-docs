@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-ae4c627c.js";
+            window.path_to_searchindex_js = "searchindex-7bc359dc.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-1d51ffef.js"></script>
@@ -2579,7 +2579,7 @@ ic replay verify [file]    # verify relay signature chain + integrity (see 06-SE
 <ul>
 <li>Palette tinting: zero extra draw calls, negligible GPU cost</li>
 <li>Surface state grid: ~2 bytes per cell (compact fixed-point) — a 128×128 map is 32KB</li>
-<li><code>weather_surface_system</code> is O(cells) but amortizable (update every 4 ticks for non-visible cells)</li>
+<li><code>weather_surface_system</code> is O(cells) but amortized via spatial quadrant rotation: the map is partitioned into 4 quadrants and one quadrant is updated per tick, achieving 4× throughput with constant 1-tick latency. This is a sim-only strategy — it does not depend on camera position (the sim has no camera awareness).</li>
 <li>Follows efficiency pyramid: algorithmic (grid lookup) → cache-friendly (contiguous array) → amortized</li>
 </ul>
 <p><strong>Alternatives considered:</strong></p>
@@ -3694,7 +3694,7 @@ achievements:
 </blockquote>
 <hr>
 <h2 id="d031-observability--telemetry--otel-across-engine-servers-and-ai-pipeline"><a class="header" href="#d031-observability--telemetry--otel-across-engine-servers-and-ai-pipeline">D031: Observability &amp; Telemetry — OTEL Across Engine, Servers, and AI Pipeline</a></h2>
-<p><strong>Decision:</strong> All backend servers (relay, tracking, workshop) and the game engine itself emit structured telemetry via OpenTelemetry (OTEL), enabling operational monitoring, gameplay debugging, state inspection, and AI/LLM training data collection — all from a single, unified instrumentation layer.</p>
+<p><strong>Decision:</strong> All components — game client, relay server, tracking server, workshop server — record structured telemetry to local SQLite as the primary sink. Every component runs fully offline; no telemetry depends on external infrastructure. OTEL (OpenTelemetry) is an optional export layer for server operators who want Grafana dashboards — it is never a requirement. The instrumentation layer is unified across all components, enabling operational monitoring, gameplay debugging, GUI usage analysis, pattern discovery, and AI/LLM training data collection.</p>
 <p><strong>Rationale:</strong></p>
 <ul>
 <li>Backend servers (relay, tracking, workshop) are production infrastructure — they need health metrics, latency histograms, error rates, and distributed traces, just like any microservice</li>
@@ -3708,6 +3708,32 @@ achievements:
 <li>A single instrumentation approach (OTEL) avoids the mess of ad-hoc logging, custom metrics files, separate debug protocols, and incompatible formats</li>
 </ul>
 <p><strong>Key Design Elements:</strong></p>
+<h3 id="unified-local-first-storage"><a class="header" href="#unified-local-first-storage">Unified Local-First Storage</a></h3>
+<p><strong>Every component records telemetry to a local SQLite file. No exceptions.</strong> This is the same principle as D034 (SQLite as embedded storage) and D061 (local-first data) applied to telemetry. The game client, relay server, tracking server, and workshop server all write to their own <code>telemetry.db</code> using an identical schema. No component depends on an external collector, dashboard, or aggregation service to function.</p>
+<pre><code class="language-sql">-- Identical schema on every component (client, relay, tracking, workshop)
+CREATE TABLE telemetry_events (
+    id            INTEGER PRIMARY KEY,
+    timestamp     TEXT    NOT NULL,        -- ISO 8601 with microsecond precision
+    session_id    TEXT    NOT NULL,        -- random per-process-lifetime
+    component     TEXT    NOT NULL,        -- 'client', 'relay', 'tracking', 'workshop'
+    category      TEXT    NOT NULL,        -- event domain (see taxonomy below)
+    event         TEXT    NOT NULL,        -- specific event name
+    severity      TEXT    NOT NULL DEFAULT 'info',  -- 'trace','debug','info','warn','error'
+    data          TEXT,                    -- JSON payload (structured, no PII)
+    duration_us   INTEGER,                -- for events with measurable duration
+    tick          INTEGER,                -- sim tick (gameplay/sim events only)
+    correlation   TEXT                     -- trace ID for cross-component correlation
+);
+
+CREATE INDEX idx_telemetry_ts          ON telemetry_events(timestamp);
+CREATE INDEX idx_telemetry_cat_event   ON telemetry_events(category, event);
+CREATE INDEX idx_telemetry_session     ON telemetry_events(session_id);
+CREATE INDEX idx_telemetry_severity    ON telemetry_events(severity) WHERE severity IN ('warn', 'error');
+CREATE INDEX idx_telemetry_correlation ON telemetry_events(correlation) WHERE correlation IS NOT NULL;
+</code></pre>
+<p><strong>Why one schema everywhere?</strong> Aggregation scripts, debugging tools, and community analysis all work identically regardless of source. A relay operator can run the same <code>/analytics export</code> command as a player. Exported files from different components can be imported into a single SQLite database for cross-component analysis (desync debugging across client + relay). The aggregation tooling is a handful of SQL queries, not a specialized backend.</p>
+<p><strong>OTEL is an optional export layer, not the primary sink.</strong> Server operators who want real-time dashboards (Grafana, Prometheus, Jaeger) can enable OTEL export — but it’s a “nice-to-have” for sophisticated deployments, not a dependency. A community member running a relay server on a spare machine doesn’t need to set up Prometheus. They get full telemetry in a SQLite file they can query with any SQL tool.</p>
+<p><strong>Retention and rotation:</strong> Each component’s <code>telemetry.db</code> has a configurable max size (default: 100 MB for client, 500 MB for servers). When the limit is reached, the oldest events are pruned. <code>/analytics export</code> exports a date range to a separate file before pruning. Servers can also configure time-based retention (e.g., <code>telemetry.retention_days = 30</code>).</p>
 <h3 id="three-telemetry-signals-otel-standard"><a class="header" href="#three-telemetry-signals-otel-standard">Three Telemetry Signals (OTEL Standard)</a></h3>
 <div class="table-wrapper">
 <table>
@@ -3722,7 +3748,7 @@ achievements:
 </table>
 </div>
 <h3 id="backend-server-telemetry-relay-tracking-workshop"><a class="header" href="#backend-server-telemetry-relay-tracking-workshop">Backend Server Telemetry (Relay, Tracking, Workshop)</a></h3>
-<p>Standard operational observability — same patterns used by any production Rust service:</p>
+<p>Standard operational observability — same patterns used by any production Rust service. <strong>All servers record to local SQLite</strong> (<code>telemetry.db</code>) using the unified schema above. The OTEL metric names below double as the <code>event</code> field in the SQLite table — operators can query locally via SQL or optionally export to Prometheus/Grafana.</p>
 <p><strong>Relay server metrics:</strong></p>
 <pre><code>relay.games.active                    # gauge: concurrent games
 relay.games.total                     # counter: total games hosted
@@ -3751,8 +3777,57 @@ workshop.resolve.latency_ms           # histogram: dependency resolution time
 workshop.resolve.conflicts            # counter: version conflicts detected
 workshop.search.latency_ms            # histogram: search query time
 </code></pre>
-<p><strong>Distributed traces:</strong> A multiplayer game session gets a trace ID. Every order, tick, and desync event references this trace ID. Debug a desync by searching for the game’s trace ID in Jaeger and seeing the exact sequence of events across all participants.</p>
-<p><strong>Health endpoints:</strong> Every server exposes <code>/healthz</code> (already designed) and <code>/readyz</code>. Prometheus scrape endpoint at <code>/metrics</code>. These are standard and compose with existing k8s deployment (Helm charts already designed in <code>03-NETCODE.md</code>).</p>
+<h4 id="server-side-structured-events-sqlite"><a class="header" href="#server-side-structured-events-sqlite">Server-Side Structured Events (SQLite)</a></h4>
+<p>Beyond counters and gauges, each server records detailed structured events to <code>telemetry.db</code>. These are the events that actually enable troubleshooting and pattern analysis:</p>
+<p><strong>Relay server events:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Event</th><th>JSON <code>data</code> Fields</th><th>Troubleshooting Value</th></tr>
+</thead>
+<tbody>
+<tr><td><code>relay.game.start</code></td><td><code>game_id</code>, <code>map</code>, <code>player_count</code>, <code>settings_hash</code>, <code>balance_preset</code></td><td>Which maps/settings are popular?</td></tr>
+<tr><td><code>relay.game.end</code></td><td><code>game_id</code>, <code>duration_s</code>, <code>ticks</code>, <code>outcome</code>, <code>player_count</code></td><td>Match length distribution, completion vs. abandonment rates</td></tr>
+<tr><td><code>relay.player.join</code></td><td><code>game_id</code>, <code>slot</code>, <code>rtt_ms</code>, <code>mod_profile_fingerprint</code></td><td>Connection quality at join time, mod compatibility</td></tr>
+<tr><td><code>relay.player.leave</code></td><td><code>game_id</code>, <code>slot</code>, <code>reason</code> (quit/disconnect/kicked/timeout), <code>match_time_s</code></td><td>Why and when players leave — early ragequit vs. end-of-game</td></tr>
+<tr><td><code>relay.tick.process</code></td><td><code>game_id</code>, <code>tick</code>, <code>order_count</code>, <code>process_us</code>, <code>stall_detected</code></td><td>Per-tick performance, stall diagnosis</td></tr>
+<tr><td><code>relay.order.forward</code></td><td><code>game_id</code>, <code>player</code>, <code>tick</code>, <code>order_type</code>, <code>sub_tick_us</code>, <code>size_bytes</code></td><td>Order volume, sub-tick fairness verification</td></tr>
+<tr><td><code>relay.desync</code></td><td><code>game_id</code>, <code>tick</code>, <code>diverged_players[]</code>, <code>hash_expected</code>, <code>hash_actual</code></td><td>Desync diagnosis — which tick, which players</td></tr>
+<tr><td><code>relay.lag_switch</code></td><td><code>game_id</code>, <code>player</code>, <code>gap_ms</code>, <code>orders_during_gap</code></td><td>Cheating detection audit trail</td></tr>
+<tr><td><code>relay.suspicion</code></td><td><code>game_id</code>, <code>player</code>, <code>score</code>, <code>contributing_factors{}</code></td><td>Behavioral analysis transparency</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Tracking server events:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Event</th><th>JSON <code>data</code> Fields</th><th>Troubleshooting Value</th></tr>
+</thead>
+<tbody>
+<tr><td><code>tracking.listing.create</code></td><td><code>game_id</code>, <code>map</code>, <code>host_hash</code>, <code>settings_summary</code></td><td>Game creation patterns</td></tr>
+<tr><td><code>tracking.listing.expire</code></td><td><code>game_id</code>, <code>age_s</code>, <code>reason</code> (TTL/host_departed)</td><td>Why games disappear from the browser</td></tr>
+<tr><td><code>tracking.query</code></td><td><code>query_type</code> (browse/search/filter), <code>params</code>, <code>results_count</code>, <code>latency_ms</code></td><td>Search effectiveness, popular filters</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Workshop server events:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Event</th><th>JSON <code>data</code> Fields</th><th>Troubleshooting Value</th></tr>
+</thead>
+<tbody>
+<tr><td><code>workshop.publish</code></td><td><code>resource_id</code>, <code>type</code>, <code>version</code>, <code>size_bytes</code>, <code>dep_count</code></td><td>Publishing patterns, resource sizes</td></tr>
+<tr><td><code>workshop.download</code></td><td><code>resource_id</code>, <code>version</code>, <code>requester_hash</code>, <code>latency_ms</code></td><td>Download volume, popular resources</td></tr>
+<tr><td><code>workshop.resolve</code></td><td><code>root_resource</code>, <code>dep_count</code>, <code>conflicts</code>, <code>latency_ms</code></td><td>Dependency hell frequency, resolution performance</td></tr>
+<tr><td><code>workshop.search</code></td><td><code>query</code>, <code>filters</code>, <code>results_count</code>, <code>latency_ms</code></td><td>What people are looking for, search quality</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Server export and analysis:</strong> Every server supports the same commands as the client — <code>ic-server analytics export</code>, <code>ic-server analytics inspect</code>, <code>ic-server analytics clear</code>. A relay operator troubleshooting laggy matches runs a SQL query against their local <code>telemetry.db</code> — no Grafana required. The exported SQLite file can be attached to a bug report or shared with the project team, identical workflow to the client.</p>
+<p><strong>Distributed traces:</strong> A multiplayer game session gets a trace ID (the <code>correlation</code> field). Every order, tick, and desync event references this trace ID. Debug a desync by searching for the game’s trace ID across the relay’s <code>telemetry.db</code> and the affected clients’ exported <code>telemetry.db</code> files — correlate events that crossed component boundaries. For operators with OTEL enabled, the same trace ID routes to Jaeger for visual timeline inspection.</p>
+<p><strong>Health endpoints:</strong> Every server exposes <code>/healthz</code> (already designed) and <code>/readyz</code>. Prometheus scrape endpoint at <code>/metrics</code> (when OTEL export is enabled). These are standard and compose with existing k8s deployment (Helm charts already designed in <code>03-NETCODE.md</code>).</p>
 <h3 id="game-engine-telemetry-client-side"><a class="header" href="#game-engine-telemetry-client-side">Game Engine Telemetry (Client-Side)</a></h3>
 <p>The engine emits structured telemetry for debugging, profiling, and AI training — but only when enabled. <strong>Hot paths remain zero-cost when telemetry is disabled</strong> (compile-time feature flag <code>telemetry</code>).</p>
 <h4 id="performance-instrumentation"><a class="header" href="#performance-instrumentation">Performance Instrumentation</a></h4>
@@ -3830,34 +3905,303 @@ pub enum GameplayEvent {
 </div>
 <p><strong>Privacy:</strong> Gameplay events are associated with anonymized player IDs (hashed). No PII in telemetry. Players opt in to telemetry export (default: local-only for debugging). Tournament/ranked play may require telemetry for anti-cheat and certified results. See <code>06-SECURITY.md</code>.</p>
 <p><strong>Data format:</strong> Gameplay events export as structured OTEL log records → can be collected into Parquet/Arrow columnar format for batch ML training. The LLM training pipeline reads events, not raw replay bytes.</p>
-<h3 id="architecture-where-telemetry-lives"><a class="header" href="#architecture-where-telemetry-lives">Architecture: Where Telemetry Lives</a></h3>
-<pre><code>                  ┌──────────────────────────────────────────┐
-                  │              OTEL Collector               │
-                  │  (receives all signals, routes to sinks)  │
-                  └──┬──────────┬──────────┬─────────────────┘
-                     │          │          │
-              ┌──────▼──┐ ┌────▼────┐ ┌───▼─────────────┐
-              │Prometheus│ │ Jaeger  │ │ Loki / Storage  │
-              │(metrics) │ │(traces) │ │(logs / events)  │
-              └──────────┘ └─────────┘ └───────┬─────────┘
-                                               │
-                                        ┌──────▼──────┐
-                                        │ AI Training  │
-                                        │ Pipeline     │
-                                        │ (Parquet→ML) │
-                                        └─────────────┘
-
-  Emitters:
-  ┌─────────┐  ┌─────────┐  ┌──────────┐  ┌──────────┐
-  │  Relay  │  │Tracking │  │ Workshop │  │  Game    │
-  │ Server  │  │ Server  │  │  Server  │  │ Engine   │
-  └─────────┘  └─────────┘  └──────────┘  └──────────┘
-</code></pre>
-<p>No emitter talks directly to Prometheus/Jaeger/Loki — everything goes through the OTEL Collector. This means:</p>
+<h3 id="product-analytics--comprehensive-client-event-taxonomy"><a class="header" href="#product-analytics--comprehensive-client-event-taxonomy">Product Analytics — Comprehensive Client Event Taxonomy</a></h3>
+<p>The telemetry categories above capture what happens <em>in the simulation</em> (gameplay events, system timing) and on the <em>servers</em> (relay metrics, game lifecycle). A third domain is equally critical: <strong>how players interact with the game itself</strong> — which features are used, which are ignored, how people navigate the UI, how they play matches, and where they get confused or drop off.</p>
+<p>This is the data that turns guessing into knowing: “42% of players never opened the career stats page,” “players who use control groups average 60% higher APM,” “the recovery phrase screen has a 60% skip rate — we should redesign the prompt,” “right-click ordering outnumbers sidebar ordering 8:1 — invest in right-click UX, not sidebar polish.”</p>
+<p><strong>Core principle: the game client never phones home.</strong> IC is an independent project — the client has zero dependency on any IC-hosted backend, analytics service, or telemetry endpoint. Product analytics are recorded to the local <code>telemetry.db</code> (same unified schema as every other component), stored locally, and stay local unless the player deliberately exports them. This matches the project’s local-first philosophy (D034, D061) and ensures IC remains fully functional with no internet connectivity whatsoever.</p>
+<p><strong>Design principles:</strong></p>
+<ol>
+<li><strong>Offline-only by design.</strong> The client contains no transmission code, no HTTP endpoints, no phone-home logic. There is no analytics backend to depend on, no infrastructure to maintain, no service to go offline.</li>
+<li><strong>Player-owned data.</strong> The <code>telemetry.db</code> file lives on the player’s machine — the same open SQLite format they can query themselves (D034). It’s their data. They can inspect it, export it, or delete it anytime.</li>
+<li><strong>Voluntary export for bug reports.</strong> <code>/analytics export</code> produces a self-contained file (JSON or SQLite extract) the player can review and attach to bug reports, forum posts, GitHub issues, or community surveys. The player decides when, where, and to whom they send it.</li>
+<li><strong>Transparent and inspectable.</strong> <code>/analytics inspect</code> shows exactly what’s recorded. No hidden fields, no device fingerprinting. Players can query the SQLite table directly.</li>
+<li><strong>Zero impact.</strong> The game is fully functional with analytics recording on or off. No nag screens. Recording can be disabled via <code>telemetry.product_analytics</code> cvar (default: on for local recording).</li>
+</ol>
+<p><strong>What product analytics explicitly does NOT capture:</strong></p>
 <ul>
-<li>Emitters don’t know or care about the backend storage</li>
-<li>Self-hosters can route to whatever they want (Grafana Cloud, Datadog, or just stdout)</li>
-<li>The collector handles sampling, batching, and export — emitters stay lightweight</li>
+<li>Chat messages, player names, opponent names (no PII)</li>
+<li>Keystroke logging, raw mouse coordinates, screen captures</li>
+<li>Hardware identifiers, MAC addresses, IP addresses</li>
+<li>Filesystem contents, installed software, browser history</li>
+</ul>
+<h4 id="gui-interaction-events"><a class="header" href="#gui-interaction-events">GUI Interaction Events</a></h4>
+<p>These events capture how the player navigates the interface — which screens they visit, which buttons they click, which features they discover, and where they spend their time. This is the primary source for UX insights.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Event</th><th>JSON <code>data</code> Fields</th><th>What It Reveals</th></tr>
+</thead>
+<tbody>
+<tr><td><code>gui.screen.open</code></td><td><code>screen_id</code>, <code>from_screen</code>, <code>method</code> (button/hotkey/back/auto)</td><td>Navigation patterns — which screens do players visit? In what order?</td></tr>
+<tr><td><code>gui.screen.close</code></td><td><code>screen_id</code>, <code>duration_ms</code>, <code>next_screen</code></td><td>Time on screen — do players read the settings page for 2 seconds or 30?</td></tr>
+<tr><td><code>gui.click</code></td><td><code>widget_id</code>, <code>widget_type</code> (button/tab/toggle/slider/list_item), <code>screen</code></td><td>Which widgets get used? Which are dead space?</td></tr>
+<tr><td><code>gui.hotkey</code></td><td><code>key_combo</code>, <code>action</code>, <code>context_screen</code></td><td>Hotkey adoption — are players discovering keyboard shortcuts?</td></tr>
+<tr><td><code>gui.tooltip.shown</code></td><td><code>widget_id</code>, <code>duration_ms</code></td><td>Which UI elements confuse players enough to hover for a tooltip?</td></tr>
+<tr><td><code>gui.sidebar.interact</code></td><td><code>tab</code>, <code>item_id</code>, <code>action</code> (select/scroll/queue/cancel), <code>method</code> (click/hotkey)</td><td>Sidebar usage patterns — build queue behavior, tab switching</td></tr>
+<tr><td><code>gui.minimap.interact</code></td><td><code>action</code> (camera_move/ping/attack_move/rally_point), <code>position_normalized</code></td><td>Minimap as input device — how often, for what?</td></tr>
+<tr><td><code>gui.build_placement</code></td><td><code>structure_type</code>, <code>outcome</code> (placed/cancelled/invalid_position), <code>time_to_place_ms</code></td><td>Build placement UX — how long does it take? How often do players cancel?</td></tr>
+<tr><td><code>gui.context_menu</code></td><td><code>items_shown</code>, <code>item_selected</code>, <code>screen</code></td><td>Right-click menu usage and discoverability</td></tr>
+<tr><td><code>gui.scroll</code></td><td><code>container_id</code>, <code>direction</code>, <code>distance</code>, <code>screen</code></td><td>Scroll depth — do players scroll through long lists?</td></tr>
+<tr><td><code>gui.panel.resize</code></td><td><code>panel_id</code>, <code>old_size</code>, <code>new_size</code></td><td>UI layout preferences</td></tr>
+<tr><td><code>gui.search</code></td><td><code>context</code> (workshop/map_browser/settings/console), <code>query_length</code>, <code>results_count</code></td><td>Search usage patterns — what are players looking for?</td></tr>
+</tbody>
+</table>
+</div>
+<h4 id="rts-input-events"><a class="header" href="#rts-input-events">RTS Input Events</a></h4>
+<p>These events capture how the player actually plays the game — selection patterns, ordering habits, control group usage, camera behavior. This is the primary source for gameplay pattern analysis and understanding how players interact with the core RTS mechanics.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Event</th><th>JSON <code>data</code> Fields</th><th>What It Reveals</th></tr>
+</thead>
+<tbody>
+<tr><td><code>input.select</code></td><td><code>unit_count</code>, <code>method</code> (box_drag/click/ctrl_group/double_click/tab_cycle/select_all), <code>unit_types[]</code></td><td>Selection habits — do players use box select or control groups?</td></tr>
+<tr><td><code>input.ctrl_group</code></td><td><code>group_number</code>, <code>action</code> (assign/recall/append/steal), <code>unit_count</code>, <code>unit_types[]</code></td><td>Control group adoption — which groups, how many units, reassignment frequency</td></tr>
+<tr><td><code>input.order</code></td><td><code>order_type</code> (move/attack/attack_move/guard/patrol/stop/force_fire/deploy), <code>target_type</code> (ground/unit/building/none), <code>unit_count</code>, <code>method</code> (right_click/hotkey/minimap/sidebar)</td><td>How players issue orders — right-click vs. hotkey vs. sidebar? What order types dominate?</td></tr>
+<tr><td><code>input.build_queue</code></td><td><code>item_type</code>, <code>action</code> (queue/cancel/hold/repeat), <code>method</code> (click/hotkey), <code>queue_depth</code>, <code>queue_position</code></td><td>Build queue management — do players queue in advance or build-on-demand?</td></tr>
+<tr><td><code>input.camera</code></td><td><code>method</code> (edge_scroll/keyboard/minimap_click/ctrl_group_recall/base_hotkey), <code>distance</code>, <code>duration_ms</code></td><td>Camera control habits — which method dominates? How far do players scroll?</td></tr>
+<tr><td><code>input.rally_point</code></td><td><code>building_type</code>, <code>position_type</code> (ground/unit/building), <code>distance_from_building</code></td><td>Rally point usage and placement patterns</td></tr>
+<tr><td><code>input.waypoint</code></td><td><code>waypoint_count</code>, <code>order_type</code>, <code>total_distance</code></td><td>Shift-queue / waypoint usage frequency and complexity</td></tr>
+</tbody>
+</table>
+</div>
+<h4 id="match-flow-events"><a class="header" href="#match-flow-events">Match Flow Events</a></h4>
+<p>These capture the lifecycle and pacing of matches — when they start, how they progress, why they end. The <code>match.pace</code> snapshot emitted periodically is particularly powerful: it creates a time-series of the player’s economic and military state, enabling pace analysis, build order reconstruction, and difficulty curve assessment.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Event</th><th>JSON <code>data</code> Fields</th><th>What It Reveals</th></tr>
+</thead>
+<tbody>
+<tr><td><code>match.start</code></td><td><code>mode</code>, <code>map</code>, <code>player_count</code>, <code>ai_count</code>, <code>ai_difficulty</code>, <code>balance_preset</code>, <code>render_mode</code>, <code>mod_profile_fingerprint</code></td><td>What people play — which modes, maps, settings</td></tr>
+<tr><td><code>match.pace</code></td><td>Emitted every 60s: <code>tick</code>, <code>apm</code>, <code>credits</code>, <code>power_balance</code>, <code>unit_count</code>, <code>army_value</code>, <code>tech_tier</code>, <code>buildings_count</code>, <code>harvesters_active</code></td><td>Economic/military time-series — pacing, build order tendencies, when players peak</td></tr>
+<tr><td><code>match.end</code></td><td><code>duration_s</code>, <code>outcome</code> (win/loss/draw/disconnect/surrender), <code>units_built</code>, <code>units_lost</code>, <code>credits_harvested</code>, <code>credits_spent</code>, <code>peak_army_value</code>, <code>peak_unit_count</code></td><td>Win/loss context, game length, economic efficiency</td></tr>
+<tr><td><code>match.first_build</code></td><td><code>structure_type</code>, <code>time_s</code></td><td>Build order opening — first building timing (balance indicator)</td></tr>
+<tr><td><code>match.first_combat</code></td><td><code>time_s</code>, <code>attacker_units</code>, <code>defender_units</code>, <code>outcome</code></td><td>When does first blood happen? (game pacing metric)</td></tr>
+<tr><td><code>match.surrender_point</code></td><td><code>time_s</code>, <code>army_value_ratio</code>, <code>tech_tier_diff</code>, <code>credits_diff</code></td><td>At what resource/army deficit do players give up?</td></tr>
+<tr><td><code>match.pause</code></td><td><code>reason</code> (player/desync/lag_stall), <code>duration_s</code></td><td>Pause frequency — desync vs. deliberate pauses</td></tr>
+</tbody>
+</table>
+</div>
+<h4 id="session--lifecycle-events"><a class="header" href="#session--lifecycle-events">Session &amp; Lifecycle Events</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Event</th><th>JSON <code>data</code> Fields</th><th>What It Reveals</th></tr>
+</thead>
+<tbody>
+<tr><td><code>session.start</code></td><td><code>engine_version</code>, <code>os</code>, <code>display_resolution</code>, <code>game_module</code>, <code>mod_profile_fingerprint</code>, <code>session_number</code> (incrementing per install)</td><td>Environment context — OS distribution, screen sizes, how many times they’ve launched</td></tr>
+<tr><td><code>session.end</code></td><td><code>duration_s</code>, <code>reason</code> (quit/crash/update/system_sleep), <code>screens_visited[]</code>, <code>matches_played</code>, <code>features_used[]</code></td><td>Session shape — how long, what did they do, clean exit or crash?</td></tr>
+<tr><td><code>session.idle</code></td><td><code>screen_id</code>, <code>duration_s</code></td><td>Idle detection — was the player AFK on the main menu for 20 minutes?</td></tr>
+</tbody>
+</table>
+</div>
+<h4 id="settings--configuration-events"><a class="header" href="#settings--configuration-events">Settings &amp; Configuration Events</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Event</th><th>JSON <code>data</code> Fields</th><th>What It Reveals</th></tr>
+</thead>
+<tbody>
+<tr><td><code>settings.changed</code></td><td><code>setting_path</code>, <code>old_value</code>, <code>new_value</code>, <code>screen</code></td><td>Which defaults are wrong? What do players immediately change?</td></tr>
+<tr><td><code>settings.preset</code></td><td><code>preset_type</code> (balance/theme/qol/render/experience), <code>preset_name</code></td><td>Preset popularity — Classic vs. Remastered vs. Modern</td></tr>
+<tr><td><code>settings.mod_profile</code></td><td><code>action</code> (activate/create/delete/import/export), <code>profile_name</code>, <code>mod_count</code></td><td>Mod profile adoption and management patterns</td></tr>
+<tr><td><code>settings.keybind</code></td><td><code>action</code>, <code>old_key</code>, <code>new_key</code></td><td>Which keybinds do players remap? (ergonomics insight)</td></tr>
+</tbody>
+</table>
+</div>
+<h4 id="onboarding-events"><a class="header" href="#onboarding-events">Onboarding Events</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Event</th><th>JSON <code>data</code> Fields</th><th>What It Reveals</th></tr>
+</thead>
+<tbody>
+<tr><td><code>onboarding.step</code></td><td><code>step_id</code>, <code>step_name</code>, <code>action</code> (completed/skipped/abandoned), <code>time_on_step_s</code></td><td>Where do new players drop off? Is the flow too long?</td></tr>
+<tr><td><code>onboarding.tutorial</code></td><td><code>tutorial_id</code>, <code>progress_pct</code>, <code>completed</code>, <code>time_spent_s</code>, <code>deaths</code></td><td>Tutorial completion and difficulty</td></tr>
+<tr><td><code>onboarding.first_use</code></td><td><code>feature_id</code>, <code>session_number</code>, <code>time_since_install_s</code></td><td>Feature discovery timeline — when do players first find the console? Career stats? Workshop?</td></tr>
+<tr><td><code>onboarding.recovery_phrase</code></td><td><code>action</code> (shown/written_confirmed/skipped), <code>time_on_screen_s</code></td><td>Recovery phrase adoption — critical for D061 backup design</td></tr>
+</tbody>
+</table>
+</div>
+<h4 id="error--diagnostic-events"><a class="header" href="#error--diagnostic-events">Error &amp; Diagnostic Events</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Event</th><th>JSON <code>data</code> Fields</th><th>What It Reveals</th></tr>
+</thead>
+<tbody>
+<tr><td><code>error.crash</code></td><td><code>panic_message_hash</code>, <code>backtrace_hash</code>, <code>context</code> (screen/system/tick)</td><td>Crash frequency, clustering by context</td></tr>
+<tr><td><code>error.mod_load</code></td><td><code>mod_id</code>, <code>error_type</code>, <code>file_path_hash</code></td><td>Which mods break? Which errors?</td></tr>
+<tr><td><code>error.asset</code></td><td><code>asset_path_hash</code>, <code>format</code>, <code>error_type</code></td><td>Asset loading failures in the wild</td></tr>
+<tr><td><code>error.desync</code></td><td><code>tick</code>, <code>expected_hash</code>, <code>actual_hash</code>, <code>divergent_system_hint</code></td><td>Client-side desync evidence (correlates with relay <code>relay.desync</code>)</td></tr>
+<tr><td><code>error.network</code></td><td><code>error_type</code>, <code>context</code> (connect/relay/workshop/tracking)</td><td>Network failures by category</td></tr>
+<tr><td><code>error.ui</code></td><td><code>widget_id</code>, <code>error_type</code>, <code>screen</code></td><td>UI rendering/interaction bugs</td></tr>
+</tbody>
+</table>
+</div>
+<h4 id="performance-sampling-events"><a class="header" href="#performance-sampling-events">Performance Sampling Events</a></h4>
+<p>Emitted periodically (not every frame — sampled to avoid overhead). These answer: “Are players hitting performance problems we don’t see in development?”</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Event</th><th>JSON <code>data</code> Fields</th><th>Sampling Rate</th><th>What It Reveals</th></tr>
+</thead>
+<tbody>
+<tr><td><code>perf.frame</code></td><td><code>p50_ms</code>, <code>p95_ms</code>, <code>p99_ms</code>, <code>max_ms</code>, <code>entity_count</code>, <code>draw_calls</code>, <code>gpu_time_ms</code></td><td>Every 10s</td><td>Frame time distribution — who’s struggling?</td></tr>
+<tr><td><code>perf.sim</code></td><td><code>p50_us</code>, <code>p95_us</code>, <code>p99_us</code>, per-system <code>{system: us}</code> breakdown</td><td>Every 30s</td><td>Sim tick budget — which systems are expensive for which players?</td></tr>
+<tr><td><code>perf.load</code></td><td><code>what</code> (map/mod/assets/game_launch/screen), <code>duration_ms</code>, <code>size_bytes</code></td><td>On event</td><td>Load times — how long does game startup take on real hardware?</td></tr>
+<tr><td><code>perf.memory</code></td><td><code>heap_bytes</code>, <code>component_storage_bytes</code>, <code>scratch_buffer_bytes</code>, <code>asset_cache_bytes</code></td><td>Every 60s</td><td>Memory pressure on real machines</td></tr>
+<tr><td><code>perf.pathfinding</code></td><td><code>requests</code>, <code>cache_hits</code>, <code>cache_hit_rate</code>, <code>p95_compute_us</code></td><td>Every 30s</td><td>Pathfinding load in real matches</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="analytical-power-what-questions-the-data-answers"><a class="header" href="#analytical-power-what-questions-the-data-answers">Analytical Power: What Questions the Data Answers</a></h3>
+<p>The telemetry design above is intentionally structured for SQL queryability. Here are representative queries against the unified <code>telemetry_events</code> table that demonstrate the kind of insights this data enables — these queries work identically on client exports, server <code>telemetry.db</code> files, or aggregated community datasets:</p>
+<p><strong>GUI &amp; UX Insights:</strong></p>
+<pre><code class="language-sql">-- Which screens do players never visit?
+SELECT json_extract(data, '$.screen_id') AS screen, COUNT(*) AS visits
+FROM telemetry_events WHERE event = 'gui.screen.open'
+GROUP BY screen ORDER BY visits ASC LIMIT 20;
+
+-- How do players issue orders: right-click, hotkey, or sidebar?
+SELECT json_extract(data, '$.method') AS method, COUNT(*) AS orders
+FROM telemetry_events WHERE event = 'input.order'
+GROUP BY method ORDER BY orders DESC;
+
+-- Which settings do players change within the first session?
+SELECT json_extract(data, '$.setting_path') AS setting,
+       json_extract(data, '$.old_value') AS default_val,
+       json_extract(data, '$.new_value') AS changed_to,
+       COUNT(*) AS changes
+FROM telemetry_events e
+JOIN (SELECT DISTINCT session_id FROM telemetry_events
+      WHERE event = 'session.start'
+      AND json_extract(data, '$.session_number') = 1) first
+  ON e.session_id = first.session_id
+WHERE e.event = 'settings.changed'
+GROUP BY setting ORDER BY changes DESC;
+
+-- Control group adoption: what percentage of matches use ctrl groups?
+SELECT
+  COUNT(DISTINCT CASE WHEN event = 'input.ctrl_group' THEN session_id END) * 100.0 /
+  COUNT(DISTINCT CASE WHEN event = 'match.start' THEN session_id END) AS pct_matches_with_ctrl_groups
+FROM telemetry_events WHERE event IN ('input.ctrl_group', 'match.start');
+</code></pre>
+<p><strong>Gameplay Pattern Insights:</strong></p>
+<pre><code class="language-sql">-- Average match duration by mode and map
+SELECT json_extract(data, '$.mode') AS mode,
+       json_extract(data, '$.map') AS map,
+       AVG(json_extract(data, '$.duration_s')) AS avg_duration_s,
+       COUNT(*) AS matches
+FROM telemetry_events WHERE event = 'match.end'
+GROUP BY mode, map ORDER BY matches DESC;
+
+-- Build order openings: what do players build first?
+SELECT json_extract(data, '$.structure_type') AS first_building,
+       COUNT(*) AS frequency,
+       AVG(json_extract(data, '$.time_s')) AS avg_time_s
+FROM telemetry_events WHERE event = 'match.first_build'
+GROUP BY first_building ORDER BY frequency DESC;
+
+-- APM distribution across the player base
+SELECT
+  CASE WHEN apm &lt; 30 THEN 'casual (&lt;30)'
+       WHEN apm &lt; 80 THEN 'intermediate (30-80)'
+       WHEN apm &lt; 150 THEN 'advanced (80-150)'
+       ELSE 'expert (150+)' END AS skill_bucket,
+  COUNT(*) AS snapshots
+FROM (SELECT CAST(json_extract(data, '$.apm') AS INTEGER) AS apm
+      FROM telemetry_events WHERE event = 'match.pace')
+GROUP BY skill_bucket;
+
+-- At what deficit do players surrender?
+SELECT AVG(json_extract(data, '$.army_value_ratio')) AS avg_army_ratio,
+       AVG(json_extract(data, '$.credits_diff')) AS avg_credit_diff,
+       COUNT(*) AS surrenders
+FROM telemetry_events WHERE event = 'match.surrender_point';
+</code></pre>
+<p><strong>Troubleshooting Insights:</strong></p>
+<pre><code class="language-sql">-- Crash frequency by context (which screen/system crashes most?)
+SELECT json_extract(data, '$.context') AS context,
+       json_extract(data, '$.backtrace_hash') AS stack,
+       COUNT(*) AS occurrences
+FROM telemetry_events WHERE event = 'error.crash'
+GROUP BY context, stack ORDER BY occurrences DESC LIMIT 20;
+
+-- Desync correlation: which maps/mods trigger desyncs?
+-- (run across aggregated relay + client exports)
+SELECT json_extract(data, '$.map') AS map,
+       COUNT(CASE WHEN event = 'relay.desync' THEN 1 END) AS desyncs,
+       COUNT(CASE WHEN event = 'relay.game.end' THEN 1 END) AS total_games,
+       ROUND(COUNT(CASE WHEN event = 'relay.desync' THEN 1 END) * 100.0 /
+             NULLIF(COUNT(CASE WHEN event = 'relay.game.end' THEN 1 END), 0), 1) AS desync_pct
+FROM telemetry_events
+WHERE event IN ('relay.desync', 'relay.game.end')
+GROUP BY map ORDER BY desync_pct DESC;
+
+-- Performance: which players have sustained frame drops?
+SELECT session_id,
+       AVG(json_extract(data, '$.p95_ms')) AS avg_p95_frame_ms,
+       MAX(json_extract(data, '$.entity_count')) AS peak_entities
+FROM telemetry_events WHERE event = 'perf.frame'
+GROUP BY session_id
+HAVING avg_p95_frame_ms &gt; 33.3  -- below 30 FPS sustained
+ORDER BY avg_p95_frame_ms DESC;
+</code></pre>
+<p><strong>Aggregation happens in the open, not in a backend.</strong> If the project team wants to analyze telemetry across many players (e.g., for a usability study, balance patch, or release retrospective), they ask the community to voluntarily submit exports — the same model as open-source projects collecting crash dumps on GitHub. Community members run <code>/analytics export</code>, review the file, and attach it. Aggregation scripts live in the repository and run locally — anyone can reproduce the analysis.</p>
+<p><strong>Console commands (D058) — identical on client and server:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Command</th><th>Action</th></tr>
+</thead>
+<tbody>
+<tr><td><code>/analytics status</code></td><td>Show recording status, event count, <code>telemetry.db</code> size, retention settings</td></tr>
+<tr><td><code>/analytics inspect [category] [--last N]</code></td><td>Display recent events, optionally filtered by category</td></tr>
+<tr><td><code>/analytics export [--from DATE] [--to DATE] [--category CAT]</code></td><td>Export to JSON/SQLite in <code>&lt;data_dir&gt;/exports/</code> with optional date/category filter</td></tr>
+<tr><td><code>/analytics clear [--before DATE]</code></td><td>Delete events, optionally only before a date</td></tr>
+<tr><td><code>/analytics on/off</code></td><td>Toggle local recording (<code>telemetry.product_analytics</code> cvar)</td></tr>
+<tr><td><code>/analytics query SQL</code></td><td>Run ad-hoc SQL against <code>telemetry.db</code> (dev console only, <code>DEV_ONLY</code> flag)</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="architecture-where-telemetry-lives"><a class="header" href="#architecture-where-telemetry-lives">Architecture: Where Telemetry Lives</a></h3>
+<p><strong>Primary path (always-on): local SQLite.</strong> Every component writes to its own <code>telemetry.db</code>. This is the ground truth. No network, no infrastructure, no dependencies.</p>
+<pre><code>  ┌─────────────────────────────────────────────────────────────────┐
+  │ Every component (client, relay, tracking, workshop)             │
+  │                                                                 │
+  │  Instrumentation    ──►  telemetry.db (local SQLite)            │
+  │  (tracing + events)      ├── always written                     │
+  │                          ├── /analytics inspect                 │
+  │                          ├── /analytics export ──► .json file   │
+  │                          │   (voluntary: bug report, feedback)  │
+  │                          └── retention: max size / max age      │
+  └─────────────────────────────────────────────────────────────────┘
+</code></pre>
+<p><strong>Optional path (server operators only): OTEL export.</strong> Server operators who want real-time dashboards can enable OTEL export alongside the SQLite sink. This is a deployment choice for sophisticated operators — never a requirement.</p>
+<pre><code>  Servers with OTEL enabled:
+
+  telemetry.db ◄── Instrumentation ──► OTEL Collector (optional)
+  (always)         (tracing + events)       │
+                                     ┌──────┴──────────────────┐
+                                     │          │              │
+                              ┌──────▼──┐ ┌────▼────┐ ┌───────▼───┐
+                              │Prometheus│ │ Jaeger  │ │   Loki    │
+                              │(metrics) │ │(traces) │ │(logs)     │
+                              └──────────┘ └─────────┘ └─────┬─────┘
+                                                             │
+                                                      ┌──────▼──────┐
+                                                      │ AI Training  │
+                                                      │ (Parquet→ML) │
+                                                      └─────────────┘
+</code></pre>
+<p>The dual-write approach means:</p>
+<ul>
+<li><strong>Every deployment</strong> gets full telemetry in SQLite — zero setup required</li>
+<li><strong>Sophisticated deployments</strong> can additionally route to Grafana/Prometheus/Jaeger for real-time dashboards</li>
+<li>Self-hosters can route OTEL to whatever they want (Grafana Cloud, Datadog, or just stdout)</li>
+<li>If the OTEL collector goes down, telemetry continues in SQLite uninterrupted — no data loss</li>
 </ul>
 <h3 id="implementation-approach"><a class="header" href="#implementation-approach">Implementation Approach</a></h3>
 <p><strong>Rust ecosystem:</strong></p>
@@ -3867,17 +4211,32 @@ pub enum GameplayEvent {
 <li><code>tracing-opentelemetry</code> — bridges <code>tracing</code> spans to OTEL traces</li>
 <li><code>metrics</code> crate — lightweight counters/histograms, exported via OTEL</li>
 </ul>
-<p><strong>Zero-cost when disabled:</strong> The <code>telemetry</code> feature flag gates all instrumentation behind <code>#[cfg(feature = "telemetry")]</code>. When disabled (default for release builds), all telemetry calls compile to no-ops. No runtime cost, no allocations, no branches. This respects invariant #5 (efficiency-first performance).</p>
+<p><strong>Zero-cost engine instrumentation when disabled:</strong> The <code>telemetry</code> feature flag gates <strong>engine-level</strong> instrumentation (per-system tick timing, <code>GameplayEvent</code> stream, OTEL export) behind <code>#[cfg(feature = "telemetry")]</code>. When disabled, all engine telemetry calls compile to no-ops. No runtime cost, no allocations, no branches. This respects invariant #5 (efficiency-first performance).</p>
+<p><strong>Product analytics (GUI interaction, session, settings, onboarding, errors, perf sampling) always record to SQLite</strong> — they are lightweight structured event inserts, not per-tick instrumentation. The overhead is negligible (one SQLite INSERT per user action, batched in WAL mode). Players who want to disable even this can set <code>telemetry.product_analytics false</code>.</p>
+<p><strong>Transaction batching:</strong> All SQLite INSERTs — both telemetry events and gameplay events — are explicitly batched in transactions to avoid per-INSERT fsync overhead:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Event source</th><th>Batch strategy</th></tr>
+</thead>
+<tbody>
+<tr><td>Product analytics</td><td>Buffered in memory; flushed in a single <code>BEGIN</code>/<code>COMMIT</code> every 1 second or 50 events, whichever first</td></tr>
+<tr><td>Gameplay events</td><td>Buffered per tick; flushed in a single <code>BEGIN</code>/<code>COMMIT</code> at end of tick (typically 1-20 events per tick)</td></tr>
+<tr><td>Server telemetry</td><td>Ring buffer; flushed in a single <code>BEGIN</code>/<code>COMMIT</code> every 100 ms or 200 events, whichever first</td></tr>
+</tbody>
+</table>
+</div>
+<p>All writes happen on a dedicated I/O thread (or <code>spawn_blocking</code> task) — never on the game loop thread. The game loop thread only appends to a lock-free ring buffer; the I/O thread drains and commits. This guarantees that SQLite contention (including <code>busy_timeout</code> waits and WAL checkpoints) cannot cause frame drops.</p>
 <p><strong>Build configurations:</strong></p>
 <div class="table-wrapper">
 <table>
 <thead>
-<tr><th>Build</th><th>Telemetry</th><th>Use case</th></tr>
+<tr><th>Build</th><th>Engine Telemetry</th><th>Product Analytics (SQLite)</th><th>OTEL Export</th><th>Use case</th></tr>
 </thead>
 <tbody>
-<tr><td><code>release</code></td><td>Off</td><td>Player-facing builds — zero overhead</td></tr>
-<tr><td><code>release-telemetry</code></td><td>On</td><td>Tournament servers, AI training, debugging</td></tr>
-<tr><td><code>debug</code></td><td>On</td><td>Development — full instrumentation</td></tr>
+<tr><td><code>release</code></td><td>Off</td><td>On (local SQLite)</td><td>Off</td><td>Player-facing builds — minimal overhead</td></tr>
+<tr><td><code>release-telemetry</code></td><td>On</td><td>On (local SQLite)</td><td>Optional</td><td>Tournament servers, AI training, debugging</td></tr>
+<tr><td><code>debug</code></td><td>On</td><td>On (local SQLite)</td><td>Optional</td><td>Development — full instrumentation</td></tr>
 </tbody>
 </table>
 </div>
@@ -3912,7 +4271,7 @@ services:
 <li>No telemetry (leaves operators blind and AI training without data)</li>
 <li>Always-on telemetry (violates performance invariant — must be zero-cost when disabled)</li>
 </ul>
-<p><strong>Phase:</strong> Backend server telemetry in Phase 5 (multiplayer). Engine telemetry in Phase 2 (sim) and Phase 3 (chrome/debug overlay). AI training pipeline in Phase 7 (LLM).</p>
+<p><strong>Phase:</strong> Unified <code>telemetry_events</code> SQLite schema + <code>/analytics</code> console commands in Phase 2 (shared across all components from day one). Engine telemetry (per-system timing, <code>GameplayEvent</code> stream) in Phase 2 (sim). Product analytics (GUI interaction, session, settings, onboarding, errors, performance sampling) in Phase 3 (alongside UI chrome). Server-side SQLite telemetry recording (relay, tracking, workshop) in Phase 5 (multiplayer). Optional OTEL export layer for server operators in Phase 5. Pre-built Grafana dashboards in Phase 5. AI training pipeline in Phase 7 (LLM).</p>
 <hr>
 <h2 id="d032-switchable-ui-themes-main-menu-chrome-lobby"><a class="header" href="#d032-switchable-ui-themes-main-menu-chrome-lobby">D032: Switchable UI Themes (Main Menu, Chrome, Lobby)</a></h2>
 <p><strong>Decision:</strong> Ship a YAML-driven UI theme system with multiple built-in presets. Players pick their preferred visual style for the main menu, in-game chrome (sidebar, minimap, build queue), and lobby. Mods and community can create and publish custom themes.</p>
@@ -4342,7 +4701,7 @@ qol:
 <tr><td><strong>Save game index</strong></td><td>Save name, campaign, mission, timestamp, playtime, thumbnail path</td><td>Fast save browser without deserializing every save file on launch.</td></tr>
 <tr><td><strong>Workshop cache</strong></td><td>Downloaded resource metadata, versions, checksums, dependency graph</td><td>Offline dependency resolution. Know what’s installed without scanning the filesystem.</td></tr>
 <tr><td><strong>Map catalog</strong></td><td>Map name, player count, size, author, source (local/workshop/OpenRA), tags</td><td>Browse local maps from all sources with a single query.</td></tr>
-<tr><td><strong>Gameplay event log</strong></td><td>Structured <code>GameplayEvent</code> records (D031) per game session</td><td>Queryable post-game analysis without an OTEL stack: <code>SELECT json_extract(data_json, '$.weapon'), AVG(json_extract(data_json, '$.damage')) FROM gameplay_events WHERE event_type = 'combat' AND session_id = ?</code>. Mod developers debug balance with SQL, not Grafana.</td></tr>
+<tr><td><strong>Gameplay event log</strong></td><td>Structured <code>GameplayEvent</code> records (D031) per game session</td><td>Queryable post-game analysis without an OTEL stack. Frequently-aggregated fields (<code>event_type</code>, <code>unit_type_id</code>, <code>target_type_id</code>) are denormalized as indexed columns for fast <code>PlayerStyleProfile</code> building (D042). Full payloads remain in <code>data_json</code> for ad-hoc SQL: <code>SELECT json_extract(data_json, '$.weapon'), AVG(json_extract(data_json, '$.damage')) FROM gameplay_events WHERE event_type = 'combat' AND session_id = ?</code>.</td></tr>
 <tr><td><strong>Asset index</strong></td><td><code>.mix</code> archive contents, MiniYAML conversion cache (keyed by file hash)</td><td>Skip re-parsing on startup. Know which <code>.mix</code> contains which file without opening every archive.</td></tr>
 </tbody>
 </table>
@@ -4363,14 +4722,21 @@ qol:
 </table>
 </div>
 <h3 id="why-sqlite-specifically"><a class="header" href="#why-sqlite-specifically">Why SQLite specifically</a></h3>
+<p><strong>The strategic argument: SQLite is the world’s most widely deployed database format.</strong> Choosing SQLite means IC’s player data isn’t locked behind a proprietary format that only IC can read — it’s stored in an open, standardized, universally-supported container that anything can query. Python scripts, R notebooks, Jupyter, Grafana, Excel (via ODBC), DB Browser for SQLite, the <code>sqlite3</code> CLI, Datasette, LLM agents, custom analytics tools, research projects, community stat trackers, third-party companion apps — all of them can open an IC <code>.db</code> file and run SQL against it with zero IC-specific tooling. This is a deliberate architectural choice: <strong>player data is a platform, not a product feature.</strong> The community can build things on top of IC’s data that we never imagined, using tools we’ve never heard of, because the interface is SQL — not a custom binary format, not a REST API that requires our servers to be running, not a proprietary export.</p>
+<p>Every use case the community might invent — balance analysis, AI training datasets, tournament statistics, replay research, performance benchmarking, meta-game tracking, coach feedback tools, stream overlays reading live stat data — is a SQL query away. No SDK required. No reverse engineering. No waiting for us to build an export feature. The <code>.db</code> file IS the export.</p>
+<p>This is also why SQLite is chosen over flat files (JSON, CSV): structured data in a relational schema with SQL query support enables questions that flat files can’t answer efficiently. “What’s my win rate with Soviet on maps larger than 128×128 against players I’ve faced more than 3 times?” is a single SQL query against <code>matches</code> + <code>match_players</code>. With JSON files, it’s a custom script.</p>
+<p><strong>The practical arguments:</strong></p>
 <ul>
 <li><strong><code>rusqlite</code></strong> is a mature, well-maintained Rust crate with no unsafe surprises</li>
 <li><strong>Single-file database</strong> — fits the “just a binary” deployment model. No connection strings, no separate database process, no credentials to manage</li>
 <li><strong>Self-hosting alignment</strong> — a community relay operator on a €5 VPS gets persistent match history without installing or operating a database server</li>
 <li><strong>FTS5 full-text search</strong> — covers workshop resource search and replay text search without Elasticsearch or a separate search service</li>
 <li><strong>WAL mode</strong> — handles concurrent reads from web endpoints while a single writer persists new records. Sufficient for community-scale deployments (hundreds of concurrent users, not millions)</li>
-<li><strong>WASM-compatible</strong> — <code>sql.js</code> (Emscripten build of SQLite) or <code>sqlite-wasm</code> for the browser target. The client-side replay catalog and gameplay event log work in the browser build.</li>
-<li><strong>Ad-hoc investigation</strong> — any operator can open the <code>.db</code> file in DB Browser for SQLite, DBeaver, or the <code>sqlite3</code> CLI and run queries immediately. No Grafana dashboards required. This fills the gap between “just stdout logs” and “full OTEL stack” for community self-hosters.</li>
+<li><strong>WASM-compatible</strong> — <code>sql.js</code> (Emscripten build of SQLite) or <code>sqlite-wasm</code> for the browser target. The client-side replay catalog and gameplay event log work in the browser build</li>
+<li><strong>Ad-hoc investigation</strong> — any operator can open the <code>.db</code> file in DB Browser for SQLite, DBeaver, or the <code>sqlite3</code> CLI and run queries immediately. No Grafana dashboards required. This fills the gap between “just stdout logs” and “full OTEL stack” for community self-hosters</li>
+<li><strong>Backup-friendly</strong> — <code>VACUUM INTO</code> produces a self-contained, compacted copy safe to take while the database is in use (D061). A backup is just a file copy. No dump/restore ceremony</li>
+<li><strong>Immune to bitrot</strong> — The Library of Congress recommends SQLite as a storage format for datasets. IC player data from 2027 will still be readable in 2047 — the format is that stable</li>
+<li><strong>Deterministic and testable</strong> — in CI, gameplay event assertions are SQL queries against a test fixture database. No mock infrastructure needed</li>
 </ul>
 <h3 id="relationship-to-d031-otel-telemetry"><a class="header" href="#relationship-to-d031-otel-telemetry">Relationship to D031 (OTEL Telemetry)</a></h3>
 <p>D031 (OTEL) and D034 (SQLite) are complementary, not competing:</p>
@@ -4510,14 +4876,21 @@ CREATE TABLE match_players (
 );
 
 -- Gameplay events (D031 structured events, written per session)
+-- Top fields denormalized as indexed columns to avoid json_extract() scans
+-- during PlayerStyleProfile aggregation (D042). The full payload remains in
+-- data_json for ad-hoc SQL queries and mod developer analytics.
 CREATE TABLE gameplay_events (
-    id          INTEGER PRIMARY KEY,
-    session_id  TEXT NOT NULL,
-    tick        INTEGER NOT NULL,
-    event_type  TEXT NOT NULL,   -- 'unit_built', 'unit_killed', 'building_placed', ...
-    player      TEXT,
-    data_json   TEXT NOT NULL    -- event-specific payload
+    id              INTEGER PRIMARY KEY,
+    session_id      TEXT NOT NULL,
+    tick            INTEGER NOT NULL,
+    event_type      TEXT NOT NULL,       -- 'unit_built', 'unit_killed', 'building_placed', ...
+    player          TEXT,
+    unit_type_id    INTEGER,             -- denormalized: interned unit type (nullable for non-unit events)
+    target_type_id  INTEGER,             -- denormalized: interned target type (nullable)
+    data_json       TEXT NOT NULL        -- event-specific payload (full detail)
 );
+CREATE INDEX idx_ge_session_event ON gameplay_events(session_id, event_type);
+CREATE INDEX idx_ge_unit_type ON gameplay_events(unit_type_id) WHERE unit_type_id IS NOT NULL;
 
 -- Campaign state (D021 branching campaigns)
 CREATE TABLE campaign_missions (
@@ -4547,6 +4920,148 @@ CREATE VIRTUAL TABLE replay_search USING fts5(
 </code></pre>
 <h3 id="schema-migration"><a class="header" href="#schema-migration">Schema Migration</a></h3>
 <p>Each service manages its own schema using embedded SQL migrations (numbered, applied on startup). The <code>rusqlite</code> <code>user_version</code> pragma tracks the current schema version. Forward-only migrations — the binary upgrades the database file automatically on first launch after an update.</p>
+<h3 id="per-database-pragma-configuration"><a class="header" href="#per-database-pragma-configuration">Per-Database PRAGMA Configuration</a></h3>
+<p>Every SQLite database in IC gets a purpose-tuned PRAGMA configuration applied at connection open time. The correct settings depend on the database’s access pattern (write-heavy vs. read-heavy), data criticality (irreplaceable credentials vs. recreatable cache), expected size, and concurrency requirements. A single “one size fits all” configuration would either sacrifice durability for databases that need it (credentials, achievements) or sacrifice throughput for databases that need speed (telemetry, gameplay events).</p>
+<p><strong>All databases share these baseline PRAGMAs:</strong></p>
+<pre><code class="language-sql">PRAGMA journal_mode = WAL;          -- all databases use WAL (concurrent readers, non-blocking writes)
+PRAGMA foreign_keys = ON;           -- enforced everywhere (except single-table telemetry)
+PRAGMA encoding = 'UTF-8';         -- consistent text encoding
+PRAGMA trusted_schema = OFF;        -- defense-in-depth: disable untrusted SQL functions in schema
+</code></pre>
+<p><code>page_size</code> must be set <strong>before</strong> the first write to a new database (it cannot be changed after creation without <code>VACUUM</code>). All other PRAGMAs are applied on every connection open.</p>
+<p><strong>Connection initialization pattern (Rust):</strong></p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Apply purpose-specific PRAGMAs to a freshly opened rusqlite::Connection.
+/// Called immediately after Connection::open(), before any application queries.
+fn configure_connection(conn: &amp;Connection, config: &amp;DbConfig) -&gt; rusqlite::Result&lt;()&gt; {
+    // page_size only effective on new databases (before first table creation)
+    conn.pragma_update(None, "page_size", config.page_size)?;
+    conn.pragma_update(None, "journal_mode", "wal")?;
+    conn.pragma_update(None, "synchronous", config.synchronous)?;
+    conn.pragma_update(None, "cache_size", config.cache_size)?;
+    conn.pragma_update(None, "foreign_keys", config.foreign_keys)?;
+    conn.pragma_update(None, "busy_timeout", config.busy_timeout_ms)?;
+    conn.pragma_update(None, "temp_store", config.temp_store)?;
+    conn.pragma_update(None, "wal_autocheckpoint", config.wal_autocheckpoint)?;
+    conn.pragma_update(None, "trusted_schema", "off")?;
+    if config.mmap_size &gt; 0 {
+        conn.pragma_update(None, "mmap_size", config.mmap_size)?;
+    }
+    if config.auto_vacuum != AutoVacuum::None {
+        conn.pragma_update(None, "auto_vacuum", config.auto_vacuum.as_str())?;
+    }
+    Ok(())
+}
+<span class="boring">}</span></code></pre>
+<h4 id="client-side-databases"><a class="header" href="#client-side-databases">Client-Side Databases</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>PRAGMA / Database</th><th><code>gameplay.db</code></th><th><code>telemetry.db</code></th><th><code>profile.db</code></th><th><code>achievements.db</code></th><th><code>communities/*.db</code></th><th><code>workshop/cache.db</code></th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Purpose</strong></td><td>Match history, events, campaigns, replays, profiles, training</td><td>Telemetry event stream</td><td>Identity, friends, images</td><td>Achievement defs &amp; progress</td><td>Signed credentials</td><td>Workshop metadata cache</td></tr>
+<tr><td><strong>synchronous</strong></td><td><code>NORMAL</code></td><td><code>NORMAL</code></td><td><code>FULL</code></td><td><code>FULL</code></td><td><code>FULL</code></td><td><code>NORMAL</code></td></tr>
+<tr><td><strong>cache_size</strong></td><td><code>-16384</code> (16 MB)</td><td><code>-4096</code> (4 MB)</td><td><code>-2048</code> (2 MB)</td><td><code>-1024</code> (1 MB)</td><td><code>-512</code> (512 KB)</td><td><code>-4096</code> (4 MB)</td></tr>
+<tr><td><strong>page_size</strong></td><td><code>4096</code></td><td><code>4096</code></td><td><code>4096</code></td><td><code>4096</code></td><td><code>4096</code></td><td><code>4096</code></td></tr>
+<tr><td><strong>mmap_size</strong></td><td><code>67108864</code> (64 MB)</td><td><code>0</code></td><td><code>0</code></td><td><code>0</code></td><td><code>0</code></td><td><code>0</code></td></tr>
+<tr><td><strong>busy_timeout</strong></td><td><code>2000</code> (2 s)</td><td><code>1000</code> (1 s)</td><td><code>3000</code> (3 s)</td><td><code>3000</code> (3 s)</td><td><code>3000</code> (3 s)</td><td><code>3000</code> (3 s)</td></tr>
+<tr><td><strong>temp_store</strong></td><td><code>MEMORY</code></td><td><code>MEMORY</code></td><td><code>DEFAULT</code></td><td><code>DEFAULT</code></td><td><code>DEFAULT</code></td><td><code>MEMORY</code></td></tr>
+<tr><td><strong>auto_vacuum</strong></td><td><code>NONE</code></td><td><code>NONE</code></td><td><code>INCREMENTAL</code></td><td><code>NONE</code></td><td><code>NONE</code></td><td><code>INCREMENTAL</code></td></tr>
+<tr><td><strong>wal_autocheckpoint</strong></td><td><code>2000</code> (≈8 MB WAL)</td><td><code>4000</code> (≈16 MB WAL)</td><td><code>500</code> (≈2 MB WAL)</td><td><code>100</code></td><td><code>100</code></td><td><code>1000</code></td></tr>
+<tr><td><strong>foreign_keys</strong></td><td><code>ON</code></td><td><code>OFF</code></td><td><code>ON</code></td><td><code>ON</code></td><td><code>ON</code></td><td><code>ON</code></td></tr>
+<tr><td><strong>Expected size</strong></td><td>10–500 MB</td><td>≤100 MB (pruned)</td><td>1–10 MB</td><td>&lt;1 MB</td><td>&lt;1 MB each</td><td>1–50 MB</td></tr>
+<tr><td><strong>Data criticality</strong></td><td>Valuable (history)</td><td>Low (recreatable)</td><td><strong>Critical</strong> (identity)</td><td>High (player investment)</td><td><strong>Critical</strong> (signed)</td><td>Low (recreatable)</td></tr>
+</tbody>
+</table>
+</div>
+<h4 id="server-side-databases"><a class="header" href="#server-side-databases">Server-Side Databases</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>PRAGMA / Database</th><th>Server <code>telemetry.db</code></th><th>Relay data</th><th>Workshop server</th><th>Matchmaking server</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Purpose</strong></td><td>High-throughput event stream</td><td>Match results, desync, behavior profiles</td><td>Resource registry, FTS5 search</td><td>Ratings, leaderboards, history</td></tr>
+<tr><td><strong>synchronous</strong></td><td><code>NORMAL</code></td><td><code>FULL</code></td><td><code>NORMAL</code></td><td><code>FULL</code></td></tr>
+<tr><td><strong>cache_size</strong></td><td><code>-8192</code> (8 MB)</td><td><code>-8192</code> (8 MB)</td><td><code>-16384</code> (16 MB)</td><td><code>-8192</code> (8 MB)</td></tr>
+<tr><td><strong>page_size</strong></td><td><code>4096</code></td><td><code>4096</code></td><td><code>4096</code></td><td><code>4096</code></td></tr>
+<tr><td><strong>mmap_size</strong></td><td><code>0</code></td><td><code>0</code></td><td><code>268435456</code> (256 MB)</td><td><code>134217728</code> (128 MB)</td></tr>
+<tr><td><strong>busy_timeout</strong></td><td><code>5000</code> (5 s)</td><td><code>5000</code> (5 s)</td><td><code>10000</code> (10 s)</td><td><code>10000</code> (10 s)</td></tr>
+<tr><td><strong>temp_store</strong></td><td><code>MEMORY</code></td><td><code>MEMORY</code></td><td><code>MEMORY</code></td><td><code>MEMORY</code></td></tr>
+<tr><td><strong>auto_vacuum</strong></td><td><code>NONE</code></td><td><code>NONE</code></td><td><code>INCREMENTAL</code></td><td><code>NONE</code></td></tr>
+<tr><td><strong>wal_autocheckpoint</strong></td><td><code>8000</code> (≈32 MB WAL)</td><td><code>1000</code> (≈4 MB WAL)</td><td><code>1000</code> (≈4 MB WAL)</td><td><code>1000</code> (≈4 MB WAL)</td></tr>
+<tr><td><strong>foreign_keys</strong></td><td><code>OFF</code></td><td><code>ON</code></td><td><code>ON</code></td><td><code>ON</code></td></tr>
+<tr><td><strong>Expected size</strong></td><td>≤500 MB (pruned)</td><td>10 MB–10 GB</td><td>10 MB–10 GB</td><td>1 MB–1 GB</td></tr>
+<tr><td><strong>Data criticality</strong></td><td>Low (operational)</td><td><strong>Critical</strong> (signed records)</td><td>Moderate (rebuildable from packages)</td><td><strong>Critical</strong> (player ratings)</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Tournament server</strong> uses the same configuration as relay data — brackets, match results, and map pool votes are signed records with identical durability requirements (<code>synchronous=FULL</code>, 8 MB cache, append-only growth).</p>
+<h4 id="table-to-file-assignments-for-d047-and-d057"><a class="header" href="#table-to-file-assignments-for-d047-and-d057">Table-to-File Assignments for D047 and D057</a></h4>
+<p>Not every table set warrants its own <code>.db</code> file. Two decision areas have SQLite tables that live inside existing databases:</p>
+<ul>
+<li><strong>D047 LLM provider config</strong> (<code>llm_providers</code>, <code>llm_task_routing</code>) → stored in <strong><code>profile.db</code></strong>. These are small config tables (~dozen rows) containing encrypted API keys — they inherit <code>profile.db</code>’s <code>synchronous=FULL</code> durability, which is appropriate for data that includes secrets. Co-locating with identity data keeps all “who am I and what are my settings” data in one backup-critical file.</li>
+<li><strong>D057 Skill Library</strong> (<code>skills</code>, <code>skills_fts</code>, <code>skill_embeddings</code>, <code>skill_compositions</code>) → stored in <strong><code>gameplay.db</code></strong>. Skills are analytical data produced from gameplay — they benefit from <code>gameplay.db</code>’s 16 MB cache and 64 MB mmap (FTS5 keyword search and embedding similarity scans over potentially thousands of skills). A mature skill library with embeddings may reach 10–50 MB, well within <code>gameplay.db</code>’s 10–500 MB expected range. Co-locating with <code>gameplay_events</code> and <code>player_profiles</code> keeps all AI/LLM-consumed data queryable in one file.</li>
+</ul>
+<h4 id="configuration-rationale"><a class="header" href="#configuration-rationale">Configuration Rationale</a></h4>
+<p><strong><code>synchronous</code> — the most impactful setting:</strong></p>
+<ul>
+<li><strong><code>FULL</code></strong> for databases storing irreplaceable data: <code>profile.db</code> (player identity), <code>achievements.db</code> (player investment), <code>communities/*.db</code> (signed credentials that require server contact to re-obtain), relay match data (signed <code>CertifiedMatchResult</code> records), and matchmaking ratings (player ELO/Glicko-2 history). <code>FULL</code> guarantees that a committed transaction survives even an OS crash or power failure — the fsync penalty is acceptable because these databases have low write frequency.</li>
+<li><strong><code>NORMAL</code></strong> for everything else. In WAL mode, <code>NORMAL</code> still guarantees durability against application crashes (the WAL is synced before committing). Only an OS-level crash during a checkpoint could theoretically lose a transaction — an acceptable risk for telemetry events, gameplay analytics, and recreatable caches.</li>
+</ul>
+<p><strong><code>cache_size</code> — scaled to query complexity:</strong></p>
+<ul>
+<li><code>gameplay.db</code> gets 16 MB because it runs the most complex queries: multi-table JOINs for career stats, aggregate functions over thousands of gameplay_events, FTS5 replay search. The large cache keeps hot index pages in memory across analytical queries.</li>
+<li>Server Workshop gets 16 MB for the same reason — FTS5 search over the entire resource registry benefits from a large page cache.</li>
+<li><code>telemetry.db</code> (client and server) gets a moderate cache because writes dominate reads. The write path doesn’t benefit from large caches — it’s all sequential inserts.</li>
+<li>Small databases (<code>achievements.db</code>, <code>communities/*.db</code>) need minimal cache because their entire content fits in a few hundred pages.</li>
+</ul>
+<p><strong><code>mmap_size</code> — for read-heavy databases that grow large:</strong></p>
+<ul>
+<li><code>gameplay.db</code> at 64 MB: after months of play, this database may contain hundreds of thousands of gameplay_events rows. Memory-mapping avoids repeated read syscalls during analytical queries like <code>PlayerStyleProfile</code> aggregation (D042). The 64 MB limit keeps memory pressure manageable on the minimum-spec 4 GB machine — just 1.6% of total RAM. If the database exceeds 64 MB, the remainder uses standard reads. On systems with ≥8 GB RAM, this could be scaled up at runtime.</li>
+<li>Server Workshop and Matchmaking at 128–256 MB: large registries and leaderboard scans benefit from mmap. Workshop search scans FTS5 index pages; matchmaking scans rating tables for top-N queries. Server hardware typically has ≥16 GB RAM.</li>
+<li>Write-dominated databases (<code>telemetry.db</code>) skip mmap entirely — the write path doesn’t benefit, and mmap can actually hinder WAL performance by creating contention between mapped reads and WAL writes.</li>
+</ul>
+<p><strong><code>wal_autocheckpoint</code> — tuned to write cadence:</strong></p>
+<ul>
+<li>Client <code>telemetry.db</code> at 4000 pages (≈16 MB WAL): telemetry writes are bursty during gameplay (potentially hundreds of events per second during intense combat). A large autocheckpoint threshold batches writes and defers the expensive checkpoint operation, preventing frame drops. The WAL file may grow to 16 MB during a match and get checkpointed during the post-game transition.</li>
+<li>Server <code>telemetry.db</code> at 8000 pages (≈32 MB WAL): relay servers handling multiple concurrent games need even larger write batches. The 32 MB WAL absorbs write bursts without checkpoint contention blocking game event recording.</li>
+<li><code>gameplay.db</code> at 2000 pages (≈8 MB WAL): moderate — gameplay_events arrive faster than profile updates but slower than telemetry. The 8 MB buffer handles end-of-match write bursts.</li>
+<li>Small databases at 100–500 pages: writes are rare; keep the WAL file small and tidy.</li>
+</ul>
+<p><strong><code>auto_vacuum</code> — only where deletions create waste:</strong></p>
+<ul>
+<li><code>INCREMENTAL</code> for <code>profile.db</code> (avatar/banner image replacements leave pages of dead BLOB data), <code>workshop/cache.db</code> (mod uninstalls remove metadata rows), and server Workshop (resource unpublish). Incremental mode marks freed pages for reuse without the full-table rewrite cost of <code>FULL</code> auto_vacuum. Reclamation happens via periodic <code>PRAGMA incremental_vacuum(N)</code> calls on background threads.</li>
+<li><code>NONE</code> everywhere else. Telemetry uses DELETE-based pruning but full VACUUM is only warranted on export (compaction). Achievements, community credentials, and match history grow monotonically — no deletions means no wasted space. Relay match data is append-only.</li>
+</ul>
+<p><strong><code>busy_timeout</code> — preventing SQLITE_BUSY errors:</strong></p>
+<ul>
+<li>1 second for client <code>telemetry.db</code>: telemetry writes must never cause visible gameplay lag. If the database is locked for over 1 second, something is seriously wrong — better to drop the event than stall the game loop.</li>
+<li>2 seconds for <code>gameplay.db</code>: UI queries (career stats page) occasionally overlap with background event writes. All <code>gameplay.db</code> writes happen on a dedicated I/O thread (see “Transaction batching” above), so <code>busy_timeout</code> waits occur on the I/O thread — never on the game loop thread. 2 seconds is sufficient for typical contention.</li>
+<li>5 seconds for server telemetry: high-throughput event recording on servers can create brief WAL contention during checkpoints. Server hardware and dedicated I/O threads make a 5-second timeout acceptable.</li>
+<li>10 seconds for server Workshop and Matchmaking: web API requests may queue behind write transactions during peak load. A generous timeout prevents spurious failures.</li>
+</ul>
+<p><strong><code>temp_store = MEMORY</code> — for databases that run complex queries:</strong></p>
+<ul>
+<li><code>gameplay.db</code>, <code>telemetry.db</code>, Workshop, Matchmaking: complex analytical queries (GROUP BY, ORDER BY, JOIN) may create temporary tables or sort buffers. Storing these in RAM avoids disk I/O overhead for intermediate results.</li>
+<li>Profile, achievements, community databases: queries are simple key lookups and small result sets — <code>DEFAULT</code> (disk-backed temp) is fine and avoids unnecessary memory pressure.</li>
+</ul>
+<p><strong><code>foreign_keys = OFF</code> for <code>telemetry.db</code> only:</strong></p>
+<ul>
+<li>The unified telemetry schema is a single table with no foreign keys. Disabling the pragma avoids the per-statement FK check overhead on every INSERT — measurable savings at high event rates.</li>
+<li>All other databases have proper FK relationships and enforce them.</li>
+</ul>
+<h4 id="wasm-platform-adjustments"><a class="header" href="#wasm-platform-adjustments">WASM Platform Adjustments</a></h4>
+<p>Browser builds (via <code>sql.js</code> or <code>sqlite-wasm</code> on OPFS) operate under different constraints:</p>
+<ul>
+<li><strong><code>mmap_size = 0</code></strong> always — mmap is not available in WASM environments</li>
+<li><strong><code>cache_size</code></strong> reduced by 50% — browser memory budgets are tighter</li>
+<li><strong><code>synchronous = NORMAL</code></strong> for all databases — OPFS provides its own durability guarantees and the browser may not honor fsync semantics</li>
+<li><strong><code>wal_autocheckpoint</code></strong> kept at default (1000) — OPFS handles sequential I/O differently than native filesystems; large WAL files offer less benefit</li>
+</ul>
+<p>These adjustments are applied automatically by the <code>DbConfig</code> builder when it detects the WASM target at compile time (<code>#[cfg(target_arch = "wasm32")]</code>).</p>
 <h3 id="scaling-path"><a class="header" href="#scaling-path">Scaling Path</a></h3>
 <p>SQLite is the default and the right choice for 95% of deployments. For the official infrastructure at high scale, individual services can optionally be configured to use PostgreSQL by swapping the storage backend trait implementation. The schema is designed to be portable (standard SQL, no SQLite-specific syntax). FTS5 is used for full-text search on Workshop and replay catalogs — a PostgreSQL backend would substitute <code>tsvector</code>/<code>tsquery</code> for the same queries. This is a future optimization, not a launch requirement.</p>
 <p>Each service defines its own storage trait — no god-trait mixing unrelated concerns:</p>
@@ -4578,6 +5093,15 @@ pub trait WorkshopStorage: Send + Sync {
 /// wrapping a rusqlite::Connection (WAL mode, foreign keys on, journal_size_limit set).
 /// PostgreSQL implementations are optional, behind `#[cfg(feature = "postgres")]`.
 <span class="boring">}</span></code></pre>
+<h3 id="alternatives-considered"><a class="header" href="#alternatives-considered">Alternatives Considered</a></h3>
+<ul>
+<li><strong>JSON / TOML flat files</strong> (rejected — no query capability; “what’s my win rate on this map?” requires loading every match file and filtering in code; no indexing, no FTS, no joins; scales poorly past hundreds of records; the user’s data is opaque to external tools unless we also build export scripts)</li>
+<li><strong>RocksDB / sled / redb</strong> (rejected — key-value stores require application-level query logic for everything; no SQL means no ad-hoc investigation, no external tool compatibility, no community reuse; the data is locked behind IC-specific access patterns)</li>
+<li><strong>PostgreSQL as default</strong> (rejected — destroys the “just a binary” deployment model; community relay operators shouldn’t need to install and maintain a database server; adds operational complexity for zero benefit at community scale)</li>
+<li><strong>Redis</strong> (rejected — in-memory only by default; no persistence guarantees without configuration; no SQL; wrong tool for durable structured records)</li>
+<li><strong>Custom binary format</strong> (rejected — maximum vendor lock-in; the community can’t build anything on top of it without reverse engineering; contradicts the open-standard philosophy)</li>
+<li><strong>No persistent storage; compute everything from replay files</strong> (rejected — replays are large, parsing is expensive, and many queries span multiple sessions; pre-computed aggregates in SQLite make career stats and AI adaptation instant)</li>
+</ul>
 <p><strong>Phase:</strong> SQLite storage for relay and client lands in Phase 2 (replay catalog, save game index, gameplay event log). Workshop server storage lands in Phase 6a (D030). Matchmaking and tournament storage land in Phase 5 (competitive infrastructure). The <code>StorageBackend</code> trait is defined early but PostgreSQL implementation is deferred until scale requires it.</p>
 <hr>
 <h2 id="d038--scenario-editor-ofpeden-inspired-sdk"><a class="header" href="#d038--scenario-editor-ofpeden-inspired-sdk">D038 — Scenario Editor (OFP/Eden-Inspired, SDK)</a></h2>
@@ -5985,7 +6509,7 @@ WC3 Style    — Ctrl+T trigger editor, Ctrl+B triggers browser
 <blockquote>
 <p><strong>Note:</strong> The accessibility features above cover the <strong>editor</strong> UI. <strong>Game-level accessibility</strong> — colorblind faction colors, minimap palettes, resource differentiation, screen reader support for menus, subtitle options for EVA/briefings, and remappable controls — is a separate concern that applies to <code>ic-render</code> and <code>ic-ui</code>, not <code>ic-editor</code>. Game accessibility ships in Phase 7 (see <code>08-ROADMAP.md</code>).</p>
 </blockquote>
-<h3 id="alternatives-considered"><a class="header" href="#alternatives-considered">Alternatives Considered</a></h3>
+<h3 id="alternatives-considered-1"><a class="header" href="#alternatives-considered-1">Alternatives Considered</a></h3>
 <ol>
 <li><strong>In-game editor (original design, revised by D040):</strong> The original D038 design embedded the editor inside the game binary. Revised to SDK-separate architecture — players shouldn’t see creator tools. The SDK still reuses the same Bevy rendering and sim crates, so there’s no loss of live preview capability. See D040 § SDK Architecture for the full rationale.</li>
 <li><strong>Text-only editing (YAML + Lua):</strong> Already supported for power users and LLM generation. The visual editor is the accessibility layer on top of the same data format.</li>
@@ -6174,7 +6698,7 @@ WC3 Style    — Ctrl+T trigger editor, Ctrl+B triggers browser
 <p><strong>ra-formats write support:</strong> Currently <code>ra-formats</code> is read-only (parse .mix, .shp, .pal, .vqa, .aud). The Asset Studio requires write support — generating .shp from frames, writing .pal files, encoding .vqa video, encoding .aud audio, optionally packing .mix archives. This is an additive extension to <code>ra-formats</code> (no redesign of existing parsers), but non-trivial engineering: .shp writing requires correct header generation, frame offset tables, and optional LCW/RLE compression; .vqa encoding requires VQ codebook generation and frame differencing; .aud encoding requires IMA ADPCM compression with correct <code>AUDHeaderType</code> generation and <code>IndexTable</code>/<code>DiffTable</code> lookup table application; .mix packing requires building the file index and CRC hash table. All encoders reference the EA GPL source code implementations directly (see <code>05-FORMATS.md</code> § Binary Format Codec Reference). Budget accordingly in Phase 6a.</p>
 <p><strong>Video pipeline:</strong> The game engine natively plays .mp4 and .webm via standard media decoders (platform-provided or bundled). Campaign creators can use modern formats directly — no conversion needed. The .vqa ↔ .mp4/.webm conversion in the Asset Studio is for creators who <em>want</em> the classic C&amp;C aesthetic (palette-quantized, low-res FMV look) or who need to extract and remix original EA cutscenes. The conversion pipeline lives in <code>ra-formats</code> (VQA codec) + <code>ic-editor</code> (UI, preview, trim/crop tools). Someone recording a briefing with a webcam or screen recorder imports their .mp4, previews it in the Video Playback module’s display modes (fullscreen, radar_comm, picture_in_picture), optionally converts to .vqa for retro feel, and publishes via Workshop (D030).</p>
 <p><strong>Audio pipeline:</strong> The game engine natively plays .wav, .ogg, and .mp3 via standard audio decoders (Bevy audio plugin + platform codecs). Modern formats are the recommended choice for new content — .ogg for music and voice lines (good compression, no licensing issues), .wav for short sound effects (zero decode latency). The .aud ↔ .wav/.ogg conversion in the Asset Studio is for creators who need to extract and remix original EA audio (hundreds of classic sound effects, EVA voice lines, and Hell March variations) or who want to encode custom audio in classic AUD format for OpenRA mod compatibility. The conversion pipeline lives in <code>ra-formats</code> (AUD codec — IMA ADPCM encode/decode using the original Westwood <code>IndexTable</code>/<code>DiffTable</code> from the EA GPL source) + <code>ic-editor</code> (UI, waveform preview, trim/normalize/fade tools). Someone recording custom EVA voice lines imports their .wav files, previews with waveform visualization, normalizes volume, optionally converts to .aud for classic feel or keeps as .ogg for modern mods, and publishes via Workshop (D030). Batch conversion handles entire sound libraries — extract all 200+ RA1 sound effects to .wav in one operation.</p>
-<h3 id="alternatives-considered-1"><a class="header" href="#alternatives-considered-1">Alternatives Considered</a></h3>
+<h3 id="alternatives-considered-2"><a class="header" href="#alternatives-considered-2">Alternatives Considered</a></h3>
 <ol>
 <li><strong>Rely on external tools entirely</strong> (Photoshop, Aseprite, XCC Mixer) — Rejected. Forces modders to learn multiple disconnected tools with no in-context preview. The “last mile” problem (PNG → game-ready .shp with correct palette, offsets, and facing rotations) is where most modders give up.</li>
 <li><strong>Build a full art suite</strong> (pixel editor, 3D modeler) — Rejected. Scope explosion. Aseprite and Blender exist. We handle the game-specific parts they can’t.</li>
@@ -6927,7 +7451,7 @@ impl AiStrategy for StyleDrivenAi {
 <li><strong>D016 (BYOLLM):</strong> LLM coaching is optional. Without it, the rule-based weakness identification and structured summary system works standalone.</li>
 <li><strong>D010 (snapshots):</strong> Training sessions use standard sim snapshots for save/restore. No special infrastructure needed.</li>
 </ul>
-<h3 id="alternatives-considered-2"><a class="header" href="#alternatives-considered-2">Alternatives Considered</a></h3>
+<h3 id="alternatives-considered-3"><a class="header" href="#alternatives-considered-3">Alternatives Considered</a></h3>
 <div class="table-wrapper">
 <table>
 <thead>
@@ -7326,7 +7850,7 @@ mod:
 <li><strong>D045 (pathfinding presets):</strong> Same modder-selectable pattern. Mods select or provide pathfinders; mods select or provide AI implementations. Both distribute via Workshop; both compose with experience profiles. Key difference: pathfinding is one axis (algorithm), AI is two axes (algorithm + difficulty).</li>
 <li><strong>D048 (render modes):</strong> Same modder-selectable pattern. The trait-per-subsystem architecture means every pluggable system follows the same model: engine ships built-in implementations, mods can add more, players/modders pick what they want.</li>
 </ul>
-<h3 id="alternatives-considered-3"><a class="header" href="#alternatives-considered-3">Alternatives Considered</a></h3>
+<h3 id="alternatives-considered-4"><a class="header" href="#alternatives-considered-4">Alternatives Considered</a></h3>
 <ul>
 <li>AI difficulty only, no style presets (rejected — difficulty is orthogonal to style; a “Hard Classic RA” AI should be hard but still play like original RA, not like a modern AI turned up)</li>
 <li>One “best” AI only (rejected — the community is split like they are on balance; offer choice)</li>
@@ -7583,7 +8107,7 @@ pub struct LlmPlayerAi {
 </tbody>
 </table>
 </div>
-<h3 id="alternatives-considered-4"><a class="header" href="#alternatives-considered-4">Alternatives Considered</a></h3>
+<h3 id="alternatives-considered-5"><a class="header" href="#alternatives-considered-5">Alternatives Considered</a></h3>
 <ul>
 <li>LLM replaces inner AI entirely in orchestrator mode (rejected — latency makes tick-level LLM control impractical; hybrid is better)</li>
 <li>LLM operates between games only (rejected — D042 already covers between-game coaching; real-time guidance is the new capability)</li>
@@ -7791,7 +8315,7 @@ mod:
 <li><strong>D033 (QoL toggles):</strong> Some implementation-specific parameters (harvester stuck fix, infantry scatter smoothing) could be classified as QoL. Presets bundle them for consistency; individual toggles in advanced settings allow fine-tuning.</li>
 <li><strong>D048 (render modes):</strong> Same modder-selectable pattern. Mods select or provide render modes; mods select or provide pathfinders. The trait-per-subsystem architecture means every pluggable system follows the same model.</li>
 </ul>
-<h3 id="alternatives-considered-5"><a class="header" href="#alternatives-considered-5">Alternatives Considered</a></h3>
+<h3 id="alternatives-considered-6"><a class="header" href="#alternatives-considered-6">Alternatives Considered</a></h3>
 <ul>
 <li><strong>One “best” pathfinding only</strong> (rejected — Classic RA movement feel is part of the nostalgia and is critical for original scenario compatibility; forcing modern pathing on purists would alienate them AND break existing missions)</li>
 <li><strong>Pathfinding differences handled by balance presets</strong> (rejected — movement behavior is fundamentally different from numeric values; a separate axis deserves separate selection)</li>
@@ -7922,7 +8446,7 @@ pub trait PlatformServices: Send + Sync {
 <li><strong>D036 (Achievements):</strong> D046 formalizes the multi-platform achievement sync that D036 mentioned briefly (“Steam achievements sync for Steam builds”).</li>
 <li><strong>D037 (Governance):</strong> Premium content moderation, verified publisher approval, and revenue-related disputes fall under community governance (D037).</li>
 </ul>
-<h3 id="alternatives-considered-6"><a class="header" href="#alternatives-considered-6">Alternatives Considered</a></h3>
+<h3 id="alternatives-considered-7"><a class="header" href="#alternatives-considered-7">Alternatives Considered</a></h3>
 <ul>
 <li>No premium content ever (rejected — leaves money on the table for both the project and legitimate IP holders like EA; the Remastered art pack use case is too valuable)</li>
 <li>Open marketplace for all creators (rejected — Skyrim paid mods disaster; tips-only for individual creators, premium only for verified publishers)</li>
@@ -8080,7 +8604,7 @@ CREATE TABLE llm_task_routing (
 <li><strong>D034 (SQLite):</strong> Provider configurations stored locally, encrypted API keys.</li>
 <li><strong>D044 (LLM AI):</strong> The task routing table directly determines which provider the orchestrator and LLM player use.</li>
 </ul>
-<h3 id="alternatives-considered-7"><a class="header" href="#alternatives-considered-7">Alternatives Considered</a></h3>
+<h3 id="alternatives-considered-8"><a class="header" href="#alternatives-considered-8">Alternatives Considered</a></h3>
 <ul>
 <li>Settings-only configuration, no dedicated UI (rejected — multiple providers with task routing is too complex for a settings page)</li>
 <li>No community sharing (rejected — LLM configuration is a significant friction point; community knowledge sharing reduces the barrier)</li>
@@ -8250,7 +8774,7 @@ render_modes:
 <p><strong>For a complete 3D game module</strong> (e.g., Generals clone): The game module can register only 3D render modes — no classic 2D at all. Or it can ship both. The architecture supports any combination.</p>
 <h3 id="minimum-viable-scope"><a class="header" href="#minimum-viable-scope">Minimum Viable Scope</a></h3>
 <p>Phase 2 delivers the infrastructure — render mode registration, asset handle swapping, the <code>RenderMode</code> struct. The HD/SD toggle (classic ↔ hd) works. Phase 3 adds the settings UI and keybind. Phase 6a supports mod-provided render modes (3D). The architecture supports all of this from day one; the phases gate what’s <em>tested and polished.</em></p>
-<h3 id="alternatives-considered-8"><a class="header" href="#alternatives-considered-8">Alternatives Considered</a></h3>
+<h3 id="alternatives-considered-9"><a class="header" href="#alternatives-considered-9">Alternatives Considered</a></h3>
 <ol>
 <li><strong>Resource packs only, no render mode concept</strong> — Rejected. Switching from 2D to 3D requires changing the render backend and camera, not just assets. Resource packs can’t do that.</li>
 <li><strong>3D as a separate game module</strong> — Rejected. A “3D RA1” game module would duplicate all the rules, balance, and systems from the base RA1 module. The whole point is that the sim is unchanged.</li>
@@ -8366,6 +8890,26 @@ render_modes:
 <p>ZIP was chosen over tar.gz because: random access to individual files (no full decompression to read manifest.yaml), universal tooling, <code>.oramap</code> precedent, and Rust’s <code>zip</code> crate is mature.</p>
 <p><strong>VPK-style indexed manifest (from Valve Source Engine):</strong> The <code>.icpkg</code> manifest (manifest.yaml) is placed at the <strong>start</strong> of the archive, not at the end. This follows Valve’s VPK (Valve Pak) format design, where the directory/index appears at the beginning of the file — allowing tools to read metadata, file listings, and dependencies without downloading or decompressing the entire package. For Workshop browsing, the tracker can serve just the first ~4KB of a package (the manifest) to populate search results, preview images, and dependency resolution without fetching the full archive. ZIP’s central directory is at the <em>end</em> of the file, so ZIP-based <code>.icpkg</code> files include a redundant manifest at offset 0 (outside the ZIP structure, in a fixed-size header) for fast remote reads, with the canonical copy inside the ZIP for standard tooling compatibility. See <code>research/valve-github-analysis.md</code> § 6.4.</p>
 <p><strong>Content-addressed asset deduplication (from Valve Fossilize):</strong> Workshop asset storage uses <strong>content-addressed hashing</strong> for deduplication — each file is identified by <code>SHA-256(content)</code>, not by path or name. When a modder publishes a new version that changes only 2 of 50 files, only the 2 changed files are uploaded; the remaining 48 reference existing content hashes already in the Workshop. This reduces upload size, storage cost, and download time for updates. The pattern comes from Fossilize’s content hashing (FOSS_BLOB_HASH = SHA-256 of serialized data, see <code>research/valve-github-analysis.md</code> § 3.2) and is also used by Git (content-addressed object store), Docker (layer deduplication), and IPFS (CID-based storage). The per-file SHA-256 hashes already present in manifest.yaml serve as content addresses — no additional metadata needed.</p>
+<p><strong>Local cache CAS deduplication:</strong> The same content-addressed pattern extends to the player’s local <code>workshop/</code> directory. Instead of storing raw <code>.icpkg</code> ZIP files — where 10 mods bundling the same HD sprite pack each contain a separate copy — the Workshop client unpacks downloaded packages into a <strong>content-addressed blob store</strong> (<code>workshop/blobs/&lt;sha256-prefix&gt;/&lt;sha256&gt;</code>). Each installed package’s manifest maps logical file paths to blob hashes; the package directory contains only symlinks or lightweight references to the shared blob store. Benefits:</p>
+<ul>
+<li><strong>Disk savings:</strong> Popular shared resources (HD sprite packs, sound effect libraries, font packs) stored once regardless of how many mods depend on them. Ten mods using the same 200MB HD pack → 200MB stored, not 2GB.</li>
+<li><strong>Faster installs:</strong> When installing a new mod, the client checks blob hashes against the local store before downloading. Files already present (from other mods) are skipped — only genuinely new content is fetched.</li>
+<li><strong>Atomic updates:</strong> Updating a mod replaces only changed blob references. Unchanged files (same hash) are already in the store.</li>
+<li><strong>Garbage collection:</strong> <code>ic mod gc</code> removes blobs no longer referenced by any installed package. Runs automatically during Workshop cleanup prompts (D030 budget system).</li>
+</ul>
+<pre><code>workshop/
+├── cache.db              # Package metadata, manifests, dependency graph
+├── blobs/                # Content-addressed blob store
+│   ├── a1/a1b2c3...     # SHA-256 hash → file content
+│   ├── d4/d4e5f6...
+│   └── ...
+└── packages/             # Per-package manifests (references into blobs/)
+    ├── alice--hd-sprites-2.0.0/
+    │   └── manifest.yaml # Maps logical paths → blob hashes
+    └── bob--desert-map-1.1.0/
+        └── manifest.yaml
+</code></pre>
+<p>The local CAS store is an optimization that ships alongside the full Workshop in Phase 6a. The initial Workshop (Phase 4–5) can use simpler <code>.icpkg</code>-on-disk storage and upgrade to CAS when the full Workshop matures — the manifest.yaml already contains per-file SHA-256 hashes, so the data model is forward-compatible.</p>
 <h3 id="p2p-distribution-bittorrentwebtorrent"><a class="header" href="#p2p-distribution-bittorrentwebtorrent">P2P Distribution (BitTorrent/WebTorrent)</a></h3>
 <p><strong>The cost problem:</strong> A popular 500MB mod downloaded 10,000 times generates 5TB of egress. At CDN rates ($0.01–0.09/GB), that’s $50–450/month — per mod. For a community project sustained by donations, centralized hosting is financially unsustainable at scale. A BitTorrent tracker VPS costs $5–20/month regardless of popularity.</p>
 <p><strong>The solution:</strong> Workshop distribution uses the <strong>BitTorrent protocol</strong> for large packages, with HTTP direct download as fallback. The Workshop server acts as both metadata registry (SQLite, lightweight) and BitTorrent tracker (peer coordination, lightweight). Actual content transfer happens peer-to-peer between players who have the package.</p>
@@ -8736,7 +9280,7 @@ workshop:
 <li><strong>Privacy-responsible:</strong> IP exposure is equivalent to any multiplayer game. HTTP-only mode available for privacy-sensitive users. No additional surveillance beyond standard BitTorrent protocol.</li>
 <li><strong>Proven technology:</strong> BitTorrent has been distributing large files reliably for 20+ years. Blizzard used it for WoW patches. The protocol is well-understood, well-documented, and well-implemented.</li>
 </ul>
-<h3 id="alternatives-considered-9"><a class="header" href="#alternatives-considered-9">Alternatives Considered</a></h3>
+<h3 id="alternatives-considered-10"><a class="header" href="#alternatives-considered-10">Alternatives Considered</a></h3>
 <ul>
 <li><strong>Centralized CDN only</strong> (rejected — financially unsustainable for a donation-funded community project. A popular 500MB mod downloaded 10K times = 5TB = $50-450/month. P2P reduces this to near-zero marginal cost)</li>
 <li><strong>IPFS</strong> (rejected as primary distribution protocol — slow cold-content discovery, complex setup, ecosystem declining, content pinning is expensive, poor game-quality UX. However, multiple Bitswap protocol design patterns adopted: EWMA peer scoring, per-peer fairness caps, want-have/want-block two-phase discovery, broadcast control, dual WAN/LAN discovery, delegated HTTP routing, batch provider announcements. See competitive landscape table above and research deep dive)</li>
@@ -9768,8 +10312,9 @@ Example:     3f7a2b91e4d08c56
 <ul>
 <li>Generated on first community join. Ed25519 keypair stored encrypted (AEAD with user passphrase) in the player’s local config.</li>
 <li>The same keypair CAN be reused across communities (simpler) or the player CAN generate per-community keypairs (more private). Player’s choice in settings.</li>
-<li>Key recovery: if the player loses their keypair, they can re-register with the community (new key = new player with fresh rating). This is intentional — key loss resets reputation, preventing key selling.</li>
-<li><strong>Key export:</strong> <code>ic player export-key --encrypted</code> exports the keypair as an encrypted file (AEAD, user passphrase). This is the player’s backup. The UI nags once (“Back up your player key? You’ll need it if you switch computers.”) and never again.</li>
+<li><strong>Key recovery via mnemonic seed (D061):</strong> The keypair is derived from a 24-word BIP-39 mnemonic phrase. If the player saved the phrase, they can regenerate the identical keypair on any machine via <code>ic identity recover</code>. Existing SCRs validate automatically — the recovered key matches the old public key.</li>
+<li><strong>Key loss without mnemonic:</strong> If the player lost both the keypair AND the recovery phrase, they re-register with the community (new key = new player with fresh rating). This is intentional — unrecoverable key loss resets reputation, preventing key selling.</li>
+<li><strong>Key export:</strong> <code>ic player export-key --encrypted</code> exports the keypair as an encrypted file (AEAD, user passphrase). The mnemonic seed phrase is the preferred backup mechanism; encrypted key export is an alternative for users who prefer file-based backup.</li>
 </ul>
 <h4 id="community-keys-two-key-architecture"><a class="header" href="#community-keys-two-key-architecture">Community Keys: Two-Key Architecture</a></h4>
 <p>Every community server has <strong>two</strong> Ed25519 keypairs, inspired by DNSSEC’s Zone Signing Key (ZSK) / Key Signing Key (KSK) pattern:</p>
@@ -10091,7 +10636,7 @@ CREATE TABLE key_rotations (
 <li><strong>D042 (Player profiles):</strong> Behavioral profiles remain local-only (D042). The credential file holds signed competitive data (ratings, matches, achievements). They complement each other: D042 = private local analytics, D052 = portable signed reputation.</li>
 <li><strong>P004 (Lobby/matchmaking):</strong> This decision partially resolves P004. Room discovery (5 tiers), lobby P2P resource sharing, and matchmaking are now designed. The remaining Phase 5 work is wire format specifics (message framing, serialization, state machine transitions).</li>
 </ul>
-<h3 id="alternatives-considered-10"><a class="header" href="#alternatives-considered-10">Alternatives Considered</a></h3>
+<h3 id="alternatives-considered-11"><a class="header" href="#alternatives-considered-11">Alternatives Considered</a></h3>
 <ul>
 <li><strong>Centralized ranking database</strong> (rejected — expensive to host, single point of failure, doesn’t match IC’s federation model, violates local-first privacy principle)</li>
 <li><strong>JWT for credentials</strong> (rejected — algorithm confusion attacks, <code>alg: none</code> bypass, JSON parsing ambiguity, no built-in replay protection, no built-in revocation. See comparison table above)</li>
@@ -10702,7 +11247,7 @@ pub enum TrustRequirement {
 <li><strong>D050 (Workshop):</strong> Workshop creator statistics feed the creator profile section.</li>
 <li><strong>D052 (Community Servers &amp; SCR):</strong> The verification backbone. Every reputation claim in the profile (rating, achievements, community membership) is backed by a signed credential. D053 is the user-facing layer; D052 is the cryptographic foundation. Trusted Communities (D053) determine which SCR issuers the player considers authoritative — this feeds into profile display, lobby filtering, and matchmaking preferences.</li>
 </ul>
-<h3 id="alternatives-considered-11"><a class="header" href="#alternatives-considered-11">Alternatives Considered</a></h3>
+<h3 id="alternatives-considered-12"><a class="header" href="#alternatives-considered-12">Alternatives Considered</a></h3>
 <ul>
 <li><strong>Central profile server</strong> (rejected — contradicts federation model, creates single point of failure, requires infrastructure IC doesn’t want to operate)</li>
 <li><strong>Blockchain-based identity</strong> (rejected — massively overcomplicated, no user benefit over Ed25519 SCR, environmental concerns)</li>
@@ -11053,7 +11598,7 @@ pub enum CodecError {
 </tbody>
 </table>
 </div>
-<h3 id="alternatives-considered-12"><a class="header" href="#alternatives-considered-12">Alternatives Considered</a></h3>
+<h3 id="alternatives-considered-13"><a class="header" href="#alternatives-considered-13">Alternatives Considered</a></h3>
 <ul>
 <li><strong>Abstract everything now</strong> (rejected — violates D015’s “no speculative abstractions”; the 7 items above don’t carry meaningful regret risk)</li>
 <li><strong>Abstract nothing, handle it later</strong> (rejected — Transport blocks WASM multiplayer <em>now</em>; SignatureScheme’s 15 hardcoded callsites grow with every feature; SnapshotCodec’s first schema change will force an emergency versioning retrofit)</li>
@@ -11344,7 +11889,7 @@ pub struct MatchmakingConfig {
 <li>Rating records must use D052’s SCR format — portable credentials require standardized format</li>
 <li>Tier resolution logic is engine-provided — communities customize the YAML data, not the resolution code</li>
 </ul>
-<h3 id="alternatives-considered-13"><a class="header" href="#alternatives-considered-13">Alternatives Considered</a></h3>
+<h3 id="alternatives-considered-14"><a class="header" href="#alternatives-considered-14">Alternatives Considered</a></h3>
 <ul>
 <li><strong>Raw rating only, no tiers</strong> (rejected — C&amp;C Remastered showed that numbers alone lack motivational hooks. The research clearly shows that named milestones drive engagement in every successful ranked system)</li>
 <li><strong>LoL-style LP system with promotion series</strong> (rejected — LP/MMR disconnect is the most complained-about feature in LoL. Promotion series were so unpopular that Riot removed them in 2024. IC should not repeat this error)</li>
@@ -11622,7 +12167,7 @@ ic replay import --batch ./openra-replays/ -o ./converted/
 <li><strong>NOT a guarantee of visual fidelity.</strong> The game will look “roughly right” for early ticks, then progressively diverge as simulation differences compound. This is expected and documented (D011).</li>
 <li><strong>NOT a replacement for IC’s native replay system.</strong> Native <code>.icrep</code> replays are the primary format. Foreign replay support is a compatibility/migration/testing feature.</li>
 </ul>
-<h3 id="alternatives-considered-14"><a class="header" href="#alternatives-considered-14">Alternatives Considered</a></h3>
+<h3 id="alternatives-considered-15"><a class="header" href="#alternatives-considered-15">Alternatives Considered</a></h3>
 <ul>
 <li><strong>Convert-only, no direct playback</strong> (rejected — forces a batch step before viewing; users want to double-click an <code>.orarep</code> and watch it immediately)</li>
 <li><strong>Direct playback only, no conversion</strong> (rejected — analysis tooling and regression tests need <code>.icrep</code> format; conversion enables the analysis event stream and signature chain)</li>
@@ -11998,7 +12543,7 @@ ic skill stats     # library overview: counts by domain/confidence/game module
 <li><strong>NOT required for any LLM feature to work.</strong> All LLM features (D016, D044) work without a skill library — they just don’t improve over time. The library is an additive enhancement, not a prerequisite.</li>
 <li><strong>NOT a replacement for hand-authored content.</strong> The built-in scene templates, AI behavior presets (D043), and campaign content (D021) are hand-crafted and don’t depend on the skill library. The library augments LLM capabilities; it doesn’t replace authored content.</li>
 </ul>
-<h3 id="alternatives-considered-15"><a class="header" href="#alternatives-considered-15">Alternatives Considered</a></h3>
+<h3 id="alternatives-considered-16"><a class="header" href="#alternatives-considered-16">Alternatives Considered</a></h3>
 <ul>
 <li><strong>Full model fine-tuning per user</strong> (rejected — requires GPU infrastructure, violates BYOLLM portability, incompatible with API-based providers, and risks catastrophic forgetting of general capabilities)</li>
 <li><strong>Replay-as-skill (store full replays as skills)</strong> (rejected — replays are too large and unstructured for retrieval; skills must be compressed to situation+plan patterns that fit in a prompt context window)</li>
@@ -13277,7 +13822,7 @@ config.td.yaml               # TD-specific overrides (optional)
 <li><strong>NOT available in competitive/ranked play.</strong> Dev commands are gated behind DeveloperMode (V44). The chat system and non-dev commands work in ranked; the Lua console and dev commands do not. Normal console commands (<code>/move</code>, <code>/build</code>, etc.) are treated as GUI-equivalent inputs — they produce the same <code>PlayerOrder</code> and are governed by D033 QoL toggles. See “Competitive Integrity in Multiplayer” above for the full framework: order rate monitoring, input source tracking, ranked restrictions, and tournament mode.</li>
 <li><strong>NOT a server management panel.</strong> Server administration beyond kick/ban/config should use external tools (web panels, RCON protocol). The in-game commands cover in-match operations only.</li>
 </ul>
-<h3 id="alternatives-considered-16"><a class="header" href="#alternatives-considered-16">Alternatives Considered</a></h3>
+<h3 id="alternatives-considered-17"><a class="header" href="#alternatives-considered-17">Alternatives Considered</a></h3>
 <ul>
 <li><strong>Separate console only, no chat integration</strong> (rejected — Source Engine’s model works for FPS games where chat is secondary, but RTS players use chat heavily during matches; forcing tilde-switch for commands is friction. Factorio and Minecraft prove unified is better for games where chat and commands coexist.)</li>
 <li><strong>Chat only, no developer console</strong> (rejected — power users need multi-line Lua input, scrollback, cvar browsing, and syntax highlighting. A single-line chat field can’t provide this. The developer console is a thin UI layer over the same dispatcher — minimal implementation cost.)</li>
@@ -14817,7 +15362,7 @@ Chat.SendToTeam(player, message)           -- Convenience: team-chat
 /wheel &lt;phrase_id&gt;       # Send chat wheel phrase by ID
 /replay strip-voice &lt;file&gt; # Remove voice from replay file
 </code></pre>
-<h3 id="alternatives-considered-17"><a class="header" href="#alternatives-considered-17">Alternatives Considered</a></h3>
+<h3 id="alternatives-considered-18"><a class="header" href="#alternatives-considered-18">Alternatives Considered</a></h3>
 <ul>
 <li><strong>External voice only (Discord/TeamSpeak/Mumble)</strong> (rejected — external voice is the status quo for OpenRA and it’s the #1 friction point for new players. Forcing third-party voice excludes casual players, fragments the community, and makes beacons/pings impossible to synchronize with voice. Built-in voice is table stakes for a modern multiplayer game. However, deep analysis of Mumble’s protocol, Janus SFU, and str0m’s sans-I/O WebRTC directly informed IC’s VoIP design — see <code>research/open-source-voip-analysis.md</code> for the full survey.)</li>
 <li><strong>P2P voice instead of relay-forwarded</strong> (rejected — P2P voice exposes player IP addresses to all participants. This is a known harassment vector: competitive players have been DDoS’d via IPs obtained from game voice. Relay-forwarded voice maintains D007’s IP privacy guarantee. The bandwidth cost is negligible for the relay.)</li>
@@ -15021,7 +15566,7 @@ pub enum QualityTier {
 <li><strong>Testing matrix explosion:</strong> Every configurable parameter multiplies the QA matrix. Sub-tick on/off × 5 sync frequencies × 3 debug levels = 30 configurations to test.</li>
 </ol>
 <p>The games that got this right — Generals, Factorio, CS2 — all converged on the same philosophy: <strong>invest in adaptive algorithms, not exposed knobs.</strong></p>
-<h3 id="alternatives-considered-18"><a class="header" href="#alternatives-considered-18">Alternatives Considered</a></h3>
+<h3 id="alternatives-considered-19"><a class="header" href="#alternatives-considered-19">Alternatives Considered</a></h3>
 <ul>
 <li><strong>Expose tick rate as a lobby setting</strong> (rejected — unlike game speed, tick rate affects CPU cost, bandwidth, and netcode timing in ways players can’t reason about. If 30 tps causes issues on low-end hardware, that’s a game speed problem (lower speed = lower effective tps), not a tick rate problem.)</li>
 <li><strong>Expose latency setting like StarCraft BW</strong> (rejected — BW’s Low/High/Extra High was necessary because the game had no adaptive run-ahead. IC has adaptive run-ahead from Generals. The manual setting is replaced by a better automatic system.)</li>
@@ -15036,6 +15581,893 @@ pub enum QualityTier {
 <li><strong>D015 (Efficiency-First Performance):</strong> Adaptive algorithms (run-ahead, timing feedback) are the “better algorithms” tier of the efficiency pyramid — they solve the problem before reaching for brute-force approaches.</li>
 <li><strong>D033 (Toggleable QoL):</strong> Game speed is the one netcode-adjacent setting that fits D033’s toggle model. All other netcode parameters are engineering constants, not user preferences.</li>
 <li><strong>D058 (Console):</strong> The <code>net.*</code> cvars defined above follow D058’s cvar system with appropriate flags. The diagnostic overlay (<code>net_diag</code>) is a console command, not a GUI setting.</li>
+</ul>
+<h2 id="d061-player-data-backup--portability"><a class="header" href="#d061-player-data-backup--portability">D061: Player Data Backup &amp; Portability</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th></th><th></th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Status</strong></td><td>Accepted</td></tr>
+<tr><td><strong>Driver</strong></td><td>Players need to back up, restore, and migrate their game data — saves, replays, profiles, screenshots, statistics — across machines and over time</td></tr>
+<tr><td><strong>Depends on</strong></td><td>D034 (SQLite), D053 (Player Profile), D052 (Community Servers &amp; SCR), D036 (Achievements), D010 (Snapshottable Sim)</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="problem-7"><a class="header" href="#problem-7">Problem</a></h3>
+<p>Every game that stores player data eventually faces the same question: “How do I move my stuff to a new computer?” The answer ranges from terrible (hunt for hidden AppData folders, hope you got the right files) to opaque (proprietary cloud sync that works until it doesn’t). IC’s local-first architecture (D034, D053) means all player data already lives on the player’s machine — which is both the opportunity and the responsibility. If everything is local, losing that data means losing everything: campaign progress, competitive history, replay collection, social connections.</p>
+<p>The design must satisfy three requirements:</p>
+<ol>
+<li><strong>Backup:</strong> A player can create a complete, restorable snapshot of all their IC data.</li>
+<li><strong>Portability:</strong> A player can move their data to another machine or a fresh install and resume exactly where they left off.</li>
+<li><strong>Data export:</strong> A player can extract their data in standard, human-readable formats (GDPR Article 20 compliance, and just good practice).</li>
+</ol>
+<h3 id="design-principles-2"><a class="header" href="#design-principles-2">Design Principles</a></h3>
+<ol>
+<li><strong>“Just copy the folder” must work.</strong> The data directory is self-contained. No registry entries, no hidden temp folders, no external database connections. A manual copy of <code>&lt;data_dir&gt;/</code> is a valid (if crude) backup.</li>
+<li><strong>Standard formats only.</strong> ZIP for archives, SQLite for databases, PNG for images, YAML/JSON for configuration. No proprietary backup format. A player should be able to inspect their own data with standard tools (DB Browser for SQLite, any image viewer, any text editor).</li>
+<li><strong>No IC-hosted cloud.</strong> IC does not operate cloud storage. Cloud sync is opt-in through existing platform services (Steam Cloud, GOG Galaxy). This avoids infrastructure cost, liability, and the temptation to make player data hostage to a service.</li>
+<li><strong>SCRs are inherently portable.</strong> Signed Credential Records (D052) are self-verifying — they carry the community public key, payload, and Ed25519 signature. A player’s verified ratings, achievements, and community memberships work on any IC install without re-earning or re-validating. This is IC’s unique advantage over every competitor.</li>
+<li><strong>Backup is a first-class CLI feature.</strong> Not buried in a settings menu, not a third-party tool. <code>ic backup create</code> is a documented, supported command.</li>
+</ol>
+<h3 id="data-directory-layout"><a class="header" href="#data-directory-layout">Data Directory Layout</a></h3>
+<p>All player data lives under a single, stable, documented directory. The layout is defined at Phase 0 (directory structure), stabilized by Phase 2 (save/replay formats finalized), and fully populated by Phase 5 (multiplayer profile data).</p>
+<pre><code>&lt;data_dir&gt;/
+├── config.yaml                         # Engine + game settings (D033 toggles, keybinds, render quality)
+├── profile.db                          # Player identity, friends, blocks, privacy settings (D053)
+├── achievements.db                     # Achievement collection (D036)
+├── gameplay.db                         # Event log, replay catalog, save game index, map catalog, asset index (D034)
+├── telemetry.db                        # Unified telemetry events (D031) — pruned at 100 MB
+├── keys/                               # Player Ed25519 keypair (D052) — THE critical file
+│   └── identity.key                    # Private key — recoverable via mnemonic seed phrase
+├── communities/                        # Per-community credential stores (D052)
+│   ├── official-ic.db                  # SCRs: ratings, match results, achievements
+│   └── clan-wolfpack.db
+├── saves/                              # Save game files (.icsave)
+│   ├── campaign-allied-mission5.icsave
+│   ├── autosave-001.icsave
+│   ├── autosave-002.icsave
+│   └── autosave-003.icsave            # Rotating 3-slot autosave
+├── replays/                            # Replay files (.icrep)
+│   └── 2027-03-15-ranked-1v1.icrep
+├── screenshots/                        # Screenshot images (PNG with metadata)
+│   └── 2027-03-15-154532.png
+├── workshop/                           # Downloaded Workshop content (D030)
+│   ├── cache.db                        # Workshop metadata cache (D034)
+│   ├── blobs/                          # Content-addressed blob store (D049, Phase 6a)
+│   └── packages/                       # Per-package manifests (references into blobs/)
+├── mods/                               # Locally installed mods
+├── maps/                               # Locally installed maps
+├── logs/                               # Engine log files (rotated)
+└── backups/                            # Created by `ic backup create`
+    └── ic-backup-2027-03-15.zip
+</code></pre>
+<p><strong>Platform-specific <code>&lt;data_dir&gt;</code> resolution:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Platform</th><th>Default Location</th></tr>
+</thead>
+<tbody>
+<tr><td>Windows</td><td><code>%APPDATA%\IronCurtain\</code></td></tr>
+<tr><td>macOS</td><td><code>~/Library/Application Support/IronCurtain/</code></td></tr>
+<tr><td>Linux</td><td><code>$XDG_DATA_HOME/iron-curtain/</code> (default: <code>~/.local/share/iron-curtain/</code>)</td></tr>
+<tr><td>Steam Deck</td><td>Same as Linux</td></tr>
+<tr><td>Browser (WASM)</td><td>OPFS virtual filesystem (see <code>05-FORMATS.md</code> § Browser Storage)</td></tr>
+<tr><td>Mobile</td><td>App sandbox (platform-managed)</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Override:</strong> <code>IC_DATA_DIR</code> environment variable or <code>--data-dir</code> CLI flag overrides the default. Useful for portable installs (USB drive), multi-account testing, or custom backup scripts.</p>
+<h3 id="backup-system-ic-backup-cli"><a class="header" href="#backup-system-ic-backup-cli">Backup System: <code>ic backup</code> CLI</a></h3>
+<p>The <code>ic backup</code> CLI provides safe, consistent backups. Following the Fossilize-inspired CLI philosophy (D020 — each subcommand does one focused thing well):</p>
+<pre><code>ic backup create                              # Full backup → &lt;data_dir&gt;/backups/ic-backup-&lt;date&gt;.zip
+ic backup create --output ~/my-backup.zip     # Custom output path
+ic backup create --exclude replays,workshop   # Smaller backup — skip large data
+ic backup create --only keys,profile,saves    # Targeted backup — critical data only
+ic backup restore ic-backup-2027-03-15.zip    # Restore from backup (prompts on conflict)
+ic backup restore backup.zip --overwrite      # Restore without prompting
+ic backup list                                # List available backups with size and date
+ic backup verify ic-backup-2027-03-15.zip     # Verify archive integrity without restoring
+</code></pre>
+<p><strong>How <code>ic backup create</code> works:</strong></p>
+<ol>
+<li><strong>SQLite databases:</strong> Each <code>.db</code> file is backed up using <code>VACUUM INTO '&lt;temp&gt;.db'</code> — this creates a consistent, compacted copy without requiring the database to be closed. WAL checkpoints are folded in. No risk of copying a half-written WAL file.</li>
+<li><strong>Binary files:</strong> <code>.icsave</code>, <code>.icrep</code>, <code>.icpkg</code> files are copied as-is (they’re self-contained).</li>
+<li><strong>Image files:</strong> PNG screenshots are copied as-is.</li>
+<li><strong>Config files:</strong> <code>config.yaml</code> and any other YAML files are copied as-is.</li>
+<li><strong>Key files:</strong> <code>keys/identity.key</code> is included (the player’s private key — also recoverable via mnemonic seed phrase, but a full backup preserves everything).</li>
+<li><strong>Package:</strong> Everything is bundled into a ZIP archive with the original directory structure preserved. No compression on already-compressed files (<code>.icsave</code>, <code>.icrep</code> are LZ4-compressed internally).</li>
+</ol>
+<p><strong>Backup categories for <code>--exclude</code> and <code>--only</code>:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Category</th><th>Contents</th><th>Typical Size</th><th>Critical?</th></tr>
+</thead>
+<tbody>
+<tr><td><code>keys</code></td><td><code>keys/identity.key</code></td><td>&lt; 1 KB</td><td><strong>Yes</strong> — recoverable via mnemonic seed phrase</td></tr>
+<tr><td><code>profile</code></td><td><code>profile.db</code></td><td>&lt; 1 MB</td><td><strong>Yes</strong> — friends, settings, avatar</td></tr>
+<tr><td><code>communities</code></td><td><code>communities/*.db</code></td><td>1–10 MB</td><td><strong>Yes</strong> — ratings, match history (SCRs)</td></tr>
+<tr><td><code>achievements</code></td><td><code>achievements.db</code></td><td>&lt; 1 MB</td><td><strong>Yes</strong> — SCR-backed achievement proofs</td></tr>
+<tr><td><code>config</code></td><td><code>config.yaml</code></td><td>&lt; 100 KB</td><td>Medium — preferences, easily recreated</td></tr>
+<tr><td><code>saves</code></td><td><code>saves/*.icsave</code></td><td>10–100 MB</td><td>High — campaign progress, in-progress games</td></tr>
+<tr><td><code>replays</code></td><td><code>replays/*.icrep</code></td><td>100 MB – 10 GB</td><td>Low — sentimental, not functional</td></tr>
+<tr><td><code>screenshots</code></td><td><code>screenshots/*.png</code></td><td>10 MB – 5 GB</td><td>Low — sentimental, not functional</td></tr>
+<tr><td><code>workshop</code></td><td><code>workshop/</code> (cache + packages)</td><td>100 MB – 50 GB</td><td>None — re-downloadable</td></tr>
+<tr><td><code>gameplay</code></td><td><code>gameplay.db</code></td><td>10–100 MB</td><td>Medium — event log, catalogs (rebuildable)</td></tr>
+<tr><td><code>mods</code></td><td><code>mods/</code></td><td>Variable</td><td>Low — re-downloadable or re-installable</td></tr>
+<tr><td><code>maps</code></td><td><code>maps/</code></td><td>Variable</td><td>Low — re-downloadable</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Default <code>ic backup create</code></strong> includes: <code>keys</code>, <code>profile</code>, <code>communities</code>, <code>achievements</code>, <code>config</code>, <code>saves</code>, <code>replays</code>, <code>screenshots</code>, <code>gameplay</code>. Excludes <code>workshop</code>, <code>mods</code>, <code>maps</code> (re-downloadable). Total size for a typical player: 200 MB – 2 GB.</p>
+<h3 id="profile-export-json-data-portability"><a class="header" href="#profile-export-json-data-portability">Profile Export: JSON Data Portability</a></h3>
+<p>For GDPR Article 20 compliance and general good practice, IC provides a machine-readable profile export:</p>
+<pre><code>ic profile export                             # → &lt;data_dir&gt;/exports/profile-export-&lt;date&gt;.json
+ic profile export --format json               # Explicit format (JSON is default)
+</code></pre>
+<p><strong>Export contents:</strong></p>
+<pre><code class="language-json">{
+  "export_version": "1.0",
+  "exported_at": "2027-03-15T14:30:00Z",
+  "engine_version": "0.5.0",
+  "identity": {
+    "display_name": "CommanderZod",
+    "public_key": "ed25519:abc123...",
+    "bio": "Tank rush enthusiast since 1996",
+    "title": "Iron Commander",
+    "country": "DE",
+    "created_at": "2027-01-15T10:00:00Z"
+  },
+  "communities": [
+    {
+      "name": "Official IC Community",
+      "public_key": "ed25519:def456...",
+      "joined_at": "2027-01-15",
+      "rating": { "game_module": "ra1", "value": 1823, "rd": 45 },
+      "matches_played": 342,
+      "achievements": 23,
+      "credentials": [
+        {
+          "type": "rating",
+          "payload_hex": "...",
+          "signature_hex": "...",
+          "note": "Self-verifying — import on any IC install"
+        }
+      ]
+    }
+  ],
+  "friends": [
+    { "display_name": "alice", "community": "Official IC Community", "added_at": "2027-02-01" }
+  ],
+  "statistics_summary": {
+    "total_matches": 429,
+    "total_playtime_hours": 412,
+    "win_rate": 0.579,
+    "faction_distribution": { "soviet": 0.67, "allied": 0.28, "random": 0.05 }
+  },
+  "saves_count": 12,
+  "replays_count": 287,
+  "screenshots_count": 45
+}
+</code></pre>
+<p>The key feature: <strong>SCRs are included in the export and are self-verifying.</strong> A player can import their profile JSON on a new machine, and their ratings and achievements are cryptographically proven without contacting any server. No other game offers this.</p>
+<h3 id="platform-cloud-sync-optional"><a class="header" href="#platform-cloud-sync-optional">Platform Cloud Sync (Optional)</a></h3>
+<p>For players who use Steam, GOG Galaxy, or other platforms with cloud save support, IC can optionally sync critical data via the <code>PlatformServices</code> trait:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Extension to PlatformServices (D053) for cloud backup.
+pub trait PlatformCloudSync {
+    /// Upload a small file to platform cloud storage.
+    fn cloud_save(&amp;self, key: &amp;str, data: &amp;[u8]) -&gt; Result&lt;()&gt;;
+    /// Download a file from platform cloud storage.
+    fn cloud_load(&amp;self, key: &amp;str) -&gt; Result&lt;Option&lt;Vec&lt;u8&gt;&gt;&gt;;
+    /// List available cloud files.
+    fn cloud_list(&amp;self) -&gt; Result&lt;Vec&lt;CloudEntry&gt;&gt;;
+    /// Available cloud storage quota (bytes).
+    fn cloud_quota(&amp;self) -&gt; Result&lt;CloudQuota&gt;;
+}
+
+pub struct CloudQuota {
+    pub used: u64,
+    pub total: u64,  // e.g., Steam Cloud: ~1 GB per game
+}
+<span class="boring">}</span></code></pre>
+<p><strong>What syncs:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Data</th><th>Sync?</th><th>Rationale</th></tr>
+</thead>
+<tbody>
+<tr><td><code>keys/identity.key</code></td><td><strong>Yes</strong></td><td>Critical — also recoverable via mnemonic seed phrase, but cloud sync is simpler</td></tr>
+<tr><td><code>profile.db</code></td><td><strong>Yes</strong></td><td>Small, essential</td></tr>
+<tr><td><code>communities/*.db</code></td><td><strong>Yes</strong></td><td>Small, contains verified reputation (SCRs)</td></tr>
+<tr><td><code>achievements.db</code></td><td><strong>Yes</strong></td><td>Small, contains achievement proofs</td></tr>
+<tr><td><code>config.yaml</code></td><td><strong>Yes</strong></td><td>Small, preserves preferences across machines</td></tr>
+<tr><td>Latest autosave</td><td><strong>Yes</strong></td><td>Resume campaign on another machine (one <code>.icsave</code> only)</td></tr>
+<tr><td><code>saves/*.icsave</code></td><td>No</td><td>Too large for cloud quotas (user manages manually)</td></tr>
+<tr><td><code>replays/*.icrep</code></td><td>No</td><td>Too large, not critical</td></tr>
+<tr><td><code>screenshots/*.png</code></td><td>No</td><td>Too large, not critical</td></tr>
+<tr><td><code>workshop/</code></td><td>No</td><td>Re-downloadable</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Total cloud footprint:</strong> ~5–20 MB. Well within Steam Cloud’s ~1 GB per-game quota.</p>
+<p><strong>Sync triggers:</strong> Cloud sync happens at: game launch (download), game exit (upload), and after completing a match/mission (upload changed community DBs). Never during gameplay — no sync I/O on the hot path.</p>
+<h3 id="screenshots"><a class="header" href="#screenshots">Screenshots</a></h3>
+<p>Screenshots are standard PNG files with embedded metadata in the PNG <code>tEXt</code> chunks:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Key</th><th>Value</th></tr>
+</thead>
+<tbody>
+<tr><td><code>IC:EngineVersion</code></td><td><code>"0.5.0"</code></td></tr>
+<tr><td><code>IC:GameModule</code></td><td><code>"ra1"</code></td></tr>
+<tr><td><code>IC:MapName</code></td><td><code>"Arena"</code></td></tr>
+<tr><td><code>IC:Timestamp</code></td><td><code>"2027-03-15T15:45:32Z"</code></td></tr>
+<tr><td><code>IC:Players</code></td><td><code>"CommanderZod (Soviet) vs alice (Allied)"</code></td></tr>
+<tr><td><code>IC:GameTick</code></td><td><code>"18432"</code></td></tr>
+<tr><td><code>IC:ReplayFile</code></td><td><code>"2027-03-15-ranked-1v1.icrep"</code> (if applicable)</td></tr>
+</tbody>
+</table>
+</div>
+<p>Standard PNG viewers ignore these chunks; IC’s screenshot browser reads them for filtering and organization. The screenshot hotkey (mapped in <code>config.yaml</code>) captures the current frame, embeds metadata, and saves to <code>screenshots/</code> with a timestamped filename.</p>
+<h3 id="mnemonic-seed-recovery"><a class="header" href="#mnemonic-seed-recovery">Mnemonic Seed Recovery</a></h3>
+<p>The Ed25519 private key in <code>keys/identity.key</code> is the player’s cryptographic identity. If lost without backup, ratings, achievements, and community memberships are gone. Cloud sync and auto-snapshots mitigate this, but both require the original machine to have been configured correctly. A player who never enabled cloud sync and whose hard drive dies loses everything.</p>
+<p><strong>Mnemonic seed phrases</strong> solve this with zero infrastructure. Inspired by BIP-39 (Bitcoin Improvement Proposal 39), the pattern derives a cryptographic keypair deterministically from a human-readable word sequence. The player writes the words on paper. On any machine, entering those words regenerates the identical keypair. The cheapest, most resilient “cloud backup” is a piece of paper in a drawer.</p>
+<h4 id="how-it-works-1"><a class="header" href="#how-it-works-1">How It Works</a></h4>
+<ol>
+<li><strong>Key generation:</strong> When IC creates a new identity, it generates 256 bits of entropy from the OS CSPRNG (<code>getrandom</code>).</li>
+<li><strong>Mnemonic encoding:</strong> The entropy maps to a 24-word phrase from the BIP-39 English wordlist (2048 words, 11 bits per word, 24 × 11 = 264 bits — 256 bits entropy + 8-bit checksum). The wordlist is curated for unambiguous reading: no similar-looking words, no offensive words, sorted alphabetically. Example: <code>abandon ability able about above absent absorb abstract absurd abuse access accident</code>.</li>
+<li><strong>Key derivation:</strong> The mnemonic phrase is run through PBKDF2-HMAC-SHA512 (2048 rounds, per BIP-39 spec) with an optional passphrase as salt (default: empty string). The 512-bit output is truncated to 32 bytes and used as the Ed25519 private key seed.</li>
+<li><strong>Deterministic output:</strong> Same 24 words + same passphrase → identical Ed25519 keypair on any platform. The derivation uses only standardized primitives (PBKDF2, HMAC, SHA-512, Ed25519) — no IC-specific code in the critical path.</li>
+</ol>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Derives an Ed25519 keypair from a BIP-39 mnemonic phrase.
+///
+/// The derivation is deterministic: same words + same passphrase
+/// always produce the same keypair on every platform.
+pub fn keypair_from_mnemonic(
+    words: &amp;[&amp;str; 24],
+    passphrase: &amp;str,
+) -&gt; Result&lt;Ed25519Keypair, MnemonicError&gt; {
+    let entropy = mnemonic_to_entropy(words)?;  // validate checksum
+    let salt = format!("mnemonic{}", passphrase);
+    let mut seed = [0u8; 64];
+    pbkdf2_hmac_sha512(
+        &amp;entropy_to_seed_input(words),
+        salt.as_bytes(),
+        2048,
+        &amp;mut seed,
+    );
+    let signing_key = Ed25519SigningKey::from_bytes(&amp;seed[..32])?;
+    Ok(Ed25519Keypair {
+        signing_key,
+        verifying_key: signing_key.verifying_key(),
+    })
+}
+<span class="boring">}</span></code></pre>
+<h4 id="optional-passphrase-advanced"><a class="header" href="#optional-passphrase-advanced">Optional Passphrase (Advanced)</a></h4>
+<p>The mnemonic can optionally be combined with a user-chosen passphrase during key derivation. This provides two-factor recovery: the 24 words (something you wrote down) + the passphrase (something you remember). Different passphrases produce different keypairs from the same words — useful for advanced users who want plausible deniability or multiple identities from one seed. The default is no passphrase (empty string). The UI does not promote this feature — it’s accessible via CLI and the advanced section of the recovery flow.</p>
+<h4 id="cli-commands"><a class="header" href="#cli-commands">CLI Commands</a></h4>
+<pre><code>ic identity seed show          # Display the 24-word mnemonic for the current identity
+                               # Requires interactive confirmation ("This is your recovery phrase.
+                               # Anyone with these words can become you. Write them down and
+                               # store them somewhere safe.")
+ic identity seed verify        # Enter 24 words to verify they match the current identity
+ic identity recover            # Enter 24 words (+ optional passphrase) to regenerate keypair
+                               # If identity.key already exists, prompts for confirmation
+                               # before overwriting
+ic identity recover --passphrase  # Prompt for passphrase in addition to mnemonic
+</code></pre>
+<h4 id="security-properties"><a class="header" href="#security-properties">Security Properties</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Property</th><th>Detail</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Entropy</strong></td><td>256 bits from OS CSPRNG — same as generating a key directly. The mnemonic is an encoding, not a weakening.</td></tr>
+<tr><td><strong>Brute-force resistance</strong></td><td>2²⁵⁶ possible mnemonics. Infeasible to enumerate.</td></tr>
+<tr><td><strong>Checksum</strong></td><td>Last 8 bits are SHA-256 checksum of the entropy. Catches typos during recovery (1 word wrong → checksum fails).</td></tr>
+<tr><td><strong>Offline</strong></td><td>No network, no server, no cloud. The 24 words ARE the identity.</td></tr>
+<tr><td><strong>Standard</strong></td><td>BIP-39 is used by every major cryptocurrency wallet. Millions of users have successfully recovered keys from mnemonic phrases. Battle-tested.</td></tr>
+<tr><td><strong>Platform-independent</strong></td><td>Same words produce the same key on Windows, macOS, Linux, WASM, mobile. The derivation uses only standardized cryptographic primitives.</td></tr>
+</tbody>
+</table>
+</div>
+<h4 id="what-the-mnemonic-does-not-replace"><a class="header" href="#what-the-mnemonic-does-not-replace">What the Mnemonic Does NOT Replace</a></h4>
+<ul>
+<li><strong>Cloud sync</strong> — still the best option for seamless multi-device use. The mnemonic is the disaster recovery layer beneath cloud sync.</li>
+<li><strong>Regular backups</strong> — the mnemonic recovers the <em>identity</em> (keypair). It does not recover save files, replays, screenshots, or settings. A full backup preserves everything.</li>
+<li><strong>Community server records</strong> — after mnemonic recovery, the player’s keypair is restored, but community servers still hold the match history and SCRs. No re-earning needed — the recovered keypair matches the old public key, so existing SCRs validate automatically.</li>
+</ul>
+<h4 id="precedent"><a class="header" href="#precedent">Precedent</a></h4>
+<p>The BIP-39 mnemonic pattern has been used since 2013 by Bitcoin, Ethereum, and every major cryptocurrency wallet. Ledger, Trezor, MetaMask, and Phantom all use 24-word recovery phrases as the standard key backup mechanism. The pattern has survived a decade of adversarial conditions (billions of dollars at stake) and is understood by millions of non-technical users. IC adapts the encoding and derivation steps verbatim — the only IC-specific part is using the derived key for Ed25519 identity rather than cryptocurrency transactions.</p>
+<h3 id="player-experience"><a class="header" href="#player-experience">Player Experience</a></h3>
+<p>The mechanical design above (CLI, formats, directory layout) is the foundation. This section defines what the <em>player</em> actually sees and feels. The guiding principle: <strong>players should never lose data without trying.</strong> The system works in layers:</p>
+<ol>
+<li><strong>Invisible layer (always-on):</strong> Cloud sync for critical data, automatic daily snapshots</li>
+<li><strong>Gentle nudge layer:</strong> Milestone-based reminders, status indicators in settings</li>
+<li><strong>Explicit action layer:</strong> In-game Data &amp; Backup panel, CLI for power users</li>
+<li><strong>Emergency layer:</strong> Disaster recovery, identity re-creation guidance</li>
+</ol>
+<h4 id="first-launch--new-player"><a class="header" href="#first-launch--new-player">First Launch — New Player</a></h4>
+<p>Integrates with D032’s “Day-one nostalgia choice.” After the player picks their experience profile (Classic/Remastered/Modern), two additional steps:</p>
+<p><strong>Step 1 — Identity creation + recovery phrase:</strong></p>
+<pre><code>┌─────────────────────────────────────────────────────────────┐
+│                     WELCOME TO IRON CURTAIN                 │
+│                                                             │
+│  Your player identity has been created.                     │
+│                                                             │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │  CommanderZod                                         │  │
+│  │  ID: ed25519:7f3a...b2c1                              │  │
+│  │  Created: 2027-03-15                                  │  │
+│  └───────────────────────────────────────────────────────┘  │
+│                                                             │
+│  Your recovery phrase — write these 24 words down and       │
+│  store them somewhere safe. They can restore your           │
+│  identity on any machine.                                   │
+│                                                             │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │  1. abandon     7. absorb    13. acid     19. across  │  │
+│  │  2. ability     8. abstract  14. acoustic  20. act    │  │
+│  │  3. able        9. absurd    15. acquire  21. action  │  │
+│  │  4. about      10. abuse     16. adapt    22. actor   │  │
+│  │  5. above      11. access    17. add      23. actress │  │
+│  │  6. absent     12. accident  18. addict   24. actual  │  │
+│  └───────────────────────────────────────────────────────┘  │
+│                                                             │
+│  [I've written them down]            [Skip — I'll do later] │
+│                                                             │
+│  You can view this phrase anytime: Settings → Data &amp; Backup │
+│  or run `ic identity seed show` from the command line.      │
+└─────────────────────────────────────────────────────────────┘
+</code></pre>
+<p><strong>Step 2 — Cloud sync offer:</strong></p>
+<pre><code>┌─────────────────────────────────────────────────────────────┐
+│                     PROTECT YOUR DATA                       │
+│                                                             │
+│  Your recovery phrase protects your identity. Cloud sync    │
+│  also protects your settings, ratings, and progress.        │
+│                                                             │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │ ☁  Enable Cloud Sync                               │    │
+│  │    Automatically backs up your profile,             │    │
+│  │    ratings, and settings via Steam Cloud.           │    │
+│  │    [Enable]                                         │    │
+│  └─────────────────────────────────────────────────────┘    │
+│                                                             │
+│  [Continue]                     [Skip — I'll set up later]  │
+│                                                             │
+│  You can always manage backups in Settings → Data &amp; Backup  │
+└─────────────────────────────────────────────────────────────┘
+</code></pre>
+<p><strong>Rules:</strong></p>
+<ul>
+<li>Identity creation is automatic — no sign-up, no email, no password</li>
+<li>The recovery phrase is shown once during first launch, then always accessible via Settings or CLI</li>
+<li>Cloud sync is offered but not required — “Continue” without enabling works fine</li>
+<li>Skipping the recovery phrase is allowed (no forced engagement) — the first milestone nudge will remind</li>
+<li>If no platform cloud is available (non-Steam/non-GOG install), Step 2 instead shows: “We recommend creating a backup after your first few games. IC will remind you.”</li>
+<li>The entire flow is skippable — no forced engagement</li>
+</ul>
+<h4 id="first-launch--existing-player-on-new-machine"><a class="header" href="#first-launch--existing-player-on-new-machine">First Launch — Existing Player on New Machine</a></h4>
+<p>This is the critical UX flow. Detection logic on first launch:</p>
+<pre><code>                    ┌──────────────┐
+                    │ First launch │
+                    │  detected    │
+                    └──────┬───────┘
+                           │
+                    ┌──────▼───────┐        ┌──────────────────┐
+                    │ Platform     │  Yes   │ Offer automatic  │
+                    │ cloud data   ├───────►│ cloud restore    │
+                    │ available?   │        └──────────────────┘
+                    └──────┬───────┘
+                           │ No
+                    ┌──────▼───────┐
+                    │ Show restore │
+                    │ options      │
+                    └──────────────┘
+</code></pre>
+<p><strong>Cloud restore path (automatic detection):</strong></p>
+<pre><code>┌─────────────────────────────────────────────────────────────┐
+│                  EXISTING PLAYER DETECTED                    │
+│                                                             │
+│  Found data from your other machine:                        │
+│                                                             │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │  CommanderZod                                         │  │
+│  │  Rating: 1823 (Private First Class)                   │  │
+│  │  342 matches played · 23 achievements                 │  │
+│  │  Last played: March 14, 2027 on DESKTOP-HOME          │  │
+│  └───────────────────────────────────────────────────────┘  │
+│                                                             │
+│  [Restore my data]              [Start fresh instead]       │
+│                                                             │
+│  Restores: identity, ratings, achievements, settings,       │
+│  friends list, and latest campaign autosave.                │
+│  Replays, screenshots, and full saves require a backup      │
+│  file or manual folder copy.                                │
+└─────────────────────────────────────────────────────────────┘
+</code></pre>
+<p><strong>Manual restore path (no cloud data):</strong></p>
+<pre><code>┌─────────────────────────────────────────────────────────────┐
+│                     WELCOME TO IRON CURTAIN                 │
+│                                                             │
+│  Played before? Restore your data:                          │
+│                                                             │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │  🔑  Recover from recovery phrase                   │    │
+│  │      Enter your 24-word phrase to restore identity  │    │
+│  └─────────────────────────────────────────────────────┘    │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │  📁  Restore from backup file                       │    │
+│  │      Browse for a .zip backup created by IC         │    │
+│  └─────────────────────────────────────────────────────┘    │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │  📂  Copy from existing data folder                 │    │
+│  │      Point to a copied &lt;data_dir&gt; from your old PC  │    │
+│  └─────────────────────────────────────────────────────┘    │
+│                                                             │
+│  [Start fresh — create new identity]                        │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+</code></pre>
+<p><strong>Mnemonic recovery flow (from “Recover from recovery phrase”):</strong></p>
+<pre><code>┌─────────────────────────────────────────────────────────────┐
+│                   RECOVER YOUR IDENTITY                      │
+│                                                             │
+│  Enter your 24-word recovery phrase:                        │
+│                                                             │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │  1. [________]   7. [________]  13. [________]       │  │
+│  │  2. [________]   8. [________]  14. [________]       │  │
+│  │  3. [________]   9. [________]  15. [________]       │  │
+│  │  4. [________]  10. [________]  16. [________]       │  │
+│  │  5. [________]  11. [________]  17. [________]       │  │
+│  │  6. [________]  12. [________]  18. [________]       │  │
+│  │                                                       │  │
+│  │  19. [________]  21. [________]  23. [________]      │  │
+│  │  20. [________]  22. [________]  24. [________]      │  │
+│  └───────────────────────────────────────────────────────┘  │
+│                                                             │
+│  [Advanced: I used a passphrase]                            │
+│                                                             │
+│  [Recover]                                       [Back]     │
+│                                                             │
+│  Autocomplete suggests words as you type. Only BIP-39       │
+│  wordlist entries are accepted.                              │
+└─────────────────────────────────────────────────────────────┘
+</code></pre>
+<p>On successful recovery, the flow shows the restored identity (display name, public key fingerprint) and continues to the normal first-launch experience. Community servers recognize the recovered identity by its public key — existing SCRs validate automatically.</p>
+<p><strong>Note:</strong> Mnemonic recovery restores the <em>identity only</em> (keypair). Save files, replays, screenshots, and settings are not recovered by the phrase — those require a full backup or folder copy. The restore options panel makes this clear: “Recover from recovery phrase” is listed alongside “Restore from backup file” because they solve different problems. A player who has both a phrase and a backup should use the backup (it includes everything); a player who only has the phrase gets their identity back and can re-earn or re-download the rest.</p>
+<p><strong>Restore progress (both paths):</strong></p>
+<pre><code>┌─────────────────────────────────────────────────────────────┐
+│                     RESTORING YOUR DATA                     │
+│                                                             │
+│  ████████████████████░░░░░░░░  68%                          │
+│                                                             │
+│  ✓ Identity key                                             │
+│  ✓ Profile &amp; friends                                        │
+│  ✓ Community ratings (3 communities, 12 SCRs verified)      │
+│  ✓ Achievements (23 achievement proofs verified)            │
+│  ◎ Save games (4 of 12)...                                  │
+│  ○ Replays                                                  │
+│  ○ Screenshots                                              │
+│  ○ Settings                                                 │
+│                                                             │
+│  SCR verification: all credentials cryptographically valid  │
+└─────────────────────────────────────────────────────────────┘
+</code></pre>
+<p>Key UX detail: <strong>SCRs are verified during restore and the player sees it.</strong> The progress screen shows credentials being cryptographically validated. This is a trust-building moment — “your reputation is portable and provable” becomes tangible.</p>
+<h4 id="automatic-behaviors-no-player-interaction-required"><a class="header" href="#automatic-behaviors-no-player-interaction-required">Automatic Behaviors (No Player Interaction Required)</a></h4>
+<p>Most players never open a settings screen for backup. These behaviors protect them silently:</p>
+<p><strong>Auto cloud sync (if enabled):</strong></p>
+<ul>
+<li><strong>On game exit:</strong> Upload changed <code>profile.db</code>, <code>communities/*.db</code>, <code>achievements.db</code>, <code>config.yaml</code>, <code>keys/identity.key</code>, latest autosave. Silent — no UI prompt.</li>
+<li><strong>On game launch:</strong> Download cloud data, merge if needed (last-write-wins for simple files; SCR merge for community DBs — SCRs are append-only with timestamps, so merge is deterministic).</li>
+<li><strong>After completing a match:</strong> Upload updated community DB (new match result / rating change). Background, non-blocking.</li>
+</ul>
+<p><strong>Automatic daily snapshots (always-on, even without cloud):</strong></p>
+<ul>
+<li>On first launch of the day, the engine writes a lightweight “critical data snapshot” to <code>&lt;data_dir&gt;/backups/auto-critical-N.zip</code> containing only <code>keys/</code>, <code>profile.db</code>, <code>communities/*.db</code>, <code>achievements.db</code>, <code>config.yaml</code> (~5 MB total).</li>
+<li>Rotating 3-day retention: <code>auto-critical-1.zip</code>, <code>auto-critical-2.zip</code>, <code>auto-critical-3.zip</code>. Oldest overwritten.</li>
+<li>No user interaction, no prompt, no notification. Background I/O during asset loading — invisible.</li>
+<li>Even players who never touch backup settings have 3 rolling days of critical data protection.</li>
+</ul>
+<p><strong>Post-milestone nudges (main menu toasts):</strong></p>
+<p>After significant events, a non-intrusive toast appears on the main menu — same system as D030’s Workshop cleanup toasts:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Trigger</th><th>Toast (cloud sync active)</th><th>Toast (no cloud sync)</th></tr>
+</thead>
+<tbody>
+<tr><td>First ranked match</td><td><code>Your competitive career has begun! Your rating is backed up automatically.</code></td><td><code>Your competitive career has begun! Protect your rating: [Back up now]  [Dismiss]</code></td></tr>
+<tr><td>First campaign mission</td><td><code>Campaign progress saved.</code> (no toast — autosave handles it)</td><td><code>Campaign progress saved. [Create backup]  [Dismiss]</code></td></tr>
+<tr><td>New ranked tier reached</td><td><code>Congratulations — Private First Class!</code></td><td><code>Congratulations — Private First Class! [Back up now]  [Dismiss]</code></td></tr>
+<tr><td>30 days without full backup (no cloud)</td><td>—</td><td><code>It's been a month since your last backup. Your data folder is 1.4 GB. [Back up now]  [Remind me later]</code></td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Nudge rules:</strong></p>
+<ul>
+<li><strong>Never during gameplay.</strong> Only on main menu or post-game screen.</li>
+<li><strong>Maximum one nudge per session.</strong> If multiple triggers fire, highest-priority wins.</li>
+<li><strong>Dismissable and respectful.</strong> “Remind me later” delays by 7 days. Three consecutive dismissals for the same nudge type = never show that nudge again.</li>
+<li><strong>No nudges if cloud sync is active and healthy.</strong> The player is already protected.</li>
+<li><strong>No nudges for the first 3 game sessions.</strong> Let players enjoy the game before talking about data management.</li>
+</ul>
+<h4 id="settings--data--backup-panel"><a class="header" href="#settings--data--backup-panel">Settings → Data &amp; Backup Panel</a></h4>
+<p>In-game UI for players who want to manage their data visually. Accessible from Main Menu → Settings → Data &amp; Backup. This is the GUI equivalent of the <code>ic backup</code> CLI — same operations, visual interface.</p>
+<pre><code>┌──────────────────────────────────────────────────────────────────┐
+│  Settings &gt; Data &amp; Backup                                        │
+│                                                                  │
+│  ┌─ DATA HEALTH ──────────────────────────────────────────────┐  │
+│  │                                                            │  │
+│  │  Identity key          ✓ Backed up (Steam Cloud)           │  │
+│  │  Profile &amp; ratings     ✓ Synced 2 hours ago                │  │
+│  │  Achievements          ✓ Synced 2 hours ago                │  │
+│  │  Campaign progress     ✓ Latest autosave synced            │  │
+│  │  Last full backup      March 10, 2027 (5 days ago)         │  │
+│  │  Data folder size      1.4 GB                              │  │
+│  │                                                            │  │
+│  └────────────────────────────────────────────────────────────┘  │
+│                                                                  │
+│  ┌─ BACKUP ───────────────────────────────────────────────────┐  │
+│  │                                                            │  │
+│  │  [Create full backup]     Saves everything to a .zip file  │  │
+│  │  [Create critical only]   Keys, profile, ratings (&lt; 5 MB)  │  │
+│  │  [Restore from backup]    Load a .zip backup file          │  │
+│  │                                                            │  │
+│  │  Saved backups:                                            │  │
+│  │    ic-backup-2027-03-10.zip     1.2 GB    [Open] [Delete]  │  │
+│  │    ic-backup-2027-02-15.zip     980 MB    [Open] [Delete]  │  │
+│  │    auto-critical-1.zip          4.8 MB    (today)          │  │
+│  │    auto-critical-2.zip          4.7 MB    (yesterday)      │  │
+│  │    auto-critical-3.zip          4.7 MB    (2 days ago)     │  │
+│  │                                                            │  │
+│  └────────────────────────────────────────────────────────────┘  │
+│                                                                  │
+│  ┌─ CLOUD SYNC ───────────────────────────────────────────────┐  │
+│  │                                                            │  │
+│  │  Status: Active (Steam Cloud)                              │  │
+│  │  Last sync: March 15, 2027 14:32                           │  │
+│  │  Cloud usage: 12 MB / 1 GB                                 │  │
+│  │                                                            │  │
+│  │  [Sync now]  [Disable cloud sync]                          │  │
+│  │                                                            │  │
+│  └────────────────────────────────────────────────────────────┘  │
+│                                                                  │
+│  ┌─ EXPORT &amp; PORTABILITY ─────────────────────────────────────┐  │
+│  │                                                            │  │
+│  │  [Export profile (JSON)]   Machine-readable data export    │  │
+│  │  [Open data folder]        Browse files directly           │  │
+│  │                                                            │  │
+│  └────────────────────────────────────────────────────────────┘  │
+│                                                                  │
+└──────────────────────────────────────────────────────────────────┘
+</code></pre>
+<p><strong>When cloud sync is not available</strong> (non-Steam/non-GOG install), the Cloud Sync section shows:</p>
+<pre><code>│  ┌─ CLOUD SYNC ───────────────────────────────────────────────┐  │
+│  │                                                            │  │
+│  │  Status: Not available                                     │  │
+│  │  Cloud sync requires Steam or GOG Galaxy.                  │  │
+│  │                                                            │  │
+│  │  Your data is protected by automatic daily snapshots.      │  │
+│  │  We recommend creating a full backup periodically.         │  │
+│  │                                                            │  │
+│  └────────────────────────────────────────────────────────────┘  │
+</code></pre>
+<p>And Data Health adjusts severity indicators:</p>
+<pre><code>│  │  Identity key          ⚠ Local only — not cloud-backed     │  │
+│  │  Profile &amp; ratings     ⚠ Local only                        │  │
+│  │  Last full backup      Never                               │  │
+│  │  Last auto-snapshot    Today (keys + profile + ratings)    │  │
+</code></pre>
+<p>The ⚠ indicator is yellow, not red — it’s a recommendation, not an error. “Local only” is a valid state, not a broken state.</p>
+<p><strong>“Create full backup” flow:</strong> Clicking the button opens a save-file dialog (pre-filled with <code>ic-backup-&lt;date&gt;.zip</code>). A progress bar shows backup creation. On completion: <code>Backup created: ic-backup-2027-03-15.zip (1.2 GB)</code> with [Open folder] button. The same categories as <code>ic backup create --exclude</code> are exposed via checkboxes in an “Advanced” expander (collapsed by default).</p>
+<p><strong>“Restore from backup” flow:</strong> Opens a file browser filtered to <code>.zip</code> files. After selection, shows the restore progress screen (see “First Launch — Existing Player” above). If existing data conflicts with backup data, prompts: <code>Your current data differs from the backup. [Overwrite with backup]  [Cancel]</code>.</p>
+<h4 id="screenshot-gallery"><a class="header" href="#screenshot-gallery">Screenshot Gallery</a></h4>
+<p>The screenshot browser (Phase 3) uses PNG <code>tEXt</code> metadata to organize screenshots into a browsable gallery. Accessible from Main Menu → Screenshots:</p>
+<pre><code>┌──────────────────────────────────────────────────────────────────┐
+│  Screenshots                                        [Take now ⌂] │
+│                                                                  │
+│  Filter: [All maps ▾]  [All modes ▾]  [Date range ▾]  [Search…] │
+│                                                                  │
+│  ┌────────────┐  ┌────────────┐  ┌────────────┐  ┌────────────┐ │
+│  │            │  │            │  │            │  │            │ │
+│  │  (thumb)   │  │  (thumb)   │  │  (thumb)   │  │  (thumb)   │ │
+│  │            │  │            │  │            │  │            │ │
+│  ├────────────┤  ├────────────┤  ├────────────┤  ├────────────┤ │
+│  │ Arena      │  │ Fjord      │  │ Arena      │  │ Red Pass   │ │
+│  │ 1v1 Ranked │  │ 2v2 Team   │  │ Skirmish   │  │ Campaign   │ │
+│  │ Mar 15     │  │ Mar 14     │  │ Mar 12     │  │ Mar 10     │ │
+│  └────────────┘  └────────────┘  └────────────┘  └────────────┘ │
+│                                                                  │
+│  Selected: Arena — 1v1 Ranked — Mar 15, 2027 15:45               │
+│  CommanderZod (Soviet) vs alice (Allied) · Tick 18432            │
+│  [Watch replay]  [Open file]  [Copy to clipboard]  [Delete]      │
+│                                                                  │
+│  Total: 45 screenshots (128 MB)                                  │
+└──────────────────────────────────────────────────────────────────┘
+</code></pre>
+<p>Key feature: <strong>“Watch replay” links directly to the replay file</strong> via the <code>IC:ReplayFile</code> metadata. Screenshots become bookmarks into match history. A screenshot gallery doubles as a game history browser.</p>
+<p>Filters use metadata: map name, game module, date, player names. Sorting by date (default), map, or file size.</p>
+<h4 id="identity-loss--disaster-recovery"><a class="header" href="#identity-loss--disaster-recovery">Identity Loss — Disaster Recovery</a></h4>
+<p>If a player loses their machine with no backup and no cloud sync, the outcome depends on whether they saved their recovery phrase:</p>
+<p><strong>Recoverable via mnemonic seed phrase:</strong></p>
+<ul>
+<li>Ed25519 private key (the identity itself) — enter 24 words on any machine to regenerate the identical keypair</li>
+<li>Community recognition — recovered key matches the old public key, so existing SCRs validate automatically</li>
+<li>Ratings and match history — community servers recognize the recovered identity without admin intervention</li>
+</ul>
+<p><strong>Not recoverable via mnemonic (requires backup or re-creation):</strong></p>
+<ul>
+<li>Campaign save files, replay files, screenshots</li>
+<li>Local settings and preferences</li>
+<li>Achievement proofs signed by the old key (can be re-earned; or restored from backup if available)</li>
+</ul>
+<p><strong>Re-downloadable:</strong></p>
+<ul>
+<li>Workshop content (mods, maps, resource packs)</li>
+</ul>
+<p><strong>Partially recoverable via community (if mnemonic was also lost):</strong></p>
+<ul>
+<li><strong>Ratings and match history.</strong> Community servers retain match records. A player creates a new identity, and a community admin can associate the new identity with the old record via a verified identity transfer (community-specific policy, not IC-mandated). The old SCRs prove the old identity held those ratings.</li>
+<li><strong>Friends.</strong> Friends with the player in their list can re-add the new identity.</li>
+</ul>
+<p><strong>Recovery hierarchy (best to worst):</strong></p>
+<ol>
+<li><strong>Full backup</strong> — everything restored, including saves, replays, screenshots</li>
+<li><strong>Cloud sync</strong> — identity, profile, ratings, settings, latest autosave restored</li>
+<li><strong>Mnemonic seed phrase</strong> — identity restored; saves, replays, settings lost</li>
+<li><strong>Nothing saved</strong> — fresh identity; community admin can transfer old records</li>
+</ol>
+<p><strong>UX for total loss (no phrase, no backup, no cloud):</strong> No special “recovery wizard.” The player creates a fresh identity. The first-launch flow on the new identity presents the recovery phrase prominently. The system prevents the same mistake twice.</p>
+<h4 id="console-commands-d058"><a class="header" href="#console-commands-d058">Console Commands (D058)</a></h4>
+<p>All Data &amp; Backup panel operations have console equivalents:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Command</th><th>Effect</th></tr>
+</thead>
+<tbody>
+<tr><td><code>/backup create</code></td><td>Create full backup (interactive — shows progress)</td></tr>
+<tr><td><code>/backup create --critical</code></td><td>Create critical-only backup</td></tr>
+<tr><td><code>/backup restore &lt;path&gt;</code></td><td>Restore from backup file</td></tr>
+<tr><td><code>/backup list</code></td><td>List saved backups</td></tr>
+<tr><td><code>/backup verify &lt;path&gt;</code></td><td>Verify archive integrity</td></tr>
+<tr><td><code>/profile export</code></td><td>Export profile to JSON</td></tr>
+<tr><td><code>/identity seed show</code></td><td>Display 24-word recovery phrase (requires confirmation)</td></tr>
+<tr><td><code>/identity seed verify</code></td><td>Enter 24 words to verify they match current identity</td></tr>
+<tr><td><code>/identity recover</code></td><td>Enter 24 words to regenerate keypair (overwrites if exists)</td></tr>
+<tr><td><code>/data health</code></td><td>Show data health summary (identity, sync status, backup age)</td></tr>
+<tr><td><code>/data folder</code></td><td>Open data folder in system file manager</td></tr>
+<tr><td><code>/cloud sync</code></td><td>Trigger immediate cloud sync</td></tr>
+<tr><td><code>/cloud status</code></td><td>Show cloud sync status and quota</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="alternatives-considered-20"><a class="header" href="#alternatives-considered-20">Alternatives Considered</a></h3>
+<ul>
+<li><strong>Proprietary backup format with encryption</strong> (rejected — contradicts “standard formats only” principle; a ZIP file can be encrypted separately with standard tools if the player wants encryption)</li>
+<li><strong>IC-hosted cloud backup service</strong> (rejected — creates infrastructure liability, ongoing cost, and makes player data dependent on IC’s servers surviving; violates local-first philosophy)</li>
+<li><strong>Database-level replication</strong> (rejected — over-engineered for the use case; SQLite <code>VACUUM INTO</code> is simpler, safer, and produces a self-contained file)</li>
+<li><strong>Steam Cloud as primary backup</strong> (rejected — platform-specific, limited quota, opaque sync behavior; IC supports it as an <em>option</em>, not a requirement)</li>
+<li><strong>Incremental backup</strong> (deferred — full backup via <code>VACUUM INTO</code> is sufficient for player-scale data; incremental adds complexity with minimal benefit unless someone has 50+ GB of replays)</li>
+<li><strong>Forced backup before first ranked match</strong> (rejected — punishes players to solve a problem most won’t have; auto-snapshots protect critical data without friction)</li>
+<li><strong>Scary “BACK UP YOUR KEY OR ELSE” warnings</strong> (rejected — fear-based UX is hostile; the recovery phrase provides a genuine safety net, making fear unnecessary; factual presentation of options replaces warnings)</li>
+<li><strong>12-word mnemonic phrase</strong> (rejected — 12 words = 128 bits of entropy; sufficient for most uses but 24 words = 256 bits matches Ed25519’s full key strength; the BIP-39 ecosystem standardized on 24 words for high-security applications; the marginal cost of 12 extra words is negligible for a one-time operation)</li>
+<li><strong>Custom IC wordlist</strong> (rejected — BIP-39’s English wordlist is battle-tested, curated for unambiguous reading, and familiar to millions of cryptocurrency users; a custom list would need the same curation effort with no benefit)</li>
+</ul>
+<h3 id="integration-with-existing-decisions-6"><a class="header" href="#integration-with-existing-decisions-6">Integration with Existing Decisions</a></h3>
+<ul>
+<li><strong>D010 (Snapshottable Sim):</strong> Save files are sim snapshots — the backup system treats them as opaque binary files. No special handling needed beyond file copy.</li>
+<li><strong>D020 (Mod SDK &amp; CLI):</strong> The <code>ic backup</code> and <code>ic profile export</code> commands join the <code>ic</code> CLI family alongside <code>ic mod</code>, <code>ic replay</code>, <code>ic campaign</code>.</li>
+<li><strong>D030 (Workshop):</strong> Post-milestone nudge toasts use the same toast system as Workshop cleanup prompts — consistent notification UX.</li>
+<li><strong>D032 (UI Themes):</strong> First-launch identity creation integrates as the final step after theme selection. The Data &amp; Backup panel is theme-aware.</li>
+<li><strong>D034 (SQLite):</strong> SQLite is the backbone of player data storage. <code>VACUUM INTO</code> is the safe backup primitive — it handles WAL mode correctly and produces a compacted single-file copy.</li>
+<li><strong>D052 (Community Servers &amp; SCR):</strong> SCRs are the portable reputation unit. The backup system preserves them; the export system includes them. Because SCRs are cryptographically signed, they’re self-verifying on import — no server round-trip needed. Restore progress screen visibly verifies SCRs.</li>
+<li><strong>D053 (Player Profile):</strong> The profile export is D053’s data portability implementation. All locally-authoritative profile fields export to JSON; all SCR-backed fields export with full credential data.</li>
+<li><strong>D036 (Achievements):</strong> Achievement proofs are SCRs stored in <code>achievements.db</code>. Backup preserves them; export includes them in the JSON.</li>
+<li><strong>D058 (Console):</strong> All backup/export operations have <code>/backup</code> and <code>/profile</code> console command equivalents.</li>
+</ul>
+<h3 id="phase-7"><a class="header" href="#phase-7">Phase</a></h3>
+<ul>
+<li><strong>Phase 0:</strong> Define and document the <code>&lt;data_dir&gt;</code> directory layout (this decision). Add <code>IC_DATA_DIR</code> / <code>--data-dir</code> override support.</li>
+<li><strong>Phase 2:</strong> <code>ic backup create/restore</code> CLI ships alongside the save/load system. Screenshot capture with PNG metadata. Automatic daily critical snapshots (3-day rotating <code>auto-critical-N.zip</code>). Mnemonic seed generation integrated into identity creation — <code>ic identity seed show</code>, <code>ic identity seed verify</code>, <code>ic identity recover</code> CLI commands.</li>
+<li><strong>Phase 3:</strong> Screenshot browser UI with metadata filtering and replay linking. Data &amp; Backup settings panel (including “View recovery phrase” button). Post-milestone nudge toasts (first nudge reminds about recovery phrase if not yet confirmed). First-launch identity creation with recovery phrase display + cloud sync offer. Mnemonic recovery option in first-launch restore flow.</li>
+<li><strong>Phase 5:</strong> <code>ic profile export</code> ships alongside multiplayer launch (GDPR compliance). Platform cloud sync via <code>PlatformServices</code> trait (Steam Cloud, GOG Galaxy). <code>ic backup verify</code> for archive integrity checking. First-launch restore flow (cloud detection + manual restore + mnemonic recovery). Console commands (<code>/backup</code>, <code>/profile</code>, <code>/identity</code>, <code>/data</code>, <code>/cloud</code>).</li>
+</ul>
+<h2 id="d062-mod-profiles--virtual-asset-namespace"><a class="header" href="#d062-mod-profiles--virtual-asset-namespace">D062: Mod Profiles &amp; Virtual Asset Namespace</a></h2>
+<p><strong>Decision:</strong> Introduce a layered asset composition model inspired by LVM’s mark → pool → present pattern. Two new first-class concepts: <strong>mod profiles</strong> (named, hashable, switchable mod compositions) and a <strong>virtual asset namespace</strong> (a resolved lookup table mapping logical asset paths to content-addressed blobs).</p>
+<p><strong>Core insight:</strong> IC’s three-phase data loading (D003, Factorio-inspired), dependency-graph ordering, and modpack manifests (D030) already describe a composition — but the composed result is computed on-the-fly at load time and dissolved into merged state. There’s no intermediate object that represents “these N sources in this priority order with these conflict resolutions” as something you can name, hash, inspect, diff, save, or share independently. Making the composition explicit unlocks capabilities that the implicit version can’t provide.</p>
+<h3 id="the-three-layer-model"><a class="header" href="#the-three-layer-model">The Three-Layer Model</a></h3>
+<p>The model separates mod loading into three explicit phases, inspired by LVM’s physical volumes → volume groups → logical volumes:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Layer</th><th>LVM Analog</th><th>IC Concept</th><th>What It Is</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Source</strong> (PV)</td><td>Physical Volume</td><td>Registered mod/package/base game</td><td>A validated, installed content source — its files exist, its manifest is parsed, its dependencies are resolved. Immutable once registered.</td></tr>
+<tr><td><strong>Profile</strong> (VG)</td><td>Volume Group</td><td>Mod profile</td><td>A named composition: which sources, in what priority order, with what conflict resolutions and experience settings. Saved as a YAML file. Hashable.</td></tr>
+<tr><td><strong>Namespace</strong> (LV)</td><td>Logical Volume</td><td>Virtual asset namespace</td><td>The resolved lookup table: for every logical asset path, which blob (from which source) answers the query. Built from a profile at activation time. What the engine actually loads from.</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>The model does NOT replace three-phase data loading.</strong> Three-phase loading (Define → Modify → Final-fixes) organizes <em>when</em> modifications apply during profile activation. The profile organizes <em>which</em> sources participate. They’re orthogonal — the profile says “use mods A, B, C in this order” and three-phase loading says “first all Define phases, then all Modify phases, then all Final-fixes phases.”</p>
+<h3 id="mod-profiles"><a class="header" href="#mod-profiles">Mod Profiles</a></h3>
+<p>A mod profile is a YAML file in the player’s configuration directory that captures a complete, reproducible mod setup:</p>
+<pre><code class="language-yaml"># &lt;data_dir&gt;/profiles/tournament-s5.yaml
+profile:
+  name: "Tournament Season 5"
+  game_module: ra1
+
+# Which mods participate, in priority order (later overrides earlier)
+sources:
+  # Engine defaults and base game assets are always implicitly first
+  - id: "official/tournament-balance"
+    version: "=1.3.0"
+  - id: "official/hd-sprites"
+    version: "=2.0.1"
+  - id: "community/improved-explosions"
+    version: "^1.0.0"
+
+# Explicit conflict resolutions (same role as conflicts.yaml, but profile-scoped)
+conflicts:
+  - unit: heavy_tank
+    field: health.max
+    use_source: "official/tournament-balance"
+
+# Experience profile axes (D033) — bundled with the mod set
+experience:
+  balance: classic           # D019
+  theme: remastered          # D032
+  behavior: iron_curtain     # D033
+  ai_behavior: enhanced      # D043
+  pathfinding: ic_default    # D045
+  render_mode: hd_sprites    # D048
+
+# Computed at activation time, not authored
+fingerprint: null  # sha256 of the resolved namespace — set by engine
+</code></pre>
+<p><strong>Relationship to existing concepts:</strong></p>
+<ul>
+<li><strong>Experience profiles (D033)</strong> set 6 switchable axes (balance, theme, behavior, AI, pathfinding, render mode) but don’t specify <em>which community mods</em> are active. A mod profile bundles experience settings WITH the mod set — one object captures the full player experience.</li>
+<li><strong>Modpacks (D030)</strong> are published, versioned Workshop resources. A mod profile is a local, personal composition. <strong>Publishing a mod profile creates a modpack</strong> — <code>ic mod publish-profile</code> snapshots the profile into a <code>mod.yaml</code> modpack manifest for Workshop distribution. This makes mod profiles the local precursor to modpacks: curators build and test profiles locally, then publish the working result.</li>
+<li><strong><code>conflicts.yaml</code> (existing)</strong> is a global conflict override file. Profile-scoped conflicts apply only when that profile is active. Both mechanisms coexist — profile conflicts take precedence, then global <code>conflicts.yaml</code>, then default last-wins behavior.</li>
+</ul>
+<p><strong>Profile operations:</strong></p>
+<pre><code class="language-bash"># Create a profile from the currently active mod set
+ic profile save "tournament-s5"
+
+# List saved profiles
+ic profile list
+
+# Activate a profile (loads its mods + experience settings)
+ic profile activate "tournament-s5"
+
+# Show what a profile resolves to (namespace preview + conflict report)
+ic profile inspect "tournament-s5"
+
+# Diff two profiles — which assets differ, which conflicts resolve differently
+ic profile diff "tournament-s5" "casual-hd"
+
+# Publish as a modpack to Workshop
+ic mod publish-profile "tournament-s5"
+
+# Import a Workshop modpack as a local profile
+ic profile import "alice/red-apocalypse-pack"
+</code></pre>
+<p><strong>In-game UX:</strong> The mod manager gains a profile dropdown (top of the mod list). Switching profiles reconfigures the active mod set and experience settings in one action. In multiplayer lobbies, the host’s profile fingerprint is displayed — joining players with the same fingerprint skip per-mod verification. Players with a different configuration see a diff view: “You’re missing mod X” or “You have mod Y v2.0, lobby has v2.1” with one-click resolution (download missing, update mismatched).</p>
+<h3 id="virtual-asset-namespace"><a class="header" href="#virtual-asset-namespace">Virtual Asset Namespace</a></h3>
+<p>When a profile is activated, the engine builds a <strong>virtual asset namespace</strong> — a complete lookup table mapping every logical asset path to a specific content-addressed blob from a specific source. This is functionally an OverlayFS union view over the content-addressed store (D049 local CAS).</p>
+<pre><code>Namespace for profile "Tournament Season 5":
+  sprites/rifle_infantry.shp    → blob:a7f3e2... (source: official/hd-sprites)
+  sprites/medium_tank.shp       → blob:c4d1b8... (source: official/hd-sprites)
+  rules/units/infantry.yaml     → blob:9e2f0a... (source: official/tournament-balance)
+  rules/units/vehicles.yaml     → blob:1b4c7d... (source: engine-defaults)
+  audio/rifle_fire.aud          → blob:e8a5f1... (source: base-game)
+  effects/explosion_large.yaml  → blob:f2c8d3... (source: community/improved-explosions)
+</code></pre>
+<p><strong>Key properties:</strong></p>
+<ul>
+<li><strong>Deterministic:</strong> Same profile + same source versions = identical namespace. The fingerprint (SHA-256 of the sorted namespace entries) proves it.</li>
+<li><strong>Inspectable:</strong> <code>ic profile inspect</code> dumps the full namespace with provenance — which source provided which asset. Invaluable for debugging “why does my tank look wrong?” (answer: mod X overrode the sprite at priority 3).</li>
+<li><strong>Diffable:</strong> <code>ic profile diff</code> compares two namespaces entry-by-entry — shows exact asset-level differences between two mod configurations. Critical for modpack curators testing variations.</li>
+<li><strong>Cacheable:</strong> The namespace is computed once at profile activation and persisted as a lightweight index. Asset loads during gameplay are simple hash lookups — no per-load directory scanning or priority resolution.</li>
+</ul>
+<p><strong>Integration with Bevy’s asset system:</strong> The virtual namespace registers as a custom Bevy <code>AssetSource</code> that resolves asset paths through the namespace lookup table rather than filesystem directory traversal. When Bevy requests <code>sprites/rifle_infantry.shp</code>, the namespace resolves it to <code>workshop/blobs/a7/a7f3e2...</code> (the CAS blob path). This sits between IC’s mod resolution layer and Bevy’s asset loading — Bevy sees a flat namespace, unaware of the layering beneath.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// A resolved mapping from logical asset path to content-addressed blob.
+pub struct VirtualNamespace {
+    /// Logical path → (blob hash, source that provided it)
+    entries: HashMap&lt;AssetPath, NamespaceEntry&gt;,
+    /// SHA-256 of the sorted entries — the profile fingerprint
+    fingerprint: [u8; 32],
+}
+
+pub struct NamespaceEntry {
+    pub blob_hash: [u8; 32],
+    pub source_id: ModId,
+    pub source_version: Version,
+    /// How this entry won: default, last-wins, explicit-conflict-resolution
+    pub resolution: ResolutionReason,
+}
+
+pub enum ResolutionReason {
+    /// Only one source provides this path — no conflict
+    Unique,
+    /// Multiple sources; this one won via load-order priority (last-wins)
+    LastWins { overridden: Vec&lt;ModId&gt; },
+    /// Explicit resolution from profile conflicts or conflicts.yaml
+    ExplicitOverride { reason: String },
+    /// Engine default (no mod provides this path)
+    EngineDefault,
+}
+<span class="boring">}</span></code></pre>
+<h3 id="namespace-for-yaml-rules-not-just-file-assets"><a class="header" href="#namespace-for-yaml-rules-not-just-file-assets">Namespace for YAML Rules (Not Just File Assets)</a></h3>
+<p>The virtual namespace covers two distinct layers:</p>
+<ol>
+<li>
+<p><strong>File assets</strong> — sprites, audio, models, textures. Resolved by path → blob hash. Simple overlay; last-wins per path.</p>
+</li>
+<li>
+<p><strong>YAML rule state</strong> — the merged game data after three-phase loading. This is NOT a simple file overlay — it’s the result of Define → Modify → Final-fixes across all active mods. The namespace captures the <em>output</em> of this merge as a serialized snapshot. This snapshot IS the fingerprint’s primary input — two players with identical fingerprints have identical merged rule state, guaranteed.</p>
+</li>
+</ol>
+<p>The YAML rule merge runs during profile activation (not per-load). The merged result is cached. If no mods change, the cache is valid. This is the same work the engine already does — the namespace just makes the result explicit and hashable.</p>
+<h3 id="multiplayer-integration"><a class="header" href="#multiplayer-integration">Multiplayer Integration</a></h3>
+<p><strong>Lobby fingerprint verification:</strong> When a player joins a lobby, the client sends its active profile fingerprint. If it matches the host’s fingerprint, the player is guaranteed to have identical game data — no per-mod version checking needed. If fingerprints differ, the lobby computes a namespace diff and presents actionable resolution:</p>
+<ul>
+<li><strong>Missing mods:</strong> “Download mod X?” (triggers D030 auto-download)</li>
+<li><strong>Version mismatch:</strong> “Update mod Y from v2.0 to v2.1?” (one-click update)</li>
+<li><strong>Conflict resolution difference:</strong> “Host resolves heavy_tank.health.max from mod A; you resolve from mod B” — player can accept host’s profile or leave</li>
+</ul>
+<p>This replaces the current per-mod version list comparison with a single hash comparison (fast path) and falls back to detailed diff only on mismatch. The diff view is more informative than the current “incompatible mods” rejection.</p>
+<p><strong>Replay recording:</strong> Replays record the profile fingerprint alongside the existing <code>(mod_id, version)</code> list. Playback verifies the fingerprint. A fingerprint mismatch warns but doesn’t block playback — the existing mod list provides degraded compatibility checking.</p>
+<h3 id="editor-integration-d038"><a class="header" href="#editor-integration-d038">Editor Integration (D038)</a></h3>
+<p>The scenario editor benefits from profile-aware asset resolution:</p>
+<ul>
+<li><strong>Layer isolation:</strong> The editor can show “assets from mod X” vs “assets from engine defaults” in separate layer views — same UX pattern as the editor’s own entity layers with lock/visibility.</li>
+<li><strong>Hot-swap a single source:</strong> When editing a mod’s YAML rules, the editor rebuilds only that source’s contribution to the namespace rather than re-running the full three-phase merge across all N sources. This enables sub-second iteration for rule authoring.</li>
+<li><strong>Source provenance in tooltips:</strong> Hovering over a unit in the editor shows “defined in engine-defaults, modified by official/tournament-balance” — derived directly from namespace entry provenance.</li>
+</ul>
+<h3 id="alternatives-considered-21"><a class="header" href="#alternatives-considered-21">Alternatives Considered</a></h3>
+<ul>
+<li><strong>Just use modpacks (D030)</strong> — Modpacks are the published form; profiles are the local form. Without profiles, curators manually reconstruct their mod configuration every session. Profiles make the curator workflow reproducible.</li>
+<li><strong>Bevy AssetSources alone</strong> — Bevy’s <code>AssetSource</code> API can layer directories, but it doesn’t provide conflict detection, provenance tracking, fingerprinting, or diffing. The namespace sits above Bevy’s loader, not instead of it.</li>
+<li><strong>Full OverlayFS on the filesystem</strong> — Overkill. The namespace is an in-memory lookup table, not a filesystem driver. We get the same logical result without OS-level complexity or platform dependencies.</li>
+<li><strong>Hash per-mod rather than hash the composed namespace</strong> — Per-mod hashes miss the composition: same mods + different conflict resolutions = different gameplay. The namespace fingerprint captures the actual resolved state.</li>
+<li><strong>Make profiles mandatory</strong> — Rejected. A player who installs one mod and clicks play shouldn’t need to understand profiles. The engine creates a default implicit profile from the active mod set. Profiles become relevant when players want multiple configurations or when modpack curators need reproducibility.</li>
+</ul>
+<h3 id="integration-with-existing-decisions-7"><a class="header" href="#integration-with-existing-decisions-7">Integration with Existing Decisions</a></h3>
+<ul>
+<li><strong>D003 (Real YAML):</strong> YAML rule merge during profile activation uses the same <code>serde_yaml</code> pipeline. The namespace captures the merge result, not the raw files.</li>
+<li><strong>D019 (Balance Presets):</strong> Balance preset selection is a field in the mod profile. Switching profiles can switch the balance preset simultaneously.</li>
+<li><strong>D030 (Workshop):</strong> Modpacks are published snapshots of mod profiles. <code>ic mod publish-profile</code> bridges local profiles to Workshop distribution. Workshop modpacks import as local profiles via <code>ic profile import</code>.</li>
+<li><strong>D033 (Experience Profiles):</strong> Experience profile axes (balance, theme, behavior, AI, pathfinding, render mode) are embedded in mod profiles. A mod profile is a superset: experience settings + mod set + conflict resolutions.</li>
+<li><strong>D034 (SQLite):</strong> The namespace index is optionally cached in SQLite for fast profile switching. Profile metadata (name, fingerprint, last-activated) is stored alongside other player preferences.</li>
+<li><strong>D038 (Scenario Editor):</strong> Editor uses namespace provenance for source attribution and per-layer hot-swap during development.</li>
+<li><strong>D049 (Workshop Asset Formats &amp; P2P / CAS):</strong> The virtual namespace maps logical paths to content-addressed blobs in the local CAS store. The namespace IS the virtualization layer that makes CAS usable for gameplay asset loading.</li>
+<li><strong>D058 (Console):</strong> <code>/profile list</code>, <code>/profile activate &lt;name&gt;</code>, <code>/profile inspect</code>, <code>/profile diff &lt;a&gt; &lt;b&gt;</code>, <code>/profile save &lt;name&gt;</code> console commands.</li>
+</ul>
+<h3 id="phase-8"><a class="header" href="#phase-8">Phase</a></h3>
+<ul>
+<li><strong>Phase 2:</strong> Implicit default profile — the engine internally constructs a namespace from the active mod set at load time. No user-facing profile concept yet, but the <code>VirtualNamespace</code> struct exists and is used for asset resolution. Fingerprint is computed and recorded in replays.</li>
+<li><strong>Phase 4:</strong> <code>ic profile save/list/activate/inspect/diff</code> CLI commands. Profile YAML schema stabilized. Modpack curators can save and switch profiles during testing.</li>
+<li><strong>Phase 5:</strong> Lobby fingerprint verification replaces per-mod version list comparison. Namespace diff view in lobby UI. <code>/profile</code> console commands. Replay fingerprint verification on playback.</li>
+<li><strong>Phase 6a:</strong> <code>ic mod publish-profile</code> publishes a local profile as a Workshop modpack. <code>ic profile import</code> imports modpacks as local profiles. In-game mod manager gains profile dropdown. Editor provenance tooltips and per-source hot-swap.</li>
 </ul>
 
                     </main>

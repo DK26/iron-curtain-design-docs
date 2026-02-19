@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-ae4c627c.js";
+            window.path_to_searchindex_js = "searchindex-7bc359dc.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-1d51ffef.js"></script>
@@ -1232,7 +1232,7 @@ pub struct EmbeddedResources {
     }
 }
 <span class="boring">}</span></code></pre>
-<p><strong>Playback features:</strong> Variable speed (0.5x to 8x), pause, scrub to any tick (requires re-simulating from nearest snapshot or start). <code>SimSnapshot</code> can be taken at intervals during recording for fast seeking.</p>
+<p><strong>Playback features:</strong> Variable speed (0.5x to 8x), pause, scrub to any tick (re-simulates from nearest keyframe). The recorder takes a <code>SimSnapshot</code> keyframe every 300 ticks (~10 seconds at 30 tps) and stores it in the <code>.icrep</code> file. A 60-minute replay contains ~360 keyframes (~3-6 MB overhead depending on game state size), enabling sub-second seeking to any point. Keyframes are mandatory — the recorder always writes them.</p>
 <h3 id="foreign-replay-decoders-d056"><a class="header" href="#foreign-replay-decoders-d056">Foreign Replay Decoders (D056)</a></h3>
 <p><code>ra-formats</code> includes decoders for foreign replay file formats, enabling direct playback and conversion to <code>.icrep</code>:</p>
 <div class="table-wrapper">
@@ -1281,6 +1281,67 @@ pub struct RemasteredRecordedFrame {
 └── sync                    # Per-tick state hashes (u64 CRC values)
 </code></pre>
 <p>The <code>sync</code> stream enables partial divergence detection — IC can compare its own <code>state_hash()</code> against OpenRA’s recorded sync values to estimate when the simulations diverged.</p>
+<h2 id="backup-archive-format-d061"><a class="header" href="#backup-archive-format-d061">Backup Archive Format (D061)</a></h2>
+<p><code>ic backup create</code> produces a standard ZIP archive containing the player’s data directory. The archive is not a custom format — any ZIP tool can extract it.</p>
+<h3 id="structure-2"><a class="header" href="#structure-2">Structure</a></h3>
+<pre><code>ic-backup-2027-03-15.zip
+├── manifest.json                    # Backup metadata (see below)
+├── config.yaml                      # Engine settings
+├── profile.db                       # Player identity (VACUUM INTO copy)
+├── achievements.db                  # Achievement collection (VACUUM INTO copy)
+├── gameplay.db                      # Event log, catalogs (VACUUM INTO copy)
+├── keys/
+│   └── identity.key                 # Ed25519 private key
+├── communities/
+│   ├── official-ic.db               # Community credentials (VACUUM INTO copy)
+│   └── clan-wolfpack.db
+├── saves/                           # Save game files (copied as-is)
+│   └── *.icsave
+├── replays/                         # Replay files (copied as-is)
+│   └── *.icrep
+└── screenshots/                     # Screenshot images (copied as-is)
+    └── *.png
+</code></pre>
+<p><strong>Manifest:</strong></p>
+<pre><code class="language-json">{
+  "backup_version": 1,
+  "created_at": "2027-03-15T14:30:00Z",
+  "engine_version": "0.5.0",
+  "platform": "windows",
+  "categories_included": ["keys", "profile", "communities", "achievements", "config", "saves", "replays", "screenshots", "gameplay"],
+  "categories_excluded": ["workshop", "mods", "maps"],
+  "file_count": 347,
+  "total_uncompressed_bytes": 524288000
+}
+</code></pre>
+<p><strong>Key implementation details:</strong></p>
+<ul>
+<li>SQLite databases are backed up via <code>VACUUM INTO</code> — produces a consistent, compacted single-file copy without closing the database. WAL files are folded in.</li>
+<li>Already-compressed files (<code>.icsave</code>, <code>.icrep</code>) are stored in the ZIP without additional compression (ZIP <code>Store</code> method).</li>
+<li><code>ic backup verify &lt;archive&gt;</code> checks ZIP integrity and validates that all SQLite files in the archive are well-formed.</li>
+<li><code>ic backup restore</code> preserves directory structure and prompts on conflicts (suppress with <code>--overwrite</code>).</li>
+<li><code>--exclude</code> and <code>--only</code> filter by category (keys, profile, communities, achievements, config, saves, replays, screenshots, gameplay, workshop, mods, maps). See <code>09-DECISIONS.md</code> § D061 for category sizes and criticality.</li>
+</ul>
+<h2 id="screenshot-format-d061"><a class="header" href="#screenshot-format-d061">Screenshot Format (D061)</a></h2>
+<p>Screenshots are standard PNG images with IC-specific metadata in PNG <code>tEXt</code> chunks. Any image viewer displays the screenshot; IC’s screenshot browser reads the metadata for filtering and organization.</p>
+<h3 id="png-text-metadata-keys"><a class="header" href="#png-text-metadata-keys">PNG tEXt Metadata Keys</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Key</th><th>Example Value</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>IC:EngineVersion</code></td><td><code>"0.5.0"</code></td><td>Engine version at capture time</td></tr>
+<tr><td><code>IC:GameModule</code></td><td><code>"ra1"</code></td><td>Active game module</td></tr>
+<tr><td><code>IC:MapName</code></td><td><code>"Arena"</code></td><td>Map being played</td></tr>
+<tr><td><code>IC:Timestamp</code></td><td><code>"2027-03-15T15:45:32Z"</code></td><td>UTC capture timestamp</td></tr>
+<tr><td><code>IC:Players</code></td><td><code>"CommanderZod (Soviet) vs alice (Allied)"</code></td><td>Player names and factions</td></tr>
+<tr><td><code>IC:GameTick</code></td><td><code>"18432"</code></td><td>Sim tick at capture</td></tr>
+<tr><td><code>IC:ReplayFile</code></td><td><code>"2027-03-15-ranked-1v1.icrep"</code></td><td>Associated replay file (if applicable)</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Filename convention:</strong> <code>&lt;data_dir&gt;/screenshots/&lt;YYYY-MM-DD&gt;-&lt;HHMMSS&gt;.png</code> (UTC timestamp). The screenshot hotkey is configurable in <code>config.yaml</code>.</p>
 <h3 id="ra-formats-write-support"><a class="header" href="#ra-formats-write-support">ra-formats Write Support</a></h3>
 <p><code>ra-formats</code> currently focuses on reading C&amp;C file formats. Write support extends the crate for the Asset Studio (D040) and mod toolchain:</p>
 <div class="table-wrapper">

@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-ae4c627c.js";
+            window.path_to_searchindex_js = "searchindex-7bc359dc.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-1d51ffef.js"></script>
@@ -275,6 +275,7 @@ impl NetworkModel for FogAuthoritativeNetwork {
 }
 <span class="boring">}</span></code></pre>
 <p><strong>Key:</strong> Validation is deterministic and inside the sim. All clients run the same validation → all agree on rejections → no desync. Relay server also validates before broadcasting (defense in depth).</p>
+<p><strong>Scaling consideration (uBO pattern):</strong> At relay scale (thousands of orders/second across many games), the <code>match</code> dispatch above is adequate — RTS order type cardinality is low (~20 types). However, if mod-defined order types or conditional validation rules (D028) significantly expand the rule set, a <strong>token-dispatch</strong> pattern — bucketing validators by a discriminant key (order type + context flags), skipping irrelevant validators entirely — would avoid linear scanning. This is the same architecture uBlock Origin uses to evaluate ~300K filter rules in &lt;1ms: extract a discriminating token, look up only the matching bucket (see <code>research/ublock-origin-pattern-matching-analysis.md</code>). For most IC deployments, the simple <code>match</code> suffices; the dispatch pattern is insurance for heavily modded environments.</p>
 <h2 id="vulnerability-3-lag-switch-timing-manipulation"><a class="header" href="#vulnerability-3-lag-switch-timing-manipulation">Vulnerability 3: Lag Switch (Timing Manipulation)</a></h2>
 <h3 id="the-problem-2"><a class="header" href="#the-problem-2">The Problem</a></h3>
 <p>Player deliberately delays packets → opponent’s game stalls → attacker gets extra thinking time.</p>
@@ -640,6 +641,7 @@ analysis_triggers:
 <tr><td><strong>0 A.D. / Pyrogenesis</strong></td><td>GPL-2.0+</td><td><a href="https://github.com/0ad/0ad">0ad/0ad</a></td><td>Out-of-sync (OOS) detection with state hash comparison. IC already uses hash-based desync detection, but 0 A.D.’s approach to per-component hashing for desync attribution is worth studying for V36’s trust boundary implementation.</td></tr>
 <tr><td><strong>Spring Engine</strong></td><td>GPL-2.0+</td><td><a href="https://github.com/spring/spring">spring/spring</a></td><td>Minimal order validation with community-enforced norms. Cautionary example — Spring’s lack of server-side behavioral analysis means competitive integrity relies entirely on player reporting and replays. IC’s relay-side analysis is the architectural improvement.</td></tr>
 <tr><td><strong>FAF (Forged Alliance Forever)</strong></td><td>Various</td><td><a href="https://github.com/FAForever">FAForever</a></td><td>Community-managed competitive platform for SupCom. Lobby-visible mod lists, community trust system, replay-based dispute resolution. Demonstrates that <strong>transparency + community governance</strong> scales for competitive RTS without any client-side anti-cheat.</td></tr>
+<tr><td><strong>uBlock Origin</strong></td><td>GPL-3.0</td><td><a href="https://github.com/gorhill/uBlock">gorhill/uBlock</a></td><td>Not a game — but the best-in-class example of real-time <strong>pattern matching at scale with community-maintained rule sets</strong>. Token-dispatch fast-path matching, flat-array struct-of-arrays data layout (validates ECS/D015), BidiTrie compact trie, three-layer cheapest-first evaluation, allow/block/block-important priority realms. uBO uses WASM because browsers can’t run native code — IC compiles Rust directly to native machine code (faster than WASM), but the data structures and architectural patterns transfer directly. See <code>research/ublock-origin-pattern-matching-analysis.md</code>.</td></tr>
 </tbody>
 </table>
 </div>
@@ -917,6 +919,7 @@ impl RelayServer {
 <li><strong>WASM mod sandbox</strong> limits entity creation and instruction count per tick, preventing chain-reactive state explosions from mod code.</li>
 <li><strong>Sub-tick timestamps (D008)</strong> ensure that even within a tick, order priority is based on actual submission time — not on who flooded more orders.</li>
 </ul>
+<p><strong>Cheapest-first evaluation order (uBO pattern):</strong> The three layers should be evaluated in ascending cost order: <strong>hard ceiling first</strong> (Layer 3 — a single integer comparison, O(1)), <strong>then bandwidth throttle</strong> (Layer 2 — token bucket check), <strong>then time-budget pool</strong> (Layer 1 — per-player accounting with burst tracking). This mirrors uBlock Origin’s architecture where ~60% of requests are resolved by the cheapest layer (dynamic URL filtering) before the expensive static filter engine is consulted. The hard ceiling catches the obvious abuse (malformed packets, absurd order counts) before the nuanced per-player analysis runs. The code above shows Layer 1 first for conceptual clarity (it’s the “primary” in design intent), but the runtime evaluation order should be cheapest-first for performance (see <code>research/ublock-origin-pattern-matching-analysis.md</code>).</p>
 <p><strong>Lesson from the ESO case study:</strong> The Elder Scrolls Online relied on client-side “soft throttling” (animations that gate input) alongside server-side “hard throttling” (cooldown timers). Players bypassed the soft throttle by using different input types to interrupt animations — the priority/interrupt system intended for reactive defense became an exploit. The lesson: <strong>client-side throttling that can be circumvented by input type-switching is ineffective.</strong> Server-side validation is the real throttle — which is exactly what our relay does. Zenimax eventually moved block validation server-side, adding an RTT penalty — the same trade-off our relay architecture accepts by design.</p>
 <blockquote>
 <p><strong>Academic reference:</strong> Bryant, B.D. &amp; Saiedian, H. (2021). <em>An evaluation of videogame network architecture performance and security.</em> Computer Networks, 192, 108128. DOI: <a href="https://doi.org/10.1016/j.comnet.2021.108128">10.1016/j.comnet.2021.108128</a>. Companion: Bryant, B.D. &amp; Saiedian, H. (2021). <em>A State Saturation Attack against Massively Multiplayer Online Videogames.</em> ICISSP 2021.</p>

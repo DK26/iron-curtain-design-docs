@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-ae4c627c.js";
+            window.path_to_searchindex_js = "searchindex-7bc359dc.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-1d51ffef.js"></script>
@@ -472,7 +472,29 @@ overrides:
     use_mod: "bob/economy-overhaul"
 </code></pre>
 <p>This is the manual equivalent of Bethesda’s Bashed Patches — but declarative, version-controlled, and shareable.</p>
-<p><strong>Phase:</strong> Load order engine support in Phase 2 (part of YAML rule loading). Conflict detection CLI in Phase 4 (with <code>ic</code> CLI). In-game mod manager in Phase 6a.</p>
+<h3 id="mod-profiles--virtual-asset-namespace-d062"><a class="header" href="#mod-profiles--virtual-asset-namespace-d062">Mod Profiles &amp; Virtual Asset Namespace (D062)</a></h3>
+<p>The load order, active mod set, conflict resolutions, and experience settings (D033) compose into a <strong>mod profile</strong> — a named, hashable, switchable YAML file that captures a complete mod configuration:</p>
+<pre><code class="language-yaml"># &lt;data_dir&gt;/profiles/tournament-s5.yaml
+profile:
+  name: "Tournament Season 5"
+  game_module: ra1
+sources:
+  - id: "official/tournament-balance"
+    version: "=1.3.0"
+  - id: "official/hd-sprites"
+    version: "=2.0.1"
+conflicts:
+  - unit: heavy_tank
+    field: health.max
+    use_source: "official/tournament-balance"
+experience:
+  balance: classic
+  theme: remastered
+  pathfinding: ic_default
+fingerprint: null  # computed at activation
+</code></pre>
+<p>When a profile is activated, the engine builds a <strong>virtual asset namespace</strong> — a resolved lookup table mapping every logical asset path to a content-addressed blob (D049 local CAS) and every YAML rule to its merged value. The namespace fingerprint (SHA-256 of sorted entries) serves as a single-value compatibility check in multiplayer lobbies and replay playback. See <code>09-DECISIONS.md</code> § D062 for the full design: namespace struct, Bevy <code>AssetSource</code> integration, lobby fingerprint verification, editor hot-swap, and the relationship between local profiles and published modpacks (D030).</p>
+<p><strong>Phase:</strong> Load order engine support in Phase 2 (part of YAML rule loading). <code>VirtualNamespace</code> struct and fingerprinting in Phase 2. <code>ic profile</code> CLI in Phase 4. Lobby fingerprint verification in Phase 5. Conflict detection CLI in Phase 4 (with <code>ic</code> CLI). In-game mod manager with profile dropdown in Phase 6a.</p>
 <h2 id="tier-2-lua-scripting"><a class="header" href="#tier-2-lua-scripting">Tier 2: Lua Scripting</a></h2>
 <h3 id="decision-lua-over-python"><a class="header" href="#decision-lua-over-python">Decision: Lua over Python</a></h3>
 <p><strong>Why Lua:</strong></p>
@@ -962,9 +984,16 @@ mod:
 #[wasm_host_fn] fn ic_ai_scratch_alloc(bytes: u32) -&gt; *mut u8;
 #[wasm_host_fn] fn ic_ai_scratch_free(ptr: *mut u8, bytes: u32);
 
+/// String table lookups — resolve u32 type IDs to human-readable names.
+/// Called once at game start or on-demand; results cached WASM-side.
+/// This avoids per-tick String allocation across the WASM boundary.
+#[wasm_host_fn] fn ic_ai_get_type_name(type_id: u32) -&gt; String;
+#[wasm_host_fn] fn ic_ai_get_event_description(event_code: u32) -&gt; String;
+#[wasm_host_fn] fn ic_ai_get_type_count() -&gt; u32;  // total registered unit types
+
 pub struct AiUnitInfo {
     pub entity_id: u32,
-    pub unit_type: String,
+    pub unit_type_id: u32,    // interned type ID (see ic_ai_get_type_name() for string lookup)
     pub position: WorldPos,
     pub health: i32,
     pub max_health: i32,
@@ -975,7 +1004,7 @@ pub struct AiUnitInfo {
 pub struct AiEventEntry {
     pub tick: u64,
     pub event_type: u32,      // mapped from AiEventType enum
-    pub description: String,  // human/LLM-readable summary
+    pub event_code: u32,      // interned event description ID (see ic_ai_get_event_description())
     pub entity_id: Option&lt;u32&gt;,
     pub related_entity_id: Option&lt;u32&gt;,
 }
@@ -1226,7 +1255,7 @@ mod:
     - community/generals-pathfinder@^1.0
 </code></pre>
 <p><strong>Multiplayer sync:</strong> All players must use the same pathfinder — the WASM binary hash is validated in the lobby, same as any sim-affecting mod. If a player is missing the pathfinder mod, the engine auto-downloads it from the Workshop (CS:GO-style, per D030).</p>
-<p><strong>Performance contract:</strong> Pathfinder mods share the same <code>WasmExecutionLimits</code> fuel budget as other WASM mods. The engine monitors per-tick pathfinding time. If a community pathfinder consistently exceeds the budget, the lobby warns players. The engine never falls back silently to a different pathfinder — determinism means all clients must agree on every path.</p>
+<p><strong>Performance contract:</strong> Pathfinder mods share the same <code>WasmExecutionLimits</code> fuel budget as other WASM mods. The engine monitors per-tick pathfinding time. If a community pathfinder consistently exceeds the budget, the lobby warns players. The engine never falls back silently to a different pathfinder — determinism means all clients must agree on every path. If a WASM pathfinder exhausts its fuel mid-computation, the requesting unit retains its last-known heading for one tick (zero-cost “continue straight” fallback) and the path request is re-queued for the next tick with a shorter search horizon. This prevents unit freezing without breaking determinism.</p>
 <p><strong>Phase:</strong> WASM pathfinder mods in Phase 6a. The three built-in pathfinder presets (D045) ship as native Rust in Phase 2.</p>
 <h3 id="custom-ai-mods-tier-3-showcase"><a class="header" href="#custom-ai-mods-tier-3-showcase">Custom AI Mods (Tier 3 Showcase)</a></h3>
 <p>The third major Tier 3 showcase: replacing how AI opponents think. Just as render mods replace visual presentation and pathfinder mods replace navigation algorithms, AI mods replace the decision-making engine — while the simulation rules, damage pipeline, and everything else remain unchanged.</p>
@@ -2885,6 +2914,7 @@ workshop:
 </ul>
 <h3 id="modpacks-as-first-class-workshop-resources-d030"><a class="header" href="#modpacks-as-first-class-workshop-resources-d030">Modpacks as First-Class Workshop Resources (D030)</a></h3>
 <p>A <strong>modpack</strong> is a Workshop resource that bundles a curated set of mods with pinned versions, load order, and configuration — published as a single installable resource. This is the lesson from Minecraft’s CurseForge and Modrinth: modpacks solve the three hardest problems in modding ecosystems — discovery (“what mods should I use?”), compatibility (“do these mods work together?”), and onboarding (“how do I install all of this?”).</p>
+<p><strong>Modpacks are published snapshots of mod profiles (D062).</strong> Curators build and test mod profiles locally (<code>ic profile save</code>, <code>ic profile inspect</code>, <code>ic profile diff</code>), then publish the working result via <code>ic mod publish-profile</code>. Workshop modpacks import as local profiles via <code>ic profile import</code>. This makes the curator workflow reproducible — no manual reconstruction of the mod configuration each session.</p>
 <pre><code class="language-yaml"># mod.yaml for a modpack
 mod:
   id: alice/red-apocalypse-pack

@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-ae4c627c.js";
+            window.path_to_searchindex_js = "searchindex-7bc359dc.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-1d51ffef.js"></script>
@@ -226,11 +226,14 @@ pub struct TickOrders {
 }
 
 impl TickOrders {
-    /// CS2-style: process in chronological order within the tick
-    pub fn chronological(&amp;self) -&gt; impl Iterator&lt;Item = &amp;TimestampedOrder&gt; {
-        let mut sorted = self.orders.clone();
-        sorted.sort_by_key(|o| o.sub_tick_time);
-        sorted.into_iter()
+    /// CS2-style: process in chronological order within the tick.
+    /// Uses a caller-provided scratch buffer to avoid per-tick heap allocation.
+    /// The buffer is cleared and reused each tick (see TickScratch pattern in 10-PERFORMANCE.md).
+    pub fn chronological&lt;'a&gt;(&amp;'a self, scratch: &amp;'a mut Vec&lt;&amp;'a TimestampedOrder&gt;) -&gt; &amp;'a [&amp;'a TimestampedOrder] {
+        scratch.clear();
+        scratch.extend(self.orders.iter());
+        scratch.sort_by_key(|o| o.sub_tick_time);
+        scratch.as_slice()
     }
 }
 <span class="boring">}</span></code></pre>
