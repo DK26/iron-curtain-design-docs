@@ -144,6 +144,75 @@ This creates three relay deployment modes:
 
 **Connecting clients can't tell the difference.** Both the standalone binary and the embedded relay present the same protocol. `RelayLockstepNetwork` on the client side connects identically — it doesn't know or care whether the relay is a dedicated server or running inside another player's game client. This is a deployment concern, not a protocol concern.
 
+### Connection Lifecycle Type State
+
+Network connections transition through a fixed lifecycle: `Connecting → Authenticated → InLobby → InGame → Disconnecting`. Calling the wrong method in the wrong state is a security risk — processing game orders from an unauthenticated connection, or sending lobby messages during gameplay, shouldn't be possible to write accidentally.
+
+IC uses Rust's **type state pattern** to make invalid state transitions a compile error instead of a runtime bug:
+
+```rust
+use std::marker::PhantomData;
+
+/// Marker types — zero-sized, exist only in the type system.
+pub struct Connecting;
+pub struct Authenticated;
+pub struct InLobby;
+pub struct InGame;
+
+/// A network connection whose valid operations are determined by its state `S`.
+/// `PhantomData<S>` is zero-sized — no runtime cost.
+pub struct Connection<S> {
+    stream: TcpStream,
+    player_id: Option<PlayerId>,
+    _state: PhantomData<S>,
+}
+
+impl Connection<Connecting> {
+    /// Verify credentials. Consumes the Connecting connection,
+    /// returns an Authenticated one. Can't be called twice.
+    pub fn authenticate(self, cred: &Credential) -> Result<Connection<Authenticated>, AuthError> {
+        // ... verify Ed25519 signature (D052), assign PlayerId
+    }
+    // send_order() doesn't exist here — won't compile.
+}
+
+impl Connection<Authenticated> {
+    /// Join a game lobby. Consumes Authenticated, returns InLobby.
+    pub fn join_lobby(self, room: RoomId) -> Result<Connection<InLobby>, LobbyError> {
+        // ... register with lobby, send player list
+    }
+}
+
+impl Connection<InLobby> {
+    /// Transition to in-game when the lobby starts.
+    pub fn start_game(self, game_id: GameId) -> Connection<InGame> {
+        // ... initialize per-connection game state
+    }
+
+    pub fn send_chat(&self, msg: &ChatMessage) { /* ... */ }
+    // send_order() doesn't exist here — won't compile.
+}
+
+impl Connection<InGame> {
+    /// Submit a game order. Only available during gameplay.
+    pub fn send_order(&self, order: &TimestampedOrder) { /* ... */ }
+
+    /// Return to lobby after match ends.
+    pub fn end_game(self) -> Connection<InLobby> {
+        // ... cleanup per-connection game state
+    }
+}
+```
+
+**Why this matters for IC:**
+
+- **Security by construction.** The relay server handles untrusted connections. A bug that processes game orders from a connection still in `Connecting` state is an exploitable vulnerability. Type state makes it a compile error — not a runtime check someone might forget.
+- **Zero runtime cost.** `PhantomData<S>` is zero-sized. The state transitions compile to the same machine code as passing a struct between functions. No enum discriminant, no match statement, no branch prediction miss.
+- **Self-documenting API.** The method signatures *are* the state machine documentation. If `send_order()` only exists on `Connection<InGame>`, no developer needs to check whether "Am I allowed to send orders here?" — the compiler already answered.
+- **Ownership-driven transitions.** Each transition *consumes* the old connection and returns a new one. You can't accidentally keep a reference to the `Connecting` version after authentication. Rust's move semantics enforce this automatically.
+
+**Where NOT to use type state:** Game entities. Units change state constantly at runtime (idle → moving → attacking → dead) driven by data-dependent conditions — that's a runtime state machine (`enum` + `match` with exhaustiveness checking), not a compile-time type state. Type state is for state machines with a fixed, known-at-compile-time set of transitions — like connection lifecycle, file handles (open/closed), or build pipeline stages.
+
 ### Sub-Tick Order Fairness (from CS2)
 
 Counter-Strike 2 introduced "sub-tick" architecture: instead of processing all actions at discrete tick boundaries, the client timestamps every input with sub-tick precision. The server collects inputs from all clients and processes them in chronological order within each tick window. The server still ticks at 64Hz, but events are ordered by their actual timestamps.

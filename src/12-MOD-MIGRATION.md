@@ -296,19 +296,29 @@ Bevy + wgpu handle arbitrary resolutions natively. The isometric renderer in `ic
 
 #### Camera Zoom
 
-Standard Bevy camera parameter. The isometric renderer already needs to handle different view distances for the minimap and observer mode. Zoom is a single `f32` on the camera entity — trivial to expose as scroll-wheel or keybind.
+Full camera system designed in `02-ARCHITECTURE.md` § "Camera System." The `GameCamera` resource tracks position, zoom level, smooth interpolation targets, bounds, screen shake, and follow mode. Key features:
+
+- **Zoom-toward-cursor:** scroll wheel zooms centered on the mouse position (standard RTS behavior — SC2, AoE2, OpenRA). The world point under the cursor stays fixed on screen.
+- **Smooth interpolation:** frame-rate-independent exponential lerp for both zoom and pan. Feels identical at 30 fps and 240 fps.
+- **Render mode integration (D048):** each render mode defines its own zoom range and integer-snap behavior. Classic mode snaps `OrthographicProjection.scale` to integer multiples for pixel-perfect rendering. HD mode allows fully smooth zoom. 3D mode maps zoom to camera dolly distance.
+- **Pan speed scales with zoom:** zoomed out = faster scrolling, zoomed in = precision. Linear: `effective_speed = base_speed / zoom`.
+- **Competitive zoom clamping (D055/D058):** ranked matches enforce a `0.75–2.0` zoom range. Tournament organizers can override via `TournamentConfig`.
+- **YAML-configurable:** per-game-module camera defaults (zoom range, pan speed, edge scroll zone, shake intensity). Fully data-driven.
 
 ```rust
-fn camera_zoom(
-    input: Res<Input>,
-    mut camera: Query<&mut OrthographicProjection, With<GameCamera>>,
-) {
-    let scroll = input.mouse_scroll_delta();
-    for mut proj in &mut camera {
-        proj.scale = (proj.scale - scroll.y * 0.1).clamp(0.5, 3.0);
-    }
+// Zoom-toward-cursor — the camera position shifts to keep the cursor's
+// world point fixed on screen. See 02-ARCHITECTURE.md for full implementation.
+fn zoom_toward_cursor(camera: &mut GameCamera, cursor_world: Vec2, scroll_delta: f32) {
+    let old_zoom = camera.zoom_target;
+    camera.zoom_target = (old_zoom + scroll_delta * ZOOM_STEP)
+        .clamp(camera.zoom_min, camera.zoom_max);
+    let zoom_ratio = camera.zoom_target / old_zoom;
+    camera.position_target = cursor_world
+        + (camera.position_target - cursor_world) * zoom_ratio;
 }
 ```
+
+This is a significant Remastered UX improvement — the original Remastered Collection only supports integer zoom levels (1×, 2×) with no smooth transitions.
 
 #### Modern UI / Sidebar
 

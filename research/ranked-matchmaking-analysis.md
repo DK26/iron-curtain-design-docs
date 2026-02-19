@@ -324,7 +324,7 @@ The clear industry direction is toward **more transparency** in ranking:
 - Dota 2: medals + visible MMR at Immortal
 - LoL: removed promotion series (2024)
 
-IC should follow this trend: **show the actual rating number** alongside the tier name. Players who want the milestone experience see "Captain III → Captain II!" while analytically-minded players see "1847 → 1902."
+IC should follow this trend: **show the actual rating number** alongside the tier name. Players who want the milestone experience see "Major III → Major II!" while analytically-minded players see "1847 → 1902."
 
 ### 4.3 Tier Count Sweet Spot
 
@@ -415,27 +415,27 @@ Community servers then choose to replicate this experience or customize it. D052
 
 ### 6.1 Recommended Tier Structure
 
-For the Red Alert game module, Cold War military ranks provide thematic rank names:
+For the Red Alert game module, Cold War military officer ranks provide thematic rank names. All ranks are officer-grade because the player is always in a command role:
 
-| Tier               | Rating Range (Glicko-2 equivalent) | Distribution Target |
-| ------------------ | ---------------------------------- | ------------------- |
-| Conscript (III–I)  | 0–999                              | ~8%                 |
-| Private (III–I)    | 1000–1299                          | ~14%                |
-| Sergeant (III–I)   | 1300–1549                          | ~20%                |
-| Lieutenant (III–I) | 1550–1749                          | ~20%                |
-| Captain (III–I)    | 1750–1949                          | ~18%                |
-| Commander (III–I)  | 1950–2149                          | ~12%                |
-| Colonel (III–I)    | 2150–2349                          | ~5%                 |
-| General            | 2350+                              | ~2.5%               |
-| Supreme Commander  | Top 200                            | ~0.5%               |
+| Tier                | Rating Range (Glicko-2 equivalent) | Distribution Target |
+| ------------------- | ---------------------------------- | ------------------- |
+| Cadet (III–I)       | 0–999                              | ~5%                 |
+| Lieutenant (III–I)  | 1000–1249                          | ~10%                |
+| Captain (III–I)     | 1250–1424                          | ~13%                |
+| Major (III–I)       | 1425–1574                          | ~17%                |
+| Lt. Colonel (III–I) | 1575–1749                          | ~17%                |
+| Colonel (III–I)     | 1750–1974                          | ~16%                |
+| Brigadier (III–I)   | 1975–2249                          | ~12%                |
+| General             | 2250+                              | ~7%                 |
+| Supreme Commander   | Top 200                            | ~3%                 |
 
 This gives: 7 main tiers × 3 divisions + 2 elite tiers = **23 ranked positions.**
 
 **Why military ranks:**
-- Fits IC's Cold War RTS theme directly
-- Players command armies — military rank progression is the core fantasy
-- Immediately recognizable without explanation
-- Scales from the lowest conscript to the supreme commander
+- All officer-grade — the player commands armies, not follows orders as a foot soldier
+- Proper military hierarchy — every rank is real and in correct sequential order
+- Cold War theme matches IC's identity — "Supreme Commander" crowns the hierarchy with genre-defining gravitas
+- Lt. Colonel fills the natural gap between Major and Colonel
 
 **Why this count:**
 - Matches SC2's proven structure for RTS communities

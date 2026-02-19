@@ -235,6 +235,61 @@ impl TickScratch {
 
 This is a fundamental advantage of Rust over C# for games. Idiomatic C# allocates many small objects per tick (iterators, LINQ results, temporary collections, event args), each of which contributes to GC pressure. Our engine targets zero per-tick allocations.
 
+### String Interning (Compile-Time Resolution for Runtime Strings)
+
+IC is string-heavy by design — YAML keys, trait names, mod identifiers, weapon names, locomotor types, condition names, asset paths, Workshop package IDs. Comparing these strings at runtime (byte-by-byte, potentially cache-cold) in every tick is wasteful when the set of valid strings is known at load time.
+
+**String interning** resolves all YAML/mod strings to integer IDs once during loading. All runtime comparisons use the integer — a single CPU instruction instead of a variable-length byte scan.
+
+```rust
+/// Interned string handle — 4 bytes, Copy, Eq is a single integer comparison.
+/// Stable across save/load (the intern table is part of snapshot state, D010).
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct InternedId(u32);
+
+/// String intern table — built during YAML rule loading, immutable during gameplay.
+/// Part of the sim snapshot for deterministic save/resume.
+pub struct StringInterner {
+    id_to_string: Vec<String>,                  // index → string (display, debug, serialization)
+    string_to_id: HashMap<String, InternedId>,  // string → index (used at load time only)
+}
+
+impl StringInterner {
+    /// Resolve a string to its interned ID. Called during YAML loading — never in hot paths.
+    pub fn intern(&mut self, s: &str) -> InternedId {
+        if let Some(&id) = self.string_to_id.get(s) {
+            return id;
+        }
+        let id = InternedId(self.id_to_string.len() as u32);
+        self.id_to_string.push(s.to_owned());
+        self.string_to_id.insert(s.to_owned(), id);
+        id
+    }
+
+    /// Look up the original string for display/debug. Not used in hot paths.
+    pub fn resolve(&self, id: InternedId) -> &str {
+        &self.id_to_string[id.0 as usize]
+    }
+}
+```
+
+**Where interning eliminates runtime string work:**
+
+| System                             | Without interning                                       | With interning                                                                   |
+| ---------------------------------- | ------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| Condition checks (D028)            | String compare per condition per unit per tick          | `InternedId` == `InternedId` (1 instruction)                                     |
+| Trait alias resolution (D023/D027) | HashMap lookup by string at rule evaluation             | Pre-resolved at load time to canonical `InternedId`                              |
+| WASM mod API boundary              | String marshaling across host/guest (allocation + copy) | `u32` type IDs — already designed this way in `04-MODDING.md`                    |
+| Mod stacking namespace (D062)      | String-keyed path lookups in the virtual namespace      | `InternedId`-keyed flat table                                                    |
+| Versus table keys                  | Armor/weapon type strings per damage calculation        | `InternedId` indices into flat `[i32; N]` array (already done for `VersusTable`) |
+| Notification dedup                 | String comparison for cooldown checks                   | `InternedId` comparison                                                          |
+
+**Interning generalizes the `VersusTable` principle.** The `VersusTable` flat array (documented above in Layer 2) already converts armor/weapon type enums to integer indices for O(1) lookup. String interning extends this approach to *every* string-keyed system — conditions, traits, mod paths, asset names — without requiring hardcoded enums. The `VersusTable` uses compile-time enum indices; `StringInterner` provides the same benefit for data-driven strings loaded from YAML.
+
+**What NOT to intern:** Player-facing display strings (chat messages, player names, localization text). These are genuinely dynamic and not used in hot-path comparisons. Interning targets the *engine vocabulary* — the fixed set of identifiers that YAML rules, conditions, and mod APIs reference repeatedly.
+
+**Snapshot integration (D010):** The `StringInterner` is part of the sim snapshot. When saving/loading, the intern table serializes alongside game state, ensuring that `InternedId` values remain stable across save/resume. Replays record the intern table at keyframes. This is the same approach Factorio uses for its prototype string IDs — resolved once during data loading, stable for the session lifetime.
+
 ## Layer 6: Work-Stealing Parallelism (Bonus Scaling)
 
 After layers 1-5, the engine is already fast on a single core. Parallelism scales it further on better hardware.
@@ -580,15 +635,23 @@ The default Rust allocator (`System` — usually glibc `malloc` on Linux, MSVC a
 
 The following performance patterns are established across the design docs. They are not optional — violating them is a bug.
 
-| Pattern                                            | Location               | Rationale                                                                                   |
-| -------------------------------------------------- | ---------------------- | ------------------------------------------------------------------------------------------- |
-| `TickOrders::chronological()` uses scratch buffer  | `03-NETCODE.md`        | Zero per-tick heap allocation — reusable `Vec<&TimestampedOrder>` instead of `.clone()`     |
-| `VersusTable` is a flat `[i32; COUNT]` array       | `02-ARCHITECTURE.md`   | O(1) combat damage lookup — no HashMap overhead in `projectile_system()` hot path           |
-| `NotificationCooldowns` is a flat array            | `02-ARCHITECTURE.md`   | Same pattern — fixed enum → flat array                                                      |
-| WASM AI API uses `u32` type IDs, not `String`      | `04-MODDING.md`        | No per-tick String allocation across WASM boundary; string table queried once at game start |
-| Replay keyframes every 300 ticks (mandatory)       | `05-FORMATS.md`        | Sub-second seeking without re-simulating from tick 0                                        |
-| `gameplay_events` denormalized indexed columns     | `09-DECISIONS.md` D034 | Avoids `json_extract()` scans during `PlayerStyleProfile` aggregation (D042)                |
-| All SQLite writes on dedicated I/O thread          | `09-DECISIONS.md` D031 | Ring buffer → batch transaction; game loop thread never touches SQLite                      |
-| Weather quadrant rotation (1/4 map per tick)       | `09-DECISIONS.md` D022 | Sim-only amortization — no camera dependency in deterministic sim                           |
-| `gameplay.db` mmap capped at 64 MB                 | `09-DECISIONS.md` D034 | 1.6% of 4 GB min-spec RAM; scaled up on systems with ≥8 GB                                  |
-| WASM pathfinder fuel exhaustion → continue heading | `04-MODDING.md` D045   | Zero-cost fallback prevents unit freezing without breaking determinism                      |
+| Pattern                                                         | Location               | Rationale                                                                                   |
+| --------------------------------------------------------------- | ---------------------- | ------------------------------------------------------------------------------------------- |
+| `TickOrders::chronological()` uses scratch buffer               | `03-NETCODE.md`        | Zero per-tick heap allocation — reusable `Vec<&TimestampedOrder>` instead of `.clone()`     |
+| `VersusTable` is a flat `[i32; COUNT]` array                    | `02-ARCHITECTURE.md`   | O(1) combat damage lookup — no HashMap overhead in `projectile_system()` hot path           |
+| `NotificationCooldowns` is a flat array                         | `02-ARCHITECTURE.md`   | Same pattern — fixed enum → flat array                                                      |
+| WASM AI API uses `u32` type IDs, not `String`                   | `04-MODDING.md`        | No per-tick String allocation across WASM boundary; string table queried once at game start |
+| Replay keyframes every 300 ticks (mandatory)                    | `05-FORMATS.md`        | Sub-second seeking without re-simulating from tick 0                                        |
+| `gameplay_events` denormalized indexed columns                  | `09-DECISIONS.md` D034 | Avoids `json_extract()` scans during `PlayerStyleProfile` aggregation (D042)                |
+| All SQLite writes on dedicated I/O thread                       | `09-DECISIONS.md` D031 | Ring buffer → batch transaction; game loop thread never touches SQLite                      |
+| I/O ring buffer ≥1024 entries                                   | `09-DECISIONS.md` D031 | Absorbs 500 ms HDD checkpoint stall at 600 events/s peak with 3.4× headroom                 |
+| WAL checkpoint suppressed during gameplay (HDD)                 | `09-DECISIONS.md` D034 | Random I/O checkpoint on spinning disk takes 200–500 ms; defer to safe points               |
+| Autosave fsync on I/O thread, never game thread                 | `09-DECISIONS.md` D010 | HDD fsync takes 50–200 ms; game thread only produces DeltaSnapshot bytes                    |
+| Replay keyframe: snapshot on game thread, LZ4+I/O on background | `05-FORMATS.md`        | ~1 ms game thread cost every 300 ticks; compression + write async                           |
+| Weather quadrant rotation (1/4 map per tick)                    | `09-DECISIONS.md` D022 | Sim-only amortization — no camera dependency in deterministic sim                           |
+| `gameplay.db` mmap capped at 64 MB                              | `09-DECISIONS.md` D034 | 1.6% of 4 GB min-spec RAM; scaled up on systems with ≥8 GB                                  |
+| WASM pathfinder fuel exhaustion → continue heading              | `04-MODDING.md` D045   | Zero-cost fallback prevents unit freezing without breaking determinism                      |
+| `StringInterner` resolves YAML strings to `InternedId` at load  | `10-PERFORMANCE.md`    | Condition checks, trait aliases, mod paths — integer compare instead of string compare      |
+| `DoubleBuffered<T>` for fog, influence maps, global modifiers   | `02-ARCHITECTURE.md`   | Tick-consistent reads — all systems see same fog/modifier state within a tick               |
+| Connection lifecycle uses type state (`Connection<S>`)          | `03-NETCODE.md`        | Compile-time prevention of invalid state transitions — zero runtime cost via `PhantomData`  |
+| Camera zoom/pan interpolation once per frame, not per entity    | `02-ARCHITECTURE.md`   | Frame-rate-independent exponential lerp on `GameCamera` resource — `powf()` once per frame  |

@@ -708,10 +708,13 @@ Tier 3 WASM mods that replace the visual presentation (e.g., a 3D render mod) ne
 );
 
 pub enum CameraMode {
-    Isometric,          // fixed angle, zoom only
-    FreeLook,           // full 3D rotation
-    Orbital { target: WorldPos },  // orbit a point
+    Isometric,          // fixed angle, zoom via OrthographicProjection.scale
+    FreeLook,           // full 3D rotation, zoom via camera distance
+    Orbital { target: WorldPos },  // orbit a point, zoom via distance
 }
+// Zoom behavior is controlled by the GameCamera resource (02-ARCHITECTURE.md § Camera).
+// WASM render mods that provide a custom ScreenToWorld impl interpret the zoom value
+// appropriately for their camera type (orthographic scale vs. dolly distance vs. FOV).
 ```
 
 **Render mod registration:** A render mod implements the `Renderable` and `ScreenToWorld` traits (see `02-ARCHITECTURE.md` § "3D Rendering as a Mod"). It registers via `ic_render_register()` for each actor type it handles. Unregistered actor types fall through to the default sprite renderer. This allows **partial** render overrides — a mod can replace tank rendering with 3D meshes while leaving infantry as sprites.

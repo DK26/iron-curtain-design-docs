@@ -1198,6 +1198,13 @@ impl NetworkModel for ReplayPlayback {
 
 **Playback features:** Variable speed (0.5x to 8x), pause, scrub to any tick (re-simulates from nearest keyframe). The recorder takes a `SimSnapshot` keyframe every 300 ticks (~10 seconds at 30 tps) and stores it in the `.icrep` file. A 60-minute replay contains ~360 keyframes (~3-6 MB overhead depending on game state size), enabling sub-second seeking to any point. Keyframes are mandatory — the recorder always writes them.
 
+**Keyframe serialization threading:** Producing a replay keyframe involves two phases with different thread requirements:
+
+1. **ECS snapshot** (game thread): `Simulation::delta_snapshot()` reads ECS state via `ChangeMask` iteration. This MUST run on the game thread because it reads live sim state. Cost: ~0.5–1 ms for 500 units (lightweight — bitfield scan + changed component serialization). Produces a `Vec<u8>` of serialized component data.
+2. **LZ4 compression + file write** (background writer thread): The serialized bytes are sent through the replay writer's crossbeam channel to the background thread, which performs LZ4 compression (~0.3–0.5 ms for ~200 KB → ~40–80 KB) and appends to the `.icrep` file. File I/O never touches the game thread.
+
+The game thread contributes ~1 ms every 300 ticks (~10 seconds) for keyframe production — well within the 33 ms tick budget. The LZ4 compression and disk write happen asynchronously on the background writer.
+
 ### Foreign Replay Decoders (D056)
 
 `ra-formats` includes decoders for foreign replay file formats, enabling direct playback and conversion to `.icrep`:
