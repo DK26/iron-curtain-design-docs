@@ -904,17 +904,20 @@ iron_curtain_save_v1.icsave  (file extension: .icsave)
 
 ```rust
 pub struct SaveHeader {
-    pub magic: [u8; 4],          // b"ICSV" — "Iron Curtain Save"
-    pub version: u16,            // Save format version (1)
-    pub flags: u16,              // Bit flags (compressed, has_thumbnail, etc.)
-    pub metadata_offset: u32,    // Byte offset to metadata section
-    pub metadata_length: u32,    // Metadata section length
-    pub payload_offset: u32,     // Byte offset to compressed payload
-    pub payload_length: u32,     // Compressed payload length
-    pub uncompressed_length: u32,// Uncompressed payload length (for pre-allocation)
-    pub state_hash: u64,         // state_hash() of the saved tick (integrity check)
+    pub magic: [u8; 4],              // b"ICSV" — "Iron Curtain Save"
+    pub version: u16,                // Serialization format version (1 = bincode, 2 = postcard)
+    pub compression_algorithm: u8,   // D063: 0x01 = LZ4, future: 0x02 = zstd
+    pub flags: u8,                   // Bit flags (has_thumbnail, etc.) — repacked from u16 (D063)
+    pub metadata_offset: u32,        // Byte offset to metadata section
+    pub metadata_length: u32,        // Metadata section length
+    pub payload_offset: u32,         // Byte offset to compressed payload
+    pub payload_length: u32,         // Compressed payload length
+    pub uncompressed_length: u32,    // Uncompressed payload length (for pre-allocation)
+    pub state_hash: u64,             // state_hash() of the saved tick (integrity check)
 }
 ```
+
+> **Compression (D063):** The `compression_algorithm` byte identifies which decompressor to use for the payload. Version 1 files use `0x01` (LZ4). The `version` field controls the serialization format (bincode vs. postcard) independently — see `09-DECISIONS.md` § D054 for codec dispatch and § D063 for algorithm dispatch. Compression level (fastest/balanced/compact) is configurable via `settings.yaml` `compression.save_level` and affects encoding speed/ratio but not the format.
 
 > **Security (V42):** Shared `.icsave` files are an attack surface. Enforce: max decompressed size 64 MB, JSON metadata cap 1 MB, schema validation of deserialized `SimSnapshot` (entity count, position bounds, valid components). Save directory sandboxed via `strict-path` `PathBoundary`. See `06-SECURITY.md` § Vulnerability 42.
 
@@ -950,7 +953,7 @@ Human-readable metadata for the save browser UI. Stored as JSON (not the binary 
 
 ### Payload
 
-The payload is a `SimSnapshot` serialized via `serde` (bincode format for compactness) and compressed with LZ4 (fast decompression, good ratio for game state data). LZ4 was chosen over LZO (used by original RA) for its better Rust ecosystem support (`lz4_flex` crate) and superior decompression speed. The save file header's `version` field selects the codec — version 1 uses bincode + LZ4 (current), future versions may use postcard + LZ4 for schema-stable serialization. See `09-DECISIONS.md` § D054 for the full version-to-codec dispatch design.
+The payload is a `SimSnapshot` serialized via `serde` (bincode format for compactness) and compressed with LZ4 (fast decompression, good ratio for game state data). LZ4 was chosen over LZO (used by original RA) for its better Rust ecosystem support (`lz4_flex` crate) and superior decompression speed. The save file header's `version` field selects the serialization codec — version 1 uses bincode, future version 2 uses postcard. The `compression_algorithm` byte selects the decompressor independently (D063). Compression level is configurable via `settings.yaml` (`compression.save_level`: fastest/balanced/compact). See `09-DECISIONS.md` § D054 for the serialization version-to-codec dispatch and § D063 for the compression strategy.
 
 ```rust
 pub struct SimSnapshot {
@@ -992,21 +995,24 @@ iron_curtain_replay_v1.icrep  (file extension: .icrep)
 
 ```rust
 pub struct ReplayHeader {
-    pub magic: [u8; 4],           // b"ICRP" — "Iron Curtain Replay"
-    pub version: u16,             // Replay format version (1)
-    pub flags: u16,               // Bit flags (compressed, signed, has_events, has_voice)
+    pub magic: [u8; 4],              // b"ICRP" — "Iron Curtain Replay"
+    pub version: u16,                // Serialization format version (1)
+    pub compression_algorithm: u8,   // D063: 0x01 = LZ4, future: 0x02 = zstd
+    pub flags: u8,                   // Bit flags (signed, has_events, has_voice) — repacked from u16 (D063)
     pub metadata_offset: u32,
     pub metadata_length: u32,
     pub orders_offset: u32,
-    pub orders_length: u32,       // Compressed length
+    pub orders_length: u32,          // Compressed length
     pub signature_offset: u32,
     pub signature_length: u32,
-    pub total_ticks: u64,         // Total ticks in the replay
-    pub final_state_hash: u64,    // state_hash() of the last tick (integrity)
-    pub voice_offset: u32,        // 0 if no voice stream (D059)
-    pub voice_length: u32,        // Compressed length of voice stream
+    pub total_ticks: u64,            // Total ticks in the replay
+    pub final_state_hash: u64,       // state_hash() of the last tick (integrity)
+    pub voice_offset: u32,           // 0 if no voice stream (D059)
+    pub voice_length: u32,           // Compressed length of voice stream
 }
 ```
+
+> **Compression (D063):** The `compression_algorithm` byte identifies which decompressor to use for the tick order stream and embedded keyframe snapshots. Version 1 files use `0x01` (LZ4). Compression level during live recording defaults to `fastest` (configurable via `settings.yaml` `compression.replay_level`). Use `ic replay recompress` to re-encode at a higher compression level for archival. See `09-DECISIONS.md` § D063.
 
 The `flags` field includes a `HAS_VOICE` bit (bit 3). When set, the voice stream section contains per-player Opus audio tracks recorded with player consent. See `09-DECISIONS.md` § D059 for the voice consent model, storage costs, and replay playback integration.
 

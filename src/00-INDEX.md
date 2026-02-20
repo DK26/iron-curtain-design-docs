@@ -29,6 +29,7 @@ A Rust-native RTS engine that supports OpenRA resource formats (`.mix`, `.shp`, 
 | 12  | `12-MOD-MIGRATION.md`   | Combined Arms mod migration, Remastered recreation feasibility                                                                                                  | You're validating modding architecture against real-world mods                                                     |
 | 13  | `13-PHILOSOPHY.md`      | Development philosophy, game design principles, design review, lessons from C&C creators and OpenRA                                                             | You're reviewing design/code, evaluating a feature, or resolving a design tension                                  |
 | 14  | `14-METHODOLOGY.md`     | Development methodology: stages from research through release, context-bounded work units, research rigor & AI-assisted design process, agent coding guidelines | You're planning work, starting a new phase, understanding the research process, or onboarding as a new contributor |
+| 15  | `15-SERVER-GUIDE.md`    | Server administration guide: configuration reference, deployment profiles, best practices for tournament organizers, community admins, and league operators     | You're setting up a relay server, running a tournament, or tuning parameters for a community deployment            |
 
 ## Key Architectural Invariants
 

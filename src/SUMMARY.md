@@ -20,3 +20,4 @@
 - [Mod Migration Case Studies](12-MOD-MIGRATION.md)
 - [Development Philosophy](13-PHILOSOPHY.md)
 - [Development Methodology](14-METHODOLOGY.md)
+- [Server Administration Guide](15-SERVER-GUIDE.md)
