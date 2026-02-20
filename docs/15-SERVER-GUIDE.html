@@ -1,0 +1,1359 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Server Administration Guide - Iron Curtain — Design Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Design docs for a Rust-native Red Alert RTS engine">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="favicon-8114d1fc.png">
+        <link rel="stylesheet" href="css/variables-8adf115d.css">
+        <link rel="stylesheet" href="css/general-2459343d.css">
+        <link rel="stylesheet" href="css/chrome-ae938929.css">
+        <link rel="stylesheet" href="css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "searchindex-ac1e5ebd.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc-9e438da8.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Iron Curtain — Design Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs/edit/main/src/15-SERVER-GUIDE.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="server-administration-guide"><a class="header" href="#server-administration-guide">Server Administration Guide</a></h1>
+<blockquote>
+<p><strong>Audience:</strong> Server operators, tournament organizers, competitive league administrators, and content creators / casters.</p>
+<p><strong>Prerequisites:</strong> Familiarity with YAML, command-line tools, and basic server administration. For design rationale behind the configuration system, see D064 in <code>09-DECISIONS.md</code>.</p>
+<p><strong>Status:</strong> This guide describes the <em>planned</em> configuration system. Iron Curtain is in the design phase — no implementation exists yet. All examples show intended behavior.</p>
+</blockquote>
+<hr>
+<h2 id="who-this-guide-is-for"><a class="header" href="#who-this-guide-is-for">Who This Guide Is For</a></h2>
+<p>Iron Curtain’s configuration system serves four professional roles. Each role has different needs, and this guide is structured so you can skip to the sections relevant to yours.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Role</th><th>Typical Tasks</th><th>Key Sections</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Tournament organizer</strong></td><td>Set up bracket matches, control pauses, configure spectator feeds, disable surrender votes</td><td>Quick Start, Match Lifecycle, Spectator, Vote Framework, Tournament Operations</td></tr>
+<tr><td><strong>Community server admin</strong></td><td>Run a persistent relay for a clan or region, manage connections, tune anti-cheat, monitor server health</td><td>Quick Start, Relay Server, Anti-Cheat, Telemetry &amp; Monitoring, Security Hardening</td></tr>
+<tr><td><strong>Competitive league admin</strong></td><td>Configure rating parameters, define seasons, tune matchmaking for population size</td><td>Ranking &amp; Seasons, Matchmaking, Deployment Profiles</td></tr>
+<tr><td><strong>Content creator / caster</strong></td><td>Set spectator delay, configure VoIP, maximize observer count</td><td>Spectator, Communication, Training &amp; Practice</td></tr>
+</tbody>
+</table>
+</div>
+<p>Regular players do not need this guide. Player-facing settings (game speed, graphics, audio, keybinds) are configured through the in-game settings menu and <code>settings.yaml</code> — see <code>02-ARCHITECTURE.md</code> for those.</p>
+<hr>
+<h2 id="quick-start"><a class="header" href="#quick-start">Quick Start</a></h2>
+<h3 id="running-a-relay-server-with-defaults"><a class="header" href="#running-a-relay-server-with-defaults">Running a Relay Server with Defaults</a></h3>
+<p>Every parameter has a sane default. A bare relay server works without any configuration file:</p>
+<pre><code class="language-bash">./relay-server
+</code></pre>
+<p>This starts a relay on the default port with:</p>
+<ul>
+<li>Up to 1,000 simultaneous connections</li>
+<li>Up to 100 concurrent games</li>
+<li>16 players per game maximum</li>
+<li>All default match rules, ranking, and anti-cheat settings</li>
+</ul>
+<h3 id="creating-your-first-configuration"><a class="header" href="#creating-your-first-configuration">Creating Your First Configuration</a></h3>
+<p>To customize, create a <code>server_config.yaml</code> in the server’s working directory:</p>
+<pre><code class="language-yaml"># server_config.yaml — only override what you need to change
+relay:
+  max_connections: 200
+  max_games: 50
+</code></pre>
+<p>Any parameter you omit uses its compiled default. You never need to specify the full schema — only your overrides.</p>
+<p>Start the server with a specific config file:</p>
+<pre><code class="language-bash">./relay-server --config /path/to/server_config.yaml
+</code></pre>
+<h3 id="validating-a-configuration"><a class="header" href="#validating-a-configuration">Validating a Configuration</a></h3>
+<p>Before deploying a new config, validate it without starting the server:</p>
+<pre><code class="language-bash">ic server validate-config /path/to/server_config.yaml
+</code></pre>
+<p>This checks for:</p>
+<ul>
+<li>YAML syntax errors</li>
+<li>Unknown keys (with suggestions for typos)</li>
+<li>Out-of-range values (reports which values will be clamped)</li>
+<li>Cross-parameter inconsistencies (e.g., <code>matchmaking.initial_range</code> &gt; <code>matchmaking.max_range</code>)</li>
+</ul>
+<hr>
+<h2 id="configuration-system"><a class="header" href="#configuration-system">Configuration System</a></h2>
+<h3 id="three-layer-architecture"><a class="header" href="#three-layer-architecture">Three-Layer Architecture</a></h3>
+<p>Configuration uses three layers with clear precedence:</p>
+<pre><code>Priority (highest → lowest):
+┌────────────────────────────────────────┐
+│ Layer 3: Runtime Cvars                 │  /set relay.tick_deadline_ms 100
+│ Live changes via console commands.     │  Persist until restart only.
+├────────────────────────────────────────┤
+│ Layer 2: Environment Variables         │  IC_RELAY_TICK_DEADLINE_MS=100
+│ Override config file per-value.        │  Docker-friendly.
+├────────────────────────────────────────┤
+│ Layer 1: server_config.yaml            │  relay:
+│ Single file, all subsystems.           │    tick_deadline_ms: 100
+├────────────────────────────────────────┤
+│ Layer 0: Compiled Defaults             │  (built into the binary)
+└────────────────────────────────────────┘
+</code></pre>
+<p><strong>Rule:</strong> Each layer overrides the one below it. A runtime cvar always wins. An environment variable overrides the YAML file. The YAML file overrides compiled defaults.</p>
+<h3 id="environment-variable-naming"><a class="header" href="#environment-variable-naming">Environment Variable Naming</a></h3>
+<p>Every cvar maps to an environment variable by:</p>
+<ol>
+<li>Uppercasing the cvar name</li>
+<li>Replacing dots (<code>.</code>) with underscores (<code>_</code>)</li>
+<li>Prefixing with <code>IC_</code></li>
+</ol>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Cvar</th><th>Environment Variable</th></tr>
+</thead>
+<tbody>
+<tr><td><code>relay.tick_deadline_ms</code></td><td><code>IC_RELAY_TICK_DEADLINE_MS</code></td></tr>
+<tr><td><code>match.pause.max_per_player</code></td><td><code>IC_MATCH_PAUSE_MAX_PER_PLAYER</code></td></tr>
+<tr><td><code>rank.system_tau</code></td><td><code>IC_RANK_SYSTEM_TAU</code></td></tr>
+<tr><td><code>spectator.delay_ticks</code></td><td><code>IC_SPECTATOR_DELAY_TICKS</code></td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="runtime-cvars"><a class="header" href="#runtime-cvars">Runtime Cvars</a></h3>
+<p>Server operators with Host or Admin permission can change parameters live:</p>
+<pre><code>/set relay.max_games 50
+/get relay.max_games
+/list relay.*
+</code></pre>
+<p>Runtime changes persist until the server restarts — they are not written back to the YAML file. This is intentional: runtime adjustments are for in-the-moment tuning, not permanent policy changes.</p>
+<h3 id="hot-reload"><a class="header" href="#hot-reload">Hot Reload</a></h3>
+<p>Reload <code>server_config.yaml</code> without restarting:</p>
+<ul>
+<li><strong>Unix:</strong> Send <code>SIGHUP</code> to the relay process</li>
+<li><strong>Any platform:</strong> Use the <code>/reload_config</code> admin console command</li>
+</ul>
+<p><strong>Hot-reloadable parameters</strong> (changes take effect for new matches, not in-progress ones):</p>
+<ul>
+<li>All match lifecycle parameters (<code>match.*</code>)</li>
+<li>All vote parameters (<code>vote.*</code>)</li>
+<li>All spectator parameters (<code>spectator.*</code>)</li>
+<li>All communication parameters (<code>chat.*</code>)</li>
+<li>Anti-cheat thresholds (<code>anticheat.*</code>)</li>
+<li>Telemetry settings (<code>telemetry.*</code>)</li>
+</ul>
+<p><strong>Restart-required parameters</strong> (require stopping and restarting the server):</p>
+<ul>
+<li>Relay connection limits (<code>relay.max_connections</code>, <code>relay.max_connections_per_ip</code>)</li>
+<li>Database PRAGMA tuning (<code>db.*</code>)</li>
+<li>Workshop P2P transport settings (<code>workshop.p2p.*</code>)</li>
+</ul>
+<h3 id="validation-behavior"><a class="header" href="#validation-behavior">Validation Behavior</a></h3>
+<p>The configuration system enforces correctness at every layer:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Check</th><th>Behavior</th><th>Example</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Range clamping</strong></td><td>Out-of-range values are clamped; a warning is logged</td><td><code>relay.tick_deadline_ms: 10</code> → clamped to 50, logs <code>WARN</code></td></tr>
+<tr><td><strong>Type safety</strong></td><td>Wrong types (string where int expected) produce a startup error</td><td><code>relay.max_games: "fifty"</code> → error, server won’t start</td></tr>
+<tr><td><strong>Unknown keys</strong></td><td>Typos produce a warning with the closest valid key (edit distance)</td><td><code>rleay.max_games</code> → <code>WARN: unknown key 'rleay.max_games', did you mean 'relay.max_games'?</code></td></tr>
+<tr><td><strong>Cross-parameter</strong></td><td>Inconsistent pairs are automatically corrected</td><td><code>rank.rd_floor: 400, rank.rd_ceiling: 350</code> → floor set to 300 (ceiling - 50)</td></tr>
+</tbody>
+</table>
+</div>
+<h4 id="cross-parameter-consistency-rules"><a class="header" href="#cross-parameter-consistency-rules">Cross-Parameter Consistency Rules</a></h4>
+<p>These relationships are enforced automatically:</p>
+<ul>
+<li><code>catchup_sim_budget_pct + catchup_render_budget_pct</code> = 100. If not, render budget adjusts to <code>100 - sim_budget</code>.</li>
+<li><code>rank.rd_floor</code> &lt; <code>rank.rd_ceiling</code>. If violated, floor is set to <code>ceiling - 50</code>.</li>
+<li><code>matchmaking.initial_range</code> ≤ <code>matchmaking.max_range</code>. If violated, initial is set to max.</li>
+<li><code>match.penalty.abandon_cooldown_1st_secs</code> ≤ <code>2nd</code> ≤ <code>3rd</code>. If violated, higher tiers are raised to match lower.</li>
+<li><code>anticheat.degrade_at_depth</code> ≤ <code>anticheat.queue_depth</code>. If violated, degrade is set to <code>queue_depth × 0.8</code>.</li>
+</ul>
+<hr>
+<h2 id="subsystem-reference"><a class="header" href="#subsystem-reference">Subsystem Reference</a></h2>
+<p>Each subsystem section below explains: what the parameters control, when you would change them, and recommended values for common scenarios. For the complete parameter registry with types and ranges, see D064 in <code>09-DECISIONS.md</code>.</p>
+<h3 id="relay-server-relay"><a class="header" href="#relay-server-relay">Relay Server (<code>relay.*</code>)</a></h3>
+<p>The relay server accepts player connections, orders and forwards game data between players, and enforces protocol-level rules. These parameters control the relay’s resource limits and timing behavior.</p>
+<h4 id="connection-management"><a class="header" href="#connection-management">Connection Management</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Parameter</th><th>Default</th><th>What It Controls</th></tr>
+</thead>
+<tbody>
+<tr><td><code>relay.max_connections</code></td><td>1000</td><td>Total simultaneous TCP connections the relay accepts</td></tr>
+<tr><td><code>relay.max_connections_per_ip</code></td><td>5</td><td>Connections from a single IP address</td></tr>
+<tr><td><code>relay.connect_rate_per_sec</code></td><td>10</td><td>New connections accepted per second (rate limit)</td></tr>
+<tr><td><code>relay.idle_timeout_unauth_secs</code></td><td>60</td><td>Seconds before kicking an unauthenticated connection</td></tr>
+<tr><td><code>relay.idle_timeout_auth_secs</code></td><td>300</td><td>Seconds before kicking an idle authenticated player</td></tr>
+<tr><td><code>relay.max_games</code></td><td>100</td><td>Maximum concurrent game sessions</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>When to change these:</strong></p>
+<ul>
+<li><strong>LAN tournament:</strong> Raise <code>max_connections_per_ip</code> to 10–20 (many players behind one NAT). Lower <code>max_games</code> to match your bracket size.</li>
+<li><strong>Small community server:</strong> Lower <code>max_connections</code> to 200 and <code>max_games</code> to 50 to match your hardware.</li>
+<li><strong>Large public server:</strong> Raise <code>max_connections</code> toward 5000–10000 and <code>max_games</code> toward 1000, but ensure your hardware can sustain it (see Capacity Planning).</li>
+<li><strong>Under DDoS / connection spam:</strong> Lower <code>connect_rate_per_sec</code> to 3–5 and <code>idle_timeout_unauth_secs</code> to 15–30.</li>
+</ul>
+<h4 id="timing--reconnection"><a class="header" href="#timing--reconnection">Timing &amp; Reconnection</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Parameter</th><th>Default</th><th>What It Controls</th></tr>
+</thead>
+<tbody>
+<tr><td><code>relay.tick_deadline_ms</code></td><td>120</td><td>Maximum milliseconds the relay waits for a player’s orders before marking them late</td></tr>
+<tr><td><code>relay.reconnect_timeout_secs</code></td><td>60</td><td>Window for a disconnected player to rejoin a game in progress</td></tr>
+<tr><td><code>relay.timing_feedback_interval</code></td><td>30</td><td>Ticks between timing feedback messages sent to clients</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>When to change these:</strong></p>
+<ul>
+<li><strong>Competitive league (low latency):</strong> Lower <code>tick_deadline_ms</code> to 100 for tighter timing. Only do this if your player base has reliably good connections.</li>
+<li><strong>Casual / high-latency regions:</strong> Raise <code>tick_deadline_ms</code> to 150–200 to tolerate higher ping.</li>
+<li><strong>Training / debugging:</strong> Raise <code>tick_deadline_ms</code> to 500 and <code>reconnect_timeout_secs</code> to 300 for generous timeouts.</li>
+</ul>
+<p><strong>Recommendation:</strong> Leave <code>tick_deadline_ms</code> at 120 unless you have specific latency data for your player base. The adaptive run-ahead system handles most cases automatically.</p>
+<h4 id="catchup-reconnection-behavior"><a class="header" href="#catchup-reconnection-behavior">Catchup (Reconnection Behavior)</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Parameter</th><th>Default</th><th>What It Controls</th></tr>
+</thead>
+<tbody>
+<tr><td><code>relay.catchup.sim_budget_pct</code></td><td>80</td><td>% of frame budget for simulation during reconnection catchup</td></tr>
+<tr><td><code>relay.catchup.render_budget_pct</code></td><td>20</td><td>% of frame budget for rendering during reconnection catchup</td></tr>
+<tr><td><code>relay.catchup.max_ticks_per_frame</code></td><td>30</td><td>Maximum sim ticks processed per render frame during catchup</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>When to change these:</strong> These control how aggressively a reconnecting client catches up to the live game state. Higher <code>max_ticks_per_frame</code> means faster catchup but more stutter during reconnection. The defaults work well for most deployments. Only increase <code>max_ticks_per_frame</code> (to 60–120) if you need sub-10-second reconnections and your players have powerful hardware.</p>
+<hr>
+<h3 id="match-lifecycle-match"><a class="header" href="#match-lifecycle-match">Match Lifecycle (<code>match.*</code>)</a></h3>
+<p>These parameters control the lifecycle of individual games, from lobby acceptance through post-game.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Parameter</th><th>Default</th><th>What It Controls</th></tr>
+</thead>
+<tbody>
+<tr><td><code>match.accept_timeout_secs</code></td><td>30</td><td>Time for players to accept a matchmade game</td></tr>
+<tr><td><code>match.loading_timeout_secs</code></td><td>120</td><td>Maximum map loading time before a player is dropped</td></tr>
+<tr><td><code>match.countdown_secs</code></td><td>3</td><td>Pre-game countdown (after everyone loads)</td></tr>
+<tr><td><code>match.postgame_active_secs</code></td><td>30</td><td>Post-game lobby active period (chat, stats visible)</td></tr>
+<tr><td><code>match.postgame_timeout_secs</code></td><td>300</td><td>Auto-close the post-game lobby after this many seconds</td></tr>
+<tr><td><code>match.grace_period_secs</code></td><td>120</td><td>Grace period — abandoning during this window doesn’t penalize as harshly</td></tr>
+<tr><td><code>match.grace_completion_pct</code></td><td>5</td><td>Maximum game completion % for grace void (abandoned games during grace don’t count)</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>When to change these:</strong></p>
+<ul>
+<li><strong>Tournament:</strong> Raise <code>countdown_secs</code> to 5–10 for dramatic effect. Lower <code>loading_timeout_secs</code> only if you’ve verified all participants have fast hardware.</li>
+<li><strong>Casual community:</strong> Lower <code>postgame_timeout_secs</code> to 120 — players want to re-queue quickly.</li>
+<li><strong>Mod development:</strong> Raise <code>loading_timeout_secs</code> to 600 for large total conversion mods.</li>
+</ul>
+<h4 id="pause-configuration-matchpause"><a class="header" href="#pause-configuration-matchpause">Pause Configuration (<code>match.pause.*</code>)</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Parameter</th><th>Default (ranked)</th><th>Default (casual)</th><th>What It Controls</th></tr>
+</thead>
+<tbody>
+<tr><td><code>match.pause.max_per_player</code></td><td>2</td><td>-1 (unlimited)</td><td>Pauses allowed per player per game (-1 = unlimited)</td></tr>
+<tr><td><code>match.pause.max_duration_secs</code></td><td>120</td><td>300</td><td>Maximum single pause duration before auto-unpause</td></tr>
+<tr><td><code>match.pause.unpause_grace_secs</code></td><td>30</td><td>30</td><td>Warning countdown before auto-unpause</td></tr>
+<tr><td><code>match.pause.min_game_time_secs</code></td><td>30</td><td>0</td><td>Minimum game time before pausing is allowed</td></tr>
+<tr><td><code>match.pause.spectator_visible</code></td><td>true</td><td>true</td><td>Whether spectators see the pause screen</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Recommendations per deployment:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Deployment</th><th><code>max_per_player</code></th><th><code>max_duration_secs</code></th><th>Rationale</th></tr>
+</thead>
+<tbody>
+<tr><td>Tournament LAN</td><td>5</td><td>300</td><td>Admin-mediated; allow equipment issues</td></tr>
+<tr><td>Competitive league</td><td>1</td><td>60</td><td>Strict; minimize stalling</td></tr>
+<tr><td>Casual community</td><td>-1</td><td>600</td><td>Fun-first; let friends pause freely</td></tr>
+<tr><td>Training / practice</td><td>-1</td><td>3600</td><td>1-hour pauses for debugging</td></tr>
+</tbody>
+</table>
+</div>
+<h4 id="disconnect-penalties-matchpenalty"><a class="header" href="#disconnect-penalties-matchpenalty">Disconnect Penalties (<code>match.penalty.*</code>)</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Parameter</th><th>Default</th><th>What It Controls</th></tr>
+</thead>
+<tbody>
+<tr><td><code>match.penalty.abandon_cooldown_1st_secs</code></td><td>300</td><td>First abandon: 5-minute queue cooldown</td></tr>
+<tr><td><code>match.penalty.abandon_cooldown_2nd_secs</code></td><td>1800</td><td>Second abandon (within 24 hrs): 30-minute cooldown</td></tr>
+<tr><td><code>match.penalty.abandon_cooldown_3rd_secs</code></td><td>7200</td><td>Third+ abandon: 2-hour cooldown</td></tr>
+<tr><td><code>match.penalty.habitual_abandon_count</code></td><td>3</td><td>Abandons in 7 days to trigger habitual penalty</td></tr>
+<tr><td><code>match.penalty.habitual_cooldown_secs</code></td><td>86400</td><td>Habitual abandon cooldown (24 hours)</td></tr>
+<tr><td><code>match.penalty.decline_cooldown_escalation</code></td><td>“60,300,900”</td><td>Escalating cooldowns for declining match accepts</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>When to change these:</strong></p>
+<ul>
+<li><strong>Tournament:</strong> Set <code>abandon_cooldown_1st_secs</code> to 0 — admin handles penalties manually.</li>
+<li><strong>Casual:</strong> Lower all penalties (e.g., 60/300/600) to keep the mood light.</li>
+<li><strong>Competitive league:</strong> Keep defaults or increase for stricter enforcement.</li>
+</ul>
+<hr>
+<h3 id="spectator-configuration-spectator"><a class="header" href="#spectator-configuration-spectator">Spectator Configuration (<code>spectator.*</code>)</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Parameter</th><th>Default (casual)</th><th>Default (ranked)</th><th>What It Controls</th></tr>
+</thead>
+<tbody>
+<tr><td><code>spectator.allow_live</code></td><td>true</td><td>true</td><td>Whether live spectating is enabled at all</td></tr>
+<tr><td><code>spectator.delay_ticks</code></td><td>90 (3s)</td><td>3600 (2min)</td><td>Feed delay in ticks (at 30 tps)</td></tr>
+<tr><td><code>spectator.max_per_match</code></td><td>50</td><td>50</td><td>Maximum spectators per match</td></tr>
+<tr><td><code>spectator.full_visibility</code></td><td>true</td><td>false</td><td>Whether spectators see both teams</td></tr>
+<tr><td><code>spectator.allow_player_disable</code></td><td>true</td><td>false</td><td>Whether players can opt out of being spectated</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Common delay values</strong> (at 30 ticks per second):</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Ticks</th><th>Real Time</th><th>Use Case</th></tr>
+</thead>
+<tbody>
+<tr><td>0</td><td>No delay</td><td>LAN tournaments (no stream sniping risk)</td></tr>
+<tr><td>90</td><td>3 seconds</td><td>Casual viewing</td></tr>
+<tr><td>3600</td><td>2 minutes</td><td>Ranked default (anti-stream-sniping)</td></tr>
+<tr><td>9000</td><td>5 minutes</td><td>Competitive league (stricter anti-sniping)</td></tr>
+<tr><td>18000</td><td>10 minutes</td><td>Maximum supported delay</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>For casters / content creators:</strong></p>
+<ul>
+<li>Set <code>full_visibility: true</code> so casters can see entire battlefield</li>
+<li>Set <code>max_per_match: 200</code> or higher for large audiences</li>
+<li>Delay depends on whether stream sniping is a concern in your context</li>
+</ul>
+<hr>
+<h3 id="vote-framework-vote"><a class="header" href="#vote-framework-vote">Vote Framework (<code>vote.*</code>)</a></h3>
+<p>The vote system allows players to initiate and resolve team votes during matches.</p>
+<h4 id="global-settings"><a class="header" href="#global-settings">Global Settings</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Parameter</th><th>Default</th><th>What It Controls</th></tr>
+</thead>
+<tbody>
+<tr><td><code>vote.max_concurrent_per_team</code></td><td>1</td><td>Active votes allowed simultaneously per team</td></tr>
+</tbody>
+</table>
+</div>
+<h4 id="per-vote-type-parameters"><a class="header" href="#per-vote-type-parameters">Per-Vote-Type Parameters</a></h4>
+<p>Each vote type (surrender, kick, remake, draw) follows the same parameter schema:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Parameter Pattern</th><th>Surrender</th><th>Kick</th><th>Remake</th><th>Draw</th></tr>
+</thead>
+<tbody>
+<tr><td><code>vote.&lt;type&gt;.enabled</code></td><td>true</td><td>true</td><td>true</td><td>true</td></tr>
+<tr><td><code>vote.&lt;type&gt;.duration_secs</code></td><td>30</td><td>30</td><td>45</td><td>60</td></tr>
+<tr><td><code>vote.&lt;type&gt;.cooldown_secs</code></td><td>180</td><td>300</td><td>0</td><td>300</td></tr>
+<tr><td><code>vote.&lt;type&gt;.min_game_time_secs</code></td><td>300</td><td>120</td><td>0</td><td>600</td></tr>
+<tr><td><code>vote.&lt;type&gt;.max_per_player</code></td><td>-1</td><td>2</td><td>1</td><td>2</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Kick-specific protections:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Parameter</th><th>Default</th><th>What It Controls</th></tr>
+</thead>
+<tbody>
+<tr><td><code>vote.kick.army_value_protection_pct</code></td><td>40</td><td>Can’t kick a player controlling &gt;40% of team’s army value</td></tr>
+<tr><td><code>vote.kick.premade_consolidation</code></td><td>true</td><td>Premade group members’ kicks count as a single vote</td></tr>
+<tr><td><code>vote.kick.protect_last_player</code></td><td>true</td><td>Can’t kick the last remaining teammate</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Remake-specific:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Parameter</th><th>Default</th><th>What It Controls</th></tr>
+</thead>
+<tbody>
+<tr><td><code>vote.remake.max_game_time_secs</code></td><td>300</td><td>Latest point (5 min) a remake vote can be called</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Recommendations:</strong></p>
+<ul>
+<li><strong>Tournament:</strong> Disable surrender and remake entirely (<code>vote.surrender.enabled: false</code>, <code>vote.remake.enabled: false</code>). The tournament admin decides match outcomes.</li>
+<li><strong>Casual community:</strong> Consider disabling kick (<code>vote.kick.enabled: false</code>) in small communities — handle disputes personally.</li>
+<li><strong>Competitive league:</strong> Keep defaults. Consider lowering <code>vote.surrender.min_game_time_secs</code> to 180 for faster concession.</li>
+</ul>
+<hr>
+<h3 id="protocol-limits-protocol"><a class="header" href="#protocol-limits-protocol">Protocol Limits (<code>protocol.*</code>)</a></h3>
+<p>These parameters define hard limits on what players can send through the relay. They are the first line of defense against abuse.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Parameter</th><th>Default</th><th>What It Controls</th></tr>
+</thead>
+<tbody>
+<tr><td><code>protocol.max_order_size</code></td><td>4096</td><td>Maximum single order size (bytes)</td></tr>
+<tr><td><code>protocol.max_orders_per_tick</code></td><td>256</td><td>Hard ceiling on orders per tick per player</td></tr>
+<tr><td><code>protocol.max_chat_length</code></td><td>512</td><td>Maximum chat message characters</td></tr>
+<tr><td><code>protocol.max_file_transfer_size</code></td><td>65536</td><td>Maximum file transfer size (bytes)</td></tr>
+<tr><td><code>protocol.max_pending_per_peer</code></td><td>262144</td><td>Maximum buffered data per peer (bytes)</td></tr>
+<tr><td><code>protocol.max_voice_packets_per_sec</code></td><td>50</td><td>VoIP packet rate limit</td></tr>
+<tr><td><code>protocol.max_voice_packet_size</code></td><td>256</td><td>VoIP packet size limit (bytes)</td></tr>
+<tr><td><code>protocol.max_pings_per_interval</code></td><td>3</td><td>Contextual pings per 5-second window</td></tr>
+<tr><td><code>protocol.max_minimap_draw_points</code></td><td>32</td><td>Points per minimap drawing</td></tr>
+<tr><td><code>protocol.max_markers_per_player</code></td><td>10</td><td>Tactical markers per player</td></tr>
+<tr><td><code>protocol.max_markers_per_team</code></td><td>30</td><td>Tactical markers per team</td></tr>
+</tbody>
+</table>
+</div>
+<blockquote>
+<p><strong>Warning:</strong> Raising protocol limits above defaults increases the abuse surface. The defaults are tuned for competitive play. Only increase them if you have a specific need and understand the anti-cheat implications.</p>
+</blockquote>
+<p><strong>When to change these:</strong></p>
+<ul>
+<li><strong>Large team games (8v8):</strong> You may want to raise <code>max_markers_per_team</code> to 50–60 for more tactical coordination.</li>
+<li><strong>VoIP quality:</strong> Raising <code>max_voice_packets_per_sec</code> beyond 50 is unlikely to improve quality — the Opus codec is efficient. Consider raising <code>chat.voip_bitrate_kbps</code> instead.</li>
+<li><strong>Mod development:</strong> Mods that use very large orders might need <code>max_order_size</code> raised to 8192 or 16384.</li>
+</ul>
+<hr>
+<h3 id="communication-chat"><a class="header" href="#communication-chat">Communication (<code>chat.*</code>)</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Parameter</th><th>Default</th><th>What It Controls</th></tr>
+</thead>
+<tbody>
+<tr><td><code>chat.rate_limit_messages</code></td><td>5</td><td>Messages allowed per rate window</td></tr>
+<tr><td><code>chat.rate_limit_window_secs</code></td><td>3</td><td>Rate limit window duration</td></tr>
+<tr><td><code>chat.voip_bitrate_kbps</code></td><td>32</td><td>Opus VoIP encoding bitrate per player</td></tr>
+<tr><td><code>chat.voip_enabled</code></td><td>true</td><td>Enable relay-forwarded VoIP</td></tr>
+<tr><td><code>chat.tactical_poll_expiry_secs</code></td><td>15</td><td>Tactical poll voting window</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>VoIP bitrate guidance:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Bitrate</th><th>Quality</th><th>Bandwidth per Player</th><th>Recommended For</th></tr>
+</thead>
+<tbody>
+<tr><td>16 kbps</td><td>Acceptable</td><td>~2 KB/s</td><td>Low-bandwidth environments</td></tr>
+<tr><td>32 kbps</td><td>Good (default)</td><td>~4 KB/s</td><td>Most deployments</td></tr>
+<tr><td>64 kbps</td><td>Excellent</td><td>~8 KB/s</td><td>Tournament casting (clear commentary)</td></tr>
+<tr><td>128 kbps</td><td>Studio</td><td>~16 KB/s</td><td>Rarely needed; diminishing returns</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>When to change these:</strong></p>
+<ul>
+<li><strong>Tournament with casters:</strong> Raise <code>voip_bitrate_kbps</code> to 64 for clearer casting audio.</li>
+<li><strong>Persistent chat trolling:</strong> Lower <code>rate_limit_messages</code> to 3 and raise <code>rate_limit_window_secs</code> to 5.</li>
+<li><strong>Disable VoIP entirely:</strong> Set <code>chat.voip_enabled: false</code> if your community uses a separate voice platform (Discord, TeamSpeak).</li>
+</ul>
+<hr>
+<h3 id="anti-cheat--behavioral-analysis-anticheat"><a class="header" href="#anti-cheat--behavioral-analysis-anticheat">Anti-Cheat / Behavioral Analysis (<code>anticheat.*</code>)</a></h3>
+<p>These parameters tune the automated anti-cheat system. The system analyzes match outcomes and in-game behavioral patterns to flag suspicious activity for review.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Parameter</th><th>Default</th><th>What It Controls</th></tr>
+</thead>
+<tbody>
+<tr><td><code>anticheat.ranked_upset_threshold</code></td><td>250</td><td>Rating difference that triggers automatic review when the lower-rated player wins</td></tr>
+<tr><td><code>anticheat.new_player_max_games</code></td><td>40</td><td>Games below which new-player heuristics apply</td></tr>
+<tr><td><code>anticheat.new_player_win_chance</code></td><td>0.75</td><td>Win probability that triggers review for new accounts</td></tr>
+<tr><td><code>anticheat.rapid_climb_min_gain</code></td><td>80</td><td>Rating gain that triggers rapid-climb review</td></tr>
+<tr><td><code>anticheat.rapid_climb_chance</code></td><td>0.90</td><td>Trigger probability for rapid rating climb</td></tr>
+<tr><td><code>anticheat.behavioral_flag_score</code></td><td>0.4</td><td>Relay behavioral score that triggers review</td></tr>
+<tr><td><code>anticheat.min_duration_secs</code></td><td>120</td><td>Minimum match duration for analysis</td></tr>
+<tr><td><code>anticheat.max_age_months</code></td><td>6</td><td>Oldest match data considered</td></tr>
+<tr><td><code>anticheat.queue_depth</code></td><td>1000</td><td>Maximum analysis queue depth</td></tr>
+<tr><td><code>anticheat.degrade_at_depth</code></td><td>800</td><td>Queue depth at which probabilistic triggers degrade</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Tuning philosophy:</strong></p>
+<ul>
+<li><strong>Lower thresholds = more sensitive = more false positives.</strong> Appropriate for high-stakes competitive environments.</li>
+<li><strong>Higher thresholds = less sensitive = fewer false positives.</strong> Appropriate for casual communities where false positives are more disruptive than cheating.</li>
+</ul>
+<p><strong>Recommendations:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Deployment</th><th><code>ranked_upset_threshold</code></th><th><code>behavioral_flag_score</code></th><th>Rationale</th></tr>
+</thead>
+<tbody>
+<tr><td>Tournament</td><td>50</td><td>0.3</td><td>Review every notable upset; strict</td></tr>
+<tr><td>Competitive league</td><td>150</td><td>0.35</td><td>Moderately strict</td></tr>
+<tr><td>Casual community</td><td>400</td><td>0.6</td><td>Relaxed; trust the community</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h3 id="ranking--glicko-2-rank"><a class="header" href="#ranking--glicko-2-rank">Ranking &amp; Glicko-2 (<code>rank.*</code>)</a></h3>
+<p>Iron Curtain uses the Glicko-2 rating system. These parameters let league administrators tune it for their community’s size and activity level.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Parameter</th><th>Default</th><th>What It Controls</th></tr>
+</thead>
+<tbody>
+<tr><td><code>rank.default_rating</code></td><td>1500</td><td>Starting rating for new players</td></tr>
+<tr><td><code>rank.default_deviation</code></td><td>350</td><td>Starting rating deviation (uncertainty)</td></tr>
+<tr><td><code>rank.system_tau</code></td><td>0.5</td><td>Volatility sensitivity — how quickly ratings respond to unexpected results</td></tr>
+<tr><td><code>rank.rd_floor</code></td><td>45</td><td>Minimum deviation (maximum confidence)</td></tr>
+<tr><td><code>rank.rd_ceiling</code></td><td>350</td><td>Maximum deviation (maximum uncertainty)</td></tr>
+<tr><td><code>rank.inactivity_c</code></td><td>34.6</td><td>How fast deviation grows during inactivity</td></tr>
+<tr><td><code>rank.match_min_ticks</code></td><td>3600</td><td>Minimum ticks (2 min) for any rating weight</td></tr>
+<tr><td><code>rank.match_full_weight_ticks</code></td><td>18000</td><td>Ticks (10 min) at which the match gets full rating weight</td></tr>
+<tr><td><code>rank.match_short_game_factor</code></td><td>300</td><td>Short-game duration weighting factor</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Understanding <code>system_tau</code>:</strong></p>
+<ul>
+<li><strong>Lower tau (0.2–0.4):</strong> Ratings change slowly. Good for stable, large communities where the skill distribution is well-established.</li>
+<li><strong>Default (0.5):</strong> Balanced. Works well for most deployments.</li>
+<li><strong>Higher tau (0.6–1.0):</strong> Ratings change quickly. Good for new communities where players are still finding their level, or for communities with high player turnover.</li>
+</ul>
+<p><strong>Match duration weighting:</strong> Short games (e.g., an early GG at 3 minutes) contribute less to rating changes than full-length matches. <code>match_min_ticks</code> is the minimum game length for any rating influence. Below that, the match does not affect ratings at all. <code>match_full_weight_ticks</code> is the length at which the match counts fully.</p>
+<p><strong>Recommendation for small communities (&lt; 200 active players):</strong> Raise <code>system_tau</code> to 0.7 and lower <code>rank.rd_floor</code> to 60. This lets ratings converge faster and better reflects the smaller, more volatile skill pool.</p>
+<h4 id="season-configuration-rankseason"><a class="header" href="#season-configuration-rankseason">Season Configuration (<code>rank.season.*</code>)</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Parameter</th><th>Default</th><th>What It Controls</th></tr>
+</thead>
+<tbody>
+<tr><td><code>rank.season.duration_days</code></td><td>91</td><td>Season length (default: ~3 months)</td></tr>
+<tr><td><code>rank.season.placement_matches</code></td><td>10</td><td>Matches required for rank placement</td></tr>
+<tr><td><code>rank.season.soft_reset_factor</code></td><td>0.7</td><td>Compression toward mean at season reset (0.0 = hard reset, 1.0 = no reset)</td></tr>
+<tr><td><code>rank.season.placement_deviation</code></td><td>350</td><td>Deviation assigned during placement</td></tr>
+<tr><td><code>rank.season.leaderboard_min_matches</code></td><td>5</td><td>Minimum matches for leaderboard eligibility</td></tr>
+<tr><td><code>rank.season.leaderboard_min_opponents</code></td><td>5</td><td>Minimum distinct opponents for leaderboard</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Season length guidance:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Community Size</th><th>Recommended Duration</th><th>Placement Matches</th><th>Rationale</th></tr>
+</thead>
+<tbody>
+<tr><td>&lt; 100 active</td><td>180 days</td><td>5</td><td>Small pool needs more time to generate enough games</td></tr>
+<tr><td>100–500 active</td><td>91 days (default)</td><td>10</td><td>Standard 3-month seasons</td></tr>
+<tr><td>500–2000 active</td><td>60 days</td><td>15</td><td>More frequent resets keep things fresh</td></tr>
+<tr><td>2000+ active</td><td>60 days</td><td>15–20</td><td>Larger population supports shorter, more competitive seasons</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Soft reset factor:</strong> At season end, each player’s rating is compressed toward the global mean. A factor of 0.7 means: <code>new_rating = mean + 0.7 × (old_rating - mean)</code>. A factor of 0.0 resets everyone to the default rating. A factor of 1.0 carries ratings forward unchanged.</p>
+<hr>
+<h3 id="matchmaking-matchmaking"><a class="header" href="#matchmaking-matchmaking">Matchmaking (<code>matchmaking.*</code>)</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Parameter</th><th>Default</th><th>What It Controls</th></tr>
+</thead>
+<tbody>
+<tr><td><code>matchmaking.initial_range</code></td><td>100</td><td>Starting rating search window (± this value)</td></tr>
+<tr><td><code>matchmaking.widen_step</code></td><td>50</td><td>Rating range expansion per interval</td></tr>
+<tr><td><code>matchmaking.widen_interval_secs</code></td><td>30</td><td>Time between range expansions</td></tr>
+<tr><td><code>matchmaking.max_range</code></td><td>500</td><td>Maximum rating search range</td></tr>
+<tr><td><code>matchmaking.desperation_timeout_secs</code></td><td>300</td><td>Time before accepting any available match</td></tr>
+<tr><td><code>matchmaking.min_match_quality</code></td><td>0.3</td><td>Minimum match quality score (0.0–1.0)</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>How matchmaking expands:</strong></p>
+<pre><code>Time = 0s:   Search ±100 of player's rating
+Time = 30s:  Search ±150
+Time = 60s:  Search ±200
+Time = 90s:  Search ±250
+...
+Time = 240s: Search ±500 (max_range reached)
+Time = 300s: Accept any match (desperation)
+</code></pre>
+<p><strong>Small community tuning:</strong> The most common issue is long queue times due to low population. Address this by:</p>
+<pre><code class="language-yaml">matchmaking:
+  initial_range: 200        # Wider initial search
+  widen_step: 100            # Expand faster
+  widen_interval_secs: 15    # Expand more often
+  max_range: 1000            # Search much wider
+  desperation_timeout_secs: 120  # Accept any match after 2 min
+  min_match_quality: 0.1     # Accept lower quality matches
+</code></pre>
+<p><strong>Competitive league tuning:</strong> Prioritize match quality over queue time:</p>
+<pre><code class="language-yaml">matchmaking:
+  initial_range: 75
+  widen_step: 25
+  widen_interval_secs: 45
+  max_range: 300
+  desperation_timeout_secs: 600  # Wait up to 10 min
+  min_match_quality: 0.5         # Require higher quality
+</code></pre>
+<hr>
+<h3 id="ai-engine-tuning-ai"><a class="header" href="#ai-engine-tuning-ai">AI Engine Tuning (<code>ai.*</code>)</a></h3>
+<p>The AI personality system (aggression, expansion, build orders) is configured through YAML files in the game module, not through <code>server_config.yaml</code>. D064 exposes only the engine-level AI performance budget and evaluation frequencies, which sit below the behavioral layer.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Parameter</th><th>Default</th><th>What It Controls</th></tr>
+</thead>
+<tbody>
+<tr><td><code>ai.tick_budget_us</code></td><td>500</td><td>Microseconds of CPU time the AI is allowed per tick</td></tr>
+<tr><td><code>ai.lanchester_exponent</code></td><td>0.7</td><td>Army power scaling exponent for AI strength assessment</td></tr>
+<tr><td><code>ai.strategic_eval_interval</code></td><td>60</td><td>Ticks between full strategic reassessments</td></tr>
+<tr><td><code>ai.attack_eval_interval</code></td><td>30</td><td>Ticks between attack planning cycles</td></tr>
+<tr><td><code>ai.production_eval_interval</code></td><td>8</td><td>Ticks between production priority evaluation</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>When to change these:</strong></p>
+<ul>
+<li><strong>AI training / analysis server:</strong> Raise <code>tick_budget_us</code> to 5000 and lower all eval intervals for maximum AI quality. This trades server CPU for smarter AI.</li>
+<li><strong>Large-scale server with many AI games:</strong> Lower <code>tick_budget_us</code> to 200–300 to reduce CPU usage when many AI games run simultaneously.</li>
+<li><strong>Tournament with AI opponents:</strong> Default values are fine; AI personality presets (from YAML) are the primary tuning lever for difficulty.</li>
+</ul>
+<p>Custom difficulty tiers are added by placing YAML files in the server’s <code>ai/difficulties/</code> directory. The engine discovers and loads them alongside built-in tiers. See <code>04-MODDING.md</code> and D043 for the AI personality YAML schema.</p>
+<hr>
+<h3 id="telemetry--monitoring-telemetry"><a class="header" href="#telemetry--monitoring-telemetry">Telemetry &amp; Monitoring (<code>telemetry.*</code>)</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Parameter</th><th>Default (client)</th><th>Default (server)</th><th>What It Controls</th></tr>
+</thead>
+<tbody>
+<tr><td><code>telemetry.max_db_size_mb</code></td><td>100</td><td>500</td><td>Maximum telemetry.db size before pruning</td></tr>
+<tr><td><code>telemetry.retention_days</code></td><td>-1 (no limit)</td><td>30</td><td>Time-based retention (-1 = size-based only)</td></tr>
+<tr><td><code>telemetry.otel_export</code></td><td>false</td><td>false</td><td>Enable OpenTelemetry export</td></tr>
+<tr><td><code>telemetry.otel_endpoint</code></td><td>“”</td><td>“”</td><td>OTEL collector endpoint URL</td></tr>
+<tr><td><code>telemetry.sampling_rate</code></td><td>1.0</td><td>1.0</td><td>Event sampling rate (1.0 = 100%)</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Enabling Grafana dashboards:</strong></p>
+<p>Iron Curtain supports optional OTEL (OpenTelemetry) export for professional monitoring. To enable:</p>
+<pre><code class="language-yaml">telemetry:
+  otel_export: true
+  otel_endpoint: "http://otel-collector:4317"
+  sampling_rate: 1.0
+</code></pre>
+<p>This sends metrics and traces to an OTEL collector, which can forward to Prometheus (metrics), Jaeger (traces), and Loki (logs) for visualization in Grafana.</p>
+<p><strong>For high-traffic servers:</strong> Lower <code>sampling_rate</code> to 0.1–0.5 to reduce telemetry volume. This samples only a percentage of events while maintaining statistical accuracy.</p>
+<p><strong>For long-running analysis servers:</strong></p>
+<pre><code class="language-yaml">telemetry:
+  max_db_size_mb: 5000     # 5 GB
+  retention_days: -1        # Size-based pruning only
+</code></pre>
+<hr>
+<h3 id="database-tuning-db"><a class="header" href="#database-tuning-db">Database Tuning (<code>db.*</code>)</a></h3>
+<p>SQLite PRAGMA values tuned per database. Most operators never need to touch these — they exist for large-scale deployments and edge cases.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Parameter</th><th>Default</th><th>What It Controls</th></tr>
+</thead>
+<tbody>
+<tr><td><code>db.gameplay.cache_size_kb</code></td><td>16384</td><td>Gameplay database page cache (16 MB)</td></tr>
+<tr><td><code>db.gameplay.mmap_size_mb</code></td><td>64</td><td>Gameplay database memory-mapped I/O</td></tr>
+<tr><td><code>db.telemetry.wal_autocheckpoint</code></td><td>4000</td><td>Telemetry WAL checkpoint interval</td></tr>
+<tr><td><code>db.telemetry.cache_size_kb</code></td><td>4096</td><td>Telemetry page cache (4 MB)</td></tr>
+<tr><td><code>db.relay.cache_size_kb</code></td><td>8192</td><td>Relay data cache (8 MB)</td></tr>
+<tr><td><code>db.relay.busy_timeout_ms</code></td><td>5000</td><td>Relay busy timeout</td></tr>
+<tr><td><code>db.matchmaking.mmap_size_mb</code></td><td>128</td><td>Matchmaking memory-mapped I/O</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>When to tune:</strong></p>
+<ul>
+<li><strong>High-concurrency matchmaking server:</strong> Raise <code>db.matchmaking.mmap_size_mb</code> to 256–512 if you observe database contention under load.</li>
+<li><strong>Heavy telemetry write load:</strong> Raise <code>db.telemetry.wal_autocheckpoint</code> to 8000–16000 to batch more writes and reduce I/O overhead.</li>
+<li><strong>Memory-constrained server:</strong> Lower all cache sizes by 50%.</li>
+</ul>
+<blockquote>
+<p><strong>Note:</strong> The <code>synchronous</code> PRAGMA mode is NOT configurable. D034 sets FULL synchronous mode for credential databases and NORMAL for telemetry. This protects data integrity and is not negotiable.</p>
+</blockquote>
+<hr>
+<h3 id="workshop--p2p-workshop"><a class="header" href="#workshop--p2p-workshop">Workshop / P2P (<code>workshop.*</code>)</a></h3>
+<p>Parameters for the peer-to-peer content distribution system.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Parameter</th><th>Default</th><th>What It Controls</th></tr>
+</thead>
+<tbody>
+<tr><td><code>workshop.p2p.max_upload_speed</code></td><td>“1 MB/s”</td><td>Upload bandwidth limit per server</td></tr>
+<tr><td><code>workshop.p2p.max_download_speed</code></td><td>“unlimited”</td><td>Download bandwidth limit</td></tr>
+<tr><td><code>workshop.p2p.seed_duration_after_exit</code></td><td>“30m”</td><td>Background seeding after game closes</td></tr>
+<tr><td><code>workshop.p2p.cache_size_limit</code></td><td>“2 GB”</td><td>Local content cache LRU eviction threshold</td></tr>
+<tr><td><code>workshop.p2p.max_connections_per_pkg</code></td><td>8</td><td>Peer connections per package</td></tr>
+<tr><td><code>workshop.p2p.announce_interval_secs</code></td><td>30</td><td>Tracker announce cycle</td></tr>
+<tr><td><code>workshop.p2p.blacklist_timeout_secs</code></td><td>300</td><td>Dead peer blacklist cooldown</td></tr>
+<tr><td><code>workshop.p2p.seed_health_interval_secs</code></td><td>30</td><td>Seed box health check interval</td></tr>
+<tr><td><code>workshop.p2p.min_replica_count</code></td><td>2</td><td>Minimum replicas per popular resource</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>For dedicated seed boxes:</strong> Raise <code>max_upload_speed</code> to “10 MB/s” or “unlimited”, <code>max_connections_per_pkg</code> to 30–50, and <code>min_replica_count</code> to 3–5 to serve as high-availability content mirrors.</p>
+<p><strong>For bandwidth-constrained servers:</strong> Lower <code>max_upload_speed</code> to “256 KB/s” and reduce <code>max_connections_per_pkg</code> to 3–4.</p>
+<hr>
+<h3 id="compression-compression"><a class="header" href="#compression-compression">Compression (<code>compression.*</code>)</a></h3>
+<p>Iron Curtain uses LZ4 compression by default for saves, replays, and snapshots. Server operators can tune compression levels and, for advanced use cases, the individual algorithm parameters.</p>
+<p><strong>Basic configuration</strong> (compression levels per context):</p>
+<pre><code class="language-yaml">compression:
+  save_level: balanced       # balanced, fastest, compact
+  replay_level: fastest      # fastest for low latency during recording
+  autosave_level: fastest
+  snapshot_level: fastest    # reconnection snapshots
+  workshop_level: compact    # maximize compression for distribution
+</code></pre>
+<p><strong>Advanced configuration:</strong> The 21 parameters in <code>compression.advanced.*</code> are documented in D063 in <code>09-DECISIONS.md</code>. Most operators never need to touch these. The compression level presets (fastest/balanced/compact) set appropriate values automatically.</p>
+<p><strong>When to use advanced compression tuning:</strong></p>
+<ul>
+<li>You operate a large-scale replay archive and need to minimize storage</li>
+<li>You host Workshop content and want optimal distribution efficiency</li>
+<li>You’ve profiled and identified compression as a bottleneck</li>
+</ul>
+<hr>
+<h2 id="deployment-profiles"><a class="header" href="#deployment-profiles">Deployment Profiles</a></h2>
+<p>Iron Curtain ships four pre-built profiles as starting points. Copy and modify them for your needs.</p>
+<h3 id="tournament-lan"><a class="header" href="#tournament-lan">Tournament LAN</a></h3>
+<p><strong>Purpose:</strong> Strict competitive rules for bracket events. Admin-controlled. No player autonomy over match outcomes.</p>
+<p><strong>Key overrides:</strong></p>
+<ul>
+<li>High <code>max_connections_per_ip</code> (LAN: many players behind one router)</li>
+<li>Generous pauses (admin-mediated equipment issues)</li>
+<li>Zero spectator delay (no stream-sniping on LAN)</li>
+<li>Large spectator count (audience)</li>
+<li>Surrender and remake votes disabled (admin decides)</li>
+<li>Sensitive anti-cheat (review all upsets)</li>
+</ul>
+<pre><code class="language-bash">./relay-server --config profiles/tournament-lan.yaml
+</code></pre>
+<h3 id="casual-community"><a class="header" href="#casual-community">Casual Community</a></h3>
+<p><strong>Purpose:</strong> Relaxed rules for a friendly community. Fun-first. Generous timeouts.</p>
+<p><strong>Key overrides:</strong></p>
+<ul>
+<li>Unlimited pauses with long duration</li>
+<li>Light disconnect penalties</li>
+<li>Short spectator delay</li>
+<li>Kick votes disabled (small community — resolve disputes personally)</li>
+<li>Longer seasons with fewer placement matches</li>
+<li>Wide matchmaking range (small population)</li>
+</ul>
+<pre><code class="language-bash">./relay-server --config profiles/casual-community.yaml
+</code></pre>
+<h3 id="competitive-league"><a class="header" href="#competitive-league">Competitive League</a></h3>
+<p><strong>Purpose:</strong> Strict ranked play with custom rating parameters for the league’s skill distribution.</p>
+<p><strong>Key overrides:</strong></p>
+<ul>
+<li>Tight tick deadline for low latency</li>
+<li>Minimal pauses (1 per player, 60 seconds)</li>
+<li>Long spectator delay (5 minutes, anti-stream-sniping)</li>
+<li>Lower Glicko-2 tau (ratings change slowly — stable ladder)</li>
+<li>Shorter seasons with more placement matches</li>
+<li>Tight matchmaking with high quality floor</li>
+<li>Sensitive anti-cheat</li>
+</ul>
+<pre><code class="language-bash">./relay-server --config profiles/competitive-league.yaml
+</code></pre>
+<h3 id="training--practice"><a class="header" href="#training--practice">Training / Practice</a></h3>
+<p><strong>Purpose:</strong> For practice rooms, AI training, mod development, and debugging.</p>
+<p><strong>Key overrides:</strong></p>
+<ul>
+<li>Very generous tick deadline (500ms — tolerates debugging breakpoints)</li>
+<li>Unlimited pauses up to 1 hour</li>
+<li>Extended loading timeout (large mods)</li>
+<li>Zero spectator delay, full visibility</li>
+<li>Generous AI budget</li>
+<li>Large telemetry database, no auto-pruning</li>
+</ul>
+<pre><code class="language-bash">./relay-server --config profiles/training.yaml
+</code></pre>
+<hr>
+<h2 id="docker--container-deployment"><a class="header" href="#docker--container-deployment">Docker &amp; Container Deployment</a></h2>
+<h3 id="docker-compose"><a class="header" href="#docker-compose">Docker Compose</a></h3>
+<p>Environment variables are the primary way to override configuration in containerized deployments:</p>
+<pre><code class="language-yaml"># docker-compose.yaml
+version: "3.8"
+services:
+  relay:
+    image: ghcr.io/iron-curtain/relay-server:latest
+    ports:
+      - "7000:7000/udp"
+      - "7001:7001/tcp"
+    volumes:
+      - ./server_config.yaml:/etc/ic/server_config.yaml:ro
+      - relay-data:/var/lib/ic
+    environment:
+      IC_RELAY_MAX_CONNECTIONS: "2000"
+      IC_RELAY_MAX_GAMES: "200"
+      IC_TELEMETRY_OTEL_EXPORT: "true"
+      IC_TELEMETRY_OTEL_ENDPOINT: "http://otel-collector:4317"
+    command: ["--config", "/etc/ic/server_config.yaml"]
+
+  otel-collector:
+    image: otel/opentelemetry-collector:latest
+    ports:
+      - "4317:4317"
+    volumes:
+      - ./otel-config.yaml:/etc/otel/config.yaml:ro
+
+volumes:
+  relay-data:
+</code></pre>
+<h3 id="docker-compose--tournament-override"><a class="header" href="#docker-compose--tournament-override">Docker Compose — Tournament Override</a></h3>
+<p>Layer a tournament-specific compose file over the base:</p>
+<pre><code class="language-yaml"># docker-compose.tournament.yaml
+# Usage: docker compose -f docker-compose.yaml -f docker-compose.tournament.yaml up
+services:
+  relay:
+    environment:
+      IC_MATCH_PAUSE_MAX_PER_PLAYER: "5"
+      IC_MATCH_PAUSE_MAX_DURATION_SECS: "300"
+      IC_SPECTATOR_DELAY_TICKS: "0"
+      IC_SPECTATOR_MAX_PER_MATCH: "200"
+      IC_SPECTATOR_FULL_VISIBILITY: "true"
+      IC_VOTE_SURRENDER_ENABLED: "false"
+      IC_VOTE_REMAKE_ENABLED: "false"
+      IC_RELAY_MAX_GAMES: "20"
+      IC_RELAY_MAX_CONNECTIONS_PER_IP: "10"
+</code></pre>
+<h3 id="kubernetes--helm"><a class="header" href="#kubernetes--helm">Kubernetes / Helm</a></h3>
+<p>For Kubernetes deployments, mount <code>server_config.yaml</code> as a ConfigMap and use environment variables for per-pod overrides:</p>
+<pre><code class="language-yaml"># configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ic-relay-config
+data:
+  server_config.yaml: |
+    relay:
+      max_connections: 5000
+      max_games: 1000
+    telemetry:
+      otel_export: true
+      otel_endpoint: "http://otel-collector.monitoring:4317"
+</code></pre>
+<pre><code class="language-yaml"># deployment.yaml (abbreviated)
+spec:
+  containers:
+    - name: relay
+      image: ghcr.io/iron-curtain/relay-server:latest
+      args: ["--config", "/etc/ic/server_config.yaml"]
+      volumeMounts:
+        - name: config
+          mountPath: /etc/ic
+      env:
+        - name: IC_RELAY_MAX_CONNECTIONS
+          value: "5000"
+  volumes:
+    - name: config
+      configMap:
+        name: ic-relay-config
+</code></pre>
+<hr>
+<h2 id="tournament-operations"><a class="header" href="#tournament-operations">Tournament Operations</a></h2>
+<h3 id="pre-tournament-checklist"><a class="header" href="#pre-tournament-checklist">Pre-Tournament Checklist</a></h3>
+<ol>
+<li>
+<p><strong>Validate your config:</strong></p>
+<pre><code class="language-bash">ic server validate-config tournament-config.yaml
+</code></pre>
+</li>
+<li>
+<p><strong>Test spectator feed:</strong> Connect as a spectator and verify delay, visibility, and observer count before the event.</p>
+</li>
+<li>
+<p><strong>Dry-run a match:</strong> Run a test game with tournament settings. Verify pause limits, vote restrictions, and penalty behavior.</p>
+</li>
+<li>
+<p><strong>Confirm anti-cheat sensitivity:</strong> For important matches, lower <code>anticheat.ranked_upset_threshold</code> to catch all notable upsets.</p>
+</li>
+<li>
+<p><strong>Set appropriate <code>max_games</code>:</strong> Match your bracket size — no need to allow 100 games for a 16-player bracket.</p>
+</li>
+<li>
+<p><strong>Prepare observer/caster slots:</strong> Ensure <code>spectator.max_per_match</code> is high enough. For broadcast events, set <code>spectator.full_visibility: true</code>.</p>
+</li>
+</ol>
+<h3 id="during-the-tournament"><a class="header" href="#during-the-tournament">During the Tournament</a></h3>
+<ul>
+<li>
+<p><strong>Emergency pause:</strong> If a player has technical issues mid-game, use admin commands to extend pause duration:</p>
+<pre><code>/set match.pause.max_duration_secs 600
+</code></pre>
+<p>This takes effect for the current match (hot-reloadable).</p>
+</li>
+<li>
+<p><strong>Adjusting between rounds:</strong> Hot-reload configuration between matches using <code>/reload_config</code> or <code>SIGHUP</code>.</p>
+</li>
+<li>
+<p><strong>Match disputes:</strong> With <code>vote.surrender.enabled: false</code>, the admin must manually handle forfeits via admin commands.</p>
+</li>
+</ul>
+<h3 id="post-tournament"><a class="header" href="#post-tournament">Post-Tournament</a></h3>
+<ul>
+<li>
+<p><strong>Export telemetry:</strong> All match data is in the local <code>telemetry.db</code>. Export it for post-event analysis:</p>
+<pre><code class="language-bash">ic analytics export --since "2026-03-01" --output tournament-results.json
+</code></pre>
+</li>
+<li>
+<p><strong>Replay signing:</strong> Replays recorded during the tournament are signed with the relay’s Ed25519 key, providing tamper-evident records for dispute resolution.</p>
+</li>
+</ul>
+<hr>
+<h2 id="security-hardening"><a class="header" href="#security-hardening">Security Hardening</a></h2>
+<h3 id="configuration-file-protection"><a class="header" href="#configuration-file-protection">Configuration File Protection</a></h3>
+<pre><code class="language-bash"># Restrict access to the config file
+chmod 600 server_config.yaml
+chown icrelay:icrelay server_config.yaml
+</code></pre>
+<p>The config file may contain OTEL endpoints or other infrastructure details. Treat it as sensitive.</p>
+<h3 id="connection-limits"><a class="header" href="#connection-limits">Connection Limits</a></h3>
+<p>For public-facing servers, the defaults provide reasonable protection:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Threat</th><th>Mitigation Parameters</th></tr>
+</thead>
+<tbody>
+<tr><td>Connection flooding</td><td><code>relay.connect_rate_per_sec: 10</code>, <code>relay.idle_timeout_unauth_secs: 60</code></td></tr>
+<tr><td>IP abuse</td><td><code>relay.max_connections_per_ip: 5</code></td></tr>
+<tr><td>Protocol abuse</td><td><code>protocol.max_orders_per_tick: 256</code>, all <code>protocol.*</code> limits</td></tr>
+<tr><td>Chat spam</td><td><code>chat.rate_limit_messages: 5</code>, <code>chat.rate_limit_window_secs: 3</code></td></tr>
+<tr><td>VoIP abuse</td><td><code>protocol.max_voice_packets_per_sec: 50</code></td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>For high-risk environments</strong> (public server, competitive stakes):</p>
+<ul>
+<li>Lower <code>relay.connect_rate_per_sec</code> to 5</li>
+<li>Lower <code>relay.idle_timeout_unauth_secs</code> to 15</li>
+<li>Lower <code>relay.max_connections_per_ip</code> to 3</li>
+</ul>
+<h3 id="protocol-limit-warnings"><a class="header" href="#protocol-limit-warnings">Protocol Limit Warnings</a></h3>
+<blockquote>
+<p>Raising <code>protocol.max_orders_per_tick</code> or <code>protocol.max_order_size</code> above defaults weakens anti-cheat protection. The order validation system (D012) depends on these limits to reject order-flooding attacks. Increase them only with a specific, documented reason.</p>
+</blockquote>
+<h3 id="rating-isolation"><a class="header" href="#rating-isolation">Rating Isolation</a></h3>
+<p>Community servers with custom <code>rank.*</code> parameters produce community-scoped SCRs (Signed Cryptographic Records, D052). A community that sets <code>rank.default_rating: 9999</code> cannot inflate their players’ ratings on other communities — SCRs carry the originating community ID and are evaluated in context.</p>
+<hr>
+<h2 id="capacity-planning"><a class="header" href="#capacity-planning">Capacity Planning</a></h2>
+<h3 id="hardware-sizing"><a class="header" href="#hardware-sizing">Hardware Sizing</a></h3>
+<p>The relay server’s resource usage scales primarily with concurrent games and players:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Load</th><th>CPU</th><th>RAM</th><th>Bandwidth</th><th>Notes</th></tr>
+</thead>
+<tbody>
+<tr><td>10 games, 40 players</td><td>1 core</td><td>256 MB</td><td>~5 Mbps</td><td>Community server</td></tr>
+<tr><td>50 games, 200 players</td><td>2 cores</td><td>512 MB</td><td>~25 Mbps</td><td>Medium community</td></tr>
+<tr><td>200 games, 800 players</td><td>4 cores</td><td>2 GB</td><td>~100 Mbps</td><td>Large community</td></tr>
+<tr><td>1000 games, 4000 players</td><td>8+ cores</td><td>8 GB</td><td>~500 Mbps</td><td>Major service</td></tr>
+</tbody>
+</table>
+</div>
+<p>These are estimates based on design targets. Actual usage will depend on game complexity, AI load, spectator count, and VoIP usage. Profile your deployment.</p>
+<h3 id="monitoring-key-metrics"><a class="header" href="#monitoring-key-metrics">Monitoring Key Metrics</a></h3>
+<p>When OTEL export is enabled, monitor these metrics:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Metric</th><th>Healthy Range</th><th>Action If Exceeded</th></tr>
+</thead>
+<tbody>
+<tr><td>Relay tick processing time</td><td>&lt; 33ms (at 30 tps)</td><td>Reduce <code>max_games</code> or add hardware</td></tr>
+<tr><td>Connection count</td><td>&lt; 80% of <code>max_connections</code></td><td>Raise limit or add relay instances</td></tr>
+<tr><td>Order rate per player</td><td>&lt; <code>order_hard_ceiling</code></td><td>Check for bot/macro abuse</td></tr>
+<tr><td>Desync rate</td><td>0 per 10,000 ticks</td><td>Investigate mod compatibility</td></tr>
+<tr><td>Anti-cheat queue depth</td><td>&lt; <code>degrade_at_depth</code></td><td>Raise <code>queue_depth</code> or add review capacity</td></tr>
+<tr><td>telemetry.db size</td><td>&lt; <code>max_db_size_mb</code></td><td>Lower <code>retention_days</code> or raise <code>max_db_size_mb</code></td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="troubleshooting"><a class="header" href="#troubleshooting">Troubleshooting</a></h2>
+<h3 id="common-issues"><a class="header" href="#common-issues">Common Issues</a></h3>
+<h4 id="server-wont-start--yaml-parse-error"><a class="header" href="#server-wont-start--yaml-parse-error">“Server won’t start — YAML parse error”</a></h4>
+<p>A syntax error in <code>server_config.yaml</code>. Run validation first:</p>
+<pre><code class="language-bash">ic server validate-config server_config.yaml
+</code></pre>
+<p>Common causes:</p>
+<ul>
+<li>Tabs instead of spaces (YAML requires spaces)</li>
+<li>Missing colon after a key</li>
+<li>Incorrect nesting / indentation</li>
+</ul>
+<h4 id="unknown-key-warning-at-startup"><a class="header" href="#unknown-key-warning-at-startup">“Unknown key warning at startup”</a></h4>
+<pre><code>WARN: unknown key 'rleay.max_games', did you mean 'relay.max_games'?
+</code></pre>
+<p>A typo in a cvar name. The server starts anyway (unknown keys don’t prevent startup), but the misspelled parameter uses its default value. Fix the spelling.</p>
+<h4 id="value-clamped-warnings"><a class="header" href="#value-clamped-warnings">“Value clamped” warnings</a></h4>
+<pre><code>WARN: relay.tick_deadline_ms=10 clamped to minimum 50
+</code></pre>
+<p>A parameter is outside its valid range. The server starts with the clamped value. Check D064’s parameter registry for the valid range and adjust your config.</p>
+<h4 id="players-experiencing-lag-with-default-settings"><a class="header" href="#players-experiencing-lag-with-default-settings">“Players experiencing lag with default settings”</a></h4>
+<p>Check your player base’s typical latency. If most players have &gt; 80ms ping:</p>
+<pre><code class="language-yaml">relay:
+  tick_deadline_ms: 150    # or even 200 for high-latency regions
+</code></pre>
+<p>The adaptive run-ahead system handles most latency, but a tight tick deadline can cause unnecessary order drops for high-ping players.</p>
+<h4 id="matchmaking-queues-are-too-long"><a class="header" href="#matchmaking-queues-are-too-long">“Matchmaking queues are too long”</a></h4>
+<p>Small population problem. Widen the search parameters:</p>
+<pre><code class="language-yaml">matchmaking:
+  initial_range: 200
+  widen_step: 100
+  max_range: 1000
+  desperation_timeout_secs: 120
+  min_match_quality: 0.1
+</code></pre>
+<h4 id="anti-cheat-flagging-too-many-legitimate-players"><a class="header" href="#anti-cheat-flagging-too-many-legitimate-players">“Anti-cheat flagging too many legitimate players”</a></h4>
+<p>Raise thresholds:</p>
+<pre><code class="language-yaml">anticheat:
+  ranked_upset_threshold: 400
+  behavioral_flag_score: 0.6
+  new_player_win_chance: 0.85
+</code></pre>
+<h4 id="telemetrydb-growing-too-large"><a class="header" href="#telemetrydb-growing-too-large">“telemetry.db growing too large”</a></h4>
+<pre><code class="language-yaml">telemetry:
+  max_db_size_mb: 200       # Lower the cap
+  retention_days: 14         # Prune older data
+  sampling_rate: 0.5         # Sample only 50% of events
+</code></pre>
+<h4 id="reconnecting-players-take-too-long-to-catch-up"><a class="header" href="#reconnecting-players-take-too-long-to-catch-up">“Reconnecting players take too long to catch up”</a></h4>
+<p>Increase catchup aggressiveness (at the cost of more stutter during reconnection):</p>
+<pre><code class="language-yaml">relay:
+  catchup:
+    max_ticks_per_frame: 60   # Double default
+    sim_budget_pct: 90
+    render_budget_pct: 10
+</code></pre>
+<hr>
+<h2 id="cli-reference"><a class="header" href="#cli-reference">CLI Reference</a></h2>
+<h3 id="server-commands"><a class="header" href="#server-commands">Server Commands</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Command</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>./relay-server</code></td><td>Start with defaults</td></tr>
+<tr><td><code>./relay-server --config &lt;path&gt;</code></td><td>Start with a specific config file</td></tr>
+<tr><td><code>ic server validate-config &lt;path&gt;</code></td><td>Validate a config file without starting</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="runtime-console-commands-admin"><a class="header" href="#runtime-console-commands-admin">Runtime Console Commands (Admin)</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Command</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>/set &lt;cvar&gt; &lt;value&gt;</code></td><td>Set a cvar value at runtime</td></tr>
+<tr><td><code>/get &lt;cvar&gt;</code></td><td>Get current cvar value</td></tr>
+<tr><td><code>/list &lt;pattern&gt;</code></td><td>List cvars matching a glob pattern</td></tr>
+<tr><td><code>/reload_config</code></td><td>Hot-reload <code>server_config.yaml</code></td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="analytics--telemetry"><a class="header" href="#analytics--telemetry">Analytics / Telemetry</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Command</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>ic analytics export</code></td><td>Export telemetry data to JSON</td></tr>
+<tr><td><code>ic analytics export --since &lt;date&gt;</code></td><td>Export data since a specific date</td></tr>
+<tr><td><code>ic backup create</code></td><td>Create a full server backup (SQLite + config)</td></tr>
+<tr><td><code>ic backup restore &lt;archive&gt;</code></td><td>Restore from backup</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="engine-constants-not-configurable"><a class="header" href="#engine-constants-not-configurable">Engine Constants (Not Configurable)</a></h2>
+<p>These values are always-on, universally correct, and not exposed as configuration parameters. They exist here so operators understand what is NOT tunable and why.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Constant</th><th>Value</th><th>Why It’s Not Configurable</th></tr>
+</thead>
+<tbody>
+<tr><td>Sim tick rate</td><td>30 tps</td><td>Affects CPU cost, bandwidth, and sync timing. Game speed adjusts perceived speed.</td></tr>
+<tr><td>Sub-tick ordering</td><td>Always on</td><td>Zero-cost fairness improvement (D008). No legitimate reason to disable.</td></tr>
+<tr><td>Adaptive run-ahead</td><td>Always on</td><td>Proven over 20+ years (Generals). Automatically adapts to latency.</td></tr>
+<tr><td>Anti-lag-switch</td><td>Always on</td><td>Non-negotiable for competitive integrity.</td></tr>
+<tr><td>Deterministic simulation</td><td>Always</td><td>Breaking determinism breaks replays, spectating, and multiplayer sync.</td></tr>
+<tr><td>Fixed-point math</td><td>Always</td><td>Floats in sim = cross-platform desync.</td></tr>
+<tr><td>Order validation in sim</td><td>Always</td><td>Validation IS anti-cheat (D012). Disabling it enables cheating.</td></tr>
+<tr><td>SQLite synchronous mode</td><td>Per D034</td><td>FULL for credentials, NORMAL for telemetry. Data integrity over performance.</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="reference"><a class="header" href="#reference">Reference</a></h2>
+<h3 id="related-design-documents"><a class="header" href="#related-design-documents">Related Design Documents</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Topic</th><th>Document</th></tr>
+</thead>
+<tbody>
+<tr><td>Full parameter registry with types, ranges, defaults</td><td>D064 in <code>09-DECISIONS.md</code></td></tr>
+<tr><td>Console / cvar system design</td><td>D058 in <code>09-DECISIONS.md</code></td></tr>
+<tr><td>Relay server architecture</td><td>D007 in <code>09-DECISIONS.md</code> and <code>03-NETCODE.md</code></td></tr>
+<tr><td>Netcode parameter philosophy (why most things are not player-configurable)</td><td>D060 in <code>09-DECISIONS.md</code></td></tr>
+<tr><td>Compression tuning</td><td>D063 in <code>09-DECISIONS.md</code></td></tr>
+<tr><td>Ranked matchmaking &amp; Glicko-2</td><td>D055 in <code>09-DECISIONS.md</code></td></tr>
+<tr><td>Community server architecture &amp; SCRs</td><td>D052 in <code>09-DECISIONS.md</code></td></tr>
+<tr><td>Telemetry &amp; observability</td><td>D031 in <code>09-DECISIONS.md</code></td></tr>
+<tr><td>AI behavior presets</td><td>D043 in <code>09-DECISIONS.md</code></td></tr>
+<tr><td>SQLite per-database PRAGMA configuration</td><td>D034 in <code>09-DECISIONS.md</code></td></tr>
+<tr><td>Workshop &amp; P2P distribution</td><td>D049 in <code>09-DECISIONS.md</code></td></tr>
+<tr><td>Security &amp; threat model</td><td><code>06-SECURITY.md</code></td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="complete-parameter-audit"><a class="header" href="#complete-parameter-audit">Complete Parameter Audit</a></h3>
+<p>The <code>PARAMETER-AUDIT.md</code> file at the repository root catalogs every numeric constant, threshold, and tunable parameter across all design documents (~530+ parameters across 21 categories). It serves as an exhaustive cross-reference between the designed values and their sources.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="14-METHODOLOGY.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="14-METHODOLOGY.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr-ef4e11c1.min.js"></script>
+        <script src="mark-09e88c2c.min.js"></script>
+        <script src="searcher-c2a407aa.js"></script>
+
+        <script src="clipboard-1626706a.min.js"></script>
+        <script src="highlight-abc7f01d.js"></script>
+        <script src="book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

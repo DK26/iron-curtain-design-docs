@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-72fd73e9.js";
+            window.path_to_searchindex_js = "searchindex-ac1e5ebd.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-1d51ffef.js"></script>
+        <script src="toc-9e438da8.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -2521,6 +2521,12 @@ ic replay verify [file]    # verify relay signature chain + integrity (see 06-SE
 </li>
 <li>
 <p><strong>Continuous flow:</strong> Briefing → mission → debrief → next mission. No exit to menu between levels unless the player explicitly quits.</p>
+</li>
+<li>
+<p><strong>Campaign mission transitions:</strong> When the sim ends and the next mission’s assets need to load, the player never sees a blank screen or a generic loading bar. The transition sequence is: sim ends → debrief intermission displays (already loaded, zero wait) → background asset loading begins for the next mission → briefing intermission displays (runs concurrently with loading) → when loading completes and the player clicks “Begin Mission,” gameplay starts instantly. If the player clicks before loading finishes, a non-intrusive progress indicator appears at the bottom of the briefing screen (“Preparing battlefield… 87%”) — the briefing remains interactive, the player can re-read text or review the roster while waiting. For missions with cinematic intros (Video Playback module), the video plays while assets load in the background — by the time the cutscene ends, the mission is ready. This means campaign transitions feel like <em>narrative beats</em>, not technical interruptions. The only time a traditional loading screen appears is on first mission launch (cold start) or when asset size vastly exceeds available memory — and even then, the loading screen is themed to the campaign (campaign-defined background image, faction logo, loading tip text from <code>loading_tips.yaml</code>).</p>
+</li>
+<li>
+<p><strong>Credits sequence:</strong> The final campaign node can chain to a Credits intermission (see D038 § Intermission Screens). A credits sequence is defined per campaign — the RA1 game module ships with credits matching the original game’s style (scrolling text over a background, Hell March playing). Modders define their own credits via the Credits intermission template or a <code>credits.yaml</code> file. Credits are skippable (press Escape or click) but play by default — respecting the work of everyone who contributed to the campaign.</p>
 </li>
 <li>
 <p><strong>Narrative identity (Principle #20).</strong> Briefings, debriefs, character dialogue, and mission framing follow the C&amp;C narrative pillars: earnest commitment to the world, larger-than-life characters, quotable lines, and escalating stakes. Even procedurally generated campaigns (D016) are governed by the “C&amp;C Classic” narrative DNA rules. See <a href="13-PHILOSOPHY.html">13-PHILOSOPHY.md</a> § Principle 20 and D016 § “C&amp;C Classic — Narrative DNA.”</p>
@@ -6028,11 +6034,12 @@ nodes:
 <tr><td><strong>Dialogue</strong></td><td>Portrait + branching text choices (see Dialogue Editor below)</td><td>Story-driven campaigns, RPG conversations</td></tr>
 <tr><td><strong>World Map</strong></td><td>Map with mission locations — player chooses next mission from available nodes. In World Domination campaigns (D016), shows faction territories, frontlines, and the LLM-generated briefing for the next mission</td><td>Non-linear campaigns, World Domination</td></tr>
 <tr><td><strong>Debrief + Stats</strong></td><td>Mission results, casualties, performance grade, story flag changes</td><td>Post-mission feedback</td></tr>
+<tr><td><strong>Credits</strong></td><td>Auto-scrolling text with section headers, role/name columns, optional background video/image and music track. Supports contributor photos, logo display, and “special thanks” sections. Speed and style (classic scroll / paginated / cinematic) configurable per-campaign.</td><td>Campaign completion, mod credits, jam credits</td></tr>
 <tr><td><strong>Custom</strong></td><td>Empty canvas — arrange any combination of panels via the layout editor</td><td>Total creative freedom</td></tr>
 </tbody>
 </table>
 </div>
-<p>Intermissions are defined per campaign node (between “finish Mission 2” and “start Mission 3”). They can chain: debrief → roster management → briefing → begin mission.</p>
+<p>Intermissions are defined per campaign node (between “finish Mission 2” and “start Mission 3”). They can chain: debrief → roster management → briefing → begin mission. A typical campaign ending chains: final debrief → credits → return to campaign select (or main menu).</p>
 <p><strong>Intermission panels (building blocks):</strong></p>
 <ul>
 <li><strong>Text panel</strong> — rich text with variable substitution (<code>"Commander, we lost {Var.get('casualties')} soldiers."</code>).</li>
@@ -6042,6 +6049,7 @@ nodes:
 <li><strong>Choice panel</strong> — buttons that set story flags or campaign variables. “Execute the prisoner? [Yes] [No]” → sets <code>prisoner_executed</code> flag.</li>
 <li><strong>Map panel</strong> — shows campaign geography. Highlights available next missions if using mission pools. In World Domination mode, renders the world map with faction-colored regions, animated frontlines, and narrative briefing panel. The LLM presents the next mission through the briefing; the player sees their territory and the story context, not a strategy game menu.</li>
 <li><strong>Stats panel</strong> — mission performance: time, casualties, objectives completed, units destroyed.</li>
+<li><strong>Credits panel</strong> — auto-scrolling rich text optimized for credits display. Supports section headers (“Cast,” “Design,” “Special Thanks”), two-column role/name layout, contributor portraits, logo images, and configurable scroll speed. The text source can be inline, loaded from a <code>credits.yaml</code> file (for reuse across campaigns), or generated dynamically via Lua. Scroll style options: <code>classic</code> (continuous upward scroll, Star Wars / RA1 style), <code>paginated</code> (fade between pages), <code>cinematic</code> (camera-tracked text over background video). Music reference plays for the duration. The panel emits a <code>credits_finished</code> event when scrolling completes — chain to a Choice panel (“Play Again?” / “Return to Menu”) or auto-advance.</li>
 <li><strong>Custom Lua panel</strong> — advanced panel that runs arbitrary Lua to generate content dynamically.</li>
 </ul>
 <p>These panels compose freely. A “Base Screen” template is just a preset arrangement: roster panel on the left, inventory panel center, stats panel right, briefing text bottom. The Custom template starts empty and lets the designer arrange any combination.</p>
