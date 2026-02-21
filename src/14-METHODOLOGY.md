@@ -4,7 +4,7 @@
 
 ## Purpose of This Chapter
 
-The other design docs say **what** we're building ([01-VISION](01-VISION.md), [02-ARCHITECTURE](02-ARCHITECTURE.md)), **why** decisions were made ([09-DECISIONS](09-DECISIONS.md), [13-PHILOSOPHY](13-PHILOSOPHY.md)), and **when** things ship ([08-ROADMAP](08-ROADMAP.md)). This chapter says **how we get there** — the methodology that turns 13 design documents into a working engine.
+The other design docs say **what** we're building ([01-VISION](01-VISION.md), [02-ARCHITECTURE](02-ARCHITECTURE.md)), **why** decisions were made ([09-DECISIONS](09-DECISIONS.md) and its sub-documents, [13-PHILOSOPHY](13-PHILOSOPHY.md)), and **when** things ship ([08-ROADMAP](08-ROADMAP.md)). This chapter says **how we get there** — the methodology that turns 13 design documents into a working engine.
 
 **When to read this chapter:**
 - You're starting work on a new phase and need to know the process
@@ -72,7 +72,7 @@ Development follows eight stages. They're roughly sequential, but later stages f
 **Process:**
 - Study the original EA source code, OpenRA architecture, and other RTS engines (see `AGENTS.md` § "Reference Material")
 - Identify community pain points from OpenRA's issue tracker, Reddit, Discord, modder feedback (see [01-VISION](01-VISION.md) § "Community Pain Points")
-- For every significant design question, explore alternatives, pick one, document the rationale in [09-DECISIONS](09-DECISIONS.md)
+- For every significant design question, explore alternatives, pick one, document the rationale in the appropriate [decisions sub-document](09-DECISIONS.md)
 - Capture lessons from the original C&C creators and other game development veterans (see [13-PHILOSOPHY](13-PHILOSOPHY.md) and `research/westwood-ea-development-philosophy.md`)
 - Research is concurrent with other work in later stages — new questions arise during implementation
 - Research is a **continuous discipline**, not a phase that ends. Every new prior art study can challenge assumptions, confirm patterns, or reveal gaps. The project's commit history shows active research throughout pre-development — not tapering early but intensifying as design maturity makes it easier to ask precise questions.
@@ -81,7 +81,7 @@ Development follows eight stages. They're roughly sequential, but later stages f
 
 **Exit criteria:**
 - Every major subsystem has a design doc section with component definitions, Rust struct signatures, and YAML examples
-- Every significant alternative has been considered and the choice is documented in [09-DECISIONS](09-DECISIONS.md)
+- Every significant alternative has been considered and the choice is documented in the appropriate [decisions sub-document](09-DECISIONS.md)
 - The gap analysis against OpenRA ([11-OPENRA-FEATURES](11-OPENRA-FEATURES.md)) covers all ~700 traits with IC equivalents or explicit "not planned" decisions
 - Community context is documented: who we're building for, what they actually want, what makes them switch (see [01-VISION](01-VISION.md) § "What Makes People Actually Switch")
 
@@ -95,7 +95,7 @@ Development follows eight stages. They're roughly sequential, but later stages f
 
 **Process:**
 - Define crate boundaries with precision: which crate owns which types, which crate never imports from which other crate (see [02-ARCHITECTURE](02-ARCHITECTURE.md) § crate structure)
-- Map every trait interface: `NetworkModel`, `Pathfinder`, `SpatialIndex`, `FogProvider`, `DamageResolver`, `AiStrategy`, `OrderValidator`, `RankingProvider`, `Renderable`, `InputSource`, `OrderCodec`, `GameModule`, etc. (see D041 in [09-DECISIONS](09-DECISIONS.md))
+- Map every trait interface: `NetworkModel`, `Pathfinder`, `SpatialIndex`, `FogProvider`, `DamageResolver`, `AiStrategy`, `OrderValidator`, `RankingProvider`, `Renderable`, `InputSource`, `OrderCodec`, `GameModule`, etc. (see D041 in [decisions/09d-gameplay.md](decisions/09d-gameplay.md))
 - Define the simulation system pipeline — fixed order, documented dependencies between systems (see [02-ARCHITECTURE](02-ARCHITECTURE.md) § "System Pipeline")
 - Map data flow: `PlayerOrder` → `ic-protocol` → `NetworkModel` → `TickOrders` → `Simulation::apply_tick()` → state hash → snapshot
 - Identify every point where a game module plugs in (see D018 `GameModule` trait)
@@ -253,14 +253,14 @@ The context-bounded discipline applies equally to design work — not just code.
 
 **Example decomposition for a research integration task:**
 
-| #   | Work Unit                                      | Scope                 | Context Needed                                 | Depends On |
-| --- | ---------------------------------------------- | --------------------- | ---------------------------------------------- | ---------- |
-| 1   | Research Stratagus/Stargus engine architecture | `research/`           | GitHub repos, AGENTS.md § Reference Material   | —          |
-| 2   | Create research document with findings         | `research/`           | Notes from #1                                  | #1         |
-| 3   | Extract lessons applicable to IC AI system     | `src/09-DECISIONS.md` | Research doc from #2, D043 section             | #2         |
-| 4   | Update modding docs with Lua AI primitives     | `src/04-MODDING.md`   | Research doc from #2, existing Lua API section | #2         |
-| 5   | Update security docs with Lua stdlib policy    | `src/06-SECURITY.md`  | Research doc from #2, existing sandbox section | #2         |
-| 6   | Update AGENTS.md reference material            | `AGENTS.md`           | Research doc from #2                           | #2         |
+| #   | Work Unit                                      | Scope                       | Context Needed                                 | Depends On |
+| --- | ---------------------------------------------- | --------------------------- | ---------------------------------------------- | ---------- |
+| 1   | Research Stratagus/Stargus engine architecture | `research/`                 | GitHub repos, AGENTS.md § Reference Material   | —          |
+| 2   | Create research document with findings         | `research/`                 | Notes from #1                                  | #1         |
+| 3   | Extract lessons applicable to IC AI system     | `decisions/09d-gameplay.md` | Research doc from #2, D043 section             | #2         |
+| 4   | Update modding docs with Lua AI primitives     | `src/04-MODDING.md`         | Research doc from #2, existing Lua API section | #2         |
+| 5   | Update security docs with Lua stdlib policy    | `src/06-SECURITY.md`        | Research doc from #2, existing sandbox section | #2         |
+| 6   | Update AGENTS.md reference material            | `AGENTS.md`                 | Research doc from #2                           | #2         |
 
 Work units 3–6 are independent of each other (can proceed in parallel) but all depend on #2. This is the same dependency logic as code work units — applied to documentation.
 
@@ -387,9 +387,9 @@ The full agent rules live in `AGENTS.md` § "Working With This Codebase." This s
 
 1. **When implementation contradicts the design, investigate.** Sometimes the implementation is wrong (bug). Sometimes the design is wrong (bad assumption). Sometimes both need adjustment. Don't reflexively change either one — understand *why* they disagree first.
 
-2. **Update the design doc in the same pass as the code change.** If you change how the damage pipeline works, update [02-ARCHITECTURE](02-ARCHITECTURE.md) § damage pipeline, [09-DECISIONS](09-DECISIONS.md) § D028, and `AGENTS.md`. Don't leave stale documentation for the next person to discover.
+2. **Update the design doc in the same pass as the code change.** If you change how the damage pipeline works, update [02-ARCHITECTURE](02-ARCHITECTURE.md) § damage pipeline, [decisions/09c-modding.md](decisions/09c-modding.md) § D028, and `AGENTS.md`. Don't leave stale documentation for the next person to discover.
 
-3. **Log design changes in `09-DECISIONS.md`.** If a decision changes, don't silently edit it. Add a note: "Revised from X to Y because implementation revealed Z." The decision log is a history, not just a current snapshot.
+3. **Log design changes in the decisions sub-documents.** If a decision changes, don't silently edit it — find the decision in the appropriate sub-file via [09-DECISIONS.md](09-DECISIONS.md) and add a note: "Revised from X to Y because implementation revealed Z." The decision log is a history, not just a current snapshot.
 
 4. **Community feedback triggers design review.** If the community consistently reports that a design choice doesn't work in practice, that's data. Evaluate it against the philosophy principles, and if the design is wrong, update it. See [13-PHILOSOPHY](13-PHILOSOPHY.md) principle #2: "Fun beats documentation — if it's in the doc but plays poorly, cut it."
 
@@ -448,7 +448,7 @@ The eight stages above describe the macro structure — the project-level phases
 └──────────┬──────────────┘  "This adds a new precedent for stdlib policy."
            ▼                 "This reveals a gap we haven't addressed."
 ┌─────────────────────────┐
-│ 5. Propagate across     │  Update AGENTS.md, 09-DECISIONS.md, architecture,
+│ 5. Propagate across     │  Update AGENTS.md, decisions/*, architecture,
 │    design docs          │  roadmap, modding, security — every affected doc.
 └──────────┬──────────────┘  Use cross-cutting propagation discipline (Stage 5).
            ▼

@@ -54,7 +54,7 @@ Decode OpenRA `.orarep` and Remastered Collection replay files via `ra-formats` 
 
 This is also the foundation for **automated behavioral regression testing** — running foreign replay corpora headlessly through IC's sim to catch gross behavioral bugs (units walking through walls, harvesters ignoring ore). Not bit-identical verification, but "does this look roughly right?" sanity checks.
 
-Full architecture: see `09-DECISIONS.md` § D056.
+Full architecture: see `decisions/09f-tools.md` § D056.
 
 ### Level 2: Casual Cross-Play with Periodic Resync (Future)
 

@@ -41,7 +41,7 @@ New Workshop content should use **Bevy-native modern formats** by default. C&C l
 
 **Why modern formats:** (1) Bevy loads them natively — zero custom code, full hot-reload and async loading. (2) Security — OGG/PNG parsers are fuzz-tested and browser-audited; our custom .aud/.shp parsers are not. (3) Multi-game — non-C&C game modules (D039) won't use .shp or .aud. (4) Tooling — every editor exports PNG/OGG/WAV/WebM; nobody's toolchain outputs .aud. (5) WASM — modern formats work in browser builds out of the box.
 
-The Asset Studio (D040) converts in both directions. See `09-DECISIONS.md` § D049 for full rationale, storage comparisons, and distribution strategy.
+The Asset Studio (D040) converts in both directions. See `decisions/09e-community.md` § D049 for full rationale, storage comparisons, and distribution strategy.
 
 ### ra-formats Crate Goals
 
@@ -917,7 +917,7 @@ pub struct SaveHeader {
 }
 ```
 
-> **Compression (D063):** The `compression_algorithm` byte identifies which decompressor to use for the payload. Version 1 files use `0x01` (LZ4). The `version` field controls the serialization format (bincode vs. postcard) independently — see `09-DECISIONS.md` § D054 for codec dispatch and § D063 for algorithm dispatch. Compression level (fastest/balanced/compact) is configurable via `settings.toml` `compression.save_level` and affects encoding speed/ratio but not the format.
+> **Compression (D063):** The `compression_algorithm` byte identifies which decompressor to use for the payload. Version 1 files use `0x01` (LZ4). The `version` field controls the serialization format (bincode vs. postcard) independently — see `decisions/09d-gameplay.md` § D054 for codec dispatch and § D063 for algorithm dispatch. Compression level (fastest/balanced/compact) is configurable via `settings.toml` `compression.save_level` and affects encoding speed/ratio but not the format.
 
 > **Security (V42):** Shared `.icsave` files are an attack surface. Enforce: max decompressed size 64 MB, JSON metadata cap 1 MB, schema validation of deserialized `SimSnapshot` (entity count, position bounds, valid components). Save directory sandboxed via `strict-path` `PathBoundary`. See `06-SECURITY.md` § Vulnerability 42.
 
@@ -953,7 +953,7 @@ Human-readable metadata for the save browser UI. Stored as JSON (not the binary 
 
 ### Payload
 
-The payload is a `SimSnapshot` serialized via `serde` (bincode format for compactness) and compressed with LZ4 (fast decompression, good ratio for game state data). LZ4 was chosen over LZO (used by original RA) for its better Rust ecosystem support (`lz4_flex` crate) and superior decompression speed. The save file header's `version` field selects the serialization codec — version 1 uses bincode, future version 2 uses postcard. The `compression_algorithm` byte selects the decompressor independently (D063). Compression level is configurable via `settings.toml` (`compression.save_level`: fastest/balanced/compact). See `09-DECISIONS.md` § D054 for the serialization version-to-codec dispatch and § D063 for the compression strategy.
+The payload is a `SimSnapshot` serialized via `serde` (bincode format for compactness) and compressed with LZ4 (fast decompression, good ratio for game state data). LZ4 was chosen over LZO (used by original RA) for its better Rust ecosystem support (`lz4_flex` crate) and superior decompression speed. The save file header's `version` field selects the serialization codec — version 1 uses bincode, future version 2 uses postcard. The `compression_algorithm` byte selects the decompressor independently (D063). Compression level is configurable via `settings.toml` (`compression.save_level`: fastest/balanced/compact). See `decisions/09d-gameplay.md` § D054 for the serialization version-to-codec dispatch and § D063 for the compression strategy.
 
 ```rust
 pub struct SimSnapshot {
@@ -1012,9 +1012,9 @@ pub struct ReplayHeader {
 }
 ```
 
-> **Compression (D063):** The `compression_algorithm` byte identifies which decompressor to use for the tick order stream and embedded keyframe snapshots. Version 1 files use `0x01` (LZ4). Compression level during live recording defaults to `fastest` (configurable via `settings.toml` `compression.replay_level`). Use `ic replay recompress` to re-encode at a higher compression level for archival. See `09-DECISIONS.md` § D063.
+> **Compression (D063):** The `compression_algorithm` byte identifies which decompressor to use for the tick order stream and embedded keyframe snapshots. Version 1 files use `0x01` (LZ4). Compression level during live recording defaults to `fastest` (configurable via `settings.toml` `compression.replay_level`). Use `ic replay recompress` to re-encode at a higher compression level for archival. See `decisions/09f-tools.md` § D063.
 
-The `flags` field includes a `HAS_VOICE` bit (bit 3). When set, the voice stream section contains per-player Opus audio tracks recorded with player consent. See `09-DECISIONS.md` § D059 for the voice consent model, storage costs, and replay playback integration.
+The `flags` field includes a `HAS_VOICE` bit (bit 3). When set, the voice stream section contains per-player Opus audio tracks recorded with player consent. See `decisions/09g-interaction.md` § D059 for the voice consent model, storage costs, and replay playback integration.
 
 ### Metadata (JSON)
 
@@ -1220,7 +1220,7 @@ The game thread contributes ~1 ms every 300 ticks (~10 seconds) for keyframe pro
 | OpenRA                | `.orarep`                      | ZIP archive (order stream + `metadata.yaml` + `sync.bin`)        | `OpenRAReplayDecoder`     | OpenRA source: `ReplayUtils.cs`, `ReplayConnection.cs`              |
 | Remastered Collection | Binary (no standard extension) | `Save_Recording_Values()` header + per-frame `EventClass` DoList | `RemasteredReplayDecoder` | EA GPL source: `QUEUE.CPP` §§ `Queue_Record()` / `Queue_Playback()` |
 
-Both decoders produce a `ForeignReplay` struct (defined in `09-DECISIONS.md` § D056) — a normalized intermediate representation with `ForeignFrame` / `ForeignOrder` types. This IR is translated to IC's `TimestampedOrder` by `ForeignReplayCodec` in `ic-protocol`, then fed to either `ForeignReplayPlayback` (direct viewing) or the `ic replay import` CLI (conversion to `.icrep`).
+Both decoders produce a `ForeignReplay` struct (defined in `decisions/09f-tools.md` § D056) — a normalized intermediate representation with `ForeignFrame` / `ForeignOrder` types. This IR is translated to IC's `TimestampedOrder` by `ForeignReplayCodec` in `ic-protocol`, then fed to either `ForeignReplayPlayback` (direct viewing) or the `ic replay import` CLI (conversion to `.icrep`).
 
 **Remastered replay header** (from `Save_Recording_Values()` in `REDALERT/INIT.CPP`):
 
@@ -1309,7 +1309,7 @@ ic-backup-2027-03-15.zip
 - Already-compressed files (`.icsave`, `.icrep`) are stored in the ZIP without additional compression (ZIP `Store` method).
 - `ic backup verify <archive>` checks ZIP integrity and validates that all SQLite files in the archive are well-formed.
 - `ic backup restore` preserves directory structure and prompts on conflicts (suppress with `--overwrite`).
-- `--exclude` and `--only` filter by category (keys, profile, communities, achievements, config, saves, replays, screenshots, gameplay, workshop, mods, maps). See `09-DECISIONS.md` § D061 for category sizes and criticality.
+- `--exclude` and `--only` filter by category (keys, profile, communities, achievements, config, saves, replays, screenshots, gameplay, workshop, mods, maps). See `decisions/09e-community.md` § D061 for category sizes and criticality.
 
 ## Screenshot Format (D061)
 

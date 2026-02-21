@@ -187,7 +187,7 @@ fn pathfinding_system(
 
 ### AI Computation Budget
 
-AI runs on the same stagger/amortization principles as the rest of the sim. The default `PersonalityDrivenAi` (D043) uses a priority-based manager hierarchy where each manager runs on its own tick-gated schedule — cheap decisions run often, expensive decisions run rarely (pattern used by EA Generals, 0 A.D. Petra, and MicroRTS). Full architectural detail in D043 (`09-DECISIONS.md`); survey analysis in `research/rts-ai-implementation-survey.md`.
+AI runs on the same stagger/amortization principles as the rest of the sim. The default `PersonalityDrivenAi` (D043) uses a priority-based manager hierarchy where each manager runs on its own tick-gated schedule — cheap decisions run often, expensive decisions run rarely (pattern used by EA Generals, 0 A.D. Petra, and MicroRTS). Full architectural detail in D043 (`decisions/09d-gameplay.md`); survey analysis in `research/rts-ai-implementation-survey.md`.
 
 | AI Component                   | Frequency             | Target Time | Approach                   |
 | ------------------------------ | --------------------- | ----------- | -------------------------- |
@@ -530,7 +530,7 @@ Per-system tick timing from the benchmark suite can be exported as OTEL metrics 
 - Gameplay event stream for AI training data collection
 - Debug overlay (via `bevy_egui`) reads live telemetry for real-time profiling during development
 
-Telemetry is zero-cost when disabled (compile-time feature gate). Release builds intended for players ship without it. Tournament servers, AI training, and development builds enable it. See `09-DECISIONS.md` § D031 for full design.
+Telemetry is zero-cost when disabled (compile-time feature gate). Release builds intended for players ship without it. Tournament servers, AI training, and development builds enable it. See `decisions/09e-community.md` § D031 for full design.
 
 ### Profile Before Parallelize
 
@@ -635,23 +635,23 @@ The default Rust allocator (`System` — usually glibc `malloc` on Linux, MSVC a
 
 The following performance patterns are established across the design docs. They are not optional — violating them is a bug.
 
-| Pattern                                                         | Location               | Rationale                                                                                   |
-| --------------------------------------------------------------- | ---------------------- | ------------------------------------------------------------------------------------------- |
-| `TickOrders::chronological()` uses scratch buffer               | `03-NETCODE.md`        | Zero per-tick heap allocation — reusable `Vec<&TimestampedOrder>` instead of `.clone()`     |
-| `VersusTable` is a flat `[i32; COUNT]` array                    | `02-ARCHITECTURE.md`   | O(1) combat damage lookup — no HashMap overhead in `projectile_system()` hot path           |
-| `NotificationCooldowns` is a flat array                         | `02-ARCHITECTURE.md`   | Same pattern — fixed enum → flat array                                                      |
-| WASM AI API uses `u32` type IDs, not `String`                   | `04-MODDING.md`        | No per-tick String allocation across WASM boundary; string table queried once at game start |
-| Replay keyframes every 300 ticks (mandatory)                    | `05-FORMATS.md`        | Sub-second seeking without re-simulating from tick 0                                        |
-| `gameplay_events` denormalized indexed columns                  | `09-DECISIONS.md` D034 | Avoids `json_extract()` scans during `PlayerStyleProfile` aggregation (D042)                |
-| All SQLite writes on dedicated I/O thread                       | `09-DECISIONS.md` D031 | Ring buffer → batch transaction; game loop thread never touches SQLite                      |
-| I/O ring buffer ≥1024 entries                                   | `09-DECISIONS.md` D031 | Absorbs 500 ms HDD checkpoint stall at 600 events/s peak with 3.4× headroom                 |
-| WAL checkpoint suppressed during gameplay (HDD)                 | `09-DECISIONS.md` D034 | Random I/O checkpoint on spinning disk takes 200–500 ms; defer to safe points               |
-| Autosave fsync on I/O thread, never game thread                 | `09-DECISIONS.md` D010 | HDD fsync takes 50–200 ms; game thread only produces DeltaSnapshot bytes                    |
-| Replay keyframe: snapshot on game thread, LZ4+I/O on background | `05-FORMATS.md`        | ~1 ms game thread cost every 300 ticks; compression + write async                           |
-| Weather quadrant rotation (1/4 map per tick)                    | `09-DECISIONS.md` D022 | Sim-only amortization — no camera dependency in deterministic sim                           |
-| `gameplay.db` mmap capped at 64 MB                              | `09-DECISIONS.md` D034 | 1.6% of 4 GB min-spec RAM; scaled up on systems with ≥8 GB                                  |
-| WASM pathfinder fuel exhaustion → continue heading              | `04-MODDING.md` D045   | Zero-cost fallback prevents unit freezing without breaking determinism                      |
-| `StringInterner` resolves YAML strings to `InternedId` at load  | `10-PERFORMANCE.md`    | Condition checks, trait aliases, mod paths — integer compare instead of string compare      |
-| `DoubleBuffered<T>` for fog, influence maps, global modifiers   | `02-ARCHITECTURE.md`   | Tick-consistent reads — all systems see same fog/modifier state within a tick               |
-| Connection lifecycle uses type state (`Connection<S>`)          | `03-NETCODE.md`        | Compile-time prevention of invalid state transitions — zero runtime cost via `PhantomData`  |
-| Camera zoom/pan interpolation once per frame, not per entity    | `02-ARCHITECTURE.md`   | Frame-rate-independent exponential lerp on `GameCamera` resource — `powf()` once per frame  |
+| Pattern                                                         | Location                           | Rationale                                                                                   |
+| --------------------------------------------------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------- |
+| `TickOrders::chronological()` uses scratch buffer               | `03-NETCODE.md`                    | Zero per-tick heap allocation — reusable `Vec<&TimestampedOrder>` instead of `.clone()`     |
+| `VersusTable` is a flat `[i32; COUNT]` array                    | `02-ARCHITECTURE.md`               | O(1) combat damage lookup — no HashMap overhead in `projectile_system()` hot path           |
+| `NotificationCooldowns` is a flat array                         | `02-ARCHITECTURE.md`               | Same pattern — fixed enum → flat array                                                      |
+| WASM AI API uses `u32` type IDs, not `String`                   | `04-MODDING.md`                    | No per-tick String allocation across WASM boundary; string table queried once at game start |
+| Replay keyframes every 300 ticks (mandatory)                    | `05-FORMATS.md`                    | Sub-second seeking without re-simulating from tick 0                                        |
+| `gameplay_events` denormalized indexed columns                  | `decisions/09e-community.md` D034  | Avoids `json_extract()` scans during `PlayerStyleProfile` aggregation (D042)                |
+| All SQLite writes on dedicated I/O thread                       | `decisions/09e-community.md` D031  | Ring buffer → batch transaction; game loop thread never touches SQLite                      |
+| I/O ring buffer ≥1024 entries                                   | `decisions/09e-community.md` D031  | Absorbs 500 ms HDD checkpoint stall at 600 events/s peak with 3.4× headroom                 |
+| WAL checkpoint suppressed during gameplay (HDD)                 | `decisions/09e-community.md` D034  | Random I/O checkpoint on spinning disk takes 200–500 ms; defer to safe points               |
+| Autosave fsync on I/O thread, never game thread                 | `decisions/09a-foundation.md` D010 | HDD fsync takes 50–200 ms; game thread only produces DeltaSnapshot bytes                    |
+| Replay keyframe: snapshot on game thread, LZ4+I/O on background | `05-FORMATS.md`                    | ~1 ms game thread cost every 300 ticks; compression + write async                           |
+| Weather quadrant rotation (1/4 map per tick)                    | `decisions/09c-modding.md` D022    | Sim-only amortization — no camera dependency in deterministic sim                           |
+| `gameplay.db` mmap capped at 64 MB                              | `decisions/09e-community.md` D034  | 1.6% of 4 GB min-spec RAM; scaled up on systems with ≥8 GB                                  |
+| WASM pathfinder fuel exhaustion → continue heading              | `04-MODDING.md` D045               | Zero-cost fallback prevents unit freezing without breaking determinism                      |
+| `StringInterner` resolves YAML strings to `InternedId` at load  | `10-PERFORMANCE.md`                | Condition checks, trait aliases, mod paths — integer compare instead of string compare      |
+| `DoubleBuffered<T>` for fog, influence maps, global modifiers   | `02-ARCHITECTURE.md`               | Tick-consistent reads — all systems see same fog/modifier state within a tick               |
+| Connection lifecycle uses type state (`Connection<S>`)          | `03-NETCODE.md`                    | Compile-time prevention of invalid state transitions — zero runtime cost via `PhantomData`  |
+| Camera zoom/pan interpolation once per frame, not per entity    | `02-ARCHITECTURE.md`               | Frame-rate-independent exponential lerp on `GameCamera` resource — `powf()` once per frame  |

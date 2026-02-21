@@ -62,7 +62,7 @@ iron-curtain/
 
 ## Key Design Decisions (Summary)
 
-These are settled. Don't re-litigate unless the user explicitly wants to revisit one. Full rationale for each is in `src/09-DECISIONS.md`.
+These are settled. Don't re-litigate unless the user explicitly wants to revisit one. Full rationale is in the thematic sub-documents under `src/decisions/` — see `src/09-DECISIONS.md` for the index.
 
 | ID   | Decision                                                     | Short Rationale                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | ---- | ------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -139,7 +139,7 @@ These are settled. Don't re-litigate unless the user explicitly wants to revisit
 | ID       | Topic                                                                                                                               | Needs Resolution By |
 | -------- | ----------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
 | P002     | Fixed-point scale (256? 1024? match OpenRA's 1024?)                                                                                 | Phase 2 start       |
-| P003     | Audio library choice + music integration design (see `09-DECISIONS.md`)                                                             | Phase 3 start       |
+| P003     | Audio library choice + music integration design (see `src/09-DECISIONS.md` § Pending Decisions)                                     | Phase 3 start       |
 | P004     | Lobby/matchmaking protocol specifics — PARTIALLY RESOLVED: architecture + lobby protocol defined (D052), wire format details remain | Phase 5 start       |
 | ~~P005~~ | ~~Map editor architecture~~ — RESOLVED: Scenario editor in SDK (D038+D040)                                                          | Resolved            |
 | ~~P006~~ | ~~License choice~~ — RESOLVED: GPL v3 with modding exception (D051)                                                                 | Resolved            |
@@ -160,27 +160,37 @@ Phase 7  (Months 34-36) → LLM Missions + Ecosystem + Polish: mission generator
 
 ## Document Navigation
 
-When you need deeper detail, read the specific design doc:
+When you need deeper detail, read the specific design doc. Sub-documents are listed indented — read the parent for an overview, then navigate to the specific sub-document for detail.
 
-| Topic                                                                                                                                                                                     | Read                         |
-| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
-| Goals, competitive landscape, why this exists                                                                                                                                             | `src/01-VISION.md`           |
-| Crate structure, ECS, sim/render split, game loop, UI themes, install & source layout, development asset strategy, RA experience recreation, first runnable plan, SDK/editor architecture | `src/02-ARCHITECTURE.md`     |
-| NetworkModel trait, relay server, CS2 sub-tick, lockstep, adaptive run-ahead                                                                                                              | `src/03-NETCODE.md`          |
-| YAML rules, Lua scripting, WASM modules, sandboxing, LLM metadata, Mod SDK                                                                                                                | `src/04-MODDING.md`          |
-| File formats, EA source code insights, coordinate systems                                                                                                                                 | `src/05-FORMATS.md`          |
-| Threat model, maphack, order validation, replay signing, protocol hardening                                                                                                               | `src/06-SECURITY.md`         |
-| Cross-engine play, OrderCodec, SimReconciler, ProtocolAdapter                                                                                                                             | `src/07-CROSS-ENGINE.md`     |
-| 36-month phased roadmap with exit criteria                                                                                                                                                | `src/08-ROADMAP.md`          |
-| Full decision log with rationale and alternatives                                                                                                                                         | `src/09-DECISIONS.md`        |
-| Efficiency pyramid, profiling, performance targets, benchmarks                                                                                                                            | `src/10-PERFORMANCE.md`      |
-| OpenRA feature catalog (~700 traits), gap analysis, migration mapping                                                                                                                     | `src/11-OPENRA-FEATURES.md`  |
-| Combined Arms mod migration, Remastered recreation feasibility                                                                                                                            | `src/12-MOD-MIGRATION.md`    |
-| Development philosophy, design review principles, C&C creator lessons, narrative identity guidelines                                                                                      | `src/13-PHILOSOPHY.md`       |
-| Development methodology, context-bounded work units, research rigor                                                                                                                       | `src/14-METHODOLOGY.md`      |
-| Server admin guide: configuration, deployment profiles, tournament ops, best practices                                                                                                    | `src/15-SERVER-GUIDE.md`     |
-| Coding standards: file structure, commenting philosophy, naming, error handling, testing, code review                                                                                     | `src/16-CODING-STANDARDS.md` |
-| Player flow & UI navigation: every screen, menu, overlay, and path from launch through gameplay, UX principles, platform adaptations                                                      | `src/17-PLAYER-FLOW.md`      |
+| Topic                                                                                                                                    | Read                                   |
+| ---------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
+| Goals, competitive landscape, why this exists                                                                                            | `src/01-VISION.md`                     |
+| Crate structure, ECS, sim/render split, game loop, UI themes, install & source layout, RA experience recreation, SDK/editor architecture | `src/02-ARCHITECTURE.md`               |
+| — Extended gameplay systems: power, construction, production, harvesting, combat, fog, shroud, crates, veterancy, superweapons           | `src/architecture/gameplay-systems.md` |
+| NetworkModel trait, relay server, CS2 sub-tick, lockstep, adaptive run-ahead                                                             | `src/03-NETCODE.md`                    |
+| — Match lifecycle: lobby, loading, tick processing, pause, disconnect, desync, replay, post-game                                         | `src/netcode/match-lifecycle.md`       |
+| YAML rules, Lua scripting, WASM modules, sandboxing, LLM metadata, Mod SDK                                                               | `src/04-MODDING.md`                    |
+| — Campaign system: branching graphs, persistent state, unit carryover, co-op                                                             | `src/modding/campaigns.md`             |
+| File formats, EA source code insights, coordinate systems                                                                                | `src/05-FORMATS.md`                    |
+| Threat model, maphack, order validation, replay signing, protocol hardening                                                              | `src/06-SECURITY.md`                   |
+| Cross-engine play, OrderCodec, SimReconciler, ProtocolAdapter                                                                            | `src/07-CROSS-ENGINE.md`               |
+| 36-month phased roadmap with exit criteria                                                                                               | `src/08-ROADMAP.md`                    |
+| Decision log — index with links to all 54 decisions                                                                                      | `src/09-DECISIONS.md`                  |
+| — Decisions: Language, Bevy, YAML, fixed-point, snapshots, efficiency, rendering, multi-game, engine scope, config format                | `src/decisions/09a-foundation.md`      |
+| — Decisions: Pluggable net, relay, sub-tick, cross-engine, order validation, community servers, ranked, netcode params                   | `src/decisions/09b-networking.md`      |
+| — Decisions: Lua, WASM, Tera, UI themes, Workshop lib, GPL v3, mod profiles, cross-engine export                                         | `src/decisions/09c-modding.md`         |
+| — Decisions: Pathfinding, balance, QoL, trait subsystems, AI presets, LLM AI, render modes, extended switchability                       | `src/decisions/09d-gameplay.md`        |
+| — Decisions: Workshop, telemetry, SQLite, achievements, governance, premium, profiles, data backup                                       | `src/decisions/09e-community.md`       |
+| — Decisions: LLM missions, scenario editor, asset studio, LLM config, foreign replay, skill library                                      | `src/decisions/09f-tools.md`           |
+| — Decisions: Command console, communication (chat, voice, pings)                                                                         | `src/decisions/09g-interaction.md`     |
+| Efficiency pyramid, profiling, performance targets, benchmarks                                                                           | `src/10-PERFORMANCE.md`                |
+| OpenRA feature catalog (~700 traits), gap analysis, migration mapping                                                                    | `src/11-OPENRA-FEATURES.md`            |
+| Combined Arms mod migration, Remastered recreation feasibility                                                                           | `src/12-MOD-MIGRATION.md`              |
+| Development philosophy, design review principles, C&C creator lessons, narrative identity guidelines                                     | `src/13-PHILOSOPHY.md`                 |
+| Development methodology, context-bounded work units, research rigor                                                                      | `src/14-METHODOLOGY.md`                |
+| Server admin guide: configuration, deployment profiles, tournament ops, best practices                                                   | `src/15-SERVER-GUIDE.md`               |
+| Coding standards: file structure, commenting philosophy, naming, error handling, testing, code review                                    | `src/16-CODING-STANDARDS.md`           |
+| Player flow & UI navigation: every screen, menu, overlay, and path from launch through gameplay, UX principles, platform adaptations     | `src/17-PLAYER-FLOW.md`                |
 
 ## Legal Protections
 
@@ -227,7 +237,7 @@ The project requires a **Developer Certificate of Origin (DCO)** — contributor
 
 - **Minimum age:** 13+ (COPPA compliance).
 - **Third-party content disclaimer:** IC is not liable for Workshop content.
-- **DMCA safe harbor:** See `src/09-DECISIONS.md` § D030 for takedown process.
+- **DMCA safe harbor:** See `src/decisions/09e-community.md` § D030 for takedown process.
 
 ### Legal Operational Milestones
 
@@ -259,7 +269,7 @@ These are not design decisions — they are operational/legal tasks tied to spec
 - **Full coding standards** (file structure, commenting philosophy, naming conventions, error handling, testing patterns, code review checklist) are in `src/16-CODING-STANDARDS.md`.
 
 ### When Adding a New Feature
-1. Check `src/09-DECISIONS.md` — has this been decided already?
+1. Check `src/09-DECISIONS.md` (decision index) — has this been decided already? Follow the link to the relevant sub-document.
 2. Check the roadmap (`src/08-ROADMAP.md`) — which phase does this belong to?
 3. Respect the crate boundaries — especially `ic-sim` ↔ `ic-net` via `ic-protocol` only.
 4. If it touches performance, read `src/10-PERFORMANCE.md` and follow the efficiency pyramid (algorithm first, threading last).
@@ -291,7 +301,7 @@ Treat feedback as input, not instruction. Validate every claim before acting.
 4. **Don't accept all feedback uncritically.** Reviewers can be wrong. But if three people flag the same paragraph, the paragraph has a problem.
 
 ### Known Duplication to Fix
-- Performance details appear in both `src/09-DECISIONS.md` (D015) and `src/10-PERFORMANCE.md` — the latter is canonical
+- Performance details appear in both `src/decisions/09a-foundation.md` (D015) and `src/10-PERFORMANCE.md` — the latter is canonical
 
 ### Mistakes to Never Repeat
 These are specific errors made by agents on this project. Read them before editing any public-facing file.

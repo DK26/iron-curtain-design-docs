@@ -15,7 +15,7 @@ This chapter exists so that every design decision, code review, and feature prop
 
 **When NOT to read this chapter:**
 - You need architecture specifics → [02-ARCHITECTURE.md](02-ARCHITECTURE.md)
-- You need to check if something was already decided → [09-DECISIONS.md](09-DECISIONS.md)
+- You need to check if something was already decided → [09-DECISIONS.md](09-DECISIONS.md) (index with links to sub-documents)
 - You need performance guidance → [10-PERFORMANCE.md](10-PERFORMANCE.md)
 - You need the phase timeline → [08-ROADMAP.md](08-ROADMAP.md)
 
@@ -54,7 +54,7 @@ Competitors like Warcraft used unit caps for balance and performance. Westwood r
 
 **Where this applies:**
 - Gameplay systems in [02-ARCHITECTURE.md](02-ARCHITECTURE.md) — system designs can evolve during implementation
-- Balance presets in D019 ([09-DECISIONS.md](09-DECISIONS.md)) — multiple balance approaches coexist precisely because "fun" is subjective
+- Balance presets in D019 ([decisions/09d-gameplay.md](decisions/09d-gameplay.md)) — multiple balance approaches coexist precisely because "fun" is subjective
 - QoL toggles in D033 — experimental features can be toggled, not permanently committed
 
 ### 2. Fix Invariants Early, Iterate Everything Else
@@ -131,7 +131,7 @@ Legg's candid assessment: splitting effort across too many features produces med
 
 OpenRA made early gameplay compromises (kill bounties, Allied Hinds, auto-targeting) to ship a playable game before core features existed. Those compromises hardened into permanent identity. When the team wanted to reconsider years later, the community was split.
 
-**Rule:** Label experiments as experiments. Use D033's toggle system so that every QoL or gameplay variant can be individually enabled/disabled. Early-phase compromises must never become irrevocable identity. If a system is a placeholder, document it as one — in code comments, in the relevant design doc, and in [09-DECISIONS.md](09-DECISIONS.md).
+**Rule:** Label experiments as experiments. Use D033's toggle system so that every QoL or gameplay variant can be individually enabled/disabled. Early-phase compromises must never become irrevocable identity. If a system is a placeholder, document it as one — in code comments, in the relevant design doc, and in [decisions/09d-gameplay.md](decisions/09d-gameplay.md).
 
 ### 8. Great Teams Make Great Games
 
@@ -348,13 +348,13 @@ This principle governs all IC-generated and IC-authored content — not just han
 **Rule:** When creating or reviewing narrative content for IC — whether human-authored, LLM-generated, or community-submitted — check it against the seven pillars above. C&C's identity is its narrative voice. A technically perfect RTS with generic storytelling is not a C&C game. The camp, the conviction, and the quotability are as much a part of the engine's identity as the ECS architecture or the fixed-point math.
 
 **Where this applies:**
-- LLM system prompts and story style presets ([09-DECISIONS.md](09-DECISIONS.md) § D016 — "C&C Classic" is the default because of this principle)
-- Campaign authoring guidelines ([09-DECISIONS.md](09-DECISIONS.md) § D021 — briefings, character voices, narrative arc)
-- Cheat code and console command naming ([09-DECISIONS.md](09-DECISIONS.md) § D058 — Cold War/franchise cultural references)
+- LLM system prompts and story style presets ([decisions/09f-tools.md](decisions/09f-tools.md) § D016 — "C&C Classic" is the default because of this principle)
+- Campaign authoring guidelines ([decisions/09c-modding.md](decisions/09c-modding.md) § D021 — briefings, character voices, narrative arc)
+- Cheat code and console command naming ([decisions/09g-interaction.md](decisions/09g-interaction.md) § D058 — Cold War/franchise cultural references)
 - EVA voice line design guidance for `ic-audio` (Phase 3)
 - Unit voice design guidelines for modders ([04-MODDING.md](04-MODDING.md))
-- Scenario editor content templates ([09-DECISIONS.md](09-DECISIONS.md) § D038 — briefing authoring, character creation)
-- Workshop content review criteria ([09-DECISIONS.md](09-DECISIONS.md) § D030 — "C&C Classic" style validation)
+- Scenario editor content templates ([decisions/09f-tools.md](decisions/09f-tools.md) § D038 — briefing authoring, character creation)
+- Workshop content review criteria ([decisions/09e-community.md](decisions/09e-community.md) § D030 — "C&C Classic" style validation)
 - The foreword, README, and all public-facing project communication — IC's own voice should reflect the franchise it serves (direct, confident, unpretentious)
 
 ---
@@ -416,7 +416,7 @@ OpenRA's C# trait system is more modder-hostile than Westwood's original INI fil
 
 OpenRA, despite 339 contributors and 16.4k GitHub stars, has critical features blocked because they depend on 1–2 individuals. Tiberian Sun support has been "next" for years. Release frequency has declined.
 
-**IC Lesson:** Design so knowledge isn't concentrated. IC's design docs, AGENTS.md, and decision rationale ([09-DECISIONS.md](09-DECISIONS.md)) exist so any contributor can understand *why* a system exists, not just *what* it does. When key people leave — as they always eventually do — the documentation and architectural clarity are what survive.
+**IC Lesson:** Design so knowledge isn't concentrated. IC's design docs, AGENTS.md, and decision rationale ([09-DECISIONS.md](09-DECISIONS.md) and its sub-documents) exist so any contributor can understand *why* a system exists, not just *what* it does. When key people leave — as they always eventually do — the documentation and architectural clarity are what survive.
 
 ### Design Debt Becomes Identity
 
@@ -478,7 +478,7 @@ When proposing a new feature:
 2. State which principle(s) it serves
 3. Cross-reference the relevant design docs ([02-ARCHITECTURE.md](02-ARCHITECTURE.md), [08-ROADMAP.md](08-ROADMAP.md), etc.)
 4. If it conflicts with a principle, acknowledge the trade-off — don't pretend the conflict doesn't exist
-5. Check [09-DECISIONS.md](09-DECISIONS.md) — has this already been decided?
+5. Check [09-DECISIONS.md](09-DECISIONS.md) — has this already been decided? (The index links to thematic sub-documents.)
 6. Consider community impact — does this address a known pain point? Does it create friction for existing workflows? Check [01-VISION.md](01-VISION.md) and [11-OPENRA-FEATURES.md](11-OPENRA-FEATURES.md) for documented community needs
 
 ### For LLM Agents
@@ -487,7 +487,7 @@ If you're an AI agent working on this project:
 - Read AGENTS.md first (it points here)
 - These principles inform design *review*, not design *generation* — don't refuse to implement something just because it doesn't fit a principle. Implement it, then flag the tension
 - When two approaches seem equally valid, the principle that applies most directly is the tiebreaker
-- When no principle applies, use engineering judgment and document the rationale in [09-DECISIONS.md](09-DECISIONS.md)
+- When no principle applies, use engineering judgment and document the rationale in the appropriate [decisions sub-document](09-DECISIONS.md)
 
 ---
 

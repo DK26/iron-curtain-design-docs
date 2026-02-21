@@ -2,7 +2,7 @@
 
 > **Audience:** Server operators, tournament organizers, competitive league administrators, and content creators / casters.
 >
-> **Prerequisites:** Familiarity with TOML (for server configuration — if you know INI files, you know TOML), command-line tools, and basic server administration. For design rationale behind the configuration system, see D064 in `09-DECISIONS.md` and D067 for the TOML/YAML format split.
+> **Prerequisites:** Familiarity with TOML (for server configuration — if you know INI files, you know TOML), command-line tools, and basic server administration. For design rationale behind the configuration system, see D064 in `decisions/09a-foundation.md` and D067 for the TOML/YAML format split.
 >
 > **Status:** This guide describes the *planned* configuration system. Iron Curtain is in the design phase — no implementation exists yet. All examples show intended behavior.
 
@@ -169,7 +169,7 @@ These relationships are enforced automatically:
 
 ## Subsystem Reference
 
-Each subsystem section below explains: what the parameters control, when you would change them, and recommended values for common scenarios. For the complete parameter registry with types and ranges, see D064 in `09-DECISIONS.md`.
+Each subsystem section below explains: what the parameters control, when you would change them, and recommended values for common scenarios. For the complete parameter registry with types and ranges, see D064 in `decisions/09f-tools.md`.
 
 ### Relay Server (`relay.*`)
 
@@ -654,7 +654,7 @@ snapshot_level = "fastest"     # reconnection snapshots
 workshop_level = "compact"     # maximize compression for distribution
 ```
 
-**Advanced configuration:** The 21 parameters in `compression.advanced.*` are documented in D063 in `09-DECISIONS.md`. Most operators never need to touch these. The compression level presets (fastest/balanced/compact) set appropriate values automatically.
+**Advanced configuration:** The 21 parameters in `compression.advanced.*` are documented in D063 in `decisions/09f-tools.md`. Most operators never need to touch these. The compression level presets (fastest/balanced/compact) set appropriate values automatically.
 
 **When to use advanced compression tuning:**
 
@@ -1086,20 +1086,20 @@ These values are always-on, universally correct, and not exposed as configuratio
 
 ### Related Design Documents
 
-| Topic                                                                      | Document                                      |
-| -------------------------------------------------------------------------- | --------------------------------------------- |
-| Full parameter registry with types, ranges, defaults                       | D064 in `09-DECISIONS.md`                     |
-| Console / cvar system design                                               | D058 in `09-DECISIONS.md`                     |
-| Relay server architecture                                                  | D007 in `09-DECISIONS.md` and `03-NETCODE.md` |
-| Netcode parameter philosophy (why most things are not player-configurable) | D060 in `09-DECISIONS.md`                     |
-| Compression tuning                                                         | D063 in `09-DECISIONS.md`                     |
-| Ranked matchmaking & Glicko-2                                              | D055 in `09-DECISIONS.md`                     |
-| Community server architecture & SCRs                                       | D052 in `09-DECISIONS.md`                     |
-| Telemetry & observability                                                  | D031 in `09-DECISIONS.md`                     |
-| AI behavior presets                                                        | D043 in `09-DECISIONS.md`                     |
-| SQLite per-database PRAGMA configuration                                   | D034 in `09-DECISIONS.md`                     |
-| Workshop & P2P distribution                                                | D049 in `09-DECISIONS.md`                     |
-| Security & threat model                                                    | `06-SECURITY.md`                              |
+| Topic                                                                      | Document                                                  |
+| -------------------------------------------------------------------------- | --------------------------------------------------------- |
+| Full parameter registry with types, ranges, defaults                       | D064 in `decisions/09f-tools.md`                          |
+| Console / cvar system design                                               | D058 in `decisions/09g-interaction.md`                    |
+| Relay server architecture                                                  | D007 in `decisions/09b-networking.md` and `03-NETCODE.md` |
+| Netcode parameter philosophy (why most things are not player-configurable) | D060 in `decisions/09b-networking.md`                     |
+| Compression tuning                                                         | D063 in `decisions/09f-tools.md`                          |
+| Ranked matchmaking & Glicko-2                                              | D055 in `decisions/09b-networking.md`                     |
+| Community server architecture & SCRs                                       | D052 in `decisions/09b-networking.md`                     |
+| Telemetry & observability                                                  | D031 in `decisions/09e-community.md`                      |
+| AI behavior presets                                                        | D043 in `decisions/09d-gameplay.md`                       |
+| SQLite per-database PRAGMA configuration                                   | D034 in `decisions/09e-community.md`                      |
+| Workshop & P2P distribution                                                | D049 in `decisions/09e-community.md`                      |
+| Security & threat model                                                    | `06-SECURITY.md`                                          |
 
 ### Complete Parameter Audit
 

@@ -1598,29 +1598,29 @@ This document consolidates UI/UX information from across the design docs. The ca
 | System                                    | Canonical Source                                                 |
 | ----------------------------------------- | ---------------------------------------------------------------- |
 | Game lifecycle state machine              | `02-ARCHITECTURE.md` § Game Lifecycle State Machine              |
-| Shellmap & themes                         | `02-ARCHITECTURE.md` § UI Theme System, `09-DECISIONS.md` § D032 |
-| QoL toggles & experience profiles         | `09-DECISIONS.md` § D033                                         |
+| Shellmap & themes                         | `02-ARCHITECTURE.md` § UI Theme System, `decisions/09c-modding.md` § D032 |
+| QoL toggles & experience profiles         | `decisions/09d-gameplay.md` § D033                                         |
 | Lobby protocol & ready check              | `03-NETCODE.md` § Match Lifecycle                                |
 | Post-game flow & re-queue                 | `03-NETCODE.md` § Post-Game Flow                                 |
-| Ranked tiers & matchmaking                | `09-DECISIONS.md` § D055                                         |
-| Player profile                            | `09-DECISIONS.md` § D053                                         |
-| In-game communication (chat, VoIP, pings) | `09-DECISIONS.md` § D059                                         |
-| Command console                           | `09-DECISIONS.md` § D058                                         |
-| Tutorial & new player experience          | `09-DECISIONS.md` § D065                                         |
-| Workshop browser & mod management         | `09-DECISIONS.md` § D030                                         |
-| Mod profiles                              | `09-DECISIONS.md` § D062                                         |
-| LLM configuration                         | `09-DECISIONS.md` § D047                                         |
-| Data backup & portability                 | `09-DECISIONS.md` § D061                                         |
-| Branching campaigns                       | `09-DECISIONS.md` § D021                                         |
-| Generative campaigns                      | `09-DECISIONS.md` § D016                                         |
+| Ranked tiers & matchmaking                | `decisions/09b-networking.md` § D055                                         |
+| Player profile                            | `decisions/09e-community.md` § D053                                         |
+| In-game communication (chat, VoIP, pings) | `decisions/09g-interaction.md` § D059                                         |
+| Command console                           | `decisions/09g-interaction.md` § D058                                         |
+| Tutorial & new player experience          | `decisions/09g-interaction.md` § D065                                         |
+| Workshop browser & mod management         | `decisions/09e-community.md` § D030                                         |
+| Mod profiles                              | `decisions/09c-modding.md` § D062                                         |
+| LLM configuration                         | `decisions/09f-tools.md` § D047                                         |
+| Data backup & portability                 | `decisions/09e-community.md` § D061                                         |
+| Branching campaigns                       | `decisions/09c-modding.md` § D021                                         |
+| Generative campaigns                      | `decisions/09f-tools.md` § D016                                         |
 | Observer/spectator UI                     | `02-ARCHITECTURE.md` § Observer / Spectator UI                   |
 | SDK & scenario editor                     | `02-ARCHITECTURE.md` § IC SDK & Editor Architecture              |
 | Cursor system                             | `02-ARCHITECTURE.md` § Cursor System                             |
 | Hotkey system                             | `02-ARCHITECTURE.md` § Hotkey System                             |
 | Camera system                             | `02-ARCHITECTURE.md` § Camera System                             |
 | C&C UX philosophy                         | `13-PHILOSOPHY.md` § Principles 12-13                            |
-| Balance presets                           | `09-DECISIONS.md` § D019                                         |
-| Render modes                              | `09-DECISIONS.md` § D048                                         |
-| Foreign replay import                     | `09-DECISIONS.md` § D056                                         |
-| Cross-engine export                       | `09-DECISIONS.md` § D066                                         |
+| Balance presets                           | `decisions/09d-gameplay.md` § D019                                         |
+| Render modes                              | `decisions/09d-gameplay.md` § D048                                         |
+| Foreign replay import                     | `decisions/09f-tools.md` § D056                                         |
+| Cross-engine export                       | `decisions/09c-modding.md` § D066                                         |
 | Server configuration                      | `15-SERVER-GUIDE.md`                                             |

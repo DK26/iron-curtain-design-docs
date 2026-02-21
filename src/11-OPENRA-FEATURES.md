@@ -1254,7 +1254,7 @@ IC's replay system extends OpenRA's infrastructure with two features informed by
 
 **Replay versioning:** Replay files include a `base_build` number and a `data_version` hash (following SC2's dual-version scheme). The `base_build` identifies the protocol format; `data_version` identifies the game rules state. A replay is playable if the engine supports its `base_build` protocol, even if minor game data changes occurred between versions.
 
-**Foreign replay import (D056):** IC can directly play back OpenRA `.orarep` files and Remastered Collection replay recordings via `ForeignReplayPlayback` — a `NetworkModel` implementation that decodes foreign replay formats through `ra-formats`, translates orders via `ForeignReplayCodec`, and feeds them to IC's sim. Playback will diverge from the original sim (D011), but a `DivergenceTracker` monitors and surfaces drift in the UI. Foreign replays can also be converted to `.icrep` via `ic replay import` for archival and analysis tooling. The foreign replay corpus doubles as an automated behavioral regression test suite — detecting gross bugs like units walking through walls or harvesters ignoring ore. See `05-FORMATS.md` § "Foreign Replay Decoders" and `09-DECISIONS.md` § D056.
+**Foreign replay import (D056):** IC can directly play back OpenRA `.orarep` files and Remastered Collection replay recordings via `ForeignReplayPlayback` — a `NetworkModel` implementation that decodes foreign replay formats through `ra-formats`, translates orders via `ForeignReplayCodec`, and feeds them to IC's sim. Playback will diverge from the original sim (D011), but a `DivergenceTracker` monitors and surfaces drift in the UI. Foreign replays can also be converted to `.icrep` via `ic replay import` for archival and analysis tooling. The foreign replay corpus doubles as an automated behavioral regression test suite — detecting gross bugs like units walking through walls or harvesters ignoring ore. See `05-FORMATS.md` § "Foreign Replay Decoders" and `decisions/09f-tools.md` § D056.
 
 ---
 
@@ -1934,7 +1934,7 @@ Each actor reference exposes properties matching its components (`.Health`, `.Lo
 
 **OpenRA:** Full in-engine map editor with actor placement, terrain painting, resource placement, tile editing, undo/redo, script cell triggers, marker layers, road/path tiling tool.
 
-**Iron Curtain status:** Resolved as D038+D040 — SDK scenario editor & asset studio (OFP/Eden-inspired). Ships as part of the IC SDK (separate application from the game). Goes beyond OpenRA's map editor to include full mission logic editing: triggers with countdown/timeout timers and min/mid/max randomization, waypoints, pre-built modules (wave spawner, patrol route, guard position, reinforcements, objectives), visual connection lines, Probability of Presence per entity for replayability, compositions (reusable prefabs), layers, Simple/Advanced mode toggle, Test button, Game Master mode, Workshop publishing. The asset studio (D040) adds visual browsing, editing, and generation of game assets (sprites, palettes, terrain, chrome). See `09-DECISIONS.md` § D038 and § D040 for full design.
+**Iron Curtain status:** Resolved as D038+D040 — SDK scenario editor & asset studio (OFP/Eden-inspired). Ships as part of the IC SDK (separate application from the game). Goes beyond OpenRA's map editor to include full mission logic editing: triggers with countdown/timeout timers and min/mid/max randomization, waypoints, pre-built modules (wave spawner, patrol route, guard position, reinforcements, objectives), visual connection lines, Probability of Presence per entity for replayability, compositions (reusable prefabs), layers, Simple/Advanced mode toggle, Test button, Game Master mode, Workshop publishing. The asset studio (D040) adds visual browsing, editing, and generation of game assets (sprites, palettes, terrain, chrome). See `decisions/09f-tools.md` § D038 and § D040 for full design.
 
 ---
 
@@ -2117,35 +2117,35 @@ Each actor reference exposes properties matching its components (`.Health`, `.Lo
 
 The gap analysis is not one-directional. Iron Curtain's design docs include features OpenRA lacks:
 
-| Feature                                                     | IC Design Doc                   | OpenRA Status                         |
-| ----------------------------------------------------------- | ------------------------------- | ------------------------------------- |
-| **LLM-generated missions & campaigns**                      | `04-MODDING.md`, Phase 7        | Not present                           |
-| **Branching campaigns with persistent state**               | D021, `04-MODDING.md`           | Not present (linear campaigns only)   |
-| **WASM mod runtime**                                        | `04-MODDING.md` Tier 3          | Not present (C# DLLs only)            |
-| **Switchable balance presets**                              | D019                            | Not present (one balance per mod)     |
-| **Sub-tick timestamped orders**                             | D008, `03-NETCODE.md`           | Not present                           |
-| **Relay server architecture**                               | D007, `03-NETCODE.md`           | Not present (P2P only)                |
-| **Cross-engine compatibility**                              | `07-CROSS-ENGINE.md`            | Not present                           |
-| **Multi-game engine** (RA1+RA2+TD on one engine)            | D018, `02-ARCHITECTURE.md`      | Partial (3 games but tightly coupled) |
-| **`llm:` metadata on all resources**                        | `04-MODDING.md`                 | Not present                           |
-| **Weather system** (with sim effects)                       | `04-MODDING.md`                 | Visual only (WeatherOverlay trait)    |
-| **Workshop with semantic search**                           | `04-MODDING.md`                 | Forum-based mod sharing               |
-| **Mod SDK with CLI tool**                                   | D020, `04-MODDING.md`           | Exists but requires .NET              |
-| **Competitive infrastructure** (rated, ranked, tournaments) | `01-VISION.md`                  | Basic (no ranked, no leagues)         |
-| **Platform portability** (WASM, mobile, console)            | `02-ARCHITECTURE.md`            | Desktop only                          |
-| **3D rendering mod support**                                | `02-ARCHITECTURE.md`            | Not architecturally possible          |
-| **Signed/certified match results**                          | `06-SECURITY.md`                | Not present                           |
-| **Video as workshop resource**                              | `04-MODDING.md`                 | Not present                           |
-| **Scene templates** (parameterized mission building blocks) | `04-MODDING.md`                 | Not present                           |
-| **Adaptive difficulty** (via campaign state or LLM)         | `04-MODDING.md`, `01-VISION.md` | Not present                           |
-| **In-game Workshop browser** (search, filter, one-click)    | D030, `04-MODDING.md`           | Not present (forum sharing only)      |
-| **Auto-download on lobby join** (CS:GO-style)               | D030, `03-NETCODE.md`           | Not present (manual install)          |
-| **Steam Workshop as source** (optional, federated)          | D030, `04-MODDING.md`           | Not present                           |
-| **Creator reputation & badges**                             | D030, `04-MODDING.md`           | Not present                           |
-| **DMCA/takedown policy** (due process)                      | D030, `09-DECISIONS.md`         | Not present                           |
-| **Creator recognition & tipping**                           | D035, `04-MODDING.md`           | Not present                           |
-| **Achievement system** (engine + mod-defined)               | D036, `09-DECISIONS.md`         | Not present                           |
-| **Community governance model** (elected reps, RFC process)  | D037, `09-DECISIONS.md`         | Core team only, no formal governance  |
+| Feature                                                     | IC Design Doc                      | OpenRA Status                         |
+| ----------------------------------------------------------- | ---------------------------------- | ------------------------------------- |
+| **LLM-generated missions & campaigns**                      | `04-MODDING.md`, Phase 7           | Not present                           |
+| **Branching campaigns with persistent state**               | D021, `04-MODDING.md`              | Not present (linear campaigns only)   |
+| **WASM mod runtime**                                        | `04-MODDING.md` Tier 3             | Not present (C# DLLs only)            |
+| **Switchable balance presets**                              | D019                               | Not present (one balance per mod)     |
+| **Sub-tick timestamped orders**                             | D008, `03-NETCODE.md`              | Not present                           |
+| **Relay server architecture**                               | D007, `03-NETCODE.md`              | Not present (P2P only)                |
+| **Cross-engine compatibility**                              | `07-CROSS-ENGINE.md`               | Not present                           |
+| **Multi-game engine** (RA1+RA2+TD on one engine)            | D018, `02-ARCHITECTURE.md`         | Partial (3 games but tightly coupled) |
+| **`llm:` metadata on all resources**                        | `04-MODDING.md`                    | Not present                           |
+| **Weather system** (with sim effects)                       | `04-MODDING.md`                    | Visual only (WeatherOverlay trait)    |
+| **Workshop with semantic search**                           | `04-MODDING.md`                    | Forum-based mod sharing               |
+| **Mod SDK with CLI tool**                                   | D020, `04-MODDING.md`              | Exists but requires .NET              |
+| **Competitive infrastructure** (rated, ranked, tournaments) | `01-VISION.md`                     | Basic (no ranked, no leagues)         |
+| **Platform portability** (WASM, mobile, console)            | `02-ARCHITECTURE.md`               | Desktop only                          |
+| **3D rendering mod support**                                | `02-ARCHITECTURE.md`               | Not architecturally possible          |
+| **Signed/certified match results**                          | `06-SECURITY.md`                   | Not present                           |
+| **Video as workshop resource**                              | `04-MODDING.md`                    | Not present                           |
+| **Scene templates** (parameterized mission building blocks) | `04-MODDING.md`                    | Not present                           |
+| **Adaptive difficulty** (via campaign state or LLM)         | `04-MODDING.md`, `01-VISION.md`    | Not present                           |
+| **In-game Workshop browser** (search, filter, one-click)    | D030, `04-MODDING.md`              | Not present (forum sharing only)      |
+| **Auto-download on lobby join** (CS:GO-style)               | D030, `03-NETCODE.md`              | Not present (manual install)          |
+| **Steam Workshop as source** (optional, federated)          | D030, `04-MODDING.md`              | Not present                           |
+| **Creator reputation & badges**                             | D030, `04-MODDING.md`              | Not present                           |
+| **DMCA/takedown policy** (due process)                      | D030, `decisions/09e-community.md` | Not present                           |
+| **Creator recognition & tipping**                           | D035, `04-MODDING.md`              | Not present                           |
+| **Achievement system** (engine + mod-defined)               | D036, `decisions/09e-community.md` | Not present                           |
+| **Community governance model** (elected reps, RFC process)  | D037, `decisions/09e-community.md` | Core team only, no formal governance  |
 
 ---
 
