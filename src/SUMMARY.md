@@ -21,3 +21,5 @@
 - [Development Philosophy](13-PHILOSOPHY.md)
 - [Development Methodology](14-METHODOLOGY.md)
 - [Server Administration Guide](15-SERVER-GUIDE.md)
+- [Coding Standards](16-CODING-STANDARDS.md)
+- [Player Flow & UI Navigation](17-PLAYER-FLOW.md)

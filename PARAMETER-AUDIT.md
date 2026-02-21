@@ -1226,9 +1226,9 @@
 
 ## Cross-Cutting Parameter Categories
 
-### Parameters for `settings.yaml` (User-Configurable)
+### Parameters for `settings.toml` (User-Configurable)
 
-Parameters explicitly designed for user configuration via `settings.yaml` or cvars:
+Parameters explicitly designed for user configuration via `settings.toml` or cvars:
 
 - All render settings (shadows, vsync, max_fps, resolution_scale, particle_density)
 - All audio volumes (master, music, EVA)

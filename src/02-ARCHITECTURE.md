@@ -1791,7 +1791,7 @@ All player data lives under a single, self-contained directory. The structure is
 
 ```
 <data_dir>/
-├── config.yaml              # Settings (D033 toggles, keybinds, render quality)
+├── config.toml              # Settings (D033 toggles, keybinds, render quality)
 ├── profile.db               # Identity, friends, blocks, privacy (D053)
 ├── achievements.db          # Achievement collection (D036)
 ├── gameplay.db              # Event log, replay catalog, save index, map catalog (D034)
@@ -1966,6 +1966,417 @@ D019 (balance), D032 (theme), D033 (behavior), D043 (AI behavior), D045 (pathfin
 
 See `09-DECISIONS.md` § D033 for the full toggle catalog, YAML schema, and sim/client split details. See D043 for AI behavior presets, D045 for pathfinding behavior presets, and D048 for switchable render modes.
 
+## Red Alert Experience Recreation Strategy
+
+Making IC *feel* like Red Alert requires more than loading the right files. The graphics, sounds, menu flow, unit selection, cursor behavior, and click feedback must recreate the experience that players remember — verified against the actual source code. We have access to four authoritative reference codebases. Each serves a different purpose.
+
+### Reference Source Strategy
+
+| Source                                                                                                                  | License           | What We Extract                                                                                                                                                                                                                                                                                                                                                                                                 | What We Don't                                                                                                                                                                                            |
+| ----------------------------------------------------------------------------------------------------------------------- | ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **EA Original Red Alert** ([CnC_Red_Alert](https://github.com/electronicarts/CnC_Red_Alert))                            | GPL v3            | Canonical gameplay values (costs, HP, speeds, damage tables). Integer math patterns. Animation frame counts and timing constants. SHP draw mode implementations (shadow, ghost, fade, predator). Palette cycling logic. Audio mixing priorities. Event/order queue architecture. Cursor context logic.                                                                                                          | Don't copy rendering code verbatim — it's VGA/DirectDraw-specific. Don't adopt the architecture — `#ifdef` branching, global state, platform-specific rendering.                                         |
+| **EA Remastered Collection** ([CnC_Remastered_Collection](https://github.com/electronicarts/CnC_Remastered_Collection)) | GPL v3 (C++ DLLs) | UX gold standard — the definitive modernization of the RA experience. F1 render-mode toggle (D048 reference). Sidebar redesign. HD asset pipeline (how classic sprites map to HD equivalents). Modern QoL additions. Sound mixing improvements. How they handled the classic↔modern visual duality.                                                                                                             | GPL covers C++ engine DLLs only — the HD art assets, remastered music, and Petroglyph's C# layer are **proprietary**. Never reference proprietary Petroglyph source. Never distribute remastered assets. |
+| **OpenRA** ([OpenRA](https://github.com/OpenRA/OpenRA))                                                                 | GPL v3            | Working implementation reference for everything the community expects: sprite rendering order, palette handling, animation overlays, chrome UI system, selection UX, cursor contexts, EVA notifications, sound system integration, minimap rendering, shroud edge smoothing. OpenRA represents 15+ years of community refinement — what players consider "correct" behavior. Issue tracker as pain point radar. | Don't copy OpenRA's balance decisions verbatim (D019 — we offer them as a preset). Don't port OpenRA bugs. Don't replicate C# architecture — translate concepts to Rust/ECS.                             |
+| **Bevy** ([bevyengine/bevy](https://github.com/bevyengine/bevy))                                                        | MIT               | How to BUILD it: sprite batching and atlas systems, `bevy_audio` spatial audio, `bevy_ui` layout, asset pipeline (async loading, hot reload), wgpu render graph, ECS scheduling patterns, camera transforms, input handling.                                                                                                                                                                                    | Bevy is infrastructure, not reference for gameplay feel. It tells us *how* to render a sprite, not *which* sprite at *what* timing with *what* palette.                                                  |
+
+**The principle:** Original RA tells us what the values ARE. Remastered tells us what a modern version SHOULD feel like. OpenRA tells us what the community EXPECTS. Bevy tells us how to BUILD it.
+
+### Visual Fidelity Checklist
+
+These are the specific visual elements that make Red Alert look like Red Alert. Each must be verified against original source code constants, not guessed from screenshots.
+
+#### Sprite Rendering Pipeline
+
+| Element                             | Original RA Source Reference                                                                                                               | IC Implementation                                                                                                                                         |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Palette-indexed rendering**       | `PAL` format: 256 × RGB in 6-bit VGA range (0–63). Convert to 8-bit: `value << 2`. See `05-FORMATS.md` § PAL                               | `ra-formats` loads `.pal`; `ic-render` applies via palette texture lookup (GPU shader)                                                                    |
+| **SHP draw modes**                  | `SHAPE.H`: `SHAPE_NORMAL`, `SHAPE_SHADOW`, `SHAPE_GHOST`, `SHAPE_PREDATOR`, `SHAPE_FADING`. See `05-FORMATS.md` § SHP                      | Each draw mode is a shader variant in `ic-render`. Shadow = darkened ground sprite. Ghost = semi-transparent. Predator = distortion. Fading = remap table |
+| **Player color remapping**          | Palette indices 80–95 (16 entries) are the player color remap range. The original modifies these palette entries per player                | GPU shader: sample palette, if index ∈ [80, 95] substitute from player color ramp. Same approach as OpenRA's `PlayerColorShift`                           |
+| **Palette cycling**                 | Water animation: rotate palette indices periodically. Radar dish: palette-animated. From `ANIM.CPP` timing loops                           | `ic-render` system ticks palette rotation at the original frame rate. Cycling ranges are YAML-configurable per theater                                    |
+| **Animation frame timing**          | Frame delays defined per sequence in original `.ini` rules (and OpenRA `sequences/*.yaml`). Not arbitrary — specific tick counts per frame | `sequences/*.yaml` in `mods/ra/` defines frame counts, delays, and facings. Timing constants verified against EA source `#define`s                        |
+| **Facing quantization**             | 32 facings for vehicles/ships, 8 for infantry. SHP frame index = `facing / (256 / num_facings) * frames_per_facing`                        | `QuantizeFacings` component carries the facing count. Sprite frame index computed in render system. Matches OpenRA's `QuantizeFacingsFromSequence`        |
+| **Building construction animation** | "Make" animation plays forward on build, reverse on sell. Specific frame order                                                             | `WithMakeAnimation` equivalent in `ic-render`. Frame order and timing from EA source `BUILD.CPP`                                                          |
+| **Terrain theater palettes**        | Temperate, Snow, Interior — each with different palette and terrain tileset. Theater selected by map                                       | Per-map theater tag → loads matching `.pal` and terrain `.tmp` sprites. Same theater names as OpenRA                                                      |
+| **Shroud / fog-of-war edges**       | Original RA: hard shroud edges. OpenRA: smooth blended edges. Remastered: smoothed                                                         | IC supports both styles via `ShroudRenderer` visual config — selectable per theme/render mode                                                             |
+| **Building bibs**                   | Foundation sprites drawn under buildings (paved area)                                                                                      | Bib sprites from `.shp`, drawn at z-order below building body. Footprint from building definition                                                         |
+| **Projectile sprites**              | Bullets, rockets, tesla bolts — each a separate SHP animation                                                                              | Projectile entities carry `SpriteAnimation` components. Render system draws at interpolated positions between sim ticks                                   |
+| **Explosion animations**            | Multi-frame explosion sequences at impact points                                                                                           | `ExplosionEffect` spawned by combat system. `ic-render` plays the animation sequence then despawns                                                        |
+
+#### Z-Order (Draw Order)
+
+The draw order determines what renders on top of what. Getting this wrong makes the game look subtly broken — units clipping through buildings, shadows on top of vehicles, overlays behind walls. The canonical order (verified from original source and OpenRA):
+
+```
+Layer 0: Terrain tiles (ground)
+Layer 1: Smudges (craters, scorch marks, oil stains)
+Layer 2: Building bibs (paved foundations)
+Layer 3: Building shadows + unit shadows
+Layer 4: Buildings (sorted by Y position — southern buildings render on top)
+Layer 5: Infantry (sub-cell positioned)
+Layer 6: Vehicles / Ships (sorted by Y position)
+Layer 7: Aircraft shadows (on ground)
+Layer 8: Low-flying aircraft (sorted by Y position)
+Layer 9: High-flying aircraft
+Layer 10: Projectiles
+Layer 11: Explosions / visual effects
+Layer 12: Shroud / fog-of-war overlay
+Layer 13: UI overlays (health bars, selection boxes, waypoint lines)
+```
+
+Within each layer, entities sort by Y-coordinate (south = higher draw order = renders on top). This is the standard isometric sort that prevents visual overlapping artifacts. Bevy's sprite z-ordering maps to this layer system via `Transform.translation.z`.
+
+### Audio Fidelity Checklist
+
+Red Alert's audio is iconic — the EVA voice, unit responses, Hell March, the tesla coil zap. Audio fidelity requires matching the original game's mixing behavior, not just playing the right files.
+
+#### Sound Categories and Mixing
+
+| Category                      | Priority   | Behavior                                                                                                                                     | Original RA Reference                                                                                                                           |
+| ----------------------------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| **EVA voice lines**           | Highest    | Queue-based, one at a time, interrupts lower priority. "Building complete." "Unit lost." "Base under attack."                                | `AUDIO.CPP`: `Speak()` function, priority queue with cooldowns per notification type                                                            |
+| **Unit voice responses**      | High       | Plays on selection and on command. Multiple selected units: random pick from group, don't overlap. "Acknowledged." "Yes sir." "Affirmative." | `AUDIO.CPP`: Voice mixing. Response set defined per unit type in rules                                                                          |
+| **Weapon fire sounds**        | Normal     | Positional (spatial audio). Volume by distance from camera. Multiple simultaneous weapons don't clip — mixer clamps                          | `AUDIO.CPP`: Fire sounds tied to weapon in rules. Spatial attenuation                                                                           |
+| **Impact / explosion sounds** | Normal     | Positional. Brief, one-shot.                                                                                                                 | Warhead-defined sounds in rules                                                                                                                 |
+| **Ambient / environmental**   | Low        | Looping. Per-map or conditional (rain during storm weather, D022)                                                                            | Background audio layer                                                                                                                          |
+| **Music**                     | Background | Sequential jukebox. Tracks play in order; player can pick from options menu. Missions can set a starting theme via scenario INI              | `THEME.CPP`: `Theme_Queue()`, theme attributes (tempo, scenario ownership). No runtime combat awareness — track list is fixed at scenario start |
+
+**Original RA music system:** The original game's music was a straightforward sequential playlist. `THEME.CPP` manages a track list with per-theme attributes — each theme has a scenario owner (some tracks only play in certain missions) and a duration. In skirmish, the full soundtrack is available. In campaign, the scenario INI can specify a starting theme, but once playing, tracks advance sequentially and the player can pick from the jukebox in the options menu. There is no combat-detection system, no crossfades, and no dynamic intensity shifting. The Remastered Collection and OpenRA both preserve this simple jukebox model.
+
+**IC enhancement — dynamic situational music:** While the original RA's engine didn't support dynamic music, IC's engine and SDK treat dynamic situational music as a first-class capability. Frank Klepacki designed the RA soundtrack with gameplay tempo in mind — high-energy industrial during combat, ambient tension during build-up (see `13-PHILOSOPHY.md` § Principle #11) — but the original engine didn't act on this intent. IC closes that gap at the engine level.
+
+`ic-audio` provides three music playback modes, selectable per game module, per mission, or per mod:
+
+```yaml
+# audio/music_config.yaml
+music_mode: dynamic               # "jukebox" | "sequential" | "dynamic"
+
+# Jukebox mode (classic RA behavior):
+jukebox:
+  tracks: [BIGF226M, GRNDWIRE, HELLMARCH, MUDRA, JBURN_RG, TRENCHES, CC_THANG, WORKX_RG]
+  order: sequential               # or "shuffle"
+  loop: true
+
+# Dynamic mode (IC engine feature — mood-tagged tracks with state-driven selection):
+dynamic_playlist:
+  ambient:
+    tracks: [BIGF226M, MUDRA, JBURN_RG]
+  build:
+    tracks: [GRNDWIRE, WORKX_RG]
+  combat:
+    tracks: [HELLMARCH, TRENCHES, CC_THANG]
+  tension:
+    tracks: [RADIO2, FACE_THE_ENEMY]
+  victory:
+    tracks: [RREPORT]
+  defeat:
+    tracks: [SMSH_RG]
+  crossfade_ms: 2000              # default crossfade between mood transitions
+  combat_linger_s: 5              # stay in combat music 5s after last engagement
+```
+
+In dynamic mode, the engine monitors game state — active combat, base threat level, unit losses, objective progress — and crossfades between mood categories automatically. Designers tag tracks by mood; the engine handles transitions. No scripting required for basic dynamic music.
+
+**Three layers of control** for mission/mod creators:
+
+| Layer                     | Tool                                                                    | Capability                                                                                                                    |
+| ------------------------- | ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| **YAML configuration**    | `music_config.yaml`                                                     | Define playlists, mood tags, crossfade timing, mode selection — Tier 1 modding, no code                                       |
+| **Scenario editor (SDK)** | Music Trigger + Music Playlist modules (D038)                           | Visual drag-and-drop: swap tracks on trigger activation, set dynamic playlists per mission phase, control crossfade timing    |
+| **Lua scripting**         | `Media.PlayMusic()`, `Media.SetMusicPlaylist()`, `Media.SetMusicMode()` | Full programmatic control — force a specific track at a narrative beat, override mood category, hard-cut for dramatic moments |
+
+The scenario editor's Music Playlist module (see `09-DECISIONS.md` § D038 "Dynamic Music") exposes the full dynamic system visually — a designer drags tracks into mood buckets and previews transitions without writing code. The Music Trigger module handles scripted one-shot moments ("play Hell March when the tanks breach the wall"). Both emit standard Lua that modders can extend.
+
+The `music_mode` setting defaults to `dynamic` under the `iron_curtain` experience profile and `jukebox` under the `vanilla` profile for RA1's built-in soundtrack. Game modules and total conversions define their own default mode and mood-tagged playlists. This is Tier 1 YAML configuration — no recompilation, no Lua required for basic use.
+
+#### Unit Voice System
+
+Unit voice responses follow a specific pattern from the original game:
+
+| Event                       | Voice Pool                | Original Behavior                                                                                              |
+| --------------------------- | ------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| **Selection** (first click) | `Select` voices           | Plays one random voice from pool. Subsequent clicks on same unit cycle through pool (don't repeat immediately) |
+| **Move command**            | `Move` voices             | "Acknowledged", "Moving out", etc. One voice per command, not per selected unit                                |
+| **Attack command**          | `Attack` voices           | Weapon-specific when possible. "Engaging", "Firing", etc.                                                      |
+| **Harvest command**         | `Harvest` voices          | Harvester-specific responses                                                                                   |
+| **Unable to comply**        | `Deny` voices             | "Can't do that", "Negative" — when order is invalid                                                            |
+| **Under attack**            | `Panic` voices (infantry) | Only infantry. Played at low frequency to avoid spam                                                           |
+
+**Implementation:** Unit voice definitions live in `mods/ra/rules/units/*.yaml` alongside other unit data:
+
+```yaml
+# In rules/units/vehicles.yaml
+medium_tank:
+  voices:
+    select: [VEHIC1, REPORT1, YESSIR1]
+    move: [ACKNO, AFFIRM1, MOVOUT1]
+    attack: [AFFIRM1, YESSIR1]
+    deny: [NEGAT1, CANTDO1]
+  voice_interval: 200     # minimum ticks between voice responses (prevents spam)
+```
+
+### UX Fidelity Checklist
+
+These are the interaction patterns that make RA *play* like RA. Each is a combination of input handling, visual feedback, and audio feedback.
+
+#### Core Interaction Loop
+
+| Interaction              | Input                             | Visual Feedback                                                                  | Audio Feedback                                                       | Source Reference                                                          |
+| ------------------------ | --------------------------------- | -------------------------------------------------------------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| **Select unit**          | Left-click on unit                | Selection box appears, health bar shows                                          | Unit voice response from `Select` pool                               | All three sources agree on this pattern                                   |
+| **Box select**           | Left-click drag                   | Isometric diamond selection rectangle                                            | None (silent)                                                        | OpenRA: diamond-shaped for isometric. Original: rectangular but projected |
+| **Move command**         | Right-click on ground             | Cursor changes to move cursor, then destination marker flashes briefly           | Unit voice from `Move` pool                                          | Original RA: right-click move. OpenRA: same                               |
+| **Attack command**       | Right-click on enemy              | Cursor changes to attack cursor (crosshair)                                      | Unit voice from `Attack` pool                                        | Cursor context from `CursorProvider`                                      |
+| **Force-fire**           | Ctrl + right-click                | Force-fire cursor (target reticle) on any location                               | Attack voice                                                         | Original RA: Ctrl modifier for force-fire                                 |
+| **Force-move**           | Alt + right-click                 | Move cursor over units/buildings (crushes if able)                               | Move voice                                                           | OpenRA addition (not in original RA — QoL toggle)                         |
+| **Deploy**               | Click deploy button or hotkey     | Unit plays deploy animation, transforms (e.g., MCV → Construction Yard)          | Deploy sound effect                                                  | `DEPLOY()` in original source                                             |
+| **Sell building**        | Dollar-sign cursor + click        | Building plays "make" animation in reverse, then disappears. Infantry may emerge | Sell sound, "Building sold" EVA                                      | Original: reverse make animation + refund                                 |
+| **Repair building**      | Wrench cursor + click             | Repair icon appears on building, health ticks up                                 | Repair sound loop                                                    | Original: consumes credits while repairing                                |
+| **Place building**       | Click build-queue item when ready | Ghost outline follows cursor, green = valid, red = invalid. Click to place       | "Building" EVA on placement start, "Construction complete" on finish | Remastered: smoothest placement UX                                        |
+| **Control group assign** | Ctrl + 0-9                        | Brief flash on selected units                                                    | Beep confirmation                                                    | Standard RTS convention                                                   |
+| **Control group recall** | 0-9                               | Previously assigned units selected                                               | None                                                                 | Double-tap: camera centers on group                                       |
+
+#### Sidebar System
+
+The sidebar is the player's primary interface and the most recognizable visual element of Red Alert's UI. Three reference implementations exist:
+
+| Element            | Original RA (1996)                             | Remastered (2020)               | OpenRA                    |
+| ------------------ | ---------------------------------------------- | ------------------------------- | ------------------------- |
+| **Position**       | Right side, fixed                              | Right side, resizable           | Right side (configurable) |
+| **Build tabs**     | Two columns (structures/units), scroll buttons | Tabbed categories, larger icons | Tabbed, scrollable        |
+| **Build progress** | Clock-wipe animation over icon                 | Progress bar + clock-wipe       | Progress bar              |
+| **Power bar**      | Vertical bar, green/yellow/red                 | Same, refined styling           | Same concept              |
+| **Credit display** | Top of sidebar, counts up/down                 | Same, with income rate          | Same concept              |
+| **Radar minimap**  | Top of sidebar, player-colored dots            | Same, smoother rendering        | Same, click-to-scroll     |
+
+IC's sidebar is YAML-driven (D032 themes), supporting all three styles as switchable presets. The Classic theme recreates the 1996 layout. The Remastered theme matches the modernized layout. The default IC theme takes the best elements of both.
+
+**Credit counter animation:** The original RA doesn't jump to the new credit value — it counts up or down smoothly ($5000 → $4200 ticks down digit by digit). This is a small detail that contributes significantly to the game feel. IC replicates this with an interpolated counter in `ic-ui`.
+
+**Build queue clock-wipe:** The clock-wipe animation (circular reveal showing build progress on the unit icon) is one of RA's most distinctive UI elements. `ic-render` implements this as a shader that masks the icon with a circular wipe driven by build progress percentage.
+
+#### Verification Method
+
+How we know the recreation is accurate — not "it looks about right" but "we verified against source":
+
+| What                      | Method                                                                                                             | Tooling                                                                                     |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------- |
+| **Animation timing**      | Compare frame delay constants from EA source (`#define` values in C headers) against IC `sequences/*.yaml`         | `ic mod check` validates sequence timing against known-good values                          |
+| **Palette correctness**   | Load `.pal`, apply 6-bit→8-bit conversion, compare rendered output against original game screenshot pixel-by-pixel | Automated screenshot comparison in CI (load map, render, diff against reference PNG)        |
+| **Draw order**            | Render a test map with overlapping buildings, units, aircraft, shroud. Compare layer order against original/OpenRA | Visual regression test: render known scene, compare against golden screenshot               |
+| **Sound mixing**          | Play multiple sound events simultaneously, verify EVA > unit voice > combat priority. Verify cooldown timing       | Automated audio event sequence tests, manual A/B listening                                  |
+| **Cursor behavior**       | For each `CursorContext` (move, attack, enter, capture, etc.): hover over target, verify correct cursor appears    | Automated cursor context tests against known scenarios                                      |
+| **Sidebar layout**        | Theme rendered at standard resolutions, compared against reference screenshots                                     | Screenshot tests per theme                                                                  |
+| **UX sequences**          | Record a play session in original RA/OpenRA, replay the same commands in IC, compare visual/audio results          | Side-by-side video comparison (manual, community verification milestone)                    |
+| **Behavioral regression** | Foreign replay import (D056): play OpenRA replays in IC, track divergence points                                   | `replay-corpus/` test harness: automated divergence detection with percentage-match scoring |
+
+**Community verification:** Phase 3 exit criteria include "feels like Red Alert to someone who's played it before." This is subjective but critical — IC will release builds to the community for feel testing well before feature-completeness. The community IS the verification instrument for subjective fidelity.
+
+### What Each Phase Delivers
+
+| Phase        | Visual                                                                                                      | Audio                                                                                   | UX                                                                                       |
+| ------------ | ----------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| **Phase 0**  | — (format parsing only)                                                                                     | — (`.aud` decoder in `ra-formats`)                                                      | —                                                                                        |
+| **Phase 1**  | Terrain rendering, sprite animation, shroud, palette-aware shading, camera                                  | —                                                                                       | Camera controls only                                                                     |
+| **Phase 2**  | Unit movement animation, combat VFX, projectiles, explosions, death animations                              | —                                                                                       | — (headless sim focus)                                                                   |
+| **Phase 3**  | Sidebar, build queue chrome, minimap, health bars, selection boxes, cursor system, building placement ghost | EVA voice lines, unit responses, weapon sounds, ambient, music (jukebox + dynamic mode) | Full interaction loop: select, move, attack, build, sell, repair, deploy, control groups |
+| **Phase 6a** | Theme switching, community visual mods                                                                      | Community audio mods                                                                    | Full QoL toggle system                                                                   |
+
+## First Runnable — Bevy Loading Red Alert Resources
+
+This section defines the concrete implementation path from "no code" to "a Bevy window rendering a Red Alert map with sprites on it." It spans Phase 0 (format literacy) through Phase 1 (rendering slice) and produces the project's first visible output — the milestone that proves the architecture works.
+
+### Why This Matters
+
+The first runnable is the "Hello World" of the engine. Until a Bevy window opens and renders actual Red Alert assets, everything is theory. This milestone:
+
+- **Validates `ra-formats`.** Can we actually parse `.mix`, `.shp`, `.pal`, `.tmp` into usable data?
+- **Validates the Bevy integration.** Can we get RA sprites into Bevy's rendering pipeline?
+- **Validates the isometric math.** Can we convert grid coordinates to screen coordinates correctly?
+- **Generates community interest.** "Red Alert map rendered faithfully in Rust at 4K 144fps" is the first public proof that IC is real.
+
+### What We CAN Reference From Existing Projects
+
+We cannot copy code from OpenRA (C#) or the Remastered Collection (proprietary C# layer), but we can study their design decisions:
+
+| Source                        | What We Take                                                                                                               | What We Don't                                                                                           |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| **EA Original RA (GPL)**      | Format struct layouts (MIX header, SHP frame offsets, PAL 6-bit values), LCW/RLE decompression algorithms, integer math    | Don't copy the rendering code (VGA/DirectDraw). Don't adopt the global-state architecture               |
+| **Remastered (GPL C++ DLLs)** | HD asset pipeline concepts (how classic sprites map to HD equivalents), modernization approach                             | Don't reference the proprietary C# layer or HD art assets. No GUI code — it's Petroglyph's C#           |
+| **OpenRA (GPL)**              | Map format, YAML rule structure, palette handling, sprite animation sequences, coordinate system conventions, cursor logic | Don't copy C# rendering code verbatim. Don't duplicate OpenRA's Chrome UI system — build native Bevy UI |
+| **Bevy (MIT)**                | Sprite batching, `TextureAtlas`, asset loading, camera transforms, `wgpu` render graph, ECS patterns                       | Bevy tells us *how* to render, not *what* — gameplay feel comes from RA source code, not Bevy docs      |
+
+### Implementation Steps
+
+#### Step 1: `ra-formats` — Parse Everything (Weeks 1–2)
+
+Build the `ra-formats` crate to read all Red Alert binary formats. This is pure Rust with zero Bevy dependency — a standalone library that other tools could use.
+
+**Deliverables:**
+
+| Parser            | Input                 | Output                                                                | Reference                                                       |
+| ----------------- | --------------------- | --------------------------------------------------------------------- | --------------------------------------------------------------- |
+| **MIX archive**   | `.mix` file bytes     | File index (CRC hash → offset/size pairs), extract any file by name   | EA source `MIXFILE.CPP`: CRC hash table, two-tier (body/footer) |
+| **PAL palette**   | 256 × 3 bytes         | `[u8; 768]` with 6-bit→8-bit conversion (`value << 2`)                | EA source `PAL` format, `05-FORMATS.md` § PAL                   |
+| **SHP sprites**   | `.shp` file bytes     | `Vec<Frame>` with pixel data, width, height per frame. LCW/RLE decode | EA source `SHAPE.H`/`SHAPE.CPP`: `ShapeBlock_Type`, draw flags  |
+| **TMP tiles**     | `.tmp` file bytes     | Terrain tile images per theater (Temperate, Snow, Interior)           | OpenRA's template definitions + EA source                       |
+| **AUD audio**     | `.aud` file bytes     | PCM samples. IMA ADPCM decompression via `IndexTable`/`DiffTable`     | EA source `AUDIO.CPP`, `05-FORMATS.md` § AUD                    |
+| **CLI inspector** | Any RA file or `.mix` | Human-readable dump: file list, sprite frame count, palette preview   | `ic` CLI prototype: `ic dump <file>`                            |
+
+**Key implementation detail:** MIX archives use a CRC32 hash of the filename (uppercased) as the lookup key — there's no filename stored in the archive. `ra-formats` must include the hash function and a known-filename dictionary (from OpenRA's `global.mix` filenames list) to resolve entries by name.
+
+**Test strategy:** Parse every `.mix` from a stock Red Alert installation. Extract every `.shp` and verify frame counts match OpenRA's `sequences/*.yaml`. Render every `.pal` as a 16×16 color grid PNG.
+
+#### Step 2: Bevy Window + One Sprite (Week 3)
+
+The "Hello RA" moment — a Bevy window opens and displays a single Red Alert sprite with the correct palette applied.
+
+**What this proves:** `ra-formats` output can flow into Bevy's `Image` / `TextureAtlas` pipeline. Palette-indexed sprites render correctly on a GPU.
+
+**Implementation:**
+
+1. Load `conquer.mix` → extract `e1.shp` (rifle infantry) and `temperat.pal`
+2. Convert SHP frames to RGBA pixels by looking up each palette index in the `.pal` → produce a Bevy `Image`
+3. Build a `TextureAtlas` from the frame images (Bevy's sprite sheet system)
+4. Spawn a Bevy `SpriteSheetBundle` entity and animate through the idle frames
+5. Display in a Bevy window with a simple orthographic camera
+
+**Palette handling:** At this stage, palette application happens on the CPU during asset loading (index → RGBA lookup). The GPU palette shader (for runtime player color remapping, palette cycling) comes in Phase 1 proper. CPU conversion is correct and simple — good enough for validation.
+
+**Player color remapping:** Not needed yet. Just render with the default palette. Player colors (palette indices 80–95) are a Phase 1 concern.
+
+#### Step 3: Load and Render an OpenRA Map (Weeks 4–5)
+
+Parse `.oramap` files and render the terrain grid in correct isometric projection.
+
+**What this proves:** The coordinate system works. Isometric math is correct. Theater palettes load. Terrain tiles tile without visible seams.
+
+**Implementation:**
+
+1. Parse `.oramap` (ZIP archive containing `map.yaml` + `map.bin`)
+2. `map.yaml` defines: map size, tileset/theater, player definitions, actor placements
+3. `map.bin` is the tile grid: each cell has a tile index + subtile index
+4. Load the theater tileset (e.g., `temperat.mix` for Temperate) and its palette
+5. For each cell in the grid, look up the terrain tile image and blit it at the correct isometric screen position
+
+**Isometric coordinate transform:**
+
+```
+screen_x = (cell_x - cell_y) * tile_half_width
+screen_y = (cell_x + cell_y) * tile_half_height
+```
+
+Where `tile_half_width = 30` and `tile_half_height = 15` for classic RA's 60×30 diamond tiles (these values come from the original source and OpenRA). This is the `CoordTransform` defined in Phase 0's architecture work.
+
+**Tile rendering order:** Tiles render left-to-right, top-to-bottom in map coordinates. This is the standard isometric painter's algorithm. In Bevy, this translates to setting `Transform.translation.z` based on the cell's Y coordinate (higher Y = lower z = renders behind).
+
+**Map bounds and camera:** The map defines a playable bounds rectangle within the total tile grid. Set the Bevy camera to center on the map and allow panning with arrow keys / edge scrolling. Zoom with scroll wheel.
+
+#### Step 4: Sprites on Map + Idle Animations + Camera (Weeks 6–8)
+
+Place unit and building sprites on the terrain grid. Animate idle loops. Implement camera controls.
+
+**What this proves:** Sprites render at correct positions on the terrain. Z-ordering works (buildings behind units, shadows under vehicles). Animation timing matches the original game.
+
+**Implementation:**
+
+1. Read actor placements from `map.yaml` — each actor has a type name, cell position, and owner
+2. Look up the actor's sprite sequence from `sequences/*.yaml` (or the unit rules) — this gives the `.shp` filename, frame ranges for each animation, and facing count
+3. For each placed actor, create a Bevy entity with:
+   - `SpriteSheetBundle` using the actor's sprite frames
+   - `Transform` positioned at the isometric screen location of the actor's cell
+   - Z-order based on render layer (see § "Z-Order" above) and Y-position within layer
+4. Animate idle sequences: advance frames at the timing specified in the sequence definition
+5. Buildings: render the "make" animation's final frame (fully built state)
+
+**Camera system:**
+
+| Control           | Input                    | Behavior                                                        |
+| ----------------- | ------------------------ | --------------------------------------------------------------- |
+| **Pan**           | Arrow keys / edge scroll | Smoothly move camera. Edge scroll activates within 10px of edge |
+| **Zoom**          | Mouse scroll wheel       | Discrete zoom levels (1×, 1.5×, 2×, 3×) or smooth zoom          |
+| **Center on map** | Home key                 | Reset camera to map center                                      |
+| **Minimap click** | Click on minimap panel   | Camera jumps to clicked location                                |
+
+At this stage, the minimap is a simple downscaled render of the full map — no player colors, no fog. Game-quality minimap rendering comes in Phase 3.
+
+**Z-order validation:** Place overlapping buildings and units in a test map. Verify visually against a screenshot from OpenRA rendering the same map. The 13-layer z-order system (§ "Z-Order" above) must be correct at this step.
+
+#### Step 5: Shroud, Fog-of-War, and Selection (Weeks 9–10)
+
+Add the visual layers that make it feel like an actual game viewport rather than a debug renderer.
+
+**Shroud rendering:** Unexplored areas are black. Explored-but-not-visible areas show terrain but dimmed (fog). The shroud layer renders on top of everything (z-layer 12). Shroud edges use smooth blending tiles (from the tileset) for clean boundaries. At this stage, shroud state is hardcoded (reveal a circle around the map center) — real fog computation comes in Phase 2 with `FogProvider`.
+
+**Selection box:** Left-click-drag draws a selection rectangle. In isometric view, this is traditionally a diamond-shaped selection (rotated 45°) to match the grid orientation, though OpenRA uses a screen-aligned rectangle. IC supports both via QoL toggle (D033). Selected units show a health bar and selection bracket below them.
+
+**Cursor system:** The cursor changes based on what it's hovering over — move cursor on ground, select cursor on own units, attack cursor on enemies. This is the `CursorContext` system. At this stage, implement the visual cursor switching; the actual order dispatch (right-click → move command) is Phase 2 sim work.
+
+#### Step 6: Sidebar Chrome — First Game-Like Frame (Weeks 11–12)
+
+Assemble the classic RA sidebar layout to complete the visual frame. No functionality yet — build queues don't work, credits don't tick, radar doesn't update. But the *layout* is in place.
+
+**What this proves:** Bevy UI can reproduce the RA sidebar layout. Theme YAML (D032) drives the arrangement. The viewport resizes correctly when the sidebar is present.
+
+**Sidebar layout (Classic theme):**
+
+```
+┌───────────────────────────────────────────┬────────────┐
+│                                           │  RADAR     │
+│                                           │  MINIMAP   │
+│                                           ├────────────┤
+│          GAME VIEWPORT                    │  CREDITS   │
+│          (isometric map)                  │  $ 10000   │
+│                                           ├────────────┤
+│                                           │  POWER BAR │
+│                                           │  ████░░░░  │
+│                                           ├────────────┤
+│                                           │  BUILD     │
+│                                           │  QUEUE     │
+│                                           │  [icons]   │
+│                                           │  [icons]   │
+│                                           │            │
+├───────────────────────────────────────────┴────────────┤
+│  STATUS BAR: selected unit info / tooltip              │
+└────────────────────────────────────────────────────────┘
+```
+
+**Implementation:** Use Bevy UI (`bevy_ui`) for the sidebar layout. The sidebar is a fixed-width panel on the right. The game viewport fills the remaining space. Each sidebar section is a placeholder panel with correct sizing and positioning. The radar minimap shows the downscaled terrain render from Step 4. Build queue icons show static sprite images from the unit/building sequences.
+
+**Theme loading:** Read a `theme.yaml` (D032) that defines: sidebar width, section heights, font, color palette, chrome sprite sheet references. At this stage, only the Classic theme exists — but the loading system is in place so future themes just swap the YAML.
+
+### Content Detection — Finding RA Assets
+
+Before any of the above steps can run, the engine must locate the player's Red Alert game files. IC never distributes copyrighted assets — it loads them from games the player already owns.
+
+**Detection sources (probed at first launch):**
+
+| Source               | Detection Method                                                                   | Priority |
+| -------------------- | ---------------------------------------------------------------------------------- | -------- |
+| **Steam**            | `SteamApps/common/CnCRemastered/` or `SteamApps/common/Red Alert/` via Steam paths | 1        |
+| **GOG**              | Registry key or default GOG install path                                           | 2        |
+| **Origin / EA App**  | Registry key for C&C Ultimate Collection                                           | 3        |
+| **OpenRA**           | `~/.openra/Content/ra/` — OpenRA's own content download                            | 4        |
+| **Manual directory** | Player points to a folder containing `.mix` files                                  | 5        |
+
+If no content source is found, the first-launch flow guides the player to either install the game from a platform they own it on, or point to existing files. IC does not download game files from the internet (legal boundary).
+
+See `05-FORMATS.md` § "Content Source Detection and Installed Asset Locations" for detailed source probing logic and the `ContentSource` enum.
+
+### Timeline Summary
+
+| Weeks | Step                 | Milestone                                                    | Phase Alignment |
+| ----- | -------------------- | ------------------------------------------------------------ | --------------- |
+| 1–2   | `ra-formats` parsers | CLI can dump any MIX/SHP/PAL/TMP/AUD file                    | Phase 0         |
+| 3     | Bevy + one sprite    | Window opens, animated RA infantry on screen                 | Phase 0 → 1     |
+| 4–5   | Map rendering        | Any `.oramap` renders as isometric terrain grid              | Phase 1         |
+| 6–8   | Sprites + animations | Units and buildings on map, idle animations, camera controls | Phase 1         |
+| 9–10  | Shroud + selection   | Fog overlay, selection box, cursor context switching         | Phase 1         |
+| 11–12 | Sidebar chrome       | Classic RA layout assembled — first complete visual frame    | Phase 1         |
+
+**Phase 0 exit:** Steps 1–2 complete (parsers + one sprite in Bevy). **Phase 1 exit:** All six steps complete — any OpenRA RA map loads and renders with sprites, animations, camera, shroud, and sidebar layout at 144fps on mid-range hardware.
+
+After Step 6, the rendering slice is done. The next work is Phase 2: making the units actually *do* things (move, shoot, die) in a deterministic simulation. See `08-ROADMAP.md` § Phase 2.
+
 ## Crate Dependency Graph
 
 ```
@@ -1999,7 +2410,7 @@ Most crates are self-explanatory from the dependency graph, but three that appea
 **Responsibilities:**
 - **Sound effects:** Weapon fire, explosions, unit acknowledgments, UI clicks. Triggered by sim events (combat, production, movement) via Bevy observer systems.
 - **EVA voice system:** Plays notification audio triggered by `notification_system()` events. Manages a priority queue — high-priority notifications (nuke launch, base under attack) interrupt low-priority ones. Respects per-notification cooldowns.
-- **Music playback:** Jukebox system with playlist management, track shuffle, and cross-fade. Supports `.aud` (original RA format via `ra-formats`) and modern formats (OGG, WAV via Bevy). Theme-specific intro tracks (D032 — Hell March for Classic theme).
+- **Music playback:** Three modes — jukebox (classic sequential/shuffle), sequential (ordered playlist), and dynamic (mood-tagged tracks with game-state-driven transitions and crossfade). Supports `.aud` (original RA format via `ra-formats`) and modern formats (OGG, WAV via Bevy). Theme-specific intro tracks (D032 — Hell March for Classic theme). Dynamic mode monitors combat, base threat, and objective state to select appropriate mood category. See § "Red Alert Experience Recreation Strategy" for full music system design and D038 in `09-DECISIONS.md` for scenario editor integration.
 - **Spatial audio:** 3D positional audio for effects — explosions louder when camera is near. Uses Bevy's spatial audio with listener at `GameCamera.position` (see § "Camera System").
 - **VoIP playback:** Decodes incoming Opus voice frames from `MessageLane::Voice` and mixes them into the audio output. Handles per-player volume, muting, and optional spatial panning (D059 § Spatial Audio). Voice replay playback syncs Opus frames to game ticks.
 - **Ambient soundscapes:** Per-biome ambient loops (waves for coastal maps, wind for snow maps). Weather system (D022) can modify ambient tracks.
@@ -2181,6 +2592,563 @@ pub struct WasmInstance {
 **Browser builds:** Tier 3 WASM mods are desktop/server-only. The browser build (WASM target) cannot embed `wasmtime` — see `04-MODDING.md` § "Browser Build Limitation (WASM-on-WASM)" for the full analysis and future mitigation path (`wasmi` interpreter fallback).
 
 **Phase:** Lua runtime in Phase 4. WASM runtime in Phase 4-5. Mod API versioning in Phase 6a.
+
+## Install & Source Layout (Community-Friendly Project Structure)
+
+The directory structure — both the shipped product and the source repository — is designed to feel immediately navigable to anyone who has worked with OpenRA. OpenRA's modding community thrived because the project was approachable: open a mod folder, find YAML rules organized by category, edit values, see results. IC preserves that muscle memory while fitting the structure to a Rust/Bevy codebase.
+
+### Design Principles
+
+1. **Game modules are mods.** Built-in game modules (`mods/ra/`, `mods/td/`) use the exact same directory layout, `mod.yaml` manifest, and YAML rule schema as community-created mods. No internal-only APIs, no special paths. If a modder can edit `mods/ra/rules/units/vehicles.yaml`, anyone can see how the game's own data is structured. Directly inspired by Factorio's "game is a mod" principle (validated in D018).
+
+2. **Same vocabulary, same directories.** OpenRA uses `rules/`, `sequences/`, `chrome/`, `maps/`, `audio/`, `scripts/`. IC uses the same directory names for the same purposes. An OpenRA modder opening IC's `mods/ra/` directory knows where everything is.
+
+3. **Separate binaries for separate roles.** Game client, dedicated server, CLI tool, and SDK editor are separate executables — like OpenRA ships `OpenRA.exe`, `OpenRA.Server.exe`, and `OpenRA.Utility.exe`. A server operator never needs the renderer. A modder using the SDK never needs the multiplayer client. Each has its own binary, sharing library crates underneath.
+
+4. **Flat and scannable.** No deep nesting for its own sake. A modder looking at `mods/ra/` should see the high-level structure in a single `ls`. Subdirectories within `rules/` organize by category (units, structures, weapons) — the same pattern OpenRA uses.
+
+5. **Data next to data, code next to code.** Game content (YAML, Lua, assets) lives in `mods/`. Engine code (Rust) lives in crate directories. They don't intermingle. A gameplay modder never touches Rust. A engine contributor goes straight to the crate they need.
+
+### Install Directory (Shipped Product)
+
+What an end user sees after installing Iron Curtain:
+
+```
+iron-curtain/
+├── iron-curtain[.exe]              # Game client (ic-game binary)
+├── ic-server[.exe]                 # Relay / dedicated server (ic-net binary)
+├── ic[.exe]                        # CLI tool (mod, backup, export, profile, server commands)
+├── ic-editor[.exe]                 # SDK: scenario editor, asset studio, campaign editor (D038+D040)
+├── mods/                           # Game modules + content — the heart of the project
+│   ├── common/                     # Shared resources used by all C&C-family modules
+│   │   ├── mod.yaml                #   manifest (declares shared chrome, cursors, etc.)
+│   │   ├── chrome/                 #   shared UI layout definitions
+│   │   ├── cursors/                #   shared cursor definitions
+│   │   └── translations/           #   shared localization strings
+│   ├── ra/                         # Red Alert game module (ships Phase 2)
+│   │   ├── mod.yaml                #   manifest — same schema as any community mod
+│   │   ├── rules/                  #   unit, structure, weapon, terrain definitions
+│   │   │   ├── units/              #     infantry.yaml, vehicles.yaml, naval.yaml, aircraft.yaml
+│   │   │   ├── structures/         #     allied-structures.yaml, soviet-structures.yaml
+│   │   │   ├── weapons/            #     ballistics.yaml, missiles.yaml, energy.yaml
+│   │   │   ├── terrain/            #     temperate.yaml, snow.yaml, interior.yaml
+│   │   │   └── presets/            #     balance presets: classic.yaml, openra.yaml, remastered.yaml (D019)
+│   │   ├── maps/                   #   built-in maps
+│   │   ├── missions/               #   campaign missions (YAML scenario + Lua triggers)
+│   │   ├── sequences/              #   sprite sequence definitions (animation frames)
+│   │   ├── chrome/                 #   RA-specific UI layout (sidebar, build queue)
+│   │   ├── audio/                  #   music playlists, EVA definitions, voice mappings
+│   │   ├── ai/                     #   AI personality profiles (D043)
+│   │   ├── scripts/                #   Lua scripts (shared triggers, ability definitions)
+│   │   └── themes/                 #   UI theme overrides: classic.yaml, modern.yaml (D032)
+│   └── td/                         # Tiberian Dawn game module (ships Phase 3–4)
+│       ├── mod.yaml
+│       ├── rules/
+│       ├── maps/
+│       ├── missions/
+│       └── ...                     #   same layout as ra/
+├── LICENSE
+└── THIRD-PARTY-LICENSES
+```
+
+**Key features of the install layout:**
+
+- **`mods/common/`** is directly analogous to OpenRA's `mods/common/`. Shared assets, chrome, and cursor definitions used across all C&C-family game modules. Community game modules (Dune 2000, RA2) can depend on it or provide their own.
+- **`mods/ra/`** is a mod. It uses the same `mod.yaml` schema, the same `rules/` structure, and the same `sequences/` format as a community mod. There is no "privileged" version of this directory — the engine treats it identically to `<data_dir>/mods/my-total-conversion/`. This means every modder can read the game's own data as a working example.
+- **Every YAML file in `mods/ra/rules/` is editable.** Want to change tank cost? Open `rules/units/vehicles.yaml`, find `medium_tank`, change `cost: 800` to `cost: 750`. The same workflow as OpenRA — except the YAML is standard-compliant and serde-typed.
+- **The CLI (`ic`) is the Swiss Army knife.** `ic mod init`, `ic mod check`, `ic mod test`, `ic mod publish`, `ic backup create`, `ic export`, `ic server validate-config`. One binary, consistent subcommands — no separate tools to discover.
+
+### Source Repository (Contributor Layout)
+
+What a contributor sees after cloning the repository:
+
+```
+iron-curtain/                       # Cargo workspace root
+├── Cargo.toml                      # Workspace manifest — lists all crates
+├── Cargo.lock
+├── deny.toml                       # cargo-deny license policy (GPL-compatible deps only)
+├── AGENTS.md                       # Agent instructions (this file)
+├── README.md
+├── LICENSE                         # GPL v3 with modding exception (D051)
+├── mods/                           # Game data — YAML, Lua, assets (NOT Rust code)
+│   ├── common/
+│   ├── ra/
+│   └── td/
+├── crates/                         # All Rust crates live here
+│   ├── ra-formats/                 # .mix, .shp, .pal parsers; MiniYAML converter
+│   │   ├── Cargo.toml
+│   │   └── src/
+│   │       ├── lib.rs
+│   │       ├── mix.rs              #   MIX archive reader
+│   │       ├── shp.rs              #   SHP sprite reader
+│   │       ├── pal.rs              #   PAL palette reader
+│   │       ├── aud.rs              #   AUD audio decoder
+│   │       ├── vqa.rs              #   VQA video decoder
+│   │       ├── miniyaml.rs         #   MiniYAML parser + converter (D025)
+│   │       ├── oramap.rs           #   .oramap map loader
+│   │       └── mod_manifest.rs     #   OpenRA mod.yaml parser (D026)
+│   ├── ic-protocol/                # Shared boundary: orders, codecs
+│   │   ├── Cargo.toml
+│   │   └── src/
+│   │       ├── lib.rs
+│   │       ├── orders.rs           #   PlayerOrder, TimestampedOrder
+│   │       └── codec.rs            #   OrderCodec trait
+│   ├── ic-sim/                     # Deterministic simulation (the core)
+│   │   ├── Cargo.toml
+│   │   └── src/
+│   │       ├── lib.rs              #   pub API: Simulation, step(), snapshot()
+│   │       ├── components/         #   ECS components — one file per domain
+│   │       │   ├── mod.rs
+│   │       │   ├── health.rs       #     Health, Armor, DamageState
+│   │       │   ├── mobile.rs       #     Mobile, Locomotor, Facing
+│   │       │   ├── combat.rs       #     Armament, AutoTarget, Turreted, AmmoPool
+│   │       │   ├── production.rs   #     Buildable, ProductionQueue, Prerequisites
+│   │       │   ├── economy.rs      #     Harvester, ResourceStorage, OreField
+│   │       │   ├── transport.rs    #     Cargo, Passenger, Carryall
+│   │       │   ├── power.rs        #     PowerProvider, PowerConsumer
+│   │       │   ├── stealth.rs      #     Cloakable, Detector
+│   │       │   ├── capture.rs      #     Capturable, Captures
+│   │       │   ├── veterancy.rs    #     Veterancy, Experience
+│   │       │   ├── building.rs     #     Placement, Foundation, Sellable, Repairable
+│   │       │   └── support.rs      #     Superweapon, Chronoshift, IronCurtain
+│   │       ├── systems/            #   ECS systems — one file per simulation step
+│   │       │   ├── mod.rs
+│   │       │   ├── orders.rs       #     validate_orders(), apply_orders()
+│   │       │   ├── movement.rs     #     movement_system() — pathfinding integration
+│   │       │   ├── combat.rs       #     combat_system() — targeting, firing, damage
+│   │       │   ├── production.rs   #     production_system() — build queues, prerequisites
+│   │       │   ├── harvesting.rs   #     harvesting_system() — ore collection, delivery
+│   │       │   ├── power.rs        #     power_system() — grid calculation
+│   │       │   ├── fog.rs          #     fog_system() — delegates to FogProvider trait
+│   │       │   ├── triggers.rs     #     trigger_system() — Lua/WASM script callbacks
+│   │       │   ├── conditions.rs   #     condition_system() — D028 condition evaluation
+│   │       │   ├── cleanup.rs      #     cleanup_system() — entity removal, state transitions
+│   │       │   └── weather.rs      #     weather_system() — D022 weather state machine
+│   │       ├── traits/             #   Pluggable abstractions (D041) — NOT OpenRA "traits"
+│   │       │   ├── mod.rs
+│   │       │   ├── pathfinder.rs   #     Pathfinder trait (D013)
+│   │       │   ├── spatial.rs      #     SpatialIndex trait
+│   │       │   ├── fog.rs          #     FogProvider trait
+│   │       │   ├── damage.rs       #     DamageResolver trait
+│   │       │   ├── validator.rs    #     OrderValidator trait (D041)
+│   │       │   └── ai.rs           #     AiStrategy trait (D041)
+│   │       ├── math/               #   Fixed-point arithmetic, coordinates
+│   │       │   ├── mod.rs
+│   │       │   ├── fixed.rs        #     Fixed-point types (i32/i64 scale — P002)
+│   │       │   └── pos.rs          #     WorldPos, CellPos
+│   │       ├── rules/              #   YAML rule deserialization (serde structs)
+│   │       │   ├── mod.rs
+│   │       │   ├── unit.rs         #     UnitDef, Buildable, DisplayInfo
+│   │       │   ├── weapon.rs       #     WeaponDef, Warhead, Projectile
+│   │       │   ├── alias.rs        #     OpenRA trait name alias registry (D023)
+│   │       │   └── inheritance.rs  #     YAML inheritance resolver
+│   │       └── snapshot.rs         #   State serialization for saves/replays/rollback
+│   ├── ic-net/                     # Networking (never imports ic-sim)
+│   │   ├── Cargo.toml
+│   │   └── src/
+│   │       ├── lib.rs
+│   │       ├── network_model.rs    #   NetworkModel trait (D006)
+│   │       ├── lockstep.rs         #   LockstepNetwork implementation
+│   │       ├── local.rs            #   LocalNetwork (testing, single-player)
+│   │       ├── relay_core.rs       #   RelayCore library (D007)
+│   │       └── bin/
+│   │           └── relay.rs        #   relay-server binary entry point
+│   ├── ic-render/                  # Isometric rendering (Bevy plugin)
+│   ├── ic-ui/                      # Game chrome, sidebar, minimap
+│   ├── ic-audio/                   # Sound, music, EVA, VoIP
+│   ├── ic-script/                  # Lua + WASM mod runtimes
+│   ├── ic-ai/                      # Skirmish AI, adaptive difficulty
+│   ├── ic-llm/                     # LLM mission generation (optional)
+│   ├── ic-editor/                  # SDK binary: scenario editor, asset studio (D038+D040)
+│   └── ic-game/                    # Game binary: ties all plugins together
+│       ├── Cargo.toml
+│       └── src/
+│           └── main.rs             #   Bevy App setup, plugin registration
+├── tools/                          # Developer tools (not shipped)
+│   ├── miniyaml2yaml/              #   MiniYAML → YAML batch converter CLI
+│   └── replay-corpus/              #   Foreign replay regression test harness (D056)
+└── tests/                          # Integration tests
+    ├── sim/                        #   Deterministic sim regression tests
+    └── format/                     #   File format round-trip tests
+```
+
+### Where OpenRA Contributors Find Things
+
+An OpenRA contributor's first question is "where does this live in IC?" This table maps OpenRA's C# project structure to IC's Rust workspace:
+
+| What you did in OpenRA            | Where in OpenRA                      | Where in IC                              | Notes                                        |
+| --------------------------------- | ------------------------------------ | ---------------------------------------- | -------------------------------------------- |
+| Edit unit stats (cost, HP, speed) | `mods/ra/rules/*.yaml`               | `mods/ra/rules/units/*.yaml`             | Same workflow, real YAML instead of MiniYAML |
+| Edit weapon definitions           | `mods/ra/weapons/*.yaml`             | `mods/ra/rules/weapons/*.yaml`           | Nested under `rules/` for discoverability    |
+| Edit sprite sequences             | `mods/ra/sequences/*.yaml`           | `mods/ra/sequences/*.yaml`               | Identical location                           |
+| Write Lua mission scripts         | `mods/ra/maps/*/script.lua`          | `mods/ra/missions/*.lua`                 | Same API (D024), dedicated directory         |
+| Edit UI layout (chrome)           | `mods/ra/chrome/*.yaml`              | `mods/ra/chrome/*.yaml`                  | Identical location                           |
+| Edit balance/speed/settings       | `mods/ra/mod.yaml`                   | `mods/ra/rules/presets/*.yaml`           | Separated into named presets (D019)          |
+| Add a new C# trait (component)    | `OpenRA.Mods.RA/Traits/*.cs`         | `crates/ic-sim/src/components/*.rs`      | Rust struct + derive instead of C# class     |
+| Add a new activity (behavior)     | `OpenRA.Mods.Common/Activities/*.cs` | `crates/ic-sim/src/systems/*.rs`         | ECS system instead of activity object        |
+| Add a new warhead type            | `OpenRA.Mods.Common/Warheads/*.cs`   | `crates/ic-sim/src/components/combat.rs` | Warheads are component data + system logic   |
+| Add a format parser               | `OpenRA.Game/FileFormats/*.cs`       | `crates/ra-formats/src/*.rs`             | One file per format, same as OpenRA          |
+| Add a Lua scripting global        | `OpenRA.Mods.Common/Scripting/*.cs`  | `crates/ic-script/src/*.rs`              | D024 API surface                             |
+| Edit AI behavior                  | `OpenRA.Mods.Common/AI/*.cs`         | `crates/ic-ai/src/*.rs`                  | Priority-manager hierarchy                   |
+| Edit rendering                    | `OpenRA.Game/Graphics/*.cs`          | `crates/ic-render/src/*.rs`              | Bevy render plugin                           |
+| Edit server/network code          | `OpenRA.Server/*.cs`                 | `crates/ic-net/src/*.rs`                 | Never touches ic-sim                         |
+| Run the utility CLI               | `OpenRA.Utility.exe`                 | `ic[.exe]`                               | `ic mod check`, `ic export`, etc.            |
+| Run a dedicated server            | `OpenRA.Server.exe`                  | `ic-server[.exe]`                        | Or `ic server run` via CLI                   |
+
+### ECS Translation: OpenRA Traits → IC Components + Systems
+
+OpenRA merges data and behavior into "traits" (C# classes). In IC's ECS architecture, these split into **components** (data) and **systems** (behavior):
+
+| OpenRA Trait         | IC Component(s)                  | IC System                             | File(s)                                             |
+| -------------------- | -------------------------------- | ------------------------------------- | --------------------------------------------------- |
+| `Health`             | `Health`, `Armor`                | `combat_system()` applies damage      | `components/health.rs`, `systems/combat.rs`         |
+| `Mobile`             | `Mobile`, `Locomotor`, `Facing`  | `movement_system()` moves entities    | `components/mobile.rs`, `systems/movement.rs`       |
+| `Armament`           | `Armament`, `AmmoPool`           | `combat_system()` fires weapons       | `components/combat.rs`, `systems/combat.rs`         |
+| `Harvester`          | `Harvester`, `ResourceStorage`   | `harvesting_system()` gathers ore     | `components/economy.rs`, `systems/harvesting.rs`    |
+| `Buildable`          | `Buildable`, `Prerequisites`     | `production_system()` manages queue   | `components/production.rs`, `systems/production.rs` |
+| `Cargo`, `Passenger` | `Cargo`, `Passenger`             | `transport_system()` loads/unloads    | `components/transport.rs`                           |
+| `Cloak`              | `Cloakable`, `Detector`          | `stealth_system()` updates visibility | `components/stealth.rs`                             |
+| `Valued`             | Part of `Buildable` (cost field) | —                                     | `components/production.rs`                          |
+| `ConditionalTrait`   | Condition system (D028)          | `condition_system()` evaluates        | `systems/conditions.rs`                             |
+
+The naming convention follows Rust idioms (`snake_case` files, `PascalCase` types) but the organization mirrors OpenRA's categorical grouping — combat things together, economy things together, movement things together.
+
+### Why This Layout Works for the Community
+
+**For data modders (80% of mods):** Never leave `mods/`. Edit YAML, run `ic mod check`, see results. The built-in game modules serve as always-available, documented examples of every YAML feature. No need to read Rust code to understand what fields a unit definition supports — look at `mods/ra/rules/units/infantry.yaml`.
+
+**For Lua scripters (missions, game modes):** Write `scripts/*.lua` in your mod directory. The API is a superset of OpenRA's (D024) — same 16 globals, same function signatures. Existing OpenRA missions run unmodified. Test with `ic mod test`.
+
+**For engine contributors:** Clone the repo. `crates/` holds all Rust code. Each crate has a single responsibility and clear boundaries. The naming (`ic-sim`, `ic-net`, `ic-render`) tells you what it does. Within `ic-sim`, `components/` holds data, `systems/` holds logic, `traits/` holds the pluggable abstractions — the ECS split is consistent and predictable.
+
+**For total-conversion modders:** The `ic-sim/src/traits/` directory defines every pluggable seam — custom pathfinder, custom AI, custom fog of war, custom damage resolution. Implement a trait as a WASM module (Tier 3), register it in your `mod.yaml`, and the engine uses your implementation. No forking, no C# DLL stacking.
+
+### Development Asset Strategy
+
+A clean-sheet engine needs art for editor chrome, UI menus, CI testing, and developer workflows — but it cannot ship or commit copyrighted game content. This subsection documents how reference projects host their game resources, what IC can freely use, and what belongs (or doesn't belong) in the repository.
+
+#### How Reference Projects Host Game Resources
+
+**Original Red Alert (1996):** Assets ship as `.mix` archives — flat binary containers with CRC-hashed filenames. Originally distributed on CD-ROM, later as a freeware download installer (2008). All sprites (`.shp`), terrain (`.tmp`), palettes (`.pal`), audio (`.aud`), and cutscenes (`.vqa`) are packed inside these archives. No separate asset repository — everything distributes as compiled binaries through retail channels. The freeware release means free to download and play, not free to redistribute or embed in another project.
+
+**EA Remastered Collection (2020):** Assets distribute through Steam (and previously Origin). The HD sprite sheets, remastered music, and cutscenes are **proprietary EA content** — not covered by the GPL v3 license that applies only to the C++ engine DLLs. Resources use updated archive formats (MegV3 for TD HD, standard `.mix` for classic mode) at known Steam AppId paths. See § Content Detection for how IC locates these.
+
+**OpenRA:** The engine **never distributes copyrighted game assets**. On first launch, a content installer detects existing game installations (Steam, Origin, GOG, disc copies) or downloads specific `.mix` files from EA's publicly accessible mirrors (the freeware releases). Assets are extracted and stored to `~/.openra/Content/ra/` (Linux) or the OS-appropriate equivalent. The OpenRA **source repository** contains only engine code (C#, GPL v3), original UI chrome art, mod rules (MiniYAML), maps, Lua scripts, and editor art — all OpenRA-created content. The few original assets (icons, cursors, fonts, panel backgrounds) are small enough for plain git. No Git LFS, no external asset hosting.
+
+**Key pattern:** Every successful engine reimplementation project (OpenRA, CorsixTH, OpenMW, Wargus) uses the same model — engine code in the repo, game content loaded at runtime from the player's own installation. IC follows this pattern exactly.
+
+#### Legal Boundaries — What IC Can Freely Use
+
+| Source                                                                                                              | What's freely usable                                                                                                                                  | What's NOT usable                                                                       | License                |
+| ------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- | ---------------------- |
+| **EA Red Alert source** ([CnC_Red_Alert](https://github.com/electronicarts/CnC_Red_Alert))                          | Struct definitions, algorithms, lookup tables, gameplay constants (weapon damage, unit speeds, build times) embedded in C/C++ code                    | Zero art assets, zero sprites, zero music, zero palettes — the repo is pure source code | GPL v3                 |
+| **EA Remastered source** ([CnC_Remastered_Collection](https://github.com/electronicarts/CnC_Remastered_Collection)) | C++ engine DLL source code, format definitions, bug-fixed gameplay logic                                                                              | HD sprite sheets, remastered music, Petroglyph's C# GUI layer, all visual/audio content | GPL v3 (C++ DLLs only) |
+| **EA Generals source** ([CnC_Generals_Zero_Hour](https://github.com/electronicarts/CnC_Generals_Zero_Hour))         | Netcode reference, pathfinding code, gameplay system architecture                                                                                     | No art or audio assets in the repository                                                | GPL v3                 |
+| **OpenRA source** ([OpenRA](https://github.com/OpenRA/OpenRA))                                                      | Engine code, UI chrome art (buttons, panels, scrollbars, dropdown frames), custom cursors, fonts, icons, map editor UI art, MiniYAML rule definitions | Nothing — all repo content is GPL v3                                                    | GPL v3                 |
+
+**OpenRA's original chrome art** is technically GPL v3 and could be used — but IC's design explicitly creates **all theme art as original work** (D032). Copying OpenRA's chrome would create visual confusion between the two projects and contradict the design direction. Study the *patterns* (layout structure, what elements exist), create original art.
+
+The EA GPL source repositories contain **no art assets whatsoever** — only C/C++ source code. The `.mix` archives containing actual game content (sprites, audio, palettes, terrain, cutscenes) are copyrighted EA property distributed through retail channels, even in the freeware release.
+
+#### What Belongs in the Repository
+
+| Asset category                                             | In repo?  | Mechanism                                           | Notes                                                      |
+| ---------------------------------------------------------- | --------- | --------------------------------------------------- | ---------------------------------------------------------- |
+| **EA game files** (`.mix`, `.shp`, `.aud`, `.vqa`, `.pal`) | **Never** | `ContentDetector` finds player's install at runtime | Same model as OpenRA — see § Content Detection             |
+| **IC-original editor art** (toolbar icons, cursors)        | Yes       | Plain git — small files (~1-5KB each)               | ~20 icons for SDK, original creations                      |
+| **YAML rules, maps, Lua scripts**                          | Yes       | Plain git — text files                              | All game content data authored by IC                       |
+| **Synthetic test fixtures**                                | Yes       | Plain git — tiny hand-crafted binaries              | Minimal `.mix`/`.shp`/`.pal` (~100 bytes) for parser tests |
+| **UI fonts**                                               | Yes       | Plain git — OFL/Apache licensed                     | Open fonts bundled with the engine                         |
+| **Placeholder/debug sprites**                              | Yes       | Plain git — original creations                      | Colored rectangles, grid patterns, numbered circles        |
+| **Large binary art** (future HD sprite packs, music)       | No        | Workshop P2P distribution (D049)                    | Community-created content                                  |
+| **Demo videos, screenshots**                               | No        | External hosting, linked from docs                  | YouTube, project website                                   |
+
+**Git LFS is not needed.** The design docs already rejected Git LFS for Workshop distribution ("1GB free then paid; designed for source code, not binary asset distribution; no P2P" — see D049). The same reasoning applies to development: IC's repository is code + YAML + design docs + small original icons. Total committed binary assets will stay well under 10MB.
+
+**CI testing strategy:** Parser and format tests use synthetic fixtures — small, hand-crafted binary files (a 2-frame `.shp`, a trivial `.mix` with 3 files, a minimal `.pal`) committed to `tests/fixtures/`. These are original creations that exercise `ra-formats` code without containing EA content. Integration tests requiring real RA assets are gated behind an optional feature flag (`#[cfg(feature = "integration")]`) and run on CI runners where RA is installed, configured via `IC_CONTENT_DIR` environment variable.
+
+#### Repository Asset Layout
+
+Extending the source repository layout (see § Source Repository above):
+
+```
+iron-curtain/
+├── assets/                         # IC-original assets ONLY (committed)
+│   ├── editor/                     #   SDK toolbar icons, editor cursors, panel art
+│   ├── ui/                         #   Menu chrome sprites, HUD elements
+│   ├── fonts/                      #   Bundled open-licensed fonts
+│   └── placeholder/                #   Debug sprites, test palettes, grid overlays
+├── tests/
+│   └── fixtures/                   #   Synthetic .mix/.shp/.pal for parser tests
+├── content/                        #   *** GIT-IGNORED *** — local dev game files
+│   └── ra/                         #   Developer's RA installation (pointed to or symlinked)
+├── .gitignore                      #   Ignores content/, target/, *.db
+└── ...
+```
+
+The `content/` directory is git-ignored. Each developer either symlinks it to their RA installation or sets `IC_CONTENT_DIR` to point elsewhere. This keeps copyrighted assets completely out of version control while giving developers a consistent local path for testing.
+
+#### Freely-Usable Resources for Graphics, Menus & CI
+
+IC needs original art for editor chrome, UI menus, and visual tooling. These are the recommended open-licensed sources:
+
+**Icon libraries (for editor toolbar, SDK panels, menu items):**
+
+| Library                                            | License              | Notes                                                                                                  |
+| -------------------------------------------------- | -------------------- | ------------------------------------------------------------------------------------------------------ |
+| [Lucide](https://lucide.dev/)                      | ISC (MIT-equivalent) | 1500+ clean SVG icons. Fork of Feather Icons with active maintenance. Excellent for toolbar/menu icons |
+| [Tabler Icons](https://tabler.io/icons)            | MIT                  | 5400+ SVG icons. Comprehensive coverage including RTS-relevant icons (map, layers, grid, cursor)       |
+| [Material Symbols](https://fonts.google.com/icons) | Apache 2.0           | Google's icon set. Variable weight/size. Massive catalog                                               |
+| [Phosphor Icons](https://phosphoricons.com/)       | MIT                  | 9000+ icons in 6 weights. Clean geometric style                                                        |
+
+**Fonts (for UI text, editor panels, console):**
+
+| Font                                                 | License | Notes                                                           |
+| ---------------------------------------------------- | ------- | --------------------------------------------------------------- |
+| [Inter](https://rsms.me/inter/)                      | OFL 1.1 | Optimized for screens. Excellent for UI text at all sizes       |
+| [JetBrains Mono](https://www.jetbrains.com/lp/mono/) | OFL 1.1 | Monospace. Ideal for console, YAML editor, debug overlays       |
+| [Noto Sans](https://fonts.google.com/noto)           | OFL 1.1 | Full Unicode coverage including CJK. Essential for localization |
+| [Fira Code](https://github.com/tonsky/FiraCode)      | OFL 1.1 | Monospace with ligatures. Alternative to JetBrains Mono         |
+
+**UI framework:**
+
+- **egui** (MIT) — the editor's panel/widget framework. Ships with Bevy via `bevy_egui`. Provides buttons, sliders, text inputs, dropdown menus, tree views, docking, color pickers — all rendered procedurally with no external art needed. Handles 95% of SDK chrome requirements.
+- **Bevy UI** — the game client's UI framework. Used for in-game chrome (sidebar, minimap, build queue) with IC-original sprite sheets styled per theme (D032).
+
+**Game content (sprites, terrain, audio, cutscenes):**
+
+- **Player's own RA installation** — loaded at runtime via `ContentDetector`. Every developer needs Red Alert installed locally (Steam, GOG, or freeware). This is the development workflow, not a limitation — you're building an engine for a game you play.
+- **No external asset CDN.** IC does not host, mirror, or download copyrighted game files. The browser build (Phase 7) uses drag-and-drop import from the player's local files — see `05-FORMATS.md` § Browser Asset Storage.
+
+**Placeholder art (for development before real assets load):**
+
+During early development, before the full content detection pipeline is complete, use committed placeholder assets in `assets/placeholder/`:
+
+- Colored rectangles (16×16, 24×24, 48×48) as unit stand-ins
+- Numbered grid tiles for terrain testing
+- Solid-color palette files (`.pal`-format, 768 bytes) for render pipeline testing
+- Simple geometric shapes for building footprints
+- Generated checkerboard patterns for missing texture fallbacks
+
+These are all original creations — trivial to produce, zero legal risk, and immediately useful for testing the render pipeline before content detection is wired up.
+
+## IC SDK & Editor Architecture (D038 + D040)
+
+The IC SDK is the creative toolchain — a separate Bevy application that shares library crates with the game but ships as its own binary. Players never see editor UI. Creators download the SDK to build maps, missions, campaigns, and assets. This section covers the practical architecture: what the GUI looks like, what graphical resources it uses, how the UX flows, and how to start building it. For the full feature catalog (30+ modules, trigger system, campaign editor, dialogue trees, Game Master mode), see `09-DECISIONS.md` § D038 and D040.
+
+### SDK Application Structure
+
+The SDK is a single Bevy application with tabbed workspaces:
+
+```
+┌───────────────────────────────────────────────────────────────────────┐
+│  IC SDK                                              [_][□][X]        │
+├──────────────┬────────────────────────────────────────────────────────┤
+│              │  [Scenario Editor] [Asset Studio] [Campaign Editor]    │
+│  MODE PANEL  ├────────────────────────────────────────┬───────────────┤
+│              │                                        │               │
+│  ┌─────────┐ │         ISOMETRIC VIEWPORT             │  PROPERTIES   │
+│  │Terrain  │ │                                        │  PANEL        │
+│  │Entities │ │    (same ic-render as the game —       │               │
+│  │Triggers │ │     live preview of actual game        │  [Name: ___]  │
+│  │Waypoints│ │     rendering)                         │  [Faction: _] │
+│  │Modules  │ │                                        │  [Health: __] │
+│  │Regions  │ │                                        │  [Script: _]  │
+│  │Scripts  │ │                                        │               │
+│  │Layers   │ │                                        │               │
+│  └─────────┘ │                                        │               │
+│              ├────────────────────────────────────────┤               │
+│              │  BOTTOM PANEL (context-sensitive)       │               │
+│              │  Triggers list / Script editor / Vars  │               │
+│              ├────────────────────────────────────────┴───────────────┤
+│              │  STATUS BAR: cursor pos │ cell info │ complexity meter │
+└──────────────┴───────────────────────────────────────────────────────┘
+```
+
+**Four main areas:**
+
+| Area                   | Technology                 | Purpose                                                                                                       |
+| ---------------------- | -------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| **Mode panel (left)**  | Bevy UI or `egui`          | Editing mode selector (8–10 modes). Stays visible at all times. Icons + labels, keyboard shortcuts            |
+| **Viewport (center)**  | `ic-render` (same as game) | The isometric map view. Renders terrain, sprites, trigger areas, waypoint lines, region overlays in real time |
+| **Properties (right)** | Bevy UI or `egui`          | Context-sensitive inspector. Shows attributes of the selected entity, trigger, module, or region              |
+| **Bottom panel**       | Bevy UI or `egui`          | Tabbed: trigger list, script editor (with syntax highlighting), variables panel, module browser               |
+
+### GUI Technology Choice
+
+The SDK faces a UI technology decision that the game does not: the game's UI is a themed, styled chrome layer (D032) built for immersion, while the SDK needs a dense, professional tool UI with text fields, dropdowns, tree views, scrollable lists, and property inspectors.
+
+**Approach: Dual UI — `ic-render` viewport + `egui` panels**
+
+| Concern                  | Technology      | Rationale                                                                                                              |
+| ------------------------ | --------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| **Isometric viewport**   | `ic-render`     | Must be identical to game rendering. Uses the same Bevy render pipeline, same sprite batching, same palette shaders    |
+| **Tool panels (all)**    | `egui`          | Dense inspector UI, text input, dropdowns, tree views, scrollable lists. `bevy_egui` integrates cleanly into Bevy apps |
+| **Script editor**        | `egui` + custom | Syntax-highlighted Lua editor with autocompletion. `egui` text edit with custom highlighting pass                      |
+| **Campaign graph**       | Custom Bevy 2D  | Node-and-edge graph rendered in a 2D Bevy viewport (not isometric). Pan/zoom like a mind map                           |
+| **Asset Studio preview** | `ic-render`     | Sprite viewer, palette preview, in-context preview all use the game's rendering                                        |
+
+**Why `egui` for tool panels:** Bevy UI (`bevy_ui`) is designed for game chrome — styled panels, themed buttons, responsive layouts. The SDK needs raw productivity UI: property grids with dozens of fields, type-ahead search in entity palettes, nested tree views for trigger folders, side-by-side diff panels. `egui` provides all of these out of the box. `bevy_egui` is a mature integration crate. The game never shows `egui` (it uses themed `bevy_ui`); the SDK uses both.
+
+**Why `ic-render` for the viewport:** The editor viewport must show exactly what the game will show — same sprite draw modes, same z-ordering, same palette application, same shroud rendering. If the editor used a simplified renderer, creators would encounter "looks different in-game" surprises. Reusing `ic-render` eliminates this class of bugs entirely.
+
+### What Graphical Resources the Editor Uses
+
+The SDK does not need its own art assets for the editor chrome — it uses `egui`'s default styling (suitable for professional tools) plus the game's own assets for content preview.
+
+| Resource Category    | Source                                                                                        | Used For                                                                                    |
+| -------------------- | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| **Editor chrome**    | `egui` default dark theme (or light theme, user-selectable)                                   | All panels, menus, inspectors, tree views, buttons, text fields                             |
+| **Viewport content** | Player's installed RA assets (via `ra-formats` + content detection)                           | Terrain tiles, unit/building sprites, animations — the actual game art                      |
+| **Editor overlays**  | Procedurally generated or minimal bundled PNGs                                                | Trigger zone highlights (colored rectangles), waypoint markers (circles), region boundaries |
+| **Entity palette**   | Sprite thumbnails extracted from game assets at load time                                     | Small preview icons in the entity browser (Garry's Mod spawn menu style)                    |
+| **Mode icons**       | Bundled icon set (~20 small PNG icons, original art, CC BY-SA licensed)                       | Mode panel icons, toolbar buttons, status indicators                                        |
+| **Cursor overlays**  | Bundled cursor sprites (~5 cursor states for editor: place, select, paint, erase, eyedropper) | Editor-specific cursors (distinct from game cursors)                                        |
+
+**Key point:** The SDK ships with minimal original art — just icons and cursors for the editor UI itself. All game content (sprites, terrain, palettes, audio) comes from the player's installed games. This is the same legal model as the game: IC never distributes copyrighted assets.
+
+**Entity palette thumbnails:** When the SDK loads a game module, it renders a small thumbnail for every placeable entity type — a 48×48 preview showing the unit's idle frame. These are cached on disk after first generation. The entity palette (left panel in Entities mode) displays these as a searchable grid, with categories, favorites, and recently-placed lists. This is the "Garry's Mod spawn menu" UX described in D038 — search-as-you-type finds any entity instantly.
+
+### UX Flow — How a Creator Uses the Editor
+
+#### Creating a New Scenario (5-minute orientation)
+
+1. **Launch SDK.** Opens to a start screen: New Scenario, Open Scenario, Open Campaign, Asset Studio, Recent Files.
+2. **New Scenario.** Dialog: choose map size, theater (Temperate/Snow/Interior), game module (RA1/TD/custom mod). A blank map with terrain generates.
+3. **Terrain mode (default).** Terrain brush active. Paint terrain tiles by clicking and dragging. Brush sizes 1×1 to 7×7. Elevation tools if the game module supports Z. Right-click to eyedrop a tile type.
+4. **Switch to Entities mode (Tab or click).** Entity palette appears in the left panel. Search for "Medium Tank" → click to select → click on map to place. Properties panel on the right shows the entity's attributes: faction, facing, stance, health, veterancy, Probability of Presence, inline script.
+5. **Switch to Triggers mode.** Draw a trigger area on the map. Set condition: "Any unit of Faction A enters this area." Set action: "Reinforcements module activates" (select a preconfigured module). Set countdown timer with min/mid/max randomization.
+6. **Switch to Modules mode.** Browse built-in modules (Wave Spawner, Patrol Route, Reinforcements, Objectives). Drag a module onto the map or assign it to a trigger.
+7. **Press Test.** SDK launches `ic-game` with this scenario via `LocalNetwork`. Play the mission. Close game → return to editor. Iterate.
+8. **Press Publish.** Exports as `.oramap`-compatible package → uploads to Workshop (D030).
+
+#### Simple ↔ Advanced Mode
+
+D038 defines a Simple/Advanced toggle controlling which features are visible:
+
+| Feature                  | Simple Mode | Advanced Mode |
+| ------------------------ | ----------- | ------------- |
+| Terrain painting         | Yes         | Yes           |
+| Entity placement         | Yes         | Yes           |
+| Basic triggers           | Yes         | Yes           |
+| Modules (drag-and-drop)  | Yes         | Yes           |
+| Waypoints                | Yes         | Yes           |
+| Probability of Presence  | —           | Yes           |
+| Inline scripts           | —           | Yes           |
+| Variables panel          | —           | Yes           |
+| Connections              | —           | Yes           |
+| Scripts panel (external) | —           | Yes           |
+| Compositions             | —           | Yes           |
+| Custom Lua triggers      | —           | Yes           |
+| Campaign editor          | —           | Yes           |
+
+Simple mode hides 15+ features to present a clean, approachable interface. A new creator sees: terrain tools, entity palette, basic triggers, pre-built modules, waypoints, and a Test button. That's enough to build a complete mission. Advanced mode reveals the full power. Toggle at any time — no data loss.
+
+### Editor Viewport — What Gets Rendered
+
+The viewport is not just a map — it renders multiple overlay layers on top of the game's normal isometric view:
+
+```
+Layer 0:   Terrain tiles (from ic-render, same as game)
+Layer 1:   Grid overlay (faint lines showing cell boundaries, toggle-able)
+Layer 2:   Region highlights (named regions shown as colored overlays)
+Layer 3:   Trigger areas (pulsing colored boundaries with labels)
+Layer 4:   Entities (buildings, units — rendered via ic-render)
+Layer 5:   Waypoint markers (numbered circles with directional arrows)
+Layer 6:   Connection lines (links between triggers, modules, waypoints)
+Layer 7:   Entity selection highlight (selected entity's bounding box)
+Layer 8:   Placement ghost (translucent preview of entity being placed)
+Layer 9:   Cursor tool overlay (brush circle for terrain, snap indicator)
+```
+
+Layers 1–3 and 5–9 are editor-only overlays drawn on top of the game rendering. They use basic 2D shapes (rectangles, circles, lines, text labels) rendered via Bevy's `Gizmos` system or a simple overlay pass. No complex art assets needed — colored geometric primitives with alpha transparency.
+
+### Asset Studio GUI
+
+The Asset Studio is a tab within the same SDK application. Its layout differs from the scenario editor:
+
+```
+┌───────────────────────────────────────────────────────────────────────┐
+│  IC SDK  — Asset Studio                                               │
+├───────────────────────┬───────────────────────────┬───────────────────┤
+│                       │                           │                   │
+│  ASSET BROWSER        │    PREVIEW VIEWPORT       │  PROPERTIES       │
+│                       │                           │                   │
+│  📁 conquer.mix       │   (sprite viewer with     │  Frames: 52       │
+│    ├── e1.shp         │    palette applied,        │  Width: 50        │
+│    ├── 1tnk.shp       │    animation controls,     │  Height: 39       │
+│    └── ...            │    zoom, frame scrub)      │  Draw mode:       │
+│  📁 temperat.mix      │                           │    [Normal ▾]     │
+│    └── ...            │   ◄ ▶ ⏸ ⏮ ⏭  Frame 12/52 │  Palette:         │
+│  📁 local assets      │                           │    [temperat ▾]   │
+│    └── my_sprite.png  │                           │  Player color:    │
+│                       │                           │    [Red ▾]        │
+│  🔎 Search...         │                           │                   │
+├───────────────────────┴───────────────────────────┼───────────────────┤
+│  TOOLS:  [Import] [Export] [Batch] [Compare]      │  In-context:      │
+│                                                    │  [Preview as unit]│
+└────────────────────────────────────────────────────┴───────────────────┘
+```
+
+**Three columns:** Asset browser (tree view of loaded archives + local files), preview viewport (sprite/palette/audio/video viewer), and properties panel (metadata + editing controls). The bottom row has action buttons and the "preview as unit / building / chrome" in-context buttons that render the asset on an actual map tile (using `ic-render`).
+
+### How to Start Building the Editor
+
+The editor bootstraps on top of the game's rendering — so the first-runnable (§ "First Runnable" above) is a prerequisite. Once the engine can load and render RA maps, the editor development follows a clear sequence:
+
+#### Phase 6a Bootstrapping (Editor MVP)
+
+| Step | Deliverable                      | Dependencies                                           | Effort  |
+| ---- | -------------------------------- | ------------------------------------------------------ | ------- |
+| 1    | SDK binary scaffold              | Bevy app + `bevy_egui`, separate from `ic-game`        | 1 week  |
+| 2    | Isometric viewport (read-only)   | `ic-render` as a Bevy plugin, loads a map, pan/zoom    | 1 week  |
+| 3    | Terrain painting                 | Map data structure mutation + viewport re-render       | 2 weeks |
+| 4    | Entity placement + palette       | Entity list from mod YAML, spawn/delete on click       | 2 weeks |
+| 5    | Properties panel                 | `egui` inspector for selected entity attributes        | 1 week  |
+| 6    | Save / load (YAML + map.bin)     | Serialize map state to `.oramap`-compatible format     | 1 week  |
+| 7    | Trigger system (basic)           | Area triggers, condition/action UI, countdown timers   | 3 weeks |
+| 8    | Module system (built-in presets) | Wave Spawner, Patrol Route, Reinforcements, Objectives | 2 weeks |
+| 9    | Waypoints + connections          | Visual waypoint markers, drag to connect               | 1 week  |
+| 10   | Test button                      | Launch `ic-game` with current scenario via subprocess  | 1 week  |
+| 11   | Undo/redo + autosave             | Command pattern for all editing operations             | 2 weeks |
+| 12   | Workshop publish                 | `ic mod publish` integration, package scenario         | 1 week  |
+
+**Total: ~18 weeks for a functional scenario editor MVP.** This covers the "core scenario editor" deliverable from Phase 6a — everything a creator needs to build and publish a playable mission.
+
+#### Asset Studio Bootstrapping
+
+The Asset Studio can be developed in parallel once `ra-formats` is mature (Phase 0):
+
+| Step | Deliverable                 | Dependencies                                   | Effort  |
+| ---- | --------------------------- | ---------------------------------------------- | ------- |
+| 1    | Archive browser + file list | `ra-formats` MIX parser, `egui` tree view      | 1 week  |
+| 2    | Sprite viewer with palette  | SHP→RGBA conversion, animation scrubber        | 1 week  |
+| 3    | Palette viewer/editor       | Color grid display, remap tools                | 1 week  |
+| 4    | Audio player                | AUD→PCM→Bevy audio playback, waveform display  | 1 week  |
+| 5    | In-context preview (on map) | `ic-render` viewport showing sprite on terrain | 1 week  |
+| 6    | Import pipeline (PNG → SHP) | Palette quantization, frame assembly           | 2 weeks |
+| 7    | Chrome/theme designer       | 9-slice editor, live menu preview              | 3 weeks |
+
+**Total: ~10 weeks for Asset Studio Layer 1 (browser/viewer) + Layer 2 (basic editing).** Layer 3 (LLM generation) is Phase 7.
+
+### Do We Have Enough Information?
+
+**Yes — the design is detailed enough to build from.** The critical path is clear:
+
+1. **Rendering engine (§ "First Runnable")** is the prerequisite. Without `ra-formats` and `ic-render`, there's no viewport.
+2. **GUI framework (`egui`)** is a known, mature Rust crate. No research needed — it has property inspectors, tree views, text editors, and all the widget types the SDK needs.
+3. **Viewport rendering** reuses `ic-render` — the same code that renders the game renders the editor viewport. This eliminates the hardest rendering problem.
+4. **Editor overlays** (trigger zones, waypoints, grid lines) are simple 2D shapes on top of the game render. Bevy's `Gizmos` API handles this.
+5. **Data model** is defined — scenarios are YAML + `map.bin` (OpenRA-compatible format), triggers are YAML structs, modules are YAML + Lua. No new format to invent.
+6. **Feature scope** is defined in D038 (every module, every trigger type, every panel). The question is NOT "what should the editor do" — that's answered. The question is "in what order do we build it" — and that's answered by the phasing table above.
+
+**What remains open:**
+- P003 (audio library choice) affects the Asset Studio's audio player but not the scenario editor
+- Exact `egui` widget customization for the entity palette (search UX, thumbnail rendering) needs prototyping
+- Campaign graph editor's visual layout algorithm (auto-layout for mission nodes) needs implementation experimentation
+- The precise line between `bevy_ui` and `egui` usage may shift during development — start with `egui` for everything, migrate specific widgets to `bevy_ui` only if styling needs demand it
+
+See `09-DECISIONS.md` § D038 for the full scenario editor feature catalog, and § D040 for the Asset Studio's three-layer architecture and format support tables.
 
 ## Multi-Game Extensibility (Game Modules)
 

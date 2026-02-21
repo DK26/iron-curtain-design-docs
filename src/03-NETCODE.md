@@ -1248,13 +1248,19 @@ We run one. Games appear here by default. Free, community-operated, no account r
 
 Communities, clans, and tournament organizers run their own. The client supports a list of tracking server URLs in settings. This is the Quake/Source master server model — decentralized, resilient.
 
-```yaml
-# settings.yaml
-tracking_servers:
-  - url: "https://track.ironcurtain.gg"    # official
-  - url: "https://rts.myclan.com/track"     # clan server
-  - url: "https://openra.net/master"        # OpenRA shared browser (Level 0 compat)
-  - url: "https://cncnet.org/master"        # CnCNet shared browser (Level 0 compat)
+```toml
+# settings.toml
+[[tracking_servers]]
+url = "https://track.ironcurtain.gg"     # official
+
+[[tracking_servers]]
+url = "https://rts.myclan.com/track"     # clan server
+
+[[tracking_servers]]
+url = "https://openra.net/master"        # OpenRA shared browser (Level 0 compat)
+
+[[tracking_servers]]
+url = "https://cncnet.org/master"        # CnCNet shared browser (Level 0 compat)
 ```
 
 **Tracking server trust model (V28):** All tracking server URLs must use HTTPS — plain HTTP is rejected. The game browser shows trust indicators: bundled sources (official, OpenRA, CnCNet) display a verified badge; user-added sources display "Community" or "Unverified." Games listed from unverified sources connecting via unknown relays show "Unknown relay — first connection." When connecting to any listing, the client performs a full protocol handshake (version check, encryption, identity verification) before revealing user data. Maximum 10 configured tracking servers to limit social engineering surface.
@@ -1862,7 +1868,7 @@ vote_framework:
     #   on_pass: "scripts/votes/ai_takeover.lua"
 ```
 
-**Server operator control (D052):** Community server operators configure vote settings via their server's `config.yaml`. The relay enforces these settings — clients cannot override them. Tournament operators can disable specific vote types entirely (e.g., no remake in tournament mode where admins handle disputes).
+**Server operator control (D052):** Community server operators configure vote settings via their server's `server_config.toml`. The relay enforces these settings — clients cannot override them. Tournament operators can disable specific vote types entirely (e.g., no remake in tournament mode where admins handle disputes).
 
 #### Built-In Vote Types — Detailed Semantics
 

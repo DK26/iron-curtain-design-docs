@@ -917,7 +917,7 @@ pub struct SaveHeader {
 }
 ```
 
-> **Compression (D063):** The `compression_algorithm` byte identifies which decompressor to use for the payload. Version 1 files use `0x01` (LZ4). The `version` field controls the serialization format (bincode vs. postcard) independently — see `09-DECISIONS.md` § D054 for codec dispatch and § D063 for algorithm dispatch. Compression level (fastest/balanced/compact) is configurable via `settings.yaml` `compression.save_level` and affects encoding speed/ratio but not the format.
+> **Compression (D063):** The `compression_algorithm` byte identifies which decompressor to use for the payload. Version 1 files use `0x01` (LZ4). The `version` field controls the serialization format (bincode vs. postcard) independently — see `09-DECISIONS.md` § D054 for codec dispatch and § D063 for algorithm dispatch. Compression level (fastest/balanced/compact) is configurable via `settings.toml` `compression.save_level` and affects encoding speed/ratio but not the format.
 
 > **Security (V42):** Shared `.icsave` files are an attack surface. Enforce: max decompressed size 64 MB, JSON metadata cap 1 MB, schema validation of deserialized `SimSnapshot` (entity count, position bounds, valid components). Save directory sandboxed via `strict-path` `PathBoundary`. See `06-SECURITY.md` § Vulnerability 42.
 
@@ -953,7 +953,7 @@ Human-readable metadata for the save browser UI. Stored as JSON (not the binary 
 
 ### Payload
 
-The payload is a `SimSnapshot` serialized via `serde` (bincode format for compactness) and compressed with LZ4 (fast decompression, good ratio for game state data). LZ4 was chosen over LZO (used by original RA) for its better Rust ecosystem support (`lz4_flex` crate) and superior decompression speed. The save file header's `version` field selects the serialization codec — version 1 uses bincode, future version 2 uses postcard. The `compression_algorithm` byte selects the decompressor independently (D063). Compression level is configurable via `settings.yaml` (`compression.save_level`: fastest/balanced/compact). See `09-DECISIONS.md` § D054 for the serialization version-to-codec dispatch and § D063 for the compression strategy.
+The payload is a `SimSnapshot` serialized via `serde` (bincode format for compactness) and compressed with LZ4 (fast decompression, good ratio for game state data). LZ4 was chosen over LZO (used by original RA) for its better Rust ecosystem support (`lz4_flex` crate) and superior decompression speed. The save file header's `version` field selects the serialization codec — version 1 uses bincode, future version 2 uses postcard. The `compression_algorithm` byte selects the decompressor independently (D063). Compression level is configurable via `settings.toml` (`compression.save_level`: fastest/balanced/compact). See `09-DECISIONS.md` § D054 for the serialization version-to-codec dispatch and § D063 for the compression strategy.
 
 ```rust
 pub struct SimSnapshot {
@@ -1012,7 +1012,7 @@ pub struct ReplayHeader {
 }
 ```
 
-> **Compression (D063):** The `compression_algorithm` byte identifies which decompressor to use for the tick order stream and embedded keyframe snapshots. Version 1 files use `0x01` (LZ4). Compression level during live recording defaults to `fastest` (configurable via `settings.yaml` `compression.replay_level`). Use `ic replay recompress` to re-encode at a higher compression level for archival. See `09-DECISIONS.md` § D063.
+> **Compression (D063):** The `compression_algorithm` byte identifies which decompressor to use for the tick order stream and embedded keyframe snapshots. Version 1 files use `0x01` (LZ4). Compression level during live recording defaults to `fastest` (configurable via `settings.toml` `compression.replay_level`). Use `ic replay recompress` to re-encode at a higher compression level for archival. See `09-DECISIONS.md` § D063.
 
 The `flags` field includes a `HAS_VOICE` bit (bit 3). When set, the voice stream section contains per-player Opus audio tracks recorded with player consent. See `09-DECISIONS.md` § D059 for the voice consent model, storage costs, and replay playback integration.
 
@@ -1271,7 +1271,7 @@ The `sync` stream enables partial divergence detection — IC can compare its ow
 ```
 ic-backup-2027-03-15.zip
 ├── manifest.json                    # Backup metadata (see below)
-├── config.yaml                      # Engine settings
+├── config.toml                      # Engine settings
 ├── profile.db                       # Player identity (VACUUM INTO copy)
 ├── achievements.db                  # Achievement collection (VACUUM INTO copy)
 ├── gameplay.db                      # Event log, catalogs (VACUUM INTO copy)
@@ -1327,7 +1327,7 @@ Screenshots are standard PNG images with IC-specific metadata in PNG `tEXt` chun
 | `IC:GameTick`      | `"18432"`                                   | Sim tick at capture                    |
 | `IC:ReplayFile`    | `"2027-03-15-ranked-1v1.icrep"`             | Associated replay file (if applicable) |
 
-**Filename convention:** `<data_dir>/screenshots/<YYYY-MM-DD>-<HHMMSS>.png` (UTC timestamp). The screenshot hotkey is configurable in `config.yaml`.
+**Filename convention:** `<data_dir>/screenshots/<YYYY-MM-DD>-<HHMMSS>.png` (UTC timestamp). The screenshot hotkey is configurable in `config.toml`.
 
 ### ra-formats Write Support
 

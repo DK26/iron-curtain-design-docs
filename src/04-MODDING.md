@@ -328,7 +328,7 @@ This structure means a mod that defines new units and a mod that rebalances exis
 
 **Conflict override file (optional):**
 
-For advanced setups, a `conflicts.yaml` file in the **game's user configuration directory** (next to `settings.yaml`) lets the player explicitly resolve conflicts in their personal setup. This is a per-user file — it is not distributed with mods or modpacks, and it is not synced in multiplayer. Players who want to share their conflict resolutions can distribute the file manually or include it in a modpack manifest (the `modpack.conflicts` field serves the same purpose for published modpacks):
+For advanced setups, a `conflicts.yaml` file in the **game's user configuration directory** (next to `settings.toml`) lets the player explicitly resolve conflicts in their personal setup. This is a per-user file — it is not distributed with mods or modpacks, and it is not synced in multiplayer. Players who want to share their conflict resolutions can distribute the file manually or include it in a modpack manifest (the `modpack.conflicts` field serves the same purpose for published modpacks):
 
 ```yaml
 # conflicts.yaml — explicit conflict resolution
@@ -2422,7 +2422,7 @@ The technical architecture is inspired by JFrog Artifactory's federated reposito
 
 #### Repository Types
 
-The Workshop aggregates resources from multiple repository types (architecture inspired by Artifactory's local/remote/virtual model). Configure sources in `settings.yaml` — or just use the default (which works out of the box):
+The Workshop aggregates resources from multiple repository types (architecture inspired by Artifactory's local/remote/virtual model). Configure sources in `settings.toml` — or just use the default (which works out of the box):
 
 | Source Type   | Description                                                                                                                                                                                                                     |
 | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -2431,38 +2431,48 @@ The Workshop aggregates resources from multiple repository types (architecture i
 | **Remote**    | A Workshop server (official or community-hosted). Resources are downloaded and cached locally on first access. Cache is used for subsequent requests — works offline after first pull.                                          |
 | **Virtual**   | The merged view across all configured sources — this is what players see as "the Workshop". Merges all local + remote + git-index sources, deduplicates by resource ID, and resolves version conflicts using priority ordering. |
 
-```yaml
-# settings.yaml — Phase 0-3 (before Workshop server exists)
-workshop:
-  sources:
-    - url: "https://github.com/iron-curtain/workshop-index" # git-index: GitHub-hosted package registry
-      type: git-index
-      priority: 1                                 # highest priority in virtual view
-    - path: "C:/my-local-workshop"                # local: directory on disk
-      type: local
-      priority: 2
-  deduplicate: true               # same resource ID from multiple sources → highest priority wins
-  cache_dir: "~/.ic/cache"        # local cache for downloaded content
+```toml
+# settings.toml — Phase 0-3 (before Workshop server exists)
+[[workshop.sources]]
+url = "https://github.com/iron-curtain/workshop-index"  # git-index: GitHub-hosted package registry
+type = "git-index"
+priority = 1                                  # highest priority in virtual view
+
+[[workshop.sources]]
+path = "C:/my-local-workshop"                 # local: directory on disk
+type = "local"
+priority = 2
+
+[workshop]
+deduplicate = true                # same resource ID from multiple sources → highest priority wins
+cache_dir = "~/.ic/cache"         # local cache for downloaded content
 ```
 
-```yaml
-# settings.yaml — Phase 5+ (full Workshop server + git-index fallback)
-workshop:
-  sources:
-    - url: "https://workshop.ironcurtain.gg"      # remote: official Workshop server
-      type: remote
-      priority: 1
-    - url: "https://github.com/iron-curtain/workshop-index" # git-index: still available as fallback
-      type: git-index
-      priority: 2
-    - url: "https://mods.myclan.com/workshop"     # remote: community-hosted
-      type: remote
-      priority: 3
-    - path: "C:/my-local-workshop"                # local: directory on disk
-      type: local
-      priority: 4
-  deduplicate: true
-  cache_dir: "~/.ic/cache"
+```toml
+# settings.toml — Phase 5+ (full Workshop server + git-index fallback)
+[[workshop.sources]]
+url = "https://workshop.ironcurtain.gg"       # remote: official Workshop server
+type = "remote"
+priority = 1
+
+[[workshop.sources]]
+url = "https://github.com/iron-curtain/workshop-index"  # git-index: still available as fallback
+type = "git-index"
+priority = 2
+
+[[workshop.sources]]
+url = "https://mods.myclan.com/workshop"      # remote: community-hosted
+type = "remote"
+priority = 3
+
+[[workshop.sources]]
+path = "C:/my-local-workshop"                 # local: directory on disk
+type = "local"
+priority = 4
+
+[workshop]
+deduplicate = true
+cache_dir = "~/.ic/cache"
 ```
 
 **Git-hosted index (git-index) — Phase 0–3 default:** A public GitHub repo (`iron-curtain/workshop-index`) containing YAML manifests per package — names, versions, SHA-256, download URLs (GitHub Releases), BitTorrent info hashes, dependencies. The engine fetches the consolidated `index.yaml` via a single HTTP GET to `raw.githubusercontent.com` (CDN-backed globally). Power users and the SDK can `git clone` the repo for offline browsing or scripting. Community contributes packages via PR. Proven pattern: Homebrew, crates.io-index, Winget, Nixpkgs. See D049 for full repo structure and manifest format.
@@ -2546,18 +2556,17 @@ Workshop delivery uses **peer-to-peer distribution** for large packages, with HT
 
 **Seeding infrastructure:** A dedicated seed box (~$20-50/month VPS) permanently seeds all content, ensuring new/unpopular packages are always downloadable. Community seed volunteers and federated Workshop servers also seed. Lobby-optimized seeding prioritizes peers in the same lobby.
 
-**P2P client configuration:** Players control P2P behavior in `settings.yaml`. Bandwidth limiting is critical — residential users cannot have their connection saturated by mod seeding (a lesson from Uber Kraken's production deployment, where even datacenter agents need bandwidth caps):
+**P2P client configuration:** Players control P2P behavior in `settings.toml`. Bandwidth limiting is critical — residential users cannot have their connection saturated by mod seeding (a lesson from Uber Kraken's production deployment, where even datacenter agents need bandwidth caps):
 
-```yaml
-# settings.yaml — P2P distribution settings
-workshop:
-  p2p:
-    max_upload_speed: "1 MB/s"       # Default seeding speed cap (0 = unlimited)
-    max_download_speed: "unlimited"   # Most users won't limit
-    seed_after_download: true         # Keep seeding while game is running
-    seed_duration_after_exit: "30m"   # Background seeding after game closes
-    cache_size_limit: "2 GB"          # LRU eviction when exceeded
-    prefer_p2p: true                  # false = always use HTTP direct
+```toml
+# settings.toml — P2P distribution settings
+[workshop.p2p]
+max_upload_speed = "1 MB/s"          # Default seeding speed cap (0 = unlimited)
+max_download_speed = "unlimited"      # Most users won't limit
+seed_after_download = true            # Keep seeding while game is running
+seed_duration_after_exit = "30m"      # Background seeding after game closes
+cache_size_limit = "2 GB"             # LRU eviction when exceeded
+prefer_p2p = true                     # false = always use HTTP direct
 ```
 
 The P2P engine uses **rarest-first** piece selection, an **endgame mode** that sends duplicate requests for the last few pieces to prevent stalls, a **connection state machine** (pending → active → blacklisted) that avoids wasting time on dead or throttled peers, **statistical bad-peer detection** (demotes peers whose transfer times deviate beyond 3σ — adapted from Dragonfly's evaluator), and **3-tier download priority** (lobby-urgent / user-requested / background) for QoS differentiation. Full protocol design details — peer selection policy, weighted multi-dimensional scoring, piece request strategy, announce cycle, size-based piece lengths, health checks, preheat/prefetch, persistent replica count — are in `09-DECISIONS.md` § D049 "P2P protocol design details."
@@ -2960,17 +2969,20 @@ The LLM sees workshop resources through their `llm_meta` fields. A music track t
 
 Steam Workshop is an **optional distribution source**, not a replacement for the IC Workshop. Resources published to Steam Workshop appear in the virtual repository alongside IC Workshop and local resources. Priority ordering determines which source wins when the same resource exists in multiple places.
 
-```yaml
-# settings.yaml — Steam Workshop as an additional source
-workshop:
-  sources:
-    - url: "https://workshop.ironcurtain.gg"     # official IC Workshop
-      priority: 1
-    - type: steam_workshop                        # Steam Workshop source
-      app_id: 0000000                             # IC's Steam app ID
-      priority: 2
-    - path: "C:/my-local-workshop"
-      priority: 3
+```toml
+# settings.toml — Steam Workshop as an additional source
+[[workshop.sources]]
+url = "https://workshop.ironcurtain.gg"      # official IC Workshop
+priority = 1
+
+[[workshop.sources]]
+type = "steam_workshop"                      # Steam Workshop source
+app_id = 0000000                             # IC's Steam app ID
+priority = 2
+
+[[workshop.sources]]
+path = "C:/my-local-workshop"
+priority = 3
 ```
 
 **Key design constraints:**

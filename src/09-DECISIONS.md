@@ -2183,6 +2183,165 @@ All extended modes produce standard D021 campaigns. All are playable without an 
 
 > **See also D057 (Skill Library):** Proven mission generation patterns — which scene template combinations, parameter values, and narrative structures produce highly-rated missions — are stored in the skill library and retrieved as few-shot examples for future generation. This makes D016's template-filling approach more reliable over time without changing the generation architecture.
 
+### LLM-Generated Custom Factions
+
+Beyond missions and campaigns, the LLM can generate **complete custom factions** — a tech tree, unit roster, building roster, unique mechanics, visual identity, and faction personality — from a natural language description. The output is standard YAML (Tier 1), optionally with Lua scripts (Tier 2) for unique abilities. A generated faction is immediately playable in skirmish and custom games, shareable via Workshop, and fully editable by hand.
+
+**Why this matters:** Creating a new faction in any RTS is one of the hardest modding tasks. It requires designing 15-30+ units with coherent roles, a tech tree with meaningful progression, counter-relationships against existing factions, visual identity, and balance — all simultaneously. Most aspiring modders give up before finishing. An LLM that can generate a complete, validated faction from a description like "a guerrilla faction that relies on stealth, traps, and hit-and-run tactics" lowers the barrier from months of work to minutes of iteration.
+
+**Available resource pool:** The LLM has access to everything the engine knows about:
+
+| Source                                 | What the LLM Can Reference                                                                                                                          | How                                                                                                                                                                                         |
+| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Base game units/weapons/structures** | All YAML definitions from the active game module (RA1, TD, etc.) including stats, counter relationships, prerequisites, and `llm:` metadata         | Direct YAML read at generation time                                                                                                                                                         |
+| **Balance presets (D019)**             | All preset values — the LLM knows what "Classic" vs "OpenRA" Tanya stats look like and can calibrate accordingly                                    | Preset YAML loaded alongside base definitions                                                                                                                                               |
+| **Workshop resources (D030)**          | Published mods, unit packs, sprite sheets, sound packs, weapon definitions — anything the player has installed or that the Workshop index describes | Workshop metadata queries via `LLM` Lua global (Phase 7); local installed resources via filesystem; remote resources via Workshop API with `ai_usage` consent check (D030 § Author Consent) |
+| **Skill Library (D057)**               | Previously generated factions that were rated highly by players; proven unit archetypes, tech tree patterns, and balance relationships              | Semantic search retrieval as few-shot examples                                                                                                                                              |
+| **Player data (D034)**                 | The player's gameplay history: preferred playstyles, unit usage patterns, faction win rates                                                         | Local SQLite queries (read-only) for personalization                                                                                                                                        |
+
+**Generation pipeline:**
+
+```
+User prompt                    "A faction based on weather control and
+                                environmental warfare"
+         │
+         ▼
+┌─────────────────────────────────────────────────────────┐
+│  1. CONCEPT GENERATION                                  │
+│     LLM generates faction identity:                     │
+│     - Name, theme, visual style                         │
+│     - Core mechanic ("weather weapons that affect       │
+│       terrain and visibility")                          │
+│     - Asymmetry axis ("environmental control vs          │
+│       direct firepower — strong area denial,            │
+│       weak in direct unit-to-unit combat")              │
+│     - Design pillars (3-4 one-line principles)          │
+└─────────────────────────────────────────────────────────┘
+         │
+         ▼
+┌─────────────────────────────────────────────────────────┐
+│  2. TECH TREE GENERATION                                │
+│     LLM designs the tech tree:                          │
+│     - Building unlock chain (3-4 tiers)                 │
+│     - Each tier unlocks 2-5 units/abilities             │
+│     - Prerequisites form a DAG (validated)              │
+│     - Key decision points ("at Tier 3, choose           │
+│       Tornado Generator OR Blizzard Chamber —           │
+│       not both")                                        │
+│     References: base game tech tree structure,           │
+│     D019 balance philosophy Principle 5                  │
+│     (shared foundation + unique exceptions)             │
+└─────────────────────────────────────────────────────────┘
+         │
+         ▼
+┌─────────────────────────────────────────────────────────┐
+│  3. UNIT ROSTER GENERATION                              │
+│     For each unit slot in the tech tree:                │
+│     - Generate full YAML unit definition                │
+│     - Stats calibrated against existing factions        │
+│     - Counter relationships defined (Principle 2)       │
+│     - `llm:` metadata block filled in                   │
+│     - Weapon definitions generated or reused            │
+│     Workshop query: "Are there existing sprite packs    │
+│     or weapon definitions I can reference?"             │
+│     Skill library query: "What unit archetypes work     │
+│     well for area-denial factions?"                     │
+└─────────────────────────────────────────────────────────┘
+         │
+         ▼
+┌─────────────────────────────────────────────────────────┐
+│  4. BALANCE VALIDATION                                  │
+│     Automated checks (no LLM needed):                   │
+│     - Total faction cost curve vs existing factions     │
+│     - DPS-per-cost distribution within normal range     │
+│     - Every unit has counters AND is countered by       │
+│     - Tech tree is a valid DAG (no cycles,              │
+│       every unit reachable)                             │
+│     - No unit duplicates another unit's role exactly    │
+│     - Name/identifier uniqueness                        │
+│     If validation fails → feedback to LLM for          │
+│     iteration (up to 3 retries per issue)               │
+└─────────────────────────────────────────────────────────┘
+         │
+         ▼
+┌─────────────────────────────────────────────────────────┐
+│  5. OUTPUT                                              │
+│     Standard mod directory:                             │
+│     factions/weather_control/                           │
+│       faction.yaml     # faction identity + color       │
+│       tech_tree.yaml   # prerequisite graph             │
+│       units/           # one .yaml per unit             │
+│       weapons/         # weapon definitions             │
+│       structures/      # building definitions           │
+│       abilities.lua    # unique mechanics (Tier 2)      │
+│       preview.png      # generated or placeholder       │
+│       README.md        # faction lore + design notes    │
+│                                                         │
+│     Playable immediately. Editable by hand.             │
+│     Publishable to Workshop.                            │
+└─────────────────────────────────────────────────────────┘
+```
+
+**Example generation session:**
+
+```
+Player: "Create a faction that uses mind control and
+         psychic technology. Fragile units but powerful
+         area effects. Should be viable against both
+         Allies and Soviets in the Classic preset."
+
+LLM generates:
+  Faction: Psi Corps
+  Theme: Psychic warfare — control, confusion, area denial
+  Asymmetry: Weak individual units, powerful area abilities.
+             Can turn enemy units into assets. Vulnerable
+             to fast rushes before psychic tech is online.
+
+  Tech tree:
+    Tier 1: Psi Barracks → Initiate (basic infantry, weak attack,
+            can detect cloaked), Psi Trooper (anti-vehicle mind blast)
+    Tier 2: Psi Lab → Mentalist (area confusion — enemies attack
+            each other for 10s), Mind Reader (reveals fog in radius)
+    Tier 3: Amplifier Tower → Dominator (permanently converts one
+            enemy unit, long cooldown, expensive)
+    Tier 3 alt: Psychic Beacon → mass area slow + damage over time
+    ...
+
+  Balance validation:
+    ✓ Total faction DPS-per-cost: 0.87x Allied average (intended —
+      compensated by mind control economy)
+    ✓ Counter relationships complete: Psi units weak to vehicles
+      (can't mind-control machines), strong vs infantry
+    ✓ Tech tree DAG valid, all units reachable
+    ⚠ Dominator ability may be too strong in team games —
+      suggest adding "one active Dominator per player" cap
+    → LLM adjusts and re-validates
+```
+
+**Workshop asset integration:** The LLM can reference Workshop resources with compatible licenses and `ai_usage: allow` consent (D030 § Author Consent):
+
+- **Sprite packs:** "Use 'alice/psychic-infantry-sprites' for the Initiate's visual" — the generated YAML references the Workshop package as a dependency
+- **Sound packs:** "Use 'bob/sci-fi-weapon-sounds' for the mind blast weapon audio"
+- **Weapon definitions:** "Inherit from 'carol/energy-weapons/plasma_bolt' and adjust damage for psychic theme"
+- **Existing unit definitions:** "The Mentalist's confusion ability works like 'dave/chaos-mod/confusion_gas' but with psychic visuals instead of chemical"
+
+This means a generated faction can have real art, real sounds, and tested mechanics from day one — not just placeholder stats waiting for assets. The Workshop becomes a **component library** for LLM faction assembly.
+
+**What this is NOT:**
+- **Not allowed in ranked play.** LLM-generated factions are for skirmish, custom lobbies, and single-player. Ranked games use curated balance presets (D019/D055).
+- **Not autonomous.** The LLM proposes; the player reviews, edits, and approves. The generation UI shows every unit definition and lets the player tweak stats, rename units, or regenerate individual components before saving.
+- **Not a substitute for hand-crafted factions.** The built-in Allied and Soviet factions are carefully designed from EA source code values. Generated factions are community content — fun, creative, potentially brilliant, but not curated to the same standard.
+- **Not dependent on specific assets.** If a referenced Workshop sprite pack isn't installed, the faction still loads with placeholder sprites. Assets are enhancement, not requirements.
+
+**Iterative refinement:** After generating, the player can:
+1. **Playtest** the faction in a skirmish against AI
+2. **Request adjustments:** "Make the Tier 2 units cheaper but weaker" or "Add a naval unit"
+3. The LLM regenerates affected units with context from the existing faction definition
+4. **Manually edit** any YAML file — the generated output is standard IC content
+5. **Publish to Workshop** for others to play, rate, and fork
+
+**Phase:** Phase 7 (alongside other LLM generation features). Requires: YAML unit/faction definition system (Phase 2), Workshop resource API (Phase 6a), `ic-llm` provider system, skill library (D057).
+
 ---
 
 ## D017: Bevy Rendering Pipeline — Classic Base, Modding Possibilities
@@ -2411,6 +2570,87 @@ However, **3D rendering mods for isometric-family games are explicitly supported
 - Let mods handle it (rejected — too important to bury in the modding system; should be one click in settings)
 
 **Phase:** Phase 2 (balance values extracted during simulation implementation).
+
+### Balance Philosophy — Lessons from the Most Balanced and Fun RTS Games
+
+D019 defines the *mechanism* (switchable YAML presets). This section defines the *philosophy* — what makes faction balance good, drawn from studying the games that got it right over decades of competitive play. These principles guide the creation of the "IC Default" balance preset and inform modders creating their own.
+
+**Source games studied:** StarCraft: Brood War (25+ years competitive, 3 radically asymmetric races), StarCraft II (Blizzard's most systematically balanced RTS), Age of Empires II (40+ civilizations remarkably balanced over 25 years), Warcraft III (4 factions with hero mechanics), Company of Heroes (asymmetric doctrines), original Red Alert, and the Red Alert Remastered Collection. Where claims are specific, they reflect publicly documented game design decisions, developer commentary, or decade-scale competitive data.
+
+#### Principle 1: Asymmetry Creates Identity
+
+The most beloved RTS factions — SC:BW's Zerg/Protoss/Terran, AoE2's diverse civilizations, RA's Allies/Soviet — are memorable because they *feel different to play*, not because they have slightly different stat numbers. Asymmetry is the source of faction identity. Homogenizing factions for balance kills the reason factions exist.
+
+**Red Alert's original asymmetry:** Allies favor technology, range, precision, and flexibility (GPS, Cruisers, longbow helicopters, Tanya as surgical strike). Soviets favor mass, raw power, armor, and area destruction (Mammoth tanks, V2 rockets, Tesla coils, Iron Curtain). Both factions can win — but they win differently. An Allied player who tries to play like a Soviet player (massing heavy armor) will lose. The asymmetry forces different strategies and creates varied, interesting matches.
+
+**The lesson IC applies:** Balance presets may adjust unit costs, health, and damage — but they must never collapse faction asymmetry. A "balanced" Tanya is still a fragile commando who kills infantry instantly and demolishes buildings, not a generic elite unit. A "balanced" Mammoth Tank is still the most expensive, slowest, toughest unit on the field, not a slightly upgunned medium tank. If a balance change makes a unit feel generic, the change is wrong.
+
+#### Principle 2: Counter Triangles, Not Raw Power
+
+Good balance comes from every unit having a purpose and a vulnerability — not from every unit being equally strong. SC:BW's Zergling → Marine → Lurker → Zealot chains, AoE2's cavalry → archers → spearmen → cavalry triangle, and RA's own infantry → tank → rocket soldier → infantry loops create dynamic gameplay where army composition matters more than total resource investment.
+
+**The lesson IC applies:** When defining units for any balance preset, maintain clear counter relationships. Every unit must have:
+- At least one unit type it is **strong against** (justifies building it)
+- At least one unit type it is **weak against** (prevents it from being the only answer)
+- A **role** that can't be fully replaced by another unit of the same faction
+
+The `llm:` metadata block in YAML unit definitions (see `04-MODDING.md`) already enforces this: `counters`, `countered_by`, and `role` fields are required for every unit. Balance presets adjust *how strong* these relationships are, not *whether they exist*.
+
+#### Principle 3: Spectacle Over Spreadsheet
+
+Red Alert's original balance is "unfair" by competitive standards — Tesla Coils delete infantry, Tanya solo-kills buildings, a pack of MiGs erases a Mammoth Tank. But this is what makes the game *fun*. Units feel powerful and dramatic. SC:BW has the same quality — a full Reaver drop annihilates a mineral line, Storm kills an entire Zergling army, a Nuke ends a stalemate. These moments create stories.
+
+**The lesson IC applies:** The "Classic" preset preserves these high-damage, high-spectacle interactions — units feel as powerful as players remember. The "OpenRA" preset tones them down for competitive fairness. The "IC Default" preset aims for a middle ground: powerful enough to create memorable moments, constrained enough that counter-play is viable. Whether the Cruiser's shells one-shot a barracks or two-shot it is a balance value; whether the Cruiser *feels devastating to deploy* is a design requirement that no preset should violate.
+
+#### Principle 4: Maps Are Part of Balance
+
+SC:BW's competitive scene discovered this over 25 years: faction balance is inseparable from map design. A map with wide open spaces favors ranged factions; a map with tight choke points favors splash damage; a map with multiple expansions favors economic factions. AoE2's tournament map pool is curated as carefully as the balance patches.
+
+**The lesson IC applies:** Balance presets should be designed and tested against a representative map pool, not a single map. The competitive committee (D037) curates both the balance preset and the ranked map pool together — because changing one without considering the other produces false conclusions about faction strength. Replay data (faction win rates per map) informs both map rotation and balance adjustments.
+
+#### Principle 5: Balance Through Addition, Not Subtraction
+
+AoE2's approach to 40+ civilizations is instructive: every civilization has the same shared tech tree, with specific technologies *removed* and one unique unit *added*. The Britons lose key cavalry upgrades but get Longbowmen with exceptional range. The Goths lose stone wall technology but get cheap, fast-training infantry. Identity comes from what you're missing and what you uniquely possess — not from having a completely different tech tree.
+
+**The lesson IC applies for modders:** When creating new factions or subfactions (RA2's country bonuses, community mods), the recommended pattern is:
+1. Start from the base faction tech tree (Allied or Soviet)
+2. Remove a small number of specific capabilities (units, upgrades, or technologies)
+3. Add one or two unique capabilities that create a distinctive playstyle
+4. The unique capabilities should address a gap created by the removals, but not perfectly — the faction should have a real weakness
+
+This pattern is achievable purely in YAML (Tier 1 modding) through inheritance: the subfaction definition inherits the faction base and overrides `prerequisites` to gate or remove units, then defines new units.
+
+#### Principle 6: Patch Sparingly, Observe Patiently
+
+SC:BW received minimal balance patches after 1999 — and it's the most balanced RTS ever made. The meta evolved through player innovation, not developer intervention. AoE2: Definitive Edition patches more frequently but exercises restraint — small numerical changes (±5%), never removing or redesigning units. In contrast, games that patch aggressively based on short-term win rate data (the "nerf/buff treadmill") chase balance without ever achieving it, and players never develop deep mastery because the ground keeps shifting.
+
+**The lesson IC applies:** The "Classic" preset is conservative — values come from the EA source code and don't change. The "OpenRA" preset tracks OpenRA's competitive balance decisions. The "IC Default" preset follows its own balance philosophy:
+- **Observe before acting.** Collect ranked replay data for a full season (D055, 3 months) before making balance changes. Short-term spikes in a faction's win rate may self-correct as players adapt.
+- **Adjust values, not mechanics.** A balance pass changes numbers (cost, health, damage, build time, range) — never adds or removes units, never changes core mechanics. Mechanical changes are saved for major version releases.
+- **Absolute changes, small increments.** ±5-10% per pass, never doubling or halving a value. Multiple small passes converge on balance better than dramatic swings.
+- **Separate pools by rating.** A faction that dominates at beginner level may be fine at expert level (and vice versa). Faction win rates should be analyzed per rating bracket before making changes.
+
+#### Principle 7: Fun Is Not Win Rate
+
+A 50% win rate doesn't mean a faction is fun. A faction can have a perfect statistical balance while being miserable to play — if its optimal strategy is boring, if its units don't feel impactful, or if its matchups produce repetitive games. Conversely, a faction can have a slight statistical disadvantage and still be the community's favorite (SC:BW Zerg for years; AoE2 Celts; RA2 Korea).
+
+**The lesson IC applies:** Balance telemetry (D031) tracks not just win rates but also:
+- **Pick rates** — are players choosing to play this faction? Low pick rate with high win rate suggests the faction is strong but unpleasant.
+- **Game length distribution** — factions that consistently produce very short or very long games may indicate degenerate strategies.
+- **Unit production diversity** — if a faction's optimal strategy only uses 3 of its 15 units, the other 12 are effectively dead content.
+- **Comeback frequency** — healthy balance allows comebacks; if a faction that falls behind never recovers, the matchup may need attention.
+
+These metrics feed into balance discussions (D037 competitive committee) alongside pure win rate data.
+
+#### Summary: IC's Balance Stance
+
+| Preset         | Philosophy                                                                                                                    | Stability                                               |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| **Classic**    | Faithful RA values from EA source code. Spectacle over fairness. The game as Westwood made it.                                | Frozen — never changes.                                 |
+| **OpenRA**     | Community-driven competitive balance. Tracks OpenRA's active balance decisions.                                               | Updated when OpenRA ships balance patches.              |
+| **Remastered** | Petroglyph's subtle tweaks for the 2020 release.                                                                              | Frozen — captures the Remastered Collection as shipped. |
+| **IC Default** | Spectacle + competitive viability. Asymmetry preserved. Counter triangles enforced. Patched sparingly based on seasonal data. | Updated once per season (D055), small increments only.  |
+| **Custom**     | Modder-created presets via Workshop. Community experiments, tournament rules, "what if" scenarios.                            | Modder-controlled.                                      |
 
 ---
 
@@ -2958,7 +3198,7 @@ The Workshop uses three repository types (architecture inspired by Artifactory's
 | **Remote**  | A Workshop server (official or community-hosted). Resources are downloaded and cached locally on first access. Cache is used for subsequent requests — works offline after first pull.                                                                            |
 | **Virtual** | The aggregated view across all configured sources. The `ic` CLI and in-game browser query the virtual view — it merges listings from all local + remote + git-index sources, deduplicates by resource ID, and resolves version conflicts using priority ordering. |
 
-The `settings.yaml` `sources:` list defines which local and remote sources compose the virtual view. This is the federation model — the client never queries raw servers directly, it queries the merged Workshop view.
+The `settings.toml` `sources` list defines which local and remote sources compose the virtual view. This is the federation model — the client never queries raw servers directly, it queries the merged Workshop view.
 
 ### Package Integrity
 
@@ -3117,16 +3357,17 @@ Dependency-aware: deactivating a resource that others depend on offers: "bob/tan
 
 **Storage budget and auto-cleanup:**
 
-```yaml
-# settings.yaml
-workshop:
-  cache_dir: "~/.ic/cache"
-  storage:
-    budget_gb: 10                   # max transient cache before auto-cleanup (0 = unlimited)
-    transient_ttl_days: 30          # days of non-use before transient resources expire
-    cleanup_prompt: "weekly"        # never | after-session | weekly | monthly
-    low_disk_warning_gb: 5          # warn when OS free space drops below this
-    seed_deactivated: false         # P2P seed deactivated (but verified) resources
+```toml
+# settings.toml
+[workshop]
+cache_dir = "~/.ic/cache"
+
+[workshop.storage]
+budget_gb = 10                    # max transient cache before auto-cleanup (0 = unlimited)
+transient_ttl_days = 30           # days of non-use before transient resources expire
+cleanup_prompt = "weekly"         # never | after-session | weekly | monthly
+low_disk_warning_gb = 5           # warn when OS free space drops below this
+seed_deactivated = false          # P2P seed deactivated (but verified) resources
 ```
 
 - `budget_gb` applies to **transient** resources only. Pinned and deactivated resources don't count against the auto-cleanup budget (but are shown in disk usage summaries).
@@ -3333,17 +3574,22 @@ Every Workshop resource carries an `ai_usage` field **separate from the SPDX lic
 
 **Decision: Federated multi-source with merge.** The Workshop client can aggregate listings from multiple sources:
 
-```yaml
-# settings.yaml
-workshop:
-  sources:
-    - url: "https://workshop.ironcurtain.gg"     # official (always included)
-      priority: 1
-    - url: "https://mods.myclan.com/workshop"     # community server
-      priority: 2
-    - path: "C:/my-local-workshop"                # local directory
-      priority: 3
-  deduplicate: true               # same resource ID from multiple sources → highest priority wins
+```toml
+# settings.toml
+[[workshop.sources]]
+url = "https://workshop.ironcurtain.gg"      # official (always included)
+priority = 1
+
+[[workshop.sources]]
+url = "https://mods.myclan.com/workshop"      # community server
+priority = 2
+
+[[workshop.sources]]
+path = "C:/my-local-workshop"                 # local directory
+priority = 3
+
+[workshop]
+deduplicate = true                # same resource ID from multiple sources → highest priority wins
 ```
 
 Rationale: Single-source is too limiting for a resource registry. Crates.io has mirrors; npm has registries. A dependency system inherently benefits from federation — tournament organizers publish to their server, LAN parties use local directories, the official server is the default. Deduplication by resource ID + priority ordering handles conflicts.
@@ -3358,17 +3604,20 @@ Rationale: Single-source is too limiting for a resource registry. Crates.io has 
 
 The federated model includes **Steam Workshop as a source type** alongside IC-native Workshop servers and local directories. For Steam builds, the Workshop browser can query Steam Workshop in addition to IC sources:
 
-```yaml
-# settings.yaml (Steam build)
-workshop:
-  sources:
-    - url: "https://workshop.ironcurtain.gg"     # IC official
-      priority: 1
-    - type: steam-workshop                        # Steam Workshop (Steam builds only)
-      app_id: <steam_app_id>
-      priority: 2
-    - path: "C:/my-local-workshop"
-      priority: 3
+```toml
+# settings.toml (Steam build)
+[[workshop.sources]]
+url = "https://workshop.ironcurtain.gg"      # IC official
+priority = 1
+
+[[workshop.sources]]
+type = "steam-workshop"                      # Steam Workshop (Steam builds only)
+app_id = "<steam_app_id>"
+priority = 2
+
+[[workshop.sources]]
+path = "C:/my-local-workshop"
+priority = 3
 ```
 
 - **Publish to both:** `ic mod publish` uploads to IC Workshop; Steam builds additionally push to Steam Workshop via Steamworks API. One command, dual publish.
@@ -3673,7 +3922,7 @@ Community groups are lightweight persistent entities in the Workshop/tracking in
 
 Groups are **not** competitive clans (no group rankings, no group matchmaking). They are social infrastructure — a way for communities of players to share configurations and find each other. Competitive team features (team ratings, team matchmaking) are separate and independent.
 
-**Storage:** Group metadata stored in SQLite (D034) on the tracking/Workshop server. Groups are federated — a group created on a community tracking server is visible to members who have that server in their `settings.yaml` sources list. No central authority over group creation.
+**Storage:** Group metadata stored in SQLite (D034) on the tracking/Workshop server. Groups are federated — a group created on a community tracking server is visible to members who have that server in their `settings.toml` sources list. No central authority over group creation.
 
 **Phase:** Phase 5 (alongside multiplayer infrastructure). Minimal viable implementation: group identity + shared mod list + private lobbies. Group achievements and server lists in Phase 6a.
 
@@ -9542,7 +9791,7 @@ The local CAS store is an optimization that ships alongside the full Workshop in
 | 5–50MB       | P2P preferred, HTTP fallback | Small sprite packs, sound effect packs, script libraries. P2P helps but HTTP is acceptable. |
 | > 50MB       | P2P strongly preferred       | HD resource packs, cutscene packs, full mods. P2P's cost advantage is decisive.             |
 
-Thresholds are configurable in `settings.yaml`. Players on connections where BitTorrent is throttled or blocked can force HTTP-only mode.
+Thresholds are configurable in `settings.toml`. Players on connections where BitTorrent is throttled or blocked can force HTTP-only mode.
 
 **Auto-download on lobby join (D030 interaction):** When joining a lobby with missing resources, the client first attempts P2P download (likely fast, since other players in the lobby are already seeding). If the lobby timer is short or P2P is slow, falls back to HTTP. The lobby UI shows download progress with source indicators (P2P/HTTP). See D052 § "In-Lobby P2P Resource Sharing" for the detailed lobby protocol, including host-as-tracker, verification against Workshop index, and security constraints.
 
@@ -9660,18 +9909,17 @@ pending ──connect──► active ──timeout/error──► blacklisted
 | 50–500MB     | 1MB             | Balanced. Reasonable metadata overhead.                       |
 | > 500MB      | 4MB             | Reduced metadata overhead for large packages.                 |
 
-*Bandwidth limiting:* Configurable per-client in `settings.yaml`. Residential users cannot have their connection saturated by mod seeding — this is a hard requirement that Kraken solves with `egress_bits_per_sec`/`ingress_bits_per_sec` and IC must match.
+*Bandwidth limiting:* Configurable per-client in `settings.toml`. Residential users cannot have their connection saturated by mod seeding — this is a hard requirement that Kraken solves with `egress_bits_per_sec`/`ingress_bits_per_sec` and IC must match.
 
-```yaml
-# settings.yaml — P2P bandwidth configuration
-workshop:
-  p2p:
-    max_upload_speed: "1 MB/s"       # Default. 0 = unlimited, "0 B/s" = no seeding
-    max_download_speed: "unlimited"   # Default. Most users won't limit.
-    seed_after_download: true         # Keep seeding while game is running
-    seed_duration_after_exit: "30m"   # Background seeding after game closes (0 = none)
-    cache_size_limit: "2 GB"          # LRU eviction when exceeded
-    prefer_p2p: true                  # false = always use HTTP direct
+```toml
+# settings.toml — P2P bandwidth configuration
+[workshop.p2p]
+max_upload_speed = "1 MB/s"          # Default. 0 = unlimited, "0 B/s" = no seeding
+max_download_speed = "unlimited"      # Default. Most users won't limit.
+seed_after_download = true            # Keep seeding while game is running
+seed_duration_after_exit = "30m"      # Background seeding after game closes (0 = none)
+cache_size_limit = "2 GB"             # LRU eviction when exceeded
+prefer_p2p = true                     # false = always use HTTP direct
 ```
 
 *Health checks:* Seed boxes implement heartbeat health checks (30s interval, 3 failures → unhealthy, 2 passes → healthy again — matching Kraken's active health check parameters). The tracker marks peers as offline after 2× announce interval without contact. Unhealthy seed boxes are removed from the announce response until they recover.
@@ -9775,16 +10023,17 @@ seed_boxes:
 
 The engine's Workshop source configuration (D030) treats this as a new source type:
 
-```yaml
-# settings.yaml — Phase 0-3 configuration
-workshop:
-  sources:
-    - url: "https://github.com/iron-curtain/workshop-index"  # git-index source
-      type: git-index
-      priority: 1
-    - path: "C:/my-local-workshop"   # local development
-      type: local
-      priority: 2
+```toml
+# settings.toml — Phase 0-3 configuration
+[[workshop.sources]]
+url = "https://github.com/iron-curtain/workshop-index"   # git-index source
+type = "git-index"
+priority = 1
+
+[[workshop.sources]]
+path = "C:/my-local-workshop"    # local development
+type = "local"
+priority = 2
 ```
 
 **Community contribution workflow (manual):**
@@ -9827,7 +10076,7 @@ When official infrastructure is ready (Phase 5+), adding it is a one-line change
 2. **Phase 3–4 — Add BitTorrent tracker:** A minimal tracker binary goes live ($5-10/month VPS). Package manifests gain `torrent` source entries. P2P delivery begins for large packages. The index repo remains the discovery layer.
 3. **Phase 4–5 — Full Workshop server:** Search, ratings, dependency resolution, FTS5, integrated P2P tracker. The Workshop server can either replace the git index or coexist alongside it (both are valid D030 sources). The git index remains available as a fallback and for community-hosted Workshop servers.
 
-The progression is smooth because the federated source model (D030) already supports multiple source types — `git-index`, `local`, `remote` (Workshop server), and `steam` all coexist in `settings.yaml`.
+The progression is smooth because the federated source model (D030) already supports multiple source types — `git-index`, `local`, `remote` (Workshop server), and `steam` all coexist in `settings.toml`.
 
 **Industry precedent:**
 
@@ -11329,7 +11578,7 @@ This is cheaper than any centralized ranking service. Operating a community is w
 ### Relationship to Existing Decisions
 
 - **D007 (Relay server):** The relay produces `CertifiedMatchResult` — the input to rating computation. A Community Server bundles relay + ranking in one process.
-- **D030/D050 (Workshop federation):** Community Servers federate like Workshop sources. `settings.yaml` lists communities the same way it lists Workshop sources.
+- **D030/D050 (Workshop federation):** Community Servers federate like Workshop sources. `settings.toml` lists communities the same way it lists Workshop sources.
 - **D034 (SQLite):** The credential file IS SQLite. The community server's small state IS SQLite.
 - **D036 (Achievements):** Achievement records are SCRs stored in the credential file. The community server is the signing authority.
 - **D041 (RankingProvider trait):** Matchmaking uses `RankingProvider` implementations. Community operators choose their algorithm.
@@ -11379,7 +11628,7 @@ Clients that cache alice's public key can verify her packages remain authentic t
 
 **3. Trust-based Workshop source filtering.**
 
-D053's `TrustRequirement` model (None / AnyCommunityVerified / SpecificCommunities) maps to Workshop sources. Currently, `settings.yaml` implicitly trusts all configured sources equally. Applying D053's trust tiers:
+D053's `TrustRequirement` model (None / AnyCommunityVerified / SpecificCommunities) maps to Workshop sources. Currently, `settings.toml` implicitly trusts all configured sources equally. Applying D053's trust tiers:
 
 - **Trusted source:** `ic mod install` proceeds silently.
 - **Known source:** Install proceeds with an informational note.
@@ -11882,23 +12131,26 @@ Players can configure a list of **trusted communities** — the communities whos
 
 **Configuration:**
 
-```yaml
-# settings.yaml — communities section
-communities:
-  joined:
-    - name: "Official IC Community"
-      url: "https://official.ironcurtain.gg"
-      public_key: "ed25519:abc123..."  # cached on first join
-    - name: "Clan Wolfpack"
-      url: "https://wolfpack.example.com"
-      public_key: "ed25519:def456..."
-  
-  trusted:
-    # Communities whose signed credentials you trust for profile verification
-    # and matchmaking filtering. You don't need to be a member to trust a community.
-    - "ed25519:abc123..."   # Official IC Community
-    - "ed25519:def456..."   # Clan Wolfpack
-    - "ed25519:789ghi..."   # EU Competitive League (not a member, but trust their ratings)
+```toml
+# settings.toml — communities section
+[[communities.joined]]
+name = "Official IC Community"
+url = "https://official.ironcurtain.gg"
+public_key = "ed25519:abc123..."   # cached on first join
+
+[[communities.joined]]
+name = "Clan Wolfpack"
+url = "https://wolfpack.example.com"
+public_key = "ed25519:def456..."
+
+[communities]
+# Communities whose signed credentials you trust for profile verification
+# and matchmaking filtering. You don't need to be a member to trust a community.
+trusted = [
+    "ed25519:abc123...",    # Official IC Community
+    "ed25519:def456...",    # Clan Wolfpack
+    "ed25519:789ghi...",    # EU Competitive League (not a member, but trust their ratings)
+]
 ```
 
 Joined communities are automatically trusted (you trust the community you chose to join). Players can also trust communities they haven't joined — e.g., "I'm not a member of the EU Competitive League, but I trust their ratings as legitimate." Trust is granted by public key, so it survives community renames and URL changes.
@@ -13944,40 +14196,40 @@ bitflags! {
 
 **Loading from config file:**
 
-```yaml
-# config.yaml (user configuration — loaded at startup, saved on change)
-render:
-  shadows: true
-  shadow_quality: 2         # 0=off, 1=low, 2=medium, 3=high
-  vsync: true
-  max_fps: 144
+```toml
+# config.toml (user configuration — loaded at startup, saved on change)
+[render]
+shadows = true
+shadow_quality = 2          # 0=off, 1=low, 2=medium, 3=high
+vsync = true
+max_fps = 144
 
-audio:
-  master_volume: 80
-  music_volume: 60
-  eva_volume: 100
+[audio]
+master_volume = 80
+music_volume = 60
+eva_volume = 100
 
-gameplay:
-  scroll_speed: 5
-  control_group_steal: false
-  auto_rally_harvesters: true
+[gameplay]
+scroll_speed = 5
+control_group_steal = false
+auto_rally_harvesters = true
 
-net:
-  show_diagnostics: false       # toggle network overlay (latency, jitter, tick timing)
-  sync_frequency: 120           # ticks between full state hash checks (SERVER)
-  # DEV_ONLY parameters — debug builds only:
-  # desync_debug_level: 0       # 0-3, see 03-NETCODE.md § Debug Levels
-  # visual_prediction: true      # cosmetic prediction; disable for latency testing
-  # simulate_latency: 0          # artificial one-way latency (ms)
-  # simulate_loss: 0.0           # artificial packet loss (%)
-  # simulate_jitter: 0           # artificial jitter (ms)
+[net]
+show_diagnostics = false        # toggle network overlay (latency, jitter, tick timing)
+sync_frequency = 120            # ticks between full state hash checks (SERVER)
+# DEV_ONLY parameters — debug builds only:
+# desync_debug_level = 0        # 0-3, see 03-NETCODE.md § Debug Levels
+# visual_prediction = true       # cosmetic prediction; disable for latency testing
+# simulate_latency = 0           # artificial one-way latency (ms)
+# simulate_loss = 0.0            # artificial packet loss (%)
+# simulate_jitter = 0            # artificial jitter (ms)
 
-debug:
-  show_fps: true
-  show_network_stats: false
+[debug]
+show_fps = true
+show_network_stats = false
 ```
 
-Cvars are the runtime mirror of `config.yaml`. Changing a cvar with `PERSISTENT` flag writes back to `config.yaml`. Cvars map to the same keys as the YAML config — `render.shadows` in the cvar system corresponds to `render.shadows` in the file. This means `config.yaml` is both the startup configuration file and the serialized cvar state.
+Cvars are the runtime mirror of `config.toml`. Changing a cvar with `PERSISTENT` flag writes back to `config.toml`. Cvars map to the same keys as the TOML config — `render.shadows` in the cvar system corresponds to `[render] shadows` in the file. This means `config.toml` is both the startup configuration file and the serialized cvar state.
 
 **Cvar commands:**
 
@@ -14836,7 +15088,7 @@ cheat_codes:
 | **Chat message buffer overflow**        | Chat messages are bounded (512 chars, same as `ProtocolLimits::max_chat_message_length` from `06-SECURITY.md` § V15). Command input bounded similarly. The `StringReader` parser rejects input exceeding the limit before parsing.                                |
 | **Command injection in multiplayer**    | Commands execute locally on the issuing client. Sim-affecting commands go through the order pipeline as `PlayerOrder::ChatCommand(cmd, args)` — validated by the sim like any other order. A malicious client cannot execute commands on another client's behalf. |
 | **Denial of service via expensive Lua** | Lua execution has a tick budget. `/c` commands that exceed the budget are interrupted with an error. The chat/console remains responsive because Lua runs in the script system's time slice, not the UI thread.                                                   |
-| **Cvar persistence tampering**          | `config.yaml` is local — tampering only affects the local client. Server-authoritative cvars (`SERVER` flag) cannot be overridden by client-side config.                                                                                                          |
+| **Cvar persistence tampering**          | `config.toml` is local — tampering only affects the local client. Server-authoritative cvars (`SERVER` flag) cannot be overridden by client-side config.                                                                                                          |
 
 #### Platform Considerations
 
@@ -14852,15 +15104,15 @@ For non-desktop platforms, the cvar browser in the developer console is replaced
 
 ### Config File on Startup
 
-Cvars are loadable from `config.yaml` on startup and optionally from a per-game-module override:
+Cvars are loadable from `config.toml` on startup and optionally from a per-game-module override:
 
 ```
-config.yaml                  # global defaults
-config.ra1.yaml              # RA1-specific overrides (optional)
-config.td.yaml               # TD-specific overrides (optional)
+config.toml                   # global defaults
+config.ra1.toml               # RA1-specific overrides (optional)
+config.td.toml                # TD-specific overrides (optional)
 ```
 
-**Load order:** `config.yaml` → `config.<game_module>.yaml` → command-line arguments → in-game `/set` commands. Each layer overrides the previous. Changes made via `/set` on `PERSISTENT` cvars write back to the appropriate config file.
+**Load order:** `config.toml` → `config.<game_module>.toml` → command-line arguments → in-game `/set` commands. Each layer overrides the previous. Changes made via `/set` on `PERSISTENT` cvars write back to the appropriate config file.
 
 **Autoexec:** An optional `autoexec.cfg` file (Source Engine convention) runs commands on startup:
 
@@ -14875,7 +15127,7 @@ This is a convenience for power users who prefer text files over GUI settings. T
 
 ### What This Is NOT
 
-- **NOT a replacement for the Settings UI.** Most players change settings through the GUI. The command system and cvars are the power-user interface to the same underlying settings. Both read and write the same `config.yaml`.
+- **NOT a replacement for the Settings UI.** Most players change settings through the GUI. The command system and cvars are the power-user interface to the same underlying settings. Both read and write the same `config.toml`.
 - **NOT a scripting environment.** The `/c` Lua console is for quick testing and debugging, not for writing mods. Mods belong in proper `.lua` files loaded through the mod system (D004). The console is a REPL — one-liners and quick experiments.
 - **NOT available in competitive/ranked play.** Dev commands are gated behind DeveloperMode (V44). The chat system and non-dev commands work in ranked; the Lua console and dev commands do not. Normal console commands (`/move`, `/build`, etc.) are treated as GUI-equivalent inputs — they produce the same `PlayerOrder` and are governed by D033 QoL toggles. See "Competitive Integrity in Multiplayer" above for the full framework: order rate monitoring, input source tracking, ranked restrictions, and tournament mode.
 - **NOT a server management panel.** Server administration beyond kick/ban/config should use external tools (web panels, RCON protocol). The in-game commands cover in-match operations only.
@@ -16676,7 +16928,7 @@ Game speed affects only the interval between sim ticks — system behavior is ti
 
 #### Tier 2: Advanced / Console (Power Users, D058)
 
-Available via console commands or `config.yaml`. Not in the main GUI. Flagged with appropriate cvar flags:
+Available via console commands or `config.toml`. Not in the main GUI. Flagged with appropriate cvar flags:
 
 | Cvar                     | Type  | Default | Flags        | What It Does                                                                       |
 | ------------------------ | ----- | ------- | ------------ | ---------------------------------------------------------------------------------- |
@@ -16770,7 +17022,7 @@ All player data lives under a single, stable, documented directory. The layout i
 
 ```
 <data_dir>/
-├── config.yaml                         # Engine + game settings (D033 toggles, keybinds, render quality)
+├── config.toml                         # Engine + game settings (D033 toggles, keybinds, render quality)
 ├── profile.db                          # Player identity, friends, blocks, privacy settings (D053)
 ├── achievements.db                     # Achievement collection (D036)
 ├── gameplay.db                         # Event log, replay catalog, save game index, map catalog, asset index (D034)
@@ -16833,7 +17085,7 @@ ic backup verify ic-backup-2027-03-15.zip     # Verify archive integrity without
 1. **SQLite databases:** Each `.db` file is backed up using `VACUUM INTO '<temp>.db'` — this creates a consistent, compacted copy without requiring the database to be closed. WAL checkpoints are folded in. No risk of copying a half-written WAL file.
 2. **Binary files:** `.icsave`, `.icrep`, `.icpkg` files are copied as-is (they're self-contained).
 3. **Image files:** PNG screenshots are copied as-is.
-4. **Config files:** `config.yaml` and any other YAML files are copied as-is.
+4. **Config files:** `config.toml` and other TOML configuration files are copied as-is.
 5. **Key files:** `keys/identity.key` is included (the player's private key — also recoverable via mnemonic seed phrase, but a full backup preserves everything).
 6. **Package:** Everything is bundled into a ZIP archive with the original directory structure preserved. No compression on already-compressed files (`.icsave`, `.icrep` are LZ4-compressed internally).
 
@@ -16845,7 +17097,7 @@ ic backup verify ic-backup-2027-03-15.zip     # Verify archive integrity without
 | `profile`      | `profile.db`                   | < 1 MB         | **Yes** — friends, settings, avatar            |
 | `communities`  | `communities/*.db`             | 1–10 MB        | **Yes** — ratings, match history (SCRs)        |
 | `achievements` | `achievements.db`              | < 1 MB         | **Yes** — SCR-backed achievement proofs        |
-| `config`       | `config.yaml`                  | < 100 KB       | Medium — preferences, easily recreated         |
+| `config`       | `config.toml`                  | < 100 KB       | Medium — preferences, easily recreated         |
 | `saves`        | `saves/*.icsave`               | 10–100 MB      | High — campaign progress, in-progress games    |
 | `replays`      | `replays/*.icrep`              | 100 MB – 10 GB | Low — sentimental, not functional              |
 | `screenshots`  | `screenshots/*.png`            | 10 MB – 5 GB   | Low — sentimental, not functional              |
@@ -16946,7 +17198,7 @@ pub struct CloudQuota {
 | `profile.db`        | **Yes** | Small, essential                                                                |
 | `communities/*.db`  | **Yes** | Small, contains verified reputation (SCRs)                                      |
 | `achievements.db`   | **Yes** | Small, contains achievement proofs                                              |
-| `config.yaml`       | **Yes** | Small, preserves preferences across machines                                    |
+| `config.toml`       | **Yes** | Small, preserves preferences across machines                                    |
 | Latest autosave     | **Yes** | Resume campaign on another machine (one `.icsave` only)                         |
 | `saves/*.icsave`    | No      | Too large for cloud quotas (user manages manually)                              |
 | `replays/*.icrep`   | No      | Too large, not critical                                                         |
@@ -16971,7 +17223,7 @@ Screenshots are standard PNG files with embedded metadata in the PNG `tEXt` chun
 | `IC:GameTick`      | `"18432"`                                       |
 | `IC:ReplayFile`    | `"2027-03-15-ranked-1v1.icrep"` (if applicable) |
 
-Standard PNG viewers ignore these chunks; IC's screenshot browser reads them for filtering and organization. The screenshot hotkey (mapped in `config.yaml`) captures the current frame, embeds metadata, and saves to `screenshots/` with a timestamped filename.
+Standard PNG viewers ignore these chunks; IC's screenshot browser reads them for filtering and organization. The screenshot hotkey (mapped in `config.toml`) captures the current frame, embeds metadata, and saves to `screenshots/` with a timestamped filename.
 
 ### Mnemonic Seed Recovery
 
@@ -17261,12 +17513,12 @@ Key UX detail: **SCRs are verified during restore and the player sees it.** The 
 Most players never open a settings screen for backup. These behaviors protect them silently:
 
 **Auto cloud sync (if enabled):**
-- **On game exit:** Upload changed `profile.db`, `communities/*.db`, `achievements.db`, `config.yaml`, `keys/identity.key`, latest autosave. Silent — no UI prompt.
+- **On game exit:** Upload changed `profile.db`, `communities/*.db`, `achievements.db`, `config.toml`, `keys/identity.key`, latest autosave. Silent — no UI prompt.
 - **On game launch:** Download cloud data, merge if needed (last-write-wins for simple files; SCR merge for community DBs — SCRs are append-only with timestamps, so merge is deterministic).
 - **After completing a match:** Upload updated community DB (new match result / rating change). Background, non-blocking.
 
 **Automatic daily snapshots (always-on, even without cloud):**
-- On first launch of the day, the engine writes a lightweight "critical data snapshot" to `<data_dir>/backups/auto-critical-N.zip` containing only `keys/`, `profile.db`, `communities/*.db`, `achievements.db`, `config.yaml` (~5 MB total).
+- On first launch of the day, the engine writes a lightweight "critical data snapshot" to `<data_dir>/backups/auto-critical-N.zip` containing only `keys/`, `profile.db`, `communities/*.db`, `achievements.db`, `config.toml` (~5 MB total).
 - Rotating 3-day retention: `auto-critical-1.zip`, `auto-critical-2.zip`, `auto-critical-3.zip`. Oldest overwritten.
 - No user interaction, no prompt, no notification. Background I/O during asset loading — invisible.
 - Even players who never touch backup settings have 3 rolling days of critical data protection.
@@ -17682,3 +17934,667 @@ The scenario editor benefits from profile-aware asset resolution:
 - **Phase 4:** `ic profile save/list/activate/inspect/diff` CLI commands. Profile YAML schema stabilized. Modpack curators can save and switch profiles during testing.
 - **Phase 5:** Lobby fingerprint verification replaces per-mod version list comparison. Namespace diff view in lobby UI. `/profile` console commands. Replay fingerprint verification on playback.
 - **Phase 6a:** `ic mod publish-profile` publishes a local profile as a Workshop modpack. `ic profile import` imports modpacks as local profiles. In-game mod manager gains profile dropdown. Editor provenance tooltips and per-source hot-swap.
+
+---
+
+## D066: Cross-Engine Export & Editor Extensibility
+
+**Decision:** The IC SDK (scenario editor + asset studio) can export complete content packages — missions, campaigns, cutscenes, music, audio, textures, animations, unit definitions — to original Red Alert and OpenRA formats. The SDK is itself extensible via the same tiered modding system (YAML → Lua → WASM) that powers the game, making it a fully moddable content creation platform.
+
+**Context:** IC already imports from Red Alert and OpenRA (D025, D026, ra-formats). The Asset Studio (D040) converts between individual asset formats bidirectionally (.shp↔.png, .aud↔.wav, .vqa↔.mp4). But there is no holistic export pipeline — no way to author a complete mission in IC's superior tooling and then produce a package that loads in original Red Alert or OpenRA. This is the "content authoring platform" step: IC becomes the tool that the C&C community uses to create content for *any* C&C engine, not just IC itself. This posture — creating value for the broader community regardless of which engine they play on — is core to the project's philosophy (see `13-PHILOSOPHY.md` Principle #6: "Build with the community, not just for them").
+
+Equally important: the editor itself must be extensible. If IC is a modding platform, then the tools that create mods must also be moddable. A community member building a RA2 game module needs custom editor panels for voxel placement. A total conversion might need a custom terrain brush. Editor extensions follow the same tiered model that game mods use.
+
+### Export Targets
+
+#### Target 1: Original Red Alert (DOS/Win95 format)
+
+Export produces files loadable by the original Red Alert engine (including CnCNet-patched versions):
+
+| Content Type      | IC Source                          | Export Format                                         | Notes                                                                                                                                                                                     |
+| ----------------- | ---------------------------------- | ----------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Maps**          | IC scenario (.yaml)                | `ra.ini` (map section) + `.bin` (terrain binary)      | Map dimensions, terrain tiles, overlay (ore/gems), waypoints, cell triggers. Limited to 128×128 grid, no IC-specific features (triggers export as best-effort match to RA trigger system) |
+| **Unit rules**    | IC YAML unit definitions           | `rules.ini` sections                                  | Cost, speed, armor, weapons, prerequisites. IC-only features (conditions, multipliers) stripped with warnings. Balance values remapped to RA's integer scales                             |
+| **Missions**      | IC scenario + Lua triggers         | `.mpr` mission file + `trigger`/`teamtype` ini blocks | Lua trigger logic is *downcompiled* to RA's trigger/teamtype/action system where possible. Complex Lua with no RA equivalent generates a warning report                                   |
+| **Sprites**       | .png / sprite sheets               | .shp + .pal (256-color palette-indexed)               | Auto-quantization to target palette. Frame count/facing validation against RA expectations (8/16/32 facings)                                                                              |
+| **Audio**         | .wav / .ogg                        | .aud (IMA ADPCM)                                      | Sample rate conversion to RA-compatible rates. Mono downmix if stereo.                                                                                                                    |
+| **Cutscenes**     | .mp4 / .webm                       | .vqa (VQ compressed)                                  | Resolution downscale to 320×200 or 640×400. Palette quantization. Audio track interleaved as Westwood ADPCM                                                                               |
+| **Music**         | .ogg / .wav                        | .aud (music format)                                   | Full-length music tracks encoded as Westwood AUD. Alternative: export as standard .wav alongside custom `theme.ini`                                                                       |
+| **String tables** | IC YAML localization               | `.eng` / `.ger` / etc. string files                   | IC string keys mapped to RA string table offsets                                                                                                                                          |
+| **Archives**      | Loose files (from export pipeline) | .mix (optional packing)                               | All exported files optionally bundled into a .mix for distribution. CRC hash table generated per ra-formats § MIX                                                                         |
+
+**Fidelity model:** Export is *lossy by design*. IC supports features RA doesn't (conditions, multipliers, 3D positions, complex Lua triggers, unlimited map sizes). The exporter produces the closest RA-compatible equivalent and generates a **fidelity report** — a structured log of every feature that was downgraded, stripped, or approximated. The creator sees: "3 triggers could not be exported (RA has no equivalent for `on_condition_change`). 2 unit abilities were removed (mind control requires engine support). Map was cropped from 200×200 to 128×128." This is the same philosophy as exporting a Photoshop file to JPEG — you know what you'll lose before you commit.
+
+#### Target 2: OpenRA (.oramod / .oramap)
+
+Export produces content loadable by the current OpenRA release:
+
+| Content Type      | IC Source                       | Export Format                                            | Notes                                                                                                                                                                       |
+| ----------------- | ------------------------------- | -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Maps**          | IC scenario (.yaml)             | `.oramap` (ZIP: map.yaml + map.bin + lua/)               | Full map geometry, actor placement, player definitions, Lua scripts. IC map features beyond OpenRA's support generate warnings                                              |
+| **Mod rules**     | IC YAML unit/weapon definitions | MiniYAML rule files (tab-indented, `^`/`@` syntax)       | IC YAML → MiniYAML via D025 reverse converter. IC trait names mapped back to OpenRA trait names via D023 alias table (bidirectional). IC-only traits stripped with warnings |
+| **Campaigns**     | IC campaign graph (D021)        | OpenRA campaign manifest + sequential mission `.oramaps` | IC's branching campaign graph is linearized (longest path or user-selected branch). Persistent state (roster carry-over) stripped — OpenRA campaigns are stateless          |
+| **Lua scripts**   | IC Lua (D024 superset)          | OpenRA-compatible Lua (D024 base API)                    | IC-only Lua API extensions stripped. The exporter validates that remaining Lua uses only OpenRA's 16 globals + standard library                                             |
+| **Sprites**       | .png / sprite sheets            | .png (OpenRA native) or .shp                             | OpenRA loads PNG natively — often no conversion needed. .shp export available for mods targeting the classic sprite pipeline                                                |
+| **Audio**         | .wav / .ogg                     | .wav / .ogg (OpenRA native) or .aud                      | OpenRA loads modern formats natively. .aud export for backwards-compatible mods                                                                                             |
+| **UI themes**     | IC theme YAML + sprite sheets   | OpenRA chrome YAML + sprite sheets                       | IC theme properties (D032) mapped to OpenRA's chrome system. IC-only theme features stripped                                                                                |
+| **String tables** | IC YAML localization            | OpenRA `.ftl` (Fluent) localization files                | IC string keys mapped to OpenRA Fluent message IDs                                                                                                                          |
+| **Mod manifest**  | IC mod.yaml                     | OpenRA `mod.yaml` (D026 reverse)                         | IC mod manifest → OpenRA mod manifest. Dependency declarations, sprite sequences, rule file lists, chrome layout references                                                 |
+
+**OpenRA version targeting:** OpenRA's modding API changes between releases. The exporter targets a configurable OpenRA version (default: latest stable). A `target_openra_version` field in the export config selects which trait names, Lua API surface, and manifest schema to use. The D023 alias table is version-aware — it knows which OpenRA release introduced or deprecated each trait name.
+
+#### Target 3: IC Native (Default)
+
+Normal IC mod/map export is already covered by existing design (D030 Workshop, D062 profiles). Included here for completeness — the export pipeline is a unified system with format-specific backends, not three separate tools.
+
+### Export Pipeline Architecture
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│                     IC SDK Export Pipeline                        │
+│                                                                  │
+│  ┌─────────────┐                                                 │
+│  │ IC Scenario  │──┐                                             │
+│  │ + Assets     │  │    ┌──────────────────┐                     │
+│  └─────────────┘  ├──→│  ExportPlanner    │                     │
+│  ┌─────────────┐  │    │                  │                     │
+│  │ Export       │──┘    │ • Inventory all  │    ┌─────────────┐  │
+│  │ Config YAML  │       │   content        │    │  Fidelity   │  │
+│  │              │       │ • Detect feature │──→│  Report     │  │
+│  │ target: ra1  │       │   gaps per target│    │  (warnings) │  │
+│  │ version: 3.03│       │ • Plan transforms│    └─────────────┘  │
+│  └─────────────┘       └──────┬───────────┘                     │
+│                               │                                  │
+│             ┌─────────────────┼─────────────────┐               │
+│             ▼                 ▼                  ▼               │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐          │
+│  │ RaExporter   │  │ OraExporter  │  │ IcExporter   │          │
+│  │              │  │              │  │              │          │
+│  │ rules.ini    │  │ MiniYAML     │  │ IC YAML      │          │
+│  │ .shp/.pal    │  │ .oramap      │  │ .png/.ogg    │          │
+│  │ .aud/.vqa    │  │ .png/.ogg    │  │ Workshop     │          │
+│  │ .mix         │  │ mod.yaml     │  │              │          │
+│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘          │
+│         │                 │                  │                  │
+│         ▼                 ▼                  ▼                  │
+│  ┌─────────────────────────────────────────────────┐           │
+│  │              Output Directory / Archive           │           │
+│  └─────────────────────────────────────────────────┘           │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+**`ExportTarget` trait:**
+
+```rust
+/// Backend for exporting IC content to a specific target engine/format.
+/// Implementable via WASM for community-contributed export targets.
+pub trait ExportTarget: Send + Sync {
+    /// Human-readable name: "Original Red Alert", "OpenRA (release-20240315)", etc.
+    fn name(&self) -> &str;
+
+    /// Which IC content types this target supports.
+    fn supported_content(&self) -> &[ContentCategory];
+
+    /// Analyze the scenario and produce a fidelity report
+    /// listing what will be downgraded or lost.
+    fn plan_export(
+        &self,
+        scenario: &ExportableScenario,
+        config: &ExportConfig,
+    ) -> ExportPlan;
+
+    /// Execute the export, writing files to the output sink.
+    fn execute(
+        &self,
+        plan: &ExportPlan,
+        scenario: &ExportableScenario,
+        output: &mut dyn OutputSink,
+    ) -> Result<ExportResult, ExportError>;
+}
+
+pub enum ContentCategory {
+    Map,
+    UnitRules,
+    WeaponRules,
+    Mission,        // scenario with triggers/scripting
+    Campaign,       // multi-mission with graph/state
+    Sprites,
+    Audio,
+    Music,
+    Cutscenes,
+    UiTheme,
+    StringTable,
+    ModManifest,
+    Archive,        // .mix, .oramod ZIP, etc.
+}
+```
+
+**Key design choice:** `ExportTarget` is a trait, not a hardcoded set of if/else branches. The built-in exporters (RA1, OpenRA, IC) ship with the SDK. Community members can add export targets for other engines — Tiberian Sun modding tools, Remastered Collection, or even non-C&C engines like Stratagus — via WASM modules (Tier 3 modding). This makes the export pipeline itself extensible without engine changes.
+
+### Trigger Downcompilation (Lua → RA/OpenRA triggers)
+
+The hardest export problem. IC missions use Lua (D024) for scripting — a Turing-complete language. RA1 has a fixed trigger/teamtype/action system (~40 events, ~80 actions). OpenRA extends this with Lua but has a smaller standard library than IC.
+
+**Approach: pattern-based downcompilation, not general transpilation.**
+
+The exporter maintains a library of **recognized Lua patterns** that map to RA1 trigger equivalents:
+
+| IC Lua Pattern                          | RA1 Trigger Equivalent                     |
+| --------------------------------------- | ------------------------------------------ |
+| `Trigger.AfterDelay(ticks, fn)`         | Timed trigger (countdown)                  |
+| `Trigger.OnEnteredFootprint(cells, fn)` | Cell trigger (entered by)                  |
+| `Trigger.OnKilled(actor, fn)`           | Destroyed trigger (specific unit/building) |
+| `Trigger.OnAllKilled(actors, fn)`       | All destroyed trigger                      |
+| `Actor.Create(type, owner, pos)`        | Teamtype + reinforcement action            |
+| `actor:Attack(target)`                  | Teamtype attack waypoint action            |
+| `actor:Move(pos)`                       | Teamtype move to waypoint action           |
+| `Media.PlaySpeech(name)`                | EVA speech action                          |
+| `UserInterface.SetMissionText(text)`    | Mission text display action                |
+
+Lua that doesn't match any known pattern → **warning in fidelity report** with the unmatched code highlighted. The creator can then simplify their Lua for RA1 export or accept the limitation. For OpenRA export, more patterns survive (OpenRA supports Lua natively), but IC-only API extensions are still flagged.
+
+**This is intentionally NOT a general Lua-to-trigger compiler.** A general compiler would be fragile and produce trigger spaghetti. Pattern matching is predictable: the creator knows exactly which patterns export cleanly, and the SDK can provide "export-safe" template triggers in the scenario editor that are guaranteed to downcompile.
+
+### Editor Extensibility
+
+The IC SDK is a modding platform, not just a tool. The editor itself is extensible via the same three-tier system:
+
+#### Tier 1: YAML (Editor Data Extensions)
+
+Custom editor panels, entity palettes, and property inspectors defined via YAML:
+
+```yaml
+# extensions/ra2_editor/editor_extension.yaml
+editor_extension:
+  name: "RA2 Editor Tools"
+  version: "1.0.0"
+  
+  # Custom entity palette categories
+  palette_categories:
+    - name: "Voxel Units"
+      icon: voxel_unit_icon
+      filter:
+        has_component: VoxelModel
+    - name: "Tech Buildings"
+      icon: tech_building_icon
+      filter:
+        tag: tech_building
+  
+  # Custom property panels for entity types
+  property_panels:
+    - entity_filter: { has_component: VoxelModel }
+      panel:
+        title: "Voxel Properties"
+        fields:
+          - { key: "voxel.turret_offset", type: vec3, label: "Turret Offset" }
+          - { key: "voxel.shadow_index", type: int, label: "Shadow Index" }
+          - { key: "voxel.remap_color", type: palette_range, label: "Faction Color Range" }
+  
+  # Custom terrain brush presets
+  terrain_brushes:
+    - name: "Urban Road"
+      tiles: [road_h, road_v, road_corner_ne, road_corner_nw, road_t, road_cross]
+      auto_connect: true
+    - name: "Tiberium Field"
+      tiles: [tib_01, tib_02, tib_03, tib_spread]
+      scatter: { density: 0.7, randomize_variant: true }
+  
+  # Custom export target configuration
+  export_targets:
+    - name: "Yuri's Revenge"
+      exporter_wasm: "ra2_exporter.wasm"  # Tier 3 WASM exporter
+      config_schema: "ra2_export_config.yaml"
+```
+
+#### Tier 2: Lua (Editor Scripting)
+
+Editor automation, custom validators, batch operations:
+
+```lua
+-- extensions/quality_check/editor_scripts/validate_mission.lua
+
+-- Register a custom validation that runs before export
+Editor.RegisterValidator("balance_check", function(scenario)
+    local issues = {}
+    
+    -- Check that both sides have a base
+    for _, player in ipairs(scenario:GetPlayers()) do
+        local has_mcv = false
+        for _, actor in ipairs(scenario:GetActors(player)) do
+            if actor:HasComponent("BaseBuilding") then
+                has_mcv = true
+                break
+            end
+        end
+        if not has_mcv and player:IsPlayable() then
+            table.insert(issues, {
+                severity = "warning",
+                message = player:GetName() .. " has no base-building unit",
+                actor = nil,
+                fix = "Add an MCV or Construction Yard"
+            })
+        end
+    end
+    
+    return issues
+end)
+
+-- Register a batch operation available from the editor's command palette
+Editor.RegisterCommand("distribute_ore", {
+    label = "Distribute Ore Fields",
+    description = "Auto-place balanced ore around each player start",
+    execute = function(scenario, params)
+        for _, start_pos in ipairs(scenario:GetPlayerStarts()) do
+            -- Place ore in a ring around each start position
+            local radius = params.radius or 8
+            for dx = -radius, radius do
+                for dy = -radius, radius do
+                    local dist = math.sqrt(dx*dx + dy*dy)
+                    if dist >= radius * 0.5 and dist <= radius then
+                        local cell = start_pos:Offset(dx, dy)
+                        if scenario:GetTerrain(cell):IsPassable() then
+                            scenario:SetOverlay(cell, "ore", math.random(1, 3))
+                        end
+                    end
+                end
+            end
+        end
+    end
+})
+```
+
+#### Tier 3: WASM (Editor Plugins)
+
+Full editor plugins for custom panels, renderers, format support, and export targets:
+
+```rust
+// A WASM plugin that adds a custom export target for Tiberian Sun
+#[wasm_export]
+fn register_editor_plugin(host: &mut EditorHost) {
+    // Register a custom export target
+    host.register_export_target(TiberianSunExporter::new());
+    
+    // Register a custom asset viewer for .vxl files
+    host.register_asset_viewer("vxl", VoxelViewer::new());
+    
+    // Register a custom terrain tool
+    host.register_terrain_tool(TiberiumGrowthPainter::new());
+    
+    // Register a custom entity component editor
+    host.register_component_editor("SubterraneanUnit", SubUnitEditor::new());
+}
+```
+
+**Editor extension distribution:** Editor extensions are Workshop packages (D030) with `type: editor_extension` in their manifest. They install into the SDK's extension directory and activate on SDK restart. Extensions declared in a mod profile (D062) auto-activate when that profile is active — a RA2 game module profile automatically loads RA2 editor extensions.
+
+### Export-Safe Authoring Mode
+
+The scenario editor offers an **export-safe mode** that constrains the authoring environment to features compatible with a chosen export target:
+
+- **Select target:** "I'm building this mission for OpenRA" (or RA1, or IC)
+- **Feature gating:** The editor grays out or hides features the target doesn't support. If targeting RA1: no mind control triggers, no unlimited map size, no branching campaigns. If targeting OpenRA: no IC-only Lua APIs.
+- **Live fidelity indicator:** A traffic-light badge on each entity/trigger: green = exports perfectly, yellow = exports with approximation, red = will be stripped. The creator sees export fidelity as they build, not after.
+- **Export-safe trigger templates:** Pre-built trigger patterns guaranteed to downcompile cleanly to the target. "Timer → Reinforcement" template uses only Lua patterns with known RA1 equivalents.
+- **Dual preview:** Side-by-side preview showing "IC rendering" and "approximate target rendering" (e.g., palette-quantized sprites to simulate how it will look in original RA1).
+
+This mode doesn't prevent using IC-only features — it informs the creator of consequences in real time. A creator building primarily for IC can still glance at the OpenRA fidelity indicator to know how much work a port would take.
+
+### CLI Export
+
+Export is available from the command line for batch processing and CI integration:
+
+```bash
+# Export a single mission to OpenRA format
+ic export --target openra --version release-20240315 mission.yaml -o ./openra-output/
+
+# Export an entire campaign to RA1 format
+ic export --target ra1 campaign.yaml -o ./ra1-output/ --fidelity-report report.json
+
+# Export all sprites in a mod to .shp+.pal for RA1 compatibility
+ic export --target ra1 --content sprites mod.yaml -o ./sprites-output/
+
+# Validate export without writing files (dry run)
+ic export --target openra --dry-run mission.yaml
+
+# Batch export: every map in a directory to all targets
+ic export --target ra1,openra,ic maps/ -o ./export/
+```
+
+### What This Enables
+
+1. **IC as the C&C community's content creation hub.** Build in IC's superior editor, export to whatever engine your audience plays. A mission maker who targets both IC and OpenRA doesn't maintain two copies — they maintain one IC project and export.
+
+2. **Gradual migration path.** An OpenRA modder starts using IC's editor for map creation (exporting .oramaps), discovers the asset tools, starts authoring rules in IC YAML (exporting MiniYAML), and eventually their entire workflow is in IC — even if their audience still plays OpenRA. When their audience migrates to IC, the mod is already native.
+
+3. **Editor as a platform.** Workshop-distributed editor extensions mean the SDK improves with the community. Someone builds a RA2 voxel placement tool → everyone benefits. Someone builds a Tiberian Sun export target → the TS modding community gains a modern editor. Someone builds a mission quality validator → all mission makers benefit.
+
+4. **Preservation.** Creating new content for the original 1996 Red Alert — missions, campaigns, even total conversions — using modern tools. The export pipeline keeps the original game alive as a playable target.
+
+### Alternatives Considered
+
+1. **Export only to IC native format** — Rejected. Misses the platform opportunity. The C&C community spans multiple engines. Being useful to creators regardless of their target engine is how IC earns adoption.
+
+2. **General transpilation (Lua → any trigger system)** — Rejected. A general Lua transpiler would be fragile, produce unreadable output, and give false confidence. Pattern-based downcompilation is honest about its limitations.
+
+3. **Editor extensions via C# (OpenRA compatibility)** — Rejected. IC doesn't use C# anywhere. WASM is the Tier 3 extension mechanism — Rust, C, AssemblyScript, or any WASM-targeting language. No C# runtime dependency.
+
+4. **Separate export tools (not integrated in SDK)** — Rejected. Export is part of the creation workflow, not a post-processing step. The export-safe authoring mode only works if the editor knows the target while you're building.
+
+5. **Bit-perfect re-creation of target engine behavior** — Not a goal. Export produces valid content for the target engine, but doesn't guarantee identical gameplay to what IC simulates (D011 — cross-engine compatibility is community-layer, not sim-layer). RA1 and OpenRA will simulate the exported content with their own engines.
+
+### Integration with Existing Decisions
+
+- **D023 (OpenRA Vocabulary Compatibility):** The alias table is now bidirectional — used for import (OpenRA → IC) AND export (IC → OpenRA). The exporter reverses D023's trait name mapping.
+- **D024 (Lua API):** Export validates Lua against the target's API surface. IC-only extensions are flagged; OpenRA's 16 globals are the safe subset.
+- **D025 (Runtime MiniYAML Loading):** The MiniYAML converter is now bidirectional: load at runtime (MiniYAML → IC YAML) and export (IC YAML → MiniYAML).
+- **D026 (Mod Manifest Compatibility):** `mod.yaml` parsing is now bidirectional — import OpenRA manifests AND generate them on export.
+- **D030 (Workshop):** Editor extensions are Workshop packages. Export presets/profiles are shareable via Workshop.
+- **D038 (Scenario Editor):** The scenario editor gains export-safe mode, fidelity indicators, and export-safe trigger templates. Export is a first-class editor action, not a separate tool.
+- **D040 (Asset Studio):** Asset conversion (D040's Cross-Game Asset Bridge) is the per-file foundation. D066 orchestrates whole-project export using D040's converters.
+- **D062 (Mod Profiles):** A mod profile can embed export target preference. "RA1 Compatible" profile constrains features to RA1-exportable subset.
+- **ra-formats write support:** D066 is the primary consumer of ra-formats write support (Phase 6a). The exporter calls into ra-formats encoders for .shp, .pal, .aud, .vqa, .mix generation.
+
+### Phase
+
+- **Phase 6a:** Core export pipeline ships alongside the scenario editor and asset studio. Built-in export targets: IC native (trivial), OpenRA (`.oramap` + MiniYAML rules). Export-safe authoring mode in scenario editor. `ic export` CLI.
+- **Phase 6b:** RA1 export target (requires .ini generation, trigger downcompilation, .mix packing). Campaign export (linearization for stateless targets). Editor extensibility API (YAML + Lua tiers). Editor extension Workshop distribution.
+- **Phase 7:** WASM editor plugins (Tier 3 extensibility). Community-contributed export targets (TS, RA2, Remastered). Agentic export assistance (LLM suggests how to simplify IC-only features for target compatibility).
+
+---
+
+## D067: Configuration Format Split — TOML for Engine, YAML for Content
+
+**Decision:** All engine and infrastructure configuration files use **TOML**. All game content, mod definitions, and data-driven gameplay files use **YAML**. The file extension alone tells you what kind of file you're looking at: `.toml` = how the engine runs, `.yaml` = what the game is.
+
+**Context:** The current design uses YAML for everything — client settings, server configuration, mod manifests, unit definitions, campaign graphs, UI themes, balance presets. This works technically (YAML is a superset of what we need), but it creates an orientation problem. When a contributor opens a directory full of `.yaml` files, they can't tell at a glance whether `config.yaml` is an engine knob they can safely tune or a game rule file that affects simulation determinism. When a modder opens `server_config.yaml`, the identical extension to their `units.yaml` suggests both are part of the same system — they're not. And when documentation says "configured in YAML," it doesn't distinguish "configured by the engine operator" from "configured by the mod author."
+
+TOML is already present in the Rust ecosystem (`Cargo.toml`, `deny.toml`, `rustfmt.toml`, `clippy.toml`) and in the project itself. Rust developers already associate `.toml` with configuration. The split formalizes what's already a natural instinct.
+
+**The rule is simple:** If it configures the engine, the server, or the development toolchain, it's TOML. If it defines game content that flows through the mod/asset pipeline or the simulation, it's YAML.
+
+### File Classification
+
+#### TOML — Engine & Infrastructure Configuration
+
+| File                        | Purpose                                                                                      | Decision Reference    |
+| --------------------------- | -------------------------------------------------------------------------------------------- | --------------------- |
+| `config.toml`               | Client engine settings: render, audio, keybinds, net diagnostics, debug flags                | D058 (console/cvars)  |
+| `config.<module>.toml`      | Per-game-module client overrides (e.g., `config.ra1.toml`)                                   | D058                  |
+| `server_config.toml`        | Relay/server parameters: ~200 cvars across 14 subsystems                                     | D064                  |
+| `settings.toml`             | Workshop sources, P2P bandwidth, compression levels, cloud sync, community list              | D030, D063            |
+| `deny.toml`                 | License enforcement for `cargo deny`                                                         | Already TOML          |
+| `Cargo.toml`                | Rust build system                                                                            | Already TOML          |
+| Server deployment profiles  | `profiles/tournament-lan.toml`, `profiles/casual-community.toml`, etc.                       | D064, 15-SERVER-GUIDE |
+| `compression.advanced.toml` | Advanced compression parameters for server operators (if separate from `server_config.toml`) | D063                  |
+| Editor preferences          | `editor_prefs.toml` — SDK window layout, recent files, panel state                           | D038, D040            |
+
+**Why TOML for configuration:**
+- **Flat and explicit.** TOML doesn't allow the deeply nested structures that make YAML configs hard to scan. `[render]` / `shadows = true` is immediately readable. Configuration *should* be flat — if your config file needs 6 levels of nesting, it's probably content.
+- **No gotchas.** YAML has well-known foot-guns: `Norway: NO` parses as `false`, bare `3.0` vs `"3.0"` ambiguity, tab/space sensitivity. TOML avoids all of these — critical for files that non-developers (server operators, tournament organizers) will edit by hand.
+- **Type-safe.** TOML has native integer, float, boolean, datetime, and array types with unambiguous syntax. `max_fps = 144` is always an integer, never a string. YAML's type coercion surprises people.
+- **Ecosystem alignment.** Rust's `serde` supports TOML via `toml` crate with identical derive macros to `serde_yaml`. The entire Rust toolchain uses TOML for configuration. IC contributors expect it.
+- **Tooling.** [taplo](https://taplo.tamasfe.dev/) provides TOML LSP (validation, formatting, schema support) matching what YAML gets from Red Hat's YAML extension. VS Code gets first-class support for both.
+- **Comments preserved.** TOML's comment syntax (`#`) is simple and universally understood. Round-trip serialization with `toml_edit` preserves comments and formatting — essential for files users hand-edit.
+
+#### YAML — Game Content & Mod Data
+
+| File                             | Purpose                                                             | Decision Reference   |
+| -------------------------------- | ------------------------------------------------------------------- | -------------------- |
+| `mod.yaml`                       | Mod manifest: name, version, dependencies, assets, game module      | D026                 |
+| Unit/weapon/building definitions | `units/*.yaml`, `weapons/*.yaml`, `buildings/*.yaml`                | D003, Tier 1 modding |
+| `campaign.yaml`                  | Campaign graph, mission sequence, persistent state                  | D021                 |
+| `theme.yaml`                     | UI theme definition: sprite sheets, 9-slice coordinates, colors     | D032                 |
+| `ranked-tiers.yaml`              | Competitive rank names, thresholds, icons per game module           | D055                 |
+| Balance presets                  | `presets/balance/*.yaml` — Classic/OpenRA/Remastered values         | D019                 |
+| QoL presets                      | `presets/qol/*.yaml` — behavior toggle configurations               | D033                 |
+| Experience profiles              | `profiles/*.yaml` — named mod set + settings + conflict resolutions | D062                 |
+| Map files                        | IC map format (terrain, actors, triggers, metadata)                 | D025                 |
+| Scenario triggers/modules        | Trigger definitions, waypoints, compositions                        | D038                 |
+| String tables / localization     | Translatable game text                                              | —                    |
+| Editor extensions                | `editor_extension.yaml` — custom palettes, panels, brushes          | D066                 |
+| Export config                    | `export_config.yaml` — target engine, version, content selection    | D066                 |
+| `credits.yaml`                   | Campaign credits sequence                                           | D038                 |
+| `loading_tips.yaml`              | Loading screen tips                                                 | D038                 |
+| Tutorial definitions             | Hint triggers, tutorial step sequences                              | D065                 |
+| AI personality definitions       | Build orders, aggression curves, expansion strategies               | D043                 |
+| Achievement definitions          | In `mod.yaml` or separate achievement YAML files                    | D036                 |
+
+**Why YAML stays for content:**
+- **Deep nesting is natural.** Unit definitions have `combat.weapons[0].turret.target_filter` — content IS hierarchical. YAML handles this ergonomically. TOML's `[[combat.weapons]]` tables are awkward for deeply nested game data.
+- **Inheritance and composition.** IC's YAML content uses `inherits:` chains. Content files are designed for the `serde_yaml` pipeline with load-time inheritance resolution. TOML has no equivalent pattern.
+- **Community expectation.** The C&C modding community already works with MiniYAML (OpenRA) and INI (original). YAML is the closest modern equivalent — familiar structure, familiar ergonomics. Nobody expects to define unit stats in TOML.
+- **Multi-document support.** YAML's `---` document separator allows multiple logical documents in one file (e.g., multiple unit definitions). TOML has no multi-document support.
+- **Existing ecosystem.** JSON Schema validation for YAML content, D023 alias resolution, D025 MiniYAML conversion — all built around the YAML pipeline. The content toolchain is YAML-native.
+
+### Edge Cases & Boundary Rules
+
+| File                       | Classification | Reasoning                                                                                                                                                                                                                  |
+| -------------------------- | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `mod.yaml` (mod manifest)  | **YAML**       | It's a content declaration — what the mod IS, not how the engine runs. Even though it has configuration-like fields (`engine.version`, `dependencies`), it flows through the mod pipeline, not the engine config pipeline. |
+| Server deployment profiles | **TOML**       | They're server configuration variants, not game content. The relay reads them the same way it reads `server_config.toml`.                                                                                                  |
+| `export_config.yaml`       | **YAML**       | Export configuration is part of the content creation workflow — it describes what to export (content), not how the engine operates. It travels alongside the scenario/mod it targets.                                      |
+| `ic.lock`                  | **TOML**       | Lockfiles are infrastructure (dependency resolution state). Follows `Cargo.lock` convention.                                                                                                                               |
+| `.iccmd` console scripts   | **Neither**    | These are script files, not configuration or content. Keep as-is.                                                                                                                                                          |
+
+**The boundary test:** Ask "does this file affect the simulation or define game content?" If yes → YAML. "Does this file configure how the engine, server, or toolchain operates?" If yes → TOML. If genuinely ambiguous, prefer YAML (content is the larger set and the default assumption).
+
+### Learning Curve: Two Formats, Not Two Languages
+
+**The concern:** Introducing a second format means contributors who know YAML must now also navigate TOML. Does this add real complexity?
+
+**The short answer:** No — it removes complexity. TOML is a *strict subset* of what YAML can do. Anyone who can read YAML can read TOML in under 60 seconds. The syntax delta is tiny:
+
+| Concept        | YAML                           | TOML                            |
+| -------------- | ------------------------------ | ------------------------------- |
+| Key-value      | `max_fps: 144`                 | `max_fps = 144`                 |
+| Section        | Indentation under parent key   | `[section]` header              |
+| Nested section | More indentation               | `[parent.child]`                |
+| String         | `name: "Tank"` or `name: Tank` | `name = "Tank"` (always quoted) |
+| Boolean        | `enabled: true`                | `enabled = true`                |
+| List           | `- item` on new lines          | `items = ["a", "b"]`            |
+| Comment        | `# comment`                    | `# comment`                     |
+
+That's it. TOML syntax is closer to traditional INI and `.conf` files than to YAML. Server operators, sysadmins, and tournament organizers — the people who edit `server_config.toml` — already know this format from `php.ini`, `my.cnf`, `sshd_config`, `Cargo.toml`, and every other flat configuration file they've ever touched. TOML is the *expected* format for configuration. YAML is the surprise.
+
+**Audience separation means most people touch only one format:**
+
+| Role                                             | Touches TOML? | Touches YAML? |
+| ------------------------------------------------ | ------------- | ------------- |
+| **Modder** (unit stats, weapons, balance)        | No            | Yes           |
+| **Map maker** (terrain, triggers, scenarios)     | No            | Yes           |
+| **Campaign author** (mission graph, dialogue)    | No            | Yes           |
+| **Server operator** (relay tuning, deployment)   | Yes           | No            |
+| **Tournament organizer** (match rules, profiles) | Yes           | No            |
+| **Engine developer** (build config, CI)          | Yes           | Yes           |
+| **Total conversion modder**                      | Rarely        | Yes           |
+
+A modder who defines unit stats in YAML will never need to open a TOML file. A server operator tuning relay parameters will never need to edit YAML content files. The only role that routinely touches both is an engine developer — and Rust developers already live in TOML (`Cargo.toml`, `rustfmt.toml`, `clippy.toml`, `deny.toml`).
+
+**TOML actually reduces complexity for the files it governs:**
+
+- **No indentation traps.** YAML config files break silently when you mix tabs and spaces, or when you indent a key one level too deep. TOML uses `[section]` headers — indentation is cosmetic, not semantic.
+- **No type coercion surprises.** In YAML, `version: 3.0` is a float but `version: "3.0"` is a string. `country: NO` (Norway) is `false`. `on: push` (GitHub Actions) is `{true: "push"}`. TOML has explicit, unambiguous types — what you write is what you get.
+- **No multi-line ambiguity.** YAML has 9 different ways to write a multi-line string (`|`, `>`, `|+`, `|-`, `>+`, `>-`, etc.). TOML has one: `"""triple quotes"""`.
+- **Smaller spec.** The complete TOML spec is ~3 pages. The YAML spec is 86 pages. A format you can learn completely in 10 minutes is inherently less complex than one with hidden corners.
+
+The split doesn't ask anyone to learn a harder thing — it gives configuration files the *simpler* format and keeps the *more expressive* format for the content that actually needs it.
+
+### Cvar Persistence
+
+Cvars currently write back to `config.yaml`. Under D067, they write back to `config.toml`. The cvar key mapping is identical — `render.shadows` in the cvar system corresponds to `[render] shadows` in TOML. The `toml_edit` crate enables round-trip serialization that preserves user comments and formatting, matching the current YAML behavior.
+
+```toml
+# config.toml — client engine settings
+# This file is auto-managed by the engine. Manual edits are preserved.
+
+[render]
+shadows = true
+shadow_quality = 2          # 0=off, 1=low, 2=medium, 3=high
+vsync = true
+max_fps = 144
+
+[audio]
+master_volume = 80
+music_volume = 60
+eva_volume = 100
+
+[gameplay]
+scroll_speed = 5
+control_group_steal = false
+auto_rally_harvesters = true
+
+[net]
+show_diagnostics = false
+sync_frequency = 120
+
+[debug]
+show_fps = true
+show_network_stats = false
+```
+
+Load order remains unchanged: `config.toml` → `config.<game_module>.toml` → command-line arguments → in-game `/set` commands.
+
+### Server Configuration
+
+`server_config.toml` replaces `server_config.yaml`. The three-layer precedence (D064) becomes TOML → env vars → runtime cvars:
+
+```toml
+# server_config.toml — relay/community server configuration
+
+[relay]
+bind_address = "0.0.0.0:7400"
+max_concurrent_games = 50
+tick_rate = 30
+
+[match]
+max_players = 8
+max_game_duration_minutes = 120
+allow_observers = true
+
+[pause]
+max_pauses_per_player = 3
+pause_duration_seconds = 120
+
+[anti_cheat]
+order_validation = true
+lag_switch_detection = true
+lag_switch_threshold_ms = 3000
+```
+
+Environment variable mapping is unchanged: `IC_RELAY_BIND_ADDRESS`, `IC_MATCH_MAX_PLAYERS`, etc.
+
+The `ic server validate-config` CLI validates `.toml` files. Hot reload via SIGHUP reads the updated `.toml`.
+
+### Settings File
+
+`settings.toml` replaces `settings.yaml` for Workshop sources, compression, and P2P configuration:
+
+```toml
+# settings.toml — engine-level client settings
+
+[workshop]
+sources = [
+    { type = "remote", url = "https://workshop.ironcurtain.gg", name = "Official" },
+    { type = "git-index", url = "https://github.com/iron-curtain/workshop-index", name = "Community" },
+]
+
+[compression]
+level = "balanced"          # fastest | balanced | compact
+
+[p2p]
+enabled = true
+max_upload_kbps = 512
+max_download_kbps = 2048
+```
+
+### Data Directory Layout Update
+
+The `<data_dir>` layout (D061) reflects the split:
+
+```
+<data_dir>/
+├── config.toml                         # Engine + game settings (TOML — engine config)
+├── settings.toml                       # Workshop sources, P2P, compression (TOML — engine config)
+├── profile.db                          # Player identity, friends, blocks (SQLite)
+├── achievements.db                     # Achievement collection (SQLite)
+├── gameplay.db                         # Event log, replay catalog (SQLite)
+├── telemetry.db                        # Telemetry events (SQLite)
+├── keys/
+│   └── identity.key
+├── communities/
+│   ├── official-ic.db
+│   └── clan-wolfpack.db
+├── saves/
+├── replays/
+├── screenshots/
+├── workshop/
+├── mods/                               # Mod content (YAML files inside)
+├── maps/                               # Map content (YAML files inside)
+├── logs/
+└── backups/
+```
+
+**The visual signal:** Top-level config files are `.toml` (infrastructure). Everything under `mods/` and `maps/` is `.yaml` (content). SQLite databases are `.db` (structured data). Three file types, three concerns, zero ambiguity.
+
+### Migration
+
+This is a design-phase decision — no code exists to migrate. All documentation examples are updated to reflect the correct format. If documentation examples in other design docs still show `config.yaml` or `server_config.yaml`, they should be treated as references to the corresponding `.toml` files per D067.
+
+### `serde` Implementation
+
+Both TOML and YAML use the same `serde` derive macros in Rust:
+
+```rust
+use serde::{Serialize, Deserialize};
+
+// Engine configuration — deserialized from TOML
+#[derive(Serialize, Deserialize)]
+pub struct EngineConfig {
+    pub render: RenderConfig,
+    pub audio: AudioConfig,
+    pub gameplay: GameplayConfig,
+    pub net: NetConfig,
+    pub debug: DebugConfig,
+}
+
+// Game content — deserialized from YAML
+#[derive(Serialize, Deserialize)]
+pub struct UnitDefinition {
+    pub inherits: Option<String>,
+    pub display: DisplayConfig,
+    pub buildable: BuildableConfig,
+    pub health: HealthConfig,
+    pub mobile: Option<MobileConfig>,
+    pub combat: Option<CombatConfig>,
+}
+```
+
+The struct definitions don't change — only the parser crate (`toml` vs `serde_yaml`) and the file extension. A config struct works with both formats during a transition period if needed.
+
+### Alternatives Considered
+
+1. **Keep everything YAML** — Rejected. Loses the instant-recognition benefit. "Is this engine config or game content?" remains unanswerable from the file extension alone.
+
+2. **JSON for configuration** — Rejected. No comments. JSON is hostile to hand-editing — and configuration files MUST be hand-editable by server operators and tournament organizers who aren't developers.
+
+3. **TOML for everything** — Rejected. TOML is painful for deeply nested game data. `[[units.rifle_infantry.combat.weapons]]` is objectively worse than YAML's indented hierarchies for content authoring. TOML was designed for configuration, not data description.
+
+4. **INI for configuration** — Rejected. No nested sections, no typed values, no standard spec, no `serde` support. INI is legacy — it's what original RA used, not what a modern engine should use.
+
+5. **Separate directories instead of separate formats** — Insufficient. A `config/` directory full of `.yaml` files still doesn't tell you at the file level what you're looking at. The format IS the signal.
+
+### Integration with Existing Decisions
+
+- **D003 (Real YAML):** Unchanged for content. YAML remains the content format with `serde_yaml`. D067 narrows D003's scope: YAML is for content, not for everything.
+- **D034 (SQLite):** Unaffected. SQLite databases are a third category (structured relational data). The three-format taxonomy is: TOML (config), YAML (content), SQLite (state).
+- **D058 (Command Console / Cvars):** Cvars persist to `config.toml` instead of `config.yaml`. The cvar system, key naming, and load order are unchanged.
+- **D061 (Data Backup):** `config.toml` replaces `config.yaml` in the data directory layout and backup categories.
+- **D063 (Compression):** Compression levels configured in `settings.toml`. `AdvancedCompressionConfig` lives in `server_config.toml` for server operators.
+- **D064 (Server Configuration):** `server_config.toml` replaces `server_config.yaml`. All ~200 cvars, deployment profiles, validation CLI, hot reload, and env var mapping work identically — only the file format changes.
+
+### Phase
+
+- **Phase 0:** Convention established. All new configuration files created as `.toml`. `deny.toml` and `Cargo.toml` already comply. Design doc examples use the correct format per D067.
+- **Phase 2:** `config.toml` and `settings.toml` are the live client configuration files. Cvar persistence writes to TOML.
+- **Phase 5:** `server_config.toml` and server deployment profiles are the live server configuration files. `ic server validate-config` validates TOML.
+- **Ongoing:** If a file is created and the author is unsure, apply the boundary test: "Does this affect the simulation or define game content?" → YAML. "Does this configure how software operates?" → TOML.

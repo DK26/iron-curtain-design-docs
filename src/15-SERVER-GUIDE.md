@@ -2,7 +2,7 @@
 
 > **Audience:** Server operators, tournament organizers, competitive league administrators, and content creators / casters.
 >
-> **Prerequisites:** Familiarity with YAML, command-line tools, and basic server administration. For design rationale behind the configuration system, see D064 in `09-DECISIONS.md`.
+> **Prerequisites:** Familiarity with TOML (for server configuration — if you know INI files, you know TOML), command-line tools, and basic server administration. For design rationale behind the configuration system, see D064 in `09-DECISIONS.md` and D067 for the TOML/YAML format split.
 >
 > **Status:** This guide describes the *planned* configuration system. Iron Curtain is in the design phase — no implementation exists yet. All examples show intended behavior.
 
@@ -19,7 +19,7 @@ Iron Curtain's configuration system serves four professional roles. Each role ha
 | **Competitive league admin** | Configure rating parameters, define seasons, tune matchmaking for population size                       | Ranking & Seasons, Matchmaking, Deployment Profiles                               |
 | **Content creator / caster** | Set spectator delay, configure VoIP, maximize observer count                                            | Spectator, Communication, Training & Practice                                     |
 
-Regular players do not need this guide. Player-facing settings (game speed, graphics, audio, keybinds) are configured through the in-game settings menu and `settings.yaml` — see `02-ARCHITECTURE.md` for those.
+Regular players do not need this guide. Player-facing settings (game speed, graphics, audio, keybinds) are configured through the in-game settings menu and `settings.toml` — see `02-ARCHITECTURE.md` for those.
 
 ---
 
@@ -41,13 +41,13 @@ This starts a relay on the default port with:
 
 ### Creating Your First Configuration
 
-To customize, create a `server_config.yaml` in the server's working directory:
+To customize, create a `server_config.toml` in the server's working directory:
 
-```yaml
-# server_config.yaml — only override what you need to change
-relay:
-  max_connections: 200
-  max_games: 50
+```toml
+# server_config.toml — only override what you need to change
+[relay]
+max_connections = 200
+max_games = 50
 ```
 
 Any parameter you omit uses its compiled default. You never need to specify the full schema — only your overrides.
@@ -55,7 +55,7 @@ Any parameter you omit uses its compiled default. You never need to specify the 
 Start the server with a specific config file:
 
 ```bash
-./relay-server --config /path/to/server_config.yaml
+./relay-server --config /path/to/server_config.toml
 ```
 
 ### Validating a Configuration
@@ -63,11 +63,11 @@ Start the server with a specific config file:
 Before deploying a new config, validate it without starting the server:
 
 ```bash
-ic server validate-config /path/to/server_config.yaml
+ic server validate-config /path/to/server_config.toml
 ```
 
 This checks for:
-- YAML syntax errors
+- TOML syntax errors
 - Unknown keys (with suggestions for typos)
 - Out-of-range values (reports which values will be clamped)
 - Cross-parameter inconsistencies (e.g., `matchmaking.initial_range` > `matchmaking.max_range`)
@@ -89,14 +89,14 @@ Priority (highest → lowest):
 │ Layer 2: Environment Variables         │  IC_RELAY_TICK_DEADLINE_MS=100
 │ Override config file per-value.        │  Docker-friendly.
 ├────────────────────────────────────────┤
-│ Layer 1: server_config.yaml            │  relay:
-│ Single file, all subsystems.           │    tick_deadline_ms: 100
+│ Layer 1: server_config.toml            │  [relay]
+│ Single file, all subsystems.           │  tick_deadline_ms = 100
 ├────────────────────────────────────────┤
 │ Layer 0: Compiled Defaults             │  (built into the binary)
 └────────────────────────────────────────┘
 ```
 
-**Rule:** Each layer overrides the one below it. A runtime cvar always wins. An environment variable overrides the YAML file. The YAML file overrides compiled defaults.
+**Rule:** Each layer overrides the one below it. A runtime cvar always wins. An environment variable overrides the TOML file. The TOML file overrides compiled defaults.
 
 ### Environment Variable Naming
 
@@ -122,11 +122,11 @@ Server operators with Host or Admin permission can change parameters live:
 /list relay.*
 ```
 
-Runtime changes persist until the server restarts — they are not written back to the YAML file. This is intentional: runtime adjustments are for in-the-moment tuning, not permanent policy changes.
+Runtime changes persist until the server restarts — they are not written back to the TOML file. This is intentional: runtime adjustments are for in-the-moment tuning, not permanent policy changes.
 
 ### Hot Reload
 
-Reload `server_config.yaml` without restarting:
+Reload `server_config.toml` without restarting:
 
 - **Unix:** Send `SIGHUP` to the relay process
 - **Any platform:** Use the `/reload_config` admin console command
@@ -512,33 +512,33 @@ Time = 300s: Accept any match (desperation)
 
 **Small community tuning:** The most common issue is long queue times due to low population. Address this by:
 
-```yaml
-matchmaking:
-  initial_range: 200        # Wider initial search
-  widen_step: 100            # Expand faster
-  widen_interval_secs: 15    # Expand more often
-  max_range: 1000            # Search much wider
-  desperation_timeout_secs: 120  # Accept any match after 2 min
-  min_match_quality: 0.1     # Accept lower quality matches
+```toml
+[matchmaking]
+initial_range = 200           # Wider initial search
+widen_step = 100              # Expand faster
+widen_interval_secs = 15      # Expand more often
+max_range = 1000              # Search much wider
+desperation_timeout_secs = 120   # Accept any match after 2 min
+min_match_quality = 0.1       # Accept lower quality matches
 ```
 
 **Competitive league tuning:** Prioritize match quality over queue time:
 
-```yaml
-matchmaking:
-  initial_range: 75
-  widen_step: 25
-  widen_interval_secs: 45
-  max_range: 300
-  desperation_timeout_secs: 600  # Wait up to 10 min
-  min_match_quality: 0.5         # Require higher quality
+```toml
+[matchmaking]
+initial_range = 75
+widen_step = 25
+widen_interval_secs = 45
+max_range = 300
+desperation_timeout_secs = 600   # Wait up to 10 min
+min_match_quality = 0.5          # Require higher quality
 ```
 
 ---
 
 ### AI Engine Tuning (`ai.*`)
 
-The AI personality system (aggression, expansion, build orders) is configured through YAML files in the game module, not through `server_config.yaml`. D064 exposes only the engine-level AI performance budget and evaluation frequencies, which sit below the behavioral layer.
+The AI personality system (aggression, expansion, build orders) is configured through YAML files in the game module, not through `server_config.toml`. D064 exposes only the engine-level AI performance budget and evaluation frequencies, which sit below the behavioral layer.
 
 | Parameter                     | Default | What It Controls                                       |
 | ----------------------------- | ------- | ------------------------------------------------------ |
@@ -572,11 +572,11 @@ Custom difficulty tiers are added by placing YAML files in the server's `ai/diff
 
 Iron Curtain supports optional OTEL (OpenTelemetry) export for professional monitoring. To enable:
 
-```yaml
-telemetry:
-  otel_export: true
-  otel_endpoint: "http://otel-collector:4317"
-  sampling_rate: 1.0
+```toml
+[telemetry]
+otel_export = true
+otel_endpoint = "http://otel-collector:4317"
+sampling_rate = 1.0
 ```
 
 This sends metrics and traces to an OTEL collector, which can forward to Prometheus (metrics), Jaeger (traces), and Loki (logs) for visualization in Grafana.
@@ -585,10 +585,10 @@ This sends metrics and traces to an OTEL collector, which can forward to Prometh
 
 **For long-running analysis servers:**
 
-```yaml
-telemetry:
-  max_db_size_mb: 5000     # 5 GB
-  retention_days: -1        # Size-based pruning only
+```toml
+[telemetry]
+max_db_size_mb = 5000      # 5 GB
+retention_days = -1        # Size-based pruning only
 ```
 
 ---
@@ -645,13 +645,13 @@ Iron Curtain uses LZ4 compression by default for saves, replays, and snapshots. 
 
 **Basic configuration** (compression levels per context):
 
-```yaml
-compression:
-  save_level: balanced       # balanced, fastest, compact
-  replay_level: fastest      # fastest for low latency during recording
-  autosave_level: fastest
-  snapshot_level: fastest    # reconnection snapshots
-  workshop_level: compact    # maximize compression for distribution
+```toml
+[compression]
+save_level = "balanced"        # balanced, fastest, compact
+replay_level = "fastest"       # fastest for low latency during recording
+autosave_level = "fastest"
+snapshot_level = "fastest"     # reconnection snapshots
+workshop_level = "compact"     # maximize compression for distribution
 ```
 
 **Advanced configuration:** The 21 parameters in `compression.advanced.*` are documented in D063 in `09-DECISIONS.md`. Most operators never need to touch these. The compression level presets (fastest/balanced/compact) set appropriate values automatically.
@@ -681,7 +681,7 @@ Iron Curtain ships four pre-built profiles as starting points. Copy and modify t
 - Sensitive anti-cheat (review all upsets)
 
 ```bash
-./relay-server --config profiles/tournament-lan.yaml
+./relay-server --config profiles/tournament-lan.toml
 ```
 
 ### Casual Community
@@ -697,7 +697,7 @@ Iron Curtain ships four pre-built profiles as starting points. Copy and modify t
 - Wide matchmaking range (small population)
 
 ```bash
-./relay-server --config profiles/casual-community.yaml
+./relay-server --config profiles/casual-community.toml
 ```
 
 ### Competitive League
@@ -714,7 +714,7 @@ Iron Curtain ships four pre-built profiles as starting points. Copy and modify t
 - Sensitive anti-cheat
 
 ```bash
-./relay-server --config profiles/competitive-league.yaml
+./relay-server --config profiles/competitive-league.toml
 ```
 
 ### Training / Practice
@@ -730,7 +730,7 @@ Iron Curtain ships four pre-built profiles as starting points. Copy and modify t
 - Large telemetry database, no auto-pruning
 
 ```bash
-./relay-server --config profiles/training.yaml
+./relay-server --config profiles/training.toml
 ```
 
 ---
@@ -751,14 +751,14 @@ services:
       - "7000:7000/udp"
       - "7001:7001/tcp"
     volumes:
-      - ./server_config.yaml:/etc/ic/server_config.yaml:ro
+      - ./server_config.toml:/etc/ic/server_config.toml:ro
       - relay-data:/var/lib/ic
     environment:
       IC_RELAY_MAX_CONNECTIONS: "2000"
       IC_RELAY_MAX_GAMES: "200"
       IC_TELEMETRY_OTEL_EXPORT: "true"
       IC_TELEMETRY_OTEL_ENDPOINT: "http://otel-collector:4317"
-    command: ["--config", "/etc/ic/server_config.yaml"]
+    command: ["--config", "/etc/ic/server_config.toml"]
 
   otel-collector:
     image: otel/opentelemetry-collector:latest
@@ -794,7 +794,7 @@ services:
 
 ### Kubernetes / Helm
 
-For Kubernetes deployments, mount `server_config.yaml` as a ConfigMap and use environment variables for per-pod overrides:
+For Kubernetes deployments, mount `server_config.toml` as a ConfigMap and use environment variables for per-pod overrides:
 
 ```yaml
 # configmap.yaml
@@ -803,13 +803,14 @@ kind: ConfigMap
 metadata:
   name: ic-relay-config
 data:
-  server_config.yaml: |
-    relay:
-      max_connections: 5000
-      max_games: 1000
-    telemetry:
-      otel_export: true
-      otel_endpoint: "http://otel-collector.monitoring:4317"
+  server_config.toml: |
+    [relay]
+    max_connections = 5000
+    max_games = 1000
+
+    [telemetry]
+    otel_export = true
+    otel_endpoint = "http://otel-collector.monitoring:4317"
 ```
 
 ```yaml
@@ -818,7 +819,7 @@ spec:
   containers:
     - name: relay
       image: ghcr.io/iron-curtain/relay-server:latest
-      args: ["--config", "/etc/ic/server_config.yaml"]
+      args: ["--config", "/etc/ic/server_config.toml"]
       volumeMounts:
         - name: config
           mountPath: /etc/ic
@@ -839,7 +840,7 @@ spec:
 
 1. **Validate your config:**
    ```bash
-   ic server validate-config tournament-config.yaml
+   ic server validate-config tournament-config.toml
    ```
 
 2. **Test spectator feed:** Connect as a spectator and verify delay, visibility, and observer count before the event.
@@ -881,8 +882,8 @@ spec:
 
 ```bash
 # Restrict access to the config file
-chmod 600 server_config.yaml
-chown icrelay:icrelay server_config.yaml
+chmod 600 server_config.toml
+chown icrelay:icrelay server_config.toml
 ```
 
 The config file may contain OTEL endpoints or other infrastructure details. Treat it as sensitive.
@@ -948,18 +949,18 @@ When OTEL export is enabled, monitor these metrics:
 
 ### Common Issues
 
-#### "Server won't start — YAML parse error"
+#### "Server won't start — TOML parse error"
 
-A syntax error in `server_config.yaml`. Run validation first:
+A syntax error in `server_config.toml`. Run validation first:
 
 ```bash
-ic server validate-config server_config.yaml
+ic server validate-config server_config.toml
 ```
 
 Common causes:
-- Tabs instead of spaces (YAML requires spaces)
-- Missing colon after a key
-- Incorrect nesting / indentation
+- Missing `=` between key and value
+- Unclosed string quotes
+- Duplicate section headers
 
 #### "Unknown key warning at startup"
 
@@ -981,9 +982,9 @@ A parameter is outside its valid range. The server starts with the clamped value
 
 Check your player base's typical latency. If most players have > 80ms ping:
 
-```yaml
-relay:
-  tick_deadline_ms: 150    # or even 200 for high-latency regions
+```toml
+[relay]
+tick_deadline_ms = 150     # or even 200 for high-latency regions
 ```
 
 The adaptive run-ahead system handles most latency, but a tight tick deadline can cause unnecessary order drops for high-ping players.
@@ -992,45 +993,44 @@ The adaptive run-ahead system handles most latency, but a tight tick deadline ca
 
 Small population problem. Widen the search parameters:
 
-```yaml
-matchmaking:
-  initial_range: 200
-  widen_step: 100
-  max_range: 1000
-  desperation_timeout_secs: 120
-  min_match_quality: 0.1
+```toml
+[matchmaking]
+initial_range = 200
+widen_step = 100
+max_range = 1000
+desperation_timeout_secs = 120
+min_match_quality = 0.1
 ```
 
 #### "Anti-cheat flagging too many legitimate players"
 
 Raise thresholds:
 
-```yaml
-anticheat:
-  ranked_upset_threshold: 400
-  behavioral_flag_score: 0.6
-  new_player_win_chance: 0.85
+```toml
+[anticheat]
+ranked_upset_threshold = 400
+behavioral_flag_score = 0.6
+new_player_win_chance = 0.85
 ```
 
 #### "telemetry.db growing too large"
 
-```yaml
-telemetry:
-  max_db_size_mb: 200       # Lower the cap
-  retention_days: 14         # Prune older data
-  sampling_rate: 0.5         # Sample only 50% of events
+```toml
+[telemetry]
+max_db_size_mb = 200        # Lower the cap
+retention_days = 14         # Prune older data
+sampling_rate = 0.5         # Sample only 50% of events
 ```
 
 #### "Reconnecting players take too long to catch up"
 
 Increase catchup aggressiveness (at the cost of more stutter during reconnection):
 
-```yaml
-relay:
-  catchup:
-    max_ticks_per_frame: 60   # Double default
-    sim_budget_pct: 90
-    render_budget_pct: 10
+```toml
+[relay.catchup]
+max_ticks_per_frame = 60    # Double default
+sim_budget_pct = 90
+render_budget_pct = 10
 ```
 
 ---
@@ -1052,7 +1052,7 @@ relay:
 | `/set <cvar> <value>` | Set a cvar value at runtime        |
 | `/get <cvar>`         | Get current cvar value             |
 | `/list <pattern>`     | List cvars matching a glob pattern |
-| `/reload_config`      | Hot-reload `server_config.yaml`    |
+| `/reload_config`      | Hot-reload `server_config.toml`    |
 
 ### Analytics / Telemetry
 

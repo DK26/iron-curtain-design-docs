@@ -1365,17 +1365,26 @@ The `DualModelAssessment` struct (V12 — Automation/Botting) combines behaviora
 
 **Defined thresholds (community-configurable):**
 
-```yaml
-# anti-cheat-config.yaml (ranking authority configuration)
-anti_cheat:
-  behavioral_threshold: 0.6    # behavioral_score above this → suspicious
-  statistical_threshold: 0.7   # statistical_score above this → suspicious
-  combined_threshold: 0.75     # combined score above this → action
-  actions:
-    monitor:   { combined_min: 0.5, requires_both: false }
-    flag:      { combined_min: 0.75, requires_both: true }
-    restrict:  { combined_min: 0.9, requires_both: true, min_matches: 10 }
-  # ShadowRestrict requires BOTH models to agree AND ≥10 flagged matches
+```toml
+# server_config.toml — [anti_cheat] section (ranking authority configuration)
+[anti_cheat]
+behavioral_threshold = 0.6    # behavioral_score above this → suspicious
+statistical_threshold = 0.7   # statistical_score above this → suspicious
+combined_threshold = 0.75     # combined score above this → action
+
+[anti_cheat.actions.monitor]
+combined_min = 0.5
+requires_both = false
+
+[anti_cheat.actions.flag]
+combined_min = 0.75
+requires_both = true
+
+[anti_cheat.actions.restrict]
+combined_min = 0.9
+requires_both = true
+min_matches = 10
+# ShadowRestrict requires BOTH models to agree AND ≥10 flagged matches
 ```
 
 **Transparency and appeal:**
@@ -1401,7 +1410,7 @@ This is a privacy concern, not a direct exploit — but combined with other info
 
 **Opt-in per tracking server:**
 
-- Third-party tracking servers are listed in `settings.yaml` but OFF by default. The first-run setup asks: "Show games from CnCNet and OpenRA browsers?" with an explanation of what data is shared (IP address, query frequency). The user must explicitly enable each third-party source.
+- Third-party tracking servers are listed in `settings.toml` but OFF by default. The first-run setup asks: "Show games from CnCNet and OpenRA browsers?" with an explanation of what data is shared (IP address, query frequency). The user must explicitly enable each third-party source.
 - The official IC tracking server is always enabled (same privacy policy as the rest of IC infrastructure).
 
 **Proxy option:**
