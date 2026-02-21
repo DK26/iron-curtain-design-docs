@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-ac1e5ebd.js";
+            window.path_to_searchindex_js = "searchindex-c8692886.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-9e438da8.js"></script>
+        <script src="toc-b2bf7f58.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -234,7 +234,7 @@
 </table>
 </div>
 <p><strong>Why modern formats:</strong> (1) Bevy loads them natively — zero custom code, full hot-reload and async loading. (2) Security — OGG/PNG parsers are fuzz-tested and browser-audited; our custom .aud/.shp parsers are not. (3) Multi-game — non-C&amp;C game modules (D039) won’t use .shp or .aud. (4) Tooling — every editor exports PNG/OGG/WAV/WebM; nobody’s toolchain outputs .aud. (5) WASM — modern formats work in browser builds out of the box.</p>
-<p>The Asset Studio (D040) converts in both directions. See <code>09-DECISIONS.md</code> § D049 for full rationale, storage comparisons, and distribution strategy.</p>
+<p>The Asset Studio (D040) converts in both directions. See <code>decisions/09e-community.md</code> § D049 for full rationale, storage comparisons, and distribution strategy.</p>
 <h3 id="ra-formats-crate-goals"><a class="header" href="#ra-formats-crate-goals">ra-formats Crate Goals</a></h3>
 <ol>
 <li>Parse all above formats reliably</li>
@@ -985,7 +985,7 @@ impl CoordTransform {
 }
 <span class="boring">}</span></code></pre>
 <blockquote>
-<p><strong>Compression (D063):</strong> The <code>compression_algorithm</code> byte identifies which decompressor to use for the payload. Version 1 files use <code>0x01</code> (LZ4). The <code>version</code> field controls the serialization format (bincode vs. postcard) independently — see <code>09-DECISIONS.md</code> § D054 for codec dispatch and § D063 for algorithm dispatch. Compression level (fastest/balanced/compact) is configurable via <code>settings.yaml</code> <code>compression.save_level</code> and affects encoding speed/ratio but not the format.</p>
+<p><strong>Compression (D063):</strong> The <code>compression_algorithm</code> byte identifies which decompressor to use for the payload. Version 1 files use <code>0x01</code> (LZ4). The <code>version</code> field controls the serialization format (bincode vs. postcard) independently — see <code>decisions/09d-gameplay.md</code> § D054 for codec dispatch and § D063 for algorithm dispatch. Compression level (fastest/balanced/compact) is configurable via <code>settings.toml</code> <code>compression.save_level</code> and affects encoding speed/ratio but not the format.</p>
 </blockquote>
 <blockquote>
 <p><strong>Security (V42):</strong> Shared <code>.icsave</code> files are an attack surface. Enforce: max decompressed size 64 MB, JSON metadata cap 1 MB, schema validation of deserialized <code>SimSnapshot</code> (entity count, position bounds, valid components). Save directory sandboxed via <code>strict-path</code> <code>PathBoundary</code>. See <code>06-SECURITY.md</code> § Vulnerability 42.</p>
@@ -1017,7 +1017,7 @@ impl CoordTransform {
 }
 </code></pre>
 <h3 id="payload"><a class="header" href="#payload">Payload</a></h3>
-<p>The payload is a <code>SimSnapshot</code> serialized via <code>serde</code> (bincode format for compactness) and compressed with LZ4 (fast decompression, good ratio for game state data). LZ4 was chosen over LZO (used by original RA) for its better Rust ecosystem support (<code>lz4_flex</code> crate) and superior decompression speed. The save file header’s <code>version</code> field selects the serialization codec — version 1 uses bincode, future version 2 uses postcard. The <code>compression_algorithm</code> byte selects the decompressor independently (D063). Compression level is configurable via <code>settings.yaml</code> (<code>compression.save_level</code>: fastest/balanced/compact). See <code>09-DECISIONS.md</code> § D054 for the serialization version-to-codec dispatch and § D063 for the compression strategy.</p>
+<p>The payload is a <code>SimSnapshot</code> serialized via <code>serde</code> (bincode format for compactness) and compressed with LZ4 (fast decompression, good ratio for game state data). LZ4 was chosen over LZO (used by original RA) for its better Rust ecosystem support (<code>lz4_flex</code> crate) and superior decompression speed. The save file header’s <code>version</code> field selects the serialization codec — version 1 uses bincode, future version 2 uses postcard. The <code>compression_algorithm</code> byte selects the decompressor independently (D063). Compression level is configurable via <code>settings.toml</code> (<code>compression.save_level</code>: fastest/balanced/compact). See <code>decisions/09d-gameplay.md</code> § D054 for the serialization version-to-codec dispatch and § D063 for the compression strategy.</p>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>pub struct SimSnapshot {
@@ -1066,9 +1066,9 @@ impl CoordTransform {
 }
 <span class="boring">}</span></code></pre>
 <blockquote>
-<p><strong>Compression (D063):</strong> The <code>compression_algorithm</code> byte identifies which decompressor to use for the tick order stream and embedded keyframe snapshots. Version 1 files use <code>0x01</code> (LZ4). Compression level during live recording defaults to <code>fastest</code> (configurable via <code>settings.yaml</code> <code>compression.replay_level</code>). Use <code>ic replay recompress</code> to re-encode at a higher compression level for archival. See <code>09-DECISIONS.md</code> § D063.</p>
+<p><strong>Compression (D063):</strong> The <code>compression_algorithm</code> byte identifies which decompressor to use for the tick order stream and embedded keyframe snapshots. Version 1 files use <code>0x01</code> (LZ4). Compression level during live recording defaults to <code>fastest</code> (configurable via <code>settings.toml</code> <code>compression.replay_level</code>). Use <code>ic replay recompress</code> to re-encode at a higher compression level for archival. See <code>decisions/09f-tools.md</code> § D063.</p>
 </blockquote>
-<p>The <code>flags</code> field includes a <code>HAS_VOICE</code> bit (bit 3). When set, the voice stream section contains per-player Opus audio tracks recorded with player consent. See <code>09-DECISIONS.md</code> § D059 for the voice consent model, storage costs, and replay playback integration.</p>
+<p>The <code>flags</code> field includes a <code>HAS_VOICE</code> bit (bit 3). When set, the voice stream section contains per-player Opus audio tracks recorded with player consent. See <code>decisions/09g-interaction.md</code> § D059 for the voice consent model, storage costs, and replay playback integration.</p>
 <h3 id="metadata-json-1"><a class="header" href="#metadata-json-1">Metadata (JSON)</a></h3>
 <pre><code class="language-json">{
   "replay_id": "a3f7c2d1-...",
@@ -1260,7 +1260,7 @@ pub struct EmbeddedResources {
 </tbody>
 </table>
 </div>
-<p>Both decoders produce a <code>ForeignReplay</code> struct (defined in <code>09-DECISIONS.md</code> § D056) — a normalized intermediate representation with <code>ForeignFrame</code> / <code>ForeignOrder</code> types. This IR is translated to IC’s <code>TimestampedOrder</code> by <code>ForeignReplayCodec</code> in <code>ic-protocol</code>, then fed to either <code>ForeignReplayPlayback</code> (direct viewing) or the <code>ic replay import</code> CLI (conversion to <code>.icrep</code>).</p>
+<p>Both decoders produce a <code>ForeignReplay</code> struct (defined in <code>decisions/09f-tools.md</code> § D056) — a normalized intermediate representation with <code>ForeignFrame</code> / <code>ForeignOrder</code> types. This IR is translated to IC’s <code>TimestampedOrder</code> by <code>ForeignReplayCodec</code> in <code>ic-protocol</code>, then fed to either <code>ForeignReplayPlayback</code> (direct viewing) or the <code>ic replay import</code> CLI (conversion to <code>.icrep</code>).</p>
 <p><strong>Remastered replay header</strong> (from <code>Save_Recording_Values()</code> in <code>REDALERT/INIT.CPP</code>):</p>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -1300,7 +1300,7 @@ pub struct RemasteredRecordedFrame {
 <h3 id="structure-2"><a class="header" href="#structure-2">Structure</a></h3>
 <pre><code>ic-backup-2027-03-15.zip
 ├── manifest.json                    # Backup metadata (see below)
-├── config.yaml                      # Engine settings
+├── config.toml                      # Engine settings
 ├── profile.db                       # Player identity (VACUUM INTO copy)
 ├── achievements.db                  # Achievement collection (VACUUM INTO copy)
 ├── gameplay.db                      # Event log, catalogs (VACUUM INTO copy)
@@ -1334,7 +1334,7 @@ pub struct RemasteredRecordedFrame {
 <li>Already-compressed files (<code>.icsave</code>, <code>.icrep</code>) are stored in the ZIP without additional compression (ZIP <code>Store</code> method).</li>
 <li><code>ic backup verify &lt;archive&gt;</code> checks ZIP integrity and validates that all SQLite files in the archive are well-formed.</li>
 <li><code>ic backup restore</code> preserves directory structure and prompts on conflicts (suppress with <code>--overwrite</code>).</li>
-<li><code>--exclude</code> and <code>--only</code> filter by category (keys, profile, communities, achievements, config, saves, replays, screenshots, gameplay, workshop, mods, maps). See <code>09-DECISIONS.md</code> § D061 for category sizes and criticality.</li>
+<li><code>--exclude</code> and <code>--only</code> filter by category (keys, profile, communities, achievements, config, saves, replays, screenshots, gameplay, workshop, mods, maps). See <code>decisions/09e-community.md</code> § D061 for category sizes and criticality.</li>
 </ul>
 <h2 id="screenshot-format-d061"><a class="header" href="#screenshot-format-d061">Screenshot Format (D061)</a></h2>
 <p>Screenshots are standard PNG images with IC-specific metadata in PNG <code>tEXt</code> chunks. Any image viewer displays the screenshot; IC’s screenshot browser reads the metadata for filtering and organization.</p>
@@ -1355,7 +1355,7 @@ pub struct RemasteredRecordedFrame {
 </tbody>
 </table>
 </div>
-<p><strong>Filename convention:</strong> <code>&lt;data_dir&gt;/screenshots/&lt;YYYY-MM-DD&gt;-&lt;HHMMSS&gt;.png</code> (UTC timestamp). The screenshot hotkey is configurable in <code>config.yaml</code>.</p>
+<p><strong>Filename convention:</strong> <code>&lt;data_dir&gt;/screenshots/&lt;YYYY-MM-DD&gt;-&lt;HHMMSS&gt;.png</code> (UTC timestamp). The screenshot hotkey is configurable in <code>config.toml</code>.</p>
 <h3 id="ra-formats-write-support"><a class="header" href="#ra-formats-write-support">ra-formats Write Support</a></h3>
 <p><code>ra-formats</code> currently focuses on reading C&amp;C file formats. Write support extends the crate for the Asset Studio (D040) and mod toolchain:</p>
 <div class="table-wrapper">
@@ -1381,7 +1381,7 @@ pub struct RemasteredRecordedFrame {
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="04-MODDING.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="modding/campaigns.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                             </a>
 
@@ -1395,7 +1395,7 @@ pub struct RemasteredRecordedFrame {
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="04-MODDING.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="modding/campaigns.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                     </a>
 

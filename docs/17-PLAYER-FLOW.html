@@ -1,0 +1,1651 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Player Flow &amp; UI Navigation - Iron Curtain — Design Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Design docs for a Rust-native Red Alert RTS engine">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="favicon-8114d1fc.png">
+        <link rel="stylesheet" href="css/variables-8adf115d.css">
+        <link rel="stylesheet" href="css/general-2459343d.css">
+        <link rel="stylesheet" href="css/chrome-ae938929.css">
+        <link rel="stylesheet" href="css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "searchindex-c8692886.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc-b2bf7f58.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Iron Curtain — Design Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs/edit/main/src/17-PLAYER-FLOW.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="player-flow--ui-navigation"><a class="header" href="#player-flow--ui-navigation">Player Flow &amp; UI Navigation</a></h1>
+<blockquote>
+<p>How players reach every screen and feature in Iron Curtain, from first launch to deep competitive play.</p>
+</blockquote>
+<p>This document is the canonical reference for the player’s navigation journey through every screen, menu, panel, and overlay in the game and SDK. It consolidates UI/UX information scattered across the design docs into a single walkable map. Every feature described elsewhere in the documentation must be reachable from this flow — if a feature exists but has no navigation path here, that’s a bug in this document.</p>
+<p><strong>Design goal:</strong> A returning Red Alert veteran should be playing a skirmish within 60 seconds of first launch. A competitive player should reach ranked matchmaking in two clicks from the main menu. A modder should find the Workshop in one click. No screen should be a dead end. No feature should require a manual to discover.</p>
+<hr>
+<h2 id="ux-principles"><a class="header" href="#ux-principles">UX Principles</a></h2>
+<p>These principles govern every navigation decision. They are drawn from what worked in Red Alert (1996), what the Remastered Collection (2020) refined, what OpenRA’s community expects, and what modern competitive games (SC2, AoE2:DE, CS2) have proven.</p>
+<h3 id="1-shellmap-first-menu-second"><a class="header" href="#1-shellmap-first-menu-second">1. Shellmap First, Menu Second</a></h3>
+<p>The original Red Alert put a live battle behind the main menu — it set the tone before the player clicked anything. The Remastered Collection preserved this. Iron Curtain continues the tradition: the first thing the player sees is toy soldiers fighting. The menu appears over the action, not instead of it. This is not decoration — it’s a promise: “this is what you’re about to do.”</p>
+<ul>
+<li>Classic theme: static title screen (faithful to 1996)</li>
+<li>Remastered / Modern themes: live shellmap (scripted AI battle on a random eligible map)</li>
+<li>Shellmaps are per-game-module — mods automatically get their own</li>
+<li>Performance budget: ~5% CPU, auto-disabled on low-end hardware</li>
+</ul>
+<h3 id="2-three-clicks-to-anything"><a class="header" href="#2-three-clicks-to-anything">2. Three Clicks to Anything</a></h3>
+<p>No feature should be more than three clicks from the main menu. The most common actions — start a skirmish, find a multiplayer game, continue a campaign — should be one or two clicks. This is a hard constraint on menu depth.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Action</th><th>Clicks from Main Menu</th></tr>
+</thead>
+<tbody>
+<tr><td>Start a skirmish (with last settings)</td><td>2 (Skirmish → Start)</td></tr>
+<tr><td>Continue last campaign</td><td>1 (Continue Campaign)</td></tr>
+<tr><td>Find a ranked match</td><td>2 (Multiplayer → Find Match)</td></tr>
+<tr><td>Join via room code</td><td>2 (Multiplayer → Join Code)</td></tr>
+<tr><td>Open Workshop</td><td>1 (Workshop)</td></tr>
+<tr><td>Open Settings</td><td>1 (Settings)</td></tr>
+<tr><td>View Profile</td><td>1 (Profile)</td></tr>
+<tr><td>Watch a replay</td><td>2 (Replays → select file)</td></tr>
+<tr><td>Open SDK</td><td>Separate application</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="3-no-dead-end-buttons"><a class="header" href="#3-no-dead-end-buttons">3. No Dead-End Buttons</a></h3>
+<p>Every button is always clickable (D033). If a feature requires a download, configuration, or prerequisite, the button opens a guidance panel explaining what’s needed and offering a direct path to resolve it — never a greyed-out icon with no explanation. Examples:</p>
+<ul>
+<li>“New Generative Campaign” without an LLM configured → guidance panel with [Configure LLM Provider →] and [Browse Workshop →] links</li>
+<li>“Ranked Match” without placement matches → explanation of placement system with [Play Placement Match →]</li>
+<li>Build queue item without prerequisites → tooltip showing “Requires: Radar Dome” with the Radar Dome icon highlighted in the build panel</li>
+</ul>
+<h3 id="4-muscle-memory-preservation"><a class="header" href="#4-muscle-memory-preservation">4. Muscle Memory Preservation</a></h3>
+<p>Returning players should find things where they expect them. The main menu structure mirrors what C&amp;C players know:</p>
+<ul>
+<li><strong>Left column or center:</strong> Game modes (Campaign, Skirmish, Multiplayer)</li>
+<li><strong>Right or bottom:</strong> Meta features (Settings, Profile, Workshop, Replays)</li>
+<li><strong>In-game sidebar:</strong> Right side (RA tradition), with bottom-bar as a theme option</li>
+<li><strong>Hotkeys:</strong> Default profile matches original RA1 bindings; OpenRA and Modern profiles available</li>
+</ul>
+<h3 id="5-progressive-disclosure"><a class="header" href="#5-progressive-disclosure">5. Progressive Disclosure</a></h3>
+<p>New players see a clean, unintimidating interface. Advanced features reveal themselves as the player progresses:</p>
+<ul>
+<li>First launch highlights Campaign and Skirmish; Multiplayer and Workshop are visible but not emphasized</li>
+<li>Tutorial hints appear contextually, not as a mandatory gate</li>
+<li>Developer console requires a deliberate action (tilde key) — it never appears uninvited</li>
+<li>Simple/Advanced toggle in the SDK hides ~15 features without data loss</li>
+<li>Experience profiles bundle 6 complexity axes into one-click presets</li>
+</ul>
+<h3 id="6-the-one-second-rule"><a class="header" href="#6-the-one-second-rule">6. The One-Second Rule</a></h3>
+<p>Borrowed from Westwood’s design philosophy (see <code>13-PHILOSOPHY.md</code> § Principle 12): the player should understand any screen’s purpose within one second of seeing it. If a screen needs explanation, it needs redesign. Labels are verbs (“Play,” “Watch,” “Browse,” “Create”), not nouns (“Module,” “Instance,” “Configuration”).</p>
+<h3 id="7-context-sensitive-everything"><a class="header" href="#7-context-sensitive-everything">7. Context-Sensitive Everything</a></h3>
+<p>Westwood’s greatest UI contribution was the context-sensitive cursor — move on ground, attack on enemies, harvest on resources. Iron Curtain extends this principle to every interaction:</p>
+<ul>
+<li>Cursor changes based on hovered target and selected units</li>
+<li>Right-click always does “the most useful thing” for the current context</li>
+<li>Tooltips appear on hover with relevant information, never requiring a click to learn</li>
+<li>Keyboard shortcuts are contextual — same key does different things in menu vs. gameplay vs. editor</li>
+</ul>
+<h3 id="8-platform-responsive-layout"><a class="header" href="#8-platform-responsive-layout">8. Platform-Responsive Layout</a></h3>
+<p>The UI adapts to the device, not the other way around. <code>ScreenClass</code> (Phone / Tablet / Desktop / TV) drives layout decisions. <code>InputCapabilities</code> (touch, mouse+keyboard, gamepad) drives interaction patterns. The flow chart in this document describes the Desktop experience; platform adaptations are noted where they diverge.</p>
+<hr>
+<h2 id="application-state-machine"><a class="header" href="#application-state-machine">Application State Machine</a></h2>
+<p>The game transitions through a fixed set of states (see <code>02-ARCHITECTURE.md</code> § “Game Lifecycle State Machine”):</p>
+<pre><code>┌──────────┐     ┌───────────┐     ┌─────────┐     ┌───────────┐
+│ Launched │────▸│ InMenus   │────▸│ Loading │────▸│ InGame    │
+└──────────┘     └───────────┘     └─────────┘     └───────────┘
+                   ▲     │                            │       │
+                   │     │                            │       │
+                   │     ▼                            ▼       │
+                   │   ┌───────────┐          ┌───────────┐   │
+                   │   │ InReplay  │◂─────────│ GameEnded │   │
+                   │   └───────────┘          └───────────┘   │
+                   │         │                    │           │
+                   └─────────┴────────────────────┘           │
+                                                              ▼
+                                                        ┌──────────┐
+                                                        │ Shutdown │
+                                                        └──────────┘
+</code></pre>
+<p>Every screen in this document exists within one of these states. The sim ECS world exists only during <code>InGame</code> and <code>InReplay</code>; all other states are menu/UI-only.</p>
+<hr>
+<h2 id="first-launch-flow"><a class="header" href="#first-launch-flow">First Launch Flow</a></h2>
+<p>The first time a player launches Iron Curtain, the game must accomplish three things: establish identity, locate game assets, and get them playing — in that order, as fast as possible.</p>
+<h3 id="identity-setup"><a class="header" href="#identity-setup">Identity Setup</a></h3>
+<pre><code>┌──────────────┐     ┌────────────────────┐     ┌──────────────────┐
+│ First Launch │────▸│ Recovery Phrase     │────▸│ Cloud Sync Offer │
+│              │     │ (24-word mnemonic)  │     │ (optional)       │
+└──────────────┘     └────────────────────┘     └──────────────────┘
+                           │                           │
+                    "Write this down"           "Skip" or "Enable"
+                           │                           │
+                           ▼                           ▼
+                     ┌─────────────────────────────────────┐
+                     │ Content Detection                   │
+                     └─────────────────────────────────────┘
+</code></pre>
+<ol>
+<li>
+<p><strong>Recovery phrase</strong> — A 24-word mnemonic (BIP-39 inspired) is generated and displayed. This is the player’s portable identity — it derives their Ed25519 keypair deterministically. The screen explains in plain language: “This phrase is your identity. Write it down. If you lose your computer, these 24 words restore everything.” A “Copy to clipboard” button and “I’ve saved this” confirmation.</p>
+</li>
+<li>
+<p><strong>Cloud sync offer</strong> — If a platform service is detected (Steam Cloud, GOG Galaxy), offer to enable automatic backup of critical data. “Skip” is prominent — this is optional, not a gate.</p>
+</li>
+<li>
+<p><strong>Returning player shortcut</strong> — “Already have an account?” link jumps to recovery: enter 24 words or restore from backup file.</p>
+</li>
+</ol>
+<h3 id="content-detection"><a class="header" href="#content-detection">Content Detection</a></h3>
+<pre><code>┌──────────────────┐     ┌──────────────────────────────────────────┐
+│ Content Detection │────▸│ Scanning for Red Alert game files...     │
+│                  │     │                                          │
+│ Probes:          │     │ ✓ Steam: C&amp;C Remastered Collection found │
+│ 1. Steam         │     │ ✓ OpenRA: Red Alert mod assets found     │
+│ 2. GOG Galaxy    │     │ ✗ GOG: not installed                     │
+│ 3. Origin/EA App │     │ ✗ Origin: not installed                  │
+│ 4. OpenRA        │     │                                          │
+│ 5. Manual folder │     │ [Use Steam assets]  [Use OpenRA assets]  │
+└──────────────────┘     │ [Browse for folder...]                   │
+                         └──────────────────────────────────────────┘
+</code></pre>
+<ul>
+<li>Auto-probes known install locations (Steam, GOG, Origin/EA, OpenRA directories)</li>
+<li>Shows what was found with checkmarks</li>
+<li>If nothing found: “Iron Curtain needs Red Alert game files to play. [How to get them →]” with links to purchase options (Steam Remastered Collection, etc.) and a manual folder browser</li>
+<li>If multiple sources found: player picks preferred source (or uses all — assets merge)</li>
+<li>Detection results are saved; re-scan available from Settings</li>
+</ul>
+<h3 id="new-player-gate"><a class="header" href="#new-player-gate">New Player Gate</a></h3>
+<p>After content detection, first-time players see a brief self-identification screen (D065):</p>
+<pre><code>┌─────────────────────────────────────────────────────┐
+│ Welcome, Commander.                                 │
+│                                                     │
+│ How familiar are you with Red Alert?                │
+│                                                     │
+│ [New to Red Alert]     → Tutorial recommendation    │
+│ [Played the original]  → Classic experience profile │
+│ [OpenRA veteran]       → OpenRA experience profile  │
+│ [Remastered player]    → Remastered profile         │
+│ [Just let me play]     → IC Default, skip tutorial  │
+└─────────────────────────────────────────────────────┘
+</code></pre>
+<p>This sets the initial experience profile (D033) and determines whether the tutorial is suggested. It’s skippable and changeable later in Settings.</p>
+<h3 id="transition-to-main-menu"><a class="header" href="#transition-to-main-menu">Transition to Main Menu</a></h3>
+<p>After identity + content + profile gate (or “Just let me play”), the player lands on the main menu with the shellmap running behind it. Total time: under 30 seconds for a “Just let me play” player with auto-detected assets.</p>
+<hr>
+<h2 id="main-menu"><a class="header" href="#main-menu">Main Menu</a></h2>
+<p>The main menu is the hub. Everything is reachable from here. The shellmap plays behind a semi-transparent overlay panel.</p>
+<h3 id="layout"><a class="header" href="#layout">Layout</a></h3>
+<pre><code>┌──────────────────────────────────────────────────────────────────┐
+│                                                                  │
+│                    [ IRON CURTAIN ]                               │
+│                    Red Alert                                     │
+│                                                                  │
+│              ┌─────────────────────────┐                         │
+│              │  ► Continue Campaign     │ (if save exists)       │
+│              │  ► Campaign              │                         │
+│              │  ► Skirmish              │                         │
+│              │  ► Multiplayer           │                         │
+│              │                          │                         │
+│              │  ► Replays               │                         │
+│              │  ► Workshop              │                         │
+│              │  ► Settings              │                         │
+│              │                          │                         │
+│              │  ► Profile               │ (bottom group)         │
+│              │  ► Encyclopedia          │                         │
+│              │  ► Credits               │                         │
+│              │  ► Quit                  │                         │
+│              └─────────────────────────┘                         │
+│                                                                  │
+│  [shellmap: live AI battle playing in background]                │
+│                                                                  │
+│  Iron Curtain v0.1.0        community.ironcurtain.dev    RA 1.0 │
+└──────────────────────────────────────────────────────────────────┘
+</code></pre>
+<h3 id="button-descriptions"><a class="header" href="#button-descriptions">Button Descriptions</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Button</th><th>Action</th><th>Notes</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Continue Campaign</strong></td><td>Resumes last campaign from the last completed mission’s next node</td><td>Only visible if an in-progress campaign save exists. One click to resume.</td></tr>
+<tr><td><strong>Campaign</strong></td><td>Opens Campaign Selection screen</td><td>Choose faction (Allied/Soviet), start new campaign, or select saved campaign slot.</td></tr>
+<tr><td><strong>Skirmish</strong></td><td>Opens Skirmish Setup screen</td><td>Configure a local game vs AI: map, players, settings.</td></tr>
+<tr><td><strong>Multiplayer</strong></td><td>Opens Multiplayer Hub</td><td>Five ways to find a game: Browser, Join Code, Ranked, Direct IP, QR Code.</td></tr>
+<tr><td><strong>Replays</strong></td><td>Opens Replay Browser</td><td>Browse saved replays, import foreign replays (.orarep, Remastered).</td></tr>
+<tr><td><strong>Workshop</strong></td><td>Opens Workshop Browser</td><td>Browse, install, manage mods/maps/resources from Workshop sources.</td></tr>
+<tr><td><strong>Settings</strong></td><td>Opens Settings screen</td><td>All configuration: video, audio, controls, experience profile, data, LLM.</td></tr>
+<tr><td><strong>Profile</strong></td><td>Opens Player Profile</td><td>View/edit identity, achievements, stats, friends, community memberships.</td></tr>
+<tr><td><strong>Encyclopedia</strong></td><td>Opens in-game Encyclopedia</td><td>Auto-generated unit/building reference from YAML rules.</td></tr>
+<tr><td><strong>Credits</strong></td><td>Shows credits sequence</td><td>Scrolling credits, skippable.</td></tr>
+<tr><td><strong>Quit</strong></td><td>Exits to desktop</td><td>Immediate — no “are you sure?” dialog (following the principle that the game respects the player’s intent).</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="contextual-elements"><a class="header" href="#contextual-elements">Contextual Elements</a></h3>
+<ul>
+<li><strong>Version info</strong> — Bottom-left: engine version, game module version</li>
+<li><strong>Community link</strong> — Bottom-center: link to community site/Discord</li>
+<li><strong>Mod indicator</strong> — If a non-default mod profile is active, a small indicator badge shows which profile (e.g., “Combined Arms v2.1”)</li>
+<li><strong>News ticker</strong> (optional, Modern theme) — Community announcements from the configured tracking server(s)</li>
+<li><strong>Tutorial hint</strong> — For new players: a non-intrusive callout near Campaign or Skirmish saying “New? Try the tutorial → Commander School” (D065, dismissible, appears once)</li>
+</ul>
+<hr>
+<h2 id="single-player"><a class="header" href="#single-player">Single Player</a></h2>
+<h3 id="campaign-selection"><a class="header" href="#campaign-selection">Campaign Selection</a></h3>
+<pre><code>Main Menu → Campaign
+</code></pre>
+<pre><code>┌──────────────────────────────────────────────────────────┐
+│  CAMPAIGNS                                    [← Back]   │
+│                                                          │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐     │
+│  │  [Allied    │  │  [Soviet    │  │ [Community  │     │
+│  │   Flag]     │  │   Flag]     │  │  Campaigns] │     │
+│  │             │  │             │  │             │     │
+│  │  ALLIED     │  │  SOVIET     │  │  WORKSHOP   │     │
+│  │  CAMPAIGN   │  │  CAMPAIGN   │  │  CAMPAIGNS  │     │
+│  │             │  │             │  │             │     │
+│  │ Missions:14 │  │ Missions:14 │  │ Browse →    │     │
+│  │ [New Game]  │  │ [New Game]  │  │             │     │
+│  │ [Continue]  │  │ [Continue]  │  │             │     │
+│  └─────────────┘  └─────────────┘  └─────────────┘     │
+│                                                          │
+│  ┌─────────────┐  ┌─────────────┐                       │
+│  │ [Commander  │  │ [Generative │                       │
+│  │  School]    │  │  Campaign]  │                       │
+│  │             │  │             │                       │
+│  │  TUTORIAL   │  │  AI-CREATED │                       │
+│  │  10 lessons │  │  (BYOLLM)   │                       │
+│  └─────────────┘  └─────────────┘                       │
+│                                                          │
+│  Difficulty: [Cadet ▾]  Experience: [IC Default ▾]       │
+└──────────────────────────────────────────────────────────┘
+</code></pre>
+<p><strong>Navigation paths from this screen:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Action</th><th>Destination</th></tr>
+</thead>
+<tbody>
+<tr><td>New Game (Allied/Soviet)</td><td>Campaign Graph → first mission briefing</td></tr>
+<tr><td>Continue (Allied/Soviet)</td><td>Campaign Graph → next available mission</td></tr>
+<tr><td>Workshop Campaigns</td><td>Workshop Browser (filtered to campaigns)</td></tr>
+<tr><td>Commander School</td><td>Tutorial campaign (D065, 10 branching missions)</td></tr>
+<tr><td>Generative Campaign</td><td>Generative Campaign Setup (D016) — or guidance panel if no LLM configured</td></tr>
+<tr><td>← Back</td><td>Main Menu</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="campaign-graph"><a class="header" href="#campaign-graph">Campaign Graph</a></h3>
+<pre><code>Campaign Selection → [New Game] or [Continue]
+</code></pre>
+<p>The campaign graph is a visual world map (or node-and-edge graph for community campaigns) showing mission progression. Completed missions are solid, available missions pulse, locked missions are dimmed.</p>
+<pre><code>┌──────────────────────────────────────────────────────────┐
+│  ALLIED CAMPAIGN                             [← Back]    │
+│  Operation: Allies Reunited                              │
+│                                                          │
+│          ┌───┐                                           │
+│          │ 1 │ ← Completed (solid)                       │
+│          └─┬─┘                                           │
+│        ┌───┴───┐                                         │
+│     ┌──┴──┐ ┌──┴──┐                                     │
+│     │ 2a  │ │ 2b  │ ← Branching (based on mission 1     │
+│     └──┬──┘ └──┬──┘    outcome)                          │
+│        └───┬───┘                                         │
+│         ┌──┴──┐                                          │
+│         │  3  │ ← Next available (pulsing)               │
+│         └──┬──┘                                          │
+│            ·                                             │
+│            · (locked missions dimmed below)              │
+│                                                          │
+│  Unit Roster: 12 units carried over                      │
+│  [View Roster]  [Mission Briefing →]                     │
+│                                                          │
+│  Campaign Stats: 3/14 complete  Time: 2h 15m             │
+└──────────────────────────────────────────────────────────┘
+</code></pre>
+<p><strong>Flow:</strong> Select a node → Mission Briefing screen → click “Begin Mission” → Loading → InGame. After mission: Debrief → next node unlocks on graph.</p>
+<p><strong>Campaign transitions</strong> (D021): Briefing → mission → debrief → next mission. No exit-to-menu between levels unless the player explicitly presses Escape. The debrief screen loads instantly (no black screen), and the next mission’s briefing runs concurrently with background asset loading. If a cutscene exists, it plays while assets load — by the time the cutscene ends, the mission is ready. The only loading bar appears on cold start or unusually large asset loads, and even then it’s campaign-themed.</p>
+<h3 id="skirmish-setup"><a class="header" href="#skirmish-setup">Skirmish Setup</a></h3>
+<pre><code>Main Menu → Skirmish
+</code></pre>
+<pre><code>┌──────────────────────────────────────────────────────────────┐
+│  SKIRMISH                                       [← Back]     │
+│                                                              │
+│  ┌─────────────────────────┐  ┌───────────────────────────┐ │
+│  │ MAP                     │  │ PLAYERS                    │ │
+│  │ [map preview image]     │  │                            │ │
+│  │                         │  │ 1. You (Allied) [color ▾]  │ │
+│  │ Coastal Fortress        │  │ 2. AI Easy (Soviet) [▾]    │ │
+│  │ 2-4 players, 128×128   │  │ 3. [Add AI...]             │ │
+│  │                         │  │ 4. [Add AI...]             │ │
+│  │ [Change Map]            │  │                            │ │
+│  └─────────────────────────┘  └───────────────────────────┘ │
+│                                                              │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │ GAME SETTINGS                                        │   │
+│  │                                                      │   │
+│  │ Balance:     [IC Default ▾]   Game Speed: [Normal ▾] │   │
+│  │ Pathfinding: [IC Default ▾]   Starting $:  [10000 ▾] │   │
+│  │ Fog of War:  [Shroud ▾]       Tech Level: [Full ▾]   │   │
+│  │ Crates:      [On ▾]           Short Game: [Off ▾]    │   │
+│  │                                                      │   │
+│  │ AI Preset:   [IC Default ▾]   AI Difficulty: [▾]     │   │
+│  │ [More options...]                                     │   │
+│  └──────────────────────────────────────────────────────┘   │
+│                                                              │
+│  Experience Profile: [IC Default ▾]                          │
+│                                                              │
+│                        [Start Game]                          │
+└──────────────────────────────────────────────────────────────┘
+</code></pre>
+<p><strong>Key interactions:</strong></p>
+<ul>
+<li><strong>Change Map</strong> → opens map browser (thumbnails, filters by size/players/theater, search)</li>
+<li><strong>Add AI</strong> → dropdown: difficulty (Easy/Medium/Hard/Brutal) × AI preset (Classic/OpenRA/IC Default) × faction</li>
+<li><strong>More options</strong> → expands full D033 toggle panel (sim-affecting toggles for this match)</li>
+<li><strong>Experience Profile</strong> dropdown → one-click preset that sets balance + AI + pathfinding + theme</li>
+<li><strong>Start Game</strong> → Loading → InGame</li>
+</ul>
+<p>Settings persist between sessions. “Start Game” with last-used settings is a two-click path from the main menu.</p>
+<h3 id="generative-campaign-setup"><a class="header" href="#generative-campaign-setup">Generative Campaign Setup</a></h3>
+<pre><code>Main Menu → Campaign → Generative Campaign
+</code></pre>
+<p>If no LLM provider is configured, this screen shows the No Dead-End Button guidance (D033/D016):</p>
+<pre><code>┌──────────────────────────────────────────────────────────┐
+│  GENERATIVE CAMPAIGNS                        [← Back]    │
+│                                                          │
+│  Generative campaigns use an LLM to create unique        │
+│  missions tailored to your play style.                   │
+│                                                          │
+│  [Configure LLM Provider →]                              │
+│  [Browse Pre-Generated Campaigns on Workshop →]          │
+│  [Use Built-in Mission Templates (no LLM needed) →]     │
+└──────────────────────────────────────────────────────────┘
+</code></pre>
+<p>If an LLM is configured, the setup screen (D016 § “Step 1 — Campaign Setup”):</p>
+<pre><code>┌──────────────────────────────────────────────────────────┐
+│  NEW GENERATIVE CAMPAIGN                     [← Back]    │
+│                                                          │
+│  Story style:        [C&amp;C Classic ▾]                     │
+│  Faction:            [Soviet ▾]                          │
+│  Campaign length:    [Medium (8-12 missions) ▾]          │
+│  Difficulty curve:   [Steady Climb ▾]                    │
+│  Theater:            [European ▾]                        │
+│                                                          │
+│  [▸ Advanced...]                                         │
+│    Mission variety targets, era constraints, roster       │
+│    persistence rules, narrative tone, etc.               │
+│                                                          │
+│                    [Generate Campaign]                    │
+│                                                          │
+│  Using: GPT-4o via OpenAI   Estimated time: ~45s         │
+└──────────────────────────────────────────────────────────┘
+</code></pre>
+<p>“Generate Campaign” → generation progress → Campaign Graph (same graph UI as hand-crafted campaigns).</p>
+<hr>
+<h2 id="multiplayer"><a class="header" href="#multiplayer">Multiplayer</a></h2>
+<h3 id="multiplayer-hub"><a class="header" href="#multiplayer-hub">Multiplayer Hub</a></h3>
+<pre><code>Main Menu → Multiplayer
+</code></pre>
+<pre><code>┌──────────────────────────────────────────────────────────┐
+│  MULTIPLAYER                                 [← Back]    │
+│                                                          │
+│  ┌──────────────────────────────────────────────────┐   │
+│  │  ► Find Match          Ranked 1v1 / Team queue   │   │
+│  │  ► Game Browser        Browse open games          │   │
+│  │  ► Join Code           Enter IRON-XXXX code       │   │
+│  │  ► Create Game         Host a lobby               │   │
+│  │  ► Direct Connect      IP address (LAN/advanced)  │   │
+│  └──────────────────────────────────────────────────┘   │
+│                                                          │
+│  ┌──────────────────────────────────────────────────┐   │
+│  │  QUICK INFO                                       │   │
+│  │  Players online: 847                              │   │
+│  │  Games in progress: 132                           │   │
+│  │  Your rank: Captain II (1623)                     │   │
+│  │  Season 3: 42 days remaining                      │   │
+│  └──────────────────────────────────────────────────┘   │
+│                                                          │
+│  Recent matches: [view all →]                            │
+│  ┌────────────────────────────────────────────┐         │
+│  │ vs. PlayerX (Win +24)  5 min ago  [Replay] │         │
+│  │ vs. PlayerY (Loss -18) 1 hr ago   [Replay] │         │
+│  └────────────────────────────────────────────┘         │
+└──────────────────────────────────────────────────────────┘
+</code></pre>
+<h3 id="five-ways-to-connect"><a class="header" href="#five-ways-to-connect">Five Ways to Connect</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Method</th><th>Flow</th><th>Best For</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Find Match</strong></td><td>Queue → Ready Check → Map Veto (ranked) → Loading → Game</td><td>Competitive/ranked play</td></tr>
+<tr><td><strong>Game Browser</strong></td><td>Browse list → Click game → Join Lobby → Loading → Game</td><td>Finding community games</td></tr>
+<tr><td><strong>Join Code</strong></td><td>Enter <code>IRON-XXXX</code> → Join Lobby → Loading → Game</td><td>Friends, Among Us-style casual</td></tr>
+<tr><td><strong>Create Game</strong></td><td>Configure Lobby → Share code/wait for joins → Start</td><td>Hosting custom games</td></tr>
+<tr><td><strong>Direct Connect</strong></td><td>Enter IP:port → Join Lobby → Loading → Game</td><td>LAN parties, power users</td></tr>
+</tbody>
+</table>
+</div>
+<p>Additionally: <strong>QR Code</strong> scanning (mobile/tablet) and <strong>Deep Links</strong> (Discord/Steam invites) resolve to the Join Code path.</p>
+<h3 id="game-browser"><a class="header" href="#game-browser">Game Browser</a></h3>
+<pre><code>Multiplayer Hub → Game Browser
+</code></pre>
+<pre><code>┌──────────────────────────────────────────────────────────────┐
+│  GAME BROWSER                                    [← Back]    │
+│                                                              │
+│  🔎 Search...   Filters: [Map ▾] [Mod ▾] [Status ▾] [▾]    │
+│                                                              │
+│  ┌────────────────────────────────────────────────────────┐ │
+│  │ ▸ Coastal Fortress 2v2        2/4 players   Waiting   │ │
+│  │   Host: CommanderX ★★★        Vanilla RA    ping: 45  │ │
+│  ├────────────────────────────────────────────────────────┤ │
+│  │ ▸ Desert Arena FFA            3/6 players   Waiting   │ │
+│  │   Host: TankRush99            IC Default    ping: 78  │ │
+│  ├────────────────────────────────────────────────────────┤ │
+│  │ ▸ Combined Arms 3v3           5/6 players   Waiting   │ │
+│  │   Host: ModMaster ✓           CA v2.1       ping: 112 │ │
+│  ├────────────────────────────────────────────────────────┤ │
+│  │   (greyed) Tournament Match   2/2 players   Playing   │ │
+│  │   Host: ProPlayer             IC Default    [Spec →]  │ │
+│  └────────────────────────────────────────────────────────┘ │
+│                                                              │
+│  Sources: ✓ Official  ✓ CnCNet  ✓ Community  [Manage →]     │
+│                                                              │
+│  Showing 47 games from 3 tracking servers                    │
+└──────────────────────────────────────────────────────────────┘
+</code></pre>
+<ul>
+<li>Click a game → Join Lobby (mod auto-download if needed, D030)</li>
+<li>In-progress games show [Spectate →] if spectating is enabled</li>
+<li>Trust indicators: ✓ Verified (bundled sources) vs. “Community” (user-added tracking servers)</li>
+<li>Filters: map name, mod, game status (waiting/in-progress), player count, ping range</li>
+<li>Sources configurable in Settings — merge view across official + community + OpenRA + CnCNet tracking servers</li>
+</ul>
+<h3 id="ranked-matchmaking-flow"><a class="header" href="#ranked-matchmaking-flow">Ranked Matchmaking Flow</a></h3>
+<pre><code>Multiplayer Hub → Find Match
+</code></pre>
+<pre><code>┌──────────────────────────────────────────────────────────┐
+│  FIND MATCH                                  [← Back]    │
+│                                                          │
+│  Queue: [Ranked 1v1 ▾]                                   │
+│                                                          │
+│  Your Rating: Captain II (1623 ± 48)                     │
+│  Season 3: 42 days remaining                             │
+│                                                          │
+│  Map Pool:                                               │
+│  ☑ Coastal Fortress  ☑ Glacier Bay  ☑ Desert Arena       │
+│  ☑ Ore Fields        ☐ Tundra Pass  ☑ River War          │
+│  (Veto up to 2 maps)                                     │
+│                                                          │
+│  Balance: IC Default (locked for ranked)                 │
+│  Pathfinding: IC Default (locked for ranked)             │
+│                                                          │
+│                    [Find Match]                           │
+│                                                          │
+│  Estimated wait: ~30 seconds                             │
+└──────────────────────────────────────────────────────────┘
+</code></pre>
+<p><strong>Ranked flow:</strong></p>
+<pre><code>Find Match → Searching... → Match Found → Ready Check (30s)
+  ├─ Accept → Map Veto (ranked) → Loading → InGame
+  └─ Decline → Back to queue (with escalating cooldown penalty)
+</code></pre>
+<p><strong>Ready Check</strong> — Center-screen overlay. Accept/Decline. 30-second timer. Both players must accept. Decline or timeout = back to queue with cooldown.</p>
+<p><strong>Map Veto</strong> (ranked only) — Anonymous opponent (no names shown until game starts). Each player vetoes from the map pool. Remaining maps are randomly selected. 30-second timer.</p>
+<h3 id="lobby"><a class="header" href="#lobby">Lobby</a></h3>
+<pre><code>Game Browser → Join Game
+  — or —
+Multiplayer Hub → Create Game
+  — or —
+Join Code → Enter code
+  — or —
+Direct Connect → Enter IP
+</code></pre>
+<pre><code>┌──────────────────────────────────────────────────────────────┐
+│  GAME LOBBY                           Code: IRON-7K3M       │
+│                                                              │
+│  ┌──────────────────┐  ┌──────────────────────────────────┐ │
+│  │ MAP              │  │ PLAYERS                           │ │
+│  │ [preview]        │  │                                   │ │
+│  │                  │  │ 1. HostPlayer (Allied) [Ready ✓]  │ │
+│  │ Coastal Fortress │  │ 2. You (Soviet) [Not Ready]       │ │
+│  │ 2-4 players      │  │ 3. [Open Slot]                    │ │
+│  │ [Change Map]     │  │ 4. [Add AI / Close]               │ │
+│  └──────────────────┘  └──────────────────────────────────┘ │
+│                                                              │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │ GAME SETTINGS (host controls)                         │   │
+│  │ Balance: [IC Default ▾]  Speed: [Normal ▾]            │   │
+│  │ Fog: [Shroud ▾]  Crates: [On ▾]  Starting $: [10k ▾] │   │
+│  │ Mods: vanilla (fingerprint: a3f2...)                   │   │
+│  └──────────────────────────────────────────────────────┘   │
+│                                                              │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │ CHAT                                                  │   │
+│  │ HostPlayer: gl hf                                     │   │
+│  │ &gt; _                                                   │   │
+│  └──────────────────────────────────────────────────────┘   │
+│                                                              │
+│  [Ready]  [Leave]      Share: [Copy Code] [Copy Link]        │
+│                                                              │
+│  ⚠ Downloading: combined-arms-v2.1 (2.3 MB)... 67%         │
+└──────────────────────────────────────────────────────────────┘
+</code></pre>
+<p><strong>Key interactions:</strong></p>
+<ul>
+<li><strong>Player slots</strong> — Click to change faction, color, team. Host can rearrange/kick.</li>
+<li><strong>Ready toggle</strong> — All players must be Ready before the host can start. Host clicks “Start Game” when all ready.</li>
+<li><strong>Mod fingerprint</strong> — If mismatched, a diff panel shows: “You’re missing mod X” / “Update mod Y” with [Auto-Download] buttons (D030/D062). Download progress bar in lobby.</li>
+<li><strong>Chat</strong> — Text chat within the lobby. Voice indicators if VoIP is active (D059).</li>
+<li><strong>Share</strong> — Copy join code (<code>IRON-7K3M</code>) or deep link for Discord/Steam.</li>
+<li><strong>Spectator slots</strong> — Visible if enabled. Join as spectator option.</li>
+</ul>
+<p><strong>Lobby → Game transition:</strong> Host clicks “Start Game” → all clients enter Loading state → per-player progress bars → 3-second countdown → InGame.</p>
+<h3 id="loading-screen"><a class="header" href="#loading-screen">Loading Screen</a></h3>
+<pre><code>Lobby → [All Ready] → Start Game → Loading
+</code></pre>
+<pre><code>┌──────────────────────────────────────────────────────────┐
+│                                                          │
+│                    COASTAL FORTRESS                       │
+│                                                          │
+│               [campaign-themed artwork]                   │
+│                                                          │
+│  Loading map...                                          │
+│  ████████████████░░░░░░░░░░  67%                        │
+│                                                          │
+│  Player 1: ████████████████████████ Ready                │
+│  Player 2: ████████████████░░░░░░░░ 72%                 │
+│                                                          │
+│  TIP: Hold Ctrl and click to force-fire on the ground.   │
+│                                                          │
+└──────────────────────────────────────────────────────────┘
+</code></pre>
+<ul>
+<li>Per-player progress bars (multiplayer)</li>
+<li>120-second timeout — player kicked if not loaded</li>
+<li>Loading tips (from <code>loading_tips.yaml</code>, moddable)</li>
+<li>Campaign-themed background for campaign missions</li>
+<li>All players loaded → 3-second countdown → game starts</li>
+</ul>
+<hr>
+<h2 id="in-game"><a class="header" href="#in-game">In-Game</a></h2>
+<h3 id="hud-layout"><a class="header" href="#hud-layout">HUD Layout</a></h3>
+<p>The in-game HUD follows the classic Red Alert right-sidebar layout by default (theme-switchable, D032):</p>
+<pre><code>┌──────────────────────────────────┬────────────────────┐
+│                                  │ ┌────────────────┐ │
+│                                  │ │    MINIMAP      │ │
+│                                  │ │   (click to     │ │
+│                                  │ │    move camera) │ │
+│                                  │ └────────────────┘ │
+│         GAME VIEWPORT            │ ┌────────────────┐ │
+│      (isometric map view)        │ │ $ 5,000   ⚡ 80%│ │
+│                                  │ └────────────────┘ │
+│                                  │ ┌────────────────┐ │
+│                                  │ │  POWER BAR     │ │
+│                                  │ │  ████████░░░   │ │
+│                                  │ └────────────────┘ │
+│                                  │ ┌────────────────┐ │
+│                                  │ │  BUILD QUEUE   │ │
+│                                  │ │  [Infantry ▾]  │ │
+│                                  │ │  🔫 🔫 🔫 🔫    │ │
+│                                  │ │  🚗 🚗 🚗 🚗    │ │
+│                                  │ │  🏗 🏗 🏗 🏗    │ │
+│                                  │ └────────────────┘ │
+├──────────────────────────────────┴────────────────────┤
+│ STATUS: 5 Rifle Infantry selected  HP: ████████░ 80%  │
+│ [chatbox area]                              [clock]   │
+└───────────────────────────────────────────────────────┘
+</code></pre>
+<h3 id="hud-elements"><a class="header" href="#hud-elements">HUD Elements</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Element</th><th>Location</th><th>Function</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Minimap</strong></td><td>Top-right sidebar</td><td>Overview map. Click to move camera. Team drawings appear here. Shroud shown.</td></tr>
+<tr><td><strong>Credits</strong></td><td>Below minimap</td><td>Current funds with ticking animation. Flashes when low.</td></tr>
+<tr><td><strong>Power bar</strong></td><td>Below credits</td><td>Production vs consumption ratio. Yellow = low power. Red = deficit.</td></tr>
+<tr><td><strong>Build queue</strong></td><td>Main sidebar area</td><td>Tabbed by category (Infantry/Vehicle/Aircraft/Naval/Structure/Defense). Click to queue. Right-click to cancel. Prerequisites shown on hover.</td></tr>
+<tr><td><strong>Status bar</strong></td><td>Bottom</td><td>Selected unit info: type, HP, veterancy, commands. Multi-select shows count and composition.</td></tr>
+<tr><td><strong>Chat area</strong></td><td>Bottom-left</td><td>Recent chat messages. Fades out. Press Enter to type.</td></tr>
+<tr><td><strong>Game clock</strong></td><td>Bottom-right</td><td>Match timer.</td></tr>
+<tr><td><strong>Notification area</strong></td><td>Top-center (transient)</td><td>EVA voice line text: “Base under attack,” “Building complete,” etc.</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="in-game-interactions"><a class="header" href="#in-game-interactions">In-Game Interactions</a></h3>
+<p>All gameplay input flows through the <code>InputSource</code> trait → <code>PlayerOrder</code> pipeline. The sim is never aware of UI — it receives orders, produces state.</p>
+<p><strong>Mouse:</strong></p>
+<ul>
+<li>Left-click: select unit/building</li>
+<li>Left-drag: box select (isometric diamond or rectangular, per D033 toggle)</li>
+<li>Right-click: context-sensitive command (move/attack/harvest/enter/deploy)</li>
+<li>Ctrl+right-click: force attack (attack ground)</li>
+<li>Alt+right-click: force move (ignore enemies)</li>
+<li>Scroll wheel: zoom in/out (toward cursor)</li>
+<li>Edge scroll: pan camera (10px edge zone)</li>
+</ul>
+<p><strong>Keyboard:</strong></p>
+<ul>
+<li>Arrow keys: pan camera</li>
+<li>0-9: select control group (Ctrl+# to assign, double-# to center)</li>
+<li>Tab: cycle unit types in selection</li>
+<li>H: select all of same type</li>
+<li>S: stop</li>
+<li>G: guard</li>
+<li>D: deploy (if applicable)</li>
+<li>F: force-fire mode</li>
+<li>Enter: open chat input (no prefix = team, <code>/s</code> = all, <code>/w name</code> = whisper)</li>
+<li>Tilde (~): developer console (if enabled)</li>
+<li>Escape: game menu (pause in SP, overlay in MP)</li>
+<li>F1: cycle render mode (Classic/HD/3D)</li>
+<li>F5-F8: camera bookmarks</li>
+</ul>
+<h3 id="in-game-overlays"><a class="header" href="#in-game-overlays">In-Game Overlays</a></h3>
+<p>These appear as overlays on top of the game viewport, triggered by specific actions:</p>
+<h4 id="chat--command-input"><a class="header" href="#chat--command-input">Chat &amp; Command Input</a></h4>
+<pre><code>[Enter] → Chat input bar appears at bottom
+</code></pre>
+<ul>
+<li>No prefix: team chat</li>
+<li><code>/s</code> message: all chat</li>
+<li><code>/w playername</code> message: whisper</li>
+<li><code>/</code> command: console command (tab-completable)</li>
+<li>Escape or Enter (empty): close input</li>
+</ul>
+<h4 id="ping-wheel"><a class="header" href="#ping-wheel">Ping Wheel</a></h4>
+<pre><code>[Hold G] → Radial wheel appears at cursor
+</code></pre>
+<p>8 segments: Attack Here / Defend Here / Danger / Retreat / Help / Rally Here / On My Way / Generic Ping. Release on a segment to place the ping at the cursor’s world position. Rate-limited (3 per 5 seconds).</p>
+<h4 id="chat-wheel"><a class="header" href="#chat-wheel">Chat Wheel</a></h4>
+<pre><code>[Hold V] → Radial wheel appears
+</code></pre>
+<p>32 pre-defined phrases with auto-translation (Dota 2 pattern). Categories: tactical, social, strategic. Phrases like “Attack now,” “Defend base,” “Good game,” “Need help.” Mod-extensible via YAML.</p>
+<h4 id="pause-overlay-single-player--custom-games"><a class="header" href="#pause-overlay-single-player--custom-games">Pause Overlay (Single Player / Custom Games)</a></h4>
+<pre><code>[Escape] → Pause menu
+</code></pre>
+<pre><code>┌──────────────────────────────────┐
+│           GAME PAUSED            │
+│                                  │
+│         ► Resume                 │
+│         ► Settings               │
+│         ► Save Game              │
+│         ► Load Game              │
+│         ► Restart Mission        │
+│         ► Quit to Menu           │
+│         ► Quit to Desktop        │
+└──────────────────────────────────┘
+</code></pre>
+<p>In <strong>multiplayer</strong>, Escape opens a non-pausing overlay with: Settings, Surrender, Leave Game.</p>
+<h4 id="multiplayer-escape-menu"><a class="header" href="#multiplayer-escape-menu">Multiplayer Escape Menu</a></h4>
+<pre><code>[Escape] → Overlay (game continues)
+</code></pre>
+<pre><code>┌──────────────────────────────────┐
+│         ► Resume                 │
+│         ► Settings               │
+│         ► Surrender              │
+│         ► Leave Game             │
+│                                  │
+│  [Request Pause] (limited uses)  │
+└──────────────────────────────────┘
+</code></pre>
+<ul>
+<li><strong>Request Pause</strong> — <code>PauseOrder</code> sent to all clients. 2 pauses × 120s max per player in ranked. 30s grace before opponent can unpause. Minimum 30s game time before first pause.</li>
+<li><strong>Surrender</strong> — 1v1: immediate and irreversible. Team games: opens a vote popup for teammates (2v2 = unanimous, 3v3 = ⅔, 4v4 = ¾ majority). 30-second vote window.</li>
+<li><strong>Leave Game</strong> — Warning: “Leaving a ranked match will count as a loss and apply a cooldown penalty.”</li>
+</ul>
+<h4 id="callvote-overlay"><a class="header" href="#callvote-overlay">Callvote Overlay</a></h4>
+<pre><code>Teammate or opponent initiates a vote → center-screen overlay
+</code></pre>
+<pre><code>┌──────────────────────────────────────────────┐
+│  VOTE: Remake game? (connection issues)       │
+│                                              │
+│  Called by: PlayerX                           │
+│  Time remaining: 24s                         │
+│                                              │
+│          [Yes (F1)]    [No (F2)]             │
+│                                              │
+│  Current: 1 Yes / 0 No / 2 Pending          │
+└──────────────────────────────────────────────┘
+</code></pre>
+<p>Vote types: Surrender, Kick, Remake, Draw, Custom (mod-defined). Non-voters default to “No.” 30-second timer. CS2-style presentation.</p>
+<h4 id="observerspectator-overlays"><a class="header" href="#observerspectator-overlays">Observer/Spectator Overlays</a></h4>
+<p>When spectating (observer mode), additional toggleable overlays appear:</p>
+<pre><code>┌──────────────┐  ┌──────────────┐  ┌──────────────┐
+│ ARMY         │  │ PRODUCTION   │  │ ECONOMY      │
+│              │  │              │  │              │
+│ P1: 45 units │  │ P1: Tank 67% │  │ P1: $324/min │
+│ P2: 38 units │  │ P2: MCV  23% │  │ P2: $256/min │
+└──────────────┘  └──────────────┘  └──────────────┘
+</code></pre>
+<p>Toggle keys: Army (A), Production (P), Economy (E), Powers (W), Score (S). Follow player camera: F + player number. Observer chat: separate channel from player chat (anti-coaching in ranked team games).</p>
+<h4 id="developer-console"><a class="header" href="#developer-console">Developer Console</a></h4>
+<pre><code>[Tilde ~] → Half-screen overlay (dev mode only)
+</code></pre>
+<pre><code>┌──────────────────────────────────────────────────────────┐
+│ &gt; /spawn rifleman at 1024,2048 player:2                  │
+│ Spawned: Rifleman at (1024, 2048) owned by Player 2     │
+│ &gt; /set_cash 50000                                        │
+│ Player 1 cash set to 50000                               │
+│ &gt; /net_diag 1                                            │
+│ Network diagnostics: enabled                             │
+│ &gt; _                                                      │
+│                                                          │
+│ 🔎 Filter: [all ▾]   [cvar browser]   [clear]   [close] │
+└──────────────────────────────────────────────────────────┘
+</code></pre>
+<p>Multi-line Lua syntax highlighting, scrollable filtered output, cvar browser, command history (SQLite-persisted). Brigadier-style tab completion.</p>
+<h3 id="smart-danger-alerts"><a class="header" href="#smart-danger-alerts">Smart Danger Alerts</a></h3>
+<p>Client-side auto-generated alerts (D059), toggled via D033:</p>
+<ul>
+<li><strong>Incoming Attack</strong> — Hostile units detected near your base</li>
+<li><strong>Ally Under Attack</strong> — Teammate’s structures under fire</li>
+<li><strong>Undefended Resource</strong> — Ore field with no harvester or guard</li>
+<li><strong>Superweapon Warning</strong> — Enemy superweapon nearing completion</li>
+</ul>
+<p>These appear as brief pings on the minimap with EVA voice cues. Fog-of-war filtered (no intel the player shouldn’t have).</p>
+<hr>
+<h2 id="post-game"><a class="header" href="#post-game">Post-Game</a></h2>
+<h3 id="post-game-screen"><a class="header" href="#post-game-screen">Post-Game Screen</a></h3>
+<pre><code>InGame → Victory/Defeat → Post-Game
+</code></pre>
+<pre><code>┌──────────────────────────────────────────────────────────────┐
+│  VICTORY                                                     │
+│  Coastal Fortress — 12:34                                    │
+│                                                              │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │ STATS           You              Opponent             │  │
+│  │ Units Built:    87               63                   │  │
+│  │ Units Lost:     34               63 (all)             │  │
+│  │ Structures:     12               8                    │  │
+│  │ Economy:        $45,200          $31,800              │  │
+│  │ APM:            142              98                   │  │
+│  │ Peak Army:      52               41                   │  │
+│  └───────────────────────────────────────────────────────┘  │
+│                                                              │
+│  Rating: Captain II → Captain I (+32)  🎖                    │
+│                                                              │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │ CHAT (30-second post-game lobby, still active)       │   │
+│  │ Opponent: gg wp                                      │   │
+│  │ You: gg                                              │   │
+│  └──────────────────────────────────────────────────────┘   │
+│                                                              │
+│  [Watch Replay]  [Save Replay]  [Re-Queue]  [Main Menu]     │
+│                                                              │
+│  [Report Player]                          Closes in: 4:32    │
+│                                                              │
+│  💡 TIP: You had 15 idle harvester seconds — try keeping     │
+│     all harvesters active for higher income. [Learn more →]  │
+└──────────────────────────────────────────────────────────────┘
+</code></pre>
+<p><strong>Post-game elements:</strong></p>
+<ul>
+<li><strong>Stats comparison</strong> — Economy, production, combat, activity (APM/EPM). Graphs available on hover/click.</li>
+<li><strong>Rating update</strong> — Tier badge animation if promoted/demoted. Delta shown.</li>
+<li><strong>Chat</strong> — 30-second active period, auto-closes after 5 minutes.</li>
+<li><strong>Post-game learning</strong> (D065) — Rule-based tip analyzing the match (e.g., idle harvesters, low APM, no control groups used). Links to tutorial or replay annotation.</li>
+<li><strong>Watch Replay</strong> → Replay Viewer (immediate, file already recorded)</li>
+<li><strong>Save Replay</strong> → Save <code>.icrep</code> file with metadata</li>
+<li><strong>Re-Queue</strong> → Back to matchmaking queue (ranked)</li>
+<li><strong>Main Menu</strong> → Return to main menu</li>
+<li><strong>Report Player</strong> → Report dialog (reason dropdown, optional text)</li>
+</ul>
+<hr>
+<h2 id="replays"><a class="header" href="#replays">Replays</a></h2>
+<h3 id="replay-browser"><a class="header" href="#replay-browser">Replay Browser</a></h3>
+<pre><code>Main Menu → Replays
+</code></pre>
+<pre><code>┌──────────────────────────────────────────────────────────────┐
+│  REPLAYS                                         [← Back]    │
+│                                                              │
+│  🔎 Search...  [My Games ▾] [All ▾] [Sort: Date ▾]          │
+│                                                              │
+│  ┌────────────────────────────────────────────────────────┐ │
+│  │ 📹 Coastal Fortress — You vs PlayerX                   │ │
+│  │    Victory, 12:34, IC Default, 2025-01-15              │ │
+│  │    Rating: +32                                  [Play] │ │
+│  ├────────────────────────────────────────────────────────┤ │
+│  │ 📹 Desert Arena FFA — 4 players                        │ │
+│  │    2nd place, 24:01, Vanilla RA, 2025-01-14            │ │
+│  │                                                 [Play] │ │
+│  ├────────────────────────────────────────────────────────┤ │
+│  │ 📥 Imported: match-2024-12-01.orarep (OpenRA)          │ │
+│  │    Converted to .icrep                          [Play] │ │
+│  └────────────────────────────────────────────────────────┘ │
+│                                                              │
+│  [Import Replay...]  (supports .icrep, .orarep, Remastered) │
+└──────────────────────────────────────────────────────────────┘
+</code></pre>
+<ul>
+<li>Filter by: date, map, players, win/loss, format</li>
+<li>Click [Play] → Replay Viewer</li>
+<li>[Import Replay…] → file browser for foreign replays (D056)</li>
+<li>Replay metadata shown: players, map, duration, balance preset, mod fingerprint, signed/unsigned</li>
+</ul>
+<h3 id="replay-viewer"><a class="header" href="#replay-viewer">Replay Viewer</a></h3>
+<pre><code>Replay Browser → [Play]
+  — or —
+Post-Game → [Watch Replay]
+</code></pre>
+<p>Full game playback with observer controls:</p>
+<pre><code>┌──────────────────────────────────┬────────────────────┐
+│                                  │   MINIMAP           │
+│         GAME VIEWPORT            │                    │
+│      (replay playback)           │   OBSERVER PANELS  │
+│                                  │   Army / Prod /    │
+│                                  │   Economy / Score  │
+├──────────────────────────────────┴────────────────────┤
+│ ◄◄  ◄  ▶  ►  ►►   Speed: [2x ▾]   Tick: 4521/8940   │
+│ ├──────────────●──────────────────────────────────┤   │
+│                                                       │
+│ [Player 1 View]  [Player 2 View]  [Free Camera]      │
+│ [Toggle: Army] [Prod] [Econ] [Powers] [Score]        │
+└───────────────────────────────────────────────────────┘
+</code></pre>
+<ul>
+<li>Transport controls: play/pause, speed (0.5x–8x), frame step, scrub bar</li>
+<li>Player perspective: lock to a player’s camera view</li>
+<li>Free camera: independent observer movement</li>
+<li>Observer overlays: same as live spectating (Army, Production, Economy, Powers, Score)</li>
+<li>Voice playback: if voice was recorded (opt-in), toggle per-player voice tracks</li>
+<li>Analysis event stream: available for detail drilldown</li>
+</ul>
+<hr>
+<h2 id="workshop"><a class="header" href="#workshop">Workshop</a></h2>
+<h3 id="workshop-browser"><a class="header" href="#workshop-browser">Workshop Browser</a></h3>
+<pre><code>Main Menu → Workshop
+</code></pre>
+<pre><code>┌──────────────────────────────────────────────────────────────┐
+│  WORKSHOP                                        [← Back]    │
+│                                                              │
+│  🔎 Search...  [All ▾] [Category ▾] [Sort: Popular ▾]       │
+│                                                              │
+│  Categories: Maps | Mods | Campaigns | Themes | AI Presets   │
+│  | Music | Sprites | Voice Packs | Scripts | Tutorials       │
+│                                                              │
+│  ┌────────────────────────────────────────────────────────┐ │
+│  │ 🗺 Desert Showdown Map Pack           ★★★★½  12.4k ↓   │ │
+│  │    by MapMaster ✓  |  3 maps, 4.2 MB  |  [Install]    │ │
+│  ├────────────────────────────────────────────────────────┤ │
+│  │ 🎮 Combined Arms v2.1                 ★★★★★  8.7k ↓   │ │
+│  │    by CombinedArmsTeam ✓  |  Total conversion  |      │ │
+│  │    [Installed ✓] [Update Available]                    │ │
+│  ├────────────────────────────────────────────────────────┤ │
+│  │ 🎵 Synthwave Music Pack               ★★★★   3.1k ↓   │ │
+│  │    by AudioCreator  |  12 tracks  |  [Install]         │ │
+│  └────────────────────────────────────────────────────────┘ │
+│                                                              │
+│  [My Content →]  [Installed →]  [Publishing →]               │
+└──────────────────────────────────────────────────────────────┘
+</code></pre>
+<p><strong>Resource detail page</strong> (click any item):</p>
+<ul>
+<li>Description, screenshots/preview, license (SPDX), author profile link</li>
+<li>Download count, rating, reviews</li>
+<li>Dependency tree (visual), changelog</li>
+<li>[Install] / [Update] / [Uninstall]</li>
+<li>[Report] for DMCA/policy violations</li>
+<li>[Tip Creator →] if creator has a tip link (D035)</li>
+</ul>
+<p><strong>My Content</strong> (Workshop → My Content):</p>
+<ul>
+<li>Disk management dashboard (D030): pinned/transient/expiring resources with sizes, TTL, and source</li>
+<li>Bulk actions: pin, unpin, delete, redownload</li>
+<li>Storage used / cleanup recommendations</li>
+</ul>
+<h3 id="mod-profile-manager"><a class="header" href="#mod-profile-manager">Mod Profile Manager</a></h3>
+<pre><code>Workshop → Mod Profiles
+  — or —
+Settings → Mod Profiles
+</code></pre>
+<pre><code>┌──────────────────────────────────────────────────────────┐
+│  MOD PROFILES                                [← Back]    │
+│                                                          │
+│  Active: IC Default (vanilla)                            │
+│  Fingerprint: a3f2c7...                                  │
+│                                                          │
+│  ┌────────────────────────────────────────────────────┐ │
+│  │  ► IC Default (vanilla)              [Active ✓]    │ │
+│  │  ► Combined Arms v2.1 + HD Sprites   [Activate]    │ │
+│  │  ► Tournament Standard               [Activate]    │ │
+│  │  ► My Custom Mix                     [Activate]    │ │
+│  └────────────────────────────────────────────────────┘ │
+│                                                          │
+│  [New Profile]  [Import from Workshop]  [Diff Profiles]  │
+└──────────────────────────────────────────────────────────┘
+</code></pre>
+<p>One-click profile switching reconfigures mods AND experience settings (D062).</p>
+<hr>
+<h2 id="settings"><a class="header" href="#settings">Settings</a></h2>
+<pre><code>Main Menu → Settings
+</code></pre>
+<p>Settings are organized in a tabbed layout. Each tab covers one domain. Changes auto-save.</p>
+<pre><code>┌──────────────────────────────────────────────────────────────┐
+│  SETTINGS                                        [← Back]    │
+│                                                              │
+│  [Video] [Audio] [Controls] [Gameplay] [Social] [LLM] [Data]│
+│  ─────────────────────────────────────────────────────────── │
+│                                                              │
+│  ┌────────────────────────────────────────────────────────┐ │
+│  │  (active tab content)                                  │ │
+│  │                                                        │ │
+│  │                                                        │ │
+│  │                                                        │ │
+│  └────────────────────────────────────────────────────────┘ │
+│                                                              │
+│  Experience Profile: [IC Default ▾]   [Reset to Defaults]    │
+└──────────────────────────────────────────────────────────────┘
+</code></pre>
+<h3 id="settings-tabs"><a class="header" href="#settings-tabs">Settings Tabs</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Tab</th><th>Contents</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Video</strong></td><td>Resolution, fullscreen/windowed/borderless, render mode (Classic/HD/3D), zoom limits, UI scale, shroud style (hard/smooth edges), FPS limit, VSync. Theme selection (Classic/Remastered/Modern/community).</td></tr>
+<tr><td><strong>Audio</strong></td><td>Master / Music / SFX / Voice / Ambient volume sliders. Music mode (Jukebox/Dynamic/Off). EVA voice. Spatial audio toggle.</td></tr>
+<tr><td><strong>Controls</strong></td><td>Hotkey profile (Classic/OpenRA/Modern/Custom). Full rebinding UI with category filters (Unit Commands, Production, Control Groups, Camera, Chat, Debug). Mouse settings: edge scroll speed, scroll inversion, drag selection shape.</td></tr>
+<tr><td><strong>Gameplay</strong></td><td>Experience profile (one-click preset). Balance preset. Pathfinding preset. AI behavior preset. Full D033 QoL toggle list organized by category: Production, Commands, UI Feedback, Selection, Gameplay.</td></tr>
+<tr><td><strong>Social</strong></td><td>Voice settings: PTT key, input/output device, voice effect preset, mic test. Chat settings: profanity filter, emojis, auto-translated phrases. Privacy: who can spectate, who can friend-request, online status visibility.</td></tr>
+<tr><td><strong>LLM</strong></td><td>Provider cards (add/edit/remove LLM providers). Task routing table (which provider handles which task). Connection test. Community config import/export (D047).</td></tr>
+<tr><td><strong>Data</strong></td><td>Content sources (detected game installations, manual paths, re-scan). Data health summary. Backup/Restore buttons. Cloud sync toggle. Mod profile manager link. Storage usage. Export profile data (GDPR, D061). Recovery phrase viewer (“Show my 24-word phrase”).</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="player-profile"><a class="header" href="#player-profile">Player Profile</a></h2>
+<pre><code>Main Menu → Profile
+  — or —
+Lobby → click player name → Full Profile
+  — or —
+Post-Game → click player → Full Profile
+</code></pre>
+<pre><code>┌──────────────────────────────────────────────────────────────┐
+│  PLAYER PROFILE                                  [← Back]    │
+│                                                              │
+│  ┌────────────────────────────────────────────────────────┐ │
+│  │  [Avatar]  CommanderDK                                 │ │
+│  │            Captain II (1623)  🎖🎖🎖                    │ │
+│  │            "Fear the Tesla."                           │ │
+│  │  [Edit Profile]                                        │ │
+│  └────────────────────────────────────────────────────────┘ │
+│                                                              │
+│  [Stats] [Achievements] [Match History] [Friends] [Social]   │
+│  ─────────────────────────────────────────────────────────── │
+│                                                              │
+│  ┌────────────────────────────────────────────────────────┐ │
+│  │  (active tab content)                                  │ │
+│  └────────────────────────────────────────────────────────┘ │
+│                                                              │
+│  Pinned Achievements: [🏆 First Blood] [🏆 500 Wins]        │
+│  Communities: [IC Official ✓] [CnCNet ✓]                     │
+└──────────────────────────────────────────────────────────────┘
+</code></pre>
+<h3 id="profile-tabs"><a class="header" href="#profile-tabs">Profile Tabs</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Tab</th><th>Contents</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Stats</strong></td><td>Per-game-module Glicko-2 ratings, rank tier badge, rating graph (last 50 matches), faction distribution pie chart, win streak, career totals. Click rating → Rating Details Panel (D055).</td></tr>
+<tr><td><strong>Achievements</strong></td><td>All achievements by category (Campaign/Skirmish/Multiplayer/Community). Pin up to 6 to profile. Rarity percentages. Per-game-module.</td></tr>
+<tr><td><strong>Match History</strong></td><td>Scrollable list: date, map, players, result, rating delta, [Replay] button. Filter by mode/date/result.</td></tr>
+<tr><td><strong>Friends</strong></td><td>Platform friends (Steam/GOG) + IC community friends. Presence states (Online/InGame/InLobby/Away/Invisible/Offline). [Join]/[Spectate]/[Invite] buttons. Block list. Private notes.</td></tr>
+<tr><td><strong>Social</strong></td><td>Community memberships with verified/unverified badges. Workshop creator profile (published count, downloads). Country flag. Social links.</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="rating-details-panel"><a class="header" href="#rating-details-panel">Rating Details Panel</a></h3>
+<pre><code>Profile → Stats → click rating value
+</code></pre>
+<p>Deep-dive into Glicko-2 competitive data (D055):</p>
+<ul>
+<li>Current rating box: μ (mean), RD (rating deviation), σ (volatility), confidence interval, trend arrow</li>
+<li>Plain-language explainer: “Your rating is 1623, meaning you’re roughly better than 72% of ranked players in this queue.”</li>
+<li>Rating history graph: Bevy 2D line chart, confidence band shading, per-faction color overlay</li>
+<li>Recent matches: rating impact bars (+/- per match)</li>
+<li>Faction breakdown: win rate per faction with separate faction ratings</li>
+<li>Rating distribution histogram: “You are here” marker</li>
+<li>[Export CSV] button, [Leaderboard →] link</li>
+</ul>
+<hr>
+<h2 id="encyclopedia"><a class="header" href="#encyclopedia">Encyclopedia</a></h2>
+<pre><code>Main Menu → Encyclopedia
+  — or —
+In-Game → sidebar → right-click unit/building → "View in Encyclopedia"
+</code></pre>
+<pre><code>┌──────────────────────────────────────────────────────────────┐
+│  ENCYCLOPEDIA                                    [← Back]    │
+│                                                              │
+│  🔎 Search...                                                │
+│                                                              │
+│  Categories: [Infantry] [Vehicles] [Aircraft] [Naval]        │
+│              [Structures] [Defenses] [Support]               │
+│                                                              │
+│  ┌──────────────┐  ┌─────────────────────────────────────┐  │
+│  │ UNIT LIST    │  │   TESLA COIL                         │  │
+│  │              │  │                                      │  │
+│  │ ▸ Rifle Inf. │  │   [animated sprite preview]          │  │
+│  │ ▸ Rocket Inf │  │                                      │  │
+│  │ ▸ Engineer   │  │   Cost: $1500   Power: -150          │  │
+│  │ ▸ Tanya      │  │   Range: 6   Damage: 200 (elec.)    │  │
+│  │   ...        │  │   HP: 400   Armor: Concrete          │  │
+│  │              │  │                                      │  │
+│  │ STRUCTURES   │  │   "The Tesla Coil is the Soviet's    │  │
+│  │ ▸ Const Yard │  │    primary base defense..."          │  │
+│  │ ▸ Power Plant│  │                                      │  │
+│  │ ▸ Tesla Coil │  │   Strong vs: Vehicles, Infantry      │  │
+│  │ ▸ War Fact.  │  │   Weak vs: Aircraft, Artillery       │  │
+│  │   ...        │  │   Requires: Radar Dome               │  │
+│  └──────────────┘  └─────────────────────────────────────┘  │
+└──────────────────────────────────────────────────────────────┘
+</code></pre>
+<p>Auto-generated from YAML rules. Optional <code>encyclopedia:</code> block per unit/building adds flavor text and counter-play information. Stats reflect the active balance preset.</p>
+<hr>
+<h2 id="tutorial--new-player-experience"><a class="header" href="#tutorial--new-player-experience">Tutorial &amp; New Player Experience</a></h2>
+<p>The tutorial system (D065) has five layers that integrate throughout the flow rather than existing as a single screen:</p>
+<h3 id="layer-1--commander-school"><a class="header" href="#layer-1--commander-school">Layer 1 — Commander School</a></h3>
+<pre><code>Main Menu → Campaign → Commander School
+</code></pre>
+<p>A dedicated 10-mission tutorial campaign using the D021 branching graph system. Teaches: camera, selection, movement, combat, building, harvesting, tech tree, control groups, multiplayer basics, advanced tactics. Branching allows skipping known topics. Tutorial AI opponents are below Easy difficulty.</p>
+<h3 id="layer-2--contextual-hints"><a class="header" href="#layer-2--contextual-hints">Layer 2 — Contextual Hints</a></h3>
+<p>Appear throughout the game as translucent overlay callouts at the point of need:</p>
+<pre><code>┌──────────────────────────────────────────┐
+│ 💡 TIP: Right-click to move units.       │
+│    Hold Shift to queue waypoints.        │
+│                        [Got it] [Don't   │
+│                                  show    │
+│                                  again]  │
+└──────────────────────────────────────────┘
+</code></pre>
+<p>YAML-driven triggers, adaptive suppression (hints shown less frequently as the player demonstrates mastery), experience-profile-aware (different hints for vanilla vs. OpenRA vs. Remastered veterans).</p>
+<h3 id="layer-3--new-player-pipeline"><a class="header" href="#layer-3--new-player-pipeline">Layer 3 — New Player Pipeline</a></h3>
+<p>The first-launch self-identification screen (shown earlier) feeds into:</p>
+<ul>
+<li>Skill assessment from early gameplay</li>
+<li>Difficulty recommendation for first campaign/skirmish</li>
+<li>Tutorial invitation (non-mandatory)</li>
+</ul>
+<h3 id="layer-4--adaptive-pacing"><a class="header" href="#layer-4--adaptive-pacing">Layer 4 — Adaptive Pacing</a></h3>
+<p>Behind the scenes: the engine estimates player skill from gameplay metrics and adjusts hint frequency and difficulty recommendations. Not visible as a screen — it’s a system that shapes the other layers.</p>
+<h3 id="layer-5--post-game-learning"><a class="header" href="#layer-5--post-game-learning">Layer 5 — Post-Game Learning</a></h3>
+<p>The post-game screen (see Post-Game section above) includes rule-based tips analyzing the match. “You had 15 idle harvester seconds” with a link to the relevant Commander School lesson or an annotated replay mode highlighting the moment.</p>
+<h3 id="multiplayer-onboarding"><a class="header" href="#multiplayer-onboarding">Multiplayer Onboarding</a></h3>
+<p>First time clicking <strong>Multiplayer</strong>:</p>
+<pre><code>┌──────────────────────────────────────────────────────────┐
+│  WELCOME TO MULTIPLAYER                                  │
+│                                                          │
+│  Iron Curtain multiplayer uses relay servers for fair     │
+│  matches — no lag switching, no host advantage.          │
+│                                                          │
+│  ► Try a casual game first (Game Browser)                │
+│  ► Jump into ranked (10 placement matches to calibrate)  │
+│  ► Watch a game first (Spectate)                         │
+│                                                          │
+│  [Got it, let me play]                [Don't show again] │
+└──────────────────────────────────────────────────────────┘
+</code></pre>
+<hr>
+<h2 id="ic-sdk-separate-application"><a class="header" href="#ic-sdk-separate-application">IC SDK (Separate Application)</a></h2>
+<p>The SDK is a separate Bevy application from the game (<code>ic-editor</code> crate). It shares library crates but has its own binary and launch point.</p>
+<h3 id="sdk-start-screen"><a class="header" href="#sdk-start-screen">SDK Start Screen</a></h3>
+<pre><code>┌──────────────────────────────────────────────────────────┐
+│  IRON CURTAIN SDK                                        │
+│                                                          │
+│  ► New Scenario                                          │
+│  ► New Campaign                                          │
+│  ► Open File...                                          │
+│  ► Asset Studio                                          │
+│                                                          │
+│  Recent:                                                 │
+│  · coastal-fortress.icscn  (yesterday)                   │
+│  · allied-campaign.iccampaign  (3 days ago)              │
+│  · my-mod/rules.yaml  (1 week ago)                       │
+│                                                          │
+│  ► Preferences                                           │
+│  ► Documentation                                         │
+└──────────────────────────────────────────────────────────┘
+</code></pre>
+<h3 id="scenario-editor"><a class="header" href="#scenario-editor">Scenario Editor</a></h3>
+<pre><code>SDK → New Scenario / Open File
+</code></pre>
+<pre><code>┌──────────────────────────────────────────────────────────────┐
+│  [Scenario Editor] [Asset Studio] [Campaign Editor]          │
+├──────────┬───────────────────────────┬───────────────────────┤
+│ MODE     │   ISOMETRIC VIEWPORT      │  PROPERTIES           │
+│ PANEL    │   (ic-render, same as     │  PANEL                │
+│          │    game rendering)        │  (egui)               │
+│ Terrain  │                           │                       │
+│ Entities │                           │  • Selected entity    │
+│ Triggers │                           │  • Properties list    │
+│ Waypoints│                           │  • Transform          │
+│ Modules  ├───────────────────────────┤  • Components         │
+│ Regions  │  BOTTOM PANEL             │                       │
+│ Scripts  │  (triggers/scripts/vars)  │                       │
+│ Layers   ├───────────────────────────┴───────────────────────┤
+│          │  STATUS: cursor (1024, 2048) | Cell (4, 8) | 127  │
+│          │  entities | Simple Mode                           │
+└──────────┴───────────────────────────────────────────────────┘
+</code></pre>
+<p><strong>Key features:</strong></p>
+<ul>
+<li>8 editing modes: Terrain, Entities, Triggers, Waypoints, Modules, Regions, Scripts, Layers</li>
+<li>Simple/Advanced toggle (hides ~15 features without data loss)</li>
+<li>Entity palette: search-as-you-type, 48×48 thumbnails, favorites, recently placed</li>
+<li>Trigger editor: visual condition/action builder with countdown timers</li>
+<li>Module system: 30+ drag-and-drop modules (Wave Spawner, Patrol Route, Reinforcements, etc.)</li>
+<li>Test button: launches <code>ic-game</code> with current scenario, close game returns to editor</li>
+<li>Publish button: exports → Workshop upload</li>
+<li>Undo/Redo: command pattern, autosave</li>
+<li>Export-safe authoring mode (D066): live fidelity indicators, feature gating for cross-engine compatibility</li>
+</ul>
+<h3 id="asset-studio"><a class="header" href="#asset-studio">Asset Studio</a></h3>
+<pre><code>SDK → Asset Studio
+</code></pre>
+<pre><code>┌──────────────────┬─────────────────────┬───────────────────┐
+│ ASSET BROWSER    │  PREVIEW VIEWPORT   │ PROPERTIES        │
+│ (tree: .mix      │  (sprite viewer,    │ (frames, size,    │
+│  archives +      │   animation scrub,  │  draw mode,       │
+│  local files)    │   zoom, palette)    │  palette, player  │
+│                  │                     │  color remap)     │
+│ 🔎 Search...     │  ◄ ▶ ⏸ ⏮ ⏭ Frame  │                   │
+│                  │  3/24               │                   │
+├──────────────────┴─────────────────────┼───────────────────┤
+│ [Import] [Export] [Batch] [Compare]    │ [Preview as       │
+│                                        │  unit on map]     │
+└────────────────────────────────────────┴───────────────────┘
+</code></pre>
+<p>XCC Mixer replacement with visual editing. Supports SHP, PAL, AUD, VQA, MIX, TMP. Bidirectional conversion (SHP↔PNG, AUD↔WAV). Chrome/theme designer with 9-slice editor and live menu preview.</p>
+<h3 id="campaign-editor"><a class="header" href="#campaign-editor">Campaign Editor</a></h3>
+<pre><code>SDK → New Campaign / Open Campaign
+</code></pre>
+<p>Node-and-edge graph editor in a 2D Bevy viewport (separate from isometric). Pan/zoom like a mind map. Nodes = missions (link to scenario files). Edges = outcomes (labeled with named outcome conditions). Weighted random paths configurable.</p>
+<hr>
+<h2 id="complete-navigation-map"><a class="header" href="#complete-navigation-map">Complete Navigation Map</a></h2>
+<p>Every screen and how to reach it from the main menu. Maximum depth from main menu = 3.</p>
+<pre><code>MAIN MENU
+├── Continue Campaign ─────────────────── → Campaign Graph → Briefing → InGame
+├── Campaign
+│   ├── Allied Campaign ───────────────── → Campaign Graph → Briefing → InGame
+│   ├── Soviet Campaign ───────────────── → Campaign Graph → Briefing → InGame
+│   ├── Workshop Campaigns ────────────── → Workshop (filtered)
+│   ├── Commander School ──────────────── → Tutorial Campaign
+│   └── Generative Campaign
+│       ├── (LLM configured) ──────────── → Setup → Generation → Campaign Graph
+│       └── (no LLM) ─────────────────── → Guidance Panel → [Configure] / [Workshop]
+├── Skirmish ──────────────────────────── → Skirmish Setup → Loading → InGame
+├── Multiplayer
+│   ├── Find Match ────────────────────── → Queue → Ready Check → Map Veto → Loading → InGame
+│   ├── Game Browser ──────────────────── → Game List → Join Lobby → Loading → InGame
+│   ├── Join Code ─────────────────────── → Enter Code → Join Lobby → Loading → InGame
+│   ├── Create Game ───────────────────── → Lobby (as host) → Loading → InGame
+│   └── Direct Connect ────────────────── → Enter IP → Join Lobby → Loading → InGame
+├── Replays ───────────────────────────── → Replay Browser → Replay Viewer
+├── Workshop ──────────────────────────── → Workshop Browser → Resource Detail / My Content
+├── Settings
+│   ├── Video ─────────────────────────── Theme, Resolution, Render Mode, UI Scale
+│   ├── Audio ─────────────────────────── Volumes, Music Mode, Spatial Audio
+│   ├── Controls ──────────────────────── Hotkey Profile, Rebinding, Mouse
+│   ├── Gameplay ──────────────────────── Experience Profile, QoL Toggles, Balance
+│   ├── Social ────────────────────────── Voice, Chat, Privacy
+│   ├── LLM ───────────────────────────── Provider Cards, Task Routing
+│   └── Data ──────────────────────────── Content Sources, Backup, Recovery Phrase
+├── Profile
+│   ├── Stats ─────────────────────────── Ratings, Graphs → Rating Details Panel
+│   ├── Achievements ──────────────────── Per-module, Pinnable
+│   ├── Match History ─────────────────── List → Replay links
+│   ├── Friends ───────────────────────── List, Presence, Join/Spectate/Invite
+│   └── Social ────────────────────────── Communities, Creator Profile
+├── Encyclopedia ──────────────────────── Category → Unit/Building Detail
+├── Credits
+└── Quit
+
+IN-GAME OVERLAYS (accessible during gameplay)
+├── Chat Input ────────────────────────── [Enter]
+├── Ping Wheel ────────────────────────── [Hold G]
+├── Chat Wheel ────────────────────────── [Hold V]
+├── Pause Menu (SP) / Escape Menu (MP) ── [Escape]
+├── Callvote ──────────────────────────── (triggered by vote)
+├── Observer Panels ───────────────────── (spectator mode toggles)
+├── Developer Console ─────────────────── [Tilde ~]
+└── Debug Overlays ────────────────────── (dev mode only)
+
+POST-GAME → [Watch Replay] / [Re-Queue] / [Main Menu]
+
+IC SDK (separate application)
+├── Scenario Editor ───────────────────── 8 editing modes, Simple/Advanced
+├── Asset Studio ──────────────────────── Archive browser, sprite/palette editor
+└── Campaign Editor ───────────────────── Node-and-edge graph editor
+</code></pre>
+<hr>
+<h2 id="reference-game-ui-analysis"><a class="header" href="#reference-game-ui-analysis">Reference Game UI Analysis</a></h2>
+<p>Every screen and interaction in this document was informed by studying the actual UIs of Red Alert (1996), the Remastered Collection (2020), OpenRA, and modern competitive games. This section documents what each game actually does and what IC takes from it. For full source analysis, see <code>research/westwood-ea-development-philosophy.md</code>, <code>11-OPENRA-FEATURES.md</code>, <code>research/ranked-matchmaking-analysis.md</code>, and <code>research/blizzard-github-analysis.md</code>.</p>
+<h3 id="red-alert-1996--the-foundation"><a class="header" href="#red-alert-1996--the-foundation">Red Alert (1996) — The Foundation</a></h3>
+<p><strong>Actual main menu structure:</strong> Static title screen (no shellmap) → Main Menu with buttons: New Game, Load Game, Multiplayer Game, Intro &amp; Sneak Peek, Options, Exit Game. “New Game” immediately forks: Allied or Soviet. No campaign map — missions are sequential. Options screen covers Video, Sound, Controls only. Multiplayer options: Modem, Serial, IPX Network (later Westwood Online/CnCNet). There is no replay system, no server browser, no profile, no ranked play, no encyclopedia — just the game.</p>
+<p><strong>Actual in-game sidebar:</strong> Right side, always visible. Top: radar minimap (requires Radar Dome). Below: credit counter with ticking animation. Below: power bar (green = surplus, yellow = low, red = deficit). Below: build queue icons organized by category tabs (with icons, not text). Production icons show build progress as a clock-wipe animation. Right-click cancels. No queue depth indicator (single-item production only). Bottom: selected unit info (name, health bar — internal only, not on-screen over units).</p>
+<p><strong>What IC takes from RA1:</strong></p>
+<ul>
+<li>Right-sidebar as default layout (IC’s <code>SidebarPosition::Right</code>)</li>
+<li>Credit counter with ticking animation → IC preserves this in all themes</li>
+<li>Power bar with color-coded surplus/deficit → IC preserves this</li>
+<li>Context-sensitive cursor (move on ground, attack on enemy, harvest on ore) → IC’s 14-state <code>CursorState</code> enum</li>
+<li>Tab-organized build categories → IC’s Infantry/Vehicle/Aircraft/Naval/Structure/Defense tabs</li>
+<li>“The cursor <em>is</em> the verb” principle (see <code>research/westwood-ea-development-philosophy.md</code> § Context-Sensitive Cursor)</li>
+<li>Core flow: Menu → Pick mode → Configure → Play → Results → Menu</li>
+<li>Default hotkey profile matches RA1 bindings (e.g., S for stop, G for guard)</li>
+<li>Classic theme (D032) reproduces the 1996 aesthetic: static title, military minimalism, no shellmap</li>
+</ul>
+<p><strong>What IC improves from RA1 (documented limitations):</strong></p>
+<ul>
+<li>No health bars displayed over units → IC defaults to <code>on_selection</code> (D033)</li>
+<li>No attack-move, guard, scatter, waypoint queue, rally points, force-fire ground → IC enables all via D033</li>
+<li>Single-item build queue → IC supports multi-queue with parallel factories</li>
+<li>No control group limit → IC allows unlimited control groups</li>
+<li>Exit-to-menu between campaign missions → IC provides continuous mission flow (D021)</li>
+<li>No replays, no observer mode, no ranked play → IC adds all three</li>
+</ul>
+<h3 id="cc-remastered-collection-2020--the-gold-standard"><a class="header" href="#cc-remastered-collection-2020--the-gold-standard">C&amp;C Remastered Collection (2020) — The Gold Standard</a></h3>
+<p><strong>Actual main menu structure:</strong> Live shellmap (scripted AI battle) behind a semi-transparent menu panel. Game selection screen: pick Tiberian Dawn or Red Alert (two separate games in one launcher). Per-game menu: Campaign, Skirmish, Multiplayer, Bonus Gallery, Options. Campaign screen shows the faction selection (Allied/Soviet) with difficulty options. Multiplayer: Quick Match (Elo-based 1v1 matchmaking), Custom Game (lobby-based), Leaderboard. Options: Video, Audio, Controls, Gameplay. The Bonus Gallery (concept art, behind-the-scenes, FMV jukebox, music jukebox) is a genuine UX innovation — it turns the game into a museum of its own history.</p>
+<p><strong>Actual in-game sidebar:</strong> Preserves the right-sidebar layout from RA1 but with HD sprites and modern polish. Key additions: rally points on production structures, attack-move command, queued production (build multiple of the same unit), cleaner icon layout that scales to 4K. The <strong>F1 toggle</strong> switches the entire game (sprites, terrain, sidebar, UI) between original 320×200 SD and new HD art instantly, with zero loading — the most celebrated UX feature of the remaster.</p>
+<p><strong>Actual in-game QoL vs. original</strong> (from D033 comparison tables):</p>
+<ul>
+<li>Multi-queue: ✅ (original: ❌)</li>
+<li>Parallel factories: ✅ (original: ❌)</li>
+<li>Attack-move: ✅ (original: ❌)</li>
+<li>Waypoint queue: ✅ (original: ❌)</li>
+<li>Rally points: ✅ (original: ❌)</li>
+<li>Health bars: on selection (original: never)</li>
+<li>Guard command: ❌, Scatter: ❌, Stance system: Basic only</li>
+</ul>
+<p><strong>What IC takes from Remastered:</strong></p>
+<ul>
+<li>Shellmap behind main menu → IC’s default for Remastered and Modern themes</li>
+<li>“Clean, uncluttered UI that scales well to modern resolutions” (quoted from <code>01-VISION.md</code>)</li>
+<li>Information density balance — “where OpenRA sometimes overwhelms with GUI elements, Remastered gets the density right”</li>
+<li>F1 render mode toggle → IC generalizes to Classic↔HD↔3D cycling (D048)</li>
+<li>QoL additions (rally points, attack-move, queue) as the baseline, not optional extras</li>
+<li>Bonus Gallery concept → IC’s Encyclopedia (auto-generated from YAML rules)</li>
+<li>One-click matchmaking reducing friction vs. manual lobby creation</li>
+<li>“Remastered” theme in D032: “clean modern military — HD polish, sleek panels, reverent to the original but refined”</li>
+</ul>
+<p><strong>What IC improves from Remastered:</strong></p>
+<ul>
+<li>No range circles or build radius display → IC defaults to showing both</li>
+<li>No guard command or scatter command → IC enables both</li>
+<li>No target lines showing order destinations → IC enables by default</li>
+<li>Proprietary networking → IC uses open relay architecture</li>
+<li>No mod/Workshop support → IC provides full Workshop integration</li>
+</ul>
+<h3 id="openra--the-community-standard"><a class="header" href="#openra--the-community-standard">OpenRA — The Community Standard</a></h3>
+<p><strong>Actual main menu structure:</strong> Shellmap (live AI battle) behind main menu. Buttons: Singleplayer (Missions, Skirmish), Multiplayer (Join Server, Create Server, Server Browser), Map Editor, Asset Browser, Settings, Extras (Credits, System Info). Server browser shows game name, host, map, players, status (waiting/playing), mod and version, ping. Lobby shows player list, map preview, game settings, chat, ready toggle. Settings cover: Input (hotkeys, classic vs modern mouse), Display, Audio, Advanced. No ranked matchmaking — entirely community-organized tournaments.</p>
+<p><strong>Actual in-game sidebar:</strong> The RA mod uses a tabbed production sidebar inspired by Red Alert 3 (not the original RA1 single-tab sidebar). Categories shown as clickable tabs at the top (Infantry, Vehicles, Aircraft, Structures, etc.). This is a significant departure from the original RA1 layout. Full modern RTS QoL: attack-move, force-fire, waypoint queue, guard, scatter, stances (aggressive/defensive/hold fire/return fire), rally points, unlimited control groups, tab-cycle through types in multi-selection, health bars always visible, range circles on hover, build radius display, target lines, rally point display.</p>
+<p><strong>Actual widget system</strong> (from <code>11-OPENRA-FEATURES.md</code>): 60+ widget types in the UI layer. Key logic classes: <code>MainMenuLogic</code> (menu flow), <code>ServerListLogic</code> (server browser), <code>LobbyLogic</code> (game lobby), <code>MapChooserLogic</code> (20KB — map selection is complex), <code>MissionBrowserLogic</code> (19KB), <code>ReplayBrowserLogic</code> (26KB), <code>SettingsLogic</code>, <code>AssetBrowserLogic</code> (23KB — the asset browser alone is a substantial application). Profile system with anonymous and registered identity tiers.</p>
+<p><strong>What IC takes from OpenRA:</strong></p>
+<ul>
+<li>Command interface excellence — “17 years of UI iteration; adopt their UX patterns for player interaction” (quoted from <code>01-VISION.md</code>)</li>
+<li>Full QoL feature set as the standard (attack-move, stances, rally points, etc.)</li>
+<li>Server browser with filtering and multi-source tracking</li>
+<li>Observer/spectator overlays (army, production, economy panels)</li>
+<li>In-game map editor accessible from menu</li>
+<li>Asset browser concept → IC’s Asset Studio in the SDK</li>
+<li>Profile system with identity tiers</li>
+<li>Community-driven balance and UX iteration process</li>
+</ul>
+<p><strong>What IC improves from OpenRA:</strong></p>
+<ul>
+<li>“Functional, data-driven, but with a generic feel that doesn’t evoke the same nostalgia” → IC’s D032 switchable themes restore the aesthetic</li>
+<li>“Sometimes overwhelms with GUI elements” → IC follows Remastered’s information density model</li>
+<li>Hardcoded QoL (no way to get the vanilla experience) → IC’s D033 makes every QoL individually toggleable</li>
+<li>Campaign neglect (exit-to-menu between missions, incomplete campaigns) → IC’s D021 continuous campaign flow</li>
+<li>Terrain-only scenario editor → IC’s full scenario editor with trigger/script/module editing (D038)</li>
+<li>C# recompilation required for deep mods → IC’s YAML→Lua→WASM tiered modding (no recompilation)</li>
+</ul>
+<h3 id="starcraft-ii--competitive-ux-reference"><a class="header" href="#starcraft-ii--competitive-ux-reference">StarCraft II — Competitive UX Reference</a></h3>
+<p><strong>What IC takes from SC2:</strong></p>
+<ul>
+<li>Three-interface model for AI/replay analysis (raw, feature layer, rendered) → informs IC’s sim/render split</li>
+<li>Observer overlay design (army composition, production tracking, economy graphs) → IC mirrors exactly</li>
+<li>Dual display ranked system (visible tier + hidden MMR) → IC’s Captain II (1623) format (D055)</li>
+<li>Action Result taxonomy (214 error codes for rejected orders) → informs IC’s order validation UX</li>
+<li>APM vs EPM distinction (“EPM is a better measure of meaningful player activity”) → IC’s <code>GameScore</code> tracks both</li>
+</ul>
+<h3 id="age-of-empires-ii-de--rts-ux-benchmark"><a class="header" href="#age-of-empires-ii-de--rts-ux-benchmark">Age of Empires II: DE — RTS UX Benchmark</a></h3>
+<p><strong>What IC takes from AoE2:DE:</strong></p>
+<ul>
+<li>Technology tree / encyclopedia as an in-game reference → IC’s Encyclopedia (auto-generated from YAML)</li>
+<li>Simple ranked queue appropriate for RTS community size</li>
+<li>Zoom-toward-cursor camera behavior (shared with SC2, OpenRA)</li>
+<li>Bottom-bar as a viable alternative to sidebar → IC’s D032 supports both layouts</li>
+</ul>
+<h3 id="counter-strike-2--modern-competitive-ux"><a class="header" href="#counter-strike-2--modern-competitive-ux">Counter-Strike 2 — Modern Competitive UX</a></h3>
+<p><strong>What IC takes from CS2:</strong></p>
+<ul>
+<li>Sub-tick order timestamps for fairness (D008)</li>
+<li>Vote system visual presentation → IC’s Callvote overlay</li>
+<li>Auto-download mods on lobby join → IC’s Workshop auto-download</li>
+<li>Premier mode ranked structure (named tiers, Glicko-2, placement matches) → IC’s D055</li>
+</ul>
+<h3 id="dota-2--communication-ux"><a class="header" href="#dota-2--communication-ux">Dota 2 — Communication UX</a></h3>
+<p><strong>What IC takes from Dota 2:</strong></p>
+<ul>
+<li>Chat wheel with auto-translated phrases → IC’s 32-phrase chat wheel (D059)</li>
+<li>Ping wheel for tactical communication → IC’s 8-segment ping wheel</li>
+<li>Contextual ping system (Apex Legends also influenced this)</li>
+</ul>
+<h3 id="factorio--settings--modding-ux"><a class="header" href="#factorio--settings--modding-ux">Factorio — Settings &amp; Modding UX</a></h3>
+<p><strong>What IC takes from Factorio:</strong></p>
+<ul>
+<li>“Game is a mod” architecture → IC’s <code>GameModule</code> trait (D018)</li>
+<li>Three-phase data loading for deterministic mod compatibility</li>
+<li>Settings that persist between sessions and respect the player’s choices</li>
+<li>Mod portal as a first-class feature, not an afterthought → IC’s Workshop</li>
+</ul>
+<hr>
+<h2 id="flow-comparison-classic-ra-vs-iron-curtain"><a class="header" href="#flow-comparison-classic-ra-vs-iron-curtain">Flow Comparison: Classic RA vs. Iron Curtain</a></h2>
+<p>For returning players, here’s how IC’s flow maps to what they remember:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Classic RA (1996)</th><th>Iron Curtain</th><th>Notes</th></tr>
+</thead>
+<tbody>
+<tr><td>Title screen → Main Menu</td><td>Shellmap → Main Menu</td><td>IC adds live battle behind menu (Remastered style)</td></tr>
+<tr><td>New Game → Allied/Soviet</td><td>Campaign → Allied/Soviet</td><td>Same fork. IC adds branching graph, roster persistence.</td></tr>
+<tr><td>Mission Briefing → Loading → Mission</td><td>Briefing → (seamless load) → Mission</td><td>IC eliminates loading screen between missions where possible.</td></tr>
+<tr><td>Exit to menu between missions</td><td>Continuous flow</td><td>Debrief → briefing → next mission, no menu exit.</td></tr>
+<tr><td>Skirmish → Map select → Play</td><td>Skirmish → Map/Players/Settings → Play</td><td>Same structure, more options.</td></tr>
+<tr><td>Modem/Serial/IPX → Lobby</td><td>Multiplayer Hub → 5 connection methods → Lobby</td><td>Far more connectivity options. Same lobby concept.</td></tr>
+<tr><td>Options → Video/Sound/Controls</td><td>Settings → 7 tabs</td><td>Same categories, much deeper customization.</td></tr>
+<tr><td>—</td><td>Workshop</td><td>New: browse and install community content.</td></tr>
+<tr><td>—</td><td>Player Profile &amp; Ranked</td><td>New: competitive identity and matchmaking.</td></tr>
+<tr><td>—</td><td>Replays</td><td>New: watch saved games.</td></tr>
+<tr><td>—</td><td>Encyclopedia</td><td>New: in-game unit reference.</td></tr>
+<tr><td>—</td><td>SDK (separate app)</td><td>New: visual scenario and asset editing.</td></tr>
+</tbody>
+</table>
+</div>
+<p>The core flow is preserved: <strong>Menu → Pick mode → Configure → Play → Results → Menu.</strong> IC adds depth at every step without changing the fundamental rhythm.</p>
+<hr>
+<h2 id="platform-adaptations"><a class="header" href="#platform-adaptations">Platform Adaptations</a></h2>
+<p>The flow described above is the Desktop experience. Other platforms adapt the same flow to their input model:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Platform</th><th>Layout Adaptation</th><th>Input Adaptation</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Desktop</strong> (default)</td><td>Full sidebar, mouse precision UI</td><td>Mouse + keyboard, edge scroll, hotkeys</td></tr>
+<tr><td><strong>Steam Deck</strong></td><td>Same as Desktop, larger touch targets</td><td>Gamepad + touchpad, PTT mapped to shoulder button</td></tr>
+<tr><td><strong>Tablet</strong></td><td>Sidebar OK, touch-sized targets</td><td>Touch: tap-select, drag-command, pinch-zoom, on-screen hotbar</td></tr>
+<tr><td><strong>Phone</strong></td><td>Bottom-bar layout, simplified sidebar</td><td>Touch: simplified controls, auto-queue, reduced hotbar</td></tr>
+<tr><td><strong>TV</strong></td><td>Large text, gamepad radial menus</td><td>Gamepad: D-pad navigation, radial command wheel</td></tr>
+<tr><td><strong>Browser (WASM)</strong></td><td>Same as Desktop</td><td>Mouse + keyboard, WebRTC VoIP</td></tr>
+</tbody>
+</table>
+</div>
+<p><code>ScreenClass</code> (Phone/Tablet/Desktop/TV) is detected automatically. <code>InputCapabilities</code> (touch, mouse, gamepad) drives interaction mode. The player flow stays identical — only the visual layout and input bindings change.</p>
+<hr>
+<h2 id="cross-references"><a class="header" href="#cross-references">Cross-References</a></h2>
+<p>This document consolidates UI/UX information from across the design docs. The canonical source for each system remains its original location:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>System</th><th>Canonical Source</th></tr>
+</thead>
+<tbody>
+<tr><td>Game lifecycle state machine</td><td><code>02-ARCHITECTURE.md</code> § Game Lifecycle State Machine</td></tr>
+<tr><td>Shellmap &amp; themes</td><td><code>02-ARCHITECTURE.md</code> § UI Theme System, <code>decisions/09c-modding.md</code> § D032</td></tr>
+<tr><td>QoL toggles &amp; experience profiles</td><td><code>decisions/09d-gameplay.md</code> § D033</td></tr>
+<tr><td>Lobby protocol &amp; ready check</td><td><code>03-NETCODE.md</code> § Match Lifecycle</td></tr>
+<tr><td>Post-game flow &amp; re-queue</td><td><code>03-NETCODE.md</code> § Post-Game Flow</td></tr>
+<tr><td>Ranked tiers &amp; matchmaking</td><td><code>decisions/09b-networking.md</code> § D055</td></tr>
+<tr><td>Player profile</td><td><code>decisions/09e-community.md</code> § D053</td></tr>
+<tr><td>In-game communication (chat, VoIP, pings)</td><td><code>decisions/09g-interaction.md</code> § D059</td></tr>
+<tr><td>Command console</td><td><code>decisions/09g-interaction.md</code> § D058</td></tr>
+<tr><td>Tutorial &amp; new player experience</td><td><code>decisions/09g-interaction.md</code> § D065</td></tr>
+<tr><td>Workshop browser &amp; mod management</td><td><code>decisions/09e-community.md</code> § D030</td></tr>
+<tr><td>Mod profiles</td><td><code>decisions/09c-modding.md</code> § D062</td></tr>
+<tr><td>LLM configuration</td><td><code>decisions/09f-tools.md</code> § D047</td></tr>
+<tr><td>Data backup &amp; portability</td><td><code>decisions/09e-community.md</code> § D061</td></tr>
+<tr><td>Branching campaigns</td><td><code>decisions/09c-modding.md</code> § D021</td></tr>
+<tr><td>Generative campaigns</td><td><code>decisions/09f-tools.md</code> § D016</td></tr>
+<tr><td>Observer/spectator UI</td><td><code>02-ARCHITECTURE.md</code> § Observer / Spectator UI</td></tr>
+<tr><td>SDK &amp; scenario editor</td><td><code>02-ARCHITECTURE.md</code> § IC SDK &amp; Editor Architecture</td></tr>
+<tr><td>Cursor system</td><td><code>02-ARCHITECTURE.md</code> § Cursor System</td></tr>
+<tr><td>Hotkey system</td><td><code>02-ARCHITECTURE.md</code> § Hotkey System</td></tr>
+<tr><td>Camera system</td><td><code>02-ARCHITECTURE.md</code> § Camera System</td></tr>
+<tr><td>C&amp;C UX philosophy</td><td><code>13-PHILOSOPHY.md</code> § Principles 12-13</td></tr>
+<tr><td>Balance presets</td><td><code>decisions/09d-gameplay.md</code> § D019</td></tr>
+<tr><td>Render modes</td><td><code>decisions/09d-gameplay.md</code> § D048</td></tr>
+<tr><td>Foreign replay import</td><td><code>decisions/09f-tools.md</code> § D056</td></tr>
+<tr><td>Cross-engine export</td><td><code>decisions/09c-modding.md</code> § D066</td></tr>
+<tr><td>Server configuration</td><td><code>15-SERVER-GUIDE.md</code></td></tr>
+</tbody>
+</table>
+</div>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="16-CODING-STANDARDS.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="16-CODING-STANDARDS.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr-ef4e11c1.min.js"></script>
+        <script src="mark-09e88c2c.min.js"></script>
+        <script src="searcher-c2a407aa.js"></script>
+
+        <script src="clipboard-1626706a.min.js"></script>
+        <script src="highlight-abc7f01d.js"></script>
+        <script src="book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

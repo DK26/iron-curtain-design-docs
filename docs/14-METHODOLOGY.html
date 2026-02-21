@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-ac1e5ebd.js";
+            window.path_to_searchindex_js = "searchindex-c8692886.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-9e438da8.js"></script>
+        <script src="toc-b2bf7f58.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -185,7 +185,7 @@
 <p>How Iron Curtain moves from design docs to a playable game — the meta-process that governs everything from research through release.</p>
 </blockquote>
 <h2 id="purpose-of-this-chapter"><a class="header" href="#purpose-of-this-chapter">Purpose of This Chapter</a></h2>
-<p>The other design docs say <strong>what</strong> we’re building (<a href="01-VISION.html">01-VISION</a>, <a href="02-ARCHITECTURE.html">02-ARCHITECTURE</a>), <strong>why</strong> decisions were made (<a href="09-DECISIONS.html">09-DECISIONS</a>, <a href="13-PHILOSOPHY.html">13-PHILOSOPHY</a>), and <strong>when</strong> things ship (<a href="08-ROADMAP.html">08-ROADMAP</a>). This chapter says <strong>how we get there</strong> — the methodology that turns 13 design documents into a working engine.</p>
+<p>The other design docs say <strong>what</strong> we’re building (<a href="01-VISION.html">01-VISION</a>, <a href="02-ARCHITECTURE.html">02-ARCHITECTURE</a>), <strong>why</strong> decisions were made (<a href="09-DECISIONS.html">09-DECISIONS</a> and its sub-documents, <a href="13-PHILOSOPHY.html">13-PHILOSOPHY</a>), and <strong>when</strong> things ship (<a href="08-ROADMAP.html">08-ROADMAP</a>). This chapter says <strong>how we get there</strong> — the methodology that turns 13 design documents into a working engine.</p>
 <p><strong>When to read this chapter:</strong></p>
 <ul>
 <li>You’re starting work on a new phase and need to know the process</li>
@@ -248,7 +248,7 @@
 <ul>
 <li>Study the original EA source code, OpenRA architecture, and other RTS engines (see <code>AGENTS.md</code> § “Reference Material”)</li>
 <li>Identify community pain points from OpenRA’s issue tracker, Reddit, Discord, modder feedback (see <a href="01-VISION.html">01-VISION</a> § “Community Pain Points”)</li>
-<li>For every significant design question, explore alternatives, pick one, document the rationale in <a href="09-DECISIONS.html">09-DECISIONS</a></li>
+<li>For every significant design question, explore alternatives, pick one, document the rationale in the appropriate <a href="09-DECISIONS.html">decisions sub-document</a></li>
 <li>Capture lessons from the original C&amp;C creators and other game development veterans (see <a href="13-PHILOSOPHY.html">13-PHILOSOPHY</a> and <code>research/westwood-ea-development-philosophy.md</code>)</li>
 <li>Research is concurrent with other work in later stages — new questions arise during implementation</li>
 <li>Research is a <strong>continuous discipline</strong>, not a phase that ends. Every new prior art study can challenge assumptions, confirm patterns, or reveal gaps. The project’s commit history shows active research throughout pre-development — not tapering early but intensifying as design maturity makes it easier to ask precise questions.</li>
@@ -257,7 +257,7 @@
 <p><strong>Exit criteria:</strong></p>
 <ul>
 <li>Every major subsystem has a design doc section with component definitions, Rust struct signatures, and YAML examples</li>
-<li>Every significant alternative has been considered and the choice is documented in <a href="09-DECISIONS.html">09-DECISIONS</a></li>
+<li>Every significant alternative has been considered and the choice is documented in the appropriate <a href="09-DECISIONS.html">decisions sub-document</a></li>
 <li>The gap analysis against OpenRA (<a href="11-OPENRA-FEATURES.html">11-OPENRA-FEATURES</a>) covers all ~700 traits with IC equivalents or explicit “not planned” decisions</li>
 <li>Community context is documented: who we’re building for, what they actually want, what makes them switch (see <a href="01-VISION.html">01-VISION</a> § “What Makes People Actually Switch”)</li>
 </ul>
@@ -270,7 +270,7 @@
 <p><strong>Process:</strong></p>
 <ul>
 <li>Define crate boundaries with precision: which crate owns which types, which crate never imports from which other crate (see <a href="02-ARCHITECTURE.html">02-ARCHITECTURE</a> § crate structure)</li>
-<li>Map every trait interface: <code>NetworkModel</code>, <code>Pathfinder</code>, <code>SpatialIndex</code>, <code>FogProvider</code>, <code>DamageResolver</code>, <code>AiStrategy</code>, <code>OrderValidator</code>, <code>RankingProvider</code>, <code>Renderable</code>, <code>InputSource</code>, <code>OrderCodec</code>, <code>GameModule</code>, etc. (see D041 in <a href="09-DECISIONS.html">09-DECISIONS</a>)</li>
+<li>Map every trait interface: <code>NetworkModel</code>, <code>Pathfinder</code>, <code>SpatialIndex</code>, <code>FogProvider</code>, <code>DamageResolver</code>, <code>AiStrategy</code>, <code>OrderValidator</code>, <code>RankingProvider</code>, <code>Renderable</code>, <code>InputSource</code>, <code>OrderCodec</code>, <code>GameModule</code>, etc. (see D041 in <a href="decisions/09d-gameplay.html">decisions/09d-gameplay.md</a>)</li>
 <li>Define the simulation system pipeline — fixed order, documented dependencies between systems (see <a href="02-ARCHITECTURE.html">02-ARCHITECTURE</a> § “System Pipeline”)</li>
 <li>Map data flow: <code>PlayerOrder</code> → <code>ic-protocol</code> → <code>NetworkModel</code> → <code>TickOrders</code> → <code>Simulation::apply_tick()</code> → state hash → snapshot</li>
 <li>Identify every point where a game module plugs in (see D018 <code>GameModule</code> trait)</li>
@@ -440,7 +440,7 @@ Does NOT touch: ic-render, ic-net, ic-ui, ic-editor
 <tbody>
 <tr><td>1</td><td>Research Stratagus/Stargus engine architecture</td><td><code>research/</code></td><td>GitHub repos, AGENTS.md § Reference Material</td><td>—</td></tr>
 <tr><td>2</td><td>Create research document with findings</td><td><code>research/</code></td><td>Notes from #1</td><td>#1</td></tr>
-<tr><td>3</td><td>Extract lessons applicable to IC AI system</td><td><code>src/09-DECISIONS.md</code></td><td>Research doc from #2, D043 section</td><td>#2</td></tr>
+<tr><td>3</td><td>Extract lessons applicable to IC AI system</td><td><code>decisions/09d-gameplay.md</code></td><td>Research doc from #2, D043 section</td><td>#2</td></tr>
 <tr><td>4</td><td>Update modding docs with Lua AI primitives</td><td><code>src/04-MODDING.md</code></td><td>Research doc from #2, existing Lua API section</td><td>#2</td></tr>
 <tr><td>5</td><td>Update security docs with Lua stdlib policy</td><td><code>src/06-SECURITY.md</code></td><td>Research doc from #2, existing sandbox section</td><td>#2</td></tr>
 <tr><td>6</td><td>Update AGENTS.md reference material</td><td><code>AGENTS.md</code></td><td>Research doc from #2</td><td>#2</td></tr>
@@ -592,10 +592,10 @@ Does NOT touch: ic-render, ic-net, ic-ui, ic-editor
 <p><strong>When implementation contradicts the design, investigate.</strong> Sometimes the implementation is wrong (bug). Sometimes the design is wrong (bad assumption). Sometimes both need adjustment. Don’t reflexively change either one — understand <em>why</em> they disagree first.</p>
 </li>
 <li>
-<p><strong>Update the design doc in the same pass as the code change.</strong> If you change how the damage pipeline works, update <a href="02-ARCHITECTURE.html">02-ARCHITECTURE</a> § damage pipeline, <a href="09-DECISIONS.html">09-DECISIONS</a> § D028, and <code>AGENTS.md</code>. Don’t leave stale documentation for the next person to discover.</p>
+<p><strong>Update the design doc in the same pass as the code change.</strong> If you change how the damage pipeline works, update <a href="02-ARCHITECTURE.html">02-ARCHITECTURE</a> § damage pipeline, <a href="decisions/09c-modding.html">decisions/09c-modding.md</a> § D028, and <code>AGENTS.md</code>. Don’t leave stale documentation for the next person to discover.</p>
 </li>
 <li>
-<p><strong>Log design changes in <code>09-DECISIONS.md</code>.</strong> If a decision changes, don’t silently edit it. Add a note: “Revised from X to Y because implementation revealed Z.” The decision log is a history, not just a current snapshot.</p>
+<p><strong>Log design changes in the decisions sub-documents.</strong> If a decision changes, don’t silently edit it — find the decision in the appropriate sub-file via <a href="09-DECISIONS.html">09-DECISIONS.md</a> and add a note: “Revised from X to Y because implementation revealed Z.” The decision log is a history, not just a current snapshot.</p>
 </li>
 <li>
 <p><strong>Community feedback triggers design review.</strong> If the community consistently reports that a design choice doesn’t work in practice, that’s data. Evaluate it against the philosophy principles, and if the design is wrong, update it. See <a href="13-PHILOSOPHY.html">13-PHILOSOPHY</a> principle #2: “Fun beats documentation — if it’s in the doc but plays poorly, cut it.”</p>
@@ -656,7 +656,7 @@ Does NOT touch: ic-render, ic-net, ic-ui, ic-editor
 └──────────┬──────────────┘  "This adds a new precedent for stdlib policy."
            ▼                 "This reveals a gap we haven't addressed."
 ┌─────────────────────────┐
-│ 5. Propagate across     │  Update AGENTS.md, 09-DECISIONS.md, architecture,
+│ 5. Propagate across     │  Update AGENTS.md, decisions/*, architecture,
 │    design docs          │  roadmap, modding, security — every affected doc.
 └──────────┬──────────────┘  Use cross-cutting propagation discipline (Stage 5).
            ▼

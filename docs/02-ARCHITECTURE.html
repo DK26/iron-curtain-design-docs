@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-ac1e5ebd.js";
+            window.path_to_searchindex_js = "searchindex-c8692886.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-9e438da8.js"></script>
+        <script src="toc-b2bf7f58.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -182,7 +182,7 @@
                     <main>
                         <h1 id="02--core-architecture"><a class="header" href="#02--core-architecture">02 — Core Architecture</a></h1>
 <h2 id="decision-bevy"><a class="header" href="#decision-bevy">Decision: Bevy</a></h2>
-<p><strong>Rationale (revised — see D002 in <code>src/09-DECISIONS.md</code>):</strong></p>
+<p><strong>Rationale (revised — see D002 in <code>decisions/09a-foundation.md</code>):</strong></p>
 <ul>
 <li>ECS <em>is</em> our architecture — Bevy gives it to us with scheduling, queries, and parallel system execution out of the box</li>
 <li>Saves 2–4 months of engine plumbing (windowing, asset pipeline, audio, rendering scaffolding)</li>
@@ -445,7 +445,7 @@ pub trait FogProvider: Send + Sync {
     fn visible_entities(&amp;self, player: PlayerId) -&gt; &amp;[EntityId];
 }
 <span class="boring">}</span></code></pre>
-<p>RA1 registers <code>RadiusFogProvider</code> (circle-based, fast, matches original RA). RA2/TS would register <code>ElevationFogProvider</code> (raycasts against terrain heightmap). The future fog-authoritative <code>NetworkModel</code> reuses the same trait on the server side to determine which entities to send per client. See D041 in <code>09-DECISIONS.md</code> for full rationale.</p>
+<p>RA1 registers <code>RadiusFogProvider</code> (circle-based, fast, matches original RA). RA2/TS would register <code>ElevationFogProvider</code> (raycasts against terrain heightmap). The future fog-authoritative <code>NetworkModel</code> reuses the same trait on the server side to determine which entities to send per client. See D041 in <code>decisions/09d-gameplay.md</code> for full rationale.</p>
 <h4 id="entity-visibility-model"><a class="header" href="#entity-visibility-model">Entity Visibility Model</a></h4>
 <p>The <code>FogProvider</code> output determines how entities appear to each player. Following SC2’s proven model (see <code>research/blizzard-github-analysis.md</code> § 1.4), each entity observed by a player carries a <strong>visibility classification</strong> that controls which data fields are available:</p>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
@@ -539,1061 +539,12 @@ pub trait OrderValidator: Send + Sync {
     ) -&gt; OrderValidity;
 }
 <span class="boring">}</span></code></pre>
-<p>RA1 registers <code>StandardOrderValidator</code> (ownership, affordability, prerequisites, placement, rate limits). See D041 in <code>09-DECISIONS.md</code> for full design and <code>GameModule</code> trait integration.</p>
+<p>RA1 registers <code>StandardOrderValidator</code> (ownership, affordability, prerequisites, placement, rate limits). See D041 in <code>decisions/09d-gameplay.md</code> for full design and <code>GameModule</code> trait integration.</p>
 <h2 id="extended-gameplay-systems-ra1-module"><a class="header" href="#extended-gameplay-systems-ra1-module">Extended Gameplay Systems (RA1 Module)</a></h2>
-<p>The 9 core components above cover the skeleton. A playable Red Alert requires ~50 components and ~20 systems. This section designs every gameplay system identified in <code>11-OPENRA-FEATURES.md</code> § gap analysis, organized by functional domain.</p>
-<h3 id="power-system"><a class="header" href="#power-system">Power System</a></h3>
-<p>Every building generates or consumes power. Power deficit disables defenses and slows production — core C&amp;C economy.</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>/// Per-building power contribution.
-pub struct Power {
-    pub provides: i32,   // Power plants: positive
-    pub consumes: i32,   // Defenses, production buildings: positive
-}
-
-/// Marker: this building goes offline during power outage.
-pub struct AffectedByPowerOutage;
-
-/// Player-level resource (not a component — stored in PlayerState).
-pub struct PowerManager {
-    pub total_capacity: i32,
-    pub total_drain: i32,
-    pub low_power: bool,  // drain &gt; capacity
-}
-<span class="boring">}</span></code></pre>
-<p><strong><code>power_system()</code> logic:</strong> Sum all <code>Power</code> components per player → update <code>PowerManager</code>. When <code>low_power</code> is true, buildings with <code>AffectedByPowerOutage</code> have their production rates halved and defenses fire at reduced rate (via condition system, D028). Power bar UI reads <code>PowerManager</code> from <code>ic-ui</code>.</p>
-<p><strong>YAML:</strong></p>
-<pre><code class="language-yaml">power_plant:
-  power: { provides: 100 }
-tesla_coil:
-  power: { consumes: 75 }
-  affected_by_power_outage: true
-</code></pre>
-<h3 id="full-damage-pipeline-d028"><a class="header" href="#full-damage-pipeline-d028">Full Damage Pipeline (D028)</a></h3>
-<p>The complete weapon → projectile → warhead chain:</p>
-<pre><code>Armament fires → Projectile entity spawned → projectile_system() advances it
-  → hit detection (range, homing, ballistic arc)
-  → Warhead(s) applied at impact point
-    → target validity (TargetTypes, stances)
-    → spread/falloff calculation (distance from impact)
-    → Versus table lookup (ArmorType × WarheadType → damage multiplier)
-    → DamageMultiplier modifiers (veterancy, terrain, conditions)
-    → Health reduced
-</code></pre>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>/// A fired projectile — exists as its own entity during flight.
-pub struct Projectile {
-    pub weapon_id: WeaponId,
-    pub source: EntityId,
-    pub owner: PlayerId,
-    pub target: ProjectileTarget,
-    pub speed: i32,            // fixed-point
-    pub warheads: Vec&lt;WarheadId&gt;,
-    pub inaccuracy: i32,       // scatter radius at target
-    pub projectile_type: ProjectileType,
-}
-
-pub enum ProjectileType {
-    Bullet,         // instant-hit (hitscan)
-    Missile { tracking: i32, rof_jitter: i32 },  // homing
-    Ballistic { gravity: i32 },                    // arcing (artillery)
-    Beam { duration: u32 },                        // continuous ray
-}
-
-pub enum ProjectileTarget {
-    Entity(EntityId),
-    Ground(WorldPos),
-}
-
-/// Warhead definition — loaded from YAML, shared (not per-entity).
-pub struct WarheadDef {
-    pub spread: i32,           // area of effect radius
-    pub versus: VersusTable,   // ArmorType → damage percentage
-    pub damage: i32,           // base damage value
-    pub falloff: Vec&lt;i32&gt;,     // damage multiplier at distance steps
-    pub valid_targets: Vec&lt;TargetType&gt;,
-    pub invalid_targets: Vec&lt;TargetType&gt;,
-    pub effects: Vec&lt;WarheadEffect&gt;,  // screen shake, spawn fire, etc.
-}
-
-/// ArmorType × WarheadType → percentage (100 = full damage)
-/// Loaded from YAML Versus table — identical format to OpenRA.
-/// Flat array indexed by ArmorType discriminant for O(1) lookup in the combat
-/// hot path — no per-hit HashMap overhead. ArmorType is a small enum (&lt;16 variants)
-/// so the array fits in a single cache line.
-pub struct VersusTable {
-    pub modifiers: [i32; ArmorType::COUNT],  // index = ArmorType as usize
-}
-<span class="boring">}</span></code></pre>
-<p><strong><code>projectile_system()</code> logic:</strong> For each <code>Projectile</code> entity: advance position by <code>speed</code>, check if arrived at target. On arrival, iterate <code>warheads</code>, apply each to entities in <code>spread</code> radius using <code>SpatialIndex::query_range()</code>. For each target: check <code>valid_targets</code>, look up <code>VersusTable</code>, apply <code>DamageMultiplier</code> conditions, reduce <code>Health</code>. If <code>Health.current &lt;= 0</code>, mark for <code>death_system()</code>.</p>
-<p><strong>YAML (weapon + warhead, OpenRA-compatible):</strong></p>
-<pre><code class="language-yaml">weapons:
-  105mm:
-    range: 5120          # in world units (fixed-point)
-    rate_of_fire: 80     # ticks between shots
-    projectile:
-      type: bullet
-      speed: 682
-    warheads:
-      - type: spread_damage
-        damage: 60
-        spread: 426
-        versus:
-          none: 100
-          light: 80
-          medium: 60
-          heavy: 40
-          wood: 120
-          concrete: 30
-        falloff: [100, 50, 25, 0]
-</code></pre>
-<h3 id="damageresolver-trait-d041"><a class="header" href="#damageresolver-trait-d041">DamageResolver Trait (D041)</a></h3>
-<p>The damage pipeline above describes the RA1 resolution algorithm. The <em>data</em> (warheads, versus tables, modifiers) is YAML-configurable, but the <em>resolution order</em> — what happens between warhead impact and health reduction — varies between game modules. RA2 needs shield-first resolution; Generals-class games need sub-object targeting. The <code>DamageResolver</code> trait abstracts this step:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>/// Game modules implement this to define damage resolution order.
-/// Called by projectile_system() after hit detection and before health reduction.
-pub trait DamageResolver: Send + Sync {
-    fn resolve_damage(
-        &amp;self,
-        warhead: &amp;WarheadDef,
-        target: &amp;DamageTarget,
-        modifiers: &amp;StatModifiers,
-        distance_from_impact: SimCoord,
-    ) -&gt; DamageResult;
-}
-
-pub struct DamageTarget {
-    pub entity: EntityId,
-    pub armor_type: ArmorType,
-    pub current_health: i32,
-    pub shield: Option&lt;ShieldState&gt;,
-    pub conditions: Conditions,
-}
-
-pub struct DamageResult {
-    pub health_damage: i32,
-    pub shield_damage: i32,
-    pub conditions_applied: Vec&lt;(ConditionId, u32)&gt;,
-    pub overkill: i32,
-}
-<span class="boring">}</span></code></pre>
-<p>RA1 registers <code>StandardDamageResolver</code> (Versus table → falloff → multiplier stack → health). RA2 would register <code>ShieldFirstDamageResolver</code>. See D041 in <code>09-DECISIONS.md</code> for full rationale and alternative implementations.</p>
-<h3 id="support-powers--superweapons"><a class="header" href="#support-powers--superweapons">Support Powers / Superweapons</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>/// Attached to the building that provides the power (e.g., Chronosphere, Iron Curtain device).
-pub struct SupportPower {
-    pub power_type: SupportPowerType,
-    pub charge_time: u32,          // ticks to fully charge
-    pub current_charge: u32,       // ticks accumulated
-    pub ready: bool,
-    pub one_shot: bool,            // nukes: consumed on use; Chronosphere: recharges
-    pub targeting: TargetingMode,
-}
-
-pub enum TargetingMode {
-    Point,                   // click a cell (nuke)
-    Area { radius: i32 },   // area selection (Iron Curtain effect)
-    Directional,             // select origin + target cell (Chronoshift)
-}
-
-pub enum SupportPowerType {
-    /// Defined by YAML — these are RA1 defaults, but the enum is data-driven.
-    Named(String),
-}
-
-/// Player-level tracking.
-pub struct SupportPowerManager {
-    pub powers: Vec&lt;SupportPowerStatus&gt;, // one per owned support building
-}
-<span class="boring">}</span></code></pre>
-<p><strong><code>support_power_system()</code> logic:</strong> For each entity with <code>SupportPower</code>: increment <code>current_charge</code> each tick. When <code>current_charge &gt;= charge_time</code>, set <code>ready = true</code>. UI shows charge bar. Activation comes via player order (sim validates ownership + readiness), then applies warheads/effects at target location.</p>
-<h3 id="building-mechanics"><a class="header" href="#building-mechanics">Building Mechanics</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>/// Build radius — buildings can only be placed near existing structures.
-pub struct BuildArea {
-    pub range: i32,   // cells from building edge
-}
-
-/// Primary building marker — determines which building produces (e.g., primary war factory).
-pub struct PrimaryBuilding;
-
-/// Rally point — newly produced units move here.
-pub struct RallyPoint {
-    pub target: WorldPos,
-}
-
-/// Building exit points — where produced units spawn.
-pub struct Exit {
-    pub offsets: Vec&lt;CellPos&gt;,   // spawn positions relative to building origin
-}
-
-/// Building can be sold.
-pub struct Sellable {
-    pub refund_percent: i32,  // typically 50
-    pub sell_time: u32,       // ticks for sell animation
-}
-
-/// Building can be repaired (by player spending credits).
-pub struct Repairable {
-    pub repair_rate: i32,     // HP per tick while repairing
-    pub repair_cost_per_hp: i32,
-}
-
-/// Gate — wall segment that opens for friendly units.
-pub struct Gate {
-    pub open_delay: u32,
-    pub close_delay: u32,
-    pub state: GateState,
-}
-
-pub enum GateState { Open, Closed, Opening, Closing }
-
-/// Wall-specific: enables line-build placement.
-pub struct LineBuild;
-<span class="boring">}</span></code></pre>
-<p><strong>Building placement validation</strong> (in <code>apply_orders()</code> → order validation):</p>
-<ol>
-<li>Check footprint fits terrain (no water, no cliffs, no existing buildings)</li>
-<li>Check within build radius of at least one friendly <code>BuildArea</code> provider</li>
-<li>Check prerequisites met (from <code>Buildable.prereqs</code>)</li>
-<li>Deduct cost → start build animation → spawn building entity</li>
-</ol>
-<h3 id="production-queue"><a class="header" href="#production-queue">Production Queue</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>/// A production queue (each building type has its own queue).
-pub struct ProductionQueue {
-    pub queue_type: QueueType,
-    pub items: Vec&lt;ProductionItem&gt;,
-    pub parallel: bool,           // RA2: parallel production per factory
-    pub paused: bool,
-}
-
-pub struct ProductionItem {
-    pub actor_type: ActorId,
-    pub remaining_cost: i32,
-    pub remaining_time: u32,
-    pub paid: i32,               // credits paid so far (for pause/resume)
-    pub infinite: bool,          // repeat production (hold queue)
-}
-<span class="boring">}</span></code></pre>
-<p><strong><code>production_system()</code> logic:</strong> For each <code>ProductionQueue</code>: if not paused and not empty, advance front item. Deduct credits incrementally (one tick’s worth per tick — production slows when credits run out). When <code>remaining_time == 0</code>, spawn unit at building’s <code>Exit</code> position, send to <code>RallyPoint</code> if set.</p>
-<h4 id="production-model-diversity"><a class="header" href="#production-model-diversity">Production Model Diversity</a></h4>
-<p>The <code>ProductionQueue</code> above describes the classic C&amp;C sidebar model, but production is one of the most varied mechanics across RTS games — even within the OpenRA mod ecosystem. Analysis of six major OpenRA mods (see <code>research/openra-mod-architecture-analysis.md</code>) reveals at least five distinct production models:</p>
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th>Model</th><th>Game</th><th>Description</th></tr>
-</thead>
-<tbody>
-<tr><td>Global sidebar</td><td>RA1, TD</td><td>One queue per unit category, shared across all factories of that type</td></tr>
-<tr><td>Tabbed sidebar</td><td>RA2</td><td>Multiple parallel queues, one per factory building</td></tr>
-<tr><td>Per-building on-site</td><td>KKnD (OpenKrush)</td><td>Each building has its own queue and rally point; no sidebar</td></tr>
-<tr><td>Single-unit selection</td><td>Dune II (d2)</td><td>Select one building, build one item — no queue at all</td></tr>
-<tr><td>Colony-based</td><td>Swarm Assault (OpenSA)</td><td>Capture colony buildings for production; no construction yard</td></tr>
-</tbody>
-</table>
-</div>
-<p>The engine must not hardcode any of these. The <code>production_system()</code> described above is the RA1 game module’s implementation. Other game modules register their own production system via <code>GameModule::system_pipeline()</code>. The <code>ProductionQueue</code> component is defined by the game module, not the engine core. A KKnD-style module might define a <code>PerBuildingProductionQueue</code> component with different constraints; a Dune II module might omit queue mechanics entirely and use a <code>SingleItemProduction</code> component.</p>
-<p>This is a key validation of invariant #9 (engine core is game-agnostic): if a non-C&amp;C total conversion on our engine needs a fundamentally different production model, the engine should not resist it.</p>
-<h3 id="resource--ore-model"><a class="header" href="#resource--ore-model">Resource / Ore Model</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>/// Ore/gem cell data — stored per map cell (in a resource layer, not as entities).
-pub struct ResourceCell {
-    pub resource_type: ResourceType,
-    pub amount: i32,     // depletes as harvested
-    pub max_amount: i32,
-    pub growth_rate: i32, // ore regrows; gems don't (YAML-configured)
-}
-
-/// Storage capacity — silos and refineries.
-pub struct ResourceStorage {
-    pub capacity: i32,
-}
-<span class="boring">}</span></code></pre>
-<p><strong><code>harvester_system()</code> logic:</strong></p>
-<ol>
-<li>Harvester navigates to nearest <code>ResourceCell</code> with amount &gt; 0</li>
-<li>Harvester mines: transfers resource from cell to <code>Harvester.capacity</code></li>
-<li>When full (or cell depleted): navigate to nearest <code>DockHost</code> with <code>DockType::Refinery</code></li>
-<li>Dock, transfer resources → credits (via resource value table)</li>
-<li>If no refinery, wait. If no ore, scout for new fields.</li>
-</ol>
-<p>Player receives “silos needed” notification when total stored exceeds total <code>ResourceStorage.capacity</code>.</p>
-<h3 id="transport--cargo"><a class="header" href="#transport--cargo">Transport / Cargo</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>pub struct Cargo {
-    pub max_weight: u32,
-    pub current_weight: u32,
-    pub passengers: Vec&lt;EntityId&gt;,
-    pub unload_delay: u32,
-}
-
-pub struct Passenger {
-    pub weight: u32,
-    pub custom_pip: Option&lt;PipType&gt;,  // minimap/selection pip color
-}
-
-/// For carryall-style air transport.
-pub struct Carryall {
-    pub carry_target: Option&lt;EntityId&gt;,
-}
-
-/// Eject passengers on death (not all transports — YAML-configured).
-pub struct EjectOnDeath;
-
-/// ParaDrop capability — drop passengers from air.
-pub struct ParaDrop {
-    pub drop_interval: u32,  // ticks between each passenger exiting
-}
-<span class="boring">}</span></code></pre>
-<p><strong>Load order:</strong> Player issues load order → <code>movement_system()</code> moves passenger to transport → when adjacent, remove passenger from world, add to <code>Cargo.passengers</code>. <strong>Unload order:</strong> Deploy order → eject passengers one by one at <code>Exit</code> positions, delay between each.</p>
-<h3 id="capture--ownership"><a class="header" href="#capture--ownership">Capture / Ownership</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>pub struct Capturable {
-    pub capture_types: Vec&lt;CaptureType&gt;,  // engineer, proximity
-    pub capture_threshold: i32,           // required capture points
-    pub current_progress: i32,
-    pub capturing_entity: Option&lt;EntityId&gt;,
-}
-
-pub struct Captures {
-    pub speed: i32,              // capture points per tick
-    pub capture_type: CaptureType,
-    pub consumed: bool,          // engineer is consumed on capture (RA1 behavior)
-}
-
-pub enum CaptureType { Infantry, Proximity }
-<span class="boring">}</span></code></pre>
-<p><strong><code>capture_system()</code> logic:</strong> For each entity with <code>Capturable</code> being captured: increment <code>current_progress</code> by capturer’s <code>speed</code>. When <code>current_progress &gt;= capture_threshold</code>, transfer ownership to capturer’s player. If <code>consumed</code>, destroy capturer. Reset progress on interruption (capturer killed or moved away).</p>
-<h3 id="stealth--cloak"><a class="header" href="#stealth--cloak">Stealth / Cloak</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>pub struct Cloak {
-    pub cloak_delay: u32,         // ticks after last action before cloaking
-    pub cloak_types: Vec&lt;CloakType&gt;,
-    pub ticks_since_action: u32,
-    pub is_cloaked: bool,
-    pub reveal_on_fire: bool,
-    pub reveal_on_move: bool,
-}
-
-pub struct DetectCloaked {
-    pub range: i32,
-    pub detect_types: Vec&lt;CloakType&gt;,
-}
-
-pub enum CloakType { Stealth, Underwater, Disguise, GapGenerator }
-<span class="boring">}</span></code></pre>
-<p><strong><code>cloak_system()</code> logic:</strong> For each <code>Cloak</code> entity: if <code>reveal_on_fire</code> and fired this tick, reset <code>ticks_since_action</code>. If <code>reveal_on_move</code> and moved this tick, reset. Otherwise increment <code>ticks_since_action</code>. When above <code>cloak_delay</code>, set <code>is_cloaked = true</code>. Rendering: cloaked and no enemy <code>DetectCloaked</code> in range → invisible. Cloaked but detected → shimmer effect. Fog system integration: cloaked entities hidden from enemy even in explored area unless detector present.</p>
-<h3 id="infantry-mechanics"><a class="header" href="#infantry-mechanics">Infantry Mechanics</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>/// Infantry sub-cell positioning — up to 5 infantry per cell.
-pub struct InfantryBody {
-    pub sub_cell: SubCell,  // Center, TopLeft, TopRight, BottomLeft, BottomRight
-}
-
-pub enum SubCell { Center, TopLeft, TopRight, BottomLeft, BottomRight }
-
-/// Panic flee behavior (e.g., civilians, dogs).
-pub struct ScaredyCat {
-    pub flee_range: i32,
-    pub panic_ticks: u32,
-}
-
-/// Take cover / prone — reduces damage, reduces speed.
-pub struct TakeCover {
-    pub damage_modifier: i32,   // e.g., 50 (half damage)
-    pub speed_modifier: i32,    // e.g., 50 (half speed)
-    pub prone_delay: u32,       // ticks to transition to prone
-}
-<span class="boring">}</span></code></pre>
-<p><strong><code>movement_system()</code> integration for infantry:</strong> When infantry moves into a cell, assigns <code>SubCell</code> based on available slots. Up to 5 infantry share one cell in different visual positions. When attacked, infantry with <code>TakeCover</code> auto-goes prone (grants condition “prone” → <code>DamageMultiplier</code> of 50%).</p>
-<h3 id="death-mechanics"><a class="header" href="#death-mechanics">Death Mechanics</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>/// Spawn an actor when this entity dies (husks, ejected pilots).
-pub struct SpawnOnDeath {
-    pub actor_type: ActorId,
-    pub probability: i32,   // 0-100, default 100
-}
-
-/// Explode on death — apply warheads at position.
-pub struct ExplodeOnDeath {
-    pub warheads: Vec&lt;WarheadId&gt;,
-}
-
-/// Timed self-destruct (demo truck, C4 charge).
-pub struct SelfDestruct {
-    pub timer: u32,        // ticks remaining
-    pub warheads: Vec&lt;WarheadId&gt;,
-}
-
-/// Damage visual states.
-pub struct DamageStates {
-    pub thresholds: Vec&lt;DamageThreshold&gt;,
-}
-
-pub struct DamageThreshold {
-    pub hp_percent: i32,   // below this → enter this state
-    pub state: DamageState,
-}
-
-pub enum DamageState { Undamaged, Light, Medium, Heavy, Critical }
-
-/// Victory condition marker — this entity must be destroyed to win.
-pub struct MustBeDestroyed;
-<span class="boring">}</span></code></pre>
-<p><strong><code>death_system()</code> logic:</strong> For entities with <code>Health.current &lt;= 0</code>: check <code>SpawnOnDeath</code> → spawn husk/pilot. Check <code>ExplodeOnDeath</code> → apply warheads at position. Remove entity from world and spatial index. For <code>SelfDestruct</code>: decrement timer each tick in a pre-death pass; when 0, kill the entity (triggers normal death path).</p>
-<h3 id="transform--deploy"><a class="header" href="#transform--deploy">Transform / Deploy</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>/// Actor can transform into another type (MCV ↔ ConYard, siege deploy/undeploy).
-pub struct Transforms {
-    pub into: ActorId,
-    pub delay: u32,              // ticks for transformation
-    pub facing: Option&lt;i32&gt;,     // required facing to transform
-    pub condition: Option&lt;ConditionId&gt;,  // condition granted during transform
-}
-<span class="boring">}</span></code></pre>
-<p><strong>Processing:</strong> Player issues deploy order → <code>transform_system()</code> starts countdown. During <code>delay</code>, entity is immobile (grants condition “deploying”). After delay, replace entity with <code>into</code> actor type, preserving health percentage, owner, and veterancy.</p>
-<h3 id="docking-system"><a class="header" href="#docking-system">Docking System</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>/// Building or unit that accepts docking (refinery, helipad, repair pad).
-pub struct DockHost {
-    pub dock_type: DockType,
-    pub dock_position: CellPos,  // where the client unit sits
-    pub queue: Vec&lt;EntityId&gt;,    // waiting to dock
-    pub occupied: bool,
-}
-
-/// Unit that needs to dock (harvester, aircraft, damaged vehicle for repair pad).
-pub struct DockClient {
-    pub dock_type: DockType,
-}
-
-pub enum DockType { Refinery, Helipad, RepairPad }
-<span class="boring">}</span></code></pre>
-<p><strong><code>docking_system()</code> logic:</strong> For each <code>DockHost</code>: if not occupied and queue non-empty, pull front of queue, guide to <code>dock_position</code>. When docked: execute dock-type-specific logic (refinery → transfer resources; helipad → reload ammo; repair pad → heal). When done, release and advance queue.</p>
-<h3 id="veterancy--experience"><a class="header" href="#veterancy--experience">Veterancy / Experience</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>/// This unit gains XP from kills.
-pub struct GainsExperience {
-    pub current_xp: i32,
-    pub level: VeterancyLevel,
-    pub thresholds: Vec&lt;i32&gt;,      // XP required for each level transition
-    pub level_conditions: Vec&lt;ConditionId&gt;,  // conditions granted at each level
-}
-
-/// This unit awards XP when killed (based on its cost/value).
-pub struct GivesExperience {
-    pub value: i32,   // XP awarded to killer
-}
-
-pub enum VeterancyLevel { Rookie, Veteran, Elite, Heroic }
-<span class="boring">}</span></code></pre>
-<p><strong><code>veterancy_system()</code> logic:</strong> When <code>death_system()</code> removes an entity with <code>GivesExperience</code>, the killer (if it has <code>GainsExperience</code>) receives <code>value</code> XP. Check <code>thresholds</code>: if XP crosses a boundary, advance <code>level</code> and grant the corresponding condition. Conditions trigger multipliers: veteran = +25% firepower/+25% armor; elite = +50%/+50% + self-heal; heroic = +75%/+75% + faster fire rate (all values from YAML, not hardcoded).</p>
-<p><strong>Campaign carry-over (D021):</strong> <code>GainsExperience.current_xp</code> and <code>level</code> are part of the roster snapshot saved between campaign missions.</p>
-<h3 id="guard-command"><a class="header" href="#guard-command">Guard Command</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>pub struct Guard {
-    pub target: EntityId,
-    pub leash_range: i32,   // max distance from target before returning
-}
-
-pub struct Guardable;  // marker: can be guarded
-<span class="boring">}</span></code></pre>
-<p><strong>Processing in <code>apply_orders()</code>:</strong> Guard order assigns <code>Guard</code> component. <code>combat_system()</code> integration: if a guarding unit’s target is attacked and attacker is within leash range, engage attacker. If target moves beyond leash range, follow.</p>
-<h3 id="crush-mechanics"><a class="header" href="#crush-mechanics">Crush Mechanics</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>pub struct Crushable {
-    pub crush_class: CrushClass,
-}
-
-pub enum CrushClass { Infantry, Wall, Hedgehog }
-
-/// Vehicles that auto-crush when moving over crushable entities.
-pub struct Crusher {
-    pub crush_classes: Vec&lt;CrushClass&gt;,
-}
-<span class="boring">}</span></code></pre>
-<p><strong><code>crush_system()</code> logic:</strong> After <code>movement_system()</code>, for each entity with <code>Crusher</code> that moved this tick: query <code>SpatialIndex</code> at new position for entities with matching <code>Crushable.crush_class</code>. Apply instant kill to crushed entities.</p>
-<h3 id="crate-system"><a class="header" href="#crate-system">Crate System</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>pub struct Crate {
-    pub action_pool: Vec&lt;CrateAction&gt;,  // weighted random selection
-}
-
-pub enum CrateAction {
-    Cash { amount: i32 },
-    Unit { actor_type: ActorId },
-    Heal { percent: i32 },
-    LevelUp,
-    MapReveal,
-    Explode { warhead: WarheadId },
-    Cloak { duration: u32 },
-    Speed { multiplier: i32, duration: u32 },
-}
-
-/// World-level system resource.
-pub struct CrateSpawner {
-    pub max_crates: u32,
-    pub spawn_interval: u32,   // ticks between spawn attempts
-    pub spawn_area: SpawnArea,
-}
-<span class="boring">}</span></code></pre>
-<p><strong><code>crate_system()</code> logic:</strong> Periodically spawn crates (up to <code>max_crates</code>). When a unit moves onto a crate: pick random <code>CrateAction</code>, apply effect to collecting unit/player. Remove crate entity.</p>
-<h3 id="mine-system"><a class="header" href="#mine-system">Mine System</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>pub struct Mine {
-    pub trigger_types: Vec&lt;TargetType&gt;,
-    pub warhead: WarheadId,
-    pub visible_to_owner: bool,
-}
-
-pub struct Minelayer {
-    pub mine_type: ActorId,
-    pub lay_delay: u32,
-}
-<span class="boring">}</span></code></pre>
-<p><strong><code>mine_system()</code> logic:</strong> After <code>movement_system()</code>, for each <code>Mine</code>: query spatial index for entities at mine position matching <code>trigger_types</code>. On contact: apply warhead, destroy mine. Mines are invisible to enemy unless detected by mine-sweeper unit (uses <code>DetectCloaked</code> with <code>CloakType::Stealth</code>).</p>
-<h3 id="notification-system"><a class="header" href="#notification-system">Notification System</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>pub struct NotificationEvent {
-    pub event_type: NotificationType,
-    pub position: Option&lt;WorldPos&gt;,  // for spatial notifications
-    pub player: PlayerId,
-}
-
-pub enum NotificationType {
-    UnitLost,
-    BaseUnderAttack,
-    HarvesterUnderAttack,
-    BuildingCaptured,
-    LowPower,
-    SilosNeeded,
-    InsufficientFunds,
-    BuildingComplete,
-    UnitReady,
-    NuclearLaunchDetected,
-    EnemySpotted,
-    ReinforcementsArrived,
-}
-
-/// Per-notification-type cooldown (avoid spam).
-/// Flat array indexed by NotificationType discriminant — small fixed enum,
-/// avoids HashMap overhead on a per-event check.
-pub struct NotificationCooldowns {
-    pub cooldowns: [u32; NotificationType::COUNT],  // ticks remaining, index = variant as usize
-    pub default_cooldown: u32,                       // typically 150 ticks (~10 sec)
-}
-<span class="boring">}</span></code></pre>
-<p><strong><code>notification_system()</code> logic:</strong> Collects events from other systems (combat → “base under attack”, production → “building complete”, power → “low power”). Checks cooldown for each type. If not on cooldown, queues notification for <code>ic-audio</code> (EVA voice line) and <code>ic-ui</code> (text overlay). Audio mapping is YAML-driven:</p>
-<pre><code class="language-yaml">notifications:
-  base_under_attack: { audio: "BATL1.AUD", priority: high, cooldown: 300 }
-  building_complete: { audio: "CONSTRU2.AUD", priority: normal, cooldown: 0 }
-  low_power: { audio: "LOPOWER1.AUD", priority: high, cooldown: 600 }
-</code></pre>
-<h3 id="cursor-system"><a class="header" href="#cursor-system">Cursor System</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>/// Determines which cursor shows when hovering over a target.
-pub struct CursorProvider {
-    pub cursor_map: HashMap&lt;CursorContext, CursorDef&gt;,
-}
-
-pub enum CursorContext {
-    Default,
-    Move,
-    Attack,
-    AttackForce,     // force-fire on ground
-    Capture,
-    Enter,           // enter transport/building
-    Deploy,
-    Sell,
-    Repair,
-    Guard,
-    SupportPower(SupportPowerType),
-    Chronoshift,
-    Nuke,
-    Harvest,
-    Impassable,
-}
-
-pub struct CursorDef {
-    pub sprite: SpriteId,
-    pub hotspot: (i32, i32),
-    pub sequence: Option&lt;AnimSequence&gt;,  // animated cursors
-}
-<span class="boring">}</span></code></pre>
-<p><strong>Logic:</strong> Each frame (render-side, not sim), determine cursor context from: selected units, hovered entity/terrain, active command mode (sell, repair, support power), force modifiers (Ctrl = force-fire, Alt = force-move). Look up <code>CursorDef</code> from <code>CursorProvider</code>. Display.</p>
-<h3 id="hotkey-system"><a class="header" href="#hotkey-system">Hotkey System</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>pub struct HotkeyConfig {
-    pub bindings: HashMap&lt;ActionId, Vec&lt;KeyCombo&gt;&gt;,
-    pub profiles: HashMap&lt;String, HotkeyProfile&gt;,
-}
-
-pub struct KeyCombo {
-    pub key: KeyCode,
-    pub modifiers: Modifiers,  // Ctrl, Shift, Alt
-}
-<span class="boring">}</span></code></pre>
-<p><strong>Built-in profiles:</strong></p>
-<ul>
-<li><code>classic</code> — original RA1 keybindings</li>
-<li><code>openra</code> — OpenRA defaults</li>
-<li><code>modern</code> — WASD camera, common RTS conventions</li>
-</ul>
-<p>Fully rebindable in settings UI. Categories: unit commands, production, control groups, camera, chat, debug. Hotkeys produce <code>PlayerOrder</code>s through <code>InputSource</code> — the sim never sees key codes.</p>
-<h3 id="camera-system"><a class="header" href="#camera-system">Camera System</a></h3>
-<p>The camera is a purely render-side concern — the sim has no camera concept (Invariant #1). Camera state lives as a Bevy <code>Resource</code> in <code>ic-render</code>, read by the rendering pipeline and <code>ic-ui</code> (minimap, spatial audio listener position). The <code>ScreenToWorld</code> trait (see § “Portability Design Rules”) converts screen coordinates to world positions; the camera system controls what region of the world is visible.</p>
-<h4 id="core-types"><a class="header" href="#core-types">Core Types</a></h4>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>/// Central camera state — a Bevy Resource in ic-render.
-/// NOT part of the sim. Save/restore for save games is serialized separately
-/// (alongside other client-side state like UI layout and audio volume).
-#[derive(Resource)]
-pub struct GameCamera {
-    /// World position the camera is centered on (render-side f32, not sim fixed-point).
-    pub position: Vec2,
-    /// Current zoom level. 1.0 = default view. &lt;1.0 = zoomed out, &gt;1.0 = zoomed in.
-    pub zoom: f32,
-    /// Zoom limits — enforced every frame. Ranked/tournament modes clamp these further.
-    pub zoom_min: f32,  // default: 0.5 (see twice as much map)
-    pub zoom_max: f32,  // default: 4.0 (pixel-level inspection)
-    /// Map bounds in world coordinates — camera cannot scroll past these.
-    pub bounds: Rect,
-    /// Smooth interpolation factor for zoom (0.0–1.0 per frame, lerp toward target).
-    pub zoom_smoothing: f32,  // default: 0.15
-    /// Smooth interpolation factor for pan.
-    pub pan_smoothing: f32,   // default: 0.2
-    /// Internal: zoom target for smooth interpolation.
-    pub zoom_target: f32,
-    /// Internal: position target for smooth pan (e.g., centering on selection).
-    pub position_target: Vec2,
-    /// Edge scroll speed in world-units per second (scaled by current zoom).
-    pub edge_scroll_speed: f32,
-    /// Keyboard pan speed in world-units per second (scaled by current zoom).
-    pub keyboard_pan_speed: f32,
-    /// Follow mode: lock camera to a unit or player's view.
-    pub follow_target: Option&lt;FollowTarget&gt;,
-    /// Screen shake state (driven by explosions, nukes, superweapons).
-    pub shake: ScreenShake,
-}
-
-pub enum FollowTarget {
-    Unit(UnitTag),               // follow a specific unit (observer, cinematic)
-    Player(PlayerId),            // lock to a player's viewport (observer mode)
-}
-
-pub struct ScreenShake {
-    pub amplitude: f32,          // current intensity (decays over time)
-    pub decay_rate: f32,         // amplitude reduction per second
-    pub frequency: f32,          // oscillation speed
-    pub offset: Vec2,            // current frame's shake offset (applied to final transform)
-}
-<span class="boring">}</span></code></pre>
-<h4 id="zoom-behavior"><a class="header" href="#zoom-behavior">Zoom Behavior</a></h4>
-<p>Zoom modifies the <code>OrthographicProjection.scale</code> on the Bevy camera entity. A zoom of 1.0 maps to the default viewport size for the active render mode (D048). Zooming out (<code>zoom &lt; 1.0</code>) shows more of the map; zooming in (<code>zoom &gt; 1.0</code>) magnifies the view.</p>
-<p><strong>Input methods:</strong></p>
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th>Input</th><th>Action</th><th>Platform</th></tr>
-</thead>
-<tbody>
-<tr><td>Mouse scroll wheel</td><td>Zoom toward/away from cursor position</td><td>Desktop</td></tr>
-<tr><td>+/- keys</td><td>Zoom toward/away from screen center</td><td>Desktop</td></tr>
-<tr><td>Pinch gesture</td><td>Zoom toward/away from pinch midpoint</td><td>Touch/mobile</td></tr>
-<tr><td><code>/zoom &lt;level&gt;</code> cmd</td><td>Set zoom to exact value (D058)</td><td>All</td></tr>
-<tr><td>Ctrl+scroll</td><td>Fine zoom (half step size)</td><td>Desktop</td></tr>
-<tr><td>Minimap scroll</td><td>Zoom the minimap’s own viewport independently</td><td>All</td></tr>
-</tbody>
-</table>
-</div>
-<p><strong>Zoom-toward-cursor</strong> is the expected UX for isometric games (SC2, AoE2, OpenRA all do this). When the player scrolls the mouse wheel, the world point under the cursor stays fixed on screen — the camera position shifts to compensate for the scale change. This requires adjusting <code>position</code> alongside <code>zoom</code>:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>fn zoom_toward_cursor(camera: &amp;mut GameCamera, cursor_world: Vec2, scroll_delta: f32) {
-    let old_zoom = camera.zoom_target;
-    camera.zoom_target = (old_zoom + scroll_delta * ZOOM_STEP)
-        .clamp(camera.zoom_min, camera.zoom_max);
-    // Shift position so the cursor's world point stays at the same screen location.
-    let zoom_ratio = camera.zoom_target / old_zoom;
-    camera.position_target = cursor_world + (camera.position_target - cursor_world) * zoom_ratio;
-}
-<span class="boring">}</span></code></pre>
-<p><strong>Smooth interpolation:</strong> The actual <code>zoom</code> and <code>position</code> values lerp toward their targets each frame:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>fn camera_interpolation(camera: &amp;mut GameCamera, dt: f32) {
-    let t_zoom = 1.0 - (1.0 - camera.zoom_smoothing).powf(dt * 60.0);
-    camera.zoom = camera.zoom.lerp(camera.zoom_target, t_zoom);
-    let t_pan = 1.0 - (1.0 - camera.pan_smoothing).powf(dt * 60.0);
-    camera.position = camera.position.lerp(camera.position_target, t_pan);
-}
-<span class="boring">}</span></code></pre>
-<p>This frame-rate-independent smoothing (exponential lerp) feels identical at 30 fps and 240 fps. The <code>powf()</code> call is once per frame, not per entity — negligible cost.</p>
-<p><strong>Discrete vs. continuous:</strong> Keyboard zoom (+/-) uses discrete steps (e.g., 0.25 increments). Mouse scroll uses finer steps (0.1). Both feed <code>zoom_target</code> and smooth toward it. There is NO “snap to integer zoom” constraint — smooth zoom is the default behavior. Classic render mode (D048) with integer scaling uses the same smooth zoom for camera movement but snaps the <code>OrthographicProjection.scale</code> to the nearest integer multiple when rendering, preventing sub-pixel shimmer on pixel art.</p>
-<h4 id="zoom-interaction-with-render-modes-d048"><a class="header" href="#zoom-interaction-with-render-modes-d048">Zoom Interaction with Render Modes (D048)</a></h4>
-<p>Different render modes have different zoom characteristics:</p>
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th>Render Mode</th><th>Default Zoom</th><th>Zoom Range</th><th>Scaling Behavior</th></tr>
-</thead>
-<tbody>
-<tr><td>Classic</td><td>1.0</td><td>0.5–3.0</td><td>Integer-scale snap for rendering; smooth camera movement</td></tr>
-<tr><td>HD</td><td>1.0</td><td>0.5–4.0</td><td>Fully smooth — no snap needed at any zoom level</td></tr>
-<tr><td>3D</td><td>1.0</td><td>0.25–6.0</td><td>Perspective FOV adjustment, not orthographic scale</td></tr>
-</tbody>
-</table>
-</div>
-<p>When a render mode switch occurs (F1 / D048), the camera system adjusts:</p>
-<ul>
-<li><code>zoom_min</code> / <code>zoom_max</code> to the new mode’s range</li>
-<li><code>zoom_target</code> is clamped to the new range (if current zoom exceeds new limits)</li>
-<li>Camera position is preserved — only the zoom behavior changes</li>
-</ul>
-<p>For 3D render modes, zoom maps to camera distance from the ground plane (dolly) rather than orthographic scale. The <code>ScreenToWorld</code> trait abstracts this — the camera system sets a <code>zoom</code> value, and the active <code>ScreenToWorld</code> implementation interprets it appropriately (orthographic scale for 2D, distance for 3D).</p>
-<h4 id="pan-scrolling"><a class="header" href="#pan-scrolling">Pan (Scrolling)</a></h4>
-<p>Four input methods, all producing the same result — a <code>position_target</code> update:</p>
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th>Method</th><th>Behavior</th></tr>
-</thead>
-<tbody>
-<tr><td>Edge scroll</td><td>Move cursor to screen edge → pan in that direction</td></tr>
-<tr><td>Keyboard (WASD/arrows)</td><td>Pan at <code>keyboard_pan_speed</code>, scaled by zoom (slower when zoomed in)</td></tr>
-<tr><td>Minimap click</td><td>Jump camera center to the clicked world position</td></tr>
-<tr><td>Middle-mouse drag</td><td>Pan by mouse delta (inverted — drag world under cursor)</td></tr>
-</tbody>
-</table>
-</div>
-<p><strong>Speed scales with zoom:</strong> When zoomed out, pan speed increases proportionally so map traversal time feels consistent. When zoomed in, pan speed decreases for precision. The scaling is linear: <code>effective_speed = base_speed / zoom</code>.</p>
-<p><strong>Bounds clamping:</strong> Every frame, <code>position_target</code> is clamped so the viewport stays within <code>bounds</code> (map rectangle plus a configurable padding). The player cannot scroll to see void beyond the map edge. Bounds are set when the map loads and do not change during gameplay.</p>
-<h4 id="screen-shake"><a class="header" href="#screen-shake">Screen Shake</a></h4>
-<p>Triggered by game events (explosions, superweapons, building destruction) via Bevy events:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>pub struct CameraShakeEvent {
-    pub epicenter: WorldPos,   // world position of the explosion
-    pub intensity: f32,        // 0.0–1.0 (nuke = 1.0, tank shell = 0.05)
-    pub duration_secs: f32,    // how long the shake lasts
-}
-<span class="boring">}</span></code></pre>
-<p>The shake system calculates <code>amplitude</code> from intensity, attenuated by distance from the camera. Multiple concurrent shakes are additive (capped at a maximum amplitude). The <code>shake.offset</code> is applied to the final camera transform each frame — it never modifies <code>position</code> or <code>position_target</code>, so the shake doesn’t drift the view.</p>
-<p>Players can disable screen shake entirely via settings (<code>/camera_shake off</code> — D058) or reduce intensity with a slider. Accessibility concern: excessive screen shake can cause motion sickness.</p>
-<h4 id="camera-in-replays-and-save-games"><a class="header" href="#camera-in-replays-and-save-games">Camera in Replays and Save Games</a></h4>
-<ul>
-<li><strong>Save games:</strong> <code>GameCamera</code> state (position, zoom, follow target) is serialized alongside other client-side state. On load, the camera restores to where the player was looking.</li>
-<li><strong>Replays:</strong> <code>CameraPositionSample</code> events (see <code>05-FORMATS.md</code>) record each player’s viewport center and zoom level at 2 Hz. Replay viewers can follow any player’s camera or use free camera. The replay camera is independent of the recorded camera data — the viewer controls their own viewport.</li>
-<li><strong>Observer mode:</strong> Observers have independent camera control with no zoom restrictions (they can zoom out further than players for overview). The <code>follow_player</code> option (see <code>ObserverState</code>) syncs the observer’s camera to a player’s recorded <code>CameraPositionSample</code> stream.</li>
-</ul>
-<h4 id="camera-configuration-yaml"><a class="header" href="#camera-configuration-yaml">Camera Configuration (YAML)</a></h4>
-<p>Per-game-module camera defaults:</p>
-<pre><code class="language-yaml">camera:
-  zoom:
-    default: 1.0
-    min: 0.5
-    max: 4.0
-    step_scroll: 0.1       # mouse wheel increment
-    step_keyboard: 0.25    # +/- key increment
-    smoothing: 0.15        # lerp factor (0 = instant, 1 = no movement)
-    # Ranked override — competitive committee (D037) sets these per season
-    ranked_min: 0.75
-    ranked_max: 2.0
-  pan:
-    edge_scroll_speed: 1200.0   # world-units/sec at zoom 1.0
-    keyboard_speed: 1000.0
-    smoothing: 0.2
-    edge_scroll_zone: 8        # pixels from screen edge to trigger
-  shake:
-    max_amplitude: 12.0         # max pixel displacement
-    decay_rate: 8.0             # amplitude reduction per second
-    enabled: true               # default; player can override in settings
-  bounds_padding: 64            # extra world-units beyond map edges
-</code></pre>
-<p>This makes camera behavior fully data-driven (Principle 4 from <code>13-PHILOSOPHY.md</code>). A Tiberian Sun module can set different zoom ranges (its taller buildings need more zoom-out headroom). A total conversion can disable edge scrolling entirely if it uses a different camera paradigm.</p>
-<h3 id="game-speed"><a class="header" href="#game-speed">Game Speed</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>/// Lobby-configurable game speed.
-pub struct GameSpeed {
-    pub preset: SpeedPreset,
-    pub tick_interval_ms: u32,   // sim tick period
-}
-
-pub enum SpeedPreset {
-    Slowest,   // 80ms per tick
-    Slower,    // 67ms per tick (default)
-    Normal,    // 50ms per tick
-    Faster,    // 35ms per tick
-    Fastest,   // 20ms per tick
-}
-<span class="boring">}</span></code></pre>
-<p>Speed affects only the interval between sim ticks — system behavior is tick-count-based, so all game logic works identically at any speed. Single-player can change speed mid-game; multiplayer sets it in lobby (synced).</p>
-<h3 id="faction-system"><a class="header" href="#faction-system">Faction System</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>/// Faction identity — loaded from YAML.
-pub struct Faction {
-    pub internal_name: String,   // "allies", "soviet"
-    pub display_name: String,    // "Allied Forces"
-    pub side: String,            // "allies", "soviet" (for grouping subfactions)
-    pub color: PlayerColor,
-    pub tech_tree: TechTreeId,
-    pub starting_units: Vec&lt;StartingUnit&gt;,
-}
-<span class="boring">}</span></code></pre>
-<p>Factions determine: available tech tree (which units/buildings can be built), default player color, starting unit composition in skirmish, lobby selection, and <code>Buildable.prereqs</code> resolution. RA2 subfactions (e.g., Korea, Libya) share a <code>side</code> but differ in <code>tech_tree</code> (one unique unit each).</p>
-<h3 id="auto-target--turret"><a class="header" href="#auto-target--turret">Auto-Target / Turret</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>/// Unit auto-acquires targets within range.
-pub struct AutoTarget {
-    pub scan_range: i32,
-    pub stance: Stance,
-    pub prefer_priority: bool,   // prefer high-priority targets
-}
-
-pub enum Stance {
-    HoldFire,      // never auto-attack
-    ReturnFire,    // attack only if attacked
-    Defend,        // attack enemies in range
-    AttackAnything, // attack anything visible
-}
-
-/// Turreted weapon — rotates independently of body.
-pub struct Turreted {
-    pub turn_speed: i32,
-    pub offset: WorldPos,      // turret mount point relative to body
-    pub current_facing: i32,   // turret facing (0-255)
-}
-
-/// Weapon requires ammo — must reload at dock (helipad).
-pub struct AmmoPool {
-    pub max_ammo: u32,
-    pub current_ammo: u32,
-    pub reload_delay: u32,    // ticks per ammo at dock
-}
-<span class="boring">}</span></code></pre>
-<p><strong><code>combat_system()</code> integration:</strong> For units with <code>AutoTarget</code> and no current attack order: scan <code>SpatialIndex</code> within <code>scan_range</code>. Filter by <code>Stance</code> rules. Pick highest-priority valid target. For <code>Turreted</code> units: rotate turret toward target at <code>turn_speed</code> per tick before firing. For <code>AmmoPool</code> units: decrement ammo on fire; when depleted, return to nearest <code>DockHost</code> with <code>DockType::Helipad</code> for reload.</p>
-<h3 id="selection-details"><a class="header" href="#selection-details">Selection Details</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>pub struct SelectionPriority {
-    pub priority: i32,         // higher = selected preferentially
-    pub click_priority: i32,   // higher = wins click-through
-}
-<span class="boring">}</span></code></pre>
-<p><strong>Selection features:</strong></p>
-<ul>
-<li><strong>Priority:</strong> When box-selecting 200 units, combat units are selected over harvesters (higher <code>priority</code>)</li>
-<li><strong>Double-click:</strong> Select all units of the same type on screen</li>
-<li><strong>Tab cycling:</strong> Cycle through unit types within a selection group</li>
-<li><strong>Control groups:</strong> 0-9 control groups, Ctrl+# to assign, # to select, double-# to center camera</li>
-<li><strong>Isometric selection box:</strong> Diamond-shaped box selection for proper isometric hit-testing</li>
-</ul>
-<h3 id="observer--spectator-ui"><a class="header" href="#observer--spectator-ui">Observer / Spectator UI</a></h3>
-<p>Observer mode (separate from player mode) displays overlays not available to players:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>pub struct ObserverState {
-    pub show_army: bool,       // unit composition per player
-    pub show_production: bool, // what each player is building
-    pub show_economy: bool,    // income rate, credits per player
-    pub show_powers: bool,     // superweapon charge timers
-    pub show_score: bool,      // strategic score tracker
-    pub follow_player: Option&lt;PlayerId&gt;,  // lock camera to player's view (writes GameCamera.follow_target)
-}
-<span class="boring">}</span></code></pre>
-<p><strong>Army overlay:</strong> Bar chart of unit counts per player, grouped by type. <strong>Production overlay:</strong> List of active queues per player. <strong>Economy overlay:</strong> Income rate graph. These are render-only — no sim interaction. Observer UI is an <code>ic-ui</code> concern.</p>
-<h4 id="game-score--performance-metrics"><a class="header" href="#game-score--performance-metrics">Game Score / Performance Metrics</a></h4>
-<p>The sim tracks a comprehensive <code>GameScore</code> per player, updated every tick. This powers the observer economy overlay, post-game stats screen, and the replay analysis event stream (see <code>05-FORMATS.md</code> § “Analysis Event Stream”). Design informed by SC2’s <code>ScoreDetails</code> protobuf (see <code>research/blizzard-github-analysis.md</code> § Part 2).</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>#[derive(Clone, Serialize, Deserialize)]
-pub struct GameScore {
-    // Economy
-    pub total_collected: ResourceSet,      // lifetime resources harvested
-    pub total_spent: ResourceSet,          // lifetime resources committed
-    pub collection_rate: ResourceSet,      // current income per minute (fixed-point)
-    pub idle_harvester_ticks: u64,         // cumulative ticks harvesters spent idle
-
-    // Production
-    pub units_produced: u32,
-    pub structures_built: u32,
-    pub idle_production_ticks: u64,        // cumulative ticks factories spent idle
-
-    // Combat
-    pub units_killed: u32,
-    pub units_lost: u32,
-    pub structures_destroyed: u32,
-    pub structures_lost: u32,
-    pub killed_value: ResourceSet,         // total value of enemy assets destroyed
-    pub lost_value: ResourceSet,           // total value of own assets lost
-    pub damage_dealt: i64,                 // fixed-point cumulative
-    pub damage_received: i64,
-
-    // Activity
-    pub actions_per_minute: u32,           // APM (all orders)
-    pub effective_actions_per_minute: u32, // EPM (non-redundant orders only)
-}
-<span class="boring">}</span></code></pre>
-<p><strong>APM vs EPM:</strong> Following SC2’s distinction — APM counts every order, EPM filters duplicate/redundant commands (e.g., repeatedly right-clicking the same destination). EPM is a better measure of meaningful player activity.</p>
-<p><strong>Sim-side only:</strong> <code>GameScore</code> lives in <code>ic-sim</code> (it’s deterministic state, not rendering). Observer overlays in <code>ic-ui</code> read it through the standard <code>Simulation</code> query interface.</p>
-<h3 id="debug--developer-tools"><a class="header" href="#debug--developer-tools">Debug / Developer Tools</a></h3>
 <blockquote>
-<p>See also <code>09-DECISIONS.md</code> § D058 for the unified chat/command console, cvar system, and Brigadier-style command tree that provides the text-based interface to these developer tools.</p>
+<p><strong>Moved to <a href="architecture/gameplay-systems.html">architecture/gameplay-systems.md</a></strong> for RAG/context efficiency.</p>
+<p>The 9 core components above cover the skeleton. A playable Red Alert requires ~50 components and ~20 systems  power, construction, production, harvesting, combat, fog of war, shroud, crates, veterancy, carriers, mind control, iron curtain, chronosphere, and more.</p>
 </blockquote>
-<p>Developer mode (toggled in settings, not available in ranked):</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>pub struct DeveloperMode {
-    pub instant_build: bool,
-    pub free_units: bool,
-    pub reveal_map: bool,
-    pub unlimited_power: bool,
-    pub invincible: bool,
-    pub give_cash_amount: i32,
-}
-<span class="boring">}</span></code></pre>
-<p><strong>Debug overlays (via <code>bevy_egui</code>):</strong></p>
-<ul>
-<li>Combat: weapon ranges as circles, target lines, damage numbers floating</li>
-<li>Pathfinding: flowfield visualization, path cost heat map, blocker highlight</li>
-<li>Performance: per-system tick time bar chart, entity count, memory usage</li>
-<li>Network: RTT graph, order latency, jitter, desync hash comparison</li>
-<li>Asset browser: preview sprites, sounds, palettes inline</li>
-</ul>
-<p>Developer cheats issue special orders validated only when <code>DeveloperMode</code> is active. In multiplayer, all players must agree to enable dev mode (prevents cheating).</p>
-<blockquote>
-<p><strong>Security (V44):</strong> The consensus mechanism for multiplayer dev mode must be specified: dev mode is sim state (not client-side), toggled exclusively via <code>PlayerOrder::SetDevMode</code> with unanimous lobby consent before game start. Dev mode orders use a distinct <code>PlayerOrder::DevCommand</code> variant rejected by the sim when dev mode is inactive. Disabled for ranked matchmaking. See <code>06-SECURITY.md</code> § Vulnerability 44.</p>
-</blockquote>
-<h4 id="debug-drawing-api"><a class="header" href="#debug-drawing-api">Debug Drawing API</a></h4>
-<p>A programmatic drawing API for rendering debug geometry. Inspired by SC2’s <code>DebugDraw</code> interface (see <code>research/blizzard-github-analysis.md</code> § Part 7) — text, lines, boxes, and spheres rendered as overlays:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>pub trait DebugDraw {
-    fn draw_text(&amp;mut self, pos: WorldPos, text: &amp;str, color: Color);
-    fn draw_line(&amp;mut self, start: WorldPos, end: WorldPos, color: Color);
-    fn draw_circle(&amp;mut self, center: WorldPos, radius: i32, color: Color);
-    fn draw_rect(&amp;mut self, min: WorldPos, max: WorldPos, color: Color);
-}
-<span class="boring">}</span></code></pre>
-<p>Used by AI visualization, pathfinding debug, weapon range display, and Lua/WASM debug scripts. All debug geometry is cleared each frame — callers re-submit every tick. Lives in <code>ic-render</code> (render concern, not sim).</p>
-<h4 id="debug-unit-manipulation"><a class="header" href="#debug-unit-manipulation">Debug Unit Manipulation</a></h4>
-<p>Developer mode supports direct entity manipulation for testing:</p>
-<ul>
-<li><strong>Spawn unit:</strong> Create any unit type at a position, owned by any player</li>
-<li><strong>Kill unit:</strong> Instantly destroy selected entities</li>
-<li><strong>Set resources:</strong> Override player credit balance</li>
-<li><strong>Modify health:</strong> Set HP to any value</li>
-</ul>
-<p>These operations are implemented as special <code>PlayerOrder</code> variants validated only when <code>DeveloperMode</code> is active. They flow through the normal order pipeline — deterministic across all clients.</p>
-<h4 id="fault-injection-testing-only"><a class="header" href="#fault-injection-testing-only">Fault Injection (Testing Only)</a></h4>
-<p>For automated stability testing — not exposed in release builds:</p>
-<ul>
-<li><strong>Hang simulation:</strong> Simulate tick timeout (verifies watchdog recovery)</li>
-<li><strong>Crash process:</strong> Controlled exit (verifies crash reporting pipeline)</li>
-<li><strong>Desync injection:</strong> Flip a bit in sim state (verifies desync detection and diagnosis)</li>
-</ul>
-<p>These follow SC2’s <code>DebugTestProcess</code> pattern for CI/CD reliability testing.</p>
-<h3 id="localization-framework"><a class="header" href="#localization-framework">Localization Framework</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>pub struct Localization {
-    pub current_locale: String,         // "en", "de", "zh-CN"
-    pub bundles: HashMap&lt;String, FluentBundle&gt;,  // locale → string bundle
-}
-<span class="boring">}</span></code></pre>
-<p>Uses <strong>Project Fluent</strong> (same as OpenRA) for parameterized, pluralization-aware message formatting:</p>
-<pre><code class="language-fluent"># en.ftl
-unit-lost = Unit lost
-base-under-attack = Our base is under attack!
-building-complete = { $building } construction complete.
-units-selected = { $count -&gt;
-    [one] {$count} unit selected
-   *[other] {$count} units selected
-}
-</code></pre>
-<p>Mods provide their own <code>.ftl</code> files. Engine strings are localizable from Phase 3. Community translations publishable to Workshop.</p>
-<h3 id="encyclopedia"><a class="header" href="#encyclopedia">Encyclopedia</a></h3>
-<p>In-game unit/building/weapon reference browser:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>pub struct EncyclopediaEntry {
-    pub actor_type: ActorId,
-    pub display_name: String,
-    pub description: String,
-    pub stats: HashMap&lt;String, String&gt;,  // "Speed: 8", "Armor: Medium"
-    pub preview_sprite: SpriteId,
-    pub category: EncyclopediaCategory,
-}
-
-pub enum EncyclopediaCategory { Infantry, Vehicle, Aircraft, Naval, Structure, Defense, Support }
-<span class="boring">}</span></code></pre>
-<p>Auto-generated from YAML rule definitions + optional <code>encyclopedia:</code> block in YAML. Accessible from main menu and in-game sidebar. Mod-defined units automatically appear in the encyclopedia.</p>
-<h3 id="palette-effects-runtime"><a class="header" href="#palette-effects-runtime">Palette Effects (Runtime)</a></h3>
-<p>Beyond static <code>.pal</code> file loading (<code>ra-formats</code>), runtime palette manipulation for classic RA visual style:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>pub enum PaletteEffect {
-    PlayerColorRemap { remap_range: (u8, u8), target_color: PlayerColor },
-    Rotation { start_index: u8, end_index: u8, speed: u32 },  // water animation
-    CloakShimmer { entity: EntityId },
-    ScreenFlash { color: PaletteColor, duration: u32 },       // nuke, chronoshift
-    DamageTint { entity: EntityId, state: DamageState },
-}
-<span class="boring">}</span></code></pre>
-<p><strong>Modern implementation:</strong> These are shader effects in Bevy’s render pipeline, not literal palette index swaps. But the modder-facing YAML configuration matches the original palette effect names for familiarity. Shader implementations achieve the same visual result with modern GPU techniques (color lookup textures, screen-space post-processing).</p>
-<h3 id="demolition--c4"><a class="header" href="#demolition--c4">Demolition / C4</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>pub struct Demolition {
-    pub delay: u32,               // ticks to detonation
-    pub warhead: WarheadId,
-    pub required_target: TargetType,  // buildings only
-}
-<span class="boring">}</span></code></pre>
-<p>Engineer-type unit with <code>Demolition</code> places C4 on a building. After <code>delay</code> ticks, warhead detonates. Target building takes massive damage (usually fatal). Engineer is consumed.</p>
-<h3 id="plug-system"><a class="header" href="#plug-system">Plug System</a></h3>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>pub struct Pluggable {
-    pub plug_type: PlugType,
-    pub max_plugs: u32,
-    pub current_plugs: u32,
-    pub effect_per_plug: ConditionId,
-}
-
-pub struct Plug {
-    pub plug_type: PlugType,
-}
-<span class="boring">}</span></code></pre>
-<p>Primarily RA2 (bio-reactor accepting infantry for extra power). Included for mod compatibility. When a <code>Plug</code> entity enters a <code>Pluggable</code> building, increment <code>current_plugs</code>, grant condition per plug (e.g., “+50 power per infantry in reactor”).</p>
-<hr>
 <h2 id="game-loop"><a class="header" href="#game-loop">Game Loop</a></h2>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -1823,13 +774,13 @@ pub trait SpatialIndex: Send + Sync {
 </tbody>
 </table>
 </div>
-<p>The RA1 game module registers three <code>Pathfinder</code> implementations — <code>RemastersPathfinder</code>, <code>OpenRaPathfinder</code>, and <code>IcPathfinder</code> (D045) — plus <code>GridSpatialHash</code>. The active pathfinder is selected via experience profiles (D045). A future continuous-space game module registers <code>NavmeshPathfinder</code> and <code>BvhSpatialIndex</code>. The sim core calls the trait — it never knows which one is running. The same principle applies to fog, damage, AI, ranking, and validation — see D041 in <code>09-DECISIONS.md</code> for the full trait definitions and rationale.</p>
+<p>The RA1 game module registers three <code>Pathfinder</code> implementations — <code>RemastersPathfinder</code>, <code>OpenRaPathfinder</code>, and <code>IcPathfinder</code> (D045) — plus <code>GridSpatialHash</code>. The active pathfinder is selected via experience profiles (D045). A future continuous-space game module registers <code>NavmeshPathfinder</code> and <code>BvhSpatialIndex</code>. The sim core calls the trait — it never knows which one is running. The same principle applies to fog, damage, AI, ranking, and validation — see D041 in <code>decisions/09d-gameplay.md</code> for the full trait definitions and rationale.</p>
 <h2 id="platform-portability"><a class="header" href="#platform-portability">Platform Portability</a></h2>
 <p>The engine must not create obstacles for any platform. Desktop is the primary dev target, but every architectural choice must be portable to browser (WASM), mobile (Android/iOS), and consoles without rework.</p>
 <h3 id="player-data-directory-d061"><a class="header" href="#player-data-directory-d061">Player Data Directory (D061)</a></h3>
-<p>All player data lives under a single, self-contained directory. The structure is stable and documented — a manual copy of this directory is a valid (if crude) backup. The <code>ic backup</code> CLI provides a safer alternative using SQLite <code>VACUUM INTO</code> for consistent database copies. See <code>09-DECISIONS.md</code> § D061 for full rationale, backup categories, and cloud sync design.</p>
+<p>All player data lives under a single, self-contained directory. The structure is stable and documented — a manual copy of this directory is a valid (if crude) backup. The <code>ic backup</code> CLI provides a safer alternative using SQLite <code>VACUUM INTO</code> for consistent database copies. See <code>decisions/09e-community.md</code> § D061 for full rationale, backup categories, and cloud sync design.</p>
 <pre><code>&lt;data_dir&gt;/
-├── config.yaml              # Settings (D033 toggles, keybinds, render quality)
+├── config.toml              # Settings (D033 toggles, keybinds, render quality)
 ├── profile.db               # Identity, friends, blocks, privacy (D053)
 ├── achievements.db          # Achievement collection (D036)
 ├── gameplay.db              # Event log, replay catalog, save index, map catalog (D034)
@@ -1871,7 +822,7 @@ pub trait SpatialIndex: Send + Sync {
 <li>New player: identity created automatically → 24-word recovery phrase displayed → cloud sync offer → backup reminder prompt</li>
 <li>Returning player on new machine: cloud data detected → restore offer showing identity, rating, match count; or mnemonic seed recovery (enter 24 words); or manual restore from backup ZIP / data folder copy</li>
 </ol>
-<p>Post-milestone toasts (same system as D030’s Workshop cleanup prompts) nudge players without cloud sync to back up after ranked matches, campaign completion, or tier promotions. See <code>09-DECISIONS.md</code> § D061 “Player Experience” for full UX mockups and scenario walkthroughs.</p>
+<p>Post-milestone toasts (same system as D030’s Workshop cleanup prompts) nudge players without cloud sync to back up after ranked matches, campaign completion, or tier promotions. See <code>decisions/09e-community.md</code> § D061 “Player Experience” for full UX mockups and scenario walkthroughs.</p>
 <h3 id="portability-design-rules"><a class="header" href="#portability-design-rules">Portability Design Rules</a></h3>
 <ol>
 <li>
@@ -1992,7 +943,7 @@ pub enum ScreenClass {
 <li>Stack with gameplay mods — a WWII total conversion ships its own olive-drab theme</li>
 <li>An “OpenRA-inspired” community theme is a natural contribution</li>
 </ul>
-<p>See <code>09-DECISIONS.md</code> § D032 for full rationale, YAML schema, and legal notes on asset sourcing.</p>
+<p>See <code>decisions/09c-modding.md</code> § D032 for full rationale, YAML schema, and legal notes on asset sourcing.</p>
 <h2 id="qol--gameplay-behavior-toggles-d033"><a class="header" href="#qol--gameplay-behavior-toggles-d033">QoL &amp; Gameplay Behavior Toggles (D033)</a></h2>
 <p>Every quality-of-life improvement from OpenRA and the Remastered Collection is <strong>individually toggleable</strong> — attack-move, multi-queue production, health bars, range circles, guard command, waypoint queuing, and dozens more. Built-in presets group toggles into coherent profiles:</p>
 <div class="table-wrapper">
@@ -2011,8 +962,413 @@ pub enum ScreenClass {
 <p>Toggles are categorized as <strong>sim-affecting</strong> (production rules, unit commands — synced in lobby) or <strong>client-only</strong> (health bars, range circles — per-player preference). This split preserves determinism (invariant #1) while giving each player visual/UX freedom.</p>
 <h3 id="experience-profiles"><a class="header" href="#experience-profiles">Experience Profiles</a></h3>
 <p>D019 (balance), D032 (theme), D033 (behavior), D043 (AI behavior), D045 (pathfinding feel), and D048 (render mode) are six independent axes that compose into <strong>experience profiles</strong>. Selecting “Vanilla RA” sets all six to classic in one click. Selecting “Iron Curtain” sets classic balance + modern theme + best QoL + enhanced AI + modern movement + HD graphics. After selecting a profile, any individual setting can still be overridden.</p>
-<p><strong>Mod profiles (D062)</strong> are a superset of experience profiles: they bundle the six experience axes WITH the active mod set and conflict resolutions into a single named, hashable object. A mod profile answers “what mods am I running AND how is the game configured?” in one saved YAML file. The profile’s fingerprint (SHA-256 of the resolved virtual asset namespace) enables single-hash compatibility checking in multiplayer lobbies. Switching profiles reconfigures both the mod set and experience settings in one action. Publishing a local mod profile via <code>ic mod publish-profile</code> creates a Workshop modpack (D030). See <code>09-DECISIONS.md</code> § D062.</p>
-<p>See <code>09-DECISIONS.md</code> § D033 for the full toggle catalog, YAML schema, and sim/client split details. See D043 for AI behavior presets, D045 for pathfinding behavior presets, and D048 for switchable render modes.</p>
+<p><strong>Mod profiles (D062)</strong> are a superset of experience profiles: they bundle the six experience axes WITH the active mod set and conflict resolutions into a single named, hashable object. A mod profile answers “what mods am I running AND how is the game configured?” in one saved YAML file. The profile’s fingerprint (SHA-256 of the resolved virtual asset namespace) enables single-hash compatibility checking in multiplayer lobbies. Switching profiles reconfigures both the mod set and experience settings in one action. Publishing a local mod profile via <code>ic mod publish-profile</code> creates a Workshop modpack (D030). See <code>decisions/09c-modding.md</code> § D062.</p>
+<p>See <code>decisions/09d-gameplay.md</code> § D033 for the full toggle catalog, YAML schema, and sim/client split details. See D043 for AI behavior presets, D045 for pathfinding behavior presets, and D048 for switchable render modes.</p>
+<h2 id="red-alert-experience-recreation-strategy"><a class="header" href="#red-alert-experience-recreation-strategy">Red Alert Experience Recreation Strategy</a></h2>
+<p>Making IC <em>feel</em> like Red Alert requires more than loading the right files. The graphics, sounds, menu flow, unit selection, cursor behavior, and click feedback must recreate the experience that players remember — verified against the actual source code. We have access to four authoritative reference codebases. Each serves a different purpose.</p>
+<h3 id="reference-source-strategy"><a class="header" href="#reference-source-strategy">Reference Source Strategy</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Source</th><th>License</th><th>What We Extract</th><th>What We Don’t</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>EA Original Red Alert</strong> (<a href="https://github.com/electronicarts/CnC_Red_Alert">CnC_Red_Alert</a>)</td><td>GPL v3</td><td>Canonical gameplay values (costs, HP, speeds, damage tables). Integer math patterns. Animation frame counts and timing constants. SHP draw mode implementations (shadow, ghost, fade, predator). Palette cycling logic. Audio mixing priorities. Event/order queue architecture. Cursor context logic.</td><td>Don’t copy rendering code verbatim — it’s VGA/DirectDraw-specific. Don’t adopt the architecture — <code>#ifdef</code> branching, global state, platform-specific rendering.</td></tr>
+<tr><td><strong>EA Remastered Collection</strong> (<a href="https://github.com/electronicarts/CnC_Remastered_Collection">CnC_Remastered_Collection</a>)</td><td>GPL v3 (C++ DLLs)</td><td>UX gold standard — the definitive modernization of the RA experience. F1 render-mode toggle (D048 reference). Sidebar redesign. HD asset pipeline (how classic sprites map to HD equivalents). Modern QoL additions. Sound mixing improvements. How they handled the classic↔modern visual duality.</td><td>GPL covers C++ engine DLLs only — the HD art assets, remastered music, and Petroglyph’s C# layer are <strong>proprietary</strong>. Never reference proprietary Petroglyph source. Never distribute remastered assets.</td></tr>
+<tr><td><strong>OpenRA</strong> (<a href="https://github.com/OpenRA/OpenRA">OpenRA</a>)</td><td>GPL v3</td><td>Working implementation reference for everything the community expects: sprite rendering order, palette handling, animation overlays, chrome UI system, selection UX, cursor contexts, EVA notifications, sound system integration, minimap rendering, shroud edge smoothing. OpenRA represents 15+ years of community refinement — what players consider “correct” behavior. Issue tracker as pain point radar.</td><td>Don’t copy OpenRA’s balance decisions verbatim (D019 — we offer them as a preset). Don’t port OpenRA bugs. Don’t replicate C# architecture — translate concepts to Rust/ECS.</td></tr>
+<tr><td><strong>Bevy</strong> (<a href="https://github.com/bevyengine/bevy">bevyengine/bevy</a>)</td><td>MIT</td><td>How to BUILD it: sprite batching and atlas systems, <code>bevy_audio</code> spatial audio, <code>bevy_ui</code> layout, asset pipeline (async loading, hot reload), wgpu render graph, ECS scheduling patterns, camera transforms, input handling.</td><td>Bevy is infrastructure, not reference for gameplay feel. It tells us <em>how</em> to render a sprite, not <em>which</em> sprite at <em>what</em> timing with <em>what</em> palette.</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>The principle:</strong> Original RA tells us what the values ARE. Remastered tells us what a modern version SHOULD feel like. OpenRA tells us what the community EXPECTS. Bevy tells us how to BUILD it.</p>
+<h3 id="visual-fidelity-checklist"><a class="header" href="#visual-fidelity-checklist">Visual Fidelity Checklist</a></h3>
+<p>These are the specific visual elements that make Red Alert look like Red Alert. Each must be verified against original source code constants, not guessed from screenshots.</p>
+<h4 id="sprite-rendering-pipeline"><a class="header" href="#sprite-rendering-pipeline">Sprite Rendering Pipeline</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Element</th><th>Original RA Source Reference</th><th>IC Implementation</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Palette-indexed rendering</strong></td><td><code>PAL</code> format: 256 × RGB in 6-bit VGA range (0–63). Convert to 8-bit: <code>value &lt;&lt; 2</code>. See <code>05-FORMATS.md</code> § PAL</td><td><code>ra-formats</code> loads <code>.pal</code>; <code>ic-render</code> applies via palette texture lookup (GPU shader)</td></tr>
+<tr><td><strong>SHP draw modes</strong></td><td><code>SHAPE.H</code>: <code>SHAPE_NORMAL</code>, <code>SHAPE_SHADOW</code>, <code>SHAPE_GHOST</code>, <code>SHAPE_PREDATOR</code>, <code>SHAPE_FADING</code>. See <code>05-FORMATS.md</code> § SHP</td><td>Each draw mode is a shader variant in <code>ic-render</code>. Shadow = darkened ground sprite. Ghost = semi-transparent. Predator = distortion. Fading = remap table</td></tr>
+<tr><td><strong>Player color remapping</strong></td><td>Palette indices 80–95 (16 entries) are the player color remap range. The original modifies these palette entries per player</td><td>GPU shader: sample palette, if index ∈ [80, 95] substitute from player color ramp. Same approach as OpenRA’s <code>PlayerColorShift</code></td></tr>
+<tr><td><strong>Palette cycling</strong></td><td>Water animation: rotate palette indices periodically. Radar dish: palette-animated. From <code>ANIM.CPP</code> timing loops</td><td><code>ic-render</code> system ticks palette rotation at the original frame rate. Cycling ranges are YAML-configurable per theater</td></tr>
+<tr><td><strong>Animation frame timing</strong></td><td>Frame delays defined per sequence in original <code>.ini</code> rules (and OpenRA <code>sequences/*.yaml</code>). Not arbitrary — specific tick counts per frame</td><td><code>sequences/*.yaml</code> in <code>mods/ra/</code> defines frame counts, delays, and facings. Timing constants verified against EA source <code>#define</code>s</td></tr>
+<tr><td><strong>Facing quantization</strong></td><td>32 facings for vehicles/ships, 8 for infantry. SHP frame index = <code>facing / (256 / num_facings) * frames_per_facing</code></td><td><code>QuantizeFacings</code> component carries the facing count. Sprite frame index computed in render system. Matches OpenRA’s <code>QuantizeFacingsFromSequence</code></td></tr>
+<tr><td><strong>Building construction animation</strong></td><td>“Make” animation plays forward on build, reverse on sell. Specific frame order</td><td><code>WithMakeAnimation</code> equivalent in <code>ic-render</code>. Frame order and timing from EA source <code>BUILD.CPP</code></td></tr>
+<tr><td><strong>Terrain theater palettes</strong></td><td>Temperate, Snow, Interior — each with different palette and terrain tileset. Theater selected by map</td><td>Per-map theater tag → loads matching <code>.pal</code> and terrain <code>.tmp</code> sprites. Same theater names as OpenRA</td></tr>
+<tr><td><strong>Shroud / fog-of-war edges</strong></td><td>Original RA: hard shroud edges. OpenRA: smooth blended edges. Remastered: smoothed</td><td>IC supports both styles via <code>ShroudRenderer</code> visual config — selectable per theme/render mode</td></tr>
+<tr><td><strong>Building bibs</strong></td><td>Foundation sprites drawn under buildings (paved area)</td><td>Bib sprites from <code>.shp</code>, drawn at z-order below building body. Footprint from building definition</td></tr>
+<tr><td><strong>Projectile sprites</strong></td><td>Bullets, rockets, tesla bolts — each a separate SHP animation</td><td>Projectile entities carry <code>SpriteAnimation</code> components. Render system draws at interpolated positions between sim ticks</td></tr>
+<tr><td><strong>Explosion animations</strong></td><td>Multi-frame explosion sequences at impact points</td><td><code>ExplosionEffect</code> spawned by combat system. <code>ic-render</code> plays the animation sequence then despawns</td></tr>
+</tbody>
+</table>
+</div>
+<h4 id="z-order-draw-order"><a class="header" href="#z-order-draw-order">Z-Order (Draw Order)</a></h4>
+<p>The draw order determines what renders on top of what. Getting this wrong makes the game look subtly broken — units clipping through buildings, shadows on top of vehicles, overlays behind walls. The canonical order (verified from original source and OpenRA):</p>
+<pre><code>Layer 0: Terrain tiles (ground)
+Layer 1: Smudges (craters, scorch marks, oil stains)
+Layer 2: Building bibs (paved foundations)
+Layer 3: Building shadows + unit shadows
+Layer 4: Buildings (sorted by Y position — southern buildings render on top)
+Layer 5: Infantry (sub-cell positioned)
+Layer 6: Vehicles / Ships (sorted by Y position)
+Layer 7: Aircraft shadows (on ground)
+Layer 8: Low-flying aircraft (sorted by Y position)
+Layer 9: High-flying aircraft
+Layer 10: Projectiles
+Layer 11: Explosions / visual effects
+Layer 12: Shroud / fog-of-war overlay
+Layer 13: UI overlays (health bars, selection boxes, waypoint lines)
+</code></pre>
+<p>Within each layer, entities sort by Y-coordinate (south = higher draw order = renders on top). This is the standard isometric sort that prevents visual overlapping artifacts. Bevy’s sprite z-ordering maps to this layer system via <code>Transform.translation.z</code>.</p>
+<h3 id="audio-fidelity-checklist"><a class="header" href="#audio-fidelity-checklist">Audio Fidelity Checklist</a></h3>
+<p>Red Alert’s audio is iconic — the EVA voice, unit responses, Hell March, the tesla coil zap. Audio fidelity requires matching the original game’s mixing behavior, not just playing the right files.</p>
+<h4 id="sound-categories-and-mixing"><a class="header" href="#sound-categories-and-mixing">Sound Categories and Mixing</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Category</th><th>Priority</th><th>Behavior</th><th>Original RA Reference</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>EVA voice lines</strong></td><td>Highest</td><td>Queue-based, one at a time, interrupts lower priority. “Building complete.” “Unit lost.” “Base under attack.”</td><td><code>AUDIO.CPP</code>: <code>Speak()</code> function, priority queue with cooldowns per notification type</td></tr>
+<tr><td><strong>Unit voice responses</strong></td><td>High</td><td>Plays on selection and on command. Multiple selected units: random pick from group, don’t overlap. “Acknowledged.” “Yes sir.” “Affirmative.”</td><td><code>AUDIO.CPP</code>: Voice mixing. Response set defined per unit type in rules</td></tr>
+<tr><td><strong>Weapon fire sounds</strong></td><td>Normal</td><td>Positional (spatial audio). Volume by distance from camera. Multiple simultaneous weapons don’t clip — mixer clamps</td><td><code>AUDIO.CPP</code>: Fire sounds tied to weapon in rules. Spatial attenuation</td></tr>
+<tr><td><strong>Impact / explosion sounds</strong></td><td>Normal</td><td>Positional. Brief, one-shot.</td><td>Warhead-defined sounds in rules</td></tr>
+<tr><td><strong>Ambient / environmental</strong></td><td>Low</td><td>Looping. Per-map or conditional (rain during storm weather, D022)</td><td>Background audio layer</td></tr>
+<tr><td><strong>Music</strong></td><td>Background</td><td>Sequential jukebox. Tracks play in order; player can pick from options menu. Missions can set a starting theme via scenario INI</td><td><code>THEME.CPP</code>: <code>Theme_Queue()</code>, theme attributes (tempo, scenario ownership). No runtime combat awareness — track list is fixed at scenario start</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Original RA music system:</strong> The original game’s music was a straightforward sequential playlist. <code>THEME.CPP</code> manages a track list with per-theme attributes — each theme has a scenario owner (some tracks only play in certain missions) and a duration. In skirmish, the full soundtrack is available. In campaign, the scenario INI can specify a starting theme, but once playing, tracks advance sequentially and the player can pick from the jukebox in the options menu. There is no combat-detection system, no crossfades, and no dynamic intensity shifting. The Remastered Collection and OpenRA both preserve this simple jukebox model.</p>
+<p><strong>IC enhancement — dynamic situational music:</strong> While the original RA’s engine didn’t support dynamic music, IC’s engine and SDK treat dynamic situational music as a first-class capability. Frank Klepacki designed the RA soundtrack with gameplay tempo in mind — high-energy industrial during combat, ambient tension during build-up (see <code>13-PHILOSOPHY.md</code> § Principle #11) — but the original engine didn’t act on this intent. IC closes that gap at the engine level.</p>
+<p><code>ic-audio</code> provides three music playback modes, selectable per game module, per mission, or per mod:</p>
+<pre><code class="language-yaml"># audio/music_config.yaml
+music_mode: dynamic               # "jukebox" | "sequential" | "dynamic"
+
+# Jukebox mode (classic RA behavior):
+jukebox:
+  tracks: [BIGF226M, GRNDWIRE, HELLMARCH, MUDRA, JBURN_RG, TRENCHES, CC_THANG, WORKX_RG]
+  order: sequential               # or "shuffle"
+  loop: true
+
+# Dynamic mode (IC engine feature — mood-tagged tracks with state-driven selection):
+dynamic_playlist:
+  ambient:
+    tracks: [BIGF226M, MUDRA, JBURN_RG]
+  build:
+    tracks: [GRNDWIRE, WORKX_RG]
+  combat:
+    tracks: [HELLMARCH, TRENCHES, CC_THANG]
+  tension:
+    tracks: [RADIO2, FACE_THE_ENEMY]
+  victory:
+    tracks: [RREPORT]
+  defeat:
+    tracks: [SMSH_RG]
+  crossfade_ms: 2000              # default crossfade between mood transitions
+  combat_linger_s: 5              # stay in combat music 5s after last engagement
+</code></pre>
+<p>In dynamic mode, the engine monitors game state — active combat, base threat level, unit losses, objective progress — and crossfades between mood categories automatically. Designers tag tracks by mood; the engine handles transitions. No scripting required for basic dynamic music.</p>
+<p><strong>Three layers of control</strong> for mission/mod creators:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Layer</th><th>Tool</th><th>Capability</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>YAML configuration</strong></td><td><code>music_config.yaml</code></td><td>Define playlists, mood tags, crossfade timing, mode selection — Tier 1 modding, no code</td></tr>
+<tr><td><strong>Scenario editor (SDK)</strong></td><td>Music Trigger + Music Playlist modules (D038)</td><td>Visual drag-and-drop: swap tracks on trigger activation, set dynamic playlists per mission phase, control crossfade timing</td></tr>
+<tr><td><strong>Lua scripting</strong></td><td><code>Media.PlayMusic()</code>, <code>Media.SetMusicPlaylist()</code>, <code>Media.SetMusicMode()</code></td><td>Full programmatic control — force a specific track at a narrative beat, override mood category, hard-cut for dramatic moments</td></tr>
+</tbody>
+</table>
+</div>
+<p>The scenario editor’s Music Playlist module (see <code>decisions/09f-tools.md</code> § D038 “Dynamic Music”) exposes the full dynamic system visually — a designer drags tracks into mood buckets and previews transitions without writing code. The Music Trigger module handles scripted one-shot moments (“play Hell March when the tanks breach the wall”). Both emit standard Lua that modders can extend.</p>
+<p>The <code>music_mode</code> setting defaults to <code>dynamic</code> under the <code>iron_curtain</code> experience profile and <code>jukebox</code> under the <code>vanilla</code> profile for RA1’s built-in soundtrack. Game modules and total conversions define their own default mode and mood-tagged playlists. This is Tier 1 YAML configuration — no recompilation, no Lua required for basic use.</p>
+<h4 id="unit-voice-system"><a class="header" href="#unit-voice-system">Unit Voice System</a></h4>
+<p>Unit voice responses follow a specific pattern from the original game:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Event</th><th>Voice Pool</th><th>Original Behavior</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Selection</strong> (first click)</td><td><code>Select</code> voices</td><td>Plays one random voice from pool. Subsequent clicks on same unit cycle through pool (don’t repeat immediately)</td></tr>
+<tr><td><strong>Move command</strong></td><td><code>Move</code> voices</td><td>“Acknowledged”, “Moving out”, etc. One voice per command, not per selected unit</td></tr>
+<tr><td><strong>Attack command</strong></td><td><code>Attack</code> voices</td><td>Weapon-specific when possible. “Engaging”, “Firing”, etc.</td></tr>
+<tr><td><strong>Harvest command</strong></td><td><code>Harvest</code> voices</td><td>Harvester-specific responses</td></tr>
+<tr><td><strong>Unable to comply</strong></td><td><code>Deny</code> voices</td><td>“Can’t do that”, “Negative” — when order is invalid</td></tr>
+<tr><td><strong>Under attack</strong></td><td><code>Panic</code> voices (infantry)</td><td>Only infantry. Played at low frequency to avoid spam</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Implementation:</strong> Unit voice definitions live in <code>mods/ra/rules/units/*.yaml</code> alongside other unit data:</p>
+<pre><code class="language-yaml"># In rules/units/vehicles.yaml
+medium_tank:
+  voices:
+    select: [VEHIC1, REPORT1, YESSIR1]
+    move: [ACKNO, AFFIRM1, MOVOUT1]
+    attack: [AFFIRM1, YESSIR1]
+    deny: [NEGAT1, CANTDO1]
+  voice_interval: 200     # minimum ticks between voice responses (prevents spam)
+</code></pre>
+<h3 id="ux-fidelity-checklist"><a class="header" href="#ux-fidelity-checklist">UX Fidelity Checklist</a></h3>
+<p>These are the interaction patterns that make RA <em>play</em> like RA. Each is a combination of input handling, visual feedback, and audio feedback.</p>
+<h4 id="core-interaction-loop"><a class="header" href="#core-interaction-loop">Core Interaction Loop</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Interaction</th><th>Input</th><th>Visual Feedback</th><th>Audio Feedback</th><th>Source Reference</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Select unit</strong></td><td>Left-click on unit</td><td>Selection box appears, health bar shows</td><td>Unit voice response from <code>Select</code> pool</td><td>All three sources agree on this pattern</td></tr>
+<tr><td><strong>Box select</strong></td><td>Left-click drag</td><td>Isometric diamond selection rectangle</td><td>None (silent)</td><td>OpenRA: diamond-shaped for isometric. Original: rectangular but projected</td></tr>
+<tr><td><strong>Move command</strong></td><td>Right-click on ground</td><td>Cursor changes to move cursor, then destination marker flashes briefly</td><td>Unit voice from <code>Move</code> pool</td><td>Original RA: right-click move. OpenRA: same</td></tr>
+<tr><td><strong>Attack command</strong></td><td>Right-click on enemy</td><td>Cursor changes to attack cursor (crosshair)</td><td>Unit voice from <code>Attack</code> pool</td><td>Cursor context from <code>CursorProvider</code></td></tr>
+<tr><td><strong>Force-fire</strong></td><td>Ctrl + right-click</td><td>Force-fire cursor (target reticle) on any location</td><td>Attack voice</td><td>Original RA: Ctrl modifier for force-fire</td></tr>
+<tr><td><strong>Force-move</strong></td><td>Alt + right-click</td><td>Move cursor over units/buildings (crushes if able)</td><td>Move voice</td><td>OpenRA addition (not in original RA — QoL toggle)</td></tr>
+<tr><td><strong>Deploy</strong></td><td>Click deploy button or hotkey</td><td>Unit plays deploy animation, transforms (e.g., MCV → Construction Yard)</td><td>Deploy sound effect</td><td><code>DEPLOY()</code> in original source</td></tr>
+<tr><td><strong>Sell building</strong></td><td>Dollar-sign cursor + click</td><td>Building plays “make” animation in reverse, then disappears. Infantry may emerge</td><td>Sell sound, “Building sold” EVA</td><td>Original: reverse make animation + refund</td></tr>
+<tr><td><strong>Repair building</strong></td><td>Wrench cursor + click</td><td>Repair icon appears on building, health ticks up</td><td>Repair sound loop</td><td>Original: consumes credits while repairing</td></tr>
+<tr><td><strong>Place building</strong></td><td>Click build-queue item when ready</td><td>Ghost outline follows cursor, green = valid, red = invalid. Click to place</td><td>“Building” EVA on placement start, “Construction complete” on finish</td><td>Remastered: smoothest placement UX</td></tr>
+<tr><td><strong>Control group assign</strong></td><td>Ctrl + 0-9</td><td>Brief flash on selected units</td><td>Beep confirmation</td><td>Standard RTS convention</td></tr>
+<tr><td><strong>Control group recall</strong></td><td>0-9</td><td>Previously assigned units selected</td><td>None</td><td>Double-tap: camera centers on group</td></tr>
+</tbody>
+</table>
+</div>
+<h4 id="sidebar-system"><a class="header" href="#sidebar-system">Sidebar System</a></h4>
+<p>The sidebar is the player’s primary interface and the most recognizable visual element of Red Alert’s UI. Three reference implementations exist:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Element</th><th>Original RA (1996)</th><th>Remastered (2020)</th><th>OpenRA</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Position</strong></td><td>Right side, fixed</td><td>Right side, resizable</td><td>Right side (configurable)</td></tr>
+<tr><td><strong>Build tabs</strong></td><td>Two columns (structures/units), scroll buttons</td><td>Tabbed categories, larger icons</td><td>Tabbed, scrollable</td></tr>
+<tr><td><strong>Build progress</strong></td><td>Clock-wipe animation over icon</td><td>Progress bar + clock-wipe</td><td>Progress bar</td></tr>
+<tr><td><strong>Power bar</strong></td><td>Vertical bar, green/yellow/red</td><td>Same, refined styling</td><td>Same concept</td></tr>
+<tr><td><strong>Credit display</strong></td><td>Top of sidebar, counts up/down</td><td>Same, with income rate</td><td>Same concept</td></tr>
+<tr><td><strong>Radar minimap</strong></td><td>Top of sidebar, player-colored dots</td><td>Same, smoother rendering</td><td>Same, click-to-scroll</td></tr>
+</tbody>
+</table>
+</div>
+<p>IC’s sidebar is YAML-driven (D032 themes), supporting all three styles as switchable presets. The Classic theme recreates the 1996 layout. The Remastered theme matches the modernized layout. The default IC theme takes the best elements of both.</p>
+<p><strong>Credit counter animation:</strong> The original RA doesn’t jump to the new credit value — it counts up or down smoothly ($5000 → $4200 ticks down digit by digit). This is a small detail that contributes significantly to the game feel. IC replicates this with an interpolated counter in <code>ic-ui</code>.</p>
+<p><strong>Build queue clock-wipe:</strong> The clock-wipe animation (circular reveal showing build progress on the unit icon) is one of RA’s most distinctive UI elements. <code>ic-render</code> implements this as a shader that masks the icon with a circular wipe driven by build progress percentage.</p>
+<h4 id="verification-method"><a class="header" href="#verification-method">Verification Method</a></h4>
+<p>How we know the recreation is accurate — not “it looks about right” but “we verified against source”:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>What</th><th>Method</th><th>Tooling</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Animation timing</strong></td><td>Compare frame delay constants from EA source (<code>#define</code> values in C headers) against IC <code>sequences/*.yaml</code></td><td><code>ic mod check</code> validates sequence timing against known-good values</td></tr>
+<tr><td><strong>Palette correctness</strong></td><td>Load <code>.pal</code>, apply 6-bit→8-bit conversion, compare rendered output against original game screenshot pixel-by-pixel</td><td>Automated screenshot comparison in CI (load map, render, diff against reference PNG)</td></tr>
+<tr><td><strong>Draw order</strong></td><td>Render a test map with overlapping buildings, units, aircraft, shroud. Compare layer order against original/OpenRA</td><td>Visual regression test: render known scene, compare against golden screenshot</td></tr>
+<tr><td><strong>Sound mixing</strong></td><td>Play multiple sound events simultaneously, verify EVA &gt; unit voice &gt; combat priority. Verify cooldown timing</td><td>Automated audio event sequence tests, manual A/B listening</td></tr>
+<tr><td><strong>Cursor behavior</strong></td><td>For each <code>CursorContext</code> (move, attack, enter, capture, etc.): hover over target, verify correct cursor appears</td><td>Automated cursor context tests against known scenarios</td></tr>
+<tr><td><strong>Sidebar layout</strong></td><td>Theme rendered at standard resolutions, compared against reference screenshots</td><td>Screenshot tests per theme</td></tr>
+<tr><td><strong>UX sequences</strong></td><td>Record a play session in original RA/OpenRA, replay the same commands in IC, compare visual/audio results</td><td>Side-by-side video comparison (manual, community verification milestone)</td></tr>
+<tr><td><strong>Behavioral regression</strong></td><td>Foreign replay import (D056): play OpenRA replays in IC, track divergence points</td><td><code>replay-corpus/</code> test harness: automated divergence detection with percentage-match scoring</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Community verification:</strong> Phase 3 exit criteria include “feels like Red Alert to someone who’s played it before.” This is subjective but critical — IC will release builds to the community for feel testing well before feature-completeness. The community IS the verification instrument for subjective fidelity.</p>
+<h3 id="what-each-phase-delivers"><a class="header" href="#what-each-phase-delivers">What Each Phase Delivers</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Phase</th><th>Visual</th><th>Audio</th><th>UX</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Phase 0</strong></td><td>— (format parsing only)</td><td>— (<code>.aud</code> decoder in <code>ra-formats</code>)</td><td>—</td></tr>
+<tr><td><strong>Phase 1</strong></td><td>Terrain rendering, sprite animation, shroud, palette-aware shading, camera</td><td>—</td><td>Camera controls only</td></tr>
+<tr><td><strong>Phase 2</strong></td><td>Unit movement animation, combat VFX, projectiles, explosions, death animations</td><td>—</td><td>— (headless sim focus)</td></tr>
+<tr><td><strong>Phase 3</strong></td><td>Sidebar, build queue chrome, minimap, health bars, selection boxes, cursor system, building placement ghost</td><td>EVA voice lines, unit responses, weapon sounds, ambient, music (jukebox + dynamic mode)</td><td>Full interaction loop: select, move, attack, build, sell, repair, deploy, control groups</td></tr>
+<tr><td><strong>Phase 6a</strong></td><td>Theme switching, community visual mods</td><td>Community audio mods</td><td>Full QoL toggle system</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="first-runnable--bevy-loading-red-alert-resources"><a class="header" href="#first-runnable--bevy-loading-red-alert-resources">First Runnable — Bevy Loading Red Alert Resources</a></h2>
+<p>This section defines the concrete implementation path from “no code” to “a Bevy window rendering a Red Alert map with sprites on it.” It spans Phase 0 (format literacy) through Phase 1 (rendering slice) and produces the project’s first visible output — the milestone that proves the architecture works.</p>
+<h3 id="why-this-matters-1"><a class="header" href="#why-this-matters-1">Why This Matters</a></h3>
+<p>The first runnable is the “Hello World” of the engine. Until a Bevy window opens and renders actual Red Alert assets, everything is theory. This milestone:</p>
+<ul>
+<li><strong>Validates <code>ra-formats</code>.</strong> Can we actually parse <code>.mix</code>, <code>.shp</code>, <code>.pal</code>, <code>.tmp</code> into usable data?</li>
+<li><strong>Validates the Bevy integration.</strong> Can we get RA sprites into Bevy’s rendering pipeline?</li>
+<li><strong>Validates the isometric math.</strong> Can we convert grid coordinates to screen coordinates correctly?</li>
+<li><strong>Generates community interest.</strong> “Red Alert map rendered faithfully in Rust at 4K 144fps” is the first public proof that IC is real.</li>
+</ul>
+<h3 id="what-we-can-reference-from-existing-projects"><a class="header" href="#what-we-can-reference-from-existing-projects">What We CAN Reference From Existing Projects</a></h3>
+<p>We cannot copy code from OpenRA (C#) or the Remastered Collection (proprietary C# layer), but we can study their design decisions:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Source</th><th>What We Take</th><th>What We Don’t</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>EA Original RA (GPL)</strong></td><td>Format struct layouts (MIX header, SHP frame offsets, PAL 6-bit values), LCW/RLE decompression algorithms, integer math</td><td>Don’t copy the rendering code (VGA/DirectDraw). Don’t adopt the global-state architecture</td></tr>
+<tr><td><strong>Remastered (GPL C++ DLLs)</strong></td><td>HD asset pipeline concepts (how classic sprites map to HD equivalents), modernization approach</td><td>Don’t reference the proprietary C# layer or HD art assets. No GUI code — it’s Petroglyph’s C#</td></tr>
+<tr><td><strong>OpenRA (GPL)</strong></td><td>Map format, YAML rule structure, palette handling, sprite animation sequences, coordinate system conventions, cursor logic</td><td>Don’t copy C# rendering code verbatim. Don’t duplicate OpenRA’s Chrome UI system — build native Bevy UI</td></tr>
+<tr><td><strong>Bevy (MIT)</strong></td><td>Sprite batching, <code>TextureAtlas</code>, asset loading, camera transforms, <code>wgpu</code> render graph, ECS patterns</td><td>Bevy tells us <em>how</em> to render, not <em>what</em> — gameplay feel comes from RA source code, not Bevy docs</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="implementation-steps"><a class="header" href="#implementation-steps">Implementation Steps</a></h3>
+<h4 id="step-1-ra-formats--parse-everything-weeks-12"><a class="header" href="#step-1-ra-formats--parse-everything-weeks-12">Step 1: <code>ra-formats</code> — Parse Everything (Weeks 1–2)</a></h4>
+<p>Build the <code>ra-formats</code> crate to read all Red Alert binary formats. This is pure Rust with zero Bevy dependency — a standalone library that other tools could use.</p>
+<p><strong>Deliverables:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Parser</th><th>Input</th><th>Output</th><th>Reference</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>MIX archive</strong></td><td><code>.mix</code> file bytes</td><td>File index (CRC hash → offset/size pairs), extract any file by name</td><td>EA source <code>MIXFILE.CPP</code>: CRC hash table, two-tier (body/footer)</td></tr>
+<tr><td><strong>PAL palette</strong></td><td>256 × 3 bytes</td><td><code>[u8; 768]</code> with 6-bit→8-bit conversion (<code>value &lt;&lt; 2</code>)</td><td>EA source <code>PAL</code> format, <code>05-FORMATS.md</code> § PAL</td></tr>
+<tr><td><strong>SHP sprites</strong></td><td><code>.shp</code> file bytes</td><td><code>Vec&lt;Frame&gt;</code> with pixel data, width, height per frame. LCW/RLE decode</td><td>EA source <code>SHAPE.H</code>/<code>SHAPE.CPP</code>: <code>ShapeBlock_Type</code>, draw flags</td></tr>
+<tr><td><strong>TMP tiles</strong></td><td><code>.tmp</code> file bytes</td><td>Terrain tile images per theater (Temperate, Snow, Interior)</td><td>OpenRA’s template definitions + EA source</td></tr>
+<tr><td><strong>AUD audio</strong></td><td><code>.aud</code> file bytes</td><td>PCM samples. IMA ADPCM decompression via <code>IndexTable</code>/<code>DiffTable</code></td><td>EA source <code>AUDIO.CPP</code>, <code>05-FORMATS.md</code> § AUD</td></tr>
+<tr><td><strong>CLI inspector</strong></td><td>Any RA file or <code>.mix</code></td><td>Human-readable dump: file list, sprite frame count, palette preview</td><td><code>ic</code> CLI prototype: <code>ic dump &lt;file&gt;</code></td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Key implementation detail:</strong> MIX archives use a CRC32 hash of the filename (uppercased) as the lookup key — there’s no filename stored in the archive. <code>ra-formats</code> must include the hash function and a known-filename dictionary (from OpenRA’s <code>global.mix</code> filenames list) to resolve entries by name.</p>
+<p><strong>Test strategy:</strong> Parse every <code>.mix</code> from a stock Red Alert installation. Extract every <code>.shp</code> and verify frame counts match OpenRA’s <code>sequences/*.yaml</code>. Render every <code>.pal</code> as a 16×16 color grid PNG.</p>
+<h4 id="step-2-bevy-window--one-sprite-week-3"><a class="header" href="#step-2-bevy-window--one-sprite-week-3">Step 2: Bevy Window + One Sprite (Week 3)</a></h4>
+<p>The “Hello RA” moment — a Bevy window opens and displays a single Red Alert sprite with the correct palette applied.</p>
+<p><strong>What this proves:</strong> <code>ra-formats</code> output can flow into Bevy’s <code>Image</code> / <code>TextureAtlas</code> pipeline. Palette-indexed sprites render correctly on a GPU.</p>
+<p><strong>Implementation:</strong></p>
+<ol>
+<li>Load <code>conquer.mix</code> → extract <code>e1.shp</code> (rifle infantry) and <code>temperat.pal</code></li>
+<li>Convert SHP frames to RGBA pixels by looking up each palette index in the <code>.pal</code> → produce a Bevy <code>Image</code></li>
+<li>Build a <code>TextureAtlas</code> from the frame images (Bevy’s sprite sheet system)</li>
+<li>Spawn a Bevy <code>SpriteSheetBundle</code> entity and animate through the idle frames</li>
+<li>Display in a Bevy window with a simple orthographic camera</li>
+</ol>
+<p><strong>Palette handling:</strong> At this stage, palette application happens on the CPU during asset loading (index → RGBA lookup). The GPU palette shader (for runtime player color remapping, palette cycling) comes in Phase 1 proper. CPU conversion is correct and simple — good enough for validation.</p>
+<p><strong>Player color remapping:</strong> Not needed yet. Just render with the default palette. Player colors (palette indices 80–95) are a Phase 1 concern.</p>
+<h4 id="step-3-load-and-render-an-openra-map-weeks-45"><a class="header" href="#step-3-load-and-render-an-openra-map-weeks-45">Step 3: Load and Render an OpenRA Map (Weeks 4–5)</a></h4>
+<p>Parse <code>.oramap</code> files and render the terrain grid in correct isometric projection.</p>
+<p><strong>What this proves:</strong> The coordinate system works. Isometric math is correct. Theater palettes load. Terrain tiles tile without visible seams.</p>
+<p><strong>Implementation:</strong></p>
+<ol>
+<li>Parse <code>.oramap</code> (ZIP archive containing <code>map.yaml</code> + <code>map.bin</code>)</li>
+<li><code>map.yaml</code> defines: map size, tileset/theater, player definitions, actor placements</li>
+<li><code>map.bin</code> is the tile grid: each cell has a tile index + subtile index</li>
+<li>Load the theater tileset (e.g., <code>temperat.mix</code> for Temperate) and its palette</li>
+<li>For each cell in the grid, look up the terrain tile image and blit it at the correct isometric screen position</li>
+</ol>
+<p><strong>Isometric coordinate transform:</strong></p>
+<pre><code>screen_x = (cell_x - cell_y) * tile_half_width
+screen_y = (cell_x + cell_y) * tile_half_height
+</code></pre>
+<p>Where <code>tile_half_width = 30</code> and <code>tile_half_height = 15</code> for classic RA’s 60×30 diamond tiles (these values come from the original source and OpenRA). This is the <code>CoordTransform</code> defined in Phase 0’s architecture work.</p>
+<p><strong>Tile rendering order:</strong> Tiles render left-to-right, top-to-bottom in map coordinates. This is the standard isometric painter’s algorithm. In Bevy, this translates to setting <code>Transform.translation.z</code> based on the cell’s Y coordinate (higher Y = lower z = renders behind).</p>
+<p><strong>Map bounds and camera:</strong> The map defines a playable bounds rectangle within the total tile grid. Set the Bevy camera to center on the map and allow panning with arrow keys / edge scrolling. Zoom with scroll wheel.</p>
+<h4 id="step-4-sprites-on-map--idle-animations--camera-weeks-68"><a class="header" href="#step-4-sprites-on-map--idle-animations--camera-weeks-68">Step 4: Sprites on Map + Idle Animations + Camera (Weeks 6–8)</a></h4>
+<p>Place unit and building sprites on the terrain grid. Animate idle loops. Implement camera controls.</p>
+<p><strong>What this proves:</strong> Sprites render at correct positions on the terrain. Z-ordering works (buildings behind units, shadows under vehicles). Animation timing matches the original game.</p>
+<p><strong>Implementation:</strong></p>
+<ol>
+<li>Read actor placements from <code>map.yaml</code> — each actor has a type name, cell position, and owner</li>
+<li>Look up the actor’s sprite sequence from <code>sequences/*.yaml</code> (or the unit rules) — this gives the <code>.shp</code> filename, frame ranges for each animation, and facing count</li>
+<li>For each placed actor, create a Bevy entity with:
+<ul>
+<li><code>SpriteSheetBundle</code> using the actor’s sprite frames</li>
+<li><code>Transform</code> positioned at the isometric screen location of the actor’s cell</li>
+<li>Z-order based on render layer (see § “Z-Order” above) and Y-position within layer</li>
+</ul>
+</li>
+<li>Animate idle sequences: advance frames at the timing specified in the sequence definition</li>
+<li>Buildings: render the “make” animation’s final frame (fully built state)</li>
+</ol>
+<p><strong>Camera system:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Control</th><th>Input</th><th>Behavior</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Pan</strong></td><td>Arrow keys / edge scroll</td><td>Smoothly move camera. Edge scroll activates within 10px of edge</td></tr>
+<tr><td><strong>Zoom</strong></td><td>Mouse scroll wheel</td><td>Discrete zoom levels (1×, 1.5×, 2×, 3×) or smooth zoom</td></tr>
+<tr><td><strong>Center on map</strong></td><td>Home key</td><td>Reset camera to map center</td></tr>
+<tr><td><strong>Minimap click</strong></td><td>Click on minimap panel</td><td>Camera jumps to clicked location</td></tr>
+</tbody>
+</table>
+</div>
+<p>At this stage, the minimap is a simple downscaled render of the full map — no player colors, no fog. Game-quality minimap rendering comes in Phase 3.</p>
+<p><strong>Z-order validation:</strong> Place overlapping buildings and units in a test map. Verify visually against a screenshot from OpenRA rendering the same map. The 13-layer z-order system (§ “Z-Order” above) must be correct at this step.</p>
+<h4 id="step-5-shroud-fog-of-war-and-selection-weeks-910"><a class="header" href="#step-5-shroud-fog-of-war-and-selection-weeks-910">Step 5: Shroud, Fog-of-War, and Selection (Weeks 9–10)</a></h4>
+<p>Add the visual layers that make it feel like an actual game viewport rather than a debug renderer.</p>
+<p><strong>Shroud rendering:</strong> Unexplored areas are black. Explored-but-not-visible areas show terrain but dimmed (fog). The shroud layer renders on top of everything (z-layer 12). Shroud edges use smooth blending tiles (from the tileset) for clean boundaries. At this stage, shroud state is hardcoded (reveal a circle around the map center) — real fog computation comes in Phase 2 with <code>FogProvider</code>.</p>
+<p><strong>Selection box:</strong> Left-click-drag draws a selection rectangle. In isometric view, this is traditionally a diamond-shaped selection (rotated 45°) to match the grid orientation, though OpenRA uses a screen-aligned rectangle. IC supports both via QoL toggle (D033). Selected units show a health bar and selection bracket below them.</p>
+<p><strong>Cursor system:</strong> The cursor changes based on what it’s hovering over — move cursor on ground, select cursor on own units, attack cursor on enemies. This is the <code>CursorContext</code> system. At this stage, implement the visual cursor switching; the actual order dispatch (right-click → move command) is Phase 2 sim work.</p>
+<h4 id="step-6-sidebar-chrome--first-game-like-frame-weeks-1112"><a class="header" href="#step-6-sidebar-chrome--first-game-like-frame-weeks-1112">Step 6: Sidebar Chrome — First Game-Like Frame (Weeks 11–12)</a></h4>
+<p>Assemble the classic RA sidebar layout to complete the visual frame. No functionality yet — build queues don’t work, credits don’t tick, radar doesn’t update. But the <em>layout</em> is in place.</p>
+<p><strong>What this proves:</strong> Bevy UI can reproduce the RA sidebar layout. Theme YAML (D032) drives the arrangement. The viewport resizes correctly when the sidebar is present.</p>
+<p><strong>Sidebar layout (Classic theme):</strong></p>
+<pre><code>┌───────────────────────────────────────────┬────────────┐
+│                                           │  RADAR     │
+│                                           │  MINIMAP   │
+│                                           ├────────────┤
+│          GAME VIEWPORT                    │  CREDITS   │
+│          (isometric map)                  │  $ 10000   │
+│                                           ├────────────┤
+│                                           │  POWER BAR │
+│                                           │  ████░░░░  │
+│                                           ├────────────┤
+│                                           │  BUILD     │
+│                                           │  QUEUE     │
+│                                           │  [icons]   │
+│                                           │  [icons]   │
+│                                           │            │
+├───────────────────────────────────────────┴────────────┤
+│  STATUS BAR: selected unit info / tooltip              │
+└────────────────────────────────────────────────────────┘
+</code></pre>
+<p><strong>Implementation:</strong> Use Bevy UI (<code>bevy_ui</code>) for the sidebar layout. The sidebar is a fixed-width panel on the right. The game viewport fills the remaining space. Each sidebar section is a placeholder panel with correct sizing and positioning. The radar minimap shows the downscaled terrain render from Step 4. Build queue icons show static sprite images from the unit/building sequences.</p>
+<p><strong>Theme loading:</strong> Read a <code>theme.yaml</code> (D032) that defines: sidebar width, section heights, font, color palette, chrome sprite sheet references. At this stage, only the Classic theme exists — but the loading system is in place so future themes just swap the YAML.</p>
+<h3 id="content-detection--finding-ra-assets"><a class="header" href="#content-detection--finding-ra-assets">Content Detection — Finding RA Assets</a></h3>
+<p>Before any of the above steps can run, the engine must locate the player’s Red Alert game files. IC never distributes copyrighted assets — it loads them from games the player already owns.</p>
+<p><strong>Detection sources (probed at first launch):</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Source</th><th>Detection Method</th><th>Priority</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Steam</strong></td><td><code>SteamApps/common/CnCRemastered/</code> or <code>SteamApps/common/Red Alert/</code> via Steam paths</td><td>1</td></tr>
+<tr><td><strong>GOG</strong></td><td>Registry key or default GOG install path</td><td>2</td></tr>
+<tr><td><strong>Origin / EA App</strong></td><td>Registry key for C&amp;C Ultimate Collection</td><td>3</td></tr>
+<tr><td><strong>OpenRA</strong></td><td><code>~/.openra/Content/ra/</code> — OpenRA’s own content download</td><td>4</td></tr>
+<tr><td><strong>Manual directory</strong></td><td>Player points to a folder containing <code>.mix</code> files</td><td>5</td></tr>
+</tbody>
+</table>
+</div>
+<p>If no content source is found, the first-launch flow guides the player to either install the game from a platform they own it on, or point to existing files. IC does not download game files from the internet (legal boundary).</p>
+<p>See <code>05-FORMATS.md</code> § “Content Source Detection and Installed Asset Locations” for detailed source probing logic and the <code>ContentSource</code> enum.</p>
+<h3 id="timeline-summary"><a class="header" href="#timeline-summary">Timeline Summary</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Weeks</th><th>Step</th><th>Milestone</th><th>Phase Alignment</th></tr>
+</thead>
+<tbody>
+<tr><td>1–2</td><td><code>ra-formats</code> parsers</td><td>CLI can dump any MIX/SHP/PAL/TMP/AUD file</td><td>Phase 0</td></tr>
+<tr><td>3</td><td>Bevy + one sprite</td><td>Window opens, animated RA infantry on screen</td><td>Phase 0 → 1</td></tr>
+<tr><td>4–5</td><td>Map rendering</td><td>Any <code>.oramap</code> renders as isometric terrain grid</td><td>Phase 1</td></tr>
+<tr><td>6–8</td><td>Sprites + animations</td><td>Units and buildings on map, idle animations, camera controls</td><td>Phase 1</td></tr>
+<tr><td>9–10</td><td>Shroud + selection</td><td>Fog overlay, selection box, cursor context switching</td><td>Phase 1</td></tr>
+<tr><td>11–12</td><td>Sidebar chrome</td><td>Classic RA layout assembled — first complete visual frame</td><td>Phase 1</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Phase 0 exit:</strong> Steps 1–2 complete (parsers + one sprite in Bevy). <strong>Phase 1 exit:</strong> All six steps complete — any OpenRA RA map loads and renders with sprites, animations, camera, shroud, and sidebar layout at 144fps on mid-range hardware.</p>
+<p>After Step 6, the rendering slice is done. The next work is Phase 2: making the units actually <em>do</em> things (move, shoot, die) in a deterministic simulation. See <code>08-ROADMAP.md</code> § Phase 2.</p>
 <h2 id="crate-dependency-graph"><a class="header" href="#crate-dependency-graph">Crate Dependency Graph</a></h2>
 <pre><code>ic-protocol  (shared types: PlayerOrder, TimestampedOrder)
     ↑
@@ -2029,7 +1385,7 @@ pub enum ScreenClass {
     └── ic-game     (depends on: everything above EXCEPT ic-editor)
 </code></pre>
 <p><strong>Critical boundary:</strong> <code>ic-sim</code> never imports from <code>ic-net</code>. <code>ic-net</code> never imports from <code>ic-sim</code>. They only share <code>ic-protocol</code>. <code>ic-game</code> never imports from <code>ic-editor</code> — the game and SDK are separate binaries that share library crates.</p>
-<p><strong>Storage boundary:</strong> <code>ic-sim</code> never reads or writes SQLite (invariant #1). Three crates are read-only consumers of the client-side SQLite database: <code>ic-ui</code> (post-game stats, career page, campaign dashboard), <code>ic-llm</code> (personalized missions, adaptive briefings, coaching), <code>ic-ai</code> (difficulty scaling, counter-strategy selection). Gameplay events are written by a Bevy observer system in <code>ic-game</code>, outside the deterministic sim. See D034 in <code>09-DECISIONS.md</code>.</p>
+<p><strong>Storage boundary:</strong> <code>ic-sim</code> never reads or writes SQLite (invariant #1). Three crates are read-only consumers of the client-side SQLite database: <code>ic-ui</code> (post-game stats, career page, campaign dashboard), <code>ic-llm</code> (personalized missions, adaptive briefings, coaching), <code>ic-ai</code> (difficulty scaling, counter-strategy selection). Gameplay events are written by a Bevy observer system in <code>ic-game</code>, outside the deterministic sim. See D034 in <code>decisions/09e-community.md</code>.</p>
 <h3 id="crate-design-notes"><a class="header" href="#crate-design-notes">Crate Design Notes</a></h3>
 <p>Most crates are self-explanatory from the dependency graph, but three that appear in the graph without dedicated design doc sections are detailed here.</p>
 <h4 id="ic-audio--sound-music-and-eva"><a class="header" href="#ic-audio--sound-music-and-eva"><code>ic-audio</code> — Sound, Music, and EVA</a></h4>
@@ -2038,7 +1394,7 @@ pub enum ScreenClass {
 <ul>
 <li><strong>Sound effects:</strong> Weapon fire, explosions, unit acknowledgments, UI clicks. Triggered by sim events (combat, production, movement) via Bevy observer systems.</li>
 <li><strong>EVA voice system:</strong> Plays notification audio triggered by <code>notification_system()</code> events. Manages a priority queue — high-priority notifications (nuke launch, base under attack) interrupt low-priority ones. Respects per-notification cooldowns.</li>
-<li><strong>Music playback:</strong> Jukebox system with playlist management, track shuffle, and cross-fade. Supports <code>.aud</code> (original RA format via <code>ra-formats</code>) and modern formats (OGG, WAV via Bevy). Theme-specific intro tracks (D032 — Hell March for Classic theme).</li>
+<li><strong>Music playback:</strong> Three modes — jukebox (classic sequential/shuffle), sequential (ordered playlist), and dynamic (mood-tagged tracks with game-state-driven transitions and crossfade). Supports <code>.aud</code> (original RA format via <code>ra-formats</code>) and modern formats (OGG, WAV via Bevy). Theme-specific intro tracks (D032 — Hell March for Classic theme). Dynamic mode monitors combat, base threat, and objective state to select appropriate mood category. See § “Red Alert Experience Recreation Strategy” for full music system design and D038 in <code>decisions/09f-tools.md</code> for scenario editor integration.</li>
 <li><strong>Spatial audio:</strong> 3D positional audio for effects — explosions louder when camera is near. Uses Bevy’s spatial audio with listener at <code>GameCamera.position</code> (see § “Camera System”).</li>
 <li><strong>VoIP playback:</strong> Decodes incoming Opus voice frames from <code>MessageLane::Voice</code> and mixes them into the audio output. Handles per-player volume, muting, and optional spatial panning (D059 § Spatial Audio). Voice replay playback syncs Opus frames to game ticks.</li>
 <li><strong>Ambient soundscapes:</strong> Per-biome ambient loops (waves for coastal maps, wind for snow maps). Weather system (D022) can modify ambient tracks.</li>
@@ -2075,7 +1431,7 @@ pub struct Jukebox {
 ├── MilitaryManager      — attack planning, event-driven defense, squad management
 └── AiState (shared)     — threat map, resource map, scouting memory
 </code></pre>
-<p>Key techniques: priority-based resource allocation (from 0 A.D. Petra), share-based unit composition (from OpenRA), influence maps for building placement (from 0 A.D.), tick-gated evaluation (from Generals/Petra), fuzzy engagement logic (from OpenRA), Lanchester-inspired threat scoring (from MicroRTS research). Each manager runs on its own tick schedule — cheap decisions (defense) every tick, expensive decisions (strategic reassessment) every 60 ticks. Total amortized AI budget: &lt;0.5ms per tick for 500 units. All AI working memory is pre-allocated in <code>AiScratch</code> (zero per-tick allocation). Full implementation detail in D043 (<code>09-DECISIONS.md</code>).</p>
+<p>Key techniques: priority-based resource allocation (from 0 A.D. Petra), share-based unit composition (from OpenRA), influence maps for building placement (from 0 A.D.), tick-gated evaluation (from Generals/Petra), fuzzy engagement logic (from OpenRA), Lanchester-inspired threat scoring (from MicroRTS research). Each manager runs on its own tick schedule — cheap decisions (defense) every tick, expensive decisions (strategic reassessment) every 60 ticks. Total amortized AI budget: &lt;0.5ms per tick for 500 units. All AI working memory is pre-allocated in <code>AiScratch</code> (zero per-tick allocation). Full implementation detail in D043 (<code>decisions/09d-gameplay.md</code>).</p>
 <p><strong>AI tiers (YAML-configured):</strong></p>
 <div class="table-wrapper">
 <table>
@@ -2147,7 +1503,7 @@ pub trait AiStrategy: Send + Sync {
     fn tick_budget_hint(&amp;self) -&gt; Option&lt;u64&gt;;
 }
 <span class="boring">}</span></code></pre>
-<p><code>FogFilteredView</code> ensures AI honesty — the AI sees only what its units see, just like a human player. Campaign scripts can grant omniscience via conditions. AI strategies are selectable in the lobby: “IC Default (Normal)”, “Workshop: Neural Net v2.1”, etc. See D041 in <code>09-DECISIONS.md</code> for full rationale.</p>
+<p><code>FogFilteredView</code> ensures AI honesty — the AI sees only what its units see, just like a human player. Campaign scripts can grant omniscience via conditions. AI strategies are selectable in the lobby: “IC Default (Normal)”, “Workshop: Neural Net v2.1”, etc. See D041 in <code>decisions/09d-gameplay.md</code> for full rationale.</p>
 <p><strong>Phase:</strong> Basic skirmish AI (Easy/Normal) in Phase 4. Hard/Brutal + adaptive difficulty in Phase 5-6a.</p>
 <h4 id="ic-script--lua-and-wasm-mod-runtimes"><a class="header" href="#ic-script--lua-and-wasm-mod-runtimes"><code>ic-script</code> — Lua and WASM Mod Runtimes</a></h4>
 <p><code>ic-script</code> hosts the Lua and WASM mod execution environments. It bridges the stable mod API surface to engine internals via a compatibility adapter layer.</p>
@@ -2203,6 +1559,559 @@ pub struct WasmInstance {
 </ul>
 <p><strong>Browser builds:</strong> Tier 3 WASM mods are desktop/server-only. The browser build (WASM target) cannot embed <code>wasmtime</code> — see <code>04-MODDING.md</code> § “Browser Build Limitation (WASM-on-WASM)” for the full analysis and future mitigation path (<code>wasmi</code> interpreter fallback).</p>
 <p><strong>Phase:</strong> Lua runtime in Phase 4. WASM runtime in Phase 4-5. Mod API versioning in Phase 6a.</p>
+<h2 id="install--source-layout-community-friendly-project-structure"><a class="header" href="#install--source-layout-community-friendly-project-structure">Install &amp; Source Layout (Community-Friendly Project Structure)</a></h2>
+<p>The directory structure — both the shipped product and the source repository — is designed to feel immediately navigable to anyone who has worked with OpenRA. OpenRA’s modding community thrived because the project was approachable: open a mod folder, find YAML rules organized by category, edit values, see results. IC preserves that muscle memory while fitting the structure to a Rust/Bevy codebase.</p>
+<h3 id="design-principles"><a class="header" href="#design-principles">Design Principles</a></h3>
+<ol>
+<li>
+<p><strong>Game modules are mods.</strong> Built-in game modules (<code>mods/ra/</code>, <code>mods/td/</code>) use the exact same directory layout, <code>mod.yaml</code> manifest, and YAML rule schema as community-created mods. No internal-only APIs, no special paths. If a modder can edit <code>mods/ra/rules/units/vehicles.yaml</code>, anyone can see how the game’s own data is structured. Directly inspired by Factorio’s “game is a mod” principle (validated in D018).</p>
+</li>
+<li>
+<p><strong>Same vocabulary, same directories.</strong> OpenRA uses <code>rules/</code>, <code>sequences/</code>, <code>chrome/</code>, <code>maps/</code>, <code>audio/</code>, <code>scripts/</code>. IC uses the same directory names for the same purposes. An OpenRA modder opening IC’s <code>mods/ra/</code> directory knows where everything is.</p>
+</li>
+<li>
+<p><strong>Separate binaries for separate roles.</strong> Game client, dedicated server, CLI tool, and SDK editor are separate executables — like OpenRA ships <code>OpenRA.exe</code>, <code>OpenRA.Server.exe</code>, and <code>OpenRA.Utility.exe</code>. A server operator never needs the renderer. A modder using the SDK never needs the multiplayer client. Each has its own binary, sharing library crates underneath.</p>
+</li>
+<li>
+<p><strong>Flat and scannable.</strong> No deep nesting for its own sake. A modder looking at <code>mods/ra/</code> should see the high-level structure in a single <code>ls</code>. Subdirectories within <code>rules/</code> organize by category (units, structures, weapons) — the same pattern OpenRA uses.</p>
+</li>
+<li>
+<p><strong>Data next to data, code next to code.</strong> Game content (YAML, Lua, assets) lives in <code>mods/</code>. Engine code (Rust) lives in crate directories. They don’t intermingle. A gameplay modder never touches Rust. A engine contributor goes straight to the crate they need.</p>
+</li>
+</ol>
+<h3 id="install-directory-shipped-product"><a class="header" href="#install-directory-shipped-product">Install Directory (Shipped Product)</a></h3>
+<p>What an end user sees after installing Iron Curtain:</p>
+<pre><code>iron-curtain/
+├── iron-curtain[.exe]              # Game client (ic-game binary)
+├── ic-server[.exe]                 # Relay / dedicated server (ic-net binary)
+├── ic[.exe]                        # CLI tool (mod, backup, export, profile, server commands)
+├── ic-editor[.exe]                 # SDK: scenario editor, asset studio, campaign editor (D038+D040)
+├── mods/                           # Game modules + content — the heart of the project
+│   ├── common/                     # Shared resources used by all C&amp;C-family modules
+│   │   ├── mod.yaml                #   manifest (declares shared chrome, cursors, etc.)
+│   │   ├── chrome/                 #   shared UI layout definitions
+│   │   ├── cursors/                #   shared cursor definitions
+│   │   └── translations/           #   shared localization strings
+│   ├── ra/                         # Red Alert game module (ships Phase 2)
+│   │   ├── mod.yaml                #   manifest — same schema as any community mod
+│   │   ├── rules/                  #   unit, structure, weapon, terrain definitions
+│   │   │   ├── units/              #     infantry.yaml, vehicles.yaml, naval.yaml, aircraft.yaml
+│   │   │   ├── structures/         #     allied-structures.yaml, soviet-structures.yaml
+│   │   │   ├── weapons/            #     ballistics.yaml, missiles.yaml, energy.yaml
+│   │   │   ├── terrain/            #     temperate.yaml, snow.yaml, interior.yaml
+│   │   │   └── presets/            #     balance presets: classic.yaml, openra.yaml, remastered.yaml (D019)
+│   │   ├── maps/                   #   built-in maps
+│   │   ├── missions/               #   campaign missions (YAML scenario + Lua triggers)
+│   │   ├── sequences/              #   sprite sequence definitions (animation frames)
+│   │   ├── chrome/                 #   RA-specific UI layout (sidebar, build queue)
+│   │   ├── audio/                  #   music playlists, EVA definitions, voice mappings
+│   │   ├── ai/                     #   AI personality profiles (D043)
+│   │   ├── scripts/                #   Lua scripts (shared triggers, ability definitions)
+│   │   └── themes/                 #   UI theme overrides: classic.yaml, modern.yaml (D032)
+│   └── td/                         # Tiberian Dawn game module (ships Phase 3–4)
+│       ├── mod.yaml
+│       ├── rules/
+│       ├── maps/
+│       ├── missions/
+│       └── ...                     #   same layout as ra/
+├── LICENSE
+└── THIRD-PARTY-LICENSES
+</code></pre>
+<p><strong>Key features of the install layout:</strong></p>
+<ul>
+<li><strong><code>mods/common/</code></strong> is directly analogous to OpenRA’s <code>mods/common/</code>. Shared assets, chrome, and cursor definitions used across all C&amp;C-family game modules. Community game modules (Dune 2000, RA2) can depend on it or provide their own.</li>
+<li><strong><code>mods/ra/</code></strong> is a mod. It uses the same <code>mod.yaml</code> schema, the same <code>rules/</code> structure, and the same <code>sequences/</code> format as a community mod. There is no “privileged” version of this directory — the engine treats it identically to <code>&lt;data_dir&gt;/mods/my-total-conversion/</code>. This means every modder can read the game’s own data as a working example.</li>
+<li><strong>Every YAML file in <code>mods/ra/rules/</code> is editable.</strong> Want to change tank cost? Open <code>rules/units/vehicles.yaml</code>, find <code>medium_tank</code>, change <code>cost: 800</code> to <code>cost: 750</code>. The same workflow as OpenRA — except the YAML is standard-compliant and serde-typed.</li>
+<li><strong>The CLI (<code>ic</code>) is the Swiss Army knife.</strong> <code>ic mod init</code>, <code>ic mod check</code>, <code>ic mod test</code>, <code>ic mod publish</code>, <code>ic backup create</code>, <code>ic export</code>, <code>ic server validate-config</code>. One binary, consistent subcommands — no separate tools to discover.</li>
+</ul>
+<h3 id="source-repository-contributor-layout"><a class="header" href="#source-repository-contributor-layout">Source Repository (Contributor Layout)</a></h3>
+<p>What a contributor sees after cloning the repository:</p>
+<pre><code>iron-curtain/                       # Cargo workspace root
+├── Cargo.toml                      # Workspace manifest — lists all crates
+├── Cargo.lock
+├── deny.toml                       # cargo-deny license policy (GPL-compatible deps only)
+├── AGENTS.md                       # Agent instructions (this file)
+├── README.md
+├── LICENSE                         # GPL v3 with modding exception (D051)
+├── mods/                           # Game data — YAML, Lua, assets (NOT Rust code)
+│   ├── common/
+│   ├── ra/
+│   └── td/
+├── crates/                         # All Rust crates live here
+│   ├── ra-formats/                 # .mix, .shp, .pal parsers; MiniYAML converter
+│   │   ├── Cargo.toml
+│   │   └── src/
+│   │       ├── lib.rs
+│   │       ├── mix.rs              #   MIX archive reader
+│   │       ├── shp.rs              #   SHP sprite reader
+│   │       ├── pal.rs              #   PAL palette reader
+│   │       ├── aud.rs              #   AUD audio decoder
+│   │       ├── vqa.rs              #   VQA video decoder
+│   │       ├── miniyaml.rs         #   MiniYAML parser + converter (D025)
+│   │       ├── oramap.rs           #   .oramap map loader
+│   │       └── mod_manifest.rs     #   OpenRA mod.yaml parser (D026)
+│   ├── ic-protocol/                # Shared boundary: orders, codecs
+│   │   ├── Cargo.toml
+│   │   └── src/
+│   │       ├── lib.rs
+│   │       ├── orders.rs           #   PlayerOrder, TimestampedOrder
+│   │       └── codec.rs            #   OrderCodec trait
+│   ├── ic-sim/                     # Deterministic simulation (the core)
+│   │   ├── Cargo.toml
+│   │   └── src/
+│   │       ├── lib.rs              #   pub API: Simulation, step(), snapshot()
+│   │       ├── components/         #   ECS components — one file per domain
+│   │       │   ├── mod.rs
+│   │       │   ├── health.rs       #     Health, Armor, DamageState
+│   │       │   ├── mobile.rs       #     Mobile, Locomotor, Facing
+│   │       │   ├── combat.rs       #     Armament, AutoTarget, Turreted, AmmoPool
+│   │       │   ├── production.rs   #     Buildable, ProductionQueue, Prerequisites
+│   │       │   ├── economy.rs      #     Harvester, ResourceStorage, OreField
+│   │       │   ├── transport.rs    #     Cargo, Passenger, Carryall
+│   │       │   ├── power.rs        #     PowerProvider, PowerConsumer
+│   │       │   ├── stealth.rs      #     Cloakable, Detector
+│   │       │   ├── capture.rs      #     Capturable, Captures
+│   │       │   ├── veterancy.rs    #     Veterancy, Experience
+│   │       │   ├── building.rs     #     Placement, Foundation, Sellable, Repairable
+│   │       │   └── support.rs      #     Superweapon, Chronoshift, IronCurtain
+│   │       ├── systems/            #   ECS systems — one file per simulation step
+│   │       │   ├── mod.rs
+│   │       │   ├── orders.rs       #     validate_orders(), apply_orders()
+│   │       │   ├── movement.rs     #     movement_system() — pathfinding integration
+│   │       │   ├── combat.rs       #     combat_system() — targeting, firing, damage
+│   │       │   ├── production.rs   #     production_system() — build queues, prerequisites
+│   │       │   ├── harvesting.rs   #     harvesting_system() — ore collection, delivery
+│   │       │   ├── power.rs        #     power_system() — grid calculation
+│   │       │   ├── fog.rs          #     fog_system() — delegates to FogProvider trait
+│   │       │   ├── triggers.rs     #     trigger_system() — Lua/WASM script callbacks
+│   │       │   ├── conditions.rs   #     condition_system() — D028 condition evaluation
+│   │       │   ├── cleanup.rs      #     cleanup_system() — entity removal, state transitions
+│   │       │   └── weather.rs      #     weather_system() — D022 weather state machine
+│   │       ├── traits/             #   Pluggable abstractions (D041) — NOT OpenRA "traits"
+│   │       │   ├── mod.rs
+│   │       │   ├── pathfinder.rs   #     Pathfinder trait (D013)
+│   │       │   ├── spatial.rs      #     SpatialIndex trait
+│   │       │   ├── fog.rs          #     FogProvider trait
+│   │       │   ├── damage.rs       #     DamageResolver trait
+│   │       │   ├── validator.rs    #     OrderValidator trait (D041)
+│   │       │   └── ai.rs           #     AiStrategy trait (D041)
+│   │       ├── math/               #   Fixed-point arithmetic, coordinates
+│   │       │   ├── mod.rs
+│   │       │   ├── fixed.rs        #     Fixed-point types (i32/i64 scale — P002)
+│   │       │   └── pos.rs          #     WorldPos, CellPos
+│   │       ├── rules/              #   YAML rule deserialization (serde structs)
+│   │       │   ├── mod.rs
+│   │       │   ├── unit.rs         #     UnitDef, Buildable, DisplayInfo
+│   │       │   ├── weapon.rs       #     WeaponDef, Warhead, Projectile
+│   │       │   ├── alias.rs        #     OpenRA trait name alias registry (D023)
+│   │       │   └── inheritance.rs  #     YAML inheritance resolver
+│   │       └── snapshot.rs         #   State serialization for saves/replays/rollback
+│   ├── ic-net/                     # Networking (never imports ic-sim)
+│   │   ├── Cargo.toml
+│   │   └── src/
+│   │       ├── lib.rs
+│   │       ├── network_model.rs    #   NetworkModel trait (D006)
+│   │       ├── lockstep.rs         #   LockstepNetwork implementation
+│   │       ├── local.rs            #   LocalNetwork (testing, single-player)
+│   │       ├── relay_core.rs       #   RelayCore library (D007)
+│   │       └── bin/
+│   │           └── relay.rs        #   relay-server binary entry point
+│   ├── ic-render/                  # Isometric rendering (Bevy plugin)
+│   ├── ic-ui/                      # Game chrome, sidebar, minimap
+│   ├── ic-audio/                   # Sound, music, EVA, VoIP
+│   ├── ic-script/                  # Lua + WASM mod runtimes
+│   ├── ic-ai/                      # Skirmish AI, adaptive difficulty
+│   ├── ic-llm/                     # LLM mission generation (optional)
+│   ├── ic-editor/                  # SDK binary: scenario editor, asset studio (D038+D040)
+│   └── ic-game/                    # Game binary: ties all plugins together
+│       ├── Cargo.toml
+│       └── src/
+│           └── main.rs             #   Bevy App setup, plugin registration
+├── tools/                          # Developer tools (not shipped)
+│   ├── miniyaml2yaml/              #   MiniYAML → YAML batch converter CLI
+│   └── replay-corpus/              #   Foreign replay regression test harness (D056)
+└── tests/                          # Integration tests
+    ├── sim/                        #   Deterministic sim regression tests
+    └── format/                     #   File format round-trip tests
+</code></pre>
+<h3 id="where-openra-contributors-find-things"><a class="header" href="#where-openra-contributors-find-things">Where OpenRA Contributors Find Things</a></h3>
+<p>An OpenRA contributor’s first question is “where does this live in IC?” This table maps OpenRA’s C# project structure to IC’s Rust workspace:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>What you did in OpenRA</th><th>Where in OpenRA</th><th>Where in IC</th><th>Notes</th></tr>
+</thead>
+<tbody>
+<tr><td>Edit unit stats (cost, HP, speed)</td><td><code>mods/ra/rules/*.yaml</code></td><td><code>mods/ra/rules/units/*.yaml</code></td><td>Same workflow, real YAML instead of MiniYAML</td></tr>
+<tr><td>Edit weapon definitions</td><td><code>mods/ra/weapons/*.yaml</code></td><td><code>mods/ra/rules/weapons/*.yaml</code></td><td>Nested under <code>rules/</code> for discoverability</td></tr>
+<tr><td>Edit sprite sequences</td><td><code>mods/ra/sequences/*.yaml</code></td><td><code>mods/ra/sequences/*.yaml</code></td><td>Identical location</td></tr>
+<tr><td>Write Lua mission scripts</td><td><code>mods/ra/maps/*/script.lua</code></td><td><code>mods/ra/missions/*.lua</code></td><td>Same API (D024), dedicated directory</td></tr>
+<tr><td>Edit UI layout (chrome)</td><td><code>mods/ra/chrome/*.yaml</code></td><td><code>mods/ra/chrome/*.yaml</code></td><td>Identical location</td></tr>
+<tr><td>Edit balance/speed/settings</td><td><code>mods/ra/mod.yaml</code></td><td><code>mods/ra/rules/presets/*.yaml</code></td><td>Separated into named presets (D019)</td></tr>
+<tr><td>Add a new C# trait (component)</td><td><code>OpenRA.Mods.RA/Traits/*.cs</code></td><td><code>crates/ic-sim/src/components/*.rs</code></td><td>Rust struct + derive instead of C# class</td></tr>
+<tr><td>Add a new activity (behavior)</td><td><code>OpenRA.Mods.Common/Activities/*.cs</code></td><td><code>crates/ic-sim/src/systems/*.rs</code></td><td>ECS system instead of activity object</td></tr>
+<tr><td>Add a new warhead type</td><td><code>OpenRA.Mods.Common/Warheads/*.cs</code></td><td><code>crates/ic-sim/src/components/combat.rs</code></td><td>Warheads are component data + system logic</td></tr>
+<tr><td>Add a format parser</td><td><code>OpenRA.Game/FileFormats/*.cs</code></td><td><code>crates/ra-formats/src/*.rs</code></td><td>One file per format, same as OpenRA</td></tr>
+<tr><td>Add a Lua scripting global</td><td><code>OpenRA.Mods.Common/Scripting/*.cs</code></td><td><code>crates/ic-script/src/*.rs</code></td><td>D024 API surface</td></tr>
+<tr><td>Edit AI behavior</td><td><code>OpenRA.Mods.Common/AI/*.cs</code></td><td><code>crates/ic-ai/src/*.rs</code></td><td>Priority-manager hierarchy</td></tr>
+<tr><td>Edit rendering</td><td><code>OpenRA.Game/Graphics/*.cs</code></td><td><code>crates/ic-render/src/*.rs</code></td><td>Bevy render plugin</td></tr>
+<tr><td>Edit server/network code</td><td><code>OpenRA.Server/*.cs</code></td><td><code>crates/ic-net/src/*.rs</code></td><td>Never touches ic-sim</td></tr>
+<tr><td>Run the utility CLI</td><td><code>OpenRA.Utility.exe</code></td><td><code>ic[.exe]</code></td><td><code>ic mod check</code>, <code>ic export</code>, etc.</td></tr>
+<tr><td>Run a dedicated server</td><td><code>OpenRA.Server.exe</code></td><td><code>ic-server[.exe]</code></td><td>Or <code>ic server run</code> via CLI</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="ecs-translation-openra-traits--ic-components--systems"><a class="header" href="#ecs-translation-openra-traits--ic-components--systems">ECS Translation: OpenRA Traits → IC Components + Systems</a></h3>
+<p>OpenRA merges data and behavior into “traits” (C# classes). In IC’s ECS architecture, these split into <strong>components</strong> (data) and <strong>systems</strong> (behavior):</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>OpenRA Trait</th><th>IC Component(s)</th><th>IC System</th><th>File(s)</th></tr>
+</thead>
+<tbody>
+<tr><td><code>Health</code></td><td><code>Health</code>, <code>Armor</code></td><td><code>combat_system()</code> applies damage</td><td><code>components/health.rs</code>, <code>systems/combat.rs</code></td></tr>
+<tr><td><code>Mobile</code></td><td><code>Mobile</code>, <code>Locomotor</code>, <code>Facing</code></td><td><code>movement_system()</code> moves entities</td><td><code>components/mobile.rs</code>, <code>systems/movement.rs</code></td></tr>
+<tr><td><code>Armament</code></td><td><code>Armament</code>, <code>AmmoPool</code></td><td><code>combat_system()</code> fires weapons</td><td><code>components/combat.rs</code>, <code>systems/combat.rs</code></td></tr>
+<tr><td><code>Harvester</code></td><td><code>Harvester</code>, <code>ResourceStorage</code></td><td><code>harvesting_system()</code> gathers ore</td><td><code>components/economy.rs</code>, <code>systems/harvesting.rs</code></td></tr>
+<tr><td><code>Buildable</code></td><td><code>Buildable</code>, <code>Prerequisites</code></td><td><code>production_system()</code> manages queue</td><td><code>components/production.rs</code>, <code>systems/production.rs</code></td></tr>
+<tr><td><code>Cargo</code>, <code>Passenger</code></td><td><code>Cargo</code>, <code>Passenger</code></td><td><code>transport_system()</code> loads/unloads</td><td><code>components/transport.rs</code></td></tr>
+<tr><td><code>Cloak</code></td><td><code>Cloakable</code>, <code>Detector</code></td><td><code>stealth_system()</code> updates visibility</td><td><code>components/stealth.rs</code></td></tr>
+<tr><td><code>Valued</code></td><td>Part of <code>Buildable</code> (cost field)</td><td>—</td><td><code>components/production.rs</code></td></tr>
+<tr><td><code>ConditionalTrait</code></td><td>Condition system (D028)</td><td><code>condition_system()</code> evaluates</td><td><code>systems/conditions.rs</code></td></tr>
+</tbody>
+</table>
+</div>
+<p>The naming convention follows Rust idioms (<code>snake_case</code> files, <code>PascalCase</code> types) but the organization mirrors OpenRA’s categorical grouping — combat things together, economy things together, movement things together.</p>
+<h3 id="why-this-layout-works-for-the-community"><a class="header" href="#why-this-layout-works-for-the-community">Why This Layout Works for the Community</a></h3>
+<p><strong>For data modders (80% of mods):</strong> Never leave <code>mods/</code>. Edit YAML, run <code>ic mod check</code>, see results. The built-in game modules serve as always-available, documented examples of every YAML feature. No need to read Rust code to understand what fields a unit definition supports — look at <code>mods/ra/rules/units/infantry.yaml</code>.</p>
+<p><strong>For Lua scripters (missions, game modes):</strong> Write <code>scripts/*.lua</code> in your mod directory. The API is a superset of OpenRA’s (D024) — same 16 globals, same function signatures. Existing OpenRA missions run unmodified. Test with <code>ic mod test</code>.</p>
+<p><strong>For engine contributors:</strong> Clone the repo. <code>crates/</code> holds all Rust code. Each crate has a single responsibility and clear boundaries. The naming (<code>ic-sim</code>, <code>ic-net</code>, <code>ic-render</code>) tells you what it does. Within <code>ic-sim</code>, <code>components/</code> holds data, <code>systems/</code> holds logic, <code>traits/</code> holds the pluggable abstractions — the ECS split is consistent and predictable.</p>
+<p><strong>For total-conversion modders:</strong> The <code>ic-sim/src/traits/</code> directory defines every pluggable seam — custom pathfinder, custom AI, custom fog of war, custom damage resolution. Implement a trait as a WASM module (Tier 3), register it in your <code>mod.yaml</code>, and the engine uses your implementation. No forking, no C# DLL stacking.</p>
+<h3 id="development-asset-strategy"><a class="header" href="#development-asset-strategy">Development Asset Strategy</a></h3>
+<p>A clean-sheet engine needs art for editor chrome, UI menus, CI testing, and developer workflows — but it cannot ship or commit copyrighted game content. This subsection documents how reference projects host their game resources, what IC can freely use, and what belongs (or doesn’t belong) in the repository.</p>
+<h4 id="how-reference-projects-host-game-resources"><a class="header" href="#how-reference-projects-host-game-resources">How Reference Projects Host Game Resources</a></h4>
+<p><strong>Original Red Alert (1996):</strong> Assets ship as <code>.mix</code> archives — flat binary containers with CRC-hashed filenames. Originally distributed on CD-ROM, later as a freeware download installer (2008). All sprites (<code>.shp</code>), terrain (<code>.tmp</code>), palettes (<code>.pal</code>), audio (<code>.aud</code>), and cutscenes (<code>.vqa</code>) are packed inside these archives. No separate asset repository — everything distributes as compiled binaries through retail channels. The freeware release means free to download and play, not free to redistribute or embed in another project.</p>
+<p><strong>EA Remastered Collection (2020):</strong> Assets distribute through Steam (and previously Origin). The HD sprite sheets, remastered music, and cutscenes are <strong>proprietary EA content</strong> — not covered by the GPL v3 license that applies only to the C++ engine DLLs. Resources use updated archive formats (MegV3 for TD HD, standard <code>.mix</code> for classic mode) at known Steam AppId paths. See § Content Detection for how IC locates these.</p>
+<p><strong>OpenRA:</strong> The engine <strong>never distributes copyrighted game assets</strong>. On first launch, a content installer detects existing game installations (Steam, Origin, GOG, disc copies) or downloads specific <code>.mix</code> files from EA’s publicly accessible mirrors (the freeware releases). Assets are extracted and stored to <code>~/.openra/Content/ra/</code> (Linux) or the OS-appropriate equivalent. The OpenRA <strong>source repository</strong> contains only engine code (C#, GPL v3), original UI chrome art, mod rules (MiniYAML), maps, Lua scripts, and editor art — all OpenRA-created content. The few original assets (icons, cursors, fonts, panel backgrounds) are small enough for plain git. No Git LFS, no external asset hosting.</p>
+<p><strong>Key pattern:</strong> Every successful engine reimplementation project (OpenRA, CorsixTH, OpenMW, Wargus) uses the same model — engine code in the repo, game content loaded at runtime from the player’s own installation. IC follows this pattern exactly.</p>
+<h4 id="legal-boundaries--what-ic-can-freely-use"><a class="header" href="#legal-boundaries--what-ic-can-freely-use">Legal Boundaries — What IC Can Freely Use</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Source</th><th>What’s freely usable</th><th>What’s NOT usable</th><th>License</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>EA Red Alert source</strong> (<a href="https://github.com/electronicarts/CnC_Red_Alert">CnC_Red_Alert</a>)</td><td>Struct definitions, algorithms, lookup tables, gameplay constants (weapon damage, unit speeds, build times) embedded in C/C++ code</td><td>Zero art assets, zero sprites, zero music, zero palettes — the repo is pure source code</td><td>GPL v3</td></tr>
+<tr><td><strong>EA Remastered source</strong> (<a href="https://github.com/electronicarts/CnC_Remastered_Collection">CnC_Remastered_Collection</a>)</td><td>C++ engine DLL source code, format definitions, bug-fixed gameplay logic</td><td>HD sprite sheets, remastered music, Petroglyph’s C# GUI layer, all visual/audio content</td><td>GPL v3 (C++ DLLs only)</td></tr>
+<tr><td><strong>EA Generals source</strong> (<a href="https://github.com/electronicarts/CnC_Generals_Zero_Hour">CnC_Generals_Zero_Hour</a>)</td><td>Netcode reference, pathfinding code, gameplay system architecture</td><td>No art or audio assets in the repository</td><td>GPL v3</td></tr>
+<tr><td><strong>OpenRA source</strong> (<a href="https://github.com/OpenRA/OpenRA">OpenRA</a>)</td><td>Engine code, UI chrome art (buttons, panels, scrollbars, dropdown frames), custom cursors, fonts, icons, map editor UI art, MiniYAML rule definitions</td><td>Nothing — all repo content is GPL v3</td><td>GPL v3</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>OpenRA’s original chrome art</strong> is technically GPL v3 and could be used — but IC’s design explicitly creates <strong>all theme art as original work</strong> (D032). Copying OpenRA’s chrome would create visual confusion between the two projects and contradict the design direction. Study the <em>patterns</em> (layout structure, what elements exist), create original art.</p>
+<p>The EA GPL source repositories contain <strong>no art assets whatsoever</strong> — only C/C++ source code. The <code>.mix</code> archives containing actual game content (sprites, audio, palettes, terrain, cutscenes) are copyrighted EA property distributed through retail channels, even in the freeware release.</p>
+<h4 id="what-belongs-in-the-repository"><a class="header" href="#what-belongs-in-the-repository">What Belongs in the Repository</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Asset category</th><th>In repo?</th><th>Mechanism</th><th>Notes</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>EA game files</strong> (<code>.mix</code>, <code>.shp</code>, <code>.aud</code>, <code>.vqa</code>, <code>.pal</code>)</td><td><strong>Never</strong></td><td><code>ContentDetector</code> finds player’s install at runtime</td><td>Same model as OpenRA — see § Content Detection</td></tr>
+<tr><td><strong>IC-original editor art</strong> (toolbar icons, cursors)</td><td>Yes</td><td>Plain git — small files (~1-5KB each)</td><td>~20 icons for SDK, original creations</td></tr>
+<tr><td><strong>YAML rules, maps, Lua scripts</strong></td><td>Yes</td><td>Plain git — text files</td><td>All game content data authored by IC</td></tr>
+<tr><td><strong>Synthetic test fixtures</strong></td><td>Yes</td><td>Plain git — tiny hand-crafted binaries</td><td>Minimal <code>.mix</code>/<code>.shp</code>/<code>.pal</code> (~100 bytes) for parser tests</td></tr>
+<tr><td><strong>UI fonts</strong></td><td>Yes</td><td>Plain git — OFL/Apache licensed</td><td>Open fonts bundled with the engine</td></tr>
+<tr><td><strong>Placeholder/debug sprites</strong></td><td>Yes</td><td>Plain git — original creations</td><td>Colored rectangles, grid patterns, numbered circles</td></tr>
+<tr><td><strong>Large binary art</strong> (future HD sprite packs, music)</td><td>No</td><td>Workshop P2P distribution (D049)</td><td>Community-created content</td></tr>
+<tr><td><strong>Demo videos, screenshots</strong></td><td>No</td><td>External hosting, linked from docs</td><td>YouTube, project website</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Git LFS is not needed.</strong> The design docs already rejected Git LFS for Workshop distribution (“1GB free then paid; designed for source code, not binary asset distribution; no P2P” — see D049). The same reasoning applies to development: IC’s repository is code + YAML + design docs + small original icons. Total committed binary assets will stay well under 10MB.</p>
+<p><strong>CI testing strategy:</strong> Parser and format tests use synthetic fixtures — small, hand-crafted binary files (a 2-frame <code>.shp</code>, a trivial <code>.mix</code> with 3 files, a minimal <code>.pal</code>) committed to <code>tests/fixtures/</code>. These are original creations that exercise <code>ra-formats</code> code without containing EA content. Integration tests requiring real RA assets are gated behind an optional feature flag (<code>#[cfg(feature = "integration")]</code>) and run on CI runners where RA is installed, configured via <code>IC_CONTENT_DIR</code> environment variable.</p>
+<h4 id="repository-asset-layout"><a class="header" href="#repository-asset-layout">Repository Asset Layout</a></h4>
+<p>Extending the source repository layout (see § Source Repository above):</p>
+<pre><code>iron-curtain/
+├── assets/                         # IC-original assets ONLY (committed)
+│   ├── editor/                     #   SDK toolbar icons, editor cursors, panel art
+│   ├── ui/                         #   Menu chrome sprites, HUD elements
+│   ├── fonts/                      #   Bundled open-licensed fonts
+│   └── placeholder/                #   Debug sprites, test palettes, grid overlays
+├── tests/
+│   └── fixtures/                   #   Synthetic .mix/.shp/.pal for parser tests
+├── content/                        #   *** GIT-IGNORED *** — local dev game files
+│   └── ra/                         #   Developer's RA installation (pointed to or symlinked)
+├── .gitignore                      #   Ignores content/, target/, *.db
+└── ...
+</code></pre>
+<p>The <code>content/</code> directory is git-ignored. Each developer either symlinks it to their RA installation or sets <code>IC_CONTENT_DIR</code> to point elsewhere. This keeps copyrighted assets completely out of version control while giving developers a consistent local path for testing.</p>
+<h4 id="freely-usable-resources-for-graphics-menus--ci"><a class="header" href="#freely-usable-resources-for-graphics-menus--ci">Freely-Usable Resources for Graphics, Menus &amp; CI</a></h4>
+<p>IC needs original art for editor chrome, UI menus, and visual tooling. These are the recommended open-licensed sources:</p>
+<p><strong>Icon libraries (for editor toolbar, SDK panels, menu items):</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Library</th><th>License</th><th>Notes</th></tr>
+</thead>
+<tbody>
+<tr><td><a href="https://lucide.dev/">Lucide</a></td><td>ISC (MIT-equivalent)</td><td>1500+ clean SVG icons. Fork of Feather Icons with active maintenance. Excellent for toolbar/menu icons</td></tr>
+<tr><td><a href="https://tabler.io/icons">Tabler Icons</a></td><td>MIT</td><td>5400+ SVG icons. Comprehensive coverage including RTS-relevant icons (map, layers, grid, cursor)</td></tr>
+<tr><td><a href="https://fonts.google.com/icons">Material Symbols</a></td><td>Apache 2.0</td><td>Google’s icon set. Variable weight/size. Massive catalog</td></tr>
+<tr><td><a href="https://phosphoricons.com/">Phosphor Icons</a></td><td>MIT</td><td>9000+ icons in 6 weights. Clean geometric style</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Fonts (for UI text, editor panels, console):</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Font</th><th>License</th><th>Notes</th></tr>
+</thead>
+<tbody>
+<tr><td><a href="https://rsms.me/inter/">Inter</a></td><td>OFL 1.1</td><td>Optimized for screens. Excellent for UI text at all sizes</td></tr>
+<tr><td><a href="https://www.jetbrains.com/lp/mono/">JetBrains Mono</a></td><td>OFL 1.1</td><td>Monospace. Ideal for console, YAML editor, debug overlays</td></tr>
+<tr><td><a href="https://fonts.google.com/noto">Noto Sans</a></td><td>OFL 1.1</td><td>Full Unicode coverage including CJK. Essential for localization</td></tr>
+<tr><td><a href="https://github.com/tonsky/FiraCode">Fira Code</a></td><td>OFL 1.1</td><td>Monospace with ligatures. Alternative to JetBrains Mono</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>UI framework:</strong></p>
+<ul>
+<li><strong>egui</strong> (MIT) — the editor’s panel/widget framework. Ships with Bevy via <code>bevy_egui</code>. Provides buttons, sliders, text inputs, dropdown menus, tree views, docking, color pickers — all rendered procedurally with no external art needed. Handles 95% of SDK chrome requirements.</li>
+<li><strong>Bevy UI</strong> — the game client’s UI framework. Used for in-game chrome (sidebar, minimap, build queue) with IC-original sprite sheets styled per theme (D032).</li>
+</ul>
+<p><strong>Game content (sprites, terrain, audio, cutscenes):</strong></p>
+<ul>
+<li><strong>Player’s own RA installation</strong> — loaded at runtime via <code>ContentDetector</code>. Every developer needs Red Alert installed locally (Steam, GOG, or freeware). This is the development workflow, not a limitation — you’re building an engine for a game you play.</li>
+<li><strong>No external asset CDN.</strong> IC does not host, mirror, or download copyrighted game files. The browser build (Phase 7) uses drag-and-drop import from the player’s local files — see <code>05-FORMATS.md</code> § Browser Asset Storage.</li>
+</ul>
+<p><strong>Placeholder art (for development before real assets load):</strong></p>
+<p>During early development, before the full content detection pipeline is complete, use committed placeholder assets in <code>assets/placeholder/</code>:</p>
+<ul>
+<li>Colored rectangles (16×16, 24×24, 48×48) as unit stand-ins</li>
+<li>Numbered grid tiles for terrain testing</li>
+<li>Solid-color palette files (<code>.pal</code>-format, 768 bytes) for render pipeline testing</li>
+<li>Simple geometric shapes for building footprints</li>
+<li>Generated checkerboard patterns for missing texture fallbacks</li>
+</ul>
+<p>These are all original creations — trivial to produce, zero legal risk, and immediately useful for testing the render pipeline before content detection is wired up.</p>
+<h2 id="ic-sdk--editor-architecture-d038--d040"><a class="header" href="#ic-sdk--editor-architecture-d038--d040">IC SDK &amp; Editor Architecture (D038 + D040)</a></h2>
+<p>The IC SDK is the creative toolchain — a separate Bevy application that shares library crates with the game but ships as its own binary. Players never see editor UI. Creators download the SDK to build maps, missions, campaigns, and assets. This section covers the practical architecture: what the GUI looks like, what graphical resources it uses, how the UX flows, and how to start building it. For the full feature catalog (30+ modules, trigger system, campaign editor, dialogue trees, Game Master mode), see <code>decisions/09f-tools.md</code> § D038 and D040.</p>
+<h3 id="sdk-application-structure"><a class="header" href="#sdk-application-structure">SDK Application Structure</a></h3>
+<p>The SDK is a single Bevy application with tabbed workspaces:</p>
+<pre><code>┌───────────────────────────────────────────────────────────────────────┐
+│  IC SDK                                              [_][□][X]        │
+├──────────────┬────────────────────────────────────────────────────────┤
+│              │  [Scenario Editor] [Asset Studio] [Campaign Editor]    │
+│  MODE PANEL  ├────────────────────────────────────────┬───────────────┤
+│              │                                        │               │
+│  ┌─────────┐ │         ISOMETRIC VIEWPORT             │  PROPERTIES   │
+│  │Terrain  │ │                                        │  PANEL        │
+│  │Entities │ │    (same ic-render as the game —       │               │
+│  │Triggers │ │     live preview of actual game        │  [Name: ___]  │
+│  │Waypoints│ │     rendering)                         │  [Faction: _] │
+│  │Modules  │ │                                        │  [Health: __] │
+│  │Regions  │ │                                        │  [Script: _]  │
+│  │Scripts  │ │                                        │               │
+│  │Layers   │ │                                        │               │
+│  └─────────┘ │                                        │               │
+│              ├────────────────────────────────────────┤               │
+│              │  BOTTOM PANEL (context-sensitive)       │               │
+│              │  Triggers list / Script editor / Vars  │               │
+│              ├────────────────────────────────────────┴───────────────┤
+│              │  STATUS BAR: cursor pos │ cell info │ complexity meter │
+└──────────────┴───────────────────────────────────────────────────────┘
+</code></pre>
+<p><strong>Four main areas:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Area</th><th>Technology</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Mode panel (left)</strong></td><td>Bevy UI or <code>egui</code></td><td>Editing mode selector (8–10 modes). Stays visible at all times. Icons + labels, keyboard shortcuts</td></tr>
+<tr><td><strong>Viewport (center)</strong></td><td><code>ic-render</code> (same as game)</td><td>The isometric map view. Renders terrain, sprites, trigger areas, waypoint lines, region overlays in real time</td></tr>
+<tr><td><strong>Properties (right)</strong></td><td>Bevy UI or <code>egui</code></td><td>Context-sensitive inspector. Shows attributes of the selected entity, trigger, module, or region</td></tr>
+<tr><td><strong>Bottom panel</strong></td><td>Bevy UI or <code>egui</code></td><td>Tabbed: trigger list, script editor (with syntax highlighting), variables panel, module browser</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="gui-technology-choice"><a class="header" href="#gui-technology-choice">GUI Technology Choice</a></h3>
+<p>The SDK faces a UI technology decision that the game does not: the game’s UI is a themed, styled chrome layer (D032) built for immersion, while the SDK needs a dense, professional tool UI with text fields, dropdowns, tree views, scrollable lists, and property inspectors.</p>
+<p><strong>Approach: Dual UI — <code>ic-render</code> viewport + <code>egui</code> panels</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Concern</th><th>Technology</th><th>Rationale</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Isometric viewport</strong></td><td><code>ic-render</code></td><td>Must be identical to game rendering. Uses the same Bevy render pipeline, same sprite batching, same palette shaders</td></tr>
+<tr><td><strong>Tool panels (all)</strong></td><td><code>egui</code></td><td>Dense inspector UI, text input, dropdowns, tree views, scrollable lists. <code>bevy_egui</code> integrates cleanly into Bevy apps</td></tr>
+<tr><td><strong>Script editor</strong></td><td><code>egui</code> + custom</td><td>Syntax-highlighted Lua editor with autocompletion. <code>egui</code> text edit with custom highlighting pass</td></tr>
+<tr><td><strong>Campaign graph</strong></td><td>Custom Bevy 2D</td><td>Node-and-edge graph rendered in a 2D Bevy viewport (not isometric). Pan/zoom like a mind map</td></tr>
+<tr><td><strong>Asset Studio preview</strong></td><td><code>ic-render</code></td><td>Sprite viewer, palette preview, in-context preview all use the game’s rendering</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Why <code>egui</code> for tool panels:</strong> Bevy UI (<code>bevy_ui</code>) is designed for game chrome — styled panels, themed buttons, responsive layouts. The SDK needs raw productivity UI: property grids with dozens of fields, type-ahead search in entity palettes, nested tree views for trigger folders, side-by-side diff panels. <code>egui</code> provides all of these out of the box. <code>bevy_egui</code> is a mature integration crate. The game never shows <code>egui</code> (it uses themed <code>bevy_ui</code>); the SDK uses both.</p>
+<p><strong>Why <code>ic-render</code> for the viewport:</strong> The editor viewport must show exactly what the game will show — same sprite draw modes, same z-ordering, same palette application, same shroud rendering. If the editor used a simplified renderer, creators would encounter “looks different in-game” surprises. Reusing <code>ic-render</code> eliminates this class of bugs entirely.</p>
+<h3 id="what-graphical-resources-the-editor-uses"><a class="header" href="#what-graphical-resources-the-editor-uses">What Graphical Resources the Editor Uses</a></h3>
+<p>The SDK does not need its own art assets for the editor chrome — it uses <code>egui</code>’s default styling (suitable for professional tools) plus the game’s own assets for content preview.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Resource Category</th><th>Source</th><th>Used For</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Editor chrome</strong></td><td><code>egui</code> default dark theme (or light theme, user-selectable)</td><td>All panels, menus, inspectors, tree views, buttons, text fields</td></tr>
+<tr><td><strong>Viewport content</strong></td><td>Player’s installed RA assets (via <code>ra-formats</code> + content detection)</td><td>Terrain tiles, unit/building sprites, animations — the actual game art</td></tr>
+<tr><td><strong>Editor overlays</strong></td><td>Procedurally generated or minimal bundled PNGs</td><td>Trigger zone highlights (colored rectangles), waypoint markers (circles), region boundaries</td></tr>
+<tr><td><strong>Entity palette</strong></td><td>Sprite thumbnails extracted from game assets at load time</td><td>Small preview icons in the entity browser (Garry’s Mod spawn menu style)</td></tr>
+<tr><td><strong>Mode icons</strong></td><td>Bundled icon set (~20 small PNG icons, original art, CC BY-SA licensed)</td><td>Mode panel icons, toolbar buttons, status indicators</td></tr>
+<tr><td><strong>Cursor overlays</strong></td><td>Bundled cursor sprites (~5 cursor states for editor: place, select, paint, erase, eyedropper)</td><td>Editor-specific cursors (distinct from game cursors)</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Key point:</strong> The SDK ships with minimal original art — just icons and cursors for the editor UI itself. All game content (sprites, terrain, palettes, audio) comes from the player’s installed games. This is the same legal model as the game: IC never distributes copyrighted assets.</p>
+<p><strong>Entity palette thumbnails:</strong> When the SDK loads a game module, it renders a small thumbnail for every placeable entity type — a 48×48 preview showing the unit’s idle frame. These are cached on disk after first generation. The entity palette (left panel in Entities mode) displays these as a searchable grid, with categories, favorites, and recently-placed lists. This is the “Garry’s Mod spawn menu” UX described in D038 — search-as-you-type finds any entity instantly.</p>
+<h3 id="ux-flow--how-a-creator-uses-the-editor"><a class="header" href="#ux-flow--how-a-creator-uses-the-editor">UX Flow — How a Creator Uses the Editor</a></h3>
+<h4 id="creating-a-new-scenario-5-minute-orientation"><a class="header" href="#creating-a-new-scenario-5-minute-orientation">Creating a New Scenario (5-minute orientation)</a></h4>
+<ol>
+<li><strong>Launch SDK.</strong> Opens to a start screen: New Scenario, Open Scenario, Open Campaign, Asset Studio, Recent Files.</li>
+<li><strong>New Scenario.</strong> Dialog: choose map size, theater (Temperate/Snow/Interior), game module (RA1/TD/custom mod). A blank map with terrain generates.</li>
+<li><strong>Terrain mode (default).</strong> Terrain brush active. Paint terrain tiles by clicking and dragging. Brush sizes 1×1 to 7×7. Elevation tools if the game module supports Z. Right-click to eyedrop a tile type.</li>
+<li><strong>Switch to Entities mode (Tab or click).</strong> Entity palette appears in the left panel. Search for “Medium Tank” → click to select → click on map to place. Properties panel on the right shows the entity’s attributes: faction, facing, stance, health, veterancy, Probability of Presence, inline script.</li>
+<li><strong>Switch to Triggers mode.</strong> Draw a trigger area on the map. Set condition: “Any unit of Faction A enters this area.” Set action: “Reinforcements module activates” (select a preconfigured module). Set countdown timer with min/mid/max randomization.</li>
+<li><strong>Switch to Modules mode.</strong> Browse built-in modules (Wave Spawner, Patrol Route, Reinforcements, Objectives). Drag a module onto the map or assign it to a trigger.</li>
+<li><strong>Press Test.</strong> SDK launches <code>ic-game</code> with this scenario via <code>LocalNetwork</code>. Play the mission. Close game → return to editor. Iterate.</li>
+<li><strong>Press Publish.</strong> Exports as <code>.oramap</code>-compatible package → uploads to Workshop (D030).</li>
+</ol>
+<h4 id="simple--advanced-mode"><a class="header" href="#simple--advanced-mode">Simple ↔ Advanced Mode</a></h4>
+<p>D038 defines a Simple/Advanced toggle controlling which features are visible:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Feature</th><th>Simple Mode</th><th>Advanced Mode</th></tr>
+</thead>
+<tbody>
+<tr><td>Terrain painting</td><td>Yes</td><td>Yes</td></tr>
+<tr><td>Entity placement</td><td>Yes</td><td>Yes</td></tr>
+<tr><td>Basic triggers</td><td>Yes</td><td>Yes</td></tr>
+<tr><td>Modules (drag-and-drop)</td><td>Yes</td><td>Yes</td></tr>
+<tr><td>Waypoints</td><td>Yes</td><td>Yes</td></tr>
+<tr><td>Probability of Presence</td><td>—</td><td>Yes</td></tr>
+<tr><td>Inline scripts</td><td>—</td><td>Yes</td></tr>
+<tr><td>Variables panel</td><td>—</td><td>Yes</td></tr>
+<tr><td>Connections</td><td>—</td><td>Yes</td></tr>
+<tr><td>Scripts panel (external)</td><td>—</td><td>Yes</td></tr>
+<tr><td>Compositions</td><td>—</td><td>Yes</td></tr>
+<tr><td>Custom Lua triggers</td><td>—</td><td>Yes</td></tr>
+<tr><td>Campaign editor</td><td>—</td><td>Yes</td></tr>
+</tbody>
+</table>
+</div>
+<p>Simple mode hides 15+ features to present a clean, approachable interface. A new creator sees: terrain tools, entity palette, basic triggers, pre-built modules, waypoints, and a Test button. That’s enough to build a complete mission. Advanced mode reveals the full power. Toggle at any time — no data loss.</p>
+<h3 id="editor-viewport--what-gets-rendered"><a class="header" href="#editor-viewport--what-gets-rendered">Editor Viewport — What Gets Rendered</a></h3>
+<p>The viewport is not just a map — it renders multiple overlay layers on top of the game’s normal isometric view:</p>
+<pre><code>Layer 0:   Terrain tiles (from ic-render, same as game)
+Layer 1:   Grid overlay (faint lines showing cell boundaries, toggle-able)
+Layer 2:   Region highlights (named regions shown as colored overlays)
+Layer 3:   Trigger areas (pulsing colored boundaries with labels)
+Layer 4:   Entities (buildings, units — rendered via ic-render)
+Layer 5:   Waypoint markers (numbered circles with directional arrows)
+Layer 6:   Connection lines (links between triggers, modules, waypoints)
+Layer 7:   Entity selection highlight (selected entity's bounding box)
+Layer 8:   Placement ghost (translucent preview of entity being placed)
+Layer 9:   Cursor tool overlay (brush circle for terrain, snap indicator)
+</code></pre>
+<p>Layers 1–3 and 5–9 are editor-only overlays drawn on top of the game rendering. They use basic 2D shapes (rectangles, circles, lines, text labels) rendered via Bevy’s <code>Gizmos</code> system or a simple overlay pass. No complex art assets needed — colored geometric primitives with alpha transparency.</p>
+<h3 id="asset-studio-gui"><a class="header" href="#asset-studio-gui">Asset Studio GUI</a></h3>
+<p>The Asset Studio is a tab within the same SDK application. Its layout differs from the scenario editor:</p>
+<pre><code>┌───────────────────────────────────────────────────────────────────────┐
+│  IC SDK  — Asset Studio                                               │
+├───────────────────────┬───────────────────────────┬───────────────────┤
+│                       │                           │                   │
+│  ASSET BROWSER        │    PREVIEW VIEWPORT       │  PROPERTIES       │
+│                       │                           │                   │
+│  📁 conquer.mix       │   (sprite viewer with     │  Frames: 52       │
+│    ├── e1.shp         │    palette applied,        │  Width: 50        │
+│    ├── 1tnk.shp       │    animation controls,     │  Height: 39       │
+│    └── ...            │    zoom, frame scrub)      │  Draw mode:       │
+│  📁 temperat.mix      │                           │    [Normal ▾]     │
+│    └── ...            │   ◄ ▶ ⏸ ⏮ ⏭  Frame 12/52 │  Palette:         │
+│  📁 local assets      │                           │    [temperat ▾]   │
+│    └── my_sprite.png  │                           │  Player color:    │
+│                       │                           │    [Red ▾]        │
+│  🔎 Search...         │                           │                   │
+├───────────────────────┴───────────────────────────┼───────────────────┤
+│  TOOLS:  [Import] [Export] [Batch] [Compare]      │  In-context:      │
+│                                                    │  [Preview as unit]│
+└────────────────────────────────────────────────────┴───────────────────┘
+</code></pre>
+<p><strong>Three columns:</strong> Asset browser (tree view of loaded archives + local files), preview viewport (sprite/palette/audio/video viewer), and properties panel (metadata + editing controls). The bottom row has action buttons and the “preview as unit / building / chrome” in-context buttons that render the asset on an actual map tile (using <code>ic-render</code>).</p>
+<h3 id="how-to-start-building-the-editor"><a class="header" href="#how-to-start-building-the-editor">How to Start Building the Editor</a></h3>
+<p>The editor bootstraps on top of the game’s rendering — so the first-runnable (§ “First Runnable” above) is a prerequisite. Once the engine can load and render RA maps, the editor development follows a clear sequence:</p>
+<h4 id="phase-6a-bootstrapping-editor-mvp"><a class="header" href="#phase-6a-bootstrapping-editor-mvp">Phase 6a Bootstrapping (Editor MVP)</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Step</th><th>Deliverable</th><th>Dependencies</th><th>Effort</th></tr>
+</thead>
+<tbody>
+<tr><td>1</td><td>SDK binary scaffold</td><td>Bevy app + <code>bevy_egui</code>, separate from <code>ic-game</code></td><td>1 week</td></tr>
+<tr><td>2</td><td>Isometric viewport (read-only)</td><td><code>ic-render</code> as a Bevy plugin, loads a map, pan/zoom</td><td>1 week</td></tr>
+<tr><td>3</td><td>Terrain painting</td><td>Map data structure mutation + viewport re-render</td><td>2 weeks</td></tr>
+<tr><td>4</td><td>Entity placement + palette</td><td>Entity list from mod YAML, spawn/delete on click</td><td>2 weeks</td></tr>
+<tr><td>5</td><td>Properties panel</td><td><code>egui</code> inspector for selected entity attributes</td><td>1 week</td></tr>
+<tr><td>6</td><td>Save / load (YAML + map.bin)</td><td>Serialize map state to <code>.oramap</code>-compatible format</td><td>1 week</td></tr>
+<tr><td>7</td><td>Trigger system (basic)</td><td>Area triggers, condition/action UI, countdown timers</td><td>3 weeks</td></tr>
+<tr><td>8</td><td>Module system (built-in presets)</td><td>Wave Spawner, Patrol Route, Reinforcements, Objectives</td><td>2 weeks</td></tr>
+<tr><td>9</td><td>Waypoints + connections</td><td>Visual waypoint markers, drag to connect</td><td>1 week</td></tr>
+<tr><td>10</td><td>Test button</td><td>Launch <code>ic-game</code> with current scenario via subprocess</td><td>1 week</td></tr>
+<tr><td>11</td><td>Undo/redo + autosave</td><td>Command pattern for all editing operations</td><td>2 weeks</td></tr>
+<tr><td>12</td><td>Workshop publish</td><td><code>ic mod publish</code> integration, package scenario</td><td>1 week</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Total: ~18 weeks for a functional scenario editor MVP.</strong> This covers the “core scenario editor” deliverable from Phase 6a — everything a creator needs to build and publish a playable mission.</p>
+<h4 id="asset-studio-bootstrapping"><a class="header" href="#asset-studio-bootstrapping">Asset Studio Bootstrapping</a></h4>
+<p>The Asset Studio can be developed in parallel once <code>ra-formats</code> is mature (Phase 0):</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Step</th><th>Deliverable</th><th>Dependencies</th><th>Effort</th></tr>
+</thead>
+<tbody>
+<tr><td>1</td><td>Archive browser + file list</td><td><code>ra-formats</code> MIX parser, <code>egui</code> tree view</td><td>1 week</td></tr>
+<tr><td>2</td><td>Sprite viewer with palette</td><td>SHP→RGBA conversion, animation scrubber</td><td>1 week</td></tr>
+<tr><td>3</td><td>Palette viewer/editor</td><td>Color grid display, remap tools</td><td>1 week</td></tr>
+<tr><td>4</td><td>Audio player</td><td>AUD→PCM→Bevy audio playback, waveform display</td><td>1 week</td></tr>
+<tr><td>5</td><td>In-context preview (on map)</td><td><code>ic-render</code> viewport showing sprite on terrain</td><td>1 week</td></tr>
+<tr><td>6</td><td>Import pipeline (PNG → SHP)</td><td>Palette quantization, frame assembly</td><td>2 weeks</td></tr>
+<tr><td>7</td><td>Chrome/theme designer</td><td>9-slice editor, live menu preview</td><td>3 weeks</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Total: ~10 weeks for Asset Studio Layer 1 (browser/viewer) + Layer 2 (basic editing).</strong> Layer 3 (LLM generation) is Phase 7.</p>
+<h3 id="do-we-have-enough-information"><a class="header" href="#do-we-have-enough-information">Do We Have Enough Information?</a></h3>
+<p><strong>Yes — the design is detailed enough to build from.</strong> The critical path is clear:</p>
+<ol>
+<li><strong>Rendering engine (§ “First Runnable”)</strong> is the prerequisite. Without <code>ra-formats</code> and <code>ic-render</code>, there’s no viewport.</li>
+<li><strong>GUI framework (<code>egui</code>)</strong> is a known, mature Rust crate. No research needed — it has property inspectors, tree views, text editors, and all the widget types the SDK needs.</li>
+<li><strong>Viewport rendering</strong> reuses <code>ic-render</code> — the same code that renders the game renders the editor viewport. This eliminates the hardest rendering problem.</li>
+<li><strong>Editor overlays</strong> (trigger zones, waypoints, grid lines) are simple 2D shapes on top of the game render. Bevy’s <code>Gizmos</code> API handles this.</li>
+<li><strong>Data model</strong> is defined — scenarios are YAML + <code>map.bin</code> (OpenRA-compatible format), triggers are YAML structs, modules are YAML + Lua. No new format to invent.</li>
+<li><strong>Feature scope</strong> is defined in D038 (every module, every trigger type, every panel). The question is NOT “what should the editor do” — that’s answered. The question is “in what order do we build it” — and that’s answered by the phasing table above.</li>
+</ol>
+<p><strong>What remains open:</strong></p>
+<ul>
+<li>P003 (audio library choice) affects the Asset Studio’s audio player but not the scenario editor</li>
+<li>Exact <code>egui</code> widget customization for the entity palette (search UX, thumbnail rendering) needs prototyping</li>
+<li>Campaign graph editor’s visual layout algorithm (auto-layout for mission nodes) needs implementation experimentation</li>
+<li>The precise line between <code>bevy_ui</code> and <code>egui</code> usage may shift during development — start with <code>egui</code> for everything, migrate specific widgets to <code>bevy_ui</code> only if styling needs demand it</li>
+</ul>
+<p>See <code>decisions/09f-tools.md</code> § D038 for the full scenario editor feature catalog, and § D040 for the Asset Studio’s three-layer architecture and format support tables.</p>
 <h2 id="multi-game-extensibility-game-modules"><a class="header" href="#multi-game-extensibility-game-modules">Multi-Game Extensibility (Game Modules)</a></h2>
 <p>The engine is designed as a <strong>game-agnostic RTS framework</strong> (D039) that ships with Red Alert (default) and Tiberian Dawn as built-in game modules. The same engine can run RA2, Dune 2000, or an original game as additional game modules — like OpenRA runs TD, RA, and D2K on one engine.</p>
 <h3 id="game-module-concept"><a class="header" href="#game-module-concept">Game Module Concept</a></h3>
@@ -2333,7 +2242,7 @@ pub trait GameModule {
 </table>
 </div>
 <p>The key insight: the engine core (<code>Simulation</code>, <code>apply_tick()</code>, <code>GameLoop</code>, <code>NetworkModel</code>, <code>Pathfinder</code>, <code>SpatialIndex</code>, <code>FogProvider</code>, <code>DamageResolver</code>, <code>OrderValidator</code>) is spatial-model-agnostic. Grid-based pathfinding is a <em>game module implementation</em>, not an engine assumption — the same way <code>LocalNetwork</code> is a network implementation, not the only possible one.</p>
-<p>A Generals-class game module would provide its own <code>Pathfinder</code> (navmesh), <code>SpatialIndex</code> (BVH), <code>FogProvider</code> (elevation LOS), <code>DamageResolver</code> (sub-object targeting), <code>AiStrategy</code> (custom AI), <code>Renderable</code> (mesh), and format loaders — while reusing the sim core, networking, modding infrastructure, workshop, competitive infrastructure, and all shared systems (production, veterancy, replays, save games). See D041 in <code>09-DECISIONS.md</code> for the full trait-abstraction strategy.</p>
+<p>A Generals-class game module would provide its own <code>Pathfinder</code> (navmesh), <code>SpatialIndex</code> (BVH), <code>FogProvider</code> (elevation LOS), <code>DamageResolver</code> (sub-object targeting), <code>AiStrategy</code> (custom AI), <code>Renderable</code> (mesh), and format loaders — while reusing the sim core, networking, modding infrastructure, workshop, competitive infrastructure, and all shared systems (production, veterancy, replays, save games). See D041 in <code>decisions/09d-gameplay.md</code> for the full trait-abstraction strategy.</p>
 <p>This is not a current development target. We build only the grid implementations. But the trait seams exist from day one, so the door stays open — for us or for the community.</p>
 <h3 id="3d-rendering-as-a-mod-not-a-game-module"><a class="header" href="#3d-rendering-as-a-mod-not-a-game-module">3D Rendering as a Mod (Not a Game Module)</a></h3>
 <p>While 3D C&amp;C titles are not current development targets, the architecture explicitly supports <strong>3D rendering mods</strong> for any game module. A “3D Red Alert” mod replaces the visual presentation while the simulation, networking, pathfinding, and rules are completely unchanged.</p>
@@ -2385,7 +2294,7 @@ rifle_infantry:
 <li><strong>Cross-view multiplayer.</strong> A player running 3D can play against a player running classic isometric — the sim is identical. Like StarCraft Remastered’s graphics toggle, but more radical.</li>
 <li><strong>Cross-view replays.</strong> Watch any replay in 2D or 3D.</li>
 <li><strong>Orthogonal to gameplay mods.</strong> A balance mod works in both views. A 3D graphics mod stacks with a gameplay mod.</li>
-<li><strong>Toggleable, not permanent.</strong> D048 (Switchable Render Modes) formalizes this: a 3D render mod adds a render mode alongside the default 2D modes. F1 cycles between classic, HD, and 3D — the player isn’t locked into one view. See <code>09-DECISIONS.md</code> § D048.</li>
+<li><strong>Toggleable, not permanent.</strong> D048 (Switchable Render Modes) formalizes this: a 3D render mod adds a render mode alongside the default 2D modes. F1 cycles between classic, HD, and 3D — the player isn’t locked into one view. See <code>decisions/09d-gameplay.md</code> § D048.</li>
 </ul>
 <p>This is a <strong>Tier 3 (WASM) mod</strong> — it replaces a rendering backend, which is too deep for YAML or Lua. See <code>04-MODDING.md</code> for details.</p>
 <h3 id="design-rules-for-multi-game-safety"><a class="header" href="#design-rules-for-multi-game-safety">Design Rules for Multi-Game Safety</a></h3>
@@ -2409,7 +2318,7 @@ rifle_infantry:
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                             </a>
 
-                            <a rel="next prefetch" href="03-NETCODE.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="architecture/gameplay-systems.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                             </a>
 
@@ -2423,7 +2332,7 @@ rifle_infantry:
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                     </a>
 
-                    <a rel="next prefetch" href="03-NETCODE.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="architecture/gameplay-systems.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                     </a>
             </nav>

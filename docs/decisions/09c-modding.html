@@ -1,0 +1,1181 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Modding &amp; Compatibility - Iron Curtain — Design Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Design docs for a Rust-native Red Alert RTS engine">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../css/general-2459343d.css">
+        <link rel="stylesheet" href="../css/chrome-ae938929.css">
+        <link rel="stylesheet" href="../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../searchindex-c8692886.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc-b2bf7f58.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Iron Curtain — Design Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs/edit/main/src/decisions/09c-modding.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="decision-log--modding--compatibility"><a class="header" href="#decision-log--modding--compatibility">Decision Log — Modding &amp; Compatibility</a></h1>
+<p>Scripting tiers (Lua/WASM), OpenRA compatibility, UI themes, mod profiles, licensing, and cross-engine export.</p>
+<hr>
+<h2 id="d004-modding--lua-not-python-for-scripting"><a class="header" href="#d004-modding--lua-not-python-for-scripting">D004: Modding — Lua (Not Python) for Scripting</a></h2>
+<p><strong>Decision:</strong> Use Lua for Tier 2 scripting. Do NOT use Python.</p>
+<p><strong>Rationale against Python:</strong></p>
+<ul>
+<li>Floating-point non-determinism breaks lockstep multiplayer</li>
+<li>GC pauses (reintroduces the problem Rust solves)</li>
+<li>50-100x slower than native (hot paths run every tick for every unit)</li>
+<li>Embedding CPython is heavy (~15-30MB)</li>
+<li>Sandboxing is unsolvable — security disaster for community mods</li>
+</ul>
+<p><strong>Rationale for Lua:</strong></p>
+<ul>
+<li>Tiny runtime (~200KB), designed for embedding</li>
+<li>Deterministic (provide fixed-point bindings, avoid floats)</li>
+<li>Trivially sandboxable (control available functions)</li>
+<li>Industry standard: Factorio, WoW, Dota 2, Roblox</li>
+<li><code>mlua</code>/<code>rlua</code> crates are mature</li>
+<li>Any modder can learn in an afternoon</li>
+</ul>
+<hr>
+<hr>
+<h2 id="d005-modding--wasm-for-power-users-tier-3"><a class="header" href="#d005-modding--wasm-for-power-users-tier-3">D005: Modding — WASM for Power Users (Tier 3)</a></h2>
+<p><strong>Decision:</strong> WASM modules via <code>wasmtime</code>/<code>wasmer</code> for advanced mods.</p>
+<p><strong>Rationale:</strong></p>
+<ul>
+<li>Near-native performance</li>
+<li>Perfectly sandboxed by design</li>
+<li>Deterministic execution (critical for multiplayer)</li>
+<li>Modders can write in Rust, C, Go, AssemblyScript, or Python-to-WASM</li>
+<li>Leapfrogs OpenRA (requires C# for deep mods)</li>
+</ul>
+<hr>
+<hr>
+<h2 id="d014-templating--tera-in-phase-6a-nice-to-have"><a class="header" href="#d014-templating--tera-in-phase-6a-nice-to-have">D014: Templating — Tera in Phase 6a (Nice-to-Have)</a></h2>
+<p><strong>Decision:</strong> Add Tera template engine for YAML/Lua generation. Phase 6a. Not foundational.</p>
+<p><strong>Rationale:</strong></p>
+<ul>
+<li>Eliminates copy-paste for faction variants, bulk unit generation</li>
+<li>Load-time only (zero runtime cost)</li>
+<li>~50 lines to integrate</li>
+<li>Optional — no mod depends on it</li>
+</ul>
+<hr>
+<hr>
+<h2 id="d032-switchable-ui-themes-main-menu-chrome-lobby"><a class="header" href="#d032-switchable-ui-themes-main-menu-chrome-lobby">D032: Switchable UI Themes (Main Menu, Chrome, Lobby)</a></h2>
+<p><strong>Decision:</strong> Ship a YAML-driven UI theme system with multiple built-in presets. Players pick their preferred visual style for the main menu, in-game chrome (sidebar, minimap, build queue), and lobby. Mods and community can create and publish custom themes.</p>
+<p><strong>Motivation:</strong></p>
+<p>The Remastered Collection nailed its main menu — it respects the original Red Alert’s military aesthetic while modernizing the presentation. OpenRA went a completely different direction: functional, data-driven, but with a generic feel that doesn’t evoke the same nostalgia. Both approaches have merit for different audiences. Rather than pick one style, let the player choose.</p>
+<p>This also mirrors D019 (switchable balance presets) and D048 (switchable render modes). Just as players choose between Classic, OpenRA, and Remastered balance rules in the lobby, and toggle between classic and HD graphics with F1, they should be able to choose their UI chrome the same way. All three compose into experience profiles.</p>
+<p><strong>Built-in themes (original art, not copied assets):</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Theme</th><th>Inspired By</th><th>Aesthetic</th><th>Default For</th></tr>
+</thead>
+<tbody>
+<tr><td>Classic</td><td>Original RA1 (1996)</td><td>Military minimalism — bare buttons over a static title screen, Soviet-era propaganda palette, utilitarian layout, Hell March on startup</td><td>RA1 game module</td></tr>
+<tr><td>Remastered</td><td>Remastered Collection (2020)</td><td>Clean modern military — HD polish, sleek panels, reverent to the original but refined, jukebox integration</td><td>—</td></tr>
+<tr><td>Modern</td><td>Iron Curtain’s own design</td><td>Full Bevy UI capabilities — dynamic panels, animated transitions, modern game launcher feel</td><td>New game modules</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Important legal note:</strong> All theme art assets are <strong>original creations</strong> inspired by these design languages — no assets are copied from EA’s Remastered Collection (those are proprietary) or from OpenRA. The themes capture the <em>aesthetic philosophy</em> (palette, layout structure, design mood) but use entirely IC-created sprite sheets, fonts, and layouts. This is standard “inspired by” in game development — layout and color choices are not copyrightable, only specific artistic expression is.</p>
+<p><strong>Theme structure (YAML-defined):</strong></p>
+<pre><code class="language-yaml"># themes/classic.yaml
+theme:
+  name: Classic
+  description: "Inspired by the original Red Alert — military minimalism"
+
+  # Chrome sprite sheet — 9-slice panels, button states, scrollbars
+  chrome:
+    sprite_sheet: themes/classic/chrome.png
+    panel: { top_left: [0, 0, 8, 8], ... }  # 9-slice regions
+    button:
+      normal: [0, 32, 118, 9]
+      hover: [0, 41, 118, 9]
+      pressed: [0, 50, 118, 9]
+      disabled: [0, 59, 118, 9]
+
+  # Color palette
+  colors:
+    primary: "#c62828"       # Soviet red
+    secondary: "#1a1a2e"     # Dark navy
+    text: "#e0e0e0"
+    text_highlight: "#ffd600"
+    panel_bg: "#0d0d1a"
+    panel_border: "#4a4a5a"
+
+  # Typography
+  fonts:
+    menu: { family: "military-stencil", size: 14 }
+    body: { family: "default", size: 12 }
+    hud: { family: "monospace", size: 11 }
+
+  # Main menu layout
+  main_menu:
+    background: themes/classic/title.png     # static image
+    shellmap: null                            # no live battle (faithfully minimal)
+    music: THEME_INTRO                       # Hell March intro
+    button_layout: vertical_center           # stacked buttons, centered
+    show_version: true
+
+  # In-game chrome
+  ingame:
+    sidebar: right                           # classic RA sidebar position
+    minimap: top_right
+    build_queue: sidebar_tabs
+    resource_bar: top_center
+
+  # Lobby
+  lobby:
+    style: compact                           # minimal chrome, functional
+</code></pre>
+<p><strong>Shellmap system (live menu backgrounds):</strong></p>
+<p>Like OpenRA’s signature feature — a real game map with scripted AI battles running behind the main menu. But better:</p>
+<ul>
+<li><strong>Per-theme shellmaps.</strong> Each theme can specify its own shellmap, or none (Classic theme faithfully uses a static image).</li>
+<li><strong>Multiple shellmaps with random selection.</strong> The Remastered and Modern themes can ship with several shellmaps — a random one plays each launch.</li>
+<li><strong>Shellmaps are regular maps</strong> tagged with <code>visibility: shellmap</code> in YAML. The engine loads them with a scripted AI that stages dramatic battles. Mods automatically get their own shellmaps.</li>
+<li><strong>Orbiting/panning camera.</strong> Shellmaps can define camera paths — slow pan across a battlefield, orbiting around a base, or fixed view.</li>
+</ul>
+<p><strong>Shellmap AI design:</strong> Shellmaps use a dedicated AI profile (<code>shellmap_ai</code> in <code>ic-ai</code>) optimized for visual drama, not competitive play:</p>
+<pre><code class="language-yaml"># ai/shellmap.yaml
+shellmap_ai:
+  personality:
+    name: "Shellmap Director"
+    aggression: 40               # builds up before attacking
+    attack_threshold: 5000       # large armies before engaging
+    micro_level: basic
+    tech_preference: balanced    # diverse unit mix for visual variety
+    dramatic_mode: true          # avoids cheese, prefers spectacle
+    max_tick_budget_us: 2000     # 2ms max — shellmap is background
+    unit_variety_bonus: 0.5      # AI prefers building different unit types
+    no_early_rush: true          # let both sides build up
+</code></pre>
+<p>The <code>dramatic_mode</code> flag tells the AI to prioritize visually interesting behavior: large mixed-army clashes over efficient rush strategies, diverse unit compositions over optimal builds, and sustained back-and-forth engagements over quick victories. The AI’s tick budget is capped at 2ms to avoid impacting menu UI responsiveness. Shellmap AI is the same <code>ic-ai</code> system used for skirmish — just a different personality profile.</p>
+<p><strong>Per-game-module default themes:</strong></p>
+<p>Each game module registers its own default theme that matches its aesthetic:</p>
+<ul>
+<li><strong>RA1 module:</strong> Classic theme (red/black Soviet palette)</li>
+<li><strong>TD module:</strong> GDI theme (green/black Nod palette) — community or first-party</li>
+<li><strong>RA2 module:</strong> Remastered-style with RA2 color palette — community or first-party</li>
+</ul>
+<p>The game module provides a <code>default_theme()</code> in its <code>GameModule</code> trait implementation. Players override this in settings.</p>
+<p><strong>Integration with existing UI architecture:</strong></p>
+<p>The theme system layers on top of <code>ic-ui</code>’s existing responsive layout profiles (D002, <code>02-ARCHITECTURE.md</code>):</p>
+<ul>
+<li><strong>Layout profiles</strong> handle <em>where</em> UI elements go (sidebar vs bottom bar, phone vs desktop) — driven by <code>ScreenClass</code></li>
+<li><strong>Themes</strong> handle <em>how</em> UI elements look (colors, chrome sprites, fonts, animations) — driven by player preference</li>
+<li>Orthogonal concerns. A player on mobile gets the Phone layout profile + their chosen theme. A player on desktop gets the Desktop layout profile + their chosen theme.</li>
+</ul>
+<p><strong>Community themes:</strong></p>
+<ul>
+<li>Themes are Tier 1 mods (YAML + sprite sheets) — no code required</li>
+<li>Publishable to the workshop (D030) as a standalone resource</li>
+<li>Players subscribe to themes independently of gameplay mods — themes and gameplay mods stack</li>
+<li>An “OpenRA-inspired” theme would be a natural community contribution</li>
+<li>Total conversion mod developers create matching themes for their mods</li>
+</ul>
+<p><strong>What this enables:</strong></p>
+<ol>
+<li><strong>Day-one nostalgia choice.</strong> First launch asks: do you want Classic, Remastered, or Modern? Sets the mood immediately.</li>
+<li><strong>Mod-matched chrome.</strong> A WWII mod ships its own olive-drab theme. A sci-fi mod ships neon blue chrome. The theme changes with the mod.</li>
+<li><strong>Cross-view consistency with D019.</strong> Classic balance + Classic theme = feels like 1996. Remastered balance + Remastered theme = feels like 2020. Players configure the full experience.</li>
+<li><strong>Live backgrounds without code.</strong> Shellmaps are regular maps — anyone can create one with the map editor.</li>
+</ol>
+<p><strong>Alternatives considered:</strong></p>
+<ul>
+<li>Hardcoded single theme (OpenRA approach) — forces one aesthetic on everyone; misses the emotional connection different players have to different eras of C&amp;C</li>
+<li>Copy Remastered Collection assets — illegal; proprietary EA art</li>
+<li>CSS-style theming (web-engine approach) — overengineered for a game; YAML is simpler and Bevy-native</li>
+<li>Theme as a full WASM mod — overkill; theming is data, not behavior; Tier 1 YAML is sufficient</li>
+</ul>
+<p><strong>Phase:</strong> Phase 3 (Game Chrome). Theme system is part of the <code>ic-ui</code> crate. Built-in themes ship with the engine. Community themes available in Phase 6a (Workshop).</p>
+<hr>
+<hr>
+<h2 id="d050-workshop-as-cross-project-reusable-library"><a class="header" href="#d050-workshop-as-cross-project-reusable-library">D050: Workshop as Cross-Project Reusable Library</a></h2>
+<p><strong>Decision:</strong> The Workshop core (registry, distribution, federation, P2P) is designed as a <strong>standalone, engine-agnostic, game-agnostic Rust library</strong> that Iron Curtain is the first consumer of, with the explicit intent that future game projects (XCOM-inspired tactics clone, Civilization-inspired 4X clone, Operation Flashpoint/ArmA-inspired military sim) will be additional consumers. These future projects may or may not use Bevy — the Workshop library must not depend on any specific game engine.</p>
+<p><strong>Rationale:</strong></p>
+<ul>
+<li>The author plans to build multiple open-source game clones in the spirit of OpenRA, each targeting a different genre’s community. Every one of these projects faces the same Workshop problem: mod distribution, versioning, dependencies, integrity, community hosting, P2P delivery</li>
+<li>Building Workshop infrastructure once and reusing it across projects amortizes the significant design and engineering investment over multiple games</li>
+<li>An XCOM clone needs soldier mods, ability packs, map presets, voice packs. A Civ clone needs civilization packs, map scripts, leader art, scenario bundles. An OFP/ArmA clone needs terrains (often 5–20 GB), vehicle models, weapon packs, mission scripts, campaign packages. All of these are “versioned packages with metadata, dependencies, and integrity verification” — the same core abstraction</li>
+<li>The P2P distribution layer is especially valuable for the ArmA-style project where mod sizes routinely exceed what any free CDN can sustain</li>
+<li>Making the library engine-agnostic also produces cleaner IC code — the Bevy integration layer is thinner, better tested, and easier to maintain</li>
+</ul>
+<h3 id="two-layer-architecture"><a class="header" href="#two-layer-architecture">Two-Layer Architecture</a></h3>
+<p>The Workshop is split into two layers with a clean boundary:</p>
+<pre><code>┌─────────────────────────────────────────────────────────┐
+│  Game Integration Layer (per-project, engine-specific)  │
+│                                                         │
+│  IC: Bevy plugin, lobby auto-download, game_module,     │
+│       .icpkg extension, `ic mod` CLI, ra-formats,       │
+│       Bevy-native format recommendations (D049)         │
+│                                                         │
+│  XCOM clone: its engine plugin, mission-trigger          │
+│       download, .xpkg, its CLI, its format prefs        │
+│                                                         │
+│  Civ clone: its engine plugin, scenario-load download,  │
+│       .cpkg, its CLI, its format prefs                  │
+│                                                         │
+│  OFP clone: its engine plugin, server-join download,    │
+│       .opkg, its CLI, its format prefs                  │
+├─────────────────────────────────────────────────────────┤
+│  Workshop Core Library (engine-agnostic, game-agnostic) │
+│                                                         │
+│  Registry: search, publish, version, depend, license    │
+│  Distribution: BitTorrent/WebTorrent, HTTP fallback     │
+│  Federation: multi-source, git-index, remote, local     │
+│  Integrity: SHA-256, piece hashing, signed manifests    │
+│  Identity: publisher/name@version                       │
+│  P2P engine: peer scoring, piece selection, bandwidth   │
+│  CLI core: auth, publish, install, update, resolve      │
+│  Protocol: federation spec, manifest schema, APIs       │
+└─────────────────────────────────────────────────────────┘
+</code></pre>
+<h3 id="core-library-boundary--whats-in-and-whats-out"><a class="header" href="#core-library-boundary--whats-in-and-whats-out">Core Library Boundary — What’s In and What’s Out</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Concern</th><th>Core Library (game-agnostic)</th><th>Game Integration Layer (per-project)</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Package format</strong></td><td>ZIP archive with <code>manifest.yaml</code>. Extension is configurable (default: <code>.pkg</code>)</td><td>IC uses <code>.icpkg</code>, other projects choose their own</td></tr>
+<tr><td><strong>Manifest schema</strong></td><td>Core fields: <code>name</code>, <code>version</code>, <code>publisher</code>, <code>description</code>, <code>license</code>, <code>dependencies</code>, <code>platforms</code>, <code>sha256</code>, <code>tags</code></td><td>Extension fields: <code>game_module</code>, <code>engine_version</code>, <code>category</code> (IC-specific). Each project defines its own extension fields</td></tr>
+<tr><td><strong>Resource categories</strong></td><td>Tags (free-form strings). Core provides no fixed category enum</td><td>Each project defines a recommended tag vocabulary (IC: <code>sprites</code>, <code>music</code>, <code>map</code>; XCOM: <code>soldiers</code>, <code>abilities</code>, <code>missions</code>; Civ: <code>civilizations</code>, <code>leaders</code>, <code>scenarios</code>; OFP: <code>terrains</code>, <code>vehicles</code>, <code>campaigns</code>)</td></tr>
+<tr><td><strong>Package identity</strong></td><td><code>publisher/name@version</code> — already game-agnostic</td><td>No change needed</td></tr>
+<tr><td><strong>Dependency resolution</strong></td><td>semver resolution, lockfile, integrity verification</td><td>Per-project compatibility checks (e.g., IC checks <code>game_module</code> + <code>engine_version</code>)</td></tr>
+<tr><td><strong>P2P distribution</strong></td><td>BitTorrent/WebTorrent protocol, tracker, peer scoring, piece selection, bandwidth limiting, HTTP fallback</td><td>Per-project seed infrastructure (IC uses <code>ironcurtain.gg</code> tracker, OFP clone uses its own)</td></tr>
+<tr><td><strong>P2P peer scoring</strong></td><td>Weighted multi-dimensional: <code>Capacity × w1 + Locality × w2 + SeedStatus × w3 + ApplicationContext × w4</code>. Weights and dimensions configurable</td><td>Each project defines <code>ApplicationContext</code>: IC = same-lobby bonus, OFP = same-server bonus, Civ = same-matchmaking-pool bonus. Projects that have no context concept set weight to 0</td></tr>
+<tr><td><strong>Download priority</strong></td><td>Three tiers: <code>critical</code> (blocking gameplay), <code>requested</code> (user-initiated), <code>background</code> (cache warming)</td><td>Each project maps its triggers: IC’s lobby-join → <code>critical</code>. OFP’s server-join → <code>critical</code>. Civ’s scenario-load → <code>requested</code></td></tr>
+<tr><td><strong>Auto-download trigger</strong></td><td>Library provides <code>download_packages(list, priority)</code> API</td><td>Integration layer decides WHEN to call it: IC calls on lobby join, OFP calls on server connect, XCOM calls on mod browser click</td></tr>
+<tr><td><strong>CLI operations</strong></td><td>Core operations: <code>auth</code>, <code>publish</code>, <code>install</code>, <code>update</code>, <code>search</code>, <code>resolve</code>, <code>lock</code>, <code>audit</code>, <code>export-bundle</code>, <code>import-bundle</code></td><td>Each project wraps as its own CLI: <code>ic mod *</code>, <code>xcom mod *</code>, etc.</td></tr>
+<tr><td><strong>Format recommendations</strong></td><td>None. The core library is format-agnostic — it distributes opaque files</td><td>Each project recommends formats for its engine: IC recommends Bevy-native (D049). A Godot-based project recommends Godot-native formats. A custom-engine project recommends whatever it loads</td></tr>
+<tr><td><strong>Federation</strong></td><td>Multi-source registry, <code>sources.yaml</code>, git-index support, remote server API, local repository</td><td>Per-project default sources: IC uses <code>ironcurtain.gg</code> + <code>iron-curtain/workshop-index</code>. Each project configures its own</td></tr>
+<tr><td><strong>Config paths</strong></td><td>Library accepts a config root path</td><td>Each project sets its own: IC uses <code>~/.ic/</code>, XCOM clone uses <code>~/.xcom/</code>, etc.</td></tr>
+<tr><td><strong>Auth tokens</strong></td><td>Token generation, storage, scoping (publish/admin/readonly), environment variable override</td><td>Per-project env var names: <code>IC_AUTH_TOKEN</code>, <code>XCOM_AUTH_TOKEN</code>, etc.</td></tr>
+<tr><td><strong>Lockfile</strong></td><td>Core lockfile format with package hashes</td><td>Per-project lockfile name: <code>ic.lock</code>, <code>xcom.lock</code>, etc.</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="impact-on-existing-d030d049-design"><a class="header" href="#impact-on-existing-d030d049-design">Impact on Existing D030/D049 Design</a></h3>
+<p>The existing Workshop design requires only <strong>architectural clarification</strong>, not redesign. The core abstractions (packages, manifests, publishers, dependencies, federation, P2P) are already game-agnostic in concept. The changes are:</p>
+<ol>
+<li>
+<p><strong>Naming</strong>: Where the design says <code>.icpkg</code>, the implementation will have a configurable extension with <code>.icpkg</code> as IC’s default. Where it says <code>ic mod *</code>, the core library provides operations and IC wraps them as <code>ic mod *</code> subcommands.</p>
+</li>
+<li>
+<p><strong>Categories</strong>: Where D030 lists a fixed <code>ResourceCategory</code> enum (Music, Sprites, Maps…), the core library uses free-form tags. IC’s integration layer provides a recommended tag vocabulary and UI groupings. Other projects provide their own.</p>
+</li>
+<li>
+<p><strong>Manifest</strong>: The <code>manifest.yaml</code> schema splits into core fields (in the library) and extension fields (per-project). <code>game_module: ra1</code> is an IC extension field, not a core manifest requirement.</p>
+</li>
+<li>
+<p><strong>Format recommendations</strong>: D049’s Bevy-native format table is IC-specific guidance, not a core Workshop concern. The core library is format-agnostic. Each consuming project publishes its own format recommendations based on its engine’s capabilities.</p>
+</li>
+<li>
+<p><strong>P2P scoring</strong>: The <code>LobbyContext</code> dimension in peer scoring becomes <code>ApplicationContext</code> — a generic callback where any project can inject context-aware peer prioritization. IC implements it as “same lobby = bonus.” An ArmA-style project implements it as “same server = bonus.”</p>
+</li>
+<li>
+<p><strong>Infrastructure</strong>: Domain names (<code>ironcurtain.gg</code>), GitHub org (<code>iron-curtain/</code>), tracker URLs — these are IC deployment configuration. The core library is configured via <code>sources.yaml</code> with no hardcoded URLs.</p>
+</li>
+</ol>
+<h3 id="cross-project-infrastructure-sharing"><a class="header" href="#cross-project-infrastructure-sharing">Cross-Project Infrastructure Sharing</a></h3>
+<p>While each project has its own Workshop deployment, sharing is possible:</p>
+<ul>
+<li><strong>Shared tracker</strong>: A single BitTorrent tracker can serve multiple game projects. The info-hash namespace is naturally disjoint (different packages = different hashes).</li>
+<li><strong>Shared git-index hosting</strong>: One GitHub org could host workshop-index repos for multiple projects.</li>
+<li><strong>Shared seed boxes</strong>: Seed infrastructure can serve packages from multiple games simultaneously — BitTorrent doesn’t care about content semantics.</li>
+<li><strong>Cross-project dependencies</strong>: A music pack or shader effect could be published once and depended on by packages from multiple games. The identity system (<code>publisher/name@version</code>) is globally unique.</li>
+<li><strong>Shared federation network</strong>: Community-hosted Workshop servers could participate in multiple games’ federation networks simultaneously.</li>
+</ul>
+<blockquote>
+<p><strong>Also shared with IC’s netcode infrastructure.</strong> The tracking server, relay server, and Workshop server share deep structural parallels within IC itself — federation, heartbeats, rate control, connection management, observability, deployment principles. The cross-pollination analysis (<code>research/p2p-federated-registry-analysis.md</code> § “Netcode ↔ Workshop Cross-Pollination”) identifies four shared infrastructure opportunities: a unified <code>ic-server</code> binary (tracking + relay + workshop in one process for small community operators), a shared federation library (multi-source aggregation used by both tracking and Workshop), a shared auth/identity layer (one Ed25519 keypair for multiplayer + publishing + profile), and shared scoring infrastructure (EWMA time-decaying reputation used by both P2P peer scoring and relay player quality tracking). The federation library and scoring infrastructure belong in the Workshop core library (D050) since they’re already game-agnostic.</p>
+</blockquote>
+<h3 id="engine-agnostic-p2p-and-netcode"><a class="header" href="#engine-agnostic-p2p-and-netcode">Engine-Agnostic P2P and Netcode</a></h3>
+<p>The P2P distribution protocol (BitTorrent/WebTorrent) and all the patterns adopted from Kraken, Dragonfly, and IPFS (see D049 competitive landscape and <code>research/p2p-federated-registry-analysis.md</code>) are <strong>already engine-agnostic</strong>. The protocol operates at the TCP/UDP level — it doesn’t know or care whether the consuming application uses Bevy, Godot, Unreal, or a custom engine. The Rust implementation (<code>ic-workshop</code> core library) has no engine dependency.</p>
+<p>For projects that use a non-Rust engine (unlikely given the author’s preferences, but architecturally supported): the Workshop core library exposes a C FFI or can be compiled as a standalone process that the game communicates with via IPC/localhost HTTP. The CLI itself serves as a non-Rust integration path — any game engine can shell out to the Workshop CLI for install/update operations.</p>
+<h3 id="non-rts-game-considerations"><a class="header" href="#non-rts-game-considerations">Non-RTS Game Considerations</a></h3>
+<p>Each future genre introduces patterns the current design doesn’t explicitly address:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Genre</th><th>Key Workshop Differences</th><th>Already Handled</th><th>Needs Attention</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Turn-based tactics</strong> (XCOM)</td><td>Smaller mod sizes, more code-heavy mods (abilities, AI), procedural map parameters</td><td>Package format, dependencies, P2P</td><td>Ability/behavior mods may need a scripting sandbox equivalent to IC’s Lua/WASM — but that’s a game concern, not a Workshop concern</td></tr>
+<tr><td><strong>Turn-based 4X</strong> (Civ)</td><td>Very large mod variety (civilizations, maps, scenarios, art), DLC-like mod structure, long-lived save compatibility</td><td>Package format, dependencies, versioning, P2P</td><td>Save-game compatibility metadata (a Civ mod that changes game rules may break existing saves). Workshop manifest could include <code>breaks_saves: true</code> as an extension field</td></tr>
+<tr><td><strong>Military sim</strong> (OFP/ArmA)</td><td>Very large packages (terrains 5–20 GB), server-mandated mod lists, many simultaneous mods active</td><td>P2P (critical for large packages), dependencies, auto-download on server join</td><td>Partial downloads (download terrain mesh now, HD textures later) could benefit from sub-package granularity. Workshop packages already support dependencies — a terrain could be split into <code>base</code> + <code>hd-textures</code> + <code>satellite-imagery</code> packages</td></tr>
+<tr><td><strong>Any</strong></td><td>Different scripting languages, different asset formats, different mod structures</td><td>Core library is content-agnostic</td><td>Nothing — this is the point of the two-layer design</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="phase"><a class="header" href="#phase">Phase</a></h3>
+<p>D050 is an architectural principle, not a deliverable with its own phase. It shapes HOW D030 and D049 are implemented:</p>
+<ul>
+<li><strong>IC Phase 3–4</strong>: Implement Workshop core as a separate Rust library crate within the IC monorepo. The crate has zero Bevy dependencies. IC’s Bevy plugin wraps the core library. The API boundary enforces the two-layer split from the start.</li>
+<li><strong>IC Phase 5–6</strong>: If a second game project begins, the core library can be extracted to its own repo with minimal effort because the boundary was enforced from day one.</li>
+<li><strong>Post-IC-launch</strong>: Each new game project creates its own integration layer and deployment configuration. The core library, P2P protocol, and federation specification are shared.</li>
+</ul>
+<hr>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>ID</th><th>Topic</th><th>Needs Resolution By</th></tr>
+</thead>
+<tbody>
+<tr><td>P001</td><td><del>ECS crate choice</del> — RESOLVED: Bevy’s built-in ECS</td><td>Resolved</td></tr>
+<tr><td>P002</td><td>Fixed-point scale (256? 1024? match OpenRA’s 1024?)</td><td>Phase 2 start</td></tr>
+<tr><td>P003</td><td>Audio library choice + music integration design (see note below)</td><td>Phase 3 start</td></tr>
+<tr><td>P004</td><td>Lobby/matchmaking protocol specifics — PARTIALLY RESOLVED: architecture + lobby protocol defined (D052), wire format details remain</td><td>Phase 5 start</td></tr>
+<tr><td>P005</td><td><del>Map editor architecture</del> — RESOLVED: Scenario editor in SDK (D038+D040)</td><td>Resolved</td></tr>
+<tr><td>P006</td><td><del>License choice</del> — RESOLVED: GPL v3 with modding exception (D051)</td><td>Resolved</td></tr>
+<tr><td>P007</td><td><del>Workshop: single source vs multi-source</del> — RESOLVED: Federated multi-source (D030)</td><td>Resolved</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="p003--audio-system-design-notes"><a class="header" href="#p003--audio-system-design-notes">P003 — Audio System Design Notes</a></h3>
+<p>The audio system is the least-designed critical subsystem. Beyond the library choice, Phase 3 needs to resolve:</p>
+<ul>
+<li><strong>Original <code>.aud</code> playback and encoding:</strong> Decoding and encoding Westwood’s <code>.aud</code> format (IMA ADPCM, mono/stereo, 8/16-bit, varying sample rates). Full codec implementation based on EA GPL source — <code>AUDHeaderType</code> header, <code>IndexTable</code>/<code>DiffTable</code> lookup tables, 4-bit nibble processing. See <code>05-FORMATS.md</code> § AUD Audio Format for complete struct definitions and algorithm details. Encoding support enables the Asset Studio (D040) audio converter for .aud ↔ .wav/.ogg conversion</li>
+<li><strong>Music loading from Remastered Collection:</strong> If the player owns the Remastered Collection, can IC load the remastered soundtrack? Licensing allows personal use of purchased files, but the integration path needs design</li>
+<li><strong>Dynamic music states:</strong> Combat/build/idle transitions (original RA had this — “Act on Instinct” during combat, ambient during base building). State machine driven by sim events</li>
+<li><strong>Music as Workshop resources:</strong> Swappable soundtrack packs via D030 — architecture supports this, but audio pipeline needs to be resource-pack-aware</li>
+<li><strong>Frank Klepacki’s music is integral to C&amp;C identity.</strong> The audio system should treat music as a first-class system, not an afterthought. See <code>13-PHILOSOPHY.md</code> § “Audio Drives Tempo”</li>
+</ul>
+<h3 id="p006--resolved-see-d051"><a class="header" href="#p006--resolved-see-d051">P006 — RESOLVED: See D051</a></h3>
+<hr>
+<hr>
+<h2 id="d051-engine-license--gpl-v3-with-explicit-modding-exception"><a class="header" href="#d051-engine-license--gpl-v3-with-explicit-modding-exception">D051: Engine License — GPL v3 with Explicit Modding Exception</a></h2>
+<p><strong>Decision:</strong> The Iron Curtain engine is licensed under <strong>GNU General Public License v3.0</strong> (GPL v3) with an explicit <strong>modding exception</strong> that clarifies mods loaded through the engine’s data and scripting interfaces are NOT derivative works.</p>
+<p><strong>Rationale:</strong></p>
+<ol>
+<li>
+<p><strong>The C&amp;C open-source community is a GPL community.</strong> EA released every C&amp;C source code drop under GPL v3 — Red Alert, Tiberian Dawn, Generals/Zero Hour, and the Remastered Collection engine. OpenRA uses GPL v3. Stratagus uses GPL-2.0. Spring Engine uses GPL-2.0. The community this project is built for lives in GPL-land. GPL v3 is the license they know, trust, and expect.</p>
+</li>
+<li>
+<p><strong>Legal compatibility with EA source.</strong> <code>ra-formats</code> directly references EA’s GPL v3 source code for struct definitions, compression algorithms, and lookup tables (see <code>05-FORMATS.md</code> § Binary Format Codec Reference). GPL v3 for the engine is the cleanest legal path — no license compatibility analysis required.</p>
+</li>
+<li>
+<p><strong>The engine stays open — forever.</strong> GPL guarantees that no one can fork the engine, close-source it, and compete with the community’s own project. For a community that has watched proprietary decisions kill or fragment C&amp;C projects over three decades, this guarantee matters. MIT/Apache would allow exactly the kind of proprietary fork the community fears.</p>
+</li>
+<li>
+<p><strong>Contributor alignment.</strong> DCO + GPL v3 is the combination used by the Linux kernel — the most successful community-developed project in history. OpenRA contributors moving to IC (or contributing to both) face zero license friction.</p>
+</li>
+<li>
+<p><strong>Modders are NOT restricted.</strong> This is the key concern the old tension analysis raised, and the answer is clear: YAML data files, Lua scripts, and WASM modules loaded through a sandboxed runtime interface are NOT derivative works under GPL. This is the same settled legal interpretation as:</p>
+<ul>
+<li>Linux kernel (GPL) + userspace programs (any license)</li>
+<li>Blender (GPL) + Python scripts (any license)</li>
+<li>WordPress (GPL) + themes and plugins loaded via defined APIs</li>
+<li>GCC (GPL) + programs compiled by GCC (any license, via runtime library exception)</li>
+</ul>
+<p>IC’s tiered modding architecture (D003/D004/D005) was specifically designed so that mods operate through data interfaces and sandboxed runtimes, never linking against engine code. The modding exception makes this explicit.</p>
+</li>
+<li>
+<p><strong>Commercial use is allowed.</strong> GPL v3 permits selling copies, hosting commercial servers, running tournaments with prize pools, and charging for relay hosting. It requires sharing source modifications — which is exactly what this community wants.</p>
+</li>
+</ol>
+<p><strong>The modding exception (added to LICENSE header):</strong></p>
+<pre><code>Additional permission under GNU GPL version 3 section 7:
+
+If you modify this Program or any covered work, by linking or combining
+it with content loaded through the engine's data interfaces (YAML rule
+files, Lua scripts, WASM modules, resource packs, Workshop packages, or
+any content loaded through the modding tiers described in the
+documentation as "Tier 1", "Tier 2", or "Tier 3"), the content loaded
+through those interfaces is NOT considered part of the covered work and
+is NOT subject to the terms of this License. Authors of such content may
+choose any license they wish.
+
+This exception does not affect the copyleft requirement for modifications
+to the engine source code itself.
+</code></pre>
+<p>This exception uses GPL v3 § 7’s “additional permissions” mechanism — the same mechanism GCC uses for its runtime library exception. It is legally sound and well-precedented.</p>
+<p><strong>Alternatives considered:</strong></p>
+<ul>
+<li><strong>MIT / Apache 2.0</strong> (rejected — allows proprietary forks that fragment the community; creates legal ambiguity when referencing GPL’d EA source code; the Bevy ecosystem uses MIT/Apache but Bevy is a general-purpose framework, not a community-specific game engine)</li>
+<li><strong>LGPL</strong> (rejected — complex, poorly understood by non-lawyers, and unnecessary given the explicit modding exception under GPL v3 § 7)</li>
+<li><strong>Dual license (GPL + commercial)</strong> (rejected — adds complexity with no clear benefit; GPL v3 already permits commercial use)</li>
+<li><strong>GPL v3 without modding exception</strong> (rejected — would leave legal ambiguity about WASM mods that might be interpreted as derivative works; the explicit exception removes all doubt)</li>
+</ul>
+<p><strong>What this means in practice:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Activity</th><th>Allowed?</th><th>Requirement</th></tr>
+</thead>
+<tbody>
+<tr><td>Play the game</td><td>Yes</td><td>—</td></tr>
+<tr><td>Create YAML/Lua/WASM mods</td><td>Yes</td><td>Any license you want (modding exception)</td></tr>
+<tr><td>Publish mods on Workshop</td><td>Yes</td><td>Author chooses license (D030 requires SPDX declaration)</td></tr>
+<tr><td>Sell a total conversion mod</td><td>Yes</td><td>Mod’s license is the author’s choice</td></tr>
+<tr><td>Fork the engine</td><td>Yes</td><td>Your fork must also be GPL v3</td></tr>
+<tr><td>Run a commercial server</td><td>Yes</td><td>If you modify the server code, share those modifications</td></tr>
+<tr><td>Use IC code in a proprietary game</td><td>No</td><td>Engine modifications must be GPL v3</td></tr>
+<tr><td>Embed IC engine in a closed-source launcher</td><td>Yes</td><td>The engine remains GPL v3; the launcher is separate</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="phase-1"><a class="header" href="#phase-1">Phase</a></h3>
+<p>Resolved. The LICENSE file ships with the GPL v3 text plus the modding exception header from Phase 0 onward.</p>
+<h3 id="ci-enforcement-cargo-deny-for-license-compliance"><a class="header" href="#ci-enforcement-cargo-deny-for-license-compliance">CI Enforcement: cargo-deny for License Compliance</a></h3>
+<p>Embark Studios’ <strong>cargo-deny</strong> (2,204★, MIT/Apache-2.0) automates license compatibility checking across the entire dependency tree. IC should add <code>cargo-deny</code> to CI from Phase 0 with a GPL v3 compatibility allowlist — every <code>cargo deny check licenses</code> run verifies that no dependency introduces a license incompatible with GPL v3 (e.g., SSPL, proprietary, GPL-2.0-only without “or later”). For Workshop content (D030), the <code>spdx</code> crate (also from Embark, 140★) parses SPDX license expressions from resource manifests, enabling automated compatibility checks at publish time. See <code>research/embark-studios-rust-gamedev-analysis.md</code> § cargo-deny.</p>
+<hr>
+<h2 id="d062-mod-profiles--virtual-asset-namespace"><a class="header" href="#d062-mod-profiles--virtual-asset-namespace">D062: Mod Profiles &amp; Virtual Asset Namespace</a></h2>
+<p><strong>Decision:</strong> Introduce a layered asset composition model inspired by LVM’s mark → pool → present pattern. Two new first-class concepts: <strong>mod profiles</strong> (named, hashable, switchable mod compositions) and a <strong>virtual asset namespace</strong> (a resolved lookup table mapping logical asset paths to content-addressed blobs).</p>
+<p><strong>Core insight:</strong> IC’s three-phase data loading (D003, Factorio-inspired), dependency-graph ordering, and modpack manifests (D030) already describe a composition — but the composed result is computed on-the-fly at load time and dissolved into merged state. There’s no intermediate object that represents “these N sources in this priority order with these conflict resolutions” as something you can name, hash, inspect, diff, save, or share independently. Making the composition explicit unlocks capabilities that the implicit version can’t provide.</p>
+<h3 id="the-three-layer-model"><a class="header" href="#the-three-layer-model">The Three-Layer Model</a></h3>
+<p>The model separates mod loading into three explicit phases, inspired by LVM’s physical volumes → volume groups → logical volumes:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Layer</th><th>LVM Analog</th><th>IC Concept</th><th>What It Is</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Source</strong> (PV)</td><td>Physical Volume</td><td>Registered mod/package/base game</td><td>A validated, installed content source — its files exist, its manifest is parsed, its dependencies are resolved. Immutable once registered.</td></tr>
+<tr><td><strong>Profile</strong> (VG)</td><td>Volume Group</td><td>Mod profile</td><td>A named composition: which sources, in what priority order, with what conflict resolutions and experience settings. Saved as a YAML file. Hashable.</td></tr>
+<tr><td><strong>Namespace</strong> (LV)</td><td>Logical Volume</td><td>Virtual asset namespace</td><td>The resolved lookup table: for every logical asset path, which blob (from which source) answers the query. Built from a profile at activation time. What the engine actually loads from.</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>The model does NOT replace three-phase data loading.</strong> Three-phase loading (Define → Modify → Final-fixes) organizes <em>when</em> modifications apply during profile activation. The profile organizes <em>which</em> sources participate. They’re orthogonal — the profile says “use mods A, B, C in this order” and three-phase loading says “first all Define phases, then all Modify phases, then all Final-fixes phases.”</p>
+<h3 id="mod-profiles"><a class="header" href="#mod-profiles">Mod Profiles</a></h3>
+<p>A mod profile is a YAML file in the player’s configuration directory that captures a complete, reproducible mod setup:</p>
+<pre><code class="language-yaml"># &lt;data_dir&gt;/profiles/tournament-s5.yaml
+profile:
+  name: "Tournament Season 5"
+  game_module: ra1
+
+# Which mods participate, in priority order (later overrides earlier)
+sources:
+  # Engine defaults and base game assets are always implicitly first
+  - id: "official/tournament-balance"
+    version: "=1.3.0"
+  - id: "official/hd-sprites"
+    version: "=2.0.1"
+  - id: "community/improved-explosions"
+    version: "^1.0.0"
+
+# Explicit conflict resolutions (same role as conflicts.yaml, but profile-scoped)
+conflicts:
+  - unit: heavy_tank
+    field: health.max
+    use_source: "official/tournament-balance"
+
+# Experience profile axes (D033) — bundled with the mod set
+experience:
+  balance: classic           # D019
+  theme: remastered          # D032
+  behavior: iron_curtain     # D033
+  ai_behavior: enhanced      # D043
+  pathfinding: ic_default    # D045
+  render_mode: hd_sprites    # D048
+
+# Computed at activation time, not authored
+fingerprint: null  # sha256 of the resolved namespace — set by engine
+</code></pre>
+<p><strong>Relationship to existing concepts:</strong></p>
+<ul>
+<li><strong>Experience profiles (D033)</strong> set 6 switchable axes (balance, theme, behavior, AI, pathfinding, render mode) but don’t specify <em>which community mods</em> are active. A mod profile bundles experience settings WITH the mod set — one object captures the full player experience.</li>
+<li><strong>Modpacks (D030)</strong> are published, versioned Workshop resources. A mod profile is a local, personal composition. <strong>Publishing a mod profile creates a modpack</strong> — <code>ic mod publish-profile</code> snapshots the profile into a <code>mod.yaml</code> modpack manifest for Workshop distribution. This makes mod profiles the local precursor to modpacks: curators build and test profiles locally, then publish the working result.</li>
+<li><strong><code>conflicts.yaml</code> (existing)</strong> is a global conflict override file. Profile-scoped conflicts apply only when that profile is active. Both mechanisms coexist — profile conflicts take precedence, then global <code>conflicts.yaml</code>, then default last-wins behavior.</li>
+</ul>
+<p><strong>Profile operations:</strong></p>
+<pre><code class="language-bash"># Create a profile from the currently active mod set
+ic profile save "tournament-s5"
+
+# List saved profiles
+ic profile list
+
+# Activate a profile (loads its mods + experience settings)
+ic profile activate "tournament-s5"
+
+# Show what a profile resolves to (namespace preview + conflict report)
+ic profile inspect "tournament-s5"
+
+# Diff two profiles — which assets differ, which conflicts resolve differently
+ic profile diff "tournament-s5" "casual-hd"
+
+# Publish as a modpack to Workshop
+ic mod publish-profile "tournament-s5"
+
+# Import a Workshop modpack as a local profile
+ic profile import "alice/red-apocalypse-pack"
+</code></pre>
+<p><strong>In-game UX:</strong> The mod manager gains a profile dropdown (top of the mod list). Switching profiles reconfigures the active mod set and experience settings in one action. In multiplayer lobbies, the host’s profile fingerprint is displayed — joining players with the same fingerprint skip per-mod verification. Players with a different configuration see a diff view: “You’re missing mod X” or “You have mod Y v2.0, lobby has v2.1” with one-click resolution (download missing, update mismatched).</p>
+<h3 id="virtual-asset-namespace"><a class="header" href="#virtual-asset-namespace">Virtual Asset Namespace</a></h3>
+<p>When a profile is activated, the engine builds a <strong>virtual asset namespace</strong> — a complete lookup table mapping every logical asset path to a specific content-addressed blob from a specific source. This is functionally an OverlayFS union view over the content-addressed store (D049 local CAS).</p>
+<pre><code>Namespace for profile "Tournament Season 5":
+  sprites/rifle_infantry.shp    → blob:a7f3e2... (source: official/hd-sprites)
+  sprites/medium_tank.shp       → blob:c4d1b8... (source: official/hd-sprites)
+  rules/units/infantry.yaml     → blob:9e2f0a... (source: official/tournament-balance)
+  rules/units/vehicles.yaml     → blob:1b4c7d... (source: engine-defaults)
+  audio/rifle_fire.aud          → blob:e8a5f1... (source: base-game)
+  effects/explosion_large.yaml  → blob:f2c8d3... (source: community/improved-explosions)
+</code></pre>
+<p><strong>Key properties:</strong></p>
+<ul>
+<li><strong>Deterministic:</strong> Same profile + same source versions = identical namespace. The fingerprint (SHA-256 of the sorted namespace entries) proves it.</li>
+<li><strong>Inspectable:</strong> <code>ic profile inspect</code> dumps the full namespace with provenance — which source provided which asset. Invaluable for debugging “why does my tank look wrong?” (answer: mod X overrode the sprite at priority 3).</li>
+<li><strong>Diffable:</strong> <code>ic profile diff</code> compares two namespaces entry-by-entry — shows exact asset-level differences between two mod configurations. Critical for modpack curators testing variations.</li>
+<li><strong>Cacheable:</strong> The namespace is computed once at profile activation and persisted as a lightweight index. Asset loads during gameplay are simple hash lookups — no per-load directory scanning or priority resolution.</li>
+</ul>
+<p><strong>Integration with Bevy’s asset system:</strong> The virtual namespace registers as a custom Bevy <code>AssetSource</code> that resolves asset paths through the namespace lookup table rather than filesystem directory traversal. When Bevy requests <code>sprites/rifle_infantry.shp</code>, the namespace resolves it to <code>workshop/blobs/a7/a7f3e2...</code> (the CAS blob path). This sits between IC’s mod resolution layer and Bevy’s asset loading — Bevy sees a flat namespace, unaware of the layering beneath.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// A resolved mapping from logical asset path to content-addressed blob.
+pub struct VirtualNamespace {
+    /// Logical path → (blob hash, source that provided it)
+    entries: HashMap&lt;AssetPath, NamespaceEntry&gt;,
+    /// SHA-256 of the sorted entries — the profile fingerprint
+    fingerprint: [u8; 32],
+}
+
+pub struct NamespaceEntry {
+    pub blob_hash: [u8; 32],
+    pub source_id: ModId,
+    pub source_version: Version,
+    /// How this entry won: default, last-wins, explicit-conflict-resolution
+    pub resolution: ResolutionReason,
+}
+
+pub enum ResolutionReason {
+    /// Only one source provides this path — no conflict
+    Unique,
+    /// Multiple sources; this one won via load-order priority (last-wins)
+    LastWins { overridden: Vec&lt;ModId&gt; },
+    /// Explicit resolution from profile conflicts or conflicts.yaml
+    ExplicitOverride { reason: String },
+    /// Engine default (no mod provides this path)
+    EngineDefault,
+}
+<span class="boring">}</span></code></pre>
+<h3 id="namespace-for-yaml-rules-not-just-file-assets"><a class="header" href="#namespace-for-yaml-rules-not-just-file-assets">Namespace for YAML Rules (Not Just File Assets)</a></h3>
+<p>The virtual namespace covers two distinct layers:</p>
+<ol>
+<li>
+<p><strong>File assets</strong> — sprites, audio, models, textures. Resolved by path → blob hash. Simple overlay; last-wins per path.</p>
+</li>
+<li>
+<p><strong>YAML rule state</strong> — the merged game data after three-phase loading. This is NOT a simple file overlay — it’s the result of Define → Modify → Final-fixes across all active mods. The namespace captures the <em>output</em> of this merge as a serialized snapshot. This snapshot IS the fingerprint’s primary input — two players with identical fingerprints have identical merged rule state, guaranteed.</p>
+</li>
+</ol>
+<p>The YAML rule merge runs during profile activation (not per-load). The merged result is cached. If no mods change, the cache is valid. This is the same work the engine already does — the namespace just makes the result explicit and hashable.</p>
+<h3 id="multiplayer-integration"><a class="header" href="#multiplayer-integration">Multiplayer Integration</a></h3>
+<p><strong>Lobby fingerprint verification:</strong> When a player joins a lobby, the client sends its active profile fingerprint. If it matches the host’s fingerprint, the player is guaranteed to have identical game data — no per-mod version checking needed. If fingerprints differ, the lobby computes a namespace diff and presents actionable resolution:</p>
+<ul>
+<li><strong>Missing mods:</strong> “Download mod X?” (triggers D030 auto-download)</li>
+<li><strong>Version mismatch:</strong> “Update mod Y from v2.0 to v2.1?” (one-click update)</li>
+<li><strong>Conflict resolution difference:</strong> “Host resolves heavy_tank.health.max from mod A; you resolve from mod B” — player can accept host’s profile or leave</li>
+</ul>
+<p>This replaces the current per-mod version list comparison with a single hash comparison (fast path) and falls back to detailed diff only on mismatch. The diff view is more informative than the current “incompatible mods” rejection.</p>
+<p><strong>Replay recording:</strong> Replays record the profile fingerprint alongside the existing <code>(mod_id, version)</code> list. Playback verifies the fingerprint. A fingerprint mismatch warns but doesn’t block playback — the existing mod list provides degraded compatibility checking.</p>
+<h3 id="editor-integration-d038"><a class="header" href="#editor-integration-d038">Editor Integration (D038)</a></h3>
+<p>The scenario editor benefits from profile-aware asset resolution:</p>
+<ul>
+<li><strong>Layer isolation:</strong> The editor can show “assets from mod X” vs “assets from engine defaults” in separate layer views — same UX pattern as the editor’s own entity layers with lock/visibility.</li>
+<li><strong>Hot-swap a single source:</strong> When editing a mod’s YAML rules, the editor rebuilds only that source’s contribution to the namespace rather than re-running the full three-phase merge across all N sources. This enables sub-second iteration for rule authoring.</li>
+<li><strong>Source provenance in tooltips:</strong> Hovering over a unit in the editor shows “defined in engine-defaults, modified by official/tournament-balance” — derived directly from namespace entry provenance.</li>
+</ul>
+<h3 id="alternatives-considered"><a class="header" href="#alternatives-considered">Alternatives Considered</a></h3>
+<ul>
+<li><strong>Just use modpacks (D030)</strong> — Modpacks are the published form; profiles are the local form. Without profiles, curators manually reconstruct their mod configuration every session. Profiles make the curator workflow reproducible.</li>
+<li><strong>Bevy AssetSources alone</strong> — Bevy’s <code>AssetSource</code> API can layer directories, but it doesn’t provide conflict detection, provenance tracking, fingerprinting, or diffing. The namespace sits above Bevy’s loader, not instead of it.</li>
+<li><strong>Full OverlayFS on the filesystem</strong> — Overkill. The namespace is an in-memory lookup table, not a filesystem driver. We get the same logical result without OS-level complexity or platform dependencies.</li>
+<li><strong>Hash per-mod rather than hash the composed namespace</strong> — Per-mod hashes miss the composition: same mods + different conflict resolutions = different gameplay. The namespace fingerprint captures the actual resolved state.</li>
+<li><strong>Make profiles mandatory</strong> — Rejected. A player who installs one mod and clicks play shouldn’t need to understand profiles. The engine creates a default implicit profile from the active mod set. Profiles become relevant when players want multiple configurations or when modpack curators need reproducibility.</li>
+</ul>
+<h3 id="integration-with-existing-decisions"><a class="header" href="#integration-with-existing-decisions">Integration with Existing Decisions</a></h3>
+<ul>
+<li><strong>D003 (Real YAML):</strong> YAML rule merge during profile activation uses the same <code>serde_yaml</code> pipeline. The namespace captures the merge result, not the raw files.</li>
+<li><strong>D019 (Balance Presets):</strong> Balance preset selection is a field in the mod profile. Switching profiles can switch the balance preset simultaneously.</li>
+<li><strong>D030 (Workshop):</strong> Modpacks are published snapshots of mod profiles. <code>ic mod publish-profile</code> bridges local profiles to Workshop distribution. Workshop modpacks import as local profiles via <code>ic profile import</code>.</li>
+<li><strong>D033 (Experience Profiles):</strong> Experience profile axes (balance, theme, behavior, AI, pathfinding, render mode) are embedded in mod profiles. A mod profile is a superset: experience settings + mod set + conflict resolutions.</li>
+<li><strong>D034 (SQLite):</strong> The namespace index is optionally cached in SQLite for fast profile switching. Profile metadata (name, fingerprint, last-activated) is stored alongside other player preferences.</li>
+<li><strong>D038 (Scenario Editor):</strong> Editor uses namespace provenance for source attribution and per-layer hot-swap during development.</li>
+<li><strong>D049 (Workshop Asset Formats &amp; P2P / CAS):</strong> The virtual namespace maps logical paths to content-addressed blobs in the local CAS store. The namespace IS the virtualization layer that makes CAS usable for gameplay asset loading.</li>
+<li><strong>D058 (Console):</strong> <code>/profile list</code>, <code>/profile activate &lt;name&gt;</code>, <code>/profile inspect</code>, <code>/profile diff &lt;a&gt; &lt;b&gt;</code>, <code>/profile save &lt;name&gt;</code> console commands.</li>
+</ul>
+<h3 id="phase-2"><a class="header" href="#phase-2">Phase</a></h3>
+<ul>
+<li><strong>Phase 2:</strong> Implicit default profile — the engine internally constructs a namespace from the active mod set at load time. No user-facing profile concept yet, but the <code>VirtualNamespace</code> struct exists and is used for asset resolution. Fingerprint is computed and recorded in replays.</li>
+<li><strong>Phase 4:</strong> <code>ic profile save/list/activate/inspect/diff</code> CLI commands. Profile YAML schema stabilized. Modpack curators can save and switch profiles during testing.</li>
+<li><strong>Phase 5:</strong> Lobby fingerprint verification replaces per-mod version list comparison. Namespace diff view in lobby UI. <code>/profile</code> console commands. Replay fingerprint verification on playback.</li>
+<li><strong>Phase 6a:</strong> <code>ic mod publish-profile</code> publishes a local profile as a Workshop modpack. <code>ic profile import</code> imports modpacks as local profiles. In-game mod manager gains profile dropdown. Editor provenance tooltips and per-source hot-swap.</li>
+</ul>
+<hr>
+<hr>
+<h2 id="d066-cross-engine-export--editor-extensibility"><a class="header" href="#d066-cross-engine-export--editor-extensibility">D066: Cross-Engine Export &amp; Editor Extensibility</a></h2>
+<p><strong>Decision:</strong> The IC SDK (scenario editor + asset studio) can export complete content packages — missions, campaigns, cutscenes, music, audio, textures, animations, unit definitions — to original Red Alert and OpenRA formats. The SDK is itself extensible via the same tiered modding system (YAML → Lua → WASM) that powers the game, making it a fully moddable content creation platform.</p>
+<p><strong>Context:</strong> IC already imports from Red Alert and OpenRA (D025, D026, ra-formats). The Asset Studio (D040) converts between individual asset formats bidirectionally (.shp↔.png, .aud↔.wav, .vqa↔.mp4). But there is no holistic export pipeline — no way to author a complete mission in IC’s superior tooling and then produce a package that loads in original Red Alert or OpenRA. This is the “content authoring platform” step: IC becomes the tool that the C&amp;C community uses to create content for <em>any</em> C&amp;C engine, not just IC itself. This posture — creating value for the broader community regardless of which engine they play on — is core to the project’s philosophy (see <code>13-PHILOSOPHY.md</code> Principle #6: “Build with the community, not just for them”).</p>
+<p>Equally important: the editor itself must be extensible. If IC is a modding platform, then the tools that create mods must also be moddable. A community member building a RA2 game module needs custom editor panels for voxel placement. A total conversion might need a custom terrain brush. Editor extensions follow the same tiered model that game mods use.</p>
+<h3 id="export-targets"><a class="header" href="#export-targets">Export Targets</a></h3>
+<h4 id="target-1-original-red-alert-doswin95-format"><a class="header" href="#target-1-original-red-alert-doswin95-format">Target 1: Original Red Alert (DOS/Win95 format)</a></h4>
+<p>Export produces files loadable by the original Red Alert engine (including CnCNet-patched versions):</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Content Type</th><th>IC Source</th><th>Export Format</th><th>Notes</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Maps</strong></td><td>IC scenario (.yaml)</td><td><code>ra.ini</code> (map section) + <code>.bin</code> (terrain binary)</td><td>Map dimensions, terrain tiles, overlay (ore/gems), waypoints, cell triggers. Limited to 128×128 grid, no IC-specific features (triggers export as best-effort match to RA trigger system)</td></tr>
+<tr><td><strong>Unit rules</strong></td><td>IC YAML unit definitions</td><td><code>rules.ini</code> sections</td><td>Cost, speed, armor, weapons, prerequisites. IC-only features (conditions, multipliers) stripped with warnings. Balance values remapped to RA’s integer scales</td></tr>
+<tr><td><strong>Missions</strong></td><td>IC scenario + Lua triggers</td><td><code>.mpr</code> mission file + <code>trigger</code>/<code>teamtype</code> ini blocks</td><td>Lua trigger logic is <em>downcompiled</em> to RA’s trigger/teamtype/action system where possible. Complex Lua with no RA equivalent generates a warning report</td></tr>
+<tr><td><strong>Sprites</strong></td><td>.png / sprite sheets</td><td>.shp + .pal (256-color palette-indexed)</td><td>Auto-quantization to target palette. Frame count/facing validation against RA expectations (8/16/32 facings)</td></tr>
+<tr><td><strong>Audio</strong></td><td>.wav / .ogg</td><td>.aud (IMA ADPCM)</td><td>Sample rate conversion to RA-compatible rates. Mono downmix if stereo.</td></tr>
+<tr><td><strong>Cutscenes</strong></td><td>.mp4 / .webm</td><td>.vqa (VQ compressed)</td><td>Resolution downscale to 320×200 or 640×400. Palette quantization. Audio track interleaved as Westwood ADPCM</td></tr>
+<tr><td><strong>Music</strong></td><td>.ogg / .wav</td><td>.aud (music format)</td><td>Full-length music tracks encoded as Westwood AUD. Alternative: export as standard .wav alongside custom <code>theme.ini</code></td></tr>
+<tr><td><strong>String tables</strong></td><td>IC YAML localization</td><td><code>.eng</code> / <code>.ger</code> / etc. string files</td><td>IC string keys mapped to RA string table offsets</td></tr>
+<tr><td><strong>Archives</strong></td><td>Loose files (from export pipeline)</td><td>.mix (optional packing)</td><td>All exported files optionally bundled into a .mix for distribution. CRC hash table generated per ra-formats § MIX</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Fidelity model:</strong> Export is <em>lossy by design</em>. IC supports features RA doesn’t (conditions, multipliers, 3D positions, complex Lua triggers, unlimited map sizes). The exporter produces the closest RA-compatible equivalent and generates a <strong>fidelity report</strong> — a structured log of every feature that was downgraded, stripped, or approximated. The creator sees: “3 triggers could not be exported (RA has no equivalent for <code>on_condition_change</code>). 2 unit abilities were removed (mind control requires engine support). Map was cropped from 200×200 to 128×128.” This is the same philosophy as exporting a Photoshop file to JPEG — you know what you’ll lose before you commit.</p>
+<h4 id="target-2-openra-oramod--oramap"><a class="header" href="#target-2-openra-oramod--oramap">Target 2: OpenRA (.oramod / .oramap)</a></h4>
+<p>Export produces content loadable by the current OpenRA release:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Content Type</th><th>IC Source</th><th>Export Format</th><th>Notes</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Maps</strong></td><td>IC scenario (.yaml)</td><td><code>.oramap</code> (ZIP: map.yaml + map.bin + lua/)</td><td>Full map geometry, actor placement, player definitions, Lua scripts. IC map features beyond OpenRA’s support generate warnings</td></tr>
+<tr><td><strong>Mod rules</strong></td><td>IC YAML unit/weapon definitions</td><td>MiniYAML rule files (tab-indented, <code>^</code>/<code>@</code> syntax)</td><td>IC YAML → MiniYAML via D025 reverse converter. IC trait names mapped back to OpenRA trait names via D023 alias table (bidirectional). IC-only traits stripped with warnings</td></tr>
+<tr><td><strong>Campaigns</strong></td><td>IC campaign graph (D021)</td><td>OpenRA campaign manifest + sequential mission <code>.oramaps</code></td><td>IC’s branching campaign graph is linearized (longest path or user-selected branch). Persistent state (roster carry-over) stripped — OpenRA campaigns are stateless</td></tr>
+<tr><td><strong>Lua scripts</strong></td><td>IC Lua (D024 superset)</td><td>OpenRA-compatible Lua (D024 base API)</td><td>IC-only Lua API extensions stripped. The exporter validates that remaining Lua uses only OpenRA’s 16 globals + standard library</td></tr>
+<tr><td><strong>Sprites</strong></td><td>.png / sprite sheets</td><td>.png (OpenRA native) or .shp</td><td>OpenRA loads PNG natively — often no conversion needed. .shp export available for mods targeting the classic sprite pipeline</td></tr>
+<tr><td><strong>Audio</strong></td><td>.wav / .ogg</td><td>.wav / .ogg (OpenRA native) or .aud</td><td>OpenRA loads modern formats natively. .aud export for backwards-compatible mods</td></tr>
+<tr><td><strong>UI themes</strong></td><td>IC theme YAML + sprite sheets</td><td>OpenRA chrome YAML + sprite sheets</td><td>IC theme properties (D032) mapped to OpenRA’s chrome system. IC-only theme features stripped</td></tr>
+<tr><td><strong>String tables</strong></td><td>IC YAML localization</td><td>OpenRA <code>.ftl</code> (Fluent) localization files</td><td>IC string keys mapped to OpenRA Fluent message IDs</td></tr>
+<tr><td><strong>Mod manifest</strong></td><td>IC mod.yaml</td><td>OpenRA <code>mod.yaml</code> (D026 reverse)</td><td>IC mod manifest → OpenRA mod manifest. Dependency declarations, sprite sequences, rule file lists, chrome layout references</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>OpenRA version targeting:</strong> OpenRA’s modding API changes between releases. The exporter targets a configurable OpenRA version (default: latest stable). A <code>target_openra_version</code> field in the export config selects which trait names, Lua API surface, and manifest schema to use. The D023 alias table is version-aware — it knows which OpenRA release introduced or deprecated each trait name.</p>
+<h4 id="target-3-ic-native-default"><a class="header" href="#target-3-ic-native-default">Target 3: IC Native (Default)</a></h4>
+<p>Normal IC mod/map export is already covered by existing design (D030 Workshop, D062 profiles). Included here for completeness — the export pipeline is a unified system with format-specific backends, not three separate tools.</p>
+<h3 id="export-pipeline-architecture"><a class="header" href="#export-pipeline-architecture">Export Pipeline Architecture</a></h3>
+<pre><code>┌──────────────────────────────────────────────────────────────────┐
+│                     IC SDK Export Pipeline                        │
+│                                                                  │
+│  ┌─────────────┐                                                 │
+│  │ IC Scenario  │──┐                                             │
+│  │ + Assets     │  │    ┌──────────────────┐                     │
+│  └─────────────┘  ├──→│  ExportPlanner    │                     │
+│  ┌─────────────┐  │    │                  │                     │
+│  │ Export       │──┘    │ • Inventory all  │    ┌─────────────┐  │
+│  │ Config YAML  │       │   content        │    │  Fidelity   │  │
+│  │              │       │ • Detect feature │──→│  Report     │  │
+│  │ target: ra1  │       │   gaps per target│    │  (warnings) │  │
+│  │ version: 3.03│       │ • Plan transforms│    └─────────────┘  │
+│  └─────────────┘       └──────┬───────────┘                     │
+│                               │                                  │
+│             ┌─────────────────┼─────────────────┐               │
+│             ▼                 ▼                  ▼               │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐          │
+│  │ RaExporter   │  │ OraExporter  │  │ IcExporter   │          │
+│  │              │  │              │  │              │          │
+│  │ rules.ini    │  │ MiniYAML     │  │ IC YAML      │          │
+│  │ .shp/.pal    │  │ .oramap      │  │ .png/.ogg    │          │
+│  │ .aud/.vqa    │  │ .png/.ogg    │  │ Workshop     │          │
+│  │ .mix         │  │ mod.yaml     │  │              │          │
+│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘          │
+│         │                 │                  │                  │
+│         ▼                 ▼                  ▼                  │
+│  ┌─────────────────────────────────────────────────┐           │
+│  │              Output Directory / Archive           │           │
+│  └─────────────────────────────────────────────────┘           │
+└──────────────────────────────────────────────────────────────────┘
+</code></pre>
+<p><strong><code>ExportTarget</code> trait:</strong></p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Backend for exporting IC content to a specific target engine/format.
+/// Implementable via WASM for community-contributed export targets.
+pub trait ExportTarget: Send + Sync {
+    /// Human-readable name: "Original Red Alert", "OpenRA (release-20240315)", etc.
+    fn name(&amp;self) -&gt; &amp;str;
+
+    /// Which IC content types this target supports.
+    fn supported_content(&amp;self) -&gt; &amp;[ContentCategory];
+
+    /// Analyze the scenario and produce a fidelity report
+    /// listing what will be downgraded or lost.
+    fn plan_export(
+        &amp;self,
+        scenario: &amp;ExportableScenario,
+        config: &amp;ExportConfig,
+    ) -&gt; ExportPlan;
+
+    /// Execute the export, writing files to the output sink.
+    fn execute(
+        &amp;self,
+        plan: &amp;ExportPlan,
+        scenario: &amp;ExportableScenario,
+        output: &amp;mut dyn OutputSink,
+    ) -&gt; Result&lt;ExportResult, ExportError&gt;;
+}
+
+pub enum ContentCategory {
+    Map,
+    UnitRules,
+    WeaponRules,
+    Mission,        // scenario with triggers/scripting
+    Campaign,       // multi-mission with graph/state
+    Sprites,
+    Audio,
+    Music,
+    Cutscenes,
+    UiTheme,
+    StringTable,
+    ModManifest,
+    Archive,        // .mix, .oramod ZIP, etc.
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Key design choice:</strong> <code>ExportTarget</code> is a trait, not a hardcoded set of if/else branches. The built-in exporters (RA1, OpenRA, IC) ship with the SDK. Community members can add export targets for other engines — Tiberian Sun modding tools, Remastered Collection, or even non-C&amp;C engines like Stratagus — via WASM modules (Tier 3 modding). This makes the export pipeline itself extensible without engine changes.</p>
+<h3 id="trigger-downcompilation-lua--raopenra-triggers"><a class="header" href="#trigger-downcompilation-lua--raopenra-triggers">Trigger Downcompilation (Lua → RA/OpenRA triggers)</a></h3>
+<p>The hardest export problem. IC missions use Lua (D024) for scripting — a Turing-complete language. RA1 has a fixed trigger/teamtype/action system (~40 events, ~80 actions). OpenRA extends this with Lua but has a smaller standard library than IC.</p>
+<p><strong>Approach: pattern-based downcompilation, not general transpilation.</strong></p>
+<p>The exporter maintains a library of <strong>recognized Lua patterns</strong> that map to RA1 trigger equivalents:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>IC Lua Pattern</th><th>RA1 Trigger Equivalent</th></tr>
+</thead>
+<tbody>
+<tr><td><code>Trigger.AfterDelay(ticks, fn)</code></td><td>Timed trigger (countdown)</td></tr>
+<tr><td><code>Trigger.OnEnteredFootprint(cells, fn)</code></td><td>Cell trigger (entered by)</td></tr>
+<tr><td><code>Trigger.OnKilled(actor, fn)</code></td><td>Destroyed trigger (specific unit/building)</td></tr>
+<tr><td><code>Trigger.OnAllKilled(actors, fn)</code></td><td>All destroyed trigger</td></tr>
+<tr><td><code>Actor.Create(type, owner, pos)</code></td><td>Teamtype + reinforcement action</td></tr>
+<tr><td><code>actor:Attack(target)</code></td><td>Teamtype attack waypoint action</td></tr>
+<tr><td><code>actor:Move(pos)</code></td><td>Teamtype move to waypoint action</td></tr>
+<tr><td><code>Media.PlaySpeech(name)</code></td><td>EVA speech action</td></tr>
+<tr><td><code>UserInterface.SetMissionText(text)</code></td><td>Mission text display action</td></tr>
+</tbody>
+</table>
+</div>
+<p>Lua that doesn’t match any known pattern → <strong>warning in fidelity report</strong> with the unmatched code highlighted. The creator can then simplify their Lua for RA1 export or accept the limitation. For OpenRA export, more patterns survive (OpenRA supports Lua natively), but IC-only API extensions are still flagged.</p>
+<p><strong>This is intentionally NOT a general Lua-to-trigger compiler.</strong> A general compiler would be fragile and produce trigger spaghetti. Pattern matching is predictable: the creator knows exactly which patterns export cleanly, and the SDK can provide “export-safe” template triggers in the scenario editor that are guaranteed to downcompile.</p>
+<h3 id="editor-extensibility"><a class="header" href="#editor-extensibility">Editor Extensibility</a></h3>
+<p>The IC SDK is a modding platform, not just a tool. The editor itself is extensible via the same three-tier system:</p>
+<h4 id="tier-1-yaml-editor-data-extensions"><a class="header" href="#tier-1-yaml-editor-data-extensions">Tier 1: YAML (Editor Data Extensions)</a></h4>
+<p>Custom editor panels, entity palettes, and property inspectors defined via YAML:</p>
+<pre><code class="language-yaml"># extensions/ra2_editor/editor_extension.yaml
+editor_extension:
+  name: "RA2 Editor Tools"
+  version: "1.0.0"
+  
+  # Custom entity palette categories
+  palette_categories:
+    - name: "Voxel Units"
+      icon: voxel_unit_icon
+      filter:
+        has_component: VoxelModel
+    - name: "Tech Buildings"
+      icon: tech_building_icon
+      filter:
+        tag: tech_building
+  
+  # Custom property panels for entity types
+  property_panels:
+    - entity_filter: { has_component: VoxelModel }
+      panel:
+        title: "Voxel Properties"
+        fields:
+          - { key: "voxel.turret_offset", type: vec3, label: "Turret Offset" }
+          - { key: "voxel.shadow_index", type: int, label: "Shadow Index" }
+          - { key: "voxel.remap_color", type: palette_range, label: "Faction Color Range" }
+  
+  # Custom terrain brush presets
+  terrain_brushes:
+    - name: "Urban Road"
+      tiles: [road_h, road_v, road_corner_ne, road_corner_nw, road_t, road_cross]
+      auto_connect: true
+    - name: "Tiberium Field"
+      tiles: [tib_01, tib_02, tib_03, tib_spread]
+      scatter: { density: 0.7, randomize_variant: true }
+  
+  # Custom export target configuration
+  export_targets:
+    - name: "Yuri's Revenge"
+      exporter_wasm: "ra2_exporter.wasm"  # Tier 3 WASM exporter
+      config_schema: "ra2_export_config.yaml"
+</code></pre>
+<h4 id="tier-2-lua-editor-scripting"><a class="header" href="#tier-2-lua-editor-scripting">Tier 2: Lua (Editor Scripting)</a></h4>
+<p>Editor automation, custom validators, batch operations:</p>
+<pre><code class="language-lua">-- extensions/quality_check/editor_scripts/validate_mission.lua
+
+-- Register a custom validation that runs before export
+Editor.RegisterValidator("balance_check", function(scenario)
+    local issues = {}
+    
+    -- Check that both sides have a base
+    for _, player in ipairs(scenario:GetPlayers()) do
+        local has_mcv = false
+        for _, actor in ipairs(scenario:GetActors(player)) do
+            if actor:HasComponent("BaseBuilding") then
+                has_mcv = true
+                break
+            end
+        end
+        if not has_mcv and player:IsPlayable() then
+            table.insert(issues, {
+                severity = "warning",
+                message = player:GetName() .. " has no base-building unit",
+                actor = nil,
+                fix = "Add an MCV or Construction Yard"
+            })
+        end
+    end
+    
+    return issues
+end)
+
+-- Register a batch operation available from the editor's command palette
+Editor.RegisterCommand("distribute_ore", {
+    label = "Distribute Ore Fields",
+    description = "Auto-place balanced ore around each player start",
+    execute = function(scenario, params)
+        for _, start_pos in ipairs(scenario:GetPlayerStarts()) do
+            -- Place ore in a ring around each start position
+            local radius = params.radius or 8
+            for dx = -radius, radius do
+                for dy = -radius, radius do
+                    local dist = math.sqrt(dx*dx + dy*dy)
+                    if dist &gt;= radius * 0.5 and dist &lt;= radius then
+                        local cell = start_pos:Offset(dx, dy)
+                        if scenario:GetTerrain(cell):IsPassable() then
+                            scenario:SetOverlay(cell, "ore", math.random(1, 3))
+                        end
+                    end
+                end
+            end
+        end
+    end
+})
+</code></pre>
+<h4 id="tier-3-wasm-editor-plugins"><a class="header" href="#tier-3-wasm-editor-plugins">Tier 3: WASM (Editor Plugins)</a></h4>
+<p>Full editor plugins for custom panels, renderers, format support, and export targets:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>// A WASM plugin that adds a custom export target for Tiberian Sun
+#[wasm_export]
+fn register_editor_plugin(host: &amp;mut EditorHost) {
+    // Register a custom export target
+    host.register_export_target(TiberianSunExporter::new());
+    
+    // Register a custom asset viewer for .vxl files
+    host.register_asset_viewer("vxl", VoxelViewer::new());
+    
+    // Register a custom terrain tool
+    host.register_terrain_tool(TiberiumGrowthPainter::new());
+    
+    // Register a custom entity component editor
+    host.register_component_editor("SubterraneanUnit", SubUnitEditor::new());
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Editor extension distribution:</strong> Editor extensions are Workshop packages (D030) with <code>type: editor_extension</code> in their manifest. They install into the SDK’s extension directory and activate on SDK restart. Extensions declared in a mod profile (D062) auto-activate when that profile is active — a RA2 game module profile automatically loads RA2 editor extensions.</p>
+<h3 id="export-safe-authoring-mode"><a class="header" href="#export-safe-authoring-mode">Export-Safe Authoring Mode</a></h3>
+<p>The scenario editor offers an <strong>export-safe mode</strong> that constrains the authoring environment to features compatible with a chosen export target:</p>
+<ul>
+<li><strong>Select target:</strong> “I’m building this mission for OpenRA” (or RA1, or IC)</li>
+<li><strong>Feature gating:</strong> The editor grays out or hides features the target doesn’t support. If targeting RA1: no mind control triggers, no unlimited map size, no branching campaigns. If targeting OpenRA: no IC-only Lua APIs.</li>
+<li><strong>Live fidelity indicator:</strong> A traffic-light badge on each entity/trigger: green = exports perfectly, yellow = exports with approximation, red = will be stripped. The creator sees export fidelity as they build, not after.</li>
+<li><strong>Export-safe trigger templates:</strong> Pre-built trigger patterns guaranteed to downcompile cleanly to the target. “Timer → Reinforcement” template uses only Lua patterns with known RA1 equivalents.</li>
+<li><strong>Dual preview:</strong> Side-by-side preview showing “IC rendering” and “approximate target rendering” (e.g., palette-quantized sprites to simulate how it will look in original RA1).</li>
+</ul>
+<p>This mode doesn’t prevent using IC-only features — it informs the creator of consequences in real time. A creator building primarily for IC can still glance at the OpenRA fidelity indicator to know how much work a port would take.</p>
+<h3 id="cli-export"><a class="header" href="#cli-export">CLI Export</a></h3>
+<p>Export is available from the command line for batch processing and CI integration:</p>
+<pre><code class="language-bash"># Export a single mission to OpenRA format
+ic export --target openra --version release-20240315 mission.yaml -o ./openra-output/
+
+# Export an entire campaign to RA1 format
+ic export --target ra1 campaign.yaml -o ./ra1-output/ --fidelity-report report.json
+
+# Export all sprites in a mod to .shp+.pal for RA1 compatibility
+ic export --target ra1 --content sprites mod.yaml -o ./sprites-output/
+
+# Validate export without writing files (dry run)
+ic export --target openra --dry-run mission.yaml
+
+# Batch export: every map in a directory to all targets
+ic export --target ra1,openra,ic maps/ -o ./export/
+</code></pre>
+<h3 id="what-this-enables"><a class="header" href="#what-this-enables">What This Enables</a></h3>
+<ol>
+<li>
+<p><strong>IC as the C&amp;C community’s content creation hub.</strong> Build in IC’s superior editor, export to whatever engine your audience plays. A mission maker who targets both IC and OpenRA doesn’t maintain two copies — they maintain one IC project and export.</p>
+</li>
+<li>
+<p><strong>Gradual migration path.</strong> An OpenRA modder starts using IC’s editor for map creation (exporting .oramaps), discovers the asset tools, starts authoring rules in IC YAML (exporting MiniYAML), and eventually their entire workflow is in IC — even if their audience still plays OpenRA. When their audience migrates to IC, the mod is already native.</p>
+</li>
+<li>
+<p><strong>Editor as a platform.</strong> Workshop-distributed editor extensions mean the SDK improves with the community. Someone builds a RA2 voxel placement tool → everyone benefits. Someone builds a Tiberian Sun export target → the TS modding community gains a modern editor. Someone builds a mission quality validator → all mission makers benefit.</p>
+</li>
+<li>
+<p><strong>Preservation.</strong> Creating new content for the original 1996 Red Alert — missions, campaigns, even total conversions — using modern tools. The export pipeline keeps the original game alive as a playable target.</p>
+</li>
+</ol>
+<h3 id="alternatives-considered-1"><a class="header" href="#alternatives-considered-1">Alternatives Considered</a></h3>
+<ol>
+<li>
+<p><strong>Export only to IC native format</strong> — Rejected. Misses the platform opportunity. The C&amp;C community spans multiple engines. Being useful to creators regardless of their target engine is how IC earns adoption.</p>
+</li>
+<li>
+<p><strong>General transpilation (Lua → any trigger system)</strong> — Rejected. A general Lua transpiler would be fragile, produce unreadable output, and give false confidence. Pattern-based downcompilation is honest about its limitations.</p>
+</li>
+<li>
+<p><strong>Editor extensions via C# (OpenRA compatibility)</strong> — Rejected. IC doesn’t use C# anywhere. WASM is the Tier 3 extension mechanism — Rust, C, AssemblyScript, or any WASM-targeting language. No C# runtime dependency.</p>
+</li>
+<li>
+<p><strong>Separate export tools (not integrated in SDK)</strong> — Rejected. Export is part of the creation workflow, not a post-processing step. The export-safe authoring mode only works if the editor knows the target while you’re building.</p>
+</li>
+<li>
+<p><strong>Bit-perfect re-creation of target engine behavior</strong> — Not a goal. Export produces valid content for the target engine, but doesn’t guarantee identical gameplay to what IC simulates (D011 — cross-engine compatibility is community-layer, not sim-layer). RA1 and OpenRA will simulate the exported content with their own engines.</p>
+</li>
+</ol>
+<h3 id="integration-with-existing-decisions-1"><a class="header" href="#integration-with-existing-decisions-1">Integration with Existing Decisions</a></h3>
+<ul>
+<li><strong>D023 (OpenRA Vocabulary Compatibility):</strong> The alias table is now bidirectional — used for import (OpenRA → IC) AND export (IC → OpenRA). The exporter reverses D023’s trait name mapping.</li>
+<li><strong>D024 (Lua API):</strong> Export validates Lua against the target’s API surface. IC-only extensions are flagged; OpenRA’s 16 globals are the safe subset.</li>
+<li><strong>D025 (Runtime MiniYAML Loading):</strong> The MiniYAML converter is now bidirectional: load at runtime (MiniYAML → IC YAML) and export (IC YAML → MiniYAML).</li>
+<li><strong>D026 (Mod Manifest Compatibility):</strong> <code>mod.yaml</code> parsing is now bidirectional — import OpenRA manifests AND generate them on export.</li>
+<li><strong>D030 (Workshop):</strong> Editor extensions are Workshop packages. Export presets/profiles are shareable via Workshop.</li>
+<li><strong>D038 (Scenario Editor):</strong> The scenario editor gains export-safe mode, fidelity indicators, and export-safe trigger templates. Export is a first-class editor action, not a separate tool.</li>
+<li><strong>D040 (Asset Studio):</strong> Asset conversion (D040’s Cross-Game Asset Bridge) is the per-file foundation. D066 orchestrates whole-project export using D040’s converters.</li>
+<li><strong>D062 (Mod Profiles):</strong> A mod profile can embed export target preference. “RA1 Compatible” profile constrains features to RA1-exportable subset.</li>
+<li><strong>ra-formats write support:</strong> D066 is the primary consumer of ra-formats write support (Phase 6a). The exporter calls into ra-formats encoders for .shp, .pal, .aud, .vqa, .mix generation.</li>
+</ul>
+<h3 id="phase-3"><a class="header" href="#phase-3">Phase</a></h3>
+<ul>
+<li><strong>Phase 6a:</strong> Core export pipeline ships alongside the scenario editor and asset studio. Built-in export targets: IC native (trivial), OpenRA (<code>.oramap</code> + MiniYAML rules). Export-safe authoring mode in scenario editor. <code>ic export</code> CLI.</li>
+<li><strong>Phase 6b:</strong> RA1 export target (requires .ini generation, trigger downcompilation, .mix packing). Campaign export (linearization for stateless targets). Editor extensibility API (YAML + Lua tiers). Editor extension Workshop distribution.</li>
+<li><strong>Phase 7:</strong> WASM editor plugins (Tier 3 extensibility). Community-contributed export targets (TS, RA2, Remastered). Agentic export assistance (LLM suggests how to simplify IC-only features for target compatibility).</li>
+</ul>
+<hr>
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../decisions/09b-networking.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../decisions/09d-gameplay.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../decisions/09b-networking.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../decisions/09d-gameplay.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../mark-09e88c2c.min.js"></script>
+        <script src="../searcher-c2a407aa.js"></script>
+
+        <script src="../clipboard-1626706a.min.js"></script>
+        <script src="../highlight-abc7f01d.js"></script>
+        <script src="../book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

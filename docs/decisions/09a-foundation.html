@@ -1,0 +1,906 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Foundation &amp; Core - Iron Curtain — Design Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Design docs for a Rust-native Red Alert RTS engine">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../css/general-2459343d.css">
+        <link rel="stylesheet" href="../css/chrome-ae938929.css">
+        <link rel="stylesheet" href="../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../searchindex-c8692886.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc-b2bf7f58.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Iron Curtain — Design Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs/edit/main/src/decisions/09a-foundation.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="decision-log--foundation--core"><a class="header" href="#decision-log--foundation--core">Decision Log — Foundation &amp; Core</a></h1>
+<p>Language, framework, data formats, simulation invariants, and core engine identity.</p>
+<hr>
+<h2 id="d001-language--rust"><a class="header" href="#d001-language--rust">D001: Language — Rust</a></h2>
+<p><strong>Decision:</strong> Build the engine in Rust.</p>
+<p><strong>Rationale:</strong></p>
+<ul>
+<li>No GC pauses (C# / .NET is OpenRA’s known weakness in large battles)</li>
+<li>Memory safety without runtime cost</li>
+<li>Fearless concurrency for parallel ECS systems</li>
+<li>First-class WASM compilation target (browser, modding sandbox)</li>
+<li>Modern tooling (cargo, crates.io, clippy, miri)</li>
+<li>No competition in Rust RTS space — wide open field</li>
+</ul>
+<p><strong>Why not a high-level language (C#, Python, Java)?</strong></p>
+<p>The goal is to extract maximum performance from the hardware. A game engine is one of the few domains where you genuinely need every cycle — the original Red Alert was written in C and ran close to the metal, and IC should too. High-level languages with garbage collectors, runtime overhead, and opaque memory layouts leave performance on the table. Rust gives the same hardware access as C without the footguns.</p>
+<p><strong>Why not C/C++?</strong></p>
+<p>Beyond the well-known safety and tooling arguments: <strong>C++ is a liability in the age of LLM-assisted development.</strong> This project is built with agentic LLMs as a core part of the development workflow. With Rust, LLM-generated code that compiles is overwhelmingly <em>correct</em> — the borrow checker, type system, and ownership model catch entire categories of bugs at compile time. The compiler is a safety net that makes LLM output trustworthy. With C++, LLM-generated code that compiles can still contain use-after-free, data races, undefined behavior, and subtle memory corruption — bugs that are dangerous precisely because they’re silent. The errors are cryptic, the debugging is painful, and the risk compounds as the codebase grows. Rust’s compiler turns the LLM from a risk into a superpower: you can develop faster and bolder because the guardrails are structural, not optional.</p>
+<p>This isn’t a temporary advantage. LLM-assisted development is the future of programming. Choosing a language where the compiler verifies LLM output — rather than one where you must manually audit every line for memory safety — is a strategic bet that compounds over the lifetime of the project.</p>
+<p><strong>Why Rust is the right moment for a C&amp;C engine:</strong></p>
+<p>Rust is replacing C and C++ across the industry. It’s in the Linux kernel, Android, Windows, Chromium, and every major cloud provider’s infrastructure. The ecosystem is maturing rapidly — crates.io has 150K+ crates, Bevy is the most actively developed open-source game engine in any language, and the community is growing faster than any systems language since C++ itself. Serious new infrastructure projects increasingly start in Rust rather than C++.</p>
+<p>This creates a unique opportunity for a C&amp;C engine renewal. The original games were written in C. OpenRA chose C# — a reasonable choice in 2007, but one that traded hardware performance for developer productivity. Rust didn’t exist as a viable option then. It does now. A Rust-native engine can match C’s performance, exceed C#’s safety, leverage Rust’s excellent concurrency model to use all available CPU cores, and tap into a modern ecosystem (Bevy, wgpu, serde, tokio) that simply has no C++ equivalent at the same quality level. The timing is right: Rust is mature enough to build on, young enough that the RTS space is wide open, and the C&amp;C community deserves an engine built with the best tools available today.</p>
+<p><strong>Alternatives considered:</strong></p>
+<ul>
+<li>C++ (manual memory management, no safety guarantees, build system pain, dangerous with LLM-assisted workflows — silent bugs where Rust would catch them at compile time)</li>
+<li>C# (would just be another OpenRA — no differentiation, GC pauses in hot paths, gives up hardware-level performance)</li>
+<li>Zig (too immature ecosystem for this scope)</li>
+</ul>
+<hr>
+<hr>
+<h2 id="d002-framework--bevy-revised-from-original-no-bevy-decision"><a class="header" href="#d002-framework--bevy-revised-from-original-no-bevy-decision">D002: Framework — Bevy (REVISED from original “No Bevy” decision)</a></h2>
+<p><strong>Decision:</strong> Use Bevy as the game framework.</p>
+<p><strong>Original decision:</strong> Custom library stack (winit + wgpu + hecs). This was overridden.</p>
+<p><strong>Why the reversal:</strong></p>
+<ul>
+<li>The 2-4 months building engine infrastructure (sprite batching, cameras, audio, input, asset pipeline, hot reload) is time NOT spent on the sim, netcode, and modding — the things that differentiate this project</li>
+<li>Bevy’s ECS IS our architecture — no “fighting two systems.” OpenRA traits map directly to Bevy components</li>
+<li><code>FixedUpdate</code> + <code>.chain()</code> gives deterministic sim scheduling natively</li>
+<li>Bevy’s plugin system makes pluggable networking cleaner than the original trait-based design</li>
+<li>Headless mode (<code>MinimalPlugins</code>) for dedicated servers is built in</li>
+<li>WASM/browser target is tested by community</li>
+<li><code>bevy_reflect</code> enables advanced modding capabilities</li>
+<li>Breaking API changes are manageable: pin version per phase, upgrade between phases</li>
+</ul>
+<p><strong>Risk mitigation:</strong></p>
+<ul>
+<li>Breaking changes → version pinning per development phase</li>
+<li>Not isometric-specific → build isometric layer on Bevy’s 2D (still less work than raw wgpu)</li>
+<li>Performance concerns → Bevy uses rayon internally, <code>par_iter()</code> for data parallelism, and allows custom render passes and SIMD where needed</li>
+</ul>
+<p><strong>Alternatives considered:</strong></p>
+<p><em>Godot (rejected):</em></p>
+<p>Godot is a mature, MIT-licensed engine with excellent tooling (editor, GDScript, asset pipeline). However, it does not fit IC’s architecture:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Requirement</th><th>Bevy</th><th>Godot</th></tr>
+</thead>
+<tbody>
+<tr><td>Language (D001)</td><td>Rust-native — IC systems are Bevy systems, no boundary crossing</td><td>C++ engine. Rust logic via GDExtension adds a C ABI boundary on every engine call</td></tr>
+<tr><td>ECS for 500+ units</td><td>Flat archetypes, cache-friendly iteration, <code>par_iter()</code></td><td>Scene tree (node hierarchy). Hundreds of RTS units as Nodes fight cache coherence. No native ECS</td></tr>
+<tr><td>Deterministic sim (Invariant #1)</td><td><code>FixedUpdate</code> + <code>.chain()</code> — explicit, documented system ordering</td><td><code>_physics_process()</code> order depends on scene tree position — harder to guarantee across versions</td></tr>
+<tr><td>Headless server</td><td><code>MinimalPlugins</code> — zero rendering, zero GPU dependency</td><td>Can run headless but designed around rendering. Heavier baseline</td></tr>
+<tr><td>Crate structure</td><td>Each <code>ic-*</code> crate is a Bevy plugin. Clean <code>Cargo.toml</code> dependency graph</td><td>Each module would be a GDExtension shared library with C ABI marshalling overhead</td></tr>
+<tr><td>WASM browser target</td><td>Community-tested. Rust code compiles to WASM directly</td><td>WASM export includes the entire C++ runtime (~40 MB+)</td></tr>
+<tr><td>Modding (D005)</td><td>WASM mods call host functions directly. Lua via <code>mlua</code> in-process</td><td>GDExtension → C ABI → Rust → WASM chain. Extra indirection</td></tr>
+<tr><td>Fixed-point math (D009)</td><td>Systems operate on IC’s <code>i32</code>/<code>i64</code> types natively</td><td>Physics uses <code>float</code>/<code>double</code> internally. IC would bypass engine math entirely</td></tr>
+</tbody>
+</table>
+</div>
+<p>Using Godot would mean writing all simulation logic in Rust via GDExtension, bypassing Godot’s physics/math/networking, building a custom editor anyway (D038), and using none of GDScript. At that point Godot becomes expensive rendering middleware with a C ABI tax — Bevy provides the same rendering capabilities (wgpu) without the boundary. Godot’s strengths (mature editor, GDScript rapid prototyping, scene tree composition) serve adventure and platformer games well but are counterproductive for flat ECS simulation of hundreds of units.</p>
+<p>IC borrows interface design patterns from Godot — pluggable <code>MultiplayerAPI</code> validates IC’s <code>NetworkModel</code> trait (D006), “editor is the engine” validates <code>ic-editor</code> as a Bevy app (D038), and the separate proposals repository informs governance (D037) — but these are architectural lessons, not reasons to adopt Godot as a runtime. See <code>research/godot-o3de-engine-analysis.md</code> for the full analysis.</p>
+<p><em>Custom library stack — winit + wgpu + hecs (original decision, rejected):</em></p>
+<p>The original plan avoided framework lock-in by assembling individual crates. Rejected because 2-4 months of infrastructure work (sprite batching, cameras, audio, input, asset pipeline) delays the differentiating features (sim, netcode, modding). Bevy provides all of this with a compatible ECS architecture.</p>
+<hr>
+<hr>
+<h2 id="d003-data-format--real-yaml-not-miniyaml"><a class="header" href="#d003-data-format--real-yaml-not-miniyaml">D003: Data Format — Real YAML, Not MiniYAML</a></h2>
+<p><strong>Decision:</strong> Use standard spec-compliant YAML with <code>serde_yaml</code>. Not OpenRA’s MiniYAML.</p>
+<p><strong>Rationale:</strong></p>
+<ul>
+<li>Standard YAML parsers, linters, formatters, editor support all work</li>
+<li><code>serde_yaml</code> → typed Rust struct deserialization for free</li>
+<li>JSON-schema validation catches errors before game loads</li>
+<li>No custom parser to maintain</li>
+<li>Inheritance resolved at load time as a processing pass, not a parser feature</li>
+</ul>
+<p><strong>Alternatives considered:</strong></p>
+<ul>
+<li>MiniYAML as-is (rejected — custom parser, no tooling support, not spec-compliant)</li>
+<li>TOML (rejected — awkward for deeply nested game data)</li>
+<li>RON (rejected — modders won’t know it, thin editor support)</li>
+<li>JSON (rejected — too verbose, no comments)</li>
+</ul>
+<p><strong>Migration:</strong> <code>miniyaml2yaml</code> converter tool in <code>ra-formats</code> crate.</p>
+<hr>
+<hr>
+<h2 id="d009-simulation--fixed-point-math-no-floats"><a class="header" href="#d009-simulation--fixed-point-math-no-floats">D009: Simulation — Fixed-Point Math, No Floats</a></h2>
+<p><strong>Decision:</strong> All sim-layer calculations use integer/fixed-point arithmetic. Floats allowed only for rendering interpolation.</p>
+<p><strong>Rationale:</strong></p>
+<ul>
+<li>Required for deterministic lockstep (floats can produce different results across platforms)</li>
+<li>Original Red Alert used integer math — proven approach</li>
+<li>OpenRA uses <code>WDist</code>/<code>WPos</code>/<code>WAngle</code> with 1024 subdivisions — same principle</li>
+</ul>
+<hr>
+<hr>
+<h2 id="d010-simulation--snapshottable-state"><a class="header" href="#d010-simulation--snapshottable-state">D010: Simulation — Snapshottable State</a></h2>
+<p><strong>Decision:</strong> Full sim state must be serializable/deserializable at any tick.</p>
+<p><strong>Rationale enables:</strong></p>
+<ul>
+<li>Save games (trivially)</li>
+<li>Replay system (initial state + orders)</li>
+<li>Desync debugging (diff snapshots between clients at divergence point)</li>
+<li>Rollback netcode (restore state N frames back, replay with corrected inputs)</li>
+<li>Cross-engine reconciliation (restore from authoritative checkpoint)</li>
+<li>Automated testing (load known state, apply inputs, verify result)</li>
+</ul>
+<p><strong>Crash-safe serialization (from Valve Fossilize):</strong> Save files use an append-only write strategy with a final header update — the same pattern Valve uses in Fossilize (their pipeline cache serialization library, see <code>research/valve-github-analysis.md</code> § Part 3). The payload is written first into a temporary file; only after the full payload is fsynced does the header (containing checksum + payload length) get written atomically. If the process crashes mid-write, the incomplete temporary file is detected and discarded on next load — the previous valid save remains intact. This eliminates the “corrupted save file” failure mode that plagues games with naïve serialization.</p>
+<p><strong>Autosave threading:</strong> Autosave (including <code>delta_snapshot()</code> serialization + LZ4 compression + fsync) MUST run on the dedicated I/O thread — never on the game loop thread. On a 5400 RPM HDD, the <code>fsync()</code> call alone takes 50–200 ms (waits for platters to physically commit). Even though delta saves are only ~30 KB, fsync latency dominates. The game thread’s only responsibility is to produce the <code>DeltaSnapshot</code> data (reading ECS state — fast, ~0.5–1 ms for 500 units via <code>ChangeMask</code> bitfield iteration). The serialized bytes are then sent to the I/O thread via the same ring buffer used for SQLite events. The I/O thread handles file I/O + fsync asynchronously. This prevents the guaranteed 50–200 ms HDD hitch that would otherwise occur every autosave interval.</p>
+<p><strong>Delta encoding for snapshots:</strong> Periodic full snapshots (for save games, desync debugging) are complemented by <strong>delta snapshots</strong> that encode only changed state since the last full snapshot. Delta encoding uses property-level diffing: each ECS component that changed since the last snapshot is serialized; unchanged components are omitted. For a 500-unit game where ~10% of components change per tick, a delta snapshot is ~10x smaller than a full snapshot. This reduces save file size, speeds up autosave, and makes periodic snapshot transmission (for late-join reconnection) bandwidth-efficient. Inspired by Source Engine’s <code>CNetworkVar</code> per-field change detection (see <code>research/valve-github-analysis.md</code> § 2.2) and the <code>SPROP_CHANGES_OFTEN</code> priority flag — components that change every tick (position, health) are checked first during delta computation, improving cache locality. See <code>10-PERFORMANCE.md</code> for the performance impact and <code>09-DECISIONS.md</code> § D054 for the <code>SnapshotCodec</code> version dispatch.</p>
+<hr>
+<hr>
+<h2 id="d015-performance--efficiency-first-not-thread-first"><a class="header" href="#d015-performance--efficiency-first-not-thread-first">D015: Performance — Efficiency-First, Not Thread-First</a></h2>
+<p><strong>Decision:</strong> Performance is achieved through algorithmic efficiency, cache-friendly data layout, adaptive workload, zero allocation, and amortized computation. Multi-core scaling is a bonus layer on top, not the foundation.</p>
+<p><strong>Principle:</strong> The engine must run a 500-unit battle smoothly on a 2-core, 4GB machine from 2012. Multi-core machines get higher unit counts as a natural consequence of the work-stealing scheduler.</p>
+<p><strong>The Efficiency Pyramid (ordered by impact):</strong></p>
+<ol>
+<li>Algorithmic efficiency (flowfields, spatial hash, hierarchical pathfinding)</li>
+<li>Cache-friendly ECS layout (hot/warm/cold component separation)</li>
+<li>Simulation LOD (skip work that doesn’t affect the outcome)</li>
+<li>Amortized work (stagger expensive systems across ticks)</li>
+<li>Zero-allocation hot paths (pre-allocated scratch buffers)</li>
+<li>Work-stealing parallelism (rayon via Bevy — bonus, not foundation)</li>
+</ol>
+<p><strong>Inspired by:</strong> Datadog Vector’s pipeline efficiency, Tokio’s work-stealing runtime. These systems are fast because they waste nothing, not because they use more hardware.</p>
+<p><strong>Anti-pattern rejected:</strong> “Just parallelize it” as the default answer. Parallelism without algorithmic efficiency is adding lanes to a highway with broken traffic lights.</p>
+<p>See <code>10-PERFORMANCE.md</code> for full details, targets, and implementation patterns.</p>
+<hr>
+<hr>
+<h2 id="d017-bevy-rendering-pipeline--classic-base-modding-possibilities"><a class="header" href="#d017-bevy-rendering-pipeline--classic-base-modding-possibilities">D017: Bevy Rendering Pipeline — Classic Base, Modding Possibilities</a></h2>
+<p><strong>Decision:</strong> Use Bevy’s rendering pipeline (wgpu) to faithfully reproduce the classic Red Alert isometric aesthetic. Bevy’s more advanced rendering capabilities (shaders, post-processing, dynamic lighting, particles, 3D) are available as modding infrastructure — not as base game goals.</p>
+<p><strong>Rationale:</strong></p>
+<ul>
+<li>The core rendering goal is a faithful classic Red Alert clone: isometric sprites, palette-aware shading, fog of war</li>
+<li>Bevy + wgpu provides this solidly via 2D sprite batching and the isometric layer</li>
+<li>Because Bevy includes a full rendering pipeline, advanced visual capabilities (bloom, color grading, GPU particles, dynamic lighting, custom shaders) are <strong>passively available</strong> to modders without extra engine work</li>
+<li>This enables community-created visual enhancements: shader effects for chrono-shift, tesla arcs, weather particles, or even full 3D rendering mods (see D018, <code>02-ARCHITECTURE.md</code> § “3D Rendering as a Mod”)</li>
+<li>Render quality tiers (Baseline → Ultra) automatically degrade for older hardware — the base classic aesthetic works on all tiers</li>
+</ul>
+<p><strong>Scope:</strong></p>
+<ul>
+<li>Phase 1: faithful isometric tile renderer, sprite animation, shroud, camera — showcase optional post-processing prototypes to demonstrate modding potential</li>
+<li>Phase 3+: rendering supports whatever the game chrome needs</li>
+<li>Phase 7: visual modding infrastructure (particle systems, shader library, weather rendering) — tools for modders, not base game goals</li>
+</ul>
+<p><strong>Design principle:</strong> The base game looks like Red Alert. Modders can make it look like whatever they want.</p>
+<hr>
+<hr>
+<h2 id="d018-multi-game-extensibility-game-modules"><a class="header" href="#d018-multi-game-extensibility-game-modules">D018: Multi-Game Extensibility (Game Modules)</a></h2>
+<p><strong>Decision:</strong> Design the engine as a game-agnostic RTS framework that ships with multiple built-in game modules. Red Alert is the default module; Tiberian Dawn ships alongside it. RA2, Tiberian Sun, Dune 2000, and original games should be addable as additional modules without modifying core engine code. The engine is also capable of powering non-C&amp;C classic RTS games (see D039).</p>
+<p><strong>Rationale:</strong></p>
+<ul>
+<li>OpenRA already proves multi-game works — runs TD, RA, and D2K on one engine via different trait/component sets</li>
+<li>The ECS architecture naturally supports this (composable components, pluggable systems)</li>
+<li>Prevents RA1 assumptions from hardening into architectural constraints that require rewrites later</li>
+<li>Broadens the project’s audience and contributor base</li>
+<li>RA2 is the most-requested extension — community interest is proven (Chrono Divide exists)</li>
+<li>Shipping RA + TD from the start (like OpenRA) proves the game-agnostic design is real, not aspirational</li>
+<li><strong>Validated by Factorio’s “game is a mod” principle:</strong> Factorio’s <code>base/</code> directory uses the exact same <code>data:extend()</code> API available to external mods — the base game is literally a mod. This is the strongest possible validation of the game module architecture. IC’s RA1 module must use NO internal APIs unavailable to external game modules. Every system it uses — pathfinding, fog of war, damage resolution, format loading — should go through <code>GameModule</code> trait registration, not internal engine shortcuts. If the RA1 module needs a capability that external modules can’t access, that capability must be promoted to a public trait or API. See <code>research/mojang-wube-modding-analysis.md</code> § “The Game Is a Mod”</li>
+</ul>
+<p><strong>The <code>GameModule</code> trait:</strong></p>
+<p>Every game module implements <code>GameModule</code>, which bundles everything the engine needs to run that game:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub trait GameModule: Send + Sync + 'static {
+    /// Human-readable name ("Red Alert", "Tiberian Dawn")
+    fn name(&amp;self) -&gt; &amp;str;
+
+    /// Register ECS components, systems, and system ordering
+    fn register_systems(&amp;self, app: &amp;mut App);
+
+    /// Provide the module's Pathfinder implementation
+    fn pathfinder(&amp;self) -&gt; Box&lt;dyn Pathfinder&gt;;
+
+    /// Provide the module's SpatialIndex implementation
+    fn spatial_index(&amp;self) -&gt; Box&lt;dyn SpatialIndex&gt;;
+
+    /// Provide the module's FogProvider implementation (D041)
+    fn fog_provider(&amp;self) -&gt; Box&lt;dyn FogProvider&gt;;
+
+    /// Provide the module's DamageResolver implementation (D041)
+    fn damage_resolver(&amp;self) -&gt; Box&lt;dyn DamageResolver&gt;;
+
+    /// Provide the module's OrderValidator implementation (D041)
+    fn order_validator(&amp;self) -&gt; Box&lt;dyn OrderValidator&gt;;
+
+    /// Provide the module's render plugin (sprite, voxel, 3D, etc.)
+    fn render_plugin(&amp;self) -&gt; Box&lt;dyn RenderPlugin&gt;;
+
+    /// List available render modes — Classic, HD, 3D, etc. (D048)
+    fn render_modes(&amp;self) -&gt; Vec&lt;RenderMode&gt;;
+
+    /// Provide the module's UI layout (sidebar style, build queue, etc.)
+    fn ui_layout(&amp;self) -&gt; UiLayout;
+
+    /// Provide format loaders for this module's asset types
+    fn format_loaders(&amp;self) -&gt; Vec&lt;Box&lt;dyn FormatLoader&gt;&gt;;
+
+    /// Register game-module-specific commands into the Brigadier command tree (D058).
+    /// RA1 registers `/sell`, `/deploy`, `/stance`, etc. A total conversion registers
+    /// its own novel commands. Engine built-in commands are pre-registered before this.
+    fn register_commands(&amp;self, dispatcher: &amp;mut CommandDispatcher);
+
+    /// List available balance presets (D019)
+    fn balance_presets(&amp;self) -&gt; Vec&lt;BalancePreset&gt;;
+
+    /// List available experience profiles (D019 + D032 + D033 + D043 + D045 + D048)
+    fn experience_profiles(&amp;self) -&gt; Vec&lt;ExperienceProfile&gt;;
+
+    /// Default experience profile name
+    fn default_profile(&amp;self) -&gt; &amp;str;
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Game module capability matrix:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Capability</th><th>RA1 (ships Phase 2)</th><th>TD (ships Phase 3-4)</th><th>Generals-class (future)</th><th>Non-C&amp;C (community)</th></tr>
+</thead>
+<tbody>
+<tr><td>Pathfinding</td><td>Multi-layer hybrid</td><td>Multi-layer hybrid</td><td>Navmesh</td><td>Module-provided</td></tr>
+<tr><td>Spatial index</td><td>Spatial hash</td><td>Spatial hash</td><td>BVH/R-tree</td><td>Module-provided</td></tr>
+<tr><td>Fog of war</td><td>Radius fog</td><td>Radius fog</td><td>Elevation LOS</td><td>Module-provided</td></tr>
+<tr><td>Damage resolution</td><td>Standard pipeline</td><td>Standard pipeline</td><td>Sub-object targeting</td><td>Module-provided</td></tr>
+<tr><td>Order validation</td><td>Standard validator</td><td>Standard validator</td><td>Module-specific rules</td><td>Module-provided</td></tr>
+<tr><td>Rendering</td><td>Isometric sprites</td><td>Isometric sprites</td><td>3D meshes</td><td>Module-provided</td></tr>
+<tr><td>Camera</td><td>Isometric fixed</td><td>Isometric fixed</td><td>Free 3D</td><td>Module-provided</td></tr>
+<tr><td>Terrain</td><td>Grid cells</td><td>Grid cells</td><td>Heightmap</td><td>Module-provided</td></tr>
+<tr><td>Format loading</td><td>.mix/.shp/.pal</td><td>.mix/.shp/.pal</td><td>.big/.w3d</td><td>Module-provided</td></tr>
+<tr><td>AI strategy</td><td>Personality-driven</td><td>Personality-driven</td><td>Module-provided</td><td>Module-provided</td></tr>
+<tr><td>Networking</td><td>Shared (ic-net)</td><td>Shared (ic-net)</td><td>Shared (ic-net)</td><td>Shared (ic-net)</td></tr>
+<tr><td>Modding (YAML/Lua/WASM)</td><td>Shared (ic-script)</td><td>Shared (ic-script)</td><td>Shared (ic-script)</td><td>Shared (ic-script)</td></tr>
+<tr><td>Workshop</td><td>Shared (D030)</td><td>Shared (D030)</td><td>Shared (D030)</td><td>Shared (D030)</td></tr>
+<tr><td>Replays &amp; saves</td><td>Shared (ic-sim)</td><td>Shared (ic-sim)</td><td>Shared (ic-sim)</td><td>Shared (ic-sim)</td></tr>
+<tr><td>Competitive systems</td><td>Shared</td><td>Shared</td><td>Shared</td><td>Shared</td></tr>
+</tbody>
+</table>
+</div>
+<p>The pattern: game-specific rendering, pathfinding, spatial queries, fog, damage resolution, AI strategy, and validation; shared networking, modding, workshop, replays, saves, and competitive infrastructure.</p>
+<p><strong>Experience profiles (composing D019 + D032 + D033 + D043 + D045 + D048):</strong></p>
+<p>An experience profile bundles a balance preset, UI theme, QoL settings, AI behavior, pathfinding feel, and render mode into a named configuration:</p>
+<pre><code class="language-yaml">profiles:
+  classic-ra:
+    display_name: "Classic Red Alert"
+    game_module: red_alert
+    balance: classic        # D019 — EA source values
+    theme: classic          # D032 — DOS/Win95 aesthetic
+    qol: vanilla            # D033 — no QoL additions
+    ai_preset: classic-ra   # D043 — original RA AI behavior
+    pathfinding: classic-ra # D045 — original RA movement feel
+    render_mode: classic    # D048 — original pixel art
+    description: "Original Red Alert experience, warts and all"
+
+  openra-ra:
+    display_name: "OpenRA Red Alert"
+    game_module: red_alert
+    balance: openra         # D019 — OpenRA competitive balance
+    theme: modern           # D032 — modern UI
+    qol: openra             # D033 — OpenRA QoL features
+    ai_preset: openra       # D043 — OpenRA skirmish AI behavior
+    pathfinding: openra     # D045 — OpenRA movement feel
+    render_mode: classic    # D048 — OpenRA uses classic sprites
+    description: "OpenRA-style experience on the Iron Curtain engine"
+
+  iron-curtain-ra:
+    display_name: "Iron Curtain Red Alert"
+    game_module: red_alert
+    balance: classic        # D019 — EA source values
+    theme: modern           # D032 — modern UI
+    qol: iron_curtain       # D033 — IC's recommended QoL
+    ai_preset: ic-default   # D043 — research-informed AI
+    pathfinding: ic-default # D045 — modern flowfield movement
+    render_mode: hd         # D048 — HD sprites if available, else classic
+    description: "Recommended — classic balance with modern QoL and enhanced AI"
+</code></pre>
+<p>Profiles are selectable in the lobby. Players can customize individual settings or pick a preset. Competitive modes lock the profile for fairness — specifically:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Profile Axis</th><th>Locked in Ranked?</th><th>Rationale</th></tr>
+</thead>
+<tbody>
+<tr><td>D019 Balance preset</td><td><strong>Yes</strong> — fixed per season per queue</td><td>Sim-affecting; all players must use the same balance rules</td></tr>
+<tr><td>D033 QoL (sim-affecting)</td><td><strong>Yes</strong> — fixed per ranked queue</td><td>Sim-affecting toggles (production, commands, gameplay sections) are lobby settings; mismatch = connection refused</td></tr>
+<tr><td>D045 Pathfinding preset</td><td><strong>Yes</strong> — same impl required</td><td>Sim-affecting; pathfinder WASM hash verified across all clients</td></tr>
+<tr><td>D043 AI preset</td><td><strong>N/A</strong> — not relevant for PvP ranked</td><td>AI presets only matter in PvE/skirmish; no competitive implication</td></tr>
+<tr><td>D032 UI theme</td><td><strong>No</strong> — client-only cosmetic</td><td>No sim impact; personal visual preference</td></tr>
+<tr><td>D048 Render mode</td><td><strong>No</strong> — client-only cosmetic</td><td>No sim impact; cross-view multiplayer is architecturally safe (see D048 § “Information Equivalence”)</td></tr>
+<tr><td>D033 QoL (client-only)</td><td><strong>No</strong> — per-player preferences</td><td>Health bar display, selection glow, etc. — purely visual/UX, no competitive advantage</td></tr>
+</tbody>
+</table>
+</div>
+<p>The locked axes collectively ensure that all ranked players share identical simulation rules. The unlocked axes are guaranteed to be information-equivalent (see D048 § “Information Equivalence” and D058 § “Visual Settings &amp; Competitive Fairness”).</p>
+<p><strong>Concrete changes (baked in from Phase 0):</strong></p>
+<ol>
+<li><code>WorldPos</code> carries a Z coordinate from day one (RA1 sets z=0). <code>CellPos</code> is a game-module convenience for grid-based games, not an engine-core type.</li>
+<li>System execution order is registered per game module, not hardcoded in engine</li>
+<li>No game-specific enums in engine core — resource types, unit categories come from YAML / module registration</li>
+<li>Renderer uses a <code>Renderable</code> trait — sprite and voxel backends implement it equally</li>
+<li>Pathfinding uses a <code>Pathfinder</code> trait — <code>IcPathfinder</code> (multi-layer hybrid) is the RA1 impl; navmesh could slot in without touching sim</li>
+<li>Spatial queries use a <code>SpatialIndex</code> trait — spatial hash is the RA1 impl; BVH/R-tree could slot in without touching combat/targeting</li>
+<li><code>GameModule</code> trait bundles component registration, system pipeline, pathfinder, spatial index, fog provider, damage resolver, order validator, format loaders, render backends, and experience profiles (see D041 for the 5 additional trait abstractions)</li>
+<li><code>PlayerOrder</code> is extensible to game-specific commands</li>
+<li>Engine crates use <code>ic-*</code> naming (not <code>ra-*</code>) to reflect game-agnostic identity (see D039). Exception: <code>ra-formats</code> stays because it reads C&amp;C-family file formats specifically.</li>
+</ol>
+<p><strong>What this does NOT mean:</strong></p>
+<ul>
+<li>We don’t build RA2 support now. Red Alert + Tiberian Dawn are the focus through Phase 3-4.</li>
+<li>We don’t add speculative abstractions. Only the nine concrete changes above.</li>
+<li>Non-C&amp;C game modules are an architectural capability, not a deliverable (see D039).</li>
+</ul>
+<p><strong>Scope boundary — current targets vs. architectural openness:</strong>
+First-party game module development targets the C&amp;C family: Red Alert (default, ships Phase 2), Tiberian Dawn (ships Phase 3-4 stretch goal). RA2, Tiberian Sun, and Dune 2000 are future community goals sharing the isometric camera, grid-based terrain, sprite/voxel rendering, and <code>.mix</code> format lineage.</p>
+<p><strong>3D titles (Generals, C&amp;C3, RA3) are not current targets</strong> but the architecture deliberately avoids closing doors. With pathfinding (<code>Pathfinder</code> trait), spatial queries (<code>SpatialIndex</code> trait), rendering (<code>Renderable</code> trait), camera (<code>ScreenToWorld</code> trait), format loading (<code>FormatRegistry</code>), fog of war (<code>FogProvider</code> trait), damage resolution (<code>DamageResolver</code> trait), AI (<code>AiStrategy</code> trait), and order validation (<code>OrderValidator</code> trait) all behind pluggable abstractions, a Generals-class game module would provide its own implementations of these traits while reusing the sim core, networking, modding infrastructure, workshop, competitive systems, replays, and save games. The traits exist from day one — the cost is near-zero, and the benefit is that neither we nor the community need to fork the engine to explore continuous-space games in the future. See D041 for the full trait-abstraction strategy and rationale.</p>
+<p>See <code>02-ARCHITECTURE.md</code> § “Architectural Openness: Beyond Isometric” for the full trait-by-trait breakdown.</p>
+<p>However, <strong>3D rendering mods for isometric-family games are explicitly supported.</strong> A “3D Red Alert” Tier 3 mod can replace sprites with GLTF meshes and the isometric camera with a free 3D camera — without changing the sim, networking, or pathfinding. Bevy’s built-in 3D pipeline makes this feasible. Cross-view multiplayer (2D vs 3D players in the same game) works because the sim is view-agnostic. See <code>02-ARCHITECTURE.md</code> § “3D Rendering as a Mod”.</p>
+<p><strong>Phase:</strong> Architecture baked in from Phase 0. RA1 module ships Phase 2. TD module targets Phase 3-4 as a stretch goal. RA2 module is a potential Phase 8+ community project.</p>
+<blockquote>
+<p><strong>Expectation management:</strong> The community’s most-requested feature is RA2 support. The architecture deliberately supports it (game-agnostic traits, extensible ECS, pluggable pathfinding), but <strong>RA2 is a future community goal, not a scheduled deliverable.</strong> No timeline, staffing, or exit criteria exist for any game module beyond RA1 and TD. When the community reads “game-agnostic,” they should understand: the architecture won’t block RA2, but nobody is building it yet. TD ships alongside RA1 to prove the multi-game design works — not because two games are twice as fun, but because an engine that only runs one game hasn’t proven it’s game-agnostic.</p>
+</blockquote>
+<hr>
+<hr>
+<h2 id="d039-engine-scope--general-purpose-classic-rts-platform"><a class="header" href="#d039-engine-scope--general-purpose-classic-rts-platform">D039: Engine Scope — General-Purpose Classic RTS Platform</a></h2>
+<p><strong>Decision:</strong> Iron Curtain is a general-purpose classic RTS engine. It ships with built-in C&amp;C game modules (Red Alert, Tiberian Dawn) as its primary content, but at the architectural level, the engine’s design does not prevent building any classic RTS — from C&amp;C to Age of Empires to StarCraft to Supreme Commander to original games.</p>
+<p><strong>The framing:</strong> Built for C&amp;C, open to anything. C&amp;C games and the OpenRA community remain the primary audience, the roadmap, and the compatibility target. What changes is how we think about the underlying engine: nothing in the engine core should assume a specific resource model, base building model, camera system, or UI layout. These are all game module concerns.</p>
+<p><strong>What this means concretely:</strong></p>
+<ol>
+<li><strong>Red Alert and Tiberian Dawn are built-in mods</strong> — they ship with the engine, like OpenRA bundles RA/TD/D2K. The engine launches into RA1 by default. Other game modules are selectable from a mod menu</li>
+<li><strong>Crate naming reflects engine identity</strong> — engine crates use <code>ic-*</code> (Iron Curtain), not <code>ra-*</code>. The exception is <code>ra-formats</code> which genuinely reads C&amp;C/Red Alert file formats. If someone builds an AoE game module, they’d write their own format reader</li>
+<li><strong><code>GameModule</code> (D018) becomes the central abstraction</strong> — the trait defines everything that differs between RTS games: resource model, building model, camera, pathfinding implementation, UI layout, tech progression, population model</li>
+<li><strong>OpenRA experience as a composable profile</strong> — D019 (balance) + D032 (themes) + D033 (QoL) combine into “experience profiles.” “OpenRA” is a profile: OpenRA balance values + Modern theme + OpenRA QoL conventions. “Classic RA” is another profile. Each is a valid interpretation of the same game module</li>
+<li><strong>The C&amp;C variety IS the architectural stress test</strong> — across the franchise (TD, RA1, TS, RA2, Generals, C&amp;C3, RA3, C&amp;C4, Renegade), C&amp;C games already span harvester/supply/streaming/zero-resource economies, sidebar/dozer/crawler building, 2D/3D cameras, grid/navmesh pathing, FPS/RTS hybrids. If the engine supports every C&amp;C game, it inherently supports most classic RTS patterns</li>
+</ol>
+<p><strong>What this does NOT mean:</strong></p>
+<ul>
+<li>We don’t dilute the C&amp;C focus. RA1 is the default module, TD ships alongside it. The roadmap doesn’t change</li>
+<li>We don’t build generic RTS features that no C&amp;C game needs. Non-C&amp;C capability is an architectural property, not a deliverable</li>
+<li>We don’t de-prioritize OpenRA community compatibility. D023–D027 are still critical</li>
+<li>We don’t build format readers for non-C&amp;C games. That’s community work on top of the engine</li>
+</ul>
+<p><strong>Why “any classic RTS” and not “strictly C&amp;C”:</strong></p>
+<ul>
+<li>The C&amp;C franchise already spans such diverse mechanics that supporting it fully means supporting most classic RTS patterns anyway</li>
+<li>Artificial limitations on non-C&amp;C use would require extra code to enforce — it’s harder to close doors than to leave them open</li>
+<li>A community member building “StarCraft in IC” exercises and validates the same <code>GameModule</code> API that a community member building “RA2 in IC” uses. Both make the engine more robust</li>
+<li>Westwood’s philosophy was engine-first: the same engine technology powered vastly different games. IC follows this spirit</li>
+<li>Cancelled C&amp;C games (Tiberium FPS, Generals 2, C&amp;C Arena) and fan concepts exist in the space between “strictly C&amp;C” and “any RTS” — the community should be free to explore them</li>
+</ul>
+<p><strong>Validation from OpenRA mod ecosystem:</strong> Three OpenRA mods serve as acid tests for game-agnostic claims (see <code>research/openra-mod-architecture-analysis.md</code> for full analysis):</p>
+<ul>
+<li><strong>OpenKrush (KKnD):</strong> The most rigorous test. KKnD shares almost nothing with C&amp;C: different resource model (oil patches, not ore), per-building production (no sidebar), different veterancy (kills-based, not XP), different terrain, 15+ proprietary binary formats with zero C&amp;C overlap. OpenKrush replaces <strong>16 complete mechanic modules</strong> to make it work on OpenRA. In IC, every one of these would go through <code>GameModule</code> — validating that the trait covers the full range of game-specific concerns.</li>
+<li><strong>OpenSA (Swarm Assault):</strong> A non-RTS-shaped game on an RTS engine — living world simulation with plant growth, creep spawners, pirate ants, colony capture. No base building, no sidebar, no harvesting. Tests whether the engine gracefully handles the <em>absence</em> of C&amp;C systems, not just replacement.</li>
+<li><strong>d2 (Dune II):</strong> The C&amp;C ancestor, but with single-unit selection, concrete prerequisites, sandworm hazards, and starport variable pricing — mechanics so archaic they test backward-compatibility of the <code>GameModule</code> abstraction.</li>
+</ul>
+<p><strong>Alternatives considered:</strong></p>
+<ul>
+<li>C&amp;C-only scope (rejected — artificially limits what the community can create, while the architecture already supports broader use)</li>
+<li>“Any game” scope (rejected — too broad, dilutes C&amp;C identity. Classic RTS is the right frame)</li>
+<li>No scope declaration (rejected — ambiguity about what game modules are welcome leads to confusion)</li>
+</ul>
+<p><strong>Phase:</strong> Baked into architecture from Phase 0 (via D018 and Invariant #9). This decision formalizes what D018 already implied and extends it.</p>
+<hr>
+<hr>
+<h2 id="d067-configuration-format-split--toml-for-engine-yaml-for-content"><a class="header" href="#d067-configuration-format-split--toml-for-engine-yaml-for-content">D067: Configuration Format Split — TOML for Engine, YAML for Content</a></h2>
+<p><strong>Decision:</strong> All engine and infrastructure configuration files use <strong>TOML</strong>. All game content, mod definitions, and data-driven gameplay files use <strong>YAML</strong>. The file extension alone tells you what kind of file you’re looking at: <code>.toml</code> = how the engine runs, <code>.yaml</code> = what the game is.</p>
+<p><strong>Context:</strong> The current design uses YAML for everything — client settings, server configuration, mod manifests, unit definitions, campaign graphs, UI themes, balance presets. This works technically (YAML is a superset of what we need), but it creates an orientation problem. When a contributor opens a directory full of <code>.yaml</code> files, they can’t tell at a glance whether <code>config.yaml</code> is an engine knob they can safely tune or a game rule file that affects simulation determinism. When a modder opens <code>server_config.yaml</code>, the identical extension to their <code>units.yaml</code> suggests both are part of the same system — they’re not. And when documentation says “configured in YAML,” it doesn’t distinguish “configured by the engine operator” from “configured by the mod author.”</p>
+<p>TOML is already present in the Rust ecosystem (<code>Cargo.toml</code>, <code>deny.toml</code>, <code>rustfmt.toml</code>, <code>clippy.toml</code>) and in the project itself. Rust developers already associate <code>.toml</code> with configuration. The split formalizes what’s already a natural instinct.</p>
+<p><strong>The rule is simple:</strong> If it configures the engine, the server, or the development toolchain, it’s TOML. If it defines game content that flows through the mod/asset pipeline or the simulation, it’s YAML.</p>
+<h3 id="file-classification"><a class="header" href="#file-classification">File Classification</a></h3>
+<h4 id="toml--engine--infrastructure-configuration"><a class="header" href="#toml--engine--infrastructure-configuration">TOML — Engine &amp; Infrastructure Configuration</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>File</th><th>Purpose</th><th>Decision Reference</th></tr>
+</thead>
+<tbody>
+<tr><td><code>config.toml</code></td><td>Client engine settings: render, audio, keybinds, net diagnostics, debug flags</td><td>D058 (console/cvars)</td></tr>
+<tr><td><code>config.&lt;module&gt;.toml</code></td><td>Per-game-module client overrides (e.g., <code>config.ra1.toml</code>)</td><td>D058</td></tr>
+<tr><td><code>server_config.toml</code></td><td>Relay/server parameters: ~200 cvars across 14 subsystems</td><td>D064</td></tr>
+<tr><td><code>settings.toml</code></td><td>Workshop sources, P2P bandwidth, compression levels, cloud sync, community list</td><td>D030, D063</td></tr>
+<tr><td><code>deny.toml</code></td><td>License enforcement for <code>cargo deny</code></td><td>Already TOML</td></tr>
+<tr><td><code>Cargo.toml</code></td><td>Rust build system</td><td>Already TOML</td></tr>
+<tr><td>Server deployment profiles</td><td><code>profiles/tournament-lan.toml</code>, <code>profiles/casual-community.toml</code>, etc.</td><td>D064, 15-SERVER-GUIDE</td></tr>
+<tr><td><code>compression.advanced.toml</code></td><td>Advanced compression parameters for server operators (if separate from <code>server_config.toml</code>)</td><td>D063</td></tr>
+<tr><td>Editor preferences</td><td><code>editor_prefs.toml</code> — SDK window layout, recent files, panel state</td><td>D038, D040</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Why TOML for configuration:</strong></p>
+<ul>
+<li><strong>Flat and explicit.</strong> TOML doesn’t allow the deeply nested structures that make YAML configs hard to scan. <code>[render]</code> / <code>shadows = true</code> is immediately readable. Configuration <em>should</em> be flat — if your config file needs 6 levels of nesting, it’s probably content.</li>
+<li><strong>No gotchas.</strong> YAML has well-known foot-guns: <code>Norway: NO</code> parses as <code>false</code>, bare <code>3.0</code> vs <code>"3.0"</code> ambiguity, tab/space sensitivity. TOML avoids all of these — critical for files that non-developers (server operators, tournament organizers) will edit by hand.</li>
+<li><strong>Type-safe.</strong> TOML has native integer, float, boolean, datetime, and array types with unambiguous syntax. <code>max_fps = 144</code> is always an integer, never a string. YAML’s type coercion surprises people.</li>
+<li><strong>Ecosystem alignment.</strong> Rust’s <code>serde</code> supports TOML via <code>toml</code> crate with identical derive macros to <code>serde_yaml</code>. The entire Rust toolchain uses TOML for configuration. IC contributors expect it.</li>
+<li><strong>Tooling.</strong> <a href="https://taplo.tamasfe.dev/">taplo</a> provides TOML LSP (validation, formatting, schema support) matching what YAML gets from Red Hat’s YAML extension. VS Code gets first-class support for both.</li>
+<li><strong>Comments preserved.</strong> TOML’s comment syntax (<code>#</code>) is simple and universally understood. Round-trip serialization with <code>toml_edit</code> preserves comments and formatting — essential for files users hand-edit.</li>
+</ul>
+<h4 id="yaml--game-content--mod-data"><a class="header" href="#yaml--game-content--mod-data">YAML — Game Content &amp; Mod Data</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>File</th><th>Purpose</th><th>Decision Reference</th></tr>
+</thead>
+<tbody>
+<tr><td><code>mod.yaml</code></td><td>Mod manifest: name, version, dependencies, assets, game module</td><td>D026</td></tr>
+<tr><td>Unit/weapon/building definitions</td><td><code>units/*.yaml</code>, <code>weapons/*.yaml</code>, <code>buildings/*.yaml</code></td><td>D003, Tier 1 modding</td></tr>
+<tr><td><code>campaign.yaml</code></td><td>Campaign graph, mission sequence, persistent state</td><td>D021</td></tr>
+<tr><td><code>theme.yaml</code></td><td>UI theme definition: sprite sheets, 9-slice coordinates, colors</td><td>D032</td></tr>
+<tr><td><code>ranked-tiers.yaml</code></td><td>Competitive rank names, thresholds, icons per game module</td><td>D055</td></tr>
+<tr><td>Balance presets</td><td><code>presets/balance/*.yaml</code> — Classic/OpenRA/Remastered values</td><td>D019</td></tr>
+<tr><td>QoL presets</td><td><code>presets/qol/*.yaml</code> — behavior toggle configurations</td><td>D033</td></tr>
+<tr><td>Experience profiles</td><td><code>profiles/*.yaml</code> — named mod set + settings + conflict resolutions</td><td>D062</td></tr>
+<tr><td>Map files</td><td>IC map format (terrain, actors, triggers, metadata)</td><td>D025</td></tr>
+<tr><td>Scenario triggers/modules</td><td>Trigger definitions, waypoints, compositions</td><td>D038</td></tr>
+<tr><td>String tables / localization</td><td>Translatable game text</td><td>—</td></tr>
+<tr><td>Editor extensions</td><td><code>editor_extension.yaml</code> — custom palettes, panels, brushes</td><td>D066</td></tr>
+<tr><td>Export config</td><td><code>export_config.yaml</code> — target engine, version, content selection</td><td>D066</td></tr>
+<tr><td><code>credits.yaml</code></td><td>Campaign credits sequence</td><td>D038</td></tr>
+<tr><td><code>loading_tips.yaml</code></td><td>Loading screen tips</td><td>D038</td></tr>
+<tr><td>Tutorial definitions</td><td>Hint triggers, tutorial step sequences</td><td>D065</td></tr>
+<tr><td>AI personality definitions</td><td>Build orders, aggression curves, expansion strategies</td><td>D043</td></tr>
+<tr><td>Achievement definitions</td><td>In <code>mod.yaml</code> or separate achievement YAML files</td><td>D036</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Why YAML stays for content:</strong></p>
+<ul>
+<li><strong>Deep nesting is natural.</strong> Unit definitions have <code>combat.weapons[0].turret.target_filter</code> — content IS hierarchical. YAML handles this ergonomically. TOML’s <code>[[combat.weapons]]</code> tables are awkward for deeply nested game data.</li>
+<li><strong>Inheritance and composition.</strong> IC’s YAML content uses <code>inherits:</code> chains. Content files are designed for the <code>serde_yaml</code> pipeline with load-time inheritance resolution. TOML has no equivalent pattern.</li>
+<li><strong>Community expectation.</strong> The C&amp;C modding community already works with MiniYAML (OpenRA) and INI (original). YAML is the closest modern equivalent — familiar structure, familiar ergonomics. Nobody expects to define unit stats in TOML.</li>
+<li><strong>Multi-document support.</strong> YAML’s <code>---</code> document separator allows multiple logical documents in one file (e.g., multiple unit definitions). TOML has no multi-document support.</li>
+<li><strong>Existing ecosystem.</strong> JSON Schema validation for YAML content, D023 alias resolution, D025 MiniYAML conversion — all built around the YAML pipeline. The content toolchain is YAML-native.</li>
+</ul>
+<h3 id="edge-cases--boundary-rules"><a class="header" href="#edge-cases--boundary-rules">Edge Cases &amp; Boundary Rules</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>File</th><th>Classification</th><th>Reasoning</th></tr>
+</thead>
+<tbody>
+<tr><td><code>mod.yaml</code> (mod manifest)</td><td><strong>YAML</strong></td><td>It’s a content declaration — what the mod IS, not how the engine runs. Even though it has configuration-like fields (<code>engine.version</code>, <code>dependencies</code>), it flows through the mod pipeline, not the engine config pipeline.</td></tr>
+<tr><td>Server deployment profiles</td><td><strong>TOML</strong></td><td>They’re server configuration variants, not game content. The relay reads them the same way it reads <code>server_config.toml</code>.</td></tr>
+<tr><td><code>export_config.yaml</code></td><td><strong>YAML</strong></td><td>Export configuration is part of the content creation workflow — it describes what to export (content), not how the engine operates. It travels alongside the scenario/mod it targets.</td></tr>
+<tr><td><code>ic.lock</code></td><td><strong>TOML</strong></td><td>Lockfiles are infrastructure (dependency resolution state). Follows <code>Cargo.lock</code> convention.</td></tr>
+<tr><td><code>.iccmd</code> console scripts</td><td><strong>Neither</strong></td><td>These are script files, not configuration or content. Keep as-is.</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>The boundary test:</strong> Ask “does this file affect the simulation or define game content?” If yes → YAML. “Does this file configure how the engine, server, or toolchain operates?” If yes → TOML. If genuinely ambiguous, prefer YAML (content is the larger set and the default assumption).</p>
+<h3 id="learning-curve-two-formats-not-two-languages"><a class="header" href="#learning-curve-two-formats-not-two-languages">Learning Curve: Two Formats, Not Two Languages</a></h3>
+<p><strong>The concern:</strong> Introducing a second format means contributors who know YAML must now also navigate TOML. Does this add real complexity?</p>
+<p><strong>The short answer:</strong> No — it removes complexity. TOML is a <em>strict subset</em> of what YAML can do. Anyone who can read YAML can read TOML in under 60 seconds. The syntax delta is tiny:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Concept</th><th>YAML</th><th>TOML</th></tr>
+</thead>
+<tbody>
+<tr><td>Key-value</td><td><code>max_fps: 144</code></td><td><code>max_fps = 144</code></td></tr>
+<tr><td>Section</td><td>Indentation under parent key</td><td><code>[section]</code> header</td></tr>
+<tr><td>Nested section</td><td>More indentation</td><td><code>[parent.child]</code></td></tr>
+<tr><td>String</td><td><code>name: "Tank"</code> or <code>name: Tank</code></td><td><code>name = "Tank"</code> (always quoted)</td></tr>
+<tr><td>Boolean</td><td><code>enabled: true</code></td><td><code>enabled = true</code></td></tr>
+<tr><td>List</td><td><code>- item</code> on new lines</td><td><code>items = ["a", "b"]</code></td></tr>
+<tr><td>Comment</td><td><code># comment</code></td><td><code># comment</code></td></tr>
+</tbody>
+</table>
+</div>
+<p>That’s it. TOML syntax is closer to traditional INI and <code>.conf</code> files than to YAML. Server operators, sysadmins, and tournament organizers — the people who edit <code>server_config.toml</code> — already know this format from <code>php.ini</code>, <code>my.cnf</code>, <code>sshd_config</code>, <code>Cargo.toml</code>, and every other flat configuration file they’ve ever touched. TOML is the <em>expected</em> format for configuration. YAML is the surprise.</p>
+<p><strong>Audience separation means most people touch only one format:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Role</th><th>Touches TOML?</th><th>Touches YAML?</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Modder</strong> (unit stats, weapons, balance)</td><td>No</td><td>Yes</td></tr>
+<tr><td><strong>Map maker</strong> (terrain, triggers, scenarios)</td><td>No</td><td>Yes</td></tr>
+<tr><td><strong>Campaign author</strong> (mission graph, dialogue)</td><td>No</td><td>Yes</td></tr>
+<tr><td><strong>Server operator</strong> (relay tuning, deployment)</td><td>Yes</td><td>No</td></tr>
+<tr><td><strong>Tournament organizer</strong> (match rules, profiles)</td><td>Yes</td><td>No</td></tr>
+<tr><td><strong>Engine developer</strong> (build config, CI)</td><td>Yes</td><td>Yes</td></tr>
+<tr><td><strong>Total conversion modder</strong></td><td>Rarely</td><td>Yes</td></tr>
+</tbody>
+</table>
+</div>
+<p>A modder who defines unit stats in YAML will never need to open a TOML file. A server operator tuning relay parameters will never need to edit YAML content files. The only role that routinely touches both is an engine developer — and Rust developers already live in TOML (<code>Cargo.toml</code>, <code>rustfmt.toml</code>, <code>clippy.toml</code>, <code>deny.toml</code>).</p>
+<p><strong>TOML actually reduces complexity for the files it governs:</strong></p>
+<ul>
+<li><strong>No indentation traps.</strong> YAML config files break silently when you mix tabs and spaces, or when you indent a key one level too deep. TOML uses <code>[section]</code> headers — indentation is cosmetic, not semantic.</li>
+<li><strong>No type coercion surprises.</strong> In YAML, <code>version: 3.0</code> is a float but <code>version: "3.0"</code> is a string. <code>country: NO</code> (Norway) is <code>false</code>. <code>on: push</code> (GitHub Actions) is <code>{true: "push"}</code>. TOML has explicit, unambiguous types — what you write is what you get.</li>
+<li><strong>No multi-line ambiguity.</strong> YAML has 9 different ways to write a multi-line string (<code>|</code>, <code>&gt;</code>, <code>|+</code>, <code>|-</code>, <code>&gt;+</code>, <code>&gt;-</code>, etc.). TOML has one: <code>"""triple quotes"""</code>.</li>
+<li><strong>Smaller spec.</strong> The complete TOML spec is ~3 pages. The YAML spec is 86 pages. A format you can learn completely in 10 minutes is inherently less complex than one with hidden corners.</li>
+</ul>
+<p>The split doesn’t ask anyone to learn a harder thing — it gives configuration files the <em>simpler</em> format and keeps the <em>more expressive</em> format for the content that actually needs it.</p>
+<h3 id="cvar-persistence"><a class="header" href="#cvar-persistence">Cvar Persistence</a></h3>
+<p>Cvars currently write back to <code>config.yaml</code>. Under D067, they write back to <code>config.toml</code>. The cvar key mapping is identical — <code>render.shadows</code> in the cvar system corresponds to <code>[render] shadows</code> in TOML. The <code>toml_edit</code> crate enables round-trip serialization that preserves user comments and formatting, matching the current YAML behavior.</p>
+<pre><code class="language-toml"># config.toml — client engine settings
+# This file is auto-managed by the engine. Manual edits are preserved.
+
+[render]
+shadows = true
+shadow_quality = 2          # 0=off, 1=low, 2=medium, 3=high
+vsync = true
+max_fps = 144
+
+[audio]
+master_volume = 80
+music_volume = 60
+eva_volume = 100
+
+[gameplay]
+scroll_speed = 5
+control_group_steal = false
+auto_rally_harvesters = true
+
+[net]
+show_diagnostics = false
+sync_frequency = 120
+
+[debug]
+show_fps = true
+show_network_stats = false
+</code></pre>
+<p>Load order remains unchanged: <code>config.toml</code> → <code>config.&lt;game_module&gt;.toml</code> → command-line arguments → in-game <code>/set</code> commands.</p>
+<h3 id="server-configuration"><a class="header" href="#server-configuration">Server Configuration</a></h3>
+<p><code>server_config.toml</code> replaces <code>server_config.yaml</code>. The three-layer precedence (D064) becomes TOML → env vars → runtime cvars:</p>
+<pre><code class="language-toml"># server_config.toml — relay/community server configuration
+
+[relay]
+bind_address = "0.0.0.0:7400"
+max_concurrent_games = 50
+tick_rate = 30
+
+[match]
+max_players = 8
+max_game_duration_minutes = 120
+allow_observers = true
+
+[pause]
+max_pauses_per_player = 3
+pause_duration_seconds = 120
+
+[anti_cheat]
+order_validation = true
+lag_switch_detection = true
+lag_switch_threshold_ms = 3000
+</code></pre>
+<p>Environment variable mapping is unchanged: <code>IC_RELAY_BIND_ADDRESS</code>, <code>IC_MATCH_MAX_PLAYERS</code>, etc.</p>
+<p>The <code>ic server validate-config</code> CLI validates <code>.toml</code> files. Hot reload via SIGHUP reads the updated <code>.toml</code>.</p>
+<h3 id="settings-file"><a class="header" href="#settings-file">Settings File</a></h3>
+<p><code>settings.toml</code> replaces <code>settings.yaml</code> for Workshop sources, compression, and P2P configuration:</p>
+<pre><code class="language-toml"># settings.toml — engine-level client settings
+
+[workshop]
+sources = [
+    { type = "remote", url = "https://workshop.ironcurtain.gg", name = "Official" },
+    { type = "git-index", url = "https://github.com/iron-curtain/workshop-index", name = "Community" },
+]
+
+[compression]
+level = "balanced"          # fastest | balanced | compact
+
+[p2p]
+enabled = true
+max_upload_kbps = 512
+max_download_kbps = 2048
+</code></pre>
+<h3 id="data-directory-layout-update"><a class="header" href="#data-directory-layout-update">Data Directory Layout Update</a></h3>
+<p>The <code>&lt;data_dir&gt;</code> layout (D061) reflects the split:</p>
+<pre><code>&lt;data_dir&gt;/
+├── config.toml                         # Engine + game settings (TOML — engine config)
+├── settings.toml                       # Workshop sources, P2P, compression (TOML — engine config)
+├── profile.db                          # Player identity, friends, blocks (SQLite)
+├── achievements.db                     # Achievement collection (SQLite)
+├── gameplay.db                         # Event log, replay catalog (SQLite)
+├── telemetry.db                        # Telemetry events (SQLite)
+├── keys/
+│   └── identity.key
+├── communities/
+│   ├── official-ic.db
+│   └── clan-wolfpack.db
+├── saves/
+├── replays/
+├── screenshots/
+├── workshop/
+├── mods/                               # Mod content (YAML files inside)
+├── maps/                               # Map content (YAML files inside)
+├── logs/
+└── backups/
+</code></pre>
+<p><strong>The visual signal:</strong> Top-level config files are <code>.toml</code> (infrastructure). Everything under <code>mods/</code> and <code>maps/</code> is <code>.yaml</code> (content). SQLite databases are <code>.db</code> (structured data). Three file types, three concerns, zero ambiguity.</p>
+<h3 id="migration"><a class="header" href="#migration">Migration</a></h3>
+<p>This is a design-phase decision — no code exists to migrate. All documentation examples are updated to reflect the correct format. If documentation examples in other design docs still show <code>config.yaml</code> or <code>server_config.yaml</code>, they should be treated as references to the corresponding <code>.toml</code> files per D067.</p>
+<h3 id="serde-implementation"><a class="header" href="#serde-implementation"><code>serde</code> Implementation</a></h3>
+<p>Both TOML and YAML use the same <code>serde</code> derive macros in Rust:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use serde::{Serialize, Deserialize};
+
+// Engine configuration — deserialized from TOML
+#[derive(Serialize, Deserialize)]
+pub struct EngineConfig {
+    pub render: RenderConfig,
+    pub audio: AudioConfig,
+    pub gameplay: GameplayConfig,
+    pub net: NetConfig,
+    pub debug: DebugConfig,
+}
+
+// Game content — deserialized from YAML
+#[derive(Serialize, Deserialize)]
+pub struct UnitDefinition {
+    pub inherits: Option&lt;String&gt;,
+    pub display: DisplayConfig,
+    pub buildable: BuildableConfig,
+    pub health: HealthConfig,
+    pub mobile: Option&lt;MobileConfig&gt;,
+    pub combat: Option&lt;CombatConfig&gt;,
+}
+<span class="boring">}</span></code></pre>
+<p>The struct definitions don’t change — only the parser crate (<code>toml</code> vs <code>serde_yaml</code>) and the file extension. A config struct works with both formats during a transition period if needed.</p>
+<h3 id="alternatives-considered"><a class="header" href="#alternatives-considered">Alternatives Considered</a></h3>
+<ol>
+<li>
+<p><strong>Keep everything YAML</strong> — Rejected. Loses the instant-recognition benefit. “Is this engine config or game content?” remains unanswerable from the file extension alone.</p>
+</li>
+<li>
+<p><strong>JSON for configuration</strong> — Rejected. No comments. JSON is hostile to hand-editing — and configuration files MUST be hand-editable by server operators and tournament organizers who aren’t developers.</p>
+</li>
+<li>
+<p><strong>TOML for everything</strong> — Rejected. TOML is painful for deeply nested game data. <code>[[units.rifle_infantry.combat.weapons]]</code> is objectively worse than YAML’s indented hierarchies for content authoring. TOML was designed for configuration, not data description.</p>
+</li>
+<li>
+<p><strong>INI for configuration</strong> — Rejected. No nested sections, no typed values, no standard spec, no <code>serde</code> support. INI is legacy — it’s what original RA used, not what a modern engine should use.</p>
+</li>
+<li>
+<p><strong>Separate directories instead of separate formats</strong> — Insufficient. A <code>config/</code> directory full of <code>.yaml</code> files still doesn’t tell you at the file level what you’re looking at. The format IS the signal.</p>
+</li>
+</ol>
+<h3 id="integration-with-existing-decisions"><a class="header" href="#integration-with-existing-decisions">Integration with Existing Decisions</a></h3>
+<ul>
+<li><strong>D003 (Real YAML):</strong> Unchanged for content. YAML remains the content format with <code>serde_yaml</code>. D067 narrows D003’s scope: YAML is for content, not for everything.</li>
+<li><strong>D034 (SQLite):</strong> Unaffected. SQLite databases are a third category (structured relational data). The three-format taxonomy is: TOML (config), YAML (content), SQLite (state).</li>
+<li><strong>D058 (Command Console / Cvars):</strong> Cvars persist to <code>config.toml</code> instead of <code>config.yaml</code>. The cvar system, key naming, and load order are unchanged.</li>
+<li><strong>D061 (Data Backup):</strong> <code>config.toml</code> replaces <code>config.yaml</code> in the data directory layout and backup categories.</li>
+<li><strong>D063 (Compression):</strong> Compression levels configured in <code>settings.toml</code>. <code>AdvancedCompressionConfig</code> lives in <code>server_config.toml</code> for server operators.</li>
+<li><strong>D064 (Server Configuration):</strong> <code>server_config.toml</code> replaces <code>server_config.yaml</code>. All ~200 cvars, deployment profiles, validation CLI, hot reload, and env var mapping work identically — only the file format changes.</li>
+</ul>
+<h3 id="phase"><a class="header" href="#phase">Phase</a></h3>
+<ul>
+<li><strong>Phase 0:</strong> Convention established. All new configuration files created as <code>.toml</code>. <code>deny.toml</code> and <code>Cargo.toml</code> already comply. Design doc examples use the correct format per D067.</li>
+<li><strong>Phase 2:</strong> <code>config.toml</code> and <code>settings.toml</code> are the live client configuration files. Cvar persistence writes to TOML.</li>
+<li><strong>Phase 5:</strong> <code>server_config.toml</code> and server deployment profiles are the live server configuration files. <code>ic server validate-config</code> validates TOML.</li>
+<li><strong>Ongoing:</strong> If a file is created and the author is unsure, apply the boundary test: “Does this affect the simulation or define game content?” → YAML. “Does this configure how software operates?” → TOML.</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../09-DECISIONS.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../decisions/09b-networking.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../09-DECISIONS.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../decisions/09b-networking.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../mark-09e88c2c.min.js"></script>
+        <script src="../searcher-c2a407aa.js"></script>
+
+        <script src="../clipboard-1626706a.min.js"></script>
+        <script src="../highlight-abc7f01d.js"></script>
+        <script src="../book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

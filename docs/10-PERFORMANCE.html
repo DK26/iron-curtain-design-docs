@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-ac1e5ebd.js";
+            window.path_to_searchindex_js = "searchindex-c8692886.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-9e438da8.js"></script>
+        <script src="toc-b2bf7f58.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -330,7 +330,7 @@ fn assign_sim_lod(
 </div>
 <p><strong>Determinism preserved:</strong> The stagger schedule is based on entity ID and tick number — deterministic on all clients.</p>
 <h3 id="ai-computation-budget"><a class="header" href="#ai-computation-budget">AI Computation Budget</a></h3>
-<p>AI runs on the same stagger/amortization principles as the rest of the sim. The default <code>PersonalityDrivenAi</code> (D043) uses a priority-based manager hierarchy where each manager runs on its own tick-gated schedule — cheap decisions run often, expensive decisions run rarely (pattern used by EA Generals, 0 A.D. Petra, and MicroRTS). Full architectural detail in D043 (<code>09-DECISIONS.md</code>); survey analysis in <code>research/rts-ai-implementation-survey.md</code>.</p>
+<p>AI runs on the same stagger/amortization principles as the rest of the sim. The default <code>PersonalityDrivenAi</code> (D043) uses a priority-based manager hierarchy where each manager runs on its own tick-gated schedule — cheap decisions run often, expensive decisions run rarely (pattern used by EA Generals, 0 A.D. Petra, and MicroRTS). Full architectural detail in D043 (<code>decisions/09d-gameplay.md</code>); survey analysis in <code>research/rts-ai-implementation-survey.md</code>.</p>
 <div class="table-wrapper">
 <table>
 <thead>
@@ -690,7 +690,7 @@ pub enum RenderTier {
 <li>Gameplay event stream for AI training data collection</li>
 <li>Debug overlay (via <code>bevy_egui</code>) reads live telemetry for real-time profiling during development</li>
 </ul>
-<p>Telemetry is zero-cost when disabled (compile-time feature gate). Release builds intended for players ship without it. Tournament servers, AI training, and development builds enable it. See <code>09-DECISIONS.md</code> § D031 for full design.</p>
+<p>Telemetry is zero-cost when disabled (compile-time feature gate). Release builds intended for players ship without it. Tournament servers, AI training, and development builds enable it. See <code>decisions/09e-community.md</code> § D031 for full design.</p>
 <h3 id="profile-before-parallelize"><a class="header" href="#profile-before-parallelize">Profile Before Parallelize</a></h3>
 <p>Never add <code>par_iter()</code> without profiling first. Measure single-threaded. If a system takes &gt; 1ms, consider parallelizing. If it takes &lt; 0.1ms, sequential is faster (avoids coordination overhead).</p>
 <p><strong>Recommended profiling tool:</strong> Embark Studios’ <strong>puffin</strong> (1,674★, MIT/Apache-2.0) — a frame-based instrumentation profiler built for game loops. Puffin’s thread-local profiling streams have ~1ns overhead when disabled (atomic bool check, no allocation), making it safe to leave instrumentation in release builds. Key features validated by production use at Embark: frame-scoped profiling (maps directly to IC’s sim tick loop), remote TCP streaming for profiling headless servers (relay server profiling without local UI), and the <code>puffin_egui</code> viewer for real-time flame graphs in development builds via <code>bevy_egui</code>. IC’s <code>telemetry</code> feature flag (D031) should gate puffin’s collection, maintaining zero-cost when disabled. See <code>research/embark-studios-rust-gamedev-analysis.md</code> § puffin.</p>
@@ -780,14 +780,14 @@ pub struct EntityBaseline {
 <tr><td><code>NotificationCooldowns</code> is a flat array</td><td><code>02-ARCHITECTURE.md</code></td><td>Same pattern — fixed enum → flat array</td></tr>
 <tr><td>WASM AI API uses <code>u32</code> type IDs, not <code>String</code></td><td><code>04-MODDING.md</code></td><td>No per-tick String allocation across WASM boundary; string table queried once at game start</td></tr>
 <tr><td>Replay keyframes every 300 ticks (mandatory)</td><td><code>05-FORMATS.md</code></td><td>Sub-second seeking without re-simulating from tick 0</td></tr>
-<tr><td><code>gameplay_events</code> denormalized indexed columns</td><td><code>09-DECISIONS.md</code> D034</td><td>Avoids <code>json_extract()</code> scans during <code>PlayerStyleProfile</code> aggregation (D042)</td></tr>
-<tr><td>All SQLite writes on dedicated I/O thread</td><td><code>09-DECISIONS.md</code> D031</td><td>Ring buffer → batch transaction; game loop thread never touches SQLite</td></tr>
-<tr><td>I/O ring buffer ≥1024 entries</td><td><code>09-DECISIONS.md</code> D031</td><td>Absorbs 500 ms HDD checkpoint stall at 600 events/s peak with 3.4× headroom</td></tr>
-<tr><td>WAL checkpoint suppressed during gameplay (HDD)</td><td><code>09-DECISIONS.md</code> D034</td><td>Random I/O checkpoint on spinning disk takes 200–500 ms; defer to safe points</td></tr>
-<tr><td>Autosave fsync on I/O thread, never game thread</td><td><code>09-DECISIONS.md</code> D010</td><td>HDD fsync takes 50–200 ms; game thread only produces DeltaSnapshot bytes</td></tr>
+<tr><td><code>gameplay_events</code> denormalized indexed columns</td><td><code>decisions/09e-community.md</code> D034</td><td>Avoids <code>json_extract()</code> scans during <code>PlayerStyleProfile</code> aggregation (D042)</td></tr>
+<tr><td>All SQLite writes on dedicated I/O thread</td><td><code>decisions/09e-community.md</code> D031</td><td>Ring buffer → batch transaction; game loop thread never touches SQLite</td></tr>
+<tr><td>I/O ring buffer ≥1024 entries</td><td><code>decisions/09e-community.md</code> D031</td><td>Absorbs 500 ms HDD checkpoint stall at 600 events/s peak with 3.4× headroom</td></tr>
+<tr><td>WAL checkpoint suppressed during gameplay (HDD)</td><td><code>decisions/09e-community.md</code> D034</td><td>Random I/O checkpoint on spinning disk takes 200–500 ms; defer to safe points</td></tr>
+<tr><td>Autosave fsync on I/O thread, never game thread</td><td><code>decisions/09a-foundation.md</code> D010</td><td>HDD fsync takes 50–200 ms; game thread only produces DeltaSnapshot bytes</td></tr>
 <tr><td>Replay keyframe: snapshot on game thread, LZ4+I/O on background</td><td><code>05-FORMATS.md</code></td><td>~1 ms game thread cost every 300 ticks; compression + write async</td></tr>
-<tr><td>Weather quadrant rotation (1/4 map per tick)</td><td><code>09-DECISIONS.md</code> D022</td><td>Sim-only amortization — no camera dependency in deterministic sim</td></tr>
-<tr><td><code>gameplay.db</code> mmap capped at 64 MB</td><td><code>09-DECISIONS.md</code> D034</td><td>1.6% of 4 GB min-spec RAM; scaled up on systems with ≥8 GB</td></tr>
+<tr><td>Weather quadrant rotation (1/4 map per tick)</td><td><code>decisions/09c-modding.md</code> D022</td><td>Sim-only amortization — no camera dependency in deterministic sim</td></tr>
+<tr><td><code>gameplay.db</code> mmap capped at 64 MB</td><td><code>decisions/09e-community.md</code> D034</td><td>1.6% of 4 GB min-spec RAM; scaled up on systems with ≥8 GB</td></tr>
 <tr><td>WASM pathfinder fuel exhaustion → continue heading</td><td><code>04-MODDING.md</code> D045</td><td>Zero-cost fallback prevents unit freezing without breaking determinism</td></tr>
 <tr><td><code>StringInterner</code> resolves YAML strings to <code>InternedId</code> at load</td><td><code>10-PERFORMANCE.md</code></td><td>Condition checks, trait aliases, mod paths — integer compare instead of string compare</td></tr>
 <tr><td><code>DoubleBuffered&lt;T&gt;</code> for fog, influence maps, global modifiers</td><td><code>02-ARCHITECTURE.md</code></td><td>Tick-consistent reads — all systems see same fog/modifier state within a tick</td></tr>
@@ -801,7 +801,7 @@ pub struct EntityBaseline {
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="09-DECISIONS.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="decisions/09g-interaction.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                             </a>
 
@@ -815,7 +815,7 @@ pub struct EntityBaseline {
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="09-DECISIONS.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="decisions/09g-interaction.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                     </a>
 

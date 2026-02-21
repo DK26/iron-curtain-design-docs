@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-ac1e5ebd.js";
+            window.path_to_searchindex_js = "searchindex-c8692886.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-9e438da8.js"></script>
+        <script src="toc-b2bf7f58.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -197,7 +197,7 @@
 <p><strong>When NOT to read this chapter:</strong></p>
 <ul>
 <li>You need architecture specifics → <a href="02-ARCHITECTURE.html">02-ARCHITECTURE.md</a></li>
-<li>You need to check if something was already decided → <a href="09-DECISIONS.html">09-DECISIONS.md</a></li>
+<li>You need to check if something was already decided → <a href="09-DECISIONS.html">09-DECISIONS.md</a> (index with links to sub-documents)</li>
 <li>You need performance guidance → <a href="10-PERFORMANCE.html">10-PERFORMANCE.md</a></li>
 <li>You need the phase timeline → <a href="08-ROADMAP.html">08-ROADMAP.md</a></li>
 </ul>
@@ -225,7 +225,7 @@ Competitors like Warcraft used unit caps for balance and performance. Westwood r
 <p><strong>Where this applies:</strong></p>
 <ul>
 <li>Gameplay systems in <a href="02-ARCHITECTURE.html">02-ARCHITECTURE.md</a> — system designs can evolve during implementation</li>
-<li>Balance presets in D019 (<a href="09-DECISIONS.html">09-DECISIONS.md</a>) — multiple balance approaches coexist precisely because “fun” is subjective</li>
+<li>Balance presets in D019 (<a href="decisions/09d-gameplay.html">decisions/09d-gameplay.md</a>) — multiple balance approaches coexist precisely because “fun” is subjective</li>
 <li>QoL toggles in D033 — experimental features can be toggled, not permanently committed</li>
 </ul>
 <h3 id="2-fix-invariants-early-iterate-everything-else"><a class="header" href="#2-fix-invariants-early-iterate-everything-else">2. Fix Invariants Early, Iterate Everything Else</a></h3>
@@ -286,7 +286,7 @@ Competitors like Warcraft used unit caps for balance and performance. Westwood r
 <p>— Paul Chote, OpenRA lead maintainer, on design debt</p>
 </blockquote>
 <p>OpenRA made early gameplay compromises (kill bounties, Allied Hinds, auto-targeting) to ship a playable game before core features existed. Those compromises hardened into permanent identity. When the team wanted to reconsider years later, the community was split.</p>
-<p><strong>Rule:</strong> Label experiments as experiments. Use D033’s toggle system so that every QoL or gameplay variant can be individually enabled/disabled. Early-phase compromises must never become irrevocable identity. If a system is a placeholder, document it as one — in code comments, in the relevant design doc, and in <a href="09-DECISIONS.html">09-DECISIONS.md</a>.</p>
+<p><strong>Rule:</strong> Label experiments as experiments. Use D033’s toggle system so that every QoL or gameplay variant can be individually enabled/disabled. Early-phase compromises must never become irrevocable identity. If a system is a placeholder, document it as one — in code comments, in the relevant design doc, and in <a href="decisions/09d-gameplay.html">decisions/09d-gameplay.md</a>.</p>
 <h3 id="8-great-teams-make-great-games"><a class="header" href="#8-great-teams-make-great-games">8. Great Teams Make Great Games</a></h3>
 <blockquote>
 <p>“Your team and the people you choose to be around are more important to your success than any awesome technical skills you can acquire. Develop those technical skills but stay humble.”</p>
@@ -468,13 +468,13 @@ Competitors like Warcraft used unit caps for balance and performance. Westwood r
 <p><strong>Rule:</strong> When creating or reviewing narrative content for IC — whether human-authored, LLM-generated, or community-submitted — check it against the seven pillars above. C&amp;C’s identity is its narrative voice. A technically perfect RTS with generic storytelling is not a C&amp;C game. The camp, the conviction, and the quotability are as much a part of the engine’s identity as the ECS architecture or the fixed-point math.</p>
 <p><strong>Where this applies:</strong></p>
 <ul>
-<li>LLM system prompts and story style presets (<a href="09-DECISIONS.html">09-DECISIONS.md</a> § D016 — “C&amp;C Classic” is the default because of this principle)</li>
-<li>Campaign authoring guidelines (<a href="09-DECISIONS.html">09-DECISIONS.md</a> § D021 — briefings, character voices, narrative arc)</li>
-<li>Cheat code and console command naming (<a href="09-DECISIONS.html">09-DECISIONS.md</a> § D058 — Cold War/franchise cultural references)</li>
+<li>LLM system prompts and story style presets (<a href="decisions/09f-tools.html">decisions/09f-tools.md</a> § D016 — “C&amp;C Classic” is the default because of this principle)</li>
+<li>Campaign authoring guidelines (<a href="decisions/09c-modding.html">decisions/09c-modding.md</a> § D021 — briefings, character voices, narrative arc)</li>
+<li>Cheat code and console command naming (<a href="decisions/09g-interaction.html">decisions/09g-interaction.md</a> § D058 — Cold War/franchise cultural references)</li>
 <li>EVA voice line design guidance for <code>ic-audio</code> (Phase 3)</li>
 <li>Unit voice design guidelines for modders (<a href="04-MODDING.html">04-MODDING.md</a>)</li>
-<li>Scenario editor content templates (<a href="09-DECISIONS.html">09-DECISIONS.md</a> § D038 — briefing authoring, character creation)</li>
-<li>Workshop content review criteria (<a href="09-DECISIONS.html">09-DECISIONS.md</a> § D030 — “C&amp;C Classic” style validation)</li>
+<li>Scenario editor content templates (<a href="decisions/09f-tools.html">decisions/09f-tools.md</a> § D038 — briefing authoring, character creation)</li>
+<li>Workshop content review criteria (<a href="decisions/09e-community.html">decisions/09e-community.md</a> § D030 — “C&amp;C Classic” style validation)</li>
 <li>The foreword, README, and all public-facing project communication — IC’s own voice should reflect the franchise it serves (direct, confident, unpretentious)</li>
 </ul>
 <hr>
@@ -510,7 +510,7 @@ Competitors like Warcraft used unit caps for balance and performance. Westwood r
 <p><strong>IC Lesson:</strong> D003/D004/D005 (YAML → Lua → WASM) explicitly address this. 80% of mods should need zero compilation. The modding bar should be <em>lower</em> than the original game’s, not higher. See <a href="04-MODDING.html">04-MODDING.md</a>.</p>
 <h3 id="knowledge-concentration-kills-projects"><a class="header" href="#knowledge-concentration-kills-projects">Knowledge Concentration Kills Projects</a></h3>
 <p>OpenRA, despite 339 contributors and 16.4k GitHub stars, has critical features blocked because they depend on 1–2 individuals. Tiberian Sun support has been “next” for years. Release frequency has declined.</p>
-<p><strong>IC Lesson:</strong> Design so knowledge isn’t concentrated. IC’s design docs, AGENTS.md, and decision rationale (<a href="09-DECISIONS.html">09-DECISIONS.md</a>) exist so any contributor can understand <em>why</em> a system exists, not just <em>what</em> it does. When key people leave — as they always eventually do — the documentation and architectural clarity are what survive.</p>
+<p><strong>IC Lesson:</strong> Design so knowledge isn’t concentrated. IC’s design docs, AGENTS.md, and decision rationale (<a href="09-DECISIONS.html">09-DECISIONS.md</a> and its sub-documents) exist so any contributor can understand <em>why</em> a system exists, not just <em>what</em> it does. When key people leave — as they always eventually do — the documentation and architectural clarity are what survive.</p>
 <h3 id="design-debt-becomes-identity"><a class="header" href="#design-debt-becomes-identity">Design Debt Becomes Identity</a></h3>
 <p>OpenRA’s early balance compromises (made before core features existed) became permanent gameplay identity. When the team tried to reconsider, the community split into “Original Red Alert” vs. “Original OpenRA” factions.</p>
 <p><strong>IC Lesson:</strong> This is why D019 (switchable balance presets) and D033 (toggleable QoL) exist. Don’t make one-off compromises that become permanent. If you must compromise, make it a toggle.</p>
@@ -572,7 +572,7 @@ Competitors like Warcraft used unit caps for balance and performance. Westwood r
 <li>State which principle(s) it serves</li>
 <li>Cross-reference the relevant design docs (<a href="02-ARCHITECTURE.html">02-ARCHITECTURE.md</a>, <a href="08-ROADMAP.html">08-ROADMAP.md</a>, etc.)</li>
 <li>If it conflicts with a principle, acknowledge the trade-off — don’t pretend the conflict doesn’t exist</li>
-<li>Check <a href="09-DECISIONS.html">09-DECISIONS.md</a> — has this already been decided?</li>
+<li>Check <a href="09-DECISIONS.html">09-DECISIONS.md</a> — has this already been decided? (The index links to thematic sub-documents.)</li>
 <li>Consider community impact — does this address a known pain point? Does it create friction for existing workflows? Check <a href="01-VISION.html">01-VISION.md</a> and <a href="11-OPENRA-FEATURES.html">11-OPENRA-FEATURES.md</a> for documented community needs</li>
 </ol>
 <h3 id="for-llm-agents"><a class="header" href="#for-llm-agents">For LLM Agents</a></h3>
@@ -581,7 +581,7 @@ Competitors like Warcraft used unit caps for balance and performance. Westwood r
 <li>Read AGENTS.md first (it points here)</li>
 <li>These principles inform design <em>review</em>, not design <em>generation</em> — don’t refuse to implement something just because it doesn’t fit a principle. Implement it, then flag the tension</li>
 <li>When two approaches seem equally valid, the principle that applies most directly is the tiebreaker</li>
-<li>When no principle applies, use engineering judgment and document the rationale in <a href="09-DECISIONS.html">09-DECISIONS.md</a></li>
+<li>When no principle applies, use engineering judgment and document the rationale in the appropriate <a href="09-DECISIONS.html">decisions sub-document</a></li>
 </ul>
 <hr>
 <h2 id="sources--further-reading"><a class="header" href="#sources--further-reading">Sources &amp; Further Reading</a></h2>

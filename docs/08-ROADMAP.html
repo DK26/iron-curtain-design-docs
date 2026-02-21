@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-ac1e5ebd.js";
+            window.path_to_searchindex_js = "searchindex-c8692886.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-9e438da8.js"></script>
+        <script src="toc-b2bf7f58.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -305,8 +305,8 @@
 <li><strong>Screenshot capture with metadata (D061):</strong> PNG screenshots with IC-specific <code>tEXt</code> chunks (engine version, map, players, tick, replay link); timestamped filenames in <code>&lt;data_dir&gt;/screenshots/</code></li>
 <li><strong>Mnemonic seed recovery (D061):</strong> BIP-39-inspired 24-word recovery phrase generated alongside Ed25519 identity key; <code>ic identity seed show</code> / <code>ic identity seed verify</code> / <code>ic identity recover</code> CLI commands; deterministic key derivation via PBKDF2-HMAC-SHA512 — zero infrastructure, zero cost, identity recoverable from a piece of paper</li>
 <li><strong>Virtual asset namespace (D062):</strong> <code>VirtualNamespace</code> struct — resolved lookup table mapping logical asset paths to content-addressed blobs (D049 CAS); built at load time from the active mod set; SHA-256 fingerprint computed and recorded in replays; implicit default profile (no user-facing profile concept yet)</li>
-<li><strong>Centralized compression module (D063):</strong> <code>CompressionAlgorithm</code> enum (LZ4) and <code>CompressionLevel</code> enum (fastest/balanced/compact); <code>AdvancedCompressionConfig</code> struct (21 raw parameters for server operators); all LZ4 callsites refactored through centralized module; <code>compression_algorithm: u8</code> byte added to save and replay headers; <code>settings.yaml</code> <code>compression.*</code> and <code>compression.advanced.*</code> sections; decompression ratio caps and security size limits configurable per deployment</li>
-<li><strong>Server configuration schema (D064):</strong> <code>server_config.yaml</code> schema definition with typed parameters, valid ranges, and compiled defaults; YAML deserialization with validation and range clamping; relay server reads config at startup; initial parameter namespaces: <code>relay.*</code>, <code>protocol.*</code>, <code>db.*</code></li>
+<li><strong>Centralized compression module (D063):</strong> <code>CompressionAlgorithm</code> enum (LZ4) and <code>CompressionLevel</code> enum (fastest/balanced/compact); <code>AdvancedCompressionConfig</code> struct (21 raw parameters for server operators); all LZ4 callsites refactored through centralized module; <code>compression_algorithm: u8</code> byte added to save and replay headers; <code>settings.toml</code> <code>compression.*</code> and <code>compression.advanced.*</code> sections; decompression ratio caps and security size limits configurable per deployment</li>
+<li><strong>Server configuration schema (D064):</strong> <code>server_config.toml</code> schema definition with typed parameters, valid ranges, and compiled defaults; TOML deserialization with validation and range clamping; relay server reads config at startup; initial parameter namespaces: <code>relay.*</code>, <code>protocol.*</code>, <code>db.*</code></li>
 </ul>
 <h3 id="release-2"><a class="header" href="#release-2">Release</a></h3>
 <p>Units moving, shooting, dying — headless sim + rendered. Record replay file. Play it back.</p>
@@ -320,8 +320,8 @@
 <li>Multiplier system operational: veterancy/terrain/crate modifiers stack and resolve correctly via fixed-point math</li>
 <li>Full damage pipeline: projectile entities travel, warheads apply composable effects, Versus table resolves armor-weapon interactions</li>
 <li>OpenRA canonical enum names used for locomotors, armor types, target types, stances (D027)</li>
-<li>Compression module centralizes all LZ4 calls; save/replay headers encode <code>compression_algorithm</code> byte; <code>settings.yaml</code> <code>compression.*</code> and <code>compression.advanced.*</code> levels take effect; <code>AdvancedCompressionConfig</code> validation and range clamping operational (D063)</li>
-<li>Server configuration schema loads <code>server_config.yaml</code> with validation, range clamping, and unknown-key detection; relay parameters (<code>relay.*</code>, <code>protocol.*</code>, <code>db.*</code>) configurable at startup (D064)</li>
+<li>Compression module centralizes all LZ4 calls; save/replay headers encode <code>compression_algorithm</code> byte; <code>settings.toml</code> <code>compression.*</code> and <code>compression.advanced.*</code> levels take effect; <code>AdvancedCompressionConfig</code> validation and range clamping operational (D063)</li>
+<li>Server configuration schema loads <code>server_config.toml</code> with validation, range clamping, and unknown-key detection; relay parameters (<code>relay.*</code>, <code>protocol.*</code>, <code>db.*</code>) configurable at startup (D064)</li>
 </ul>
 <p><strong>Stretch goals (target Phase 2, can slip to early Phase 3 without blocking):</strong></p>
 <ul>
@@ -456,7 +456,7 @@
 <li>Behavioral analysis pipeline on relay server</li>
 <li><strong>Server-side SQLite telemetry (D031):</strong> Relay, tracking, and workshop servers record structured events to local <code>telemetry.db</code> using unified schema; server event taxonomy (game lifecycle, player join/leave, per-tick processing, desync detection, lag switch detection, behavioral analysis, listing lifecycle, dependency resolution); <code>/analytics</code> commands on servers; same export/inspect workflow as client; no OTEL infrastructure required for basic server observability</li>
 <li><strong>Relay compression config (D063):</strong> Advanced compression parameters (<code>compression.advanced.*</code>) active on relay servers via env vars and CLI flags; relay compression config fingerprinting in lobby handshake; reconnection-specific parameters (<code>reconnect_pre_compress</code>, <code>reconnect_max_snapshot_bytes</code>, <code>reconnect_stall_budget_ms</code>) operational; deployment profile presets (tournament archival, caster/observer, large mod server, low-power hardware)</li>
-<li><strong>Full server configuration (D064):</strong> All ~200 <code>server_config.yaml</code> parameters active across all subsystems (relay, match lifecycle, pause, penalties, spectator, vote framework, protocol limits, communication, anti-cheat, ranking, matchmaking, AI tuning, telemetry, database, Workshop/P2P, compression); environment variable override mapping (<code>IC_RELAY_*</code>, <code>IC_MATCH_*</code>, etc.); hot reload via SIGHUP and <code>/reload_config</code>; four deployment profile templates (tournament LAN, casual community, competitive league, training/practice) ship with relay binary; cross-parameter consistency validation</li>
+<li><strong>Full server configuration (D064):</strong> All ~200 <code>server_config.toml</code> parameters active across all subsystems (relay, match lifecycle, pause, penalties, spectator, vote framework, protocol limits, communication, anti-cheat, ranking, matchmaking, AI tuning, telemetry, database, Workshop/P2P, compression); environment variable override mapping (<code>IC_RELAY_*</code>, <code>IC_MATCH_*</code>, etc.); hot reload via SIGHUP and <code>/reload_config</code>; four deployment profile templates (tournament LAN, casual community, competitive league, training/practice) ship with relay binary; cross-parameter consistency validation</li>
 <li><strong>Optional OTEL export layer (D031):</strong> Server operators can additionally enable OTEL export for real-time Grafana/Prometheus/Jaeger dashboards; <code>/healthz</code>, <code>/readyz</code>, <code>/metrics</code> endpoints; distributed trace IDs for cross-component desync debugging; pre-built Grafana dashboards; <code>docker-compose.observability.yaml</code> overlay for self-hosters</li>
 <li><strong>Backend SQLite storage (D034):</strong> Relay server persists match results, desync reports, behavioral profiles; matchmaking server persists player ratings, match history, seasonal data — all in embedded SQLite, no external database</li>
 <li><strong><code>ic profile export</code> (D061):</strong> JSON profile export with embedded SCRs for GDPR data portability; self-verifying credentials import on any IC install</li>
@@ -519,8 +519,15 @@
 <li><strong>Local CAS dedup (D049):</strong> Content-addressed blob store for Workshop packages — files stored by SHA-256 hash, deduplicated across installed mods; <code>ic mod gc</code> garbage collection; upgrades from Phase 4–5 simple <code>.icpkg</code>-on-disk storage</li>
 <li><strong><code>ic replay recompress</code> CLI (D063):</strong> Offline replay recompression at different compression levels for archival/sharing; <code>ic mod build --compression-level</code> flag for Workshop package builds</li>
 <li><strong>Annotated replay format &amp; replay coach mode (D065):</strong> Workshop-publishable annotated replays (<code>.icrep</code> + YAML annotation track with narrator text, highlights, quizzes); replay coach mode applies post-game tip rules in real-time during any replay playback; “Learning” tab in replay browser for community tutorial replays; <code>Tutorial</code> Lua API available in user-created scenarios for community tutorial creation</li>
-<li><strong><code>ic server validate-config</code> CLI (D064):</strong> Validates a <code>server_config.yaml</code> file for errors, range violations, cross-parameter inconsistencies, and unknown keys without starting a server; useful for CI/CD pipelines and pre-deployment checks</li>
+<li><strong><code>ic server validate-config</code> CLI (D064):</strong> Validates a <code>server_config.toml</code> file for errors, range violations, cross-parameter inconsistencies, and unknown keys without starting a server; useful for CI/CD pipelines and pre-deployment checks</li>
 <li><strong>Mod profile publishing (D062):</strong> <code>ic mod publish-profile</code> publishes a local mod profile as a Workshop modpack; <code>ic profile import</code> imports Workshop modpacks as local profiles; in-game mod manager gains profile dropdown for one-click switching; editor provenance tooltips and per-source hot-swap for sub-second rule iteration</li>
+</ul>
+<h3 id="deliverables--cross-engine-export-d066"><a class="header" href="#deliverables--cross-engine-export-d066">Deliverables — Cross-Engine Export (D066)</a></h3>
+<ul>
+<li><strong>Export pipeline core (D066):</strong> <code>ExportTarget</code> trait with built-in IC native and OpenRA backends; <code>ExportPlanner</code> produces fidelity reports listing downgraded/stripped features; export-safe authoring mode in scenario editor (feature gating, live fidelity indicators, export-safe trigger templates)</li>
+<li><strong>OpenRA export (D066):</strong> IC scenario → <code>.oramap</code> (ZIP: map.yaml + map.bin + lua/); IC YAML rules → MiniYAML via bidirectional D025 converter; IC trait names → OpenRA trait names via bidirectional D023 alias table; IC Lua scripts validated against OpenRA’s 16-global API surface; mod manifest generation via D026 reverse</li>
+<li><strong><code>ic export</code> CLI (D066):</strong> <code>ic export --target openra mission.yaml -o ./output/</code>; <code>--dry-run</code> for validation-only; <code>--fidelity-report</code> for structured loss report; batch export for directories</li>
+<li><strong>Export-safe trigger templates (D066):</strong> Pre-built trigger patterns in scenario editor guaranteed to downcompile cleanly to target engine trigger systems</li>
 </ul>
 <h3 id="exit-criteria-6"><a class="header" href="#exit-criteria-6">Exit Criteria</a></h3>
 <ul>
@@ -537,6 +544,9 @@
 <li>Visual diff displays structured YAML changes and syntax-highlighted Lua changes</li>
 <li>Resource Manager shows Default resources from installed game files, supports Workshop search/install inline, and accepts manual file drag-and-drop import</li>
 <li>A resource dragged from the Resource Manager onto the editor viewport creates the expected entity/assignment</li>
+<li><code>ic export --target openra</code> produces a valid <code>.oramap</code> from an IC scenario that loads in the current OpenRA release</li>
+<li>Export fidelity report correctly identifies at least 5 IC-only features that cannot export to the target</li>
+<li>Export-safe authoring mode hides/grays out features incompatible with the selected target</li>
 </ul>
 <h2 id="phase-6b-campaign-editor--game-modes-months-3034"><a class="header" href="#phase-6b-campaign-editor--game-modes-months-3034">Phase 6b: Campaign Editor &amp; Game Modes (Months 30–34)</a></h2>
 <p><strong>Goal:</strong> Extend the scenario editor into a full campaign authoring platform, ship game mode templates, and multiplayer scenario tools. These all build on Phase 6a’s editor and Workshop foundations.</p>
@@ -563,6 +573,13 @@
 <li><strong>Game Master mode (D038):</strong> Zeus-inspired real-time scenario manipulation during live gameplay — one player controls enemy faction strategy, places reinforcements, triggers events, adjusts difficulty; uses editor UI on a live sim; budget system prevents flooding</li>
 <li><strong>Achievement packs (D036):</strong> Mod-defined achievements via YAML + Lua triggers, publishable as Workshop resources; achievement browser in game UI</li>
 </ul>
+<h3 id="deliverables--ra1-export--editor-extensibility-d066"><a class="header" href="#deliverables--ra1-export--editor-extensibility-d066">Deliverables — RA1 Export &amp; Editor Extensibility (D066)</a></h3>
+<ul>
+<li><strong>RA1 export target (D066):</strong> IC scenario → <code>rules.ini</code> + <code>.mpr</code> mission files + <code>.shp</code>/<code>.pal</code>/<code>.aud</code>/<code>.vqa</code>/<code>.mix</code>; balance values remapped to RA integer scales; Lua trigger downcompilation via pattern library (recognized patterns → RA1 trigger/teamtype/action equivalents; unmatched patterns → fidelity warnings)</li>
+<li><strong>Campaign export (D066):</strong> IC branching campaign graph → linearized sequential missions for stateless targets (RA1, OpenRA); user selects branch path or exports longest path; persistent state stripped with warnings</li>
+<li><strong>Editor extensibility — YAML + Lua tiers (D066):</strong> Custom entity palette categories, property panels, terrain brush presets via YAML; editor automation, custom validators, batch operations via Lua (<code>Editor.RegisterValidator</code>, <code>Editor.RegisterCommand</code>); editor extensions distributed as Workshop packages (<code>type: editor_extension</code>)</li>
+<li><strong>Editor extension Workshop distribution (D066):</strong> Editor extensions install into SDK extension directory; mod-profile-aware auto-activation (RA2 profile activates RA2 editor extensions)</li>
+</ul>
 <h3 id="exit-criteria-7"><a class="header" href="#exit-criteria-7">Exit Criteria</a></h3>
 <ul>
 <li>Campaign editor can create a branching 5+ mission campaign with persistent roster, story flags, and intermission screens</li>
@@ -572,6 +589,10 @@
 <li>A 2-player co-op mission works with per-player objectives, AI fallback for unfilled slots, and drop-in/drop-out</li>
 <li>Game Master mode allows one player to direct enemy forces in real-time with budget constraints</li>
 <li>At least one mod-defined achievement pack loads and triggers correctly</li>
+<li><code>ic export --target ra1</code> produces <code>rules.ini</code> + mission files that load in CnCNet-patched Red Alert</li>
+<li>At least 5 Lua trigger patterns downcompile correctly to RA1 trigger/teamtype equivalents</li>
+<li>A YAML editor extension adds a custom entity palette category visible in the SDK</li>
+<li>A Lua editor script registers and executes a batch operation via <code>Editor.RegisterCommand</code></li>
 </ul>
 <h2 id="phase-7-ai-content-ecosystem--polish-months-3436"><a class="header" href="#phase-7-ai-content-ecosystem--polish-months-3436">Phase 7: AI Content, Ecosystem &amp; Polish (Months 34–36+)</a></h2>
 <p><strong>Goal:</strong> Optional LLM-generated missions (BYOLLM), visual modding infrastructure, ecosystem polish, and feature parity.</p>
@@ -591,6 +612,11 @@
 <li><strong>LLM player-aware generation (D034):</strong> When LLM provider is configured, <code>ic-llm</code> reads local SQLite for player context — faction preferences, unit usage patterns, win/loss streaks, campaign roster state; generates personalized missions, adaptive briefings, post-match commentary, coaching suggestions, rivalry narratives</li>
 <li><strong>LLM coaching loop (D042):</strong> When LLM provider is configured, <code>ic-llm</code> reads <code>training_sessions</code> + <code>player_profiles</code> for structured training plans (“Week 1: expansion timing”), post-session natural language coaching, multi-session arc tracking, and contextual tips during weakness review; builds on Phase 4–5 rule-based training system</li>
 <li><strong>AI training data pipeline (D031):</strong> gameplay event stream → OTEL collector → Parquet/Arrow columnar format → ML training; build order learning, engagement patterns, balance analysis from aggregated match telemetry</li>
+</ul>
+<h3 id="deliverables--wasm-editor-plugins--community-export-targets-d066"><a class="header" href="#deliverables--wasm-editor-plugins--community-export-targets-d066">Deliverables — WASM Editor Plugins &amp; Community Export Targets (D066)</a></h3>
+<ul>
+<li><strong>WASM editor plugins (D066 Tier 3):</strong> Full editor plugins via WASM — custom asset viewers, terrain tools, component editors, export targets; <code>EditorHost</code> API for plugin registration; community-contributed export targets for Tiberian Sun, RA2, Remastered Collection</li>
+<li><strong>Agentic export assistance (D066/D016):</strong> When LLM provider is configured, LLM suggests how to simplify IC-only features for target compatibility; auto-generates fidelity-improving alternatives for flagged triggers/features</li>
 </ul>
 <h3 id="deliverables--visual-modding-infrastructure-bevy-rendering"><a class="header" href="#deliverables--visual-modding-infrastructure-bevy-rendering">Deliverables — Visual Modding Infrastructure (Bevy Rendering)</a></h3>
 <p>These are optional visual enhancements that ship as engine capabilities for modders and community content creators. The base game uses the classic isometric aesthetic established in Phase 1.</p>

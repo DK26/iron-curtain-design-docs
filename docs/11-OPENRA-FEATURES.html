@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-ac1e5ebd.js";
+            window.path_to_searchindex_js = "searchindex-c8692886.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-9e438da8.js"></script>
+        <script src="toc-b2bf7f58.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -1839,7 +1839,7 @@ Organized by category for Iron Curtain design reference.</p>
 <p><strong>Analysis event stream:</strong> A separate data stream alongside the order stream, recording structured gameplay events (unit births, deaths, position samples, resource collection, production events). Not required for playback — purely for post-game analysis, community statistics, and tournament casting tools. See <code>05-FORMATS.md</code> § “Analysis Event Stream” for the event taxonomy.</p>
 <p><strong>Per-player score tracking:</strong> <code>GameScore</code> structs (see <code>02-ARCHITECTURE.md</code> § “Game Score / Performance Metrics”) are snapshotted periodically into the replay file. This enables post-game economy graphs, APM timelines, and comparative player performance overlays — the same kind of post-game analysis screen that SC2 popularized. OpenRA’s replay stores only raw orders; extracting statistics requires re-simulating the entire game. IC’s approach stores the computed metrics at regular intervals for instant post-game display.</p>
 <p><strong>Replay versioning:</strong> Replay files include a <code>base_build</code> number and a <code>data_version</code> hash (following SC2’s dual-version scheme). The <code>base_build</code> identifies the protocol format; <code>data_version</code> identifies the game rules state. A replay is playable if the engine supports its <code>base_build</code> protocol, even if minor game data changes occurred between versions.</p>
-<p><strong>Foreign replay import (D056):</strong> IC can directly play back OpenRA <code>.orarep</code> files and Remastered Collection replay recordings via <code>ForeignReplayPlayback</code> — a <code>NetworkModel</code> implementation that decodes foreign replay formats through <code>ra-formats</code>, translates orders via <code>ForeignReplayCodec</code>, and feeds them to IC’s sim. Playback will diverge from the original sim (D011), but a <code>DivergenceTracker</code> monitors and surfaces drift in the UI. Foreign replays can also be converted to <code>.icrep</code> via <code>ic replay import</code> for archival and analysis tooling. The foreign replay corpus doubles as an automated behavioral regression test suite — detecting gross bugs like units walking through walls or harvesters ignoring ore. See <code>05-FORMATS.md</code> § “Foreign Replay Decoders” and <code>09-DECISIONS.md</code> § D056.</p>
+<p><strong>Foreign replay import (D056):</strong> IC can directly play back OpenRA <code>.orarep</code> files and Remastered Collection replay recordings via <code>ForeignReplayPlayback</code> — a <code>NetworkModel</code> implementation that decodes foreign replay formats through <code>ra-formats</code>, translates orders via <code>ForeignReplayCodec</code>, and feeds them to IC’s sim. Playback will diverge from the original sim (D011), but a <code>DivergenceTracker</code> monitors and surfaces drift in the UI. Foreign replays can also be converted to <code>.icrep</code> via <code>ic replay import</code> for archival and analysis tooling. The foreign replay corpus doubles as an automated behavioral regression test suite — detecting gross bugs like units walking through walls or harvesters ignoring ore. See <code>05-FORMATS.md</code> § “Foreign Replay Decoders” and <code>decisions/09f-tools.md</code> § D056.</p>
 <hr>
 <h2 id="34-lobby-system"><a class="header" href="#34-lobby-system">34. Lobby System</a></h2>
 <h3 id="lobby-widget-logic"><a class="header" href="#lobby-widget-logic">Lobby Widget Logic</a></h3>
@@ -2496,7 +2496,7 @@ rifle_infantry:
 <hr>
 <h2 id="30-map-editor--resolved-d038--d040"><a class="header" href="#30-map-editor--resolved-d038--d040">30. Map Editor ✅ RESOLVED (D038 + D040)</a></h2>
 <p><strong>OpenRA:</strong> Full in-engine map editor with actor placement, terrain painting, resource placement, tile editing, undo/redo, script cell triggers, marker layers, road/path tiling tool.</p>
-<p><strong>Iron Curtain status:</strong> Resolved as D038+D040 — SDK scenario editor &amp; asset studio (OFP/Eden-inspired). Ships as part of the IC SDK (separate application from the game). Goes beyond OpenRA’s map editor to include full mission logic editing: triggers with countdown/timeout timers and min/mid/max randomization, waypoints, pre-built modules (wave spawner, patrol route, guard position, reinforcements, objectives), visual connection lines, Probability of Presence per entity for replayability, compositions (reusable prefabs), layers, Simple/Advanced mode toggle, Test button, Game Master mode, Workshop publishing. The asset studio (D040) adds visual browsing, editing, and generation of game assets (sprites, palettes, terrain, chrome). See <code>09-DECISIONS.md</code> § D038 and § D040 for full design.</p>
+<p><strong>Iron Curtain status:</strong> Resolved as D038+D040 — SDK scenario editor &amp; asset studio (OFP/Eden-inspired). Ships as part of the IC SDK (separate application from the game). Goes beyond OpenRA’s map editor to include full mission logic editing: triggers with countdown/timeout timers and min/mid/max randomization, waypoints, pre-built modules (wave spawner, patrol route, guard position, reinforcements, objectives), visual connection lines, Probability of Presence per entity for replayability, compositions (reusable prefabs), layers, Simple/Advanced mode toggle, Test button, Game Master mode, Workshop publishing. The asset studio (D040) adds visual browsing, editing, and generation of game assets (sprites, palettes, terrain, chrome). See <code>decisions/09f-tools.md</code> § D038 and § D040 for full design.</p>
 <hr>
 <h2 id="31-debug--developer-tools--designed"><a class="header" href="#31-debug--developer-tools--designed">31. Debug / Developer Tools ✅ DESIGNED</a></h2>
 <p><strong>OpenRA:</strong> <code>DeveloperMode</code> (instant build, give cash, unlimited power, build anywhere), combat debug overlay, pathfinder overlay, actor map overlay, performance graph, asset browser.</p>
@@ -2700,10 +2700,10 @@ rifle_infantry:
 <tr><td><strong>Auto-download on lobby join</strong> (CS:GO-style)</td><td>D030, <code>03-NETCODE.md</code></td><td>Not present (manual install)</td></tr>
 <tr><td><strong>Steam Workshop as source</strong> (optional, federated)</td><td>D030, <code>04-MODDING.md</code></td><td>Not present</td></tr>
 <tr><td><strong>Creator reputation &amp; badges</strong></td><td>D030, <code>04-MODDING.md</code></td><td>Not present</td></tr>
-<tr><td><strong>DMCA/takedown policy</strong> (due process)</td><td>D030, <code>09-DECISIONS.md</code></td><td>Not present</td></tr>
+<tr><td><strong>DMCA/takedown policy</strong> (due process)</td><td>D030, <code>decisions/09e-community.md</code></td><td>Not present</td></tr>
 <tr><td><strong>Creator recognition &amp; tipping</strong></td><td>D035, <code>04-MODDING.md</code></td><td>Not present</td></tr>
-<tr><td><strong>Achievement system</strong> (engine + mod-defined)</td><td>D036, <code>09-DECISIONS.md</code></td><td>Not present</td></tr>
-<tr><td><strong>Community governance model</strong> (elected reps, RFC process)</td><td>D037, <code>09-DECISIONS.md</code></td><td>Core team only, no formal governance</td></tr>
+<tr><td><strong>Achievement system</strong> (engine + mod-defined)</td><td>D036, <code>decisions/09e-community.md</code></td><td>Not present</td></tr>
+<tr><td><strong>Community governance model</strong> (elected reps, RFC process)</td><td>D037, <code>decisions/09e-community.md</code></td><td>Core team only, no formal governance</td></tr>
 </tbody>
 </table>
 </div>

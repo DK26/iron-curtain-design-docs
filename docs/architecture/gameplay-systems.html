@@ -1,0 +1,1293 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Extended Gameplay Systems (RA1) - Iron Curtain — Design Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Design docs for a Rust-native Red Alert RTS engine">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../css/general-2459343d.css">
+        <link rel="stylesheet" href="../css/chrome-ae938929.css">
+        <link rel="stylesheet" href="../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../searchindex-c8692886.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc-b2bf7f58.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Iron Curtain — Design Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs/edit/main/src/architecture/gameplay-systems.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="core-architecture--extended-gameplay-systems-ra1-module"><a class="header" href="#core-architecture--extended-gameplay-systems-ra1-module">Core Architecture  Extended Gameplay Systems (RA1 Module)</a></h1>
+<p>The 9 core components in the main architecture document cover the skeleton. A playable Red Alert requires ~50 components and ~20 systems. This section designs every gameplay system identified in 11-OPENRA-FEATURES.md gap analysis, organized by functional domain.</p>
+<h3 id="power-system"><a class="header" href="#power-system">Power System</a></h3>
+<p>Every building generates or consumes power. Power deficit disables defenses and slows production — core C&amp;C economy.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Per-building power contribution.
+pub struct Power {
+    pub provides: i32,   // Power plants: positive
+    pub consumes: i32,   // Defenses, production buildings: positive
+}
+
+/// Marker: this building goes offline during power outage.
+pub struct AffectedByPowerOutage;
+
+/// Player-level resource (not a component — stored in PlayerState).
+pub struct PowerManager {
+    pub total_capacity: i32,
+    pub total_drain: i32,
+    pub low_power: bool,  // drain &gt; capacity
+}
+<span class="boring">}</span></code></pre>
+<p><strong><code>power_system()</code> logic:</strong> Sum all <code>Power</code> components per player → update <code>PowerManager</code>. When <code>low_power</code> is true, buildings with <code>AffectedByPowerOutage</code> have their production rates halved and defenses fire at reduced rate (via condition system, D028). Power bar UI reads <code>PowerManager</code> from <code>ic-ui</code>.</p>
+<p><strong>YAML:</strong></p>
+<pre><code class="language-yaml">power_plant:
+  power: { provides: 100 }
+tesla_coil:
+  power: { consumes: 75 }
+  affected_by_power_outage: true
+</code></pre>
+<h3 id="full-damage-pipeline-d028"><a class="header" href="#full-damage-pipeline-d028">Full Damage Pipeline (D028)</a></h3>
+<p>The complete weapon → projectile → warhead chain:</p>
+<pre><code>Armament fires → Projectile entity spawned → projectile_system() advances it
+  → hit detection (range, homing, ballistic arc)
+  → Warhead(s) applied at impact point
+    → target validity (TargetTypes, stances)
+    → spread/falloff calculation (distance from impact)
+    → Versus table lookup (ArmorType × WarheadType → damage multiplier)
+    → DamageMultiplier modifiers (veterancy, terrain, conditions)
+    → Health reduced
+</code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// A fired projectile — exists as its own entity during flight.
+pub struct Projectile {
+    pub weapon_id: WeaponId,
+    pub source: EntityId,
+    pub owner: PlayerId,
+    pub target: ProjectileTarget,
+    pub speed: i32,            // fixed-point
+    pub warheads: Vec&lt;WarheadId&gt;,
+    pub inaccuracy: i32,       // scatter radius at target
+    pub projectile_type: ProjectileType,
+}
+
+pub enum ProjectileType {
+    Bullet,         // instant-hit (hitscan)
+    Missile { tracking: i32, rof_jitter: i32 },  // homing
+    Ballistic { gravity: i32 },                    // arcing (artillery)
+    Beam { duration: u32 },                        // continuous ray
+}
+
+pub enum ProjectileTarget {
+    Entity(EntityId),
+    Ground(WorldPos),
+}
+
+/// Warhead definition — loaded from YAML, shared (not per-entity).
+pub struct WarheadDef {
+    pub spread: i32,           // area of effect radius
+    pub versus: VersusTable,   // ArmorType → damage percentage
+    pub damage: i32,           // base damage value
+    pub falloff: Vec&lt;i32&gt;,     // damage multiplier at distance steps
+    pub valid_targets: Vec&lt;TargetType&gt;,
+    pub invalid_targets: Vec&lt;TargetType&gt;,
+    pub effects: Vec&lt;WarheadEffect&gt;,  // screen shake, spawn fire, etc.
+}
+
+/// ArmorType × WarheadType → percentage (100 = full damage)
+/// Loaded from YAML Versus table — identical format to OpenRA.
+/// Flat array indexed by ArmorType discriminant for O(1) lookup in the combat
+/// hot path — no per-hit HashMap overhead. ArmorType is a small enum (&lt;16 variants)
+/// so the array fits in a single cache line.
+pub struct VersusTable {
+    pub modifiers: [i32; ArmorType::COUNT],  // index = ArmorType as usize
+}
+<span class="boring">}</span></code></pre>
+<p><strong><code>projectile_system()</code> logic:</strong> For each <code>Projectile</code> entity: advance position by <code>speed</code>, check if arrived at target. On arrival, iterate <code>warheads</code>, apply each to entities in <code>spread</code> radius using <code>SpatialIndex::query_range()</code>. For each target: check <code>valid_targets</code>, look up <code>VersusTable</code>, apply <code>DamageMultiplier</code> conditions, reduce <code>Health</code>. If <code>Health.current &lt;= 0</code>, mark for <code>death_system()</code>.</p>
+<p><strong>YAML (weapon + warhead, OpenRA-compatible):</strong></p>
+<pre><code class="language-yaml">weapons:
+  105mm:
+    range: 5120          # in world units (fixed-point)
+    rate_of_fire: 80     # ticks between shots
+    projectile:
+      type: bullet
+      speed: 682
+    warheads:
+      - type: spread_damage
+        damage: 60
+        spread: 426
+        versus:
+          none: 100
+          light: 80
+          medium: 60
+          heavy: 40
+          wood: 120
+          concrete: 30
+        falloff: [100, 50, 25, 0]
+</code></pre>
+<h3 id="damageresolver-trait-d041"><a class="header" href="#damageresolver-trait-d041">DamageResolver Trait (D041)</a></h3>
+<p>The damage pipeline above describes the RA1 resolution algorithm. The <em>data</em> (warheads, versus tables, modifiers) is YAML-configurable, but the <em>resolution order</em> — what happens between warhead impact and health reduction — varies between game modules. RA2 needs shield-first resolution; Generals-class games need sub-object targeting. The <code>DamageResolver</code> trait abstracts this step:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Game modules implement this to define damage resolution order.
+/// Called by projectile_system() after hit detection and before health reduction.
+pub trait DamageResolver: Send + Sync {
+    fn resolve_damage(
+        &amp;self,
+        warhead: &amp;WarheadDef,
+        target: &amp;DamageTarget,
+        modifiers: &amp;StatModifiers,
+        distance_from_impact: SimCoord,
+    ) -&gt; DamageResult;
+}
+
+pub struct DamageTarget {
+    pub entity: EntityId,
+    pub armor_type: ArmorType,
+    pub current_health: i32,
+    pub shield: Option&lt;ShieldState&gt;,
+    pub conditions: Conditions,
+}
+
+pub struct DamageResult {
+    pub health_damage: i32,
+    pub shield_damage: i32,
+    pub conditions_applied: Vec&lt;(ConditionId, u32)&gt;,
+    pub overkill: i32,
+}
+<span class="boring">}</span></code></pre>
+<p>RA1 registers <code>StandardDamageResolver</code> (Versus table → falloff → multiplier stack → health). RA2 would register <code>ShieldFirstDamageResolver</code>. See D041 in <code>../decisions/09d-gameplay.md</code> for full rationale and alternative implementations.</p>
+<h3 id="support-powers--superweapons"><a class="header" href="#support-powers--superweapons">Support Powers / Superweapons</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Attached to the building that provides the power (e.g., Chronosphere, Iron Curtain device).
+pub struct SupportPower {
+    pub power_type: SupportPowerType,
+    pub charge_time: u32,          // ticks to fully charge
+    pub current_charge: u32,       // ticks accumulated
+    pub ready: bool,
+    pub one_shot: bool,            // nukes: consumed on use; Chronosphere: recharges
+    pub targeting: TargetingMode,
+}
+
+pub enum TargetingMode {
+    Point,                   // click a cell (nuke)
+    Area { radius: i32 },   // area selection (Iron Curtain effect)
+    Directional,             // select origin + target cell (Chronoshift)
+}
+
+pub enum SupportPowerType {
+    /// Defined by YAML — these are RA1 defaults, but the enum is data-driven.
+    Named(String),
+}
+
+/// Player-level tracking.
+pub struct SupportPowerManager {
+    pub powers: Vec&lt;SupportPowerStatus&gt;, // one per owned support building
+}
+<span class="boring">}</span></code></pre>
+<p><strong><code>support_power_system()</code> logic:</strong> For each entity with <code>SupportPower</code>: increment <code>current_charge</code> each tick. When <code>current_charge &gt;= charge_time</code>, set <code>ready = true</code>. UI shows charge bar. Activation comes via player order (sim validates ownership + readiness), then applies warheads/effects at target location.</p>
+<h3 id="building-mechanics"><a class="header" href="#building-mechanics">Building Mechanics</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Build radius — buildings can only be placed near existing structures.
+pub struct BuildArea {
+    pub range: i32,   // cells from building edge
+}
+
+/// Primary building marker — determines which building produces (e.g., primary war factory).
+pub struct PrimaryBuilding;
+
+/// Rally point — newly produced units move here.
+pub struct RallyPoint {
+    pub target: WorldPos,
+}
+
+/// Building exit points — where produced units spawn.
+pub struct Exit {
+    pub offsets: Vec&lt;CellPos&gt;,   // spawn positions relative to building origin
+}
+
+/// Building can be sold.
+pub struct Sellable {
+    pub refund_percent: i32,  // typically 50
+    pub sell_time: u32,       // ticks for sell animation
+}
+
+/// Building can be repaired (by player spending credits).
+pub struct Repairable {
+    pub repair_rate: i32,     // HP per tick while repairing
+    pub repair_cost_per_hp: i32,
+}
+
+/// Gate — wall segment that opens for friendly units.
+pub struct Gate {
+    pub open_delay: u32,
+    pub close_delay: u32,
+    pub state: GateState,
+}
+
+pub enum GateState { Open, Closed, Opening, Closing }
+
+/// Wall-specific: enables line-build placement.
+pub struct LineBuild;
+<span class="boring">}</span></code></pre>
+<p><strong>Building placement validation</strong> (in <code>apply_orders()</code> → order validation):</p>
+<ol>
+<li>Check footprint fits terrain (no water, no cliffs, no existing buildings)</li>
+<li>Check within build radius of at least one friendly <code>BuildArea</code> provider</li>
+<li>Check prerequisites met (from <code>Buildable.prereqs</code>)</li>
+<li>Deduct cost → start build animation → spawn building entity</li>
+</ol>
+<h3 id="production-queue"><a class="header" href="#production-queue">Production Queue</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// A production queue (each building type has its own queue).
+pub struct ProductionQueue {
+    pub queue_type: QueueType,
+    pub items: Vec&lt;ProductionItem&gt;,
+    pub parallel: bool,           // RA2: parallel production per factory
+    pub paused: bool,
+}
+
+pub struct ProductionItem {
+    pub actor_type: ActorId,
+    pub remaining_cost: i32,
+    pub remaining_time: u32,
+    pub paid: i32,               // credits paid so far (for pause/resume)
+    pub infinite: bool,          // repeat production (hold queue)
+}
+<span class="boring">}</span></code></pre>
+<p><strong><code>production_system()</code> logic:</strong> For each <code>ProductionQueue</code>: if not paused and not empty, advance front item. Deduct credits incrementally (one tick’s worth per tick — production slows when credits run out). When <code>remaining_time == 0</code>, spawn unit at building’s <code>Exit</code> position, send to <code>RallyPoint</code> if set.</p>
+<h4 id="production-model-diversity"><a class="header" href="#production-model-diversity">Production Model Diversity</a></h4>
+<p>The <code>ProductionQueue</code> above describes the classic C&amp;C sidebar model, but production is one of the most varied mechanics across RTS games — even within the OpenRA mod ecosystem. Analysis of six major OpenRA mods (see <code>research/openra-mod-architecture-analysis.md</code>) reveals at least five distinct production models:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Model</th><th>Game</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td>Global sidebar</td><td>RA1, TD</td><td>One queue per unit category, shared across all factories of that type</td></tr>
+<tr><td>Tabbed sidebar</td><td>RA2</td><td>Multiple parallel queues, one per factory building</td></tr>
+<tr><td>Per-building on-site</td><td>KKnD (OpenKrush)</td><td>Each building has its own queue and rally point; no sidebar</td></tr>
+<tr><td>Single-unit selection</td><td>Dune II (d2)</td><td>Select one building, build one item — no queue at all</td></tr>
+<tr><td>Colony-based</td><td>Swarm Assault (OpenSA)</td><td>Capture colony buildings for production; no construction yard</td></tr>
+</tbody>
+</table>
+</div>
+<p>The engine must not hardcode any of these. The <code>production_system()</code> described above is the RA1 game module’s implementation. Other game modules register their own production system via <code>GameModule::system_pipeline()</code>. The <code>ProductionQueue</code> component is defined by the game module, not the engine core. A KKnD-style module might define a <code>PerBuildingProductionQueue</code> component with different constraints; a Dune II module might omit queue mechanics entirely and use a <code>SingleItemProduction</code> component.</p>
+<p>This is a key validation of invariant #9 (engine core is game-agnostic): if a non-C&amp;C total conversion on our engine needs a fundamentally different production model, the engine should not resist it.</p>
+<h3 id="resource--ore-model"><a class="header" href="#resource--ore-model">Resource / Ore Model</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Ore/gem cell data — stored per map cell (in a resource layer, not as entities).
+pub struct ResourceCell {
+    pub resource_type: ResourceType,
+    pub amount: i32,     // depletes as harvested
+    pub max_amount: i32,
+    pub growth_rate: i32, // ore regrows; gems don't (YAML-configured)
+}
+
+/// Storage capacity — silos and refineries.
+pub struct ResourceStorage {
+    pub capacity: i32,
+}
+<span class="boring">}</span></code></pre>
+<p><strong><code>harvester_system()</code> logic:</strong></p>
+<ol>
+<li>Harvester navigates to nearest <code>ResourceCell</code> with amount &gt; 0</li>
+<li>Harvester mines: transfers resource from cell to <code>Harvester.capacity</code></li>
+<li>When full (or cell depleted): navigate to nearest <code>DockHost</code> with <code>DockType::Refinery</code></li>
+<li>Dock, transfer resources → credits (via resource value table)</li>
+<li>If no refinery, wait. If no ore, scout for new fields.</li>
+</ol>
+<p>Player receives “silos needed” notification when total stored exceeds total <code>ResourceStorage.capacity</code>.</p>
+<h3 id="transport--cargo"><a class="header" href="#transport--cargo">Transport / Cargo</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct Cargo {
+    pub max_weight: u32,
+    pub current_weight: u32,
+    pub passengers: Vec&lt;EntityId&gt;,
+    pub unload_delay: u32,
+}
+
+pub struct Passenger {
+    pub weight: u32,
+    pub custom_pip: Option&lt;PipType&gt;,  // minimap/selection pip color
+}
+
+/// For carryall-style air transport.
+pub struct Carryall {
+    pub carry_target: Option&lt;EntityId&gt;,
+}
+
+/// Eject passengers on death (not all transports — YAML-configured).
+pub struct EjectOnDeath;
+
+/// ParaDrop capability — drop passengers from air.
+pub struct ParaDrop {
+    pub drop_interval: u32,  // ticks between each passenger exiting
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Load order:</strong> Player issues load order → <code>movement_system()</code> moves passenger to transport → when adjacent, remove passenger from world, add to <code>Cargo.passengers</code>. <strong>Unload order:</strong> Deploy order → eject passengers one by one at <code>Exit</code> positions, delay between each.</p>
+<h3 id="capture--ownership"><a class="header" href="#capture--ownership">Capture / Ownership</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct Capturable {
+    pub capture_types: Vec&lt;CaptureType&gt;,  // engineer, proximity
+    pub capture_threshold: i32,           // required capture points
+    pub current_progress: i32,
+    pub capturing_entity: Option&lt;EntityId&gt;,
+}
+
+pub struct Captures {
+    pub speed: i32,              // capture points per tick
+    pub capture_type: CaptureType,
+    pub consumed: bool,          // engineer is consumed on capture (RA1 behavior)
+}
+
+pub enum CaptureType { Infantry, Proximity }
+<span class="boring">}</span></code></pre>
+<p><strong><code>capture_system()</code> logic:</strong> For each entity with <code>Capturable</code> being captured: increment <code>current_progress</code> by capturer’s <code>speed</code>. When <code>current_progress &gt;= capture_threshold</code>, transfer ownership to capturer’s player. If <code>consumed</code>, destroy capturer. Reset progress on interruption (capturer killed or moved away).</p>
+<h3 id="stealth--cloak"><a class="header" href="#stealth--cloak">Stealth / Cloak</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct Cloak {
+    pub cloak_delay: u32,         // ticks after last action before cloaking
+    pub cloak_types: Vec&lt;CloakType&gt;,
+    pub ticks_since_action: u32,
+    pub is_cloaked: bool,
+    pub reveal_on_fire: bool,
+    pub reveal_on_move: bool,
+}
+
+pub struct DetectCloaked {
+    pub range: i32,
+    pub detect_types: Vec&lt;CloakType&gt;,
+}
+
+pub enum CloakType { Stealth, Underwater, Disguise, GapGenerator }
+<span class="boring">}</span></code></pre>
+<p><strong><code>cloak_system()</code> logic:</strong> For each <code>Cloak</code> entity: if <code>reveal_on_fire</code> and fired this tick, reset <code>ticks_since_action</code>. If <code>reveal_on_move</code> and moved this tick, reset. Otherwise increment <code>ticks_since_action</code>. When above <code>cloak_delay</code>, set <code>is_cloaked = true</code>. Rendering: cloaked and no enemy <code>DetectCloaked</code> in range → invisible. Cloaked but detected → shimmer effect. Fog system integration: cloaked entities hidden from enemy even in explored area unless detector present.</p>
+<h3 id="infantry-mechanics"><a class="header" href="#infantry-mechanics">Infantry Mechanics</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Infantry sub-cell positioning — up to 5 infantry per cell.
+pub struct InfantryBody {
+    pub sub_cell: SubCell,  // Center, TopLeft, TopRight, BottomLeft, BottomRight
+}
+
+pub enum SubCell { Center, TopLeft, TopRight, BottomLeft, BottomRight }
+
+/// Panic flee behavior (e.g., civilians, dogs).
+pub struct ScaredyCat {
+    pub flee_range: i32,
+    pub panic_ticks: u32,
+}
+
+/// Take cover / prone — reduces damage, reduces speed.
+pub struct TakeCover {
+    pub damage_modifier: i32,   // e.g., 50 (half damage)
+    pub speed_modifier: i32,    // e.g., 50 (half speed)
+    pub prone_delay: u32,       // ticks to transition to prone
+}
+<span class="boring">}</span></code></pre>
+<p><strong><code>movement_system()</code> integration for infantry:</strong> When infantry moves into a cell, assigns <code>SubCell</code> based on available slots. Up to 5 infantry share one cell in different visual positions. When attacked, infantry with <code>TakeCover</code> auto-goes prone (grants condition “prone” → <code>DamageMultiplier</code> of 50%).</p>
+<h3 id="death-mechanics"><a class="header" href="#death-mechanics">Death Mechanics</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Spawn an actor when this entity dies (husks, ejected pilots).
+pub struct SpawnOnDeath {
+    pub actor_type: ActorId,
+    pub probability: i32,   // 0-100, default 100
+}
+
+/// Explode on death — apply warheads at position.
+pub struct ExplodeOnDeath {
+    pub warheads: Vec&lt;WarheadId&gt;,
+}
+
+/// Timed self-destruct (demo truck, C4 charge).
+pub struct SelfDestruct {
+    pub timer: u32,        // ticks remaining
+    pub warheads: Vec&lt;WarheadId&gt;,
+}
+
+/// Damage visual states.
+pub struct DamageStates {
+    pub thresholds: Vec&lt;DamageThreshold&gt;,
+}
+
+pub struct DamageThreshold {
+    pub hp_percent: i32,   // below this → enter this state
+    pub state: DamageState,
+}
+
+pub enum DamageState { Undamaged, Light, Medium, Heavy, Critical }
+
+/// Victory condition marker — this entity must be destroyed to win.
+pub struct MustBeDestroyed;
+<span class="boring">}</span></code></pre>
+<p><strong><code>death_system()</code> logic:</strong> For entities with <code>Health.current &lt;= 0</code>: check <code>SpawnOnDeath</code> → spawn husk/pilot. Check <code>ExplodeOnDeath</code> → apply warheads at position. Remove entity from world and spatial index. For <code>SelfDestruct</code>: decrement timer each tick in a pre-death pass; when 0, kill the entity (triggers normal death path).</p>
+<h3 id="transform--deploy"><a class="header" href="#transform--deploy">Transform / Deploy</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Actor can transform into another type (MCV ↔ ConYard, siege deploy/undeploy).
+pub struct Transforms {
+    pub into: ActorId,
+    pub delay: u32,              // ticks for transformation
+    pub facing: Option&lt;i32&gt;,     // required facing to transform
+    pub condition: Option&lt;ConditionId&gt;,  // condition granted during transform
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Processing:</strong> Player issues deploy order → <code>transform_system()</code> starts countdown. During <code>delay</code>, entity is immobile (grants condition “deploying”). After delay, replace entity with <code>into</code> actor type, preserving health percentage, owner, and veterancy.</p>
+<h3 id="docking-system"><a class="header" href="#docking-system">Docking System</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Building or unit that accepts docking (refinery, helipad, repair pad).
+pub struct DockHost {
+    pub dock_type: DockType,
+    pub dock_position: CellPos,  // where the client unit sits
+    pub queue: Vec&lt;EntityId&gt;,    // waiting to dock
+    pub occupied: bool,
+}
+
+/// Unit that needs to dock (harvester, aircraft, damaged vehicle for repair pad).
+pub struct DockClient {
+    pub dock_type: DockType,
+}
+
+pub enum DockType { Refinery, Helipad, RepairPad }
+<span class="boring">}</span></code></pre>
+<p><strong><code>docking_system()</code> logic:</strong> For each <code>DockHost</code>: if not occupied and queue non-empty, pull front of queue, guide to <code>dock_position</code>. When docked: execute dock-type-specific logic (refinery → transfer resources; helipad → reload ammo; repair pad → heal). When done, release and advance queue.</p>
+<h3 id="veterancy--experience"><a class="header" href="#veterancy--experience">Veterancy / Experience</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// This unit gains XP from kills.
+pub struct GainsExperience {
+    pub current_xp: i32,
+    pub level: VeterancyLevel,
+    pub thresholds: Vec&lt;i32&gt;,      // XP required for each level transition
+    pub level_conditions: Vec&lt;ConditionId&gt;,  // conditions granted at each level
+}
+
+/// This unit awards XP when killed (based on its cost/value).
+pub struct GivesExperience {
+    pub value: i32,   // XP awarded to killer
+}
+
+pub enum VeterancyLevel { Rookie, Veteran, Elite, Heroic }
+<span class="boring">}</span></code></pre>
+<p><strong><code>veterancy_system()</code> logic:</strong> When <code>death_system()</code> removes an entity with <code>GivesExperience</code>, the killer (if it has <code>GainsExperience</code>) receives <code>value</code> XP. Check <code>thresholds</code>: if XP crosses a boundary, advance <code>level</code> and grant the corresponding condition. Conditions trigger multipliers: veteran = +25% firepower/+25% armor; elite = +50%/+50% + self-heal; heroic = +75%/+75% + faster fire rate (all values from YAML, not hardcoded).</p>
+<p><strong>Campaign carry-over (D021):</strong> <code>GainsExperience.current_xp</code> and <code>level</code> are part of the roster snapshot saved between campaign missions.</p>
+<h3 id="guard-command"><a class="header" href="#guard-command">Guard Command</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct Guard {
+    pub target: EntityId,
+    pub leash_range: i32,   // max distance from target before returning
+}
+
+pub struct Guardable;  // marker: can be guarded
+<span class="boring">}</span></code></pre>
+<p><strong>Processing in <code>apply_orders()</code>:</strong> Guard order assigns <code>Guard</code> component. <code>combat_system()</code> integration: if a guarding unit’s target is attacked and attacker is within leash range, engage attacker. If target moves beyond leash range, follow.</p>
+<h3 id="crush-mechanics"><a class="header" href="#crush-mechanics">Crush Mechanics</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct Crushable {
+    pub crush_class: CrushClass,
+}
+
+pub enum CrushClass { Infantry, Wall, Hedgehog }
+
+/// Vehicles that auto-crush when moving over crushable entities.
+pub struct Crusher {
+    pub crush_classes: Vec&lt;CrushClass&gt;,
+}
+<span class="boring">}</span></code></pre>
+<p><strong><code>crush_system()</code> logic:</strong> After <code>movement_system()</code>, for each entity with <code>Crusher</code> that moved this tick: query <code>SpatialIndex</code> at new position for entities with matching <code>Crushable.crush_class</code>. Apply instant kill to crushed entities.</p>
+<h3 id="crate-system"><a class="header" href="#crate-system">Crate System</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct Crate {
+    pub action_pool: Vec&lt;CrateAction&gt;,  // weighted random selection
+}
+
+pub enum CrateAction {
+    Cash { amount: i32 },
+    Unit { actor_type: ActorId },
+    Heal { percent: i32 },
+    LevelUp,
+    MapReveal,
+    Explode { warhead: WarheadId },
+    Cloak { duration: u32 },
+    Speed { multiplier: i32, duration: u32 },
+}
+
+/// World-level system resource.
+pub struct CrateSpawner {
+    pub max_crates: u32,
+    pub spawn_interval: u32,   // ticks between spawn attempts
+    pub spawn_area: SpawnArea,
+}
+<span class="boring">}</span></code></pre>
+<p><strong><code>crate_system()</code> logic:</strong> Periodically spawn crates (up to <code>max_crates</code>). When a unit moves onto a crate: pick random <code>CrateAction</code>, apply effect to collecting unit/player. Remove crate entity.</p>
+<h3 id="mine-system"><a class="header" href="#mine-system">Mine System</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct Mine {
+    pub trigger_types: Vec&lt;TargetType&gt;,
+    pub warhead: WarheadId,
+    pub visible_to_owner: bool,
+}
+
+pub struct Minelayer {
+    pub mine_type: ActorId,
+    pub lay_delay: u32,
+}
+<span class="boring">}</span></code></pre>
+<p><strong><code>mine_system()</code> logic:</strong> After <code>movement_system()</code>, for each <code>Mine</code>: query spatial index for entities at mine position matching <code>trigger_types</code>. On contact: apply warhead, destroy mine. Mines are invisible to enemy unless detected by mine-sweeper unit (uses <code>DetectCloaked</code> with <code>CloakType::Stealth</code>).</p>
+<h3 id="notification-system"><a class="header" href="#notification-system">Notification System</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct NotificationEvent {
+    pub event_type: NotificationType,
+    pub position: Option&lt;WorldPos&gt;,  // for spatial notifications
+    pub player: PlayerId,
+}
+
+pub enum NotificationType {
+    UnitLost,
+    BaseUnderAttack,
+    HarvesterUnderAttack,
+    BuildingCaptured,
+    LowPower,
+    SilosNeeded,
+    InsufficientFunds,
+    BuildingComplete,
+    UnitReady,
+    NuclearLaunchDetected,
+    EnemySpotted,
+    ReinforcementsArrived,
+}
+
+/// Per-notification-type cooldown (avoid spam).
+/// Flat array indexed by NotificationType discriminant — small fixed enum,
+/// avoids HashMap overhead on a per-event check.
+pub struct NotificationCooldowns {
+    pub cooldowns: [u32; NotificationType::COUNT],  // ticks remaining, index = variant as usize
+    pub default_cooldown: u32,                       // typically 150 ticks (~10 sec)
+}
+<span class="boring">}</span></code></pre>
+<p><strong><code>notification_system()</code> logic:</strong> Collects events from other systems (combat → “base under attack”, production → “building complete”, power → “low power”). Checks cooldown for each type. If not on cooldown, queues notification for <code>ic-audio</code> (EVA voice line) and <code>ic-ui</code> (text overlay). Audio mapping is YAML-driven:</p>
+<pre><code class="language-yaml">notifications:
+  base_under_attack: { audio: "BATL1.AUD", priority: high, cooldown: 300 }
+  building_complete: { audio: "CONSTRU2.AUD", priority: normal, cooldown: 0 }
+  low_power: { audio: "LOPOWER1.AUD", priority: high, cooldown: 600 }
+</code></pre>
+<h3 id="cursor-system"><a class="header" href="#cursor-system">Cursor System</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Determines which cursor shows when hovering over a target.
+pub struct CursorProvider {
+    pub cursor_map: HashMap&lt;CursorContext, CursorDef&gt;,
+}
+
+pub enum CursorContext {
+    Default,
+    Move,
+    Attack,
+    AttackForce,     // force-fire on ground
+    Capture,
+    Enter,           // enter transport/building
+    Deploy,
+    Sell,
+    Repair,
+    Guard,
+    SupportPower(SupportPowerType),
+    Chronoshift,
+    Nuke,
+    Harvest,
+    Impassable,
+}
+
+pub struct CursorDef {
+    pub sprite: SpriteId,
+    pub hotspot: (i32, i32),
+    pub sequence: Option&lt;AnimSequence&gt;,  // animated cursors
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Logic:</strong> Each frame (render-side, not sim), determine cursor context from: selected units, hovered entity/terrain, active command mode (sell, repair, support power), force modifiers (Ctrl = force-fire, Alt = force-move). Look up <code>CursorDef</code> from <code>CursorProvider</code>. Display.</p>
+<h3 id="hotkey-system"><a class="header" href="#hotkey-system">Hotkey System</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct HotkeyConfig {
+    pub bindings: HashMap&lt;ActionId, Vec&lt;KeyCombo&gt;&gt;,
+    pub profiles: HashMap&lt;String, HotkeyProfile&gt;,
+}
+
+pub struct KeyCombo {
+    pub key: KeyCode,
+    pub modifiers: Modifiers,  // Ctrl, Shift, Alt
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Built-in profiles:</strong></p>
+<ul>
+<li><code>classic</code> — original RA1 keybindings</li>
+<li><code>openra</code> — OpenRA defaults</li>
+<li><code>modern</code> — WASD camera, common RTS conventions</li>
+</ul>
+<p>Fully rebindable in settings UI. Categories: unit commands, production, control groups, camera, chat, debug. Hotkeys produce <code>PlayerOrder</code>s through <code>InputSource</code> — the sim never sees key codes.</p>
+<h3 id="camera-system"><a class="header" href="#camera-system">Camera System</a></h3>
+<p>The camera is a purely render-side concern — the sim has no camera concept (Invariant #1). Camera state lives as a Bevy <code>Resource</code> in <code>ic-render</code>, read by the rendering pipeline and <code>ic-ui</code> (minimap, spatial audio listener position). The <code>ScreenToWorld</code> trait (see § “Portability Design Rules”) converts screen coordinates to world positions; the camera system controls what region of the world is visible.</p>
+<h4 id="core-types"><a class="header" href="#core-types">Core Types</a></h4>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Central camera state — a Bevy Resource in ic-render.
+/// NOT part of the sim. Save/restore for save games is serialized separately
+/// (alongside other client-side state like UI layout and audio volume).
+#[derive(Resource)]
+pub struct GameCamera {
+    /// World position the camera is centered on (render-side f32, not sim fixed-point).
+    pub position: Vec2,
+    /// Current zoom level. 1.0 = default view. &lt;1.0 = zoomed out, &gt;1.0 = zoomed in.
+    pub zoom: f32,
+    /// Zoom limits — enforced every frame. Ranked/tournament modes clamp these further.
+    pub zoom_min: f32,  // default: 0.5 (see twice as much map)
+    pub zoom_max: f32,  // default: 4.0 (pixel-level inspection)
+    /// Map bounds in world coordinates — camera cannot scroll past these.
+    pub bounds: Rect,
+    /// Smooth interpolation factor for zoom (0.0–1.0 per frame, lerp toward target).
+    pub zoom_smoothing: f32,  // default: 0.15
+    /// Smooth interpolation factor for pan.
+    pub pan_smoothing: f32,   // default: 0.2
+    /// Internal: zoom target for smooth interpolation.
+    pub zoom_target: f32,
+    /// Internal: position target for smooth pan (e.g., centering on selection).
+    pub position_target: Vec2,
+    /// Edge scroll speed in world-units per second (scaled by current zoom).
+    pub edge_scroll_speed: f32,
+    /// Keyboard pan speed in world-units per second (scaled by current zoom).
+    pub keyboard_pan_speed: f32,
+    /// Follow mode: lock camera to a unit or player's view.
+    pub follow_target: Option&lt;FollowTarget&gt;,
+    /// Screen shake state (driven by explosions, nukes, superweapons).
+    pub shake: ScreenShake,
+}
+
+pub enum FollowTarget {
+    Unit(UnitTag),               // follow a specific unit (observer, cinematic)
+    Player(PlayerId),            // lock to a player's viewport (observer mode)
+}
+
+pub struct ScreenShake {
+    pub amplitude: f32,          // current intensity (decays over time)
+    pub decay_rate: f32,         // amplitude reduction per second
+    pub frequency: f32,          // oscillation speed
+    pub offset: Vec2,            // current frame's shake offset (applied to final transform)
+}
+<span class="boring">}</span></code></pre>
+<h4 id="zoom-behavior"><a class="header" href="#zoom-behavior">Zoom Behavior</a></h4>
+<p>Zoom modifies the <code>OrthographicProjection.scale</code> on the Bevy camera entity. A zoom of 1.0 maps to the default viewport size for the active render mode (D048). Zooming out (<code>zoom &lt; 1.0</code>) shows more of the map; zooming in (<code>zoom &gt; 1.0</code>) magnifies the view.</p>
+<p><strong>Input methods:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Input</th><th>Action</th><th>Platform</th></tr>
+</thead>
+<tbody>
+<tr><td>Mouse scroll wheel</td><td>Zoom toward/away from cursor position</td><td>Desktop</td></tr>
+<tr><td>+/- keys</td><td>Zoom toward/away from screen center</td><td>Desktop</td></tr>
+<tr><td>Pinch gesture</td><td>Zoom toward/away from pinch midpoint</td><td>Touch/mobile</td></tr>
+<tr><td><code>/zoom &lt;level&gt;</code> cmd</td><td>Set zoom to exact value (D058)</td><td>All</td></tr>
+<tr><td>Ctrl+scroll</td><td>Fine zoom (half step size)</td><td>Desktop</td></tr>
+<tr><td>Minimap scroll</td><td>Zoom the minimap’s own viewport independently</td><td>All</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Zoom-toward-cursor</strong> is the expected UX for isometric games (SC2, AoE2, OpenRA all do this). When the player scrolls the mouse wheel, the world point under the cursor stays fixed on screen — the camera position shifts to compensate for the scale change. This requires adjusting <code>position</code> alongside <code>zoom</code>:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>fn zoom_toward_cursor(camera: &amp;mut GameCamera, cursor_world: Vec2, scroll_delta: f32) {
+    let old_zoom = camera.zoom_target;
+    camera.zoom_target = (old_zoom + scroll_delta * ZOOM_STEP)
+        .clamp(camera.zoom_min, camera.zoom_max);
+    // Shift position so the cursor's world point stays at the same screen location.
+    let zoom_ratio = camera.zoom_target / old_zoom;
+    camera.position_target = cursor_world + (camera.position_target - cursor_world) * zoom_ratio;
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Smooth interpolation:</strong> The actual <code>zoom</code> and <code>position</code> values lerp toward their targets each frame:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>fn camera_interpolation(camera: &amp;mut GameCamera, dt: f32) {
+    let t_zoom = 1.0 - (1.0 - camera.zoom_smoothing).powf(dt * 60.0);
+    camera.zoom = camera.zoom.lerp(camera.zoom_target, t_zoom);
+    let t_pan = 1.0 - (1.0 - camera.pan_smoothing).powf(dt * 60.0);
+    camera.position = camera.position.lerp(camera.position_target, t_pan);
+}
+<span class="boring">}</span></code></pre>
+<p>This frame-rate-independent smoothing (exponential lerp) feels identical at 30 fps and 240 fps. The <code>powf()</code> call is once per frame, not per entity — negligible cost.</p>
+<p><strong>Discrete vs. continuous:</strong> Keyboard zoom (+/-) uses discrete steps (e.g., 0.25 increments). Mouse scroll uses finer steps (0.1). Both feed <code>zoom_target</code> and smooth toward it. There is NO “snap to integer zoom” constraint — smooth zoom is the default behavior. Classic render mode (D048) with integer scaling uses the same smooth zoom for camera movement but snaps the <code>OrthographicProjection.scale</code> to the nearest integer multiple when rendering, preventing sub-pixel shimmer on pixel art.</p>
+<h4 id="zoom-interaction-with-render-modes-d048"><a class="header" href="#zoom-interaction-with-render-modes-d048">Zoom Interaction with Render Modes (D048)</a></h4>
+<p>Different render modes have different zoom characteristics:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Render Mode</th><th>Default Zoom</th><th>Zoom Range</th><th>Scaling Behavior</th></tr>
+</thead>
+<tbody>
+<tr><td>Classic</td><td>1.0</td><td>0.5–3.0</td><td>Integer-scale snap for rendering; smooth camera movement</td></tr>
+<tr><td>HD</td><td>1.0</td><td>0.5–4.0</td><td>Fully smooth — no snap needed at any zoom level</td></tr>
+<tr><td>3D</td><td>1.0</td><td>0.25–6.0</td><td>Perspective FOV adjustment, not orthographic scale</td></tr>
+</tbody>
+</table>
+</div>
+<p>When a render mode switch occurs (F1 / D048), the camera system adjusts:</p>
+<ul>
+<li><code>zoom_min</code> / <code>zoom_max</code> to the new mode’s range</li>
+<li><code>zoom_target</code> is clamped to the new range (if current zoom exceeds new limits)</li>
+<li>Camera position is preserved — only the zoom behavior changes</li>
+</ul>
+<p>For 3D render modes, zoom maps to camera distance from the ground plane (dolly) rather than orthographic scale. The <code>ScreenToWorld</code> trait abstracts this — the camera system sets a <code>zoom</code> value, and the active <code>ScreenToWorld</code> implementation interprets it appropriately (orthographic scale for 2D, distance for 3D).</p>
+<h4 id="pan-scrolling"><a class="header" href="#pan-scrolling">Pan (Scrolling)</a></h4>
+<p>Four input methods, all producing the same result — a <code>position_target</code> update:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Method</th><th>Behavior</th></tr>
+</thead>
+<tbody>
+<tr><td>Edge scroll</td><td>Move cursor to screen edge → pan in that direction</td></tr>
+<tr><td>Keyboard (WASD/arrows)</td><td>Pan at <code>keyboard_pan_speed</code>, scaled by zoom (slower when zoomed in)</td></tr>
+<tr><td>Minimap click</td><td>Jump camera center to the clicked world position</td></tr>
+<tr><td>Middle-mouse drag</td><td>Pan by mouse delta (inverted — drag world under cursor)</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Speed scales with zoom:</strong> When zoomed out, pan speed increases proportionally so map traversal time feels consistent. When zoomed in, pan speed decreases for precision. The scaling is linear: <code>effective_speed = base_speed / zoom</code>.</p>
+<p><strong>Bounds clamping:</strong> Every frame, <code>position_target</code> is clamped so the viewport stays within <code>bounds</code> (map rectangle plus a configurable padding). The player cannot scroll to see void beyond the map edge. Bounds are set when the map loads and do not change during gameplay.</p>
+<h4 id="screen-shake"><a class="header" href="#screen-shake">Screen Shake</a></h4>
+<p>Triggered by game events (explosions, superweapons, building destruction) via Bevy events:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct CameraShakeEvent {
+    pub epicenter: WorldPos,   // world position of the explosion
+    pub intensity: f32,        // 0.0–1.0 (nuke = 1.0, tank shell = 0.05)
+    pub duration_secs: f32,    // how long the shake lasts
+}
+<span class="boring">}</span></code></pre>
+<p>The shake system calculates <code>amplitude</code> from intensity, attenuated by distance from the camera. Multiple concurrent shakes are additive (capped at a maximum amplitude). The <code>shake.offset</code> is applied to the final camera transform each frame — it never modifies <code>position</code> or <code>position_target</code>, so the shake doesn’t drift the view.</p>
+<p>Players can disable screen shake entirely via settings (<code>/camera_shake off</code> — D058) or reduce intensity with a slider. Accessibility concern: excessive screen shake can cause motion sickness.</p>
+<h4 id="camera-in-replays-and-save-games"><a class="header" href="#camera-in-replays-and-save-games">Camera in Replays and Save Games</a></h4>
+<ul>
+<li><strong>Save games:</strong> <code>GameCamera</code> state (position, zoom, follow target) is serialized alongside other client-side state. On load, the camera restores to where the player was looking.</li>
+<li><strong>Replays:</strong> <code>CameraPositionSample</code> events (see <code>05-FORMATS.md</code>) record each player’s viewport center and zoom level at 2 Hz. Replay viewers can follow any player’s camera or use free camera. The replay camera is independent of the recorded camera data — the viewer controls their own viewport.</li>
+<li><strong>Observer mode:</strong> Observers have independent camera control with no zoom restrictions (they can zoom out further than players for overview). The <code>follow_player</code> option (see <code>ObserverState</code>) syncs the observer’s camera to a player’s recorded <code>CameraPositionSample</code> stream.</li>
+</ul>
+<h4 id="camera-configuration-yaml"><a class="header" href="#camera-configuration-yaml">Camera Configuration (YAML)</a></h4>
+<p>Per-game-module camera defaults:</p>
+<pre><code class="language-yaml">camera:
+  zoom:
+    default: 1.0
+    min: 0.5
+    max: 4.0
+    step_scroll: 0.1       # mouse wheel increment
+    step_keyboard: 0.25    # +/- key increment
+    smoothing: 0.15        # lerp factor (0 = instant, 1 = no movement)
+    # Ranked override — competitive committee (D037) sets these per season
+    ranked_min: 0.75
+    ranked_max: 2.0
+  pan:
+    edge_scroll_speed: 1200.0   # world-units/sec at zoom 1.0
+    keyboard_speed: 1000.0
+    smoothing: 0.2
+    edge_scroll_zone: 8        # pixels from screen edge to trigger
+  shake:
+    max_amplitude: 12.0         # max pixel displacement
+    decay_rate: 8.0             # amplitude reduction per second
+    enabled: true               # default; player can override in settings
+  bounds_padding: 64            # extra world-units beyond map edges
+</code></pre>
+<p>This makes camera behavior fully data-driven (Principle 4 from <code>13-PHILOSOPHY.md</code>). A Tiberian Sun module can set different zoom ranges (its taller buildings need more zoom-out headroom). A total conversion can disable edge scrolling entirely if it uses a different camera paradigm.</p>
+<h3 id="game-speed"><a class="header" href="#game-speed">Game Speed</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Lobby-configurable game speed.
+pub struct GameSpeed {
+    pub preset: SpeedPreset,
+    pub tick_interval_ms: u32,   // sim tick period
+}
+
+pub enum SpeedPreset {
+    Slowest,   // 80ms per tick
+    Slower,    // 67ms per tick (default)
+    Normal,    // 50ms per tick
+    Faster,    // 35ms per tick
+    Fastest,   // 20ms per tick
+}
+<span class="boring">}</span></code></pre>
+<p>Speed affects only the interval between sim ticks — system behavior is tick-count-based, so all game logic works identically at any speed. Single-player can change speed mid-game; multiplayer sets it in lobby (synced).</p>
+<h3 id="faction-system"><a class="header" href="#faction-system">Faction System</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Faction identity — loaded from YAML.
+pub struct Faction {
+    pub internal_name: String,   // "allies", "soviet"
+    pub display_name: String,    // "Allied Forces"
+    pub side: String,            // "allies", "soviet" (for grouping subfactions)
+    pub color: PlayerColor,
+    pub tech_tree: TechTreeId,
+    pub starting_units: Vec&lt;StartingUnit&gt;,
+}
+<span class="boring">}</span></code></pre>
+<p>Factions determine: available tech tree (which units/buildings can be built), default player color, starting unit composition in skirmish, lobby selection, and <code>Buildable.prereqs</code> resolution. RA2 subfactions (e.g., Korea, Libya) share a <code>side</code> but differ in <code>tech_tree</code> (one unique unit each).</p>
+<h3 id="auto-target--turret"><a class="header" href="#auto-target--turret">Auto-Target / Turret</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Unit auto-acquires targets within range.
+pub struct AutoTarget {
+    pub scan_range: i32,
+    pub stance: Stance,
+    pub prefer_priority: bool,   // prefer high-priority targets
+}
+
+pub enum Stance {
+    HoldFire,      // never auto-attack
+    ReturnFire,    // attack only if attacked
+    Defend,        // attack enemies in range
+    AttackAnything, // attack anything visible
+}
+
+/// Turreted weapon — rotates independently of body.
+pub struct Turreted {
+    pub turn_speed: i32,
+    pub offset: WorldPos,      // turret mount point relative to body
+    pub current_facing: i32,   // turret facing (0-255)
+}
+
+/// Weapon requires ammo — must reload at dock (helipad).
+pub struct AmmoPool {
+    pub max_ammo: u32,
+    pub current_ammo: u32,
+    pub reload_delay: u32,    // ticks per ammo at dock
+}
+<span class="boring">}</span></code></pre>
+<p><strong><code>combat_system()</code> integration:</strong> For units with <code>AutoTarget</code> and no current attack order: scan <code>SpatialIndex</code> within <code>scan_range</code>. Filter by <code>Stance</code> rules. Pick highest-priority valid target. For <code>Turreted</code> units: rotate turret toward target at <code>turn_speed</code> per tick before firing. For <code>AmmoPool</code> units: decrement ammo on fire; when depleted, return to nearest <code>DockHost</code> with <code>DockType::Helipad</code> for reload.</p>
+<h3 id="selection-details"><a class="header" href="#selection-details">Selection Details</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct SelectionPriority {
+    pub priority: i32,         // higher = selected preferentially
+    pub click_priority: i32,   // higher = wins click-through
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Selection features:</strong></p>
+<ul>
+<li><strong>Priority:</strong> When box-selecting 200 units, combat units are selected over harvesters (higher <code>priority</code>)</li>
+<li><strong>Double-click:</strong> Select all units of the same type on screen</li>
+<li><strong>Tab cycling:</strong> Cycle through unit types within a selection group</li>
+<li><strong>Control groups:</strong> 0-9 control groups, Ctrl+# to assign, # to select, double-# to center camera</li>
+<li><strong>Isometric selection box:</strong> Diamond-shaped box selection for proper isometric hit-testing</li>
+</ul>
+<h3 id="observer--spectator-ui"><a class="header" href="#observer--spectator-ui">Observer / Spectator UI</a></h3>
+<p>Observer mode (separate from player mode) displays overlays not available to players:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct ObserverState {
+    pub show_army: bool,       // unit composition per player
+    pub show_production: bool, // what each player is building
+    pub show_economy: bool,    // income rate, credits per player
+    pub show_powers: bool,     // superweapon charge timers
+    pub show_score: bool,      // strategic score tracker
+    pub follow_player: Option&lt;PlayerId&gt;,  // lock camera to player's view (writes GameCamera.follow_target)
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Army overlay:</strong> Bar chart of unit counts per player, grouped by type. <strong>Production overlay:</strong> List of active queues per player. <strong>Economy overlay:</strong> Income rate graph. These are render-only — no sim interaction. Observer UI is an <code>ic-ui</code> concern.</p>
+<h4 id="game-score--performance-metrics"><a class="header" href="#game-score--performance-metrics">Game Score / Performance Metrics</a></h4>
+<p>The sim tracks a comprehensive <code>GameScore</code> per player, updated every tick. This powers the observer economy overlay, post-game stats screen, and the replay analysis event stream (see <code>05-FORMATS.md</code> § “Analysis Event Stream”). Design informed by SC2’s <code>ScoreDetails</code> protobuf (see <code>research/blizzard-github-analysis.md</code> § Part 2).</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>#[derive(Clone, Serialize, Deserialize)]
+pub struct GameScore {
+    // Economy
+    pub total_collected: ResourceSet,      // lifetime resources harvested
+    pub total_spent: ResourceSet,          // lifetime resources committed
+    pub collection_rate: ResourceSet,      // current income per minute (fixed-point)
+    pub idle_harvester_ticks: u64,         // cumulative ticks harvesters spent idle
+
+    // Production
+    pub units_produced: u32,
+    pub structures_built: u32,
+    pub idle_production_ticks: u64,        // cumulative ticks factories spent idle
+
+    // Combat
+    pub units_killed: u32,
+    pub units_lost: u32,
+    pub structures_destroyed: u32,
+    pub structures_lost: u32,
+    pub killed_value: ResourceSet,         // total value of enemy assets destroyed
+    pub lost_value: ResourceSet,           // total value of own assets lost
+    pub damage_dealt: i64,                 // fixed-point cumulative
+    pub damage_received: i64,
+
+    // Activity
+    pub actions_per_minute: u32,           // APM (all orders)
+    pub effective_actions_per_minute: u32, // EPM (non-redundant orders only)
+}
+<span class="boring">}</span></code></pre>
+<p><strong>APM vs EPM:</strong> Following SC2’s distinction — APM counts every order, EPM filters duplicate/redundant commands (e.g., repeatedly right-clicking the same destination). EPM is a better measure of meaningful player activity.</p>
+<p><strong>Sim-side only:</strong> <code>GameScore</code> lives in <code>ic-sim</code> (it’s deterministic state, not rendering). Observer overlays in <code>ic-ui</code> read it through the standard <code>Simulation</code> query interface.</p>
+<h3 id="debug--developer-tools"><a class="header" href="#debug--developer-tools">Debug / Developer Tools</a></h3>
+<blockquote>
+<p>See also <code>../decisions/09g-interaction.md</code> § D058 for the unified chat/command console, cvar system, and Brigadier-style command tree that provides the text-based interface to these developer tools.</p>
+</blockquote>
+<p>Developer mode (toggled in settings, not available in ranked):</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct DeveloperMode {
+    pub instant_build: bool,
+    pub free_units: bool,
+    pub reveal_map: bool,
+    pub unlimited_power: bool,
+    pub invincible: bool,
+    pub give_cash_amount: i32,
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Debug overlays (via <code>bevy_egui</code>):</strong></p>
+<ul>
+<li>Combat: weapon ranges as circles, target lines, damage numbers floating</li>
+<li>Pathfinding: flowfield visualization, path cost heat map, blocker highlight</li>
+<li>Performance: per-system tick time bar chart, entity count, memory usage</li>
+<li>Network: RTT graph, order latency, jitter, desync hash comparison</li>
+<li>Asset browser: preview sprites, sounds, palettes inline</li>
+</ul>
+<p>Developer cheats issue special orders validated only when <code>DeveloperMode</code> is active. In multiplayer, all players must agree to enable dev mode (prevents cheating).</p>
+<blockquote>
+<p><strong>Security (V44):</strong> The consensus mechanism for multiplayer dev mode must be specified: dev mode is sim state (not client-side), toggled exclusively via <code>PlayerOrder::SetDevMode</code> with unanimous lobby consent before game start. Dev mode orders use a distinct <code>PlayerOrder::DevCommand</code> variant rejected by the sim when dev mode is inactive. Disabled for ranked matchmaking. See <code>06-SECURITY.md</code> § Vulnerability 44.</p>
+</blockquote>
+<h4 id="debug-drawing-api"><a class="header" href="#debug-drawing-api">Debug Drawing API</a></h4>
+<p>A programmatic drawing API for rendering debug geometry. Inspired by SC2’s <code>DebugDraw</code> interface (see <code>research/blizzard-github-analysis.md</code> § Part 7) — text, lines, boxes, and spheres rendered as overlays:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub trait DebugDraw {
+    fn draw_text(&amp;mut self, pos: WorldPos, text: &amp;str, color: Color);
+    fn draw_line(&amp;mut self, start: WorldPos, end: WorldPos, color: Color);
+    fn draw_circle(&amp;mut self, center: WorldPos, radius: i32, color: Color);
+    fn draw_rect(&amp;mut self, min: WorldPos, max: WorldPos, color: Color);
+}
+<span class="boring">}</span></code></pre>
+<p>Used by AI visualization, pathfinding debug, weapon range display, and Lua/WASM debug scripts. All debug geometry is cleared each frame — callers re-submit every tick. Lives in <code>ic-render</code> (render concern, not sim).</p>
+<h4 id="debug-unit-manipulation"><a class="header" href="#debug-unit-manipulation">Debug Unit Manipulation</a></h4>
+<p>Developer mode supports direct entity manipulation for testing:</p>
+<ul>
+<li><strong>Spawn unit:</strong> Create any unit type at a position, owned by any player</li>
+<li><strong>Kill unit:</strong> Instantly destroy selected entities</li>
+<li><strong>Set resources:</strong> Override player credit balance</li>
+<li><strong>Modify health:</strong> Set HP to any value</li>
+</ul>
+<p>These operations are implemented as special <code>PlayerOrder</code> variants validated only when <code>DeveloperMode</code> is active. They flow through the normal order pipeline — deterministic across all clients.</p>
+<h4 id="fault-injection-testing-only"><a class="header" href="#fault-injection-testing-only">Fault Injection (Testing Only)</a></h4>
+<p>For automated stability testing — not exposed in release builds:</p>
+<ul>
+<li><strong>Hang simulation:</strong> Simulate tick timeout (verifies watchdog recovery)</li>
+<li><strong>Crash process:</strong> Controlled exit (verifies crash reporting pipeline)</li>
+<li><strong>Desync injection:</strong> Flip a bit in sim state (verifies desync detection and diagnosis)</li>
+</ul>
+<p>These follow SC2’s <code>DebugTestProcess</code> pattern for CI/CD reliability testing.</p>
+<h3 id="localization-framework"><a class="header" href="#localization-framework">Localization Framework</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct Localization {
+    pub current_locale: String,         // "en", "de", "zh-CN"
+    pub bundles: HashMap&lt;String, FluentBundle&gt;,  // locale → string bundle
+}
+<span class="boring">}</span></code></pre>
+<p>Uses <strong>Project Fluent</strong> (same as OpenRA) for parameterized, pluralization-aware message formatting:</p>
+<pre><code class="language-fluent"># en.ftl
+unit-lost = Unit lost
+base-under-attack = Our base is under attack!
+building-complete = { $building } construction complete.
+units-selected = { $count -&gt;
+    [one] {$count} unit selected
+   *[other] {$count} units selected
+}
+</code></pre>
+<p>Mods provide their own <code>.ftl</code> files. Engine strings are localizable from Phase 3. Community translations publishable to Workshop.</p>
+<h3 id="encyclopedia"><a class="header" href="#encyclopedia">Encyclopedia</a></h3>
+<p>In-game unit/building/weapon reference browser:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct EncyclopediaEntry {
+    pub actor_type: ActorId,
+    pub display_name: String,
+    pub description: String,
+    pub stats: HashMap&lt;String, String&gt;,  // "Speed: 8", "Armor: Medium"
+    pub preview_sprite: SpriteId,
+    pub category: EncyclopediaCategory,
+}
+
+pub enum EncyclopediaCategory { Infantry, Vehicle, Aircraft, Naval, Structure, Defense, Support }
+<span class="boring">}</span></code></pre>
+<p>Auto-generated from YAML rule definitions + optional <code>encyclopedia:</code> block in YAML. Accessible from main menu and in-game sidebar. Mod-defined units automatically appear in the encyclopedia.</p>
+<h3 id="palette-effects-runtime"><a class="header" href="#palette-effects-runtime">Palette Effects (Runtime)</a></h3>
+<p>Beyond static <code>.pal</code> file loading (<code>ra-formats</code>), runtime palette manipulation for classic RA visual style:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub enum PaletteEffect {
+    PlayerColorRemap { remap_range: (u8, u8), target_color: PlayerColor },
+    Rotation { start_index: u8, end_index: u8, speed: u32 },  // water animation
+    CloakShimmer { entity: EntityId },
+    ScreenFlash { color: PaletteColor, duration: u32 },       // nuke, chronoshift
+    DamageTint { entity: EntityId, state: DamageState },
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Modern implementation:</strong> These are shader effects in Bevy’s render pipeline, not literal palette index swaps. But the modder-facing YAML configuration matches the original palette effect names for familiarity. Shader implementations achieve the same visual result with modern GPU techniques (color lookup textures, screen-space post-processing).</p>
+<h3 id="demolition--c4"><a class="header" href="#demolition--c4">Demolition / C4</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct Demolition {
+    pub delay: u32,               // ticks to detonation
+    pub warhead: WarheadId,
+    pub required_target: TargetType,  // buildings only
+}
+<span class="boring">}</span></code></pre>
+<p>Engineer-type unit with <code>Demolition</code> places C4 on a building. After <code>delay</code> ticks, warhead detonates. Target building takes massive damage (usually fatal). Engineer is consumed.</p>
+<h3 id="plug-system"><a class="header" href="#plug-system">Plug System</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct Pluggable {
+    pub plug_type: PlugType,
+    pub max_plugs: u32,
+    pub current_plugs: u32,
+    pub effect_per_plug: ConditionId,
+}
+
+pub struct Plug {
+    pub plug_type: PlugType,
+}
+<span class="boring">}</span></code></pre>
+<p>Primarily RA2 (bio-reactor accepting infantry for extra power). Included for mod compatibility. When a <code>Plug</code> entity enters a <code>Pluggable</code> building, increment <code>current_plugs</code>, grant condition per plug (e.g., “+50 power per infantry in reactor”).</p>
+<hr>
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../02-ARCHITECTURE.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../03-NETCODE.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../02-ARCHITECTURE.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../03-NETCODE.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../mark-09e88c2c.min.js"></script>
+        <script src="../searcher-c2a407aa.js"></script>
+
+        <script src="../clipboard-1626706a.min.js"></script>
+        <script src="../highlight-abc7f01d.js"></script>
+        <script src="../book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-ac1e5ebd.js";
+            window.path_to_searchindex_js = "searchindex-c8692886.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-9e438da8.js"></script>
+        <script src="toc-b2bf7f58.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -183,7 +183,7 @@
                         <h1 id="server-administration-guide"><a class="header" href="#server-administration-guide">Server Administration Guide</a></h1>
 <blockquote>
 <p><strong>Audience:</strong> Server operators, tournament organizers, competitive league administrators, and content creators / casters.</p>
-<p><strong>Prerequisites:</strong> Familiarity with YAML, command-line tools, and basic server administration. For design rationale behind the configuration system, see D064 in <code>09-DECISIONS.md</code>.</p>
+<p><strong>Prerequisites:</strong> Familiarity with TOML (for server configuration — if you know INI files, you know TOML), command-line tools, and basic server administration. For design rationale behind the configuration system, see D064 in <code>decisions/09a-foundation.md</code> and D067 for the TOML/YAML format split.</p>
 <p><strong>Status:</strong> This guide describes the <em>planned</em> configuration system. Iron Curtain is in the design phase — no implementation exists yet. All examples show intended behavior.</p>
 </blockquote>
 <hr>
@@ -202,7 +202,7 @@
 </tbody>
 </table>
 </div>
-<p>Regular players do not need this guide. Player-facing settings (game speed, graphics, audio, keybinds) are configured through the in-game settings menu and <code>settings.yaml</code> — see <code>02-ARCHITECTURE.md</code> for those.</p>
+<p>Regular players do not need this guide. Player-facing settings (game speed, graphics, audio, keybinds) are configured through the in-game settings menu and <code>settings.toml</code> — see <code>02-ARCHITECTURE.md</code> for those.</p>
 <hr>
 <h2 id="quick-start"><a class="header" href="#quick-start">Quick Start</a></h2>
 <h3 id="running-a-relay-server-with-defaults"><a class="header" href="#running-a-relay-server-with-defaults">Running a Relay Server with Defaults</a></h3>
@@ -217,23 +217,23 @@
 <li>All default match rules, ranking, and anti-cheat settings</li>
 </ul>
 <h3 id="creating-your-first-configuration"><a class="header" href="#creating-your-first-configuration">Creating Your First Configuration</a></h3>
-<p>To customize, create a <code>server_config.yaml</code> in the server’s working directory:</p>
-<pre><code class="language-yaml"># server_config.yaml — only override what you need to change
-relay:
-  max_connections: 200
-  max_games: 50
+<p>To customize, create a <code>server_config.toml</code> in the server’s working directory:</p>
+<pre><code class="language-toml"># server_config.toml — only override what you need to change
+[relay]
+max_connections = 200
+max_games = 50
 </code></pre>
 <p>Any parameter you omit uses its compiled default. You never need to specify the full schema — only your overrides.</p>
 <p>Start the server with a specific config file:</p>
-<pre><code class="language-bash">./relay-server --config /path/to/server_config.yaml
+<pre><code class="language-bash">./relay-server --config /path/to/server_config.toml
 </code></pre>
 <h3 id="validating-a-configuration"><a class="header" href="#validating-a-configuration">Validating a Configuration</a></h3>
 <p>Before deploying a new config, validate it without starting the server:</p>
-<pre><code class="language-bash">ic server validate-config /path/to/server_config.yaml
+<pre><code class="language-bash">ic server validate-config /path/to/server_config.toml
 </code></pre>
 <p>This checks for:</p>
 <ul>
-<li>YAML syntax errors</li>
+<li>TOML syntax errors</li>
 <li>Unknown keys (with suggestions for typos)</li>
 <li>Out-of-range values (reports which values will be clamped)</li>
 <li>Cross-parameter inconsistencies (e.g., <code>matchmaking.initial_range</code> &gt; <code>matchmaking.max_range</code>)</li>
@@ -250,13 +250,13 @@ relay:
 │ Layer 2: Environment Variables         │  IC_RELAY_TICK_DEADLINE_MS=100
 │ Override config file per-value.        │  Docker-friendly.
 ├────────────────────────────────────────┤
-│ Layer 1: server_config.yaml            │  relay:
-│ Single file, all subsystems.           │    tick_deadline_ms: 100
+│ Layer 1: server_config.toml            │  [relay]
+│ Single file, all subsystems.           │  tick_deadline_ms = 100
 ├────────────────────────────────────────┤
 │ Layer 0: Compiled Defaults             │  (built into the binary)
 └────────────────────────────────────────┘
 </code></pre>
-<p><strong>Rule:</strong> Each layer overrides the one below it. A runtime cvar always wins. An environment variable overrides the YAML file. The YAML file overrides compiled defaults.</p>
+<p><strong>Rule:</strong> Each layer overrides the one below it. A runtime cvar always wins. An environment variable overrides the TOML file. The TOML file overrides compiled defaults.</p>
 <h3 id="environment-variable-naming"><a class="header" href="#environment-variable-naming">Environment Variable Naming</a></h3>
 <p>Every cvar maps to an environment variable by:</p>
 <ol>
@@ -283,9 +283,9 @@ relay:
 /get relay.max_games
 /list relay.*
 </code></pre>
-<p>Runtime changes persist until the server restarts — they are not written back to the YAML file. This is intentional: runtime adjustments are for in-the-moment tuning, not permanent policy changes.</p>
+<p>Runtime changes persist until the server restarts — they are not written back to the TOML file. This is intentional: runtime adjustments are for in-the-moment tuning, not permanent policy changes.</p>
 <h3 id="hot-reload"><a class="header" href="#hot-reload">Hot Reload</a></h3>
-<p>Reload <code>server_config.yaml</code> without restarting:</p>
+<p>Reload <code>server_config.toml</code> without restarting:</p>
 <ul>
 <li><strong>Unix:</strong> Send <code>SIGHUP</code> to the relay process</li>
 <li><strong>Any platform:</strong> Use the <code>/reload_config</code> admin console command</li>
@@ -331,7 +331,7 @@ relay:
 </ul>
 <hr>
 <h2 id="subsystem-reference"><a class="header" href="#subsystem-reference">Subsystem Reference</a></h2>
-<p>Each subsystem section below explains: what the parameters control, when you would change them, and recommended values for common scenarios. For the complete parameter registry with types and ranges, see D064 in <code>09-DECISIONS.md</code>.</p>
+<p>Each subsystem section below explains: what the parameters control, when you would change them, and recommended values for common scenarios. For the complete parameter registry with types and ranges, see D064 in <code>decisions/09f-tools.md</code>.</p>
 <h3 id="relay-server-relay"><a class="header" href="#relay-server-relay">Relay Server (<code>relay.*</code>)</a></h3>
 <p>The relay server accepts player connections, orders and forwards game data between players, and enforces protocol-level rules. These parameters control the relay’s resource limits and timing behavior.</p>
 <h4 id="connection-management"><a class="header" href="#connection-management">Connection Management</a></h4>
@@ -759,26 +759,26 @@ Time = 240s: Search ±500 (max_range reached)
 Time = 300s: Accept any match (desperation)
 </code></pre>
 <p><strong>Small community tuning:</strong> The most common issue is long queue times due to low population. Address this by:</p>
-<pre><code class="language-yaml">matchmaking:
-  initial_range: 200        # Wider initial search
-  widen_step: 100            # Expand faster
-  widen_interval_secs: 15    # Expand more often
-  max_range: 1000            # Search much wider
-  desperation_timeout_secs: 120  # Accept any match after 2 min
-  min_match_quality: 0.1     # Accept lower quality matches
+<pre><code class="language-toml">[matchmaking]
+initial_range = 200           # Wider initial search
+widen_step = 100              # Expand faster
+widen_interval_secs = 15      # Expand more often
+max_range = 1000              # Search much wider
+desperation_timeout_secs = 120   # Accept any match after 2 min
+min_match_quality = 0.1       # Accept lower quality matches
 </code></pre>
 <p><strong>Competitive league tuning:</strong> Prioritize match quality over queue time:</p>
-<pre><code class="language-yaml">matchmaking:
-  initial_range: 75
-  widen_step: 25
-  widen_interval_secs: 45
-  max_range: 300
-  desperation_timeout_secs: 600  # Wait up to 10 min
-  min_match_quality: 0.5         # Require higher quality
+<pre><code class="language-toml">[matchmaking]
+initial_range = 75
+widen_step = 25
+widen_interval_secs = 45
+max_range = 300
+desperation_timeout_secs = 600   # Wait up to 10 min
+min_match_quality = 0.5          # Require higher quality
 </code></pre>
 <hr>
 <h3 id="ai-engine-tuning-ai"><a class="header" href="#ai-engine-tuning-ai">AI Engine Tuning (<code>ai.*</code>)</a></h3>
-<p>The AI personality system (aggression, expansion, build orders) is configured through YAML files in the game module, not through <code>server_config.yaml</code>. D064 exposes only the engine-level AI performance budget and evaluation frequencies, which sit below the behavioral layer.</p>
+<p>The AI personality system (aggression, expansion, build orders) is configured through YAML files in the game module, not through <code>server_config.toml</code>. D064 exposes only the engine-level AI performance budget and evaluation frequencies, which sit below the behavioral layer.</p>
 <div class="table-wrapper">
 <table>
 <thead>
@@ -818,17 +818,17 @@ Time = 300s: Accept any match (desperation)
 </div>
 <p><strong>Enabling Grafana dashboards:</strong></p>
 <p>Iron Curtain supports optional OTEL (OpenTelemetry) export for professional monitoring. To enable:</p>
-<pre><code class="language-yaml">telemetry:
-  otel_export: true
-  otel_endpoint: "http://otel-collector:4317"
-  sampling_rate: 1.0
+<pre><code class="language-toml">[telemetry]
+otel_export = true
+otel_endpoint = "http://otel-collector:4317"
+sampling_rate = 1.0
 </code></pre>
 <p>This sends metrics and traces to an OTEL collector, which can forward to Prometheus (metrics), Jaeger (traces), and Loki (logs) for visualization in Grafana.</p>
 <p><strong>For high-traffic servers:</strong> Lower <code>sampling_rate</code> to 0.1–0.5 to reduce telemetry volume. This samples only a percentage of events while maintaining statistical accuracy.</p>
 <p><strong>For long-running analysis servers:</strong></p>
-<pre><code class="language-yaml">telemetry:
-  max_db_size_mb: 5000     # 5 GB
-  retention_days: -1        # Size-based pruning only
+<pre><code class="language-toml">[telemetry]
+max_db_size_mb = 5000      # 5 GB
+retention_days = -1        # Size-based pruning only
 </code></pre>
 <hr>
 <h3 id="database-tuning-db"><a class="header" href="#database-tuning-db">Database Tuning (<code>db.*</code>)</a></h3>
@@ -885,14 +885,14 @@ Time = 300s: Accept any match (desperation)
 <h3 id="compression-compression"><a class="header" href="#compression-compression">Compression (<code>compression.*</code>)</a></h3>
 <p>Iron Curtain uses LZ4 compression by default for saves, replays, and snapshots. Server operators can tune compression levels and, for advanced use cases, the individual algorithm parameters.</p>
 <p><strong>Basic configuration</strong> (compression levels per context):</p>
-<pre><code class="language-yaml">compression:
-  save_level: balanced       # balanced, fastest, compact
-  replay_level: fastest      # fastest for low latency during recording
-  autosave_level: fastest
-  snapshot_level: fastest    # reconnection snapshots
-  workshop_level: compact    # maximize compression for distribution
+<pre><code class="language-toml">[compression]
+save_level = "balanced"        # balanced, fastest, compact
+replay_level = "fastest"       # fastest for low latency during recording
+autosave_level = "fastest"
+snapshot_level = "fastest"     # reconnection snapshots
+workshop_level = "compact"     # maximize compression for distribution
 </code></pre>
-<p><strong>Advanced configuration:</strong> The 21 parameters in <code>compression.advanced.*</code> are documented in D063 in <code>09-DECISIONS.md</code>. Most operators never need to touch these. The compression level presets (fastest/balanced/compact) set appropriate values automatically.</p>
+<p><strong>Advanced configuration:</strong> The 21 parameters in <code>compression.advanced.*</code> are documented in D063 in <code>decisions/09f-tools.md</code>. Most operators never need to touch these. The compression level presets (fastest/balanced/compact) set appropriate values automatically.</p>
 <p><strong>When to use advanced compression tuning:</strong></p>
 <ul>
 <li>You operate a large-scale replay archive and need to minimize storage</li>
@@ -913,7 +913,7 @@ Time = 300s: Accept any match (desperation)
 <li>Surrender and remake votes disabled (admin decides)</li>
 <li>Sensitive anti-cheat (review all upsets)</li>
 </ul>
-<pre><code class="language-bash">./relay-server --config profiles/tournament-lan.yaml
+<pre><code class="language-bash">./relay-server --config profiles/tournament-lan.toml
 </code></pre>
 <h3 id="casual-community"><a class="header" href="#casual-community">Casual Community</a></h3>
 <p><strong>Purpose:</strong> Relaxed rules for a friendly community. Fun-first. Generous timeouts.</p>
@@ -926,7 +926,7 @@ Time = 300s: Accept any match (desperation)
 <li>Longer seasons with fewer placement matches</li>
 <li>Wide matchmaking range (small population)</li>
 </ul>
-<pre><code class="language-bash">./relay-server --config profiles/casual-community.yaml
+<pre><code class="language-bash">./relay-server --config profiles/casual-community.toml
 </code></pre>
 <h3 id="competitive-league"><a class="header" href="#competitive-league">Competitive League</a></h3>
 <p><strong>Purpose:</strong> Strict ranked play with custom rating parameters for the league’s skill distribution.</p>
@@ -940,7 +940,7 @@ Time = 300s: Accept any match (desperation)
 <li>Tight matchmaking with high quality floor</li>
 <li>Sensitive anti-cheat</li>
 </ul>
-<pre><code class="language-bash">./relay-server --config profiles/competitive-league.yaml
+<pre><code class="language-bash">./relay-server --config profiles/competitive-league.toml
 </code></pre>
 <h3 id="training--practice"><a class="header" href="#training--practice">Training / Practice</a></h3>
 <p><strong>Purpose:</strong> For practice rooms, AI training, mod development, and debugging.</p>
@@ -953,7 +953,7 @@ Time = 300s: Accept any match (desperation)
 <li>Generous AI budget</li>
 <li>Large telemetry database, no auto-pruning</li>
 </ul>
-<pre><code class="language-bash">./relay-server --config profiles/training.yaml
+<pre><code class="language-bash">./relay-server --config profiles/training.toml
 </code></pre>
 <hr>
 <h2 id="docker--container-deployment"><a class="header" href="#docker--container-deployment">Docker &amp; Container Deployment</a></h2>
@@ -968,14 +968,14 @@ services:
       - "7000:7000/udp"
       - "7001:7001/tcp"
     volumes:
-      - ./server_config.yaml:/etc/ic/server_config.yaml:ro
+      - ./server_config.toml:/etc/ic/server_config.toml:ro
       - relay-data:/var/lib/ic
     environment:
       IC_RELAY_MAX_CONNECTIONS: "2000"
       IC_RELAY_MAX_GAMES: "200"
       IC_TELEMETRY_OTEL_EXPORT: "true"
       IC_TELEMETRY_OTEL_ENDPOINT: "http://otel-collector:4317"
-    command: ["--config", "/etc/ic/server_config.yaml"]
+    command: ["--config", "/etc/ic/server_config.toml"]
 
   otel-collector:
     image: otel/opentelemetry-collector:latest
@@ -1005,27 +1005,28 @@ services:
       IC_RELAY_MAX_CONNECTIONS_PER_IP: "10"
 </code></pre>
 <h3 id="kubernetes--helm"><a class="header" href="#kubernetes--helm">Kubernetes / Helm</a></h3>
-<p>For Kubernetes deployments, mount <code>server_config.yaml</code> as a ConfigMap and use environment variables for per-pod overrides:</p>
+<p>For Kubernetes deployments, mount <code>server_config.toml</code> as a ConfigMap and use environment variables for per-pod overrides:</p>
 <pre><code class="language-yaml"># configmap.yaml
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: ic-relay-config
 data:
-  server_config.yaml: |
-    relay:
-      max_connections: 5000
-      max_games: 1000
-    telemetry:
-      otel_export: true
-      otel_endpoint: "http://otel-collector.monitoring:4317"
+  server_config.toml: |
+    [relay]
+    max_connections = 5000
+    max_games = 1000
+
+    [telemetry]
+    otel_export = true
+    otel_endpoint = "http://otel-collector.monitoring:4317"
 </code></pre>
 <pre><code class="language-yaml"># deployment.yaml (abbreviated)
 spec:
   containers:
     - name: relay
       image: ghcr.io/iron-curtain/relay-server:latest
-      args: ["--config", "/etc/ic/server_config.yaml"]
+      args: ["--config", "/etc/ic/server_config.toml"]
       volumeMounts:
         - name: config
           mountPath: /etc/ic
@@ -1043,7 +1044,7 @@ spec:
 <ol>
 <li>
 <p><strong>Validate your config:</strong></p>
-<pre><code class="language-bash">ic server validate-config tournament-config.yaml
+<pre><code class="language-bash">ic server validate-config tournament-config.toml
 </code></pre>
 </li>
 <li>
@@ -1092,8 +1093,8 @@ spec:
 <h2 id="security-hardening"><a class="header" href="#security-hardening">Security Hardening</a></h2>
 <h3 id="configuration-file-protection"><a class="header" href="#configuration-file-protection">Configuration File Protection</a></h3>
 <pre><code class="language-bash"># Restrict access to the config file
-chmod 600 server_config.yaml
-chown icrelay:icrelay server_config.yaml
+chmod 600 server_config.toml
+chown icrelay:icrelay server_config.toml
 </code></pre>
 <p>The config file may contain OTEL endpoints or other infrastructure details. Treat it as sensitive.</p>
 <h3 id="connection-limits"><a class="header" href="#connection-limits">Connection Limits</a></h3>
@@ -1162,15 +1163,15 @@ chown icrelay:icrelay server_config.yaml
 <hr>
 <h2 id="troubleshooting"><a class="header" href="#troubleshooting">Troubleshooting</a></h2>
 <h3 id="common-issues"><a class="header" href="#common-issues">Common Issues</a></h3>
-<h4 id="server-wont-start--yaml-parse-error"><a class="header" href="#server-wont-start--yaml-parse-error">“Server won’t start — YAML parse error”</a></h4>
-<p>A syntax error in <code>server_config.yaml</code>. Run validation first:</p>
-<pre><code class="language-bash">ic server validate-config server_config.yaml
+<h4 id="server-wont-start--toml-parse-error"><a class="header" href="#server-wont-start--toml-parse-error">“Server won’t start — TOML parse error”</a></h4>
+<p>A syntax error in <code>server_config.toml</code>. Run validation first:</p>
+<pre><code class="language-bash">ic server validate-config server_config.toml
 </code></pre>
 <p>Common causes:</p>
 <ul>
-<li>Tabs instead of spaces (YAML requires spaces)</li>
-<li>Missing colon after a key</li>
-<li>Incorrect nesting / indentation</li>
+<li>Missing <code>=</code> between key and value</li>
+<li>Unclosed string quotes</li>
+<li>Duplicate section headers</li>
 </ul>
 <h4 id="unknown-key-warning-at-startup"><a class="header" href="#unknown-key-warning-at-startup">“Unknown key warning at startup”</a></h4>
 <pre><code>WARN: unknown key 'rleay.max_games', did you mean 'relay.max_games'?
@@ -1182,39 +1183,38 @@ chown icrelay:icrelay server_config.yaml
 <p>A parameter is outside its valid range. The server starts with the clamped value. Check D064’s parameter registry for the valid range and adjust your config.</p>
 <h4 id="players-experiencing-lag-with-default-settings"><a class="header" href="#players-experiencing-lag-with-default-settings">“Players experiencing lag with default settings”</a></h4>
 <p>Check your player base’s typical latency. If most players have &gt; 80ms ping:</p>
-<pre><code class="language-yaml">relay:
-  tick_deadline_ms: 150    # or even 200 for high-latency regions
+<pre><code class="language-toml">[relay]
+tick_deadline_ms = 150     # or even 200 for high-latency regions
 </code></pre>
 <p>The adaptive run-ahead system handles most latency, but a tight tick deadline can cause unnecessary order drops for high-ping players.</p>
 <h4 id="matchmaking-queues-are-too-long"><a class="header" href="#matchmaking-queues-are-too-long">“Matchmaking queues are too long”</a></h4>
 <p>Small population problem. Widen the search parameters:</p>
-<pre><code class="language-yaml">matchmaking:
-  initial_range: 200
-  widen_step: 100
-  max_range: 1000
-  desperation_timeout_secs: 120
-  min_match_quality: 0.1
+<pre><code class="language-toml">[matchmaking]
+initial_range = 200
+widen_step = 100
+max_range = 1000
+desperation_timeout_secs = 120
+min_match_quality = 0.1
 </code></pre>
 <h4 id="anti-cheat-flagging-too-many-legitimate-players"><a class="header" href="#anti-cheat-flagging-too-many-legitimate-players">“Anti-cheat flagging too many legitimate players”</a></h4>
 <p>Raise thresholds:</p>
-<pre><code class="language-yaml">anticheat:
-  ranked_upset_threshold: 400
-  behavioral_flag_score: 0.6
-  new_player_win_chance: 0.85
+<pre><code class="language-toml">[anticheat]
+ranked_upset_threshold = 400
+behavioral_flag_score = 0.6
+new_player_win_chance = 0.85
 </code></pre>
 <h4 id="telemetrydb-growing-too-large"><a class="header" href="#telemetrydb-growing-too-large">“telemetry.db growing too large”</a></h4>
-<pre><code class="language-yaml">telemetry:
-  max_db_size_mb: 200       # Lower the cap
-  retention_days: 14         # Prune older data
-  sampling_rate: 0.5         # Sample only 50% of events
+<pre><code class="language-toml">[telemetry]
+max_db_size_mb = 200        # Lower the cap
+retention_days = 14         # Prune older data
+sampling_rate = 0.5         # Sample only 50% of events
 </code></pre>
 <h4 id="reconnecting-players-take-too-long-to-catch-up"><a class="header" href="#reconnecting-players-take-too-long-to-catch-up">“Reconnecting players take too long to catch up”</a></h4>
 <p>Increase catchup aggressiveness (at the cost of more stutter during reconnection):</p>
-<pre><code class="language-yaml">relay:
-  catchup:
-    max_ticks_per_frame: 60   # Double default
-    sim_budget_pct: 90
-    render_budget_pct: 10
+<pre><code class="language-toml">[relay.catchup]
+max_ticks_per_frame = 60    # Double default
+sim_budget_pct = 90
+render_budget_pct = 10
 </code></pre>
 <hr>
 <h2 id="cli-reference"><a class="header" href="#cli-reference">CLI Reference</a></h2>
@@ -1241,7 +1241,7 @@ chown icrelay:icrelay server_config.yaml
 <tr><td><code>/set &lt;cvar&gt; &lt;value&gt;</code></td><td>Set a cvar value at runtime</td></tr>
 <tr><td><code>/get &lt;cvar&gt;</code></td><td>Get current cvar value</td></tr>
 <tr><td><code>/list &lt;pattern&gt;</code></td><td>List cvars matching a glob pattern</td></tr>
-<tr><td><code>/reload_config</code></td><td>Hot-reload <code>server_config.yaml</code></td></tr>
+<tr><td><code>/reload_config</code></td><td>Hot-reload <code>server_config.toml</code></td></tr>
 </tbody>
 </table>
 </div>
@@ -1288,17 +1288,17 @@ chown icrelay:icrelay server_config.yaml
 <tr><th>Topic</th><th>Document</th></tr>
 </thead>
 <tbody>
-<tr><td>Full parameter registry with types, ranges, defaults</td><td>D064 in <code>09-DECISIONS.md</code></td></tr>
-<tr><td>Console / cvar system design</td><td>D058 in <code>09-DECISIONS.md</code></td></tr>
-<tr><td>Relay server architecture</td><td>D007 in <code>09-DECISIONS.md</code> and <code>03-NETCODE.md</code></td></tr>
-<tr><td>Netcode parameter philosophy (why most things are not player-configurable)</td><td>D060 in <code>09-DECISIONS.md</code></td></tr>
-<tr><td>Compression tuning</td><td>D063 in <code>09-DECISIONS.md</code></td></tr>
-<tr><td>Ranked matchmaking &amp; Glicko-2</td><td>D055 in <code>09-DECISIONS.md</code></td></tr>
-<tr><td>Community server architecture &amp; SCRs</td><td>D052 in <code>09-DECISIONS.md</code></td></tr>
-<tr><td>Telemetry &amp; observability</td><td>D031 in <code>09-DECISIONS.md</code></td></tr>
-<tr><td>AI behavior presets</td><td>D043 in <code>09-DECISIONS.md</code></td></tr>
-<tr><td>SQLite per-database PRAGMA configuration</td><td>D034 in <code>09-DECISIONS.md</code></td></tr>
-<tr><td>Workshop &amp; P2P distribution</td><td>D049 in <code>09-DECISIONS.md</code></td></tr>
+<tr><td>Full parameter registry with types, ranges, defaults</td><td>D064 in <code>decisions/09f-tools.md</code></td></tr>
+<tr><td>Console / cvar system design</td><td>D058 in <code>decisions/09g-interaction.md</code></td></tr>
+<tr><td>Relay server architecture</td><td>D007 in <code>decisions/09b-networking.md</code> and <code>03-NETCODE.md</code></td></tr>
+<tr><td>Netcode parameter philosophy (why most things are not player-configurable)</td><td>D060 in <code>decisions/09b-networking.md</code></td></tr>
+<tr><td>Compression tuning</td><td>D063 in <code>decisions/09f-tools.md</code></td></tr>
+<tr><td>Ranked matchmaking &amp; Glicko-2</td><td>D055 in <code>decisions/09b-networking.md</code></td></tr>
+<tr><td>Community server architecture &amp; SCRs</td><td>D052 in <code>decisions/09b-networking.md</code></td></tr>
+<tr><td>Telemetry &amp; observability</td><td>D031 in <code>decisions/09e-community.md</code></td></tr>
+<tr><td>AI behavior presets</td><td>D043 in <code>decisions/09d-gameplay.md</code></td></tr>
+<tr><td>SQLite per-database PRAGMA configuration</td><td>D034 in <code>decisions/09e-community.md</code></td></tr>
+<tr><td>Workshop &amp; P2P distribution</td><td>D049 in <code>decisions/09e-community.md</code></td></tr>
 <tr><td>Security &amp; threat model</td><td><code>06-SECURITY.md</code></td></tr>
 </tbody>
 </table>
@@ -1314,6 +1314,9 @@ chown icrelay:icrelay server_config.yaml
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                             </a>
 
+                            <a rel="next prefetch" href="16-CODING-STANDARDS.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
 
                         <div style="clear: both"></div>
                     </nav>
@@ -1325,6 +1328,9 @@ chown icrelay:icrelay server_config.yaml
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                     </a>
 
+                    <a rel="next prefetch" href="16-CODING-STANDARDS.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
             </nav>
 
         </div>
