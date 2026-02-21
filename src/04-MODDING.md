@@ -431,6 +431,7 @@ Iron Curtain's Lua API is a **strict superset** of OpenRA's 16 global objects. A
 | `Workshop`    | Mod metadata queries                                                                                                                                                                                                                                                                                                       |
 | `LLM`         | LLM integration hooks (Phase 7)                                                                                                                                                                                                                                                                                            |
 | `Achievement` | Achievement trigger/query API (D036)                                                                                                                                                                                                                                                                                       |
+| `Tutorial`    | Tutorial step management, contextual hints, UI highlighting, camera focus, build/order restrictions for pedagogical pacing (D065). Available in all game modes — modders use it to build tutorial sequences in custom campaigns. See `decisions/09g-interaction.md` § D065 for the full API.                               |
 | `Ai`          | AI scripting primitives (Phase 4) — force composition, resource ratios, patrol/attack commands; inspired by Stratagus's proven Lua AI API (`AiForce`, `AiSetCollect`, `AiWait` pattern — see `research/stratagus-stargus-opencraft-analysis.md`). Enables Tier 2 modders to write custom AI behaviors without Tier 3 WASM. |
 
 Each actor reference exposes properties matching its components (`.Health`, `.Location`, `.Owner`, `.Move()`, `.Attack()`, `.Stop()`, `.Guard()`, `.Deploy()`, etc.) — identical to OpenRA's actor property groups.
@@ -2248,6 +2249,13 @@ my-mod/
 ├── missions/                 # campaign missions
 │   ├── allied-01.yaml
 │   └── allied-01.lua
+├── campaigns/                # campaign definitions (D021)
+│   └── tutorial/
+│       └── campaign.yaml
+├── hints/                    # contextual hint definitions (D065)
+│   └── mod-hints.yaml
+├── tips/                     # post-game tip definitions (D065)
+│   └── mod-tips.yaml
 ├── scripts/                  # Tier 2: Lua scripts
 │   ├── abilities/
 │   └── triggers/
@@ -2261,6 +2269,10 @@ my-mod/
 ├── templates/                # Tera mission/scene templates
 └── README.md                 # human-readable mod description
 ```
+
+**Contextual hints (`hints/`):** Modders define YAML-driven gameplay hints that appear at point-of-need during any game mode. Hints are merged with the base game's hints at load time. The full schema — trigger types, suppression rules, experience profile targeting, and SQLite tracking — is documented in `decisions/09g-interaction.md` § D065 Layer 2.
+
+**Post-game tips (`tips/`):** YAML-driven rule-based tips shown on the post-game stats screen, matching gameplay event patterns. See `decisions/09g-interaction.md` § D065 Layer 5.
 
 ### Mod Templates (via `cargo-generate`)
 

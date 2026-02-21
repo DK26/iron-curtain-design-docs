@@ -308,6 +308,181 @@ adaptive:
 
 This is not AI-adaptive difficulty (that's D016/`ic-llm`). This is **designer-authored conditional logic** expressed in YAML — the campaign reacts to the player's cumulative performance without any LLM involvement.
 
+### Tutorial Campaigns — Progressive Element Introduction (D065)
+
+The campaign system supports **tutorial campaigns** — campaigns designed to teach game mechanics (or mod mechanics) one at a time. Tutorial campaigns use everything above (branching graphs, state persistence, adaptive difficulty) plus the `Tutorial` Lua global (D065) to restrict and reveal gameplay elements progressively.
+
+This pattern works for the built-in Commander School and for modder-created tutorial campaigns. A modder introducing custom units, buildings, or mechanics in a total conversion can use the same infrastructure.
+
+#### End-to-End Example: "Scorched Earth" Mod Tutorial
+
+A modder has created a "Scorched Earth" mod that adds a flamethrower infantry unit, an incendiary airstrike superweapon, and a fire-spreading terrain mechanic. They want a 4-mission tutorial that introduces each new element before the player encounters it in the main campaign.
+
+**Campaign definition:**
+
+```yaml
+# mods/scorched-earth/campaigns/tutorial/campaign.yaml
+campaign:
+  id: scorched_tutorial
+  title: "Scorched Earth — Field Training"
+  description: "Learn the fire mechanics before you burn everything down"
+  start_mission: se_01
+  category: tutorial           # appears under Campaign → Tutorial
+  requires_mod: scorched-earth
+  icon: scorched_tutorial_icon
+
+  persistent_state:
+    unit_roster: false           # no carryover for tutorial missions
+    custom_flags:
+      mechanics_learned: []      # tracks which mod mechanics the player has used
+
+  missions:
+    se_01:
+      map: missions/scorched-tutorial/01-meet-the-pyro
+      briefing: briefings/scorched/01.yaml
+      outcomes:
+        pass:
+          next: se_02
+          state_effects:
+            append_flag: { mechanics_learned: [flamethrower, fire_spread] }
+        skip:
+          next: se_02
+          state_effects:
+            append_flag: { mechanics_learned: [flamethrower, fire_spread] }
+
+    se_02:
+      map: missions/scorched-tutorial/02-controlled-burn
+      briefing: briefings/scorched/02.yaml
+      outcomes:
+        pass:
+          next: se_03
+          state_effects:
+            append_flag: { mechanics_learned: [firebreak, extinguish] }
+        struggle:
+          next: se_02  # retry the same mission with more resources
+          adaptive:
+            on_previous_defeat:
+              bonus_units: [fire_truck, fire_truck]
+        skip:
+          next: se_03
+
+    se_03:
+      map: missions/scorched-tutorial/03-call-the-airstrike
+      briefing: briefings/scorched/03.yaml
+      outcomes:
+        pass:
+          next: se_04
+          state_effects:
+            append_flag: { mechanics_learned: [incendiary_airstrike] }
+        skip:
+          next: se_04
+
+    se_04:
+      map: missions/scorched-tutorial/04-trial-by-fire
+      briefing: briefings/scorched/04.yaml
+      outcomes:
+        pass:
+          description: "Training complete — you're ready for the Scorched Earth campaign"
+```
+
+**Mission 01 Lua script — introducing the flamethrower and fire spread:**
+
+```lua
+-- mods/scorched-earth/missions/scorched-tutorial/01-meet-the-pyro.lua
+
+function OnMissionStart()
+    local player = Player.GetPlayer("GoodGuy")
+    local enemy = Player.GetPlayer("BadGuy")
+
+    -- Restrict everything except the new flame units
+    Tutorial.RestrictSidebar(true)
+    Tutorial.RestrictOrders({"move", "stop", "attack"})
+
+    -- Spawn player's flame squad
+    local pyros = Actor.Create("flame_trooper", player, spawn_south, { count = 3 })
+
+    -- Spawn enemy bunker (wood — flammable)
+    local bunker = Actor.Create("wood_bunker", enemy, bunker_pos)
+
+    -- Step 1: Move to position
+    Tutorial.SetStep("approach", {
+        title = "Deploy the Pyros",
+        hint = "Select your Flame Troopers and move them toward the enemy bunker.",
+        focus_area = bunker_pos,
+        eva_line = "new_unit_flame_trooper",
+        completion = { type = "move_to", area = approach_zone }
+    })
+end
+
+function OnStepComplete(step_id)
+    if step_id == "approach" then
+        -- Step 2: Attack the bunker
+        Tutorial.SetStep("ignite", {
+            title = "Set It Ablaze",
+            hint = "Right-click the wooden bunker to attack it. " ..
+                   "Flame Troopers set structures on fire — watch it spread.",
+            highlight_ui = "command_bar",
+            completion = { type = "action", action = "attack", target_type = "wood_bunker" }
+        })
+
+    elseif step_id == "ignite" then
+        -- Step 3: Observe fire spread (no player action needed — just watch)
+        Tutorial.ShowHint(
+            "Fire spreads to adjacent flammable tiles. " ..
+            "Trees, wooden structures, and dry grass will catch fire. " ..
+            "Stone and water are fireproof.", {
+            title = "Fire Spread",
+            duration = 10,
+            position = "near_building",
+            icon = "hint_fire",
+        })
+
+        -- Wait for the fire to spread to at least 3 tiles
+        Tutorial.SetStep("watch_spread", {
+            title = "Watch It Burn",
+            hint = "Observe the fire spreading to nearby trees.",
+            completion = { type = "custom", lua_condition = "GetFireTileCount() >= 3" }
+        })
+
+    elseif step_id == "watch_spread" then
+        Tutorial.ShowHint("Fire is a powerful tool — but it burns friend and foe alike. " ..
+                          "Be careful where you aim.", {
+            title = "A Word of Caution",
+            duration = 8,
+            position = "screen_center",
+        })
+        Trigger.AfterDelay(DateTime.Seconds(10), function()
+            Campaign.complete("pass")
+        end)
+    end
+end
+```
+
+**Mod-specific hints for in-game discovery:**
+
+```yaml
+# mods/scorched-earth/hints/fire-hints.yaml
+hints:
+  - id: se_fire_near_friendly
+    title: "Watch Your Flames"
+    text: "Fire is spreading toward your own buildings! Move units away or build a firebreak."
+    category: mod_specific
+    trigger:
+      type: custom
+      lua_condition: "IsFireNearFriendlyBuilding(5)"  # within 5 cells
+    suppression:
+      mastery_action: build_firebreak
+      mastery_threshold: 2
+      cooldown_seconds: 120
+      max_shows: 5
+    experience_profiles: [all]
+    priority: high
+    position: near_building
+    eva_line = se_fire_warning
+```
+
+This pattern scales to any complexity — the modder uses the same YAML campaign format for a 3-mission mod tutorial that the engine uses for its 10-mission Commander School. The `Tutorial` Lua API, `hints.yaml` schema, and scenario editor Tutorial modules (D038) all work identically for first-party and third-party content.
+
 ### LLM Campaign Generation
 
 The LLM (`ic-llm`) can generate entire campaign graphs, not just individual missions:

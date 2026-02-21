@@ -182,7 +182,7 @@ When you need deeper detail, read the specific design doc. Sub-documents are lis
 | — Decisions: Pathfinding, balance, QoL, trait subsystems, AI presets, LLM AI, render modes, extended switchability                       | `src/decisions/09d-gameplay.md`        |
 | — Decisions: Workshop, telemetry, SQLite, achievements, governance, premium, profiles, data backup                                       | `src/decisions/09e-community.md`       |
 | — Decisions: LLM missions, scenario editor, asset studio, LLM config, foreign replay, skill library                                      | `src/decisions/09f-tools.md`           |
-| — Decisions: Command console, communication (chat, voice, pings)                                                                         | `src/decisions/09g-interaction.md`     |
+| — Decisions: Command console, communication (chat, voice, pings), tutorial/new player experience                                         | `src/decisions/09g-interaction.md`     |
 | Efficiency pyramid, profiling, performance targets, benchmarks                                                                           | `src/10-PERFORMANCE.md`                |
 | OpenRA feature catalog (~700 traits), gap analysis, migration mapping                                                                    | `src/11-OPENRA-FEATURES.md`            |
 | Combined Arms mod migration, Remastered recreation feasibility                                                                           | `src/12-MOD-MIGRATION.md`              |

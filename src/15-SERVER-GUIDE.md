@@ -1103,4 +1103,4 @@ These values are always-on, universally correct, and not exposed as configuratio
 
 ### Complete Parameter Audit
 
-The `PARAMETER-AUDIT.md` file at the repository root catalogs every numeric constant, threshold, and tunable parameter across all design documents (~530+ parameters across 21 categories). It serves as an exhaustive cross-reference between the designed values and their sources.
+The `research/parameter-audit.md` file catalogs every numeric constant, threshold, and tunable parameter across all design documents (~530+ parameters across 21 categories). It serves as an exhaustive cross-reference between the designed values and their sources.
