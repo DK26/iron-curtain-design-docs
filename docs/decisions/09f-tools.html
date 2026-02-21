@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-c8692886.js";
+            window.path_to_searchindex_js = "../searchindex-05559aa2.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-b2bf7f58.js"></script>
@@ -2394,6 +2394,10 @@ Mission init script    — special file that runs once at mission start
 <tr><td><strong>Multiplayer</strong></td><td>Spawn Point</td><td>faction, position</td><td>Player starting location in MP scenarios</td></tr>
 <tr><td><strong>Multiplayer</strong></td><td>Crate Drop</td><td>position, trigger, contents</td><td>Random powerup/crate on trigger</td></tr>
 <tr><td><strong>Multiplayer</strong></td><td>Spectator Bookmark</td><td>position, label, trigger, camera_angle</td><td>Author-defined camera bookmark for spectator/replay mode — marks key locations and dramatic moments. Spectators can cycle bookmarks with hotkeys. Replays auto-cut to bookmarks when triggered.</td></tr>
+<tr><td><strong>Tutorial</strong></td><td>Tutorial Step</td><td>step_id, title, hint, completion, focus_area, highlight_ui, eva_line</td><td>Defines a tutorial step with instructional overlay, completion condition, and optional camera/UI focus. Equivalent to <code>Tutorial.SetStep()</code> in Lua but configurable without scripting. Connects to triggers for step sequencing. (D065)</td></tr>
+<tr><td><strong>Tutorial</strong></td><td>Tutorial Hint</td><td>text, position, duration, icon, eva_line, dismissable</td><td>Shows a one-shot contextual hint. Equivalent to <code>Tutorial.ShowHint()</code> in Lua. Connect to a trigger to control when the hint appears. (D065)</td></tr>
+<tr><td><strong>Tutorial</strong></td><td>Tutorial Gate</td><td>allowed_build_types[], allowed_orders[], restrict_sidebar</td><td>Restricts player actions for pedagogical pacing — limits what can be built or ordered until a trigger releases the gate. Equivalent to <code>Tutorial.RestrictBuildOptions()</code> / <code>Tutorial.RestrictOrders()</code> in Lua. (D065)</td></tr>
+<tr><td><strong>Tutorial</strong></td><td>Skill Check</td><td>action_type, target_count, time_limit</td><td>Monitors player performance on a specific action (selection speed, combat accuracy, etc.) and fires success/fail outputs. Used for skill assessment exercises and remedial branching. (D065)</td></tr>
 </tbody>
 </table>
 </div>

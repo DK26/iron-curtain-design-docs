@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-c8692886.js";
+            window.path_to_searchindex_js = "searchindex-05559aa2.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-b2bf7f58.js"></script>
@@ -208,7 +208,7 @@
 <tr><td>09d</td><td><code>decisions/09d-gameplay.md</code></td><td>Decisions: pathfinding, balance, QoL, trait subsystems, AI presets, LLM AI, render modes, extended switchability</td><td>You’re working on gameplay mechanics or AI decisions (D013, D019, D033, D041–D045, D048, D054)</td></tr>
 <tr><td>09e</td><td><code>decisions/09e-community.md</code></td><td>Decisions: Workshop, telemetry, SQLite, achievements, governance, premium content, profiles, data portability</td><td>You’re working on community platform or infrastructure decisions (D030, D031, D034–D037, D046, D049, D053, D061)</td></tr>
 <tr><td>09f</td><td><code>decisions/09f-tools.md</code></td><td>Decisions: LLM missions, scenario editor, asset studio, LLM config, foreign replay, skill library</td><td>You’re working on tools, editor, or LLM decisions (D016, D038, D040, D047, D056, D057)</td></tr>
-<tr><td>09g</td><td><code>decisions/09g-interaction.md</code></td><td>Decisions: command console, communication (chat, voice, pings)</td><td>You’re working on in-game interaction systems (D058, D059)</td></tr>
+<tr><td>09g</td><td><code>decisions/09g-interaction.md</code></td><td>Decisions: command console, communication (chat, voice, pings), tutorial/new player experience</td><td>You’re working on in-game interaction systems (D058, D059, D065)</td></tr>
 <tr><td>10</td><td><code>10-PERFORMANCE.md</code></td><td>Efficiency-first performance philosophy, targets, profiling</td><td>You’re optimizing a system, choosing algorithms, or adding parallelism</td></tr>
 <tr><td>11</td><td><code>11-OPENRA-FEATURES.md</code></td><td>OpenRA feature catalog (~700 traits), gap analysis, migration mapping</td><td>You’re assessing feature parity or planning which systems to build next</td></tr>
 <tr><td>12</td><td><code>12-MOD-MIGRATION.md</code></td><td>Combined Arms mod migration, Remastered recreation feasibility</td><td>You’re validating modding architecture against real-world mods</td></tr>
@@ -6312,6 +6312,7 @@ fingerprint: null  # computed at activation
 <tr><td><code>Workshop</code></td><td>Mod metadata queries</td></tr>
 <tr><td><code>LLM</code></td><td>LLM integration hooks (Phase 7)</td></tr>
 <tr><td><code>Achievement</code></td><td>Achievement trigger/query API (D036)</td></tr>
+<tr><td><code>Tutorial</code></td><td>Tutorial step management, contextual hints, UI highlighting, camera focus, build/order restrictions for pedagogical pacing (D065). Available in all game modes — modders use it to build tutorial sequences in custom campaigns. See <code>decisions/09g-interaction.md</code> § D065 for the full API.</td></tr>
 <tr><td><code>Ai</code></td><td>AI scripting primitives (Phase 4) — force composition, resource ratios, patrol/attack commands; inspired by Stratagus’s proven Lua AI API (<code>AiForce</code>, <code>AiSetCollect</code>, <code>AiWait</code> pattern — see <code>research/stratagus-stargus-opencraft-analysis.md</code>). Enables Tier 2 modders to write custom AI behaviors without Tier 3 WASM.</td></tr>
 </tbody>
 </table>
@@ -7985,6 +7986,13 @@ llm:
 ├── missions/                 # campaign missions
 │   ├── allied-01.yaml
 │   └── allied-01.lua
+├── campaigns/                # campaign definitions (D021)
+│   └── tutorial/
+│       └── campaign.yaml
+├── hints/                    # contextual hint definitions (D065)
+│   └── mod-hints.yaml
+├── tips/                     # post-game tip definitions (D065)
+│   └── mod-tips.yaml
 ├── scripts/                  # Tier 2: Lua scripts
 │   ├── abilities/
 │   └── triggers/
@@ -7998,6 +8006,8 @@ llm:
 ├── templates/                # Tera mission/scene templates
 └── README.md                 # human-readable mod description
 </code></pre>
+<p><strong>Contextual hints (<code>hints/</code>):</strong> Modders define YAML-driven gameplay hints that appear at point-of-need during any game mode. Hints are merged with the base game’s hints at load time. The full schema — trigger types, suppression rules, experience profile targeting, and SQLite tracking — is documented in <code>decisions/09g-interaction.md</code> § D065 Layer 2.</p>
+<p><strong>Post-game tips (<code>tips/</code>):</strong> YAML-driven rule-based tips shown on the post-game stats screen, matching gameplay event patterns. See <code>decisions/09g-interaction.md</code> § D065 Layer 5.</p>
 <h3 id="mod-templates-via-cargo-generate"><a class="header" href="#mod-templates-via-cargo-generate">Mod Templates (via <code>cargo-generate</code>)</a></h3>
 <p><code>ic mod init</code> uses <code>cargo-generate</code>-style templates. Built-in templates:</p>
 <div class="table-wrapper">
@@ -8566,6 +8576,166 @@ adaptive:
       enemy_count_multiplier: 1.3
 </code></pre>
 <p>This is not AI-adaptive difficulty (that’s D016/<code>ic-llm</code>). This is <strong>designer-authored conditional logic</strong> expressed in YAML — the campaign reacts to the player’s cumulative performance without any LLM involvement.</p>
+<h3 id="tutorial-campaigns--progressive-element-introduction-d065"><a class="header" href="#tutorial-campaigns--progressive-element-introduction-d065">Tutorial Campaigns — Progressive Element Introduction (D065)</a></h3>
+<p>The campaign system supports <strong>tutorial campaigns</strong> — campaigns designed to teach game mechanics (or mod mechanics) one at a time. Tutorial campaigns use everything above (branching graphs, state persistence, adaptive difficulty) plus the <code>Tutorial</code> Lua global (D065) to restrict and reveal gameplay elements progressively.</p>
+<p>This pattern works for the built-in Commander School and for modder-created tutorial campaigns. A modder introducing custom units, buildings, or mechanics in a total conversion can use the same infrastructure.</p>
+<h4 id="end-to-end-example-scorched-earth-mod-tutorial"><a class="header" href="#end-to-end-example-scorched-earth-mod-tutorial">End-to-End Example: “Scorched Earth” Mod Tutorial</a></h4>
+<p>A modder has created a “Scorched Earth” mod that adds a flamethrower infantry unit, an incendiary airstrike superweapon, and a fire-spreading terrain mechanic. They want a 4-mission tutorial that introduces each new element before the player encounters it in the main campaign.</p>
+<p><strong>Campaign definition:</strong></p>
+<pre><code class="language-yaml"># mods/scorched-earth/campaigns/tutorial/campaign.yaml
+campaign:
+  id: scorched_tutorial
+  title: "Scorched Earth — Field Training"
+  description: "Learn the fire mechanics before you burn everything down"
+  start_mission: se_01
+  category: tutorial           # appears under Campaign → Tutorial
+  requires_mod: scorched-earth
+  icon: scorched_tutorial_icon
+
+  persistent_state:
+    unit_roster: false           # no carryover for tutorial missions
+    custom_flags:
+      mechanics_learned: []      # tracks which mod mechanics the player has used
+
+  missions:
+    se_01:
+      map: missions/scorched-tutorial/01-meet-the-pyro
+      briefing: briefings/scorched/01.yaml
+      outcomes:
+        pass:
+          next: se_02
+          state_effects:
+            append_flag: { mechanics_learned: [flamethrower, fire_spread] }
+        skip:
+          next: se_02
+          state_effects:
+            append_flag: { mechanics_learned: [flamethrower, fire_spread] }
+
+    se_02:
+      map: missions/scorched-tutorial/02-controlled-burn
+      briefing: briefings/scorched/02.yaml
+      outcomes:
+        pass:
+          next: se_03
+          state_effects:
+            append_flag: { mechanics_learned: [firebreak, extinguish] }
+        struggle:
+          next: se_02  # retry the same mission with more resources
+          adaptive:
+            on_previous_defeat:
+              bonus_units: [fire_truck, fire_truck]
+        skip:
+          next: se_03
+
+    se_03:
+      map: missions/scorched-tutorial/03-call-the-airstrike
+      briefing: briefings/scorched/03.yaml
+      outcomes:
+        pass:
+          next: se_04
+          state_effects:
+            append_flag: { mechanics_learned: [incendiary_airstrike] }
+        skip:
+          next: se_04
+
+    se_04:
+      map: missions/scorched-tutorial/04-trial-by-fire
+      briefing: briefings/scorched/04.yaml
+      outcomes:
+        pass:
+          description: "Training complete — you're ready for the Scorched Earth campaign"
+</code></pre>
+<p><strong>Mission 01 Lua script — introducing the flamethrower and fire spread:</strong></p>
+<pre><code class="language-lua">-- mods/scorched-earth/missions/scorched-tutorial/01-meet-the-pyro.lua
+
+function OnMissionStart()
+    local player = Player.GetPlayer("GoodGuy")
+    local enemy = Player.GetPlayer("BadGuy")
+
+    -- Restrict everything except the new flame units
+    Tutorial.RestrictSidebar(true)
+    Tutorial.RestrictOrders({"move", "stop", "attack"})
+
+    -- Spawn player's flame squad
+    local pyros = Actor.Create("flame_trooper", player, spawn_south, { count = 3 })
+
+    -- Spawn enemy bunker (wood — flammable)
+    local bunker = Actor.Create("wood_bunker", enemy, bunker_pos)
+
+    -- Step 1: Move to position
+    Tutorial.SetStep("approach", {
+        title = "Deploy the Pyros",
+        hint = "Select your Flame Troopers and move them toward the enemy bunker.",
+        focus_area = bunker_pos,
+        eva_line = "new_unit_flame_trooper",
+        completion = { type = "move_to", area = approach_zone }
+    })
+end
+
+function OnStepComplete(step_id)
+    if step_id == "approach" then
+        -- Step 2: Attack the bunker
+        Tutorial.SetStep("ignite", {
+            title = "Set It Ablaze",
+            hint = "Right-click the wooden bunker to attack it. " ..
+                   "Flame Troopers set structures on fire — watch it spread.",
+            highlight_ui = "command_bar",
+            completion = { type = "action", action = "attack", target_type = "wood_bunker" }
+        })
+
+    elseif step_id == "ignite" then
+        -- Step 3: Observe fire spread (no player action needed — just watch)
+        Tutorial.ShowHint(
+            "Fire spreads to adjacent flammable tiles. " ..
+            "Trees, wooden structures, and dry grass will catch fire. " ..
+            "Stone and water are fireproof.", {
+            title = "Fire Spread",
+            duration = 10,
+            position = "near_building",
+            icon = "hint_fire",
+        })
+
+        -- Wait for the fire to spread to at least 3 tiles
+        Tutorial.SetStep("watch_spread", {
+            title = "Watch It Burn",
+            hint = "Observe the fire spreading to nearby trees.",
+            completion = { type = "custom", lua_condition = "GetFireTileCount() &gt;= 3" }
+        })
+
+    elseif step_id == "watch_spread" then
+        Tutorial.ShowHint("Fire is a powerful tool — but it burns friend and foe alike. " ..
+                          "Be careful where you aim.", {
+            title = "A Word of Caution",
+            duration = 8,
+            position = "screen_center",
+        })
+        Trigger.AfterDelay(DateTime.Seconds(10), function()
+            Campaign.complete("pass")
+        end)
+    end
+end
+</code></pre>
+<p><strong>Mod-specific hints for in-game discovery:</strong></p>
+<pre><code class="language-yaml"># mods/scorched-earth/hints/fire-hints.yaml
+hints:
+  - id: se_fire_near_friendly
+    title: "Watch Your Flames"
+    text: "Fire is spreading toward your own buildings! Move units away or build a firebreak."
+    category: mod_specific
+    trigger:
+      type: custom
+      lua_condition: "IsFireNearFriendlyBuilding(5)"  # within 5 cells
+    suppression:
+      mastery_action: build_firebreak
+      mastery_threshold: 2
+      cooldown_seconds: 120
+      max_shows: 5
+    experience_profiles: [all]
+    priority: high
+    position: near_building
+    eva_line = se_fire_warning
+</code></pre>
+<p>This pattern scales to any complexity — the modder uses the same YAML campaign format for a 3-mission mod tutorial that the engine uses for its 10-mission Commander School. The <code>Tutorial</code> Lua API, <code>hints.yaml</code> schema, and scenario editor Tutorial modules (D038) all work identically for first-party and third-party content.</p>
 <h3 id="llm-campaign-generation"><a class="header" href="#llm-campaign-generation">LLM Campaign Generation</a></h3>
 <p>The LLM (<code>ic-llm</code>) can generate entire campaign graphs, not just individual missions:</p>
 <pre><code>User: "Create a 5-mission Soviet campaign where you invade Alaska.
@@ -12772,7 +12942,7 @@ let game = GameLoop::new(sim, renderer, adapted);
 <tr><td><a href="#decision-log--gameplay--ai">Gameplay &amp; AI</a></td><td>Pathfinding, balance, QoL, AI systems, render modes, trait-abstracted subsystems</td><td>D013, D019, D033, D041–D045, D048, D054</td></tr>
 <tr><td><a href="#decision-log--community--platform">Community &amp; Platform</a></td><td>Workshop, telemetry, storage, achievements, governance, profiles, data portability</td><td>D030, D031, D034–D037, D046, D049, D053, D061</td></tr>
 <tr><td><a href="#decision-log--tools--editor">Tools &amp; Editor</a></td><td>LLM mission generation, scenario editor, asset studio, foreign replays, skill library</td><td>D016, D038, D040, D047, D056, D057</td></tr>
-<tr><td><a href="#decision-log--in-game-interaction">In-Game Interaction</a></td><td>Command console, communication systems (chat, voice, pings)</td><td>D058, D059</td></tr>
+<tr><td><a href="#decision-log--in-game-interaction">In-Game Interaction</a></td><td>Command console, communication systems (chat, voice, pings), tutorial/new player experience</td><td>D058, D059, D065</td></tr>
 </tbody>
 </table>
 </div>
@@ -12834,6 +13004,7 @@ let game = GameLoop::new(sim, renderer, adapted);
 <tr><td>D058</td><td>In-Game Command Console</td><td><a href="#decision-log--in-game-interaction">Interaction</a></td></tr>
 <tr><td>D059</td><td>In-Game Communication (Chat, Voice, Pings)</td><td><a href="#decision-log--in-game-interaction">Interaction</a></td></tr>
 <tr><td>D060</td><td>Netcode Parameter Philosophy</td><td><a href="#decision-log--networking--multiplayer">Networking</a></td></tr>
+<tr><td>D065</td><td>Tutorial &amp; New Player Experience</td><td><a href="#decision-log--in-game-interaction">Interaction</a></td></tr>
 <tr><td>D061</td><td>Player Data Backup &amp; Portability</td><td><a href="#decision-log--community--platform">Community</a></td></tr>
 <tr><td>D062</td><td>Mod Profiles &amp; Virtual Asset Namespace</td><td><a href="#decision-log--modding--compatibility">Modding</a></td></tr>
 <tr><td>D066</td><td>Cross-Engine Export &amp; Editor Extensibility</td><td><a href="#decision-log--modding--compatibility">Modding</a></td></tr>
@@ -25736,6 +25907,10 @@ Mission init script    — special file that runs once at mission start
 <tr><td><strong>Multiplayer</strong></td><td>Spawn Point</td><td>faction, position</td><td>Player starting location in MP scenarios</td></tr>
 <tr><td><strong>Multiplayer</strong></td><td>Crate Drop</td><td>position, trigger, contents</td><td>Random powerup/crate on trigger</td></tr>
 <tr><td><strong>Multiplayer</strong></td><td>Spectator Bookmark</td><td>position, label, trigger, camera_angle</td><td>Author-defined camera bookmark for spectator/replay mode — marks key locations and dramatic moments. Spectators can cycle bookmarks with hotkeys. Replays auto-cut to bookmarks when triggered.</td></tr>
+<tr><td><strong>Tutorial</strong></td><td>Tutorial Step</td><td>step_id, title, hint, completion, focus_area, highlight_ui, eva_line</td><td>Defines a tutorial step with instructional overlay, completion condition, and optional camera/UI focus. Equivalent to <code>Tutorial.SetStep()</code> in Lua but configurable without scripting. Connects to triggers for step sequencing. (D065)</td></tr>
+<tr><td><strong>Tutorial</strong></td><td>Tutorial Hint</td><td>text, position, duration, icon, eva_line, dismissable</td><td>Shows a one-shot contextual hint. Equivalent to <code>Tutorial.ShowHint()</code> in Lua. Connect to a trigger to control when the hint appears. (D065)</td></tr>
+<tr><td><strong>Tutorial</strong></td><td>Tutorial Gate</td><td>allowed_build_types[], allowed_orders[], restrict_sidebar</td><td>Restricts player actions for pedagogical pacing — limits what can be built or ordered until a trigger releases the gate. Equivalent to <code>Tutorial.RestrictBuildOptions()</code> / <code>Tutorial.RestrictOrders()</code> in Lua. (D065)</td></tr>
+<tr><td><strong>Tutorial</strong></td><td>Skill Check</td><td>action_type, target_count, time_limit</td><td>Monitors player performance on a specific action (selection speed, combat accuracy, etc.) and fires success/fail outputs. Used for skill assessment exercises and remedial branching. (D065)</td></tr>
 </tbody>
 </table>
 </div>
@@ -30708,7 +30883,955 @@ pub enum QualityTier {
 </table>
 </div>
 <p>All five responses share the same trigger signal (<code>ConnectionQuality</code>), the same reaction pattern (reduce → adapt → recover), and the same design philosophy (D015’s efficiency pyramid — better algorithms before more resources). Building them on shared infrastructure ensures they cooperate rather than compete.</p>
-<hr><div style="break-before: page; page-break-before: always;"></div>
+<hr>
+<hr>
+<h2 id="d065-tutorial--new-player-experience--five-layer-onboarding-system"><a class="header" href="#d065-tutorial--new-player-experience--five-layer-onboarding-system">D065: Tutorial &amp; New Player Experience — Five-Layer Onboarding System</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th></th><th></th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Status</strong></td><td>Accepted</td></tr>
+<tr><td><strong>Phase</strong></td><td>Phase 3 (contextual hints, new player pipeline, progressive discovery), Phase 4 (Commander School campaign, skill assessment, post-game learning, tutorial achievements)</td></tr>
+<tr><td><strong>Depends on</strong></td><td>D004 (Lua Scripting), D021 (Branching Campaigns), D033 (QoL Toggles — experience profiles), D034 (SQLite — hint history, skill estimate), D036 (Achievements), D038 (Scenario Editor — tutorial modules), D043 (AI Behavior Presets — tutorial AI tier)</td></tr>
+<tr><td><strong>Driver</strong></td><td>OpenRA’s new player experience is a wiki link to a YouTube video. The Remastered Collection added basic tooltips. No open-source RTS has a structured onboarding system. The genre’s complexity is the #1 barrier to new players — players who bounce from one failed match never return.</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="problem-2-1"><a class="header" href="#problem-2-1">Problem</a></h3>
+<p>Classic RTS games are notoriously hostile to new players. The original Red Alert’s “tutorial” was Mission 1 of the Allied campaign, which assumed the player already understood control groups, attack-move, and ore harvesting. OpenRA offers no in-game tutorial at all. The Remastered Collection added tooltips and a training mode but no structured curriculum.</p>
+<p>IC targets three distinct player populations and must serve all of them:</p>
+<ol>
+<li><strong>Complete RTS newcomers</strong> — never played any RTS. Need camera, selection, and movement concepts before anything else.</li>
+<li><strong>Lapsed RA veterans</strong> — played in the 90s, remember concepts vaguely, need a refresher on specific mechanics and new IC features.</li>
+<li><strong>OpenRA / Remastered players</strong> — know RA well but may not know IC-specific features (weather, experience profiles, campaign persistence, console commands).</li>
+</ol>
+<p>A single-sized tutorial serves none of them well. Veterans resent being forced through basics. Newcomers drown in information presented too fast. The system must adapt.</p>
+<h3 id="decision-2-2"><a class="header" href="#decision-2-2">Decision</a></h3>
+<p>A five-layer tutorial system that integrates throughout the player experience rather than existing as a single screen or mode. Each layer operates independently — players benefit from whichever layers they encounter, in any order.</p>
+<h3 id="layer-1--commander-school-tutorial-campaign"><a class="header" href="#layer-1--commander-school-tutorial-campaign">Layer 1 — Commander School (Tutorial Campaign)</a></h3>
+<p>A dedicated 10-mission tutorial campaign using the D021 branching graph system, accessible from <code>Main Menu → Campaign → Commander School</code>. This is a first-class campaign, not a popup sequence — it has briefings, EVA voice lines, map variety, and a branching graph with remedial branches for players who struggle.</p>
+<h4 id="mission-structure"><a class="header" href="#mission-structure">Mission Structure</a></h4>
+<pre><code>                    ┌─────────────────┐
+                    │  01: First Steps │  Camera, selection, movement
+                    │  (Movement Only) │
+                    └────────┬────────┘
+                             │
+              ┌──────────────┼──────────────┐
+              │ pass         │ struggle     │
+              ▼              ▼              │
+    ┌─────────────────┐  ┌──────────────┐  │
+    │  02: First Blood │  │  01r: Camera  │  │  Remedial: just camera + selection
+    │  (Basic Combat)  │  │  Basics      │──┘
+    └────────┬────────┘  └──────────────┘
+             │
+             ▼
+    ┌─────────────────┐
+    │  03: Base Camp   │  Build a power plant + barracks
+    │  (Construction)  │
+    └────────┬────────┘
+             │
+             ▼
+    ┌─────────────────┐
+    │  04: Supply Line │  Build a refinery, protect harvesters
+    │  (Economy)       │
+    └────────┬────────┘
+             │
+             ▼
+    ┌─────────────────┐
+    │  05: Hold the    │  Walls, turrets, repair
+    │  Line (Defense)  │
+    └────────┬────────┘
+             │
+             ▼
+    ┌─────────────────┐
+    │  06: Keyboard    │  Control groups, hotkeys, queue commands
+    │  Commander       │
+    │  (Controls)      │
+    └────────┬────────┘
+             │
+             ▼
+    ┌─────────────────┐
+    │  07: Combined    │  Rock-paper-scissors: infantry vs vehicles
+    │  Arms            │  vs air; counter units
+    └────────┬────────┘
+             │
+             ▼
+    ┌─────────────────┐
+    │  08: Iron        │  Full skirmish vs tutorial AI; apply
+    │  Curtain Rising  │  everything learned
+    │  (First Skirmish)│
+    └────────┬────────┘
+             │
+       ┌─────┴─────┐
+       │ victory    │ defeat
+       ▼            ▼
+    ┌────────┐  ┌──────────────┐
+    │  09:   │  │  08r: Second │  Retry with hints enabled
+    │  Multi │  │  Chance      │──► loops back to 09
+    │  player│  └──────────────┘
+    │  Intro │
+    └───┬────┘
+        │
+        ▼
+    ┌─────────────────┐
+    │  10: Advanced    │  Tech tree, superweapons, naval,
+    │  Tactics         │  weather effects (optional)
+    └─────────────────┘
+</code></pre>
+<p>Every mission is <strong>skippable</strong>. Players can jump to any unlocked mission from the Commander School menu. Completing mission N unlocks mission N+1 (and its remedial branch, if any). Veterans can skip directly to Mission 08 (First Skirmish) or 10 (Advanced Tactics) after a brief skill check.</p>
+<h4 id="tutorial-ai-difficulty-tier"><a class="header" href="#tutorial-ai-difficulty-tier">Tutorial AI Difficulty Tier</a></h4>
+<p>Commander School uses a dedicated tutorial AI difficulty tier below D043’s Easy:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>AI Tier</th><th>Behavior</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Tutorial</strong></td><td>Scripted responses only. Attacks on cue. Does not exploit weaknesses. Builds at fixed timing.</td></tr>
+<tr><td><strong>Easy</strong> (D043)</td><td>Priority-based; slow reactions; limited tech tree; no harassment</td></tr>
+<tr><td><strong>Normal</strong> (D043)</td><td>Full priority-based; moderate aggression; uses counters</td></tr>
+<tr><td><strong>Hard+</strong> (D043)</td><td>Full AI with aggression/strategy axes</td></tr>
+</tbody>
+</table>
+</div>
+<p>The Tutorial tier is <strong>Lua-scripted per mission</strong>, not a general-purpose AI. Mission 02’s AI sends two rifle squads after 3 minutes. Mission 08’s AI builds a base and attacks after 5 minutes. The behavior is pedagogically tuned — the AI exists to teach, not to win.</p>
+<h4 id="experience-profile-awareness"><a class="header" href="#experience-profile-awareness">Experience-Profile Awareness</a></h4>
+<p>Commander School adapts to the player’s experience profile (D033):</p>
+<ul>
+<li><strong>New to RTS:</strong> Full hints, slower pacing, EVA narration on every new concept</li>
+<li><strong>RA veteran / OpenRA player:</strong> Skip basic missions, focus on IC-specific features (weather, console, experience profiles)</li>
+<li><strong>Custom:</strong> Player chose which missions to unlock via the skill assessment (Layer 3)</li>
+</ul>
+<p>The experience profile is read from the first-launch self-identification (see <code>17-PLAYER-FLOW.md</code>). It is not a difficulty setting — it controls <em>what is taught</em>, not <em>how hard the AI fights</em>.</p>
+<h4 id="campaign-yaml-definition"><a class="header" href="#campaign-yaml-definition">Campaign YAML Definition</a></h4>
+<pre><code class="language-yaml"># campaigns/tutorial/campaign.yaml
+campaign:
+  id: commander_school
+  title: "Commander School"
+  description: "Learn to command — from basic movement to full-scale warfare"
+  start_mission: tutorial_01
+  category: tutorial  # displayed under Campaign → Tutorial, not Campaign → Allied/Soviet
+  icon: tutorial_icon
+  badge: commander_school  # shown on campaign menu for players who haven't started
+
+  persistent_state:
+    unit_roster: false        # tutorial missions don't carry units forward
+    veterancy: false
+    resources: false
+    equipment: false
+    custom_flags:
+      skills_demonstrated: []  # tracks which skills the player has shown
+
+  missions:
+    tutorial_01:
+      map: missions/tutorial/01-first-steps
+      briefing: briefings/tutorial/01.yaml
+      skip_allowed: true
+      experience_profiles: [new_to_rts, all]  # shown to these profiles
+      outcomes:
+        pass:
+          description: "Mission complete"
+          next: tutorial_02
+          state_effects:
+            append_flag: { skills_demonstrated: [camera, selection, movement] }
+        struggle:
+          description: "Player struggled with camera/selection"
+          next: tutorial_01r
+        skip:
+          description: "Player skipped"
+          next: tutorial_02
+          state_effects:
+            append_flag: { skills_demonstrated: [camera, selection, movement] }
+
+    tutorial_01r:
+      map: missions/tutorial/01r-camera-basics
+      briefing: briefings/tutorial/01r.yaml
+      remedial: true  # UI shows this as a "practice" mission, not a setback
+      outcomes:
+        pass:
+          next: tutorial_02
+          state_effects:
+            append_flag: { skills_demonstrated: [camera, selection] }
+
+    tutorial_02:
+      map: missions/tutorial/02-first-blood
+      briefing: briefings/tutorial/02.yaml
+      skip_allowed: true
+      outcomes:
+        pass:
+          next: tutorial_03
+          state_effects:
+            append_flag: { skills_demonstrated: [attack, force_fire] }
+        skip:
+          next: tutorial_03
+
+    # ... missions 03–10 follow the same pattern ...
+
+    tutorial_08:
+      map: missions/tutorial/08-first-skirmish
+      briefing: briefings/tutorial/08.yaml
+      skip_allowed: false  # this one is the capstone — encourage completion
+      outcomes:
+        victory:
+          next: tutorial_09
+          state_effects:
+            append_flag: { skills_demonstrated: [full_skirmish] }
+        defeat:
+          next: tutorial_08r
+          debrief: briefings/tutorial/08-debrief-defeat.yaml
+
+    tutorial_08r:
+      map: missions/tutorial/08-first-skirmish
+      briefing: briefings/tutorial/08r.yaml
+      remedial: true
+      adaptive:
+        on_previous_defeat:
+          bonus_resources: 3000
+          bonus_units: [medium_tank, medium_tank]
+          enable_tutorial_hints: true  # force hints on for retry
+      outcomes:
+        victory:
+          next: tutorial_09
+        defeat:
+          next: tutorial_08r  # can retry indefinitely
+
+    tutorial_09:
+      map: missions/tutorial/09-multiplayer-intro
+      briefing: briefings/tutorial/09.yaml
+      skip_allowed: true
+      outcomes:
+        pass:
+          next: tutorial_10
+        skip:
+          next: tutorial_10
+
+    tutorial_10:
+      map: missions/tutorial/10-advanced-tactics
+      briefing: briefings/tutorial/10.yaml
+      optional: true  # not required for "Graduate" achievement
+      experience_profiles: [all]
+      outcomes:
+        pass:
+          description: "Commander School complete"
+</code></pre>
+<h4 id="tutorial-mission-lua-script-pattern"><a class="header" href="#tutorial-mission-lua-script-pattern">Tutorial Mission Lua Script Pattern</a></h4>
+<p>Each tutorial mission uses the <code>Tutorial</code> Lua global to manage the teaching flow:</p>
+<pre><code class="language-lua">-- missions/tutorial/02-first-blood.lua
+-- Mission 02: First Blood — introduces basic combat
+
+-- Mission setup
+function OnMissionStart()
+    -- Disable sidebar building (not taught yet)
+    Tutorial.RestrictSidebar(true)
+
+    -- Spawn player units
+    local player = Player.GetPlayer("GoodGuy")
+    local rifles = Actor.Create("e1", player, entry_south, { count = 5 })
+
+    -- Spawn enemy patrol (tutorial AI — scripted, not general AI)
+    local enemy = Player.GetPlayer("BadGuy")
+    local patrol = Actor.Create("e1", enemy, patrol_start, { count = 3 })
+
+    -- Step 1: Introduce the enemy
+    Tutorial.SetStep("spot_enemy", {
+        title = "Enemy Contact",
+        hint = "Red units are hostile. Select your soldiers and right-click an enemy to attack.",
+        focus_area = patrol_start,       -- camera pans here
+        highlight_ui = nil,              -- no UI highlight needed
+        eva_line = "enemy_units_detected",
+        completion = { type = "kill", count = 1 }  -- complete when player kills any enemy
+    })
+end
+
+-- Step progression
+function OnStepComplete(step_id)
+    if step_id == "spot_enemy" then
+        Tutorial.SetStep("attack_move", {
+            title = "Attack-Move",
+            hint = "Hold Ctrl and right-click to attack-move. Your units will engage enemies along the way.",
+            highlight_ui = "attack_move_button",  -- highlights the A-move button on the command bar
+            eva_line = "commander_tip_attack_move",
+            completion = { type = "action", action = "attack_move" }
+        })
+
+    elseif step_id == "attack_move" then
+        Tutorial.SetStep("clear_area", {
+            title = "Clear the Area",
+            hint = "Destroy all remaining enemies to complete the mission.",
+            completion = { type = "kill_all", faction = "BadGuy" }
+        })
+
+    elseif step_id == "clear_area" then
+        -- Mission complete
+        Campaign.complete("pass")
+    end
+end
+
+-- Detect struggle: if player hasn't killed anyone after 2 minutes
+Trigger.AfterDelay(DateTime.Minutes(2), function()
+    if Tutorial.GetCurrentStep() == "spot_enemy" then
+        Tutorial.ShowHint("Try selecting your units (click + drag) then right-clicking on an enemy.")
+        -- If still stuck after 4 minutes total, the campaign graph routes to a remedial mission
+    end
+end)
+
+-- Detect struggle: player lost most units without killing enemies
+Trigger.OnAllKilledOrCaptured(Player.GetPlayer("GoodGuy"):GetActors(), function()
+    Campaign.complete("struggle")
+end)
+</code></pre>
+<h3 id="layer-2--contextual-hints-yaml-driven-always-on"><a class="header" href="#layer-2--contextual-hints-yaml-driven-always-on">Layer 2 — Contextual Hints (YAML-Driven, Always-On)</a></h3>
+<p>Contextual hints appear as translucent overlay callouts during gameplay, triggered by game state. They are NOT part of Commander School — they work in any game mode (skirmish, multiplayer, custom campaigns). Modders can author custom hints for their mods.</p>
+<h4 id="hint-pipeline"><a class="header" href="#hint-pipeline">Hint Pipeline</a></h4>
+<pre><code>  HintTrigger          HintFilter           HintRenderer
+  (game state     →    (suppression,    →   (overlay, fade,
+   evaluation)          cooldowns,           positioning,
+                        experience           dismiss)
+                        profile)
+</code></pre>
+<ol>
+<li><strong>HintTrigger</strong> evaluates conditions against the current game state every N ticks (configurable, default: every 150 ticks / 5 seconds). Triggers are YAML-defined — no Lua required for standard hints.</li>
+<li><strong>HintFilter</strong> suppresses hints the player doesn’t need: already dismissed, demonstrated mastery (performed the action N times), cooldown not expired, experience profile excludes this hint.</li>
+<li><strong>HintRenderer</strong> displays the hint as a UI overlay — positioned near the relevant screen element, with fade-in/fade-out, dismiss button, and “don’t show again” toggle.</li>
+</ol>
+<h4 id="hint-definition-schema-hintsyaml"><a class="header" href="#hint-definition-schema-hintsyaml">Hint Definition Schema (<code>hints.yaml</code>)</a></h4>
+<pre><code class="language-yaml"># hints/base-game.yaml — ships with the game
+# Modders create their own hints.yaml in their mod directory
+
+hints:
+  - id: idle_harvester
+    title: "Idle Harvester"
+    text: "Your harvester is sitting idle. Click it and right-click an ore field to start collecting."
+    category: economy
+    icon: hint_harvester
+    trigger:
+      type: unit_idle
+      unit_type: "harvester"
+      idle_duration_seconds: 15    # only triggers after 15s of idling
+    suppression:
+      mastery_action: harvest_command      # stop showing after player has issued 5 harvest commands
+      mastery_threshold: 5
+      cooldown_seconds: 120               # don't repeat more than once every 2 minutes
+      max_shows: 10                       # never show more than 10 times total
+    experience_profiles: [new_to_rts, ra_veteran]  # show to these profiles, not openra_player
+    priority: high     # high priority hints interrupt low priority ones
+    position: near_unit  # position hint near the idle harvester
+    eva_line: null       # no EVA voice for this hint (too frequent)
+    dismiss_action: got_it  # "Got it" button only — no "don't show again" on high-priority hints
+
+  - id: negative_power
+    title: "Low Power"
+    text: "Your base is low on power. Build more Power Plants to restore production speed."
+    category: economy
+    icon: hint_power
+    trigger:
+      type: resource_threshold
+      resource: power
+      condition: negative        # power demand &gt; power supply
+      sustained_seconds: 10      # must be negative for 10s (not transient during building)
+    suppression:
+      mastery_action: build_power_plant
+      mastery_threshold: 3
+      cooldown_seconds: 180
+      max_shows: 8
+    experience_profiles: [new_to_rts]
+    priority: high
+    position: near_sidebar       # position near the build queue
+    eva_line: low_power           # EVA says "Low power"
+
+  - id: control_groups
+    title: "Control Groups"
+    text: "Select units and press Ctrl+1 to assign them to group 1. Press 1 to reselect them instantly."
+    category: controls
+    icon: hint_hotkey
+    trigger:
+      type: unit_count
+      condition: "&gt;= 8"         # suggest control groups when player has 8+ units
+      without_action: assign_control_group  # only if they haven't used groups yet
+      sustained_seconds: 60      # must have 8+ units for 60s without grouping
+    suppression:
+      mastery_action: assign_control_group
+      mastery_threshold: 1       # one use = mastery for this hint
+      cooldown_seconds: 300
+      max_shows: 3
+    experience_profiles: [new_to_rts]
+    priority: medium
+    position: screen_top         # general hint, not tied to a unit
+    eva_line: commander_tip_control_groups
+
+  - id: tech_tree_reminder
+    title: "Tech Up"
+    text: "New units become available as you build advanced structures. Check the sidebar for greyed-out options."
+    category: strategy
+    icon: hint_tech
+    trigger:
+      type: time_without_action
+      action: build_tech_structure
+      time_minutes: 5            # 5 minutes into a game with no tech building
+      min_game_time_minutes: 3   # don't trigger in the first 3 minutes
+    suppression:
+      mastery_action: build_tech_structure
+      mastery_threshold: 1
+      cooldown_seconds: 600
+      max_shows: 3
+    experience_profiles: [new_to_rts]
+    priority: low
+    position: near_sidebar
+
+  # Modder-authored hint example (from a hypothetical "Chrono Warfare" mod):
+  - id: chrono_shift_intro
+    title: "Chrono Shift Ready"
+    text: "Your Chronosphere is charged! Select units, then click the Chronosphere and pick a destination."
+    category: mod_specific
+    icon: hint_chrono
+    trigger:
+      type: building_ready
+      building_type: "chronosphere"
+      ability: "chrono_shift"
+      first_time: true           # only on the first Chronosphere completion per game
+    suppression:
+      mastery_action: use_chrono_shift
+      mastery_threshold: 1
+      cooldown_seconds: 0        # first_time already limits it
+      max_shows: 1
+    experience_profiles: [all]
+    priority: high
+    position: near_building
+    eva_line: chronosphere_ready
+</code></pre>
+<h4 id="trigger-types-extensible"><a class="header" href="#trigger-types-extensible">Trigger Types (Extensible)</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Trigger Type</th><th>Parameters</th><th>Fires When</th></tr>
+</thead>
+<tbody>
+<tr><td><code>unit_idle</code></td><td><code>unit_type</code>, <code>idle_duration_seconds</code></td><td>A unit of that type has been idle for N seconds</td></tr>
+<tr><td><code>resource_threshold</code></td><td><code>resource</code>, <code>condition</code>, <code>sustained_seconds</code></td><td>A resource exceeds/falls below a threshold for N seconds</td></tr>
+<tr><td><code>unit_count</code></td><td><code>condition</code>, <code>without_action</code>, <code>sustained_seconds</code></td><td>Player has N units and hasn’t performed the suggested action</td></tr>
+<tr><td><code>time_without_action</code></td><td><code>action</code>, <code>time_minutes</code>, <code>min_game_time_minutes</code></td><td>N minutes pass without the player performing a specific action</td></tr>
+<tr><td><code>building_ready</code></td><td><code>building_type</code>, <code>ability</code>, <code>first_time</code></td><td>A building completes construction (or its ability charges)</td></tr>
+<tr><td><code>first_encounter</code></td><td><code>entity_type</code></td><td>Player sees an enemy unit/building type for the first time</td></tr>
+<tr><td><code>damage_taken</code></td><td><code>damage_source_type</code>, <code>threshold_percent</code></td><td>Player units take significant damage from a specific type</td></tr>
+<tr><td><code>area_enter</code></td><td><code>area</code>, <code>unit_types</code></td><td>Player units enter a named map region</td></tr>
+<tr><td><code>custom</code></td><td><code>lua_condition</code></td><td>Lua expression evaluates to true (Tier 2 mods only)</td></tr>
+</tbody>
+</table>
+</div>
+<p>Modders define new triggers via Lua (Tier 2) or WASM (Tier 3). The <code>custom</code> trigger type is a Lua escape hatch for conditions that don’t fit the built-in types.</p>
+<h4 id="hint-history-sqlite"><a class="header" href="#hint-history-sqlite">Hint History (SQLite)</a></h4>
+<pre><code class="language-sql">-- In player.db (D034)
+CREATE TABLE hint_history (
+    hint_id       TEXT NOT NULL,
+    show_count    INTEGER NOT NULL DEFAULT 0,
+    last_shown    INTEGER,          -- Unix timestamp
+    dismissed     BOOLEAN NOT NULL DEFAULT FALSE,  -- "Don't show again"
+    mastery_count INTEGER NOT NULL DEFAULT 0,      -- times the mastery_action was performed
+    PRIMARY KEY (hint_id)
+);
+</code></pre>
+<p>The hint system queries this table before showing each hint. <code>mastery_count &gt;= mastery_threshold</code> suppresses the hint permanently. <code>dismissed = TRUE</code> suppresses it permanently. <code>last_shown + cooldown_seconds &gt; now</code> suppresses it temporarily.</p>
+<h4 id="qol-integration-d033"><a class="header" href="#qol-integration-d033">QoL Integration (D033)</a></h4>
+<p>Hints are individually toggleable per category in <code>Settings → QoL → Hints</code>:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Setting</th><th>Default (New to RTS)</th><th>Default (RA Vet)</th><th>Default (OpenRA)</th></tr>
+</thead>
+<tbody>
+<tr><td>Economy hints</td><td>On</td><td>On</td><td>Off</td></tr>
+<tr><td>Combat hints</td><td>On</td><td>Off</td><td>Off</td></tr>
+<tr><td>Controls hints</td><td>On</td><td>On</td><td>Off</td></tr>
+<tr><td>Strategy hints</td><td>On</td><td>Off</td><td>Off</td></tr>
+<tr><td>Mod-specific hints</td><td>On</td><td>On</td><td>On</td></tr>
+<tr><td>Hint frequency</td><td>Normal</td><td>Reduced</td><td>Minimal</td></tr>
+<tr><td>EVA voice on hints</td><td>On</td><td>Off</td><td>Off</td></tr>
+</tbody>
+</table>
+</div>
+<p><code>/hints</code> console commands (D058): <code>/hints list</code>, <code>/hints enable &lt;category&gt;</code>, <code>/hints disable &lt;category&gt;</code>, <code>/hints reset</code>, <code>/hints suppress &lt;id&gt;</code>.</p>
+<h3 id="layer-3--new-player-pipeline"><a class="header" href="#layer-3--new-player-pipeline">Layer 3 — New Player Pipeline</a></h3>
+<p>The first-launch flow (see <code>17-PLAYER-FLOW.md</code>) includes a self-identification step:</p>
+<pre><code>Theme Selection (D032) → Self-Identification → Tutorial Offer → Main Menu
+</code></pre>
+<h4 id="self-identification-gate"><a class="header" href="#self-identification-gate">Self-Identification Gate</a></h4>
+<pre><code>┌──────────────────────────────────────────────────┐
+│  WELCOME, COMMANDER                              │
+│                                                  │
+│  How familiar are you with real-time strategy?   │
+│                                                  │
+│  ► New to RTS games                              │
+│  ► Played some RTS games before                  │
+│  ► Red Alert veteran                             │
+│  ► OpenRA / Remastered player                    │
+│  ► Skip — just let me play                       │
+│                                                  │
+└──────────────────────────────────────────────────┘
+</code></pre>
+<p>This sets the <code>experience_profile</code> used by all five layers. The profile is stored in <code>player.db</code> (D034) and changeable in <code>Settings → QoL → Experience Profile</code>.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Selection</th><th>Experience Profile</th><th>Default Hints</th><th>Tutorial Offer</th></tr>
+</thead>
+<tbody>
+<tr><td>New to RTS</td><td><code>new_to_rts</code></td><td>All on</td><td>“Would you like to start with Commander School?”</td></tr>
+<tr><td>Played some RTS</td><td><code>rts_player</code></td><td>Economy + Controls</td><td>“Commander School available in Campaigns”</td></tr>
+<tr><td>Red Alert veteran</td><td><code>ra_veteran</code></td><td>Economy only</td><td>Badge on campaign menu</td></tr>
+<tr><td>OpenRA / Remastered</td><td><code>openra_player</code></td><td>Mod-specific only</td><td>Badge on campaign menu</td></tr>
+<tr><td>Skip</td><td><code>skip</code></td><td>All off</td><td>No offer</td></tr>
+</tbody>
+</table>
+</div>
+<h4 id="skill-assessment-phase-4"><a class="header" href="#skill-assessment-phase-4">Skill Assessment (Phase 4)</a></h4>
+<p>After Commander School Mission 01 (or as a standalone 2-minute exercise accessible from <code>Settings → QoL → Recalibrate</code>), the engine estimates the player’s baseline skill:</p>
+<pre><code>┌──────────────────────────────────────────────────┐
+│  SKILL CALIBRATION (2 minutes)                   │
+│                                                  │
+│  Complete these exercises:                       │
+│  ✓  Select and move units to waypoints           │
+│  ✓  Select specific units from a mixed group     │
+│  ►  Camera: pan to each flashing area            │
+│     Timed combat: destroy targets in order        │
+│                                                  │
+│  [Skip Assessment]                               │
+└──────────────────────────────────────────────────┘
+</code></pre>
+<p>Measures:</p>
+<ul>
+<li><strong>Selection speed</strong> — time to select correct units from a mixed group</li>
+<li><strong>Camera fluency</strong> — time to pan to each target area</li>
+<li><strong>Combat efficiency</strong> — accuracy of focused fire on marked targets</li>
+<li><strong>APM estimate</strong> — actions per minute during the exercises</li>
+</ul>
+<p>Results stored in SQLite:</p>
+<pre><code class="language-sql">-- In player.db
+CREATE TABLE player_skill_estimate (
+    player_id        TEXT PRIMARY KEY,
+    selection_speed  INTEGER,    -- percentile (0–100)
+    camera_fluency   INTEGER,
+    combat_efficiency INTEGER,
+    apm_estimate     INTEGER,    -- raw APM
+    assessed_at      INTEGER,    -- Unix timestamp
+    assessment_type  TEXT        -- 'tutorial_01' or 'standalone'
+);
+</code></pre>
+<p>The skill estimate feeds Layers 2 and 4: hint frequency scales with skill (fewer hints for skilled players), and the first skirmish AI difficulty recommendation uses the estimate.</p>
+<h3 id="layer-4--adaptive-pacing-engine"><a class="header" href="#layer-4--adaptive-pacing-engine">Layer 4 — Adaptive Pacing Engine</a></h3>
+<p>A background system (no direct UI — it shapes the other layers) that continuously estimates player mastery and adjusts the learning experience.</p>
+<h4 id="inputs"><a class="header" href="#inputs">Inputs</a></h4>
+<ul>
+<li><code>hint_history</code> — which hints have been shown, dismissed, or mastered</li>
+<li><code>player_skill_estimate</code> — from the skill assessment</li>
+<li><code>gameplay_events</code> (D031) — actual in-game actions (build orders, APM, unit losses, idle time)</li>
+<li><code>experience_profile</code> — self-identified experience level</li>
+</ul>
+<h4 id="outputs"><a class="header" href="#outputs">Outputs</a></h4>
+<ul>
+<li><strong>Hint frequency multiplier</strong> — scales the cooldown on all hints. A player demonstrating mastery gets longer cooldowns (fewer hints). A struggling player gets shorter cooldowns (more hints).</li>
+<li><strong>Difficulty recommendation</strong> — suggested AI difficulty for the next skirmish. Displayed as a tooltip in the lobby AI picker: “Based on your recent games, Normal difficulty is recommended.”</li>
+<li><strong>Feature discovery pacing</strong> — controls how quickly progressive discovery notifications appear (Layer 5 below).</li>
+<li><strong>Tutorial EVA activation</strong> — in the Allied/Soviet campaigns (not Commander School), first encounters with new unit types or buildings trigger a brief EVA line if the player hasn’t completed the relevant Commander School mission. “Construction complete. This is a Radar Dome — it reveals the minimap.” Only triggers once per entity type per campaign playthrough.</li>
+</ul>
+<h4 id="pacing-algorithm"><a class="header" href="#pacing-algorithm">Pacing Algorithm</a></h4>
+<pre><code>skill_estimate = weighted_average(
+    0.3 × selection_speed_percentile,
+    0.2 × camera_fluency_percentile,
+    0.2 × combat_efficiency_percentile,
+    0.15 × recent_apm_trend,           -- from gameplay_events
+    0.15 × hint_mastery_rate            -- % of hints mastered vs shown
+)
+
+hint_frequency_multiplier = clamp(
+    2.0 - (skill_estimate / 50.0),      -- range: 0.0 (no hints) to 2.0 (double frequency)
+    min = 0.2,
+    max = 2.0
+)
+
+recommended_difficulty = match skill_estimate {
+    0..25   =&gt; "Easy",
+    25..50  =&gt; "Normal",
+    50..75  =&gt; "Hard",
+    75..100 =&gt; "Brutal",
+}
+</code></pre>
+<p>This is deterministic and entirely local — no LLM, no network, no privacy concerns. The pacing engine exists in <code>ic-ui</code> (not <code>ic-sim</code>) because it affects presentation, not simulation.</p>
+<h3 id="layer-5--post-game-learning"><a class="header" href="#layer-5--post-game-learning">Layer 5 — Post-Game Learning</a></h3>
+<p>After every match, the post-game stats screen (D034) includes a learning section:</p>
+<h4 id="rule-based-tips"><a class="header" href="#rule-based-tips">Rule-Based Tips</a></h4>
+<p>YAML-driven pattern matching on <code>gameplay_events</code>:</p>
+<pre><code class="language-yaml"># tips/base-game-tips.yaml
+tips:
+  - id: idle_harvesters
+    title: "Keep Your Economy Running"
+    positive: false
+    condition:
+      type: stat_threshold
+      stat: idle_harvester_seconds
+      threshold: 30
+    text: "Your harvesters sat idle for {idle_harvester_seconds} seconds. Idle harvesters mean lost income."
+    learn_more: tutorial_04  # links to Commander School Mission 04 (Economy)
+
+  - id: good_micro
+    title: "Sharp Micro"
+    positive: true
+    condition:
+      type: stat_threshold
+      stat: average_unit_efficiency  # damage dealt / damage taken per unit
+      threshold: 1.5
+      direction: above
+    text: "Your units dealt {ratio}× more damage than they took — strong micro."
+
+  - id: no_tech
+    title: "Explore the Tech Tree"
+    positive: false
+    condition:
+      type: never_built
+      building_types: [radar_dome, tech_center, battle_lab]
+      min_game_length_minutes: 8
+    text: "You didn't build any advanced structures. Higher-tech units can turn the tide."
+    learn_more: tutorial_07  # links to Commander School Mission 07 (Combined Arms)
+</code></pre>
+<p><strong>Tip selection:</strong> 1–3 tips per game. At least one positive (“you did this well”) and at most one improvement (“you could try this”). Tips rotate — the engine avoids repeating the same tip in consecutive games.</p>
+<h4 id="annotated-replay-mode"><a class="header" href="#annotated-replay-mode">Annotated Replay Mode</a></h4>
+<p>“Watch the moment” links in post-game tips jump to an annotated replay — the replay plays with an overlay highlighting the relevant moment:</p>
+<pre><code>┌────────────────────────────────────────────────────────────┐
+│  REPLAY — ANNOTATED                                        │
+│  ┌──────────────────────────────────────────────────────┐  │
+│  │                                                      │  │
+│  │   [Game replay playing at 0.5x speed]               │  │
+│  │                                                      │  │
+│  │   ┌─────────────────────────────────┐               │  │
+│  │   │ 💡 Your harvester sat idle here │               │  │
+│  │   │    for 23 seconds while ore was │               │  │
+│  │   │    available 3 cells away.      │               │  │
+│  │   │    [Return to Stats]            │               │  │
+│  │   └─────────────────────────────────┘               │  │
+│  │                                                      │  │
+│  └──────────────────────────────────────────────────────┘  │
+│  ◄◄  ►  ►►  │ 4:23 / 12:01 │ 0.5x │                       │
+└────────────────────────────────────────────────────────────┘
+</code></pre>
+<p>The annotation data is generated at match end (not during gameplay — no sim overhead). It’s a list of <code>(tick, position, text)</code> tuples stored alongside the replay file.</p>
+<h4 id="progressive-feature-discovery"><a class="header" href="#progressive-feature-discovery">Progressive Feature Discovery</a></h4>
+<p>Milestone-based main menu notifications that surface features over the player’s first weeks:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Milestone</th><th>Feature Suggested</th><th>Notification</th></tr>
+</thead>
+<tbody>
+<tr><td>First game completed</td><td>Replays</td><td>“Your game was saved as a replay. Watch it from the Replays menu.”</td></tr>
+<tr><td>3 games completed</td><td>Experience profiles</td><td>“Did you know? You can switch gameplay presets in Settings → QoL.”</td></tr>
+<tr><td>First multiplayer game</td><td>Ranked play</td><td>“Ready for a challenge? Ranked matches calibrate your skill rating.”</td></tr>
+<tr><td>5 games completed</td><td>Workshop</td><td>“The Workshop has community maps, mods, and campaigns. Browse it anytime.”</td></tr>
+<tr><td>Commander School done</td><td>Training mode</td><td>“Try training mode to practice against AI with custom settings.”</td></tr>
+<tr><td>10 games completed</td><td>Console</td><td>“Press Enter and type / to access console commands.”</td></tr>
+<tr><td>First mod installed</td><td>Mod profiles</td><td>“Create mod profiles to switch between different mod setups quickly.”</td></tr>
+</tbody>
+</table>
+</div>
+<p>Maximum one notification per session. Three dismissals of the same category = never again. Discovery state stored in <code>hint_history</code> SQLite table (reuses the same suppression infrastructure as Layer 2).</p>
+<p><code>/discovery</code> console commands (D058): <code>/discovery list</code>, <code>/discovery reset</code>, <code>/discovery trigger &lt;milestone&gt;</code>.</p>
+<h3 id="tutorial-lua-global-api"><a class="header" href="#tutorial-lua-global-api">Tutorial Lua Global API</a></h3>
+<p>The <code>Tutorial</code> global is an IC-exclusive Lua extension available in all game modes (not just Commander School). Modders use it to build tutorial sequences in their own campaigns and scenarios.</p>
+<pre><code class="language-lua">-- === Step Management ===
+
+-- Define and activate a tutorial step. The step is displayed as a hint overlay
+-- and tracked for completion. Only one step can be active at a time.
+-- Calling SetStep while a step is active replaces it.
+Tutorial.SetStep(step_id, {
+    title = "Step Title",                    -- displayed in the hint overlay header
+    hint = "Instructional text for the player", -- main body text
+    focus_area = position_or_region,         -- optional: camera pans to this location
+    highlight_ui = "ui_element_id",          -- optional: highlight a sidebar/UI element
+    eva_line = "eva_sound_id",               -- optional: play an EVA voice line
+    completion = {                           -- when is this step "done"?
+        type = "action",                     -- "action", "kill", "kill_all", "build",
+                                             -- "select", "move_to", "research", "custom"
+        action = "attack_move",              -- specific action to detect
+        -- OR:
+        count = 3,                           -- for "kill": kill N enemies
+        -- OR:
+        unit_type = "power_plant",           -- for "build": build this structure
+        -- OR:
+        lua_condition = "CheckCustomGoal()", -- for "custom": Lua expression
+    },
+})
+
+-- Query the currently active step ID (nil if no step active)
+local current = Tutorial.GetCurrentStep()
+
+-- Manually complete the current step (triggers OnStepComplete)
+Tutorial.CompleteStep()
+
+-- Skip the current step without triggering completion
+Tutorial.SkipStep()
+
+-- === Hint Display ===
+
+-- Show a one-shot hint (not tied to a step). Useful for contextual tips
+-- within a mission script without the full step tracking machinery.
+Tutorial.ShowHint(text, {
+    title = "Optional Title",        -- nil = no title bar
+    duration = 8,                    -- seconds before auto-dismiss (0 = manual dismiss only)
+    position = "near_unit",          -- "near_unit", "near_building", "screen_top",
+                                     -- "screen_center", "near_sidebar", position_table
+    icon = "hint_icon_id",           -- optional icon
+    eva_line = "eva_sound_id",       -- optional EVA line
+    dismissable = true,              -- show dismiss button (default: true)
+})
+
+-- Show a hint anchored to a specific actor (follows the actor on screen)
+Tutorial.ShowActorHint(actor, text, options)
+
+-- Dismiss all currently visible hints
+Tutorial.DismissAllHints()
+
+-- === Camera &amp; Focus ===
+
+-- Smoothly pan the camera to a position or region
+Tutorial.FocusArea(position_or_region, {
+    duration = 1.5,                  -- pan duration in seconds
+    zoom = 1.0,                      -- optional zoom level (1.0 = default)
+    lock = false,                    -- if true, player can't move camera until unlock
+})
+
+-- Release a camera lock set by FocusArea
+Tutorial.UnlockCamera()
+
+-- === UI Highlighting ===
+
+-- Highlight a UI element with a pulsing glow effect
+Tutorial.HighlightUI(element_id, {
+    style = "pulse",                 -- "pulse", "arrow", "outline", "dim_others"
+    duration = 0,                    -- seconds (0 = until manually cleared)
+    text = "Click here",             -- optional tooltip on the highlight
+})
+
+-- Clear a specific highlight
+Tutorial.ClearHighlight(element_id)
+
+-- Clear all highlights
+Tutorial.ClearAllHighlights()
+
+-- === Restrictions (for teaching pacing) ===
+
+-- Disable sidebar/building (player can't construct until enabled)
+Tutorial.RestrictSidebar(enabled)
+
+-- Restrict which unit types the player can build
+Tutorial.RestrictBuildOptions(allowed_types)  -- e.g., {"power_plant", "barracks"}
+
+-- Restrict which orders the player can issue
+Tutorial.RestrictOrders(allowed_orders)  -- e.g., {"move", "stop", "attack"}
+
+-- Clear all restrictions
+Tutorial.ClearRestrictions()
+
+-- === Progress Tracking ===
+
+-- Check if the player has demonstrated a skill (from campaign state flags)
+local knows_groups = Tutorial.HasSkill("assign_control_group")
+
+-- Get the number of times a specific hint has been shown (from hint_history)
+local shown = Tutorial.GetHintShowCount("idle_harvester")
+
+-- Check if a specific Commander School mission has been completed
+local passed = Tutorial.IsMissionComplete("tutorial_04")
+
+-- === Callbacks ===
+
+-- Register a callback for when a step completes
+-- (also available as the global OnStepComplete function)
+Tutorial.OnStepComplete(function(step_id)
+    -- step_id is the string passed to SetStep
+end)
+
+-- Register a callback for when the player performs a specific action
+Tutorial.OnAction(action_name, function(context)
+    -- context contains details: { actor = ..., target = ..., position = ... }
+end)
+</code></pre>
+<h4 id="ui-element-ids-for-highlightui"><a class="header" href="#ui-element-ids-for-highlightui">UI Element IDs for HighlightUI</a></h4>
+<p>The <code>element_id</code> parameter refers to logical UI element names (not internal Bevy entity IDs):</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Element ID</th><th>What It Highlights</th></tr>
+</thead>
+<tbody>
+<tr><td><code>sidebar</code></td><td>The entire build sidebar</td></tr>
+<tr><td><code>sidebar_building</code></td><td>The building tab of the sidebar</td></tr>
+<tr><td><code>sidebar_unit</code></td><td>The unit tab of the sidebar</td></tr>
+<tr><td><code>sidebar_item:&lt;type&gt;</code></td><td>A specific buildable item (e.g., <code>sidebar_item:power_plant</code>)</td></tr>
+<tr><td><code>minimap</code></td><td>The minimap</td></tr>
+<tr><td><code>command_bar</code></td><td>The unit command bar (move, stop, attack, etc.)</td></tr>
+<tr><td><code>attack_move_button</code></td><td>The attack-move button specifically</td></tr>
+<tr><td><code>deploy_button</code></td><td>The deploy button</td></tr>
+<tr><td><code>guard_button</code></td><td>The guard button</td></tr>
+<tr><td><code>money_display</code></td><td>The credits/resource counter</td></tr>
+<tr><td><code>power_bar</code></td><td>The power supply/demand indicator</td></tr>
+<tr><td><code>radar_toggle</code></td><td>The radar on/off button</td></tr>
+<tr><td><code>sell_button</code></td><td>The sell (wrench/dollar) button</td></tr>
+<tr><td><code>repair_button</code></td><td>The repair button</td></tr>
+</tbody>
+</table>
+</div>
+<p>Modders can register custom UI element IDs for custom UI panels via <code>Tutorial.RegisterUIElement(id, description)</code>.</p>
+<h3 id="tutorial-achievements-d036"><a class="header" href="#tutorial-achievements-d036">Tutorial Achievements (D036)</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Achievement</th><th>Condition</th><th>Icon</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Graduate</strong></td><td>Complete Commander School (missions 01–09)</td><td>🎓</td></tr>
+<tr><td><strong>Honors Graduate</strong></td><td>Complete Commander School with zero retries</td><td>🏅</td></tr>
+<tr><td><strong>Quick Study</strong></td><td>Complete Commander School in under 45 minutes total</td><td>⚡</td></tr>
+<tr><td><strong>Helping Hand</strong></td><td>Complete a community-made tutorial campaign</td><td>🤝</td></tr>
+</tbody>
+</table>
+</div>
+<p>These are engine-defined achievements (not mod-defined). They use the D036 achievement system and sync with Steam achievements for Steam builds.</p>
+<h3 id="multiplayer-onboarding"><a class="header" href="#multiplayer-onboarding">Multiplayer Onboarding</a></h3>
+<p>First time clicking <strong>Multiplayer</strong> from the main menu, a welcome overlay appears (see <code>17-PLAYER-FLOW.md</code> for the full layout):</p>
+<ul>
+<li>Explains relay server model (no host advantage)</li>
+<li>Suggests: casual game first → ranked → spectate</li>
+<li>“Got it, let me play” dismisses permanently</li>
+<li>Stored in <code>hint_history</code> as <code>mp_welcome_dismissed</code></li>
+</ul>
+<p>After the player’s first multiplayer game, a brief overlay explains the post-game stats and rating system if ranked.</p>
+<h3 id="modder-tutorial-api--custom-tutorial-campaigns"><a class="header" href="#modder-tutorial-api--custom-tutorial-campaigns">Modder Tutorial API — Custom Tutorial Campaigns</a></h3>
+<p>The entire tutorial infrastructure is available to modders. A modder creating a total conversion or a complex mod with novel mechanics can build their own Commander School equivalent:</p>
+<ol>
+<li><strong>Campaign YAML:</strong> Use <code>category: tutorial</code> in the campaign definition. The campaign appears under <code>Campaign → Tutorial</code> in the main menu.</li>
+<li><strong>Tutorial Lua API:</strong> All <code>Tutorial.*</code> functions work in any campaign or scenario, not just the built-in Commander School. Call <code>Tutorial.SetStep()</code>, <code>Tutorial.ShowHint()</code>, <code>Tutorial.HighlightUI()</code>, etc.</li>
+<li><strong>Custom hints:</strong> Add a <code>hints.yaml</code> to the mod directory. Hints are merged with the base game hints at load time. Mod hints can reference mod-specific unit types, building types, and actions.</li>
+<li><strong>Custom trigger types:</strong> Define custom triggers via Lua using the <code>custom</code> trigger type in <code>hints.yaml</code>, or register a full trigger type via WASM (Tier 3).</li>
+<li><strong>Scenario editor modules:</strong> Use the Tutorial Step and Tutorial Hint modules (D038) to build tutorial sequences visually without writing Lua.</li>
+</ol>
+<h4 id="end-to-end-example-modder-tutorial-campaign"><a class="header" href="#end-to-end-example-modder-tutorial-campaign">End-to-End Example: Modder Tutorial Campaign</a></h4>
+<p>A modder creating a “Chrono Warfare” mod with a time-manipulation mechanic wants a 3-mission tutorial introducing the new features:</p>
+<pre><code class="language-yaml"># mods/chrono-warfare/campaigns/tutorial/campaign.yaml
+campaign:
+  id: chrono_tutorial
+  title: "Chrono Warfare — Basic Training"
+  description: "Learn the new time-manipulation abilities"
+  start_mission: chrono_01
+  category: tutorial
+  requires_mod: chrono-warfare
+
+  missions:
+    chrono_01:
+      map: missions/chrono-tutorial/01-temporal-basics
+      briefing: briefings/chrono-01.yaml
+      outcomes:
+        pass: { next: chrono_02 }
+        skip: { next: chrono_02 }
+
+    chrono_02:
+      map: missions/chrono-tutorial/02-chrono-shift
+      briefing: briefings/chrono-02.yaml
+      outcomes:
+        pass: { next: chrono_03 }
+        skip: { next: chrono_03 }
+
+    chrono_03:
+      map: missions/chrono-tutorial/03-time-bomb
+      briefing: briefings/chrono-03.yaml
+      outcomes:
+        pass: { description: "Training complete" }
+</code></pre>
+<pre><code class="language-lua">-- mods/chrono-warfare/missions/chrono-tutorial/01-temporal-basics.lua
+
+function OnMissionStart()
+    -- Restrict everything except the new mechanic
+    Tutorial.RestrictSidebar(true)
+    Tutorial.RestrictOrders({"move", "stop", "chrono_freeze"})
+
+    -- Step 1: Introduce the Chrono Freeze ability
+    Tutorial.SetStep("learn_freeze", {
+        title = "Temporal Freeze",
+        hint = "Your Chrono Trooper can freeze enemies in time. " ..
+               "Select the trooper and use the Chrono Freeze ability on the enemy tank.",
+        focus_area = enemy_tank_position,
+        highlight_ui = "sidebar_item:chrono_freeze",
+        eva_line = "chrono_tech_available",
+        completion = { type = "action", action = "chrono_freeze" }
+    })
+end
+
+function OnStepComplete(step_id)
+    if step_id == "learn_freeze" then
+        Tutorial.ShowHint("The enemy tank is frozen in time for 10 seconds. " ..
+                          "Frozen units can't move, shoot, or be damaged.", {
+            duration = 6,
+            position = "near_unit",
+        })
+
+        Trigger.AfterDelay(DateTime.Seconds(8), function()
+            Tutorial.SetStep("destroy_frozen", {
+                title = "Shatter the Frozen",
+                hint = "When the freeze ends, the target takes bonus damage for 3 seconds. " ..
+                       "Attack the tank right as the freeze expires!",
+                completion = { type = "kill", count = 1 }
+            })
+        end)
+
+    elseif step_id == "destroy_frozen" then
+        Campaign.complete("pass")
+    end
+end
+</code></pre>
+<pre><code class="language-yaml"># mods/chrono-warfare/hints/chrono-hints.yaml
+hints:
+  - id: chrono_freeze_ready
+    title: "Chrono Freeze Available"
+    text: "Your Chrono Trooper's freeze ability is ready. Use it on high-value targets."
+    category: mod_specific
+    trigger:
+      type: building_ready
+      building_type: "chrono_trooper"
+      ability: "chrono_freeze"
+      first_time: true
+    suppression:
+      mastery_action: use_chrono_freeze
+      mastery_threshold: 3
+      cooldown_seconds: 0
+      max_shows: 1
+    experience_profiles: [all]
+    priority: high
+    position: near_unit
+</code></pre>
+<h3 id="campaign-pedagogical-pacing-guidelines"><a class="header" href="#campaign-pedagogical-pacing-guidelines">Campaign Pedagogical Pacing Guidelines</a></h3>
+<p>For the built-in Allied and Soviet campaigns (not Commander School), IC follows these pacing guidelines to ensure the official campaigns serve as gentle second-layer tutorials:</p>
+<ol>
+<li><strong>One new mechanic per mission maximum.</strong> Mission 1 introduces movement. Mission 2 adds combat. Mission 3 adds base building. Never two new systems in the same mission.</li>
+<li><strong>Tutorial EVA lines for first encounters.</strong> The first time the player builds a new structure type or encounters a new enemy unit type, EVA provides a brief explanation — but only if the player hasn’t completed the relevant Commander School lesson. This is context-sensitive, not a lecture.</li>
+<li><strong>Safe-to-fail early missions.</strong> The first 3 missions of each campaign have generous time limits, weak enemies, and no base-building pressure. The player can explore at their own pace.</li>
+<li><strong>No mechanic is required without introduction.</strong> If Mission 7 requires naval combat, Mission 6 introduces shipyards in a low-pressure scenario.</li>
+<li><strong>Difficulty progression: linear, not spiked.</strong> No “brick wall” missions. If a mission has a significant difficulty increase, it offers a remedial branch (D021 campaign graph).</li>
+</ol>
+<p>These guidelines apply to modders creating campaigns intended for the <code>category: campaign</code> (not <code>category: tutorial</code>). They’re documented here rather than enforced by the engine — modders can choose to follow or ignore them.</p>
+<h3 id="cross-references"><a class="header" href="#cross-references">Cross-References</a></h3>
+<ul>
+<li><strong>D004 (Lua Scripting):</strong> <code>Tutorial</code> is a Lua global, part of the IC-exclusive API extension set (see <code>04-MODDING.md</code> § IC-exclusive extensions).</li>
+<li><strong>D021 (Branching Campaigns):</strong> Commander School’s branching graph (with remedial branches) uses the standard D021 campaign system. Tutorial campaigns are campaigns — they use the same YAML format, Lua API, and campaign graph engine.</li>
+<li><strong>D033 (QoL Toggles):</strong> Experience profiles control hint defaults. Individual hint categories are toggleable. The D033 QoL panel exposes hint frequency settings.</li>
+<li><strong>D034 (SQLite):</strong> <code>hint_history</code>, <code>player_skill_estimate</code>, and discovery state in <code>player.db</code>. Tip display history also in SQLite.</li>
+<li><strong>D036 (Achievements):</strong> Graduate, Honors Graduate, Quick Study, Helping Hand. Engine-defined, Steam-synced.</li>
+<li><strong>D038 (Scenario Editor):</strong> Tutorial Step and Tutorial Hint modules enable visual tutorial creation without Lua. See D038’s module library.</li>
+<li><strong>D043 (AI Behavior Presets):</strong> Tutorial AI tier sits below Easy difficulty. It’s Lua-scripted per mission, not a general-purpose AI.</li>
+<li><strong>D058 (Command Console):</strong> <code>/hints</code> and <code>/discovery</code> console commands for hint management and discovery milestone control.</li>
+<li><strong>D031 (Telemetry):</strong> New player pipeline emits <code>onboarding.step</code> telemetry events. Hint shows/dismissals are tracked in <code>gameplay_events</code> for UX analysis.</li>
+<li><strong><code>17-PLAYER-FLOW.md</code>:</strong> Full player flow mockups for all five tutorial layers, including the self-identification screen, Commander School entry, multiplayer onboarding, and post-game tips.</li>
+<li><strong><code>08-ROADMAP.md</code>:</strong> Phase 3 deliverables (hint system, new player pipeline, progressive discovery), Phase 4 deliverables (Commander School, skill assessment, post-game learning, tutorial achievements).</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div>
 <h1 id="10--performance-philosophy--strategy"><a class="header" href="#10--performance-philosophy--strategy">10 — Performance Philosophy &amp; Strategy</a></h1>
 <h2 id="core-principle-efficiency-not-brute-force"><a class="header" href="#core-principle-efficiency-not-brute-force">Core Principle: Efficiency, Not Brute Force</a></h2>
 <p><strong>Performance goal: a 2012 laptop with 2 cores and 4GB RAM runs a 500-unit battle smoothly. A modern machine handles 3000 units without sweating.</strong></p>
@@ -36702,7 +37825,7 @@ render_budget_pct = 10
 </table>
 </div>
 <h3 id="complete-parameter-audit"><a class="header" href="#complete-parameter-audit">Complete Parameter Audit</a></h3>
-<p>The <code>PARAMETER-AUDIT.md</code> file at the repository root catalogs every numeric constant, threshold, and tunable parameter across all design documents (~530+ parameters across 21 categories). It serves as an exhaustive cross-reference between the designed values and their sources.</p>
+<p>The <code>research/parameter-audit.md</code> file catalogs every numeric constant, threshold, and tunable parameter across all design documents (~530+ parameters across 21 categories). It serves as an exhaustive cross-reference between the designed values and their sources.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="16--coding-standards"><a class="header" href="#16--coding-standards">16 — Coding Standards</a></h1>
 <h2 id="purpose-of-this-chapter-2"><a class="header" href="#purpose-of-this-chapter-2">Purpose of This Chapter</a></h2>
@@ -38731,7 +39854,7 @@ In-Game → sidebar → right-click unit/building → "View in Encyclopedia"
 └──────────────────────────────────────────┘
 </code></pre>
 <p>YAML-driven triggers, adaptive suppression (hints shown less frequently as the player demonstrates mastery), experience-profile-aware (different hints for vanilla vs. OpenRA vs. Remastered veterans).</p>
-<h3 id="layer-3--new-player-pipeline"><a class="header" href="#layer-3--new-player-pipeline">Layer 3 — New Player Pipeline</a></h3>
+<h3 id="layer-3--new-player-pipeline-1"><a class="header" href="#layer-3--new-player-pipeline-1">Layer 3 — New Player Pipeline</a></h3>
 <p>The first-launch self-identification screen (shown earlier) feeds into:</p>
 <ul>
 <li>Skill assessment from early gameplay</li>
@@ -38740,9 +39863,9 @@ In-Game → sidebar → right-click unit/building → "View in Encyclopedia"
 </ul>
 <h3 id="layer-4--adaptive-pacing"><a class="header" href="#layer-4--adaptive-pacing">Layer 4 — Adaptive Pacing</a></h3>
 <p>Behind the scenes: the engine estimates player skill from gameplay metrics and adjusts hint frequency and difficulty recommendations. Not visible as a screen — it’s a system that shapes the other layers.</p>
-<h3 id="layer-5--post-game-learning"><a class="header" href="#layer-5--post-game-learning">Layer 5 — Post-Game Learning</a></h3>
+<h3 id="layer-5--post-game-learning-1"><a class="header" href="#layer-5--post-game-learning-1">Layer 5 — Post-Game Learning</a></h3>
 <p>The post-game screen (see Post-Game section above) includes rule-based tips analyzing the match. “You had 15 idle harvester seconds” with a link to the relevant Commander School lesson or an annotated replay mode highlighting the moment.</p>
-<h3 id="multiplayer-onboarding"><a class="header" href="#multiplayer-onboarding">Multiplayer Onboarding</a></h3>
+<h3 id="multiplayer-onboarding-1"><a class="header" href="#multiplayer-onboarding-1">Multiplayer Onboarding</a></h3>
 <p>First time clicking <strong>Multiplayer</strong>:</p>
 <pre><code>┌──────────────────────────────────────────────────────────┐
 │  WELCOME TO MULTIPLAYER                                  │
@@ -39057,7 +40180,7 @@ IC SDK (separate application)
 </div>
 <p><code>ScreenClass</code> (Phone/Tablet/Desktop/TV) is detected automatically. <code>InputCapabilities</code> (touch, mouse, gamepad) drives interaction mode. The player flow stays identical — only the visual layout and input bindings change.</p>
 <hr>
-<h2 id="cross-references"><a class="header" href="#cross-references">Cross-References</a></h2>
+<h2 id="cross-references-1"><a class="header" href="#cross-references-1">Cross-References</a></h2>
 <p>This document consolidates UI/UX information from across the design docs. The canonical source for each system remains its original location:</p>
 <div class="table-wrapper">
 <table>

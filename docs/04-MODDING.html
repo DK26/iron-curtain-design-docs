@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-c8692886.js";
+            window.path_to_searchindex_js = "searchindex-05559aa2.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-b2bf7f58.js"></script>
@@ -559,6 +559,7 @@ fingerprint: null  # computed at activation
 <tr><td><code>Workshop</code></td><td>Mod metadata queries</td></tr>
 <tr><td><code>LLM</code></td><td>LLM integration hooks (Phase 7)</td></tr>
 <tr><td><code>Achievement</code></td><td>Achievement trigger/query API (D036)</td></tr>
+<tr><td><code>Tutorial</code></td><td>Tutorial step management, contextual hints, UI highlighting, camera focus, build/order restrictions for pedagogical pacing (D065). Available in all game modes — modders use it to build tutorial sequences in custom campaigns. See <code>decisions/09g-interaction.md</code> § D065 for the full API.</td></tr>
 <tr><td><code>Ai</code></td><td>AI scripting primitives (Phase 4) — force composition, resource ratios, patrol/attack commands; inspired by Stratagus’s proven Lua AI API (<code>AiForce</code>, <code>AiSetCollect</code>, <code>AiWait</code> pattern — see <code>research/stratagus-stargus-opencraft-analysis.md</code>). Enables Tier 2 modders to write custom AI behaviors without Tier 3 WASM.</td></tr>
 </tbody>
 </table>
@@ -2232,6 +2233,13 @@ llm:
 ├── missions/                 # campaign missions
 │   ├── allied-01.yaml
 │   └── allied-01.lua
+├── campaigns/                # campaign definitions (D021)
+│   └── tutorial/
+│       └── campaign.yaml
+├── hints/                    # contextual hint definitions (D065)
+│   └── mod-hints.yaml
+├── tips/                     # post-game tip definitions (D065)
+│   └── mod-tips.yaml
 ├── scripts/                  # Tier 2: Lua scripts
 │   ├── abilities/
 │   └── triggers/
@@ -2245,6 +2253,8 @@ llm:
 ├── templates/                # Tera mission/scene templates
 └── README.md                 # human-readable mod description
 </code></pre>
+<p><strong>Contextual hints (<code>hints/</code>):</strong> Modders define YAML-driven gameplay hints that appear at point-of-need during any game mode. Hints are merged with the base game’s hints at load time. The full schema — trigger types, suppression rules, experience profile targeting, and SQLite tracking — is documented in <code>decisions/09g-interaction.md</code> § D065 Layer 2.</p>
+<p><strong>Post-game tips (<code>tips/</code>):</strong> YAML-driven rule-based tips shown on the post-game stats screen, matching gameplay event patterns. See <code>decisions/09g-interaction.md</code> § D065 Layer 5.</p>
 <h3 id="mod-templates-via-cargo-generate"><a class="header" href="#mod-templates-via-cargo-generate">Mod Templates (via <code>cargo-generate</code>)</a></h3>
 <p><code>ic mod init</code> uses <code>cargo-generate</code>-style templates. Built-in templates:</p>
 <div class="table-wrapper">
