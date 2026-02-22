@@ -2784,6 +2784,10 @@ pub struct ProtocolLimits {
 
 **Layout and handedness:** The minimap cluster (minimap + alerts + bookmark dock) mirrors with the player's handedness setting. The command rail remains on the dominant-thumb side, so minimap communication and camera navigation stay on the opposite side and don't fight for the same thumb.
 
+**Official binding profile integration (D065):** Communication controls in D059 are not a separate control scheme. They are semantic actions in D065's canonical input action catalog (e.g., `open_chat`, `voice_ptt`, `ping_wheel`, `chat_wheel`, `minimap_draw`, `callvote`, `mute_player`) and are mapped through the same official profiles (`Classic RA`, `OpenRA`, `Modern RTS`, `Gamepad Default`, `Steam Deck Default`, `Touch Phone/Tablet`). This keeps tutorial prompts, Quick Reference, and "What's Changed in Controls" updates consistent across devices and profile changes.
+
+**Discoverability rule (controller/touch):** Every D059 communication action must have a visible UI path in addition to any shortcut/button chord. Example: PTT may be on a shoulder button, but the voice panel still exposes the active binding and a test control; pings/chat wheel may use radial holds, but the pause/controls menu and Quick Reference must show how to trigger them on the current profile.
+
 ### 8. Lua API Extensions (D024)
 
 Building on the existing `Beacon` and `Radar` globals from OpenRA compatibility:
@@ -3528,6 +3532,210 @@ The walkthrough teaches only control fundamentals (camera pan/zoom, selection, c
 - `Skip to Game`
 
 This keeps D065's early experience friendly on touch devices without duplicating Commander School missions.
+
+#### Canonical Input Action Model and Official Binding Profiles
+
+To keep desktop, touch, Steam Deck, TV/gamepad, tutorials, and accessibility remaps aligned, D065 defines a **single semantic input action catalog**. The game binds physical inputs to semantic actions; tutorial prompts, the Controls Quick Reference, and the Controls-Changed Walkthrough all render from the same catalog.
+
+**Design rule:** IC does not define "the keyboard layout" as raw keys first. It defines **actions** first, then ships official binding profiles per device/input class.
+
+**Semantic action categories (canonical):**
+- **Camera** — pan, zoom, center-on-selection, cycle alerts, save/jump camera bookmark, minimap jump/scrub
+- **Selection & Orders** — select, add/remove selection, box select, deselect, context command, attack-move, guard, stop, force action, deploy, stance/ability shortcuts
+- **Production & Build** — open/close build UI, category navigation, queue/cancel, structure placement confirm/cancel/rotate (module-specific), repair/sell/context build actions
+- **Control Groups** — select group, assign group, add-to-group, center group
+- **Communication & Coordination** — open chat, channel shortcuts, whisper, push-to-talk, ping wheel, chat wheel, minimap draw, tactical markers, callvote
+- **UI / System** — pause/menu, scoreboard, controls quick reference, console (where supported), screenshot, replay controls, observer panels
+
+**Official profile families (shipped defaults):**
+- `Classic RA (KBM)` — preserves classic RTS muscle memory where practical
+- `OpenRA (KBM)` — optimized for OpenRA veterans (matching common command expectations)
+- `Modern RTS (KBM)` — IC default desktop profile tuned for discoverability and D065 onboarding
+- `Gamepad Default` — cursor/radial hybrid for TV/console-style play
+- `Steam Deck Default` — Deck-specific variant (touchpads/optional gyro/OSK-aware), not just generic gamepad
+- `Touch Phone` and `Touch Tablet` — gesture + HUD layout profiles (defined by D059/D065 mobile control rules; not "key" maps, but still part of the same action catalog)
+
+**Binding profile behavior:**
+- Profiles are versioned. A local profile stores either a stock profile ID or a **diff** from a stock profile (`Custom`).
+- Rebinding UI edits semantic actions, never hardcodes UI-widget-local shortcuts.
+- A single action may have multiple bindings (e.g., keyboard key + mouse button chord, or gamepad button + radial fallback).
+- Platform-incompatible actions are hidden or remapped with a visible alternative (no dead-end actions on controller/touch).
+- Tutorial prompts and quick reference entries resolve against the **active profile + current `InputCapabilities` + `ScreenClass`**.
+
+**Official baseline defaults (high-level, normative examples):**
+
+| Action | Desktop KBM default (Modern RTS) | Steam Deck / Gamepad default | Touch default |
+| ------ | -------------------------------- | ---------------------------- | ------------- |
+| Select / context command | Left-click / Right-click | Cursor confirm button (`A`/`Cross`) | Tap |
+| Box select | Left-drag | Hold modifier + cursor drag / touchpad drag | Hold + drag |
+| Attack-Move | `A` then target | Command radial → Attack-Move | Command rail `Attack-Move` (optional) |
+| Guard | `Q` then target/self | Command radial → Guard | Command rail `Guard` (optional) |
+| Stop | `S` | Face button / radial shortcut | Visible button in command rail/overflow |
+| Deploy | `D` | Context action / radial | Context tap or rail button |
+| Control groups | `1–0`, `Ctrl+1–0` | D-pad pages / radial groups (profile-defined) | Bottom control-group bar chips |
+| Camera bookmarks | `F5–F8`, `Ctrl+F5–F8` | D-pad/overlay quick slots (profile-defined) | Bookmark dock near minimap (tap/long-press) |
+| Open chat | `Enter` | Menu shortcut + OSK | Chat button + OS keyboard |
+| Controls Quick Reference | `F1` | Pause → Controls (optionally bound) | Pause → Controls |
+
+**Controller / Deck interaction model requirements (official profiles):**
+- Controller profiles must provide a visible, discoverable path to all high-frequency orders (context command + command radial + pause/quick reference fallback)
+- Steam Deck profile may use touchpad cursor and optional gyro precision, but every action must remain usable with gamepad-only input
+- Text-heavy actions (chat, console where allowed) may invoke OSK; gameplay-critical actions may not depend on text entry
+- Communication actions (PTT, ping wheel, chat wheel) must remain reachable without leaving combat camera control for more than one gesture/button chord
+
+**Accessibility requirements for all profiles:**
+- Full rebinding across keyboard, mouse, gamepad, and Deck controls
+- Hold/toggle alternatives (e.g., PTT, radial hold vs tap-toggle, sticky modifiers)
+- Adjustable repeat rates, deadzones, stick curves, cursor acceleration, and gyro sensitivity (where supported)
+- One-handed / reduced-dexterity viable alternatives for high-frequency commands (via remaps, radials, or quick bars)
+- Controls Quick Reference always reflects the player's current bindings and accessibility overrides, not only stock defaults
+
+**Competitive integrity note:** Binding/remap freedom is supported, but multi-action automation/macros remain governed by D033 competitive equalization policy. Official profiles define discoverable defaults, not privileged input capabilities.
+
+#### Official Default Binding Matrix (v1, Normative Baseline)
+
+The tables below define the **normative baseline defaults** for:
+- `Modern RTS (KBM)`
+- `Gamepad Default`
+- `Steam Deck Default` (Deck-specific overrides and additions)
+
+`Classic RA (KBM)` and `OpenRA (KBM)` are compatibility-oriented profiles layered on the same semantic action catalog. They may differ in key placement, but must expose the same actions and remain fully documented in the Controls Quick Reference.
+
+**Controller naming convention (generic):**
+- `Confirm` = primary face button (`A` / `Cross`)
+- `Cancel` = secondary face button (`B` / `Circle`)
+- `Cmd Radial` = default **hold** command radial button (profile-defined; `Y` / `Triangle` by default)
+- `Menu` / `View` = start/select-equivalent buttons
+
+**Steam Deck defaults:** Deck inherits `Gamepad Default` semantics but prefers **right trackpad cursor** and optional **gyro precision** for fine targeting. All actions remain usable without gyro.
+
+##### Camera & Navigation
+
+| Semantic action | Modern RTS (KBM) | Gamepad Default | Steam Deck Default | Notes |
+| --------------- | ---------------- | --------------- | ------------------ | ----- |
+| Camera pan | Mouse to screen edge / Middle-mouse drag | Left stick | Left stick | Edge-scroll can be disabled; drag-pan remains |
+| Camera zoom in | Mouse wheel up | `RB` (tap) or zoom radial | `RB` (tap) / two-finger trackpad pinch emulation optional | Profile may swap with category cycling if player prefers |
+| Camera zoom out | Mouse wheel down | `LB` (tap) or zoom radial | `LB` (tap) / two-finger trackpad pinch emulation optional | Same binding family as zoom in |
+| Center on selection | `C` | `R3` click | `R3` click / `L4` (alt binding) | Mode-safe in gameplay and observer views |
+| Cycle recent alert | `Space` | `D-pad Down` | `D-pad Down` | In replay mode, `Space` is reserved for replay pause/play |
+| Jump bookmark slot 1–4 | `F5–F8` | `D-pad Left/Right` page + quick slot overlay confirm | Bookmark dock overlay via `R5`, then face/d-pad select | Quick slots map to D065 bookmark system |
+| Save bookmark slot 1–4 | `Ctrl+F5–F8` | Hold bookmark overlay + `Confirm` on slot | Hold bookmark overlay (`R5`) + slot click/confirm | Matches desktop/touch semantics |
+| Open minimap focus / camera jump mode | Mouse click minimap | `View` + left stick (minimap focus mode) | Left trackpad minimap focus (default) / `View`+stick fallback | No hidden-only path; visible in quick reference |
+
+##### Selection & Orders
+
+| Semantic action | Modern RTS (KBM) | Gamepad Default | Steam Deck Default | Notes |
+| --------------- | ---------------- | --------------- | ------------------ | ----- |
+| Select / Context command | Left-click select / Right-click context | Cursor + `Confirm` | Trackpad cursor + `R2` (`Confirm`) | Same semantic action, resolved by context |
+| Add/remove selection modifier | `Shift` + click/drag | `LT` modifier while selecting | `L2` modifier while selecting | Also used for queue modifier in production UI |
+| Box select | Left-drag | Hold selection modifier + cursor drag | Hold `L2` + trackpad drag (or stick drag) | Touch remains hold+drag (D059/D065 mobile) |
+| Deselect | `Esc` / click empty UI space | `Cancel` | `B` / `Cancel` | `Cancel` also exits modal targeting |
+| Attack-Move | `A`, then target | `Cmd Radial` → Attack-Move | `R1` radial → Attack-Move | High-frequency, surfaced in radial + quick ref |
+| Guard | `Q`, then target/self | `Cmd Radial` → Guard | `R1` radial → Guard | `Q` avoids conflict with `Hold G` ping wheel |
+| Stop | `S` | `X` (tap) | `X` (tap) / `R4` (alt) | Immediate command, no target required |
+| Force Action / Force Fire | `F`, then target | `Cmd Radial` → Force Action | `R1` radial → Force Action | Name varies by module; semantic action remains |
+| Deploy / Toggle deploy state | `D` | `Y` (tap, context-sensitive) or radial | `Y` / radial | Falls back to context action if deployable selected |
+| Scatter / emergency disperse | `X` | `Cmd Radial` → Scatter | `R1` radial → Scatter | Optional per module/profile; present if module supports |
+| Cycle selected-unit subtype | `Ctrl+Tab` | `D-pad Right` (selection mode) | `D-pad Right` (selection mode) | If selection contains mixed types |
+
+##### Production, Build, and Control Groups
+
+| Semantic action | Modern RTS (KBM) | Gamepad Default | Steam Deck Default | Notes |
+| --------------- | ---------------- | --------------- | ------------------ | ----- |
+| Open/close production panel focus | `B` (focus build UI) / click sidebar | `D-pad Left` (tap) | `D-pad Left` (tap) | Does not pause; focus shifts to production UI |
+| Cycle production categories | `Q/E` (while build UI focused) | `LB/RB` | `LB/RB` | Contextual to production focus mode |
+| Queue selected item | `Enter` / left-click on item | `Confirm` | `R2` / trackpad click | Works in production focus mode |
+| Queue 5 / repeat modifier | `Shift` + queue | `LT` + queue | `L2` + queue | Uses same modifier family as selection add |
+| Cancel queue item | Right-click queue slot | `Cancel` on queue slot | `B` on queue slot | Contextual in queue UI |
+| Set rally point / waypoint | `R`, then target | `Cmd Radial` → Rally/Waypoint | `R1` radial → Rally/Waypoint | Module-specific labeling |
+| Building placement confirm | Left-click | `Confirm` | `R2` / trackpad click | Ghost preview remains visible |
+| Building placement cancel | `Esc` / Right-click | `Cancel` | `B` | Consistent across modes |
+| Building placement rotate (if supported) | `R` | `Y` (placement mode) | `Y` (placement mode) | Context-sensitive; only shown if module supports rotation |
+| Select control group 1–0 | `1–0` | Control-group overlay + slot select (`D-pad Up` opens) | Bottom/back-button overlay (`L4`) + slot select | Touch uses bottom control-group bar chips |
+| Assign control group 1–0 | `Ctrl+1–0` | Overlay + hold slot | Overlay + hold slot | Assignment is explicit to avoid accidental overwrite |
+| Center camera on control group | Double-tap `1–0` | Overlay + reselect active slot | Overlay + reselect active slot | Mirrors desktop double-tap behavior |
+
+##### Communication & Coordination (D059)
+
+| Semantic action | Modern RTS (KBM) | Gamepad Default | Steam Deck Default | Notes |
+| --------------- | ---------------- | --------------- | ------------------ | ----- |
+| Open chat input | `Enter` | `View` (hold) → chat input / OSK | `View` (hold) or keyboard shortcut + OSK | D058/D059 command browser remains available where supported |
+| Team chat shortcut | `/team` prefix or channel toggle in chat UI | Chat panel channel tab | Chat panel channel tab | Semantic action resolves to channel switch |
+| All-chat shortcut | `/all` prefix or channel toggle in chat UI | Chat panel channel tab | Chat panel channel tab | D058 `/s` remains one-shot send |
+| Whisper | `/w <player>` or player context menu | Player card → Whisper | Player card → Whisper | Visible UI path required |
+| Push-to-talk (PTT) | `CapsLock` (default, rebindable) | `LB` (hold) | `L1` (hold) | VAD optional, PTT default per D059 |
+| Ping wheel | `Hold G` + mouse direction | `R3` (hold) + right stick | `R3` hold + stick or right trackpad radial | Matches D059 controller guidance |
+| Quick ping | `G` tap | `D-pad Up` tap | `D-pad Up` tap | Tap vs hold disambiguation for ping wheel |
+| Chat wheel | `Hold V` + mouse direction | `D-pad Right` hold | `D-pad Right` hold | Quick-reference shows phrase preview by profile |
+| Minimap draw | `Alt` + minimap drag | Minimap focus mode + `RT` draw | Touch minimap draw or minimap focus mode + `R2` | Deck prefers touch minimap when available |
+| Callvote menu / command | `/callvote` or Pause → Vote | Pause → Vote | Pause → Vote | Console command remains equivalent where exposed |
+| Mute/unmute player | Scoreboard/context menu (`Tab`) | Scoreboard/context menu | Scoreboard/context menu | No hidden shortcut required |
+
+##### UI / System / Replay / Spectator
+
+| Semantic action | Modern RTS (KBM) | Gamepad Default | Steam Deck Default | Notes |
+| --------------- | ---------------- | --------------- | ------------------ | ----- |
+| Pause / Escape menu | `Esc` | `Menu` | `Menu` | In multiplayer opens escape menu, not sim pause |
+| Scoreboard / player list | `Tab` | `View` (tap) | `View` (tap) | Supports mute/report/context actions |
+| Controls Quick Reference | `F1` | Pause → Controls (bindable shortcut optional) | `L5` (hold) optional + Pause → Controls | Always reachable from pause/settings |
+| Developer console (where supported) | `~` | Pause → Command Browser (GUI) | Pause → Command Browser (GUI) | No tilde requirement on non-keyboard platforms |
+| Screenshot | `F12` | Pause → Photo/Share submenu (platform API) | `Steam`+`R1` (OS default) / in-game photo action | Platform-specific capture APIs may override |
+| Replay pause/play (replay mode) | `Space` | `Confirm` | `R2` / `Confirm` | Mode-specific; does not conflict with live match `Space` alert cycle |
+| Replay seek step ± | `,` / `.` | `LB/RB` (replay mode) | `LB/RB` (replay mode) | Profile may remap to triggers |
+| Observer panel toggle | `O` | `Y` (observer mode) | `Y` (observer mode) | Only visible in spectator/caster contexts |
+
+#### Workshop-Shareable Configuration Profiles (Optional)
+
+Players can share **configuration profiles** via the Workshop as an optional, non-gameplay resource type. This includes:
+- control bindings / input profiles (KBM, gamepad, Deck, touch layout preferences)
+- accessibility presets (target size, hold/toggle behavior, deadzones, high-contrast HUD toggles)
+- HUD/layout preference bundles (where layout profiles permit customization)
+- camera/QoL preference bundles (non-authoritative client settings)
+
+**Hard boundaries (safety / trust):**
+- No secrets or credentials (API keys, tokens, account auth data) — those remain D047-only local secrets
+- No absolute file paths, device serials, hardware IDs, or OS-specific personal data
+- No executable scripts/macros bundled in config profiles
+- No automatic application on install; imports always show a **scope + diff preview** before apply
+
+**Compatibility metadata (required for controls-focused profiles):**
+- semantic action catalog version
+- target input class (`desktop_kbm`, `gamepad`, `deck`, `touch_phone`, `touch_tablet`)
+- optional `ScreenClass` / layout profile compatibility hints
+- notes for features required by the profile (e.g., gyro, rear buttons, command rail enabled)
+
+**UX behavior:**
+- Controls screen supports `Import`, `Export`, and `Share on Workshop`
+- Workshop pages show the target device/profile class and a human-readable action summary (e.g., "Deck profile: right-trackpad cursor + gyro precision + PTT on L1")
+- Applying a profile can be partial (controls-only, touch-only, accessibility-only) to avoid clobbering unrelated preferences
+
+This follows the same philosophy as the Controls Quick Reference and D065 prompt system: shared semantics, device-specific presentation, and no hidden behavior.
+
+#### Controls Quick Reference (Always Available, Non-Blocking)
+
+D065 also provides a persistent **Controls Quick Reference** overlay/menu entry so advanced actions are never hidden behind memory or community lore.
+
+**Rules:**
+- Always available from gameplay (desktop, controller/Deck, and touch), pause menu, and settings
+- Device-specific presentation, shared semantic content (same action catalog, different prompts/icons)
+- Includes core actions + advanced/high-friction actions (camera bookmarks, command rail overrides, build drawer/sidebar interactions, chat/ping wheels)
+- Dismissable, searchable, and safe to open/close without disrupting the current mode
+- Can be pinned in reduced form during early sessions (optional setting), then auto-unpins as the player demonstrates mastery
+
+This is a **reference aid**, not a tutorial gate. It never blocks gameplay and does not require completion.
+
+#### Controls-Changed Walkthrough (One-Time After Input UX Changes)
+
+When a game update changes control defaults, official input profile mappings, touch gesture behavior, command-rail mappings, or HUD placements in a way that affects muscle memory, D065 can show a short **What's Changed in Controls** walkthrough on next launch.
+
+**Behavior:**
+- Triggered by a local controls-layout/version mismatch (e.g., input profile schema version or layout profile revision)
+- One-time prompt per affected profile/device; skippable and replayable later from Settings
+- Focuses only on changed interactions (not a full tutorial replay)
+- Prioritizes touch-platform changes (where discoverability regressions are most likely), but desktop can use it too
+- Links to the Controls Quick Reference and Commander School for deeper refreshers
+
+**Philosophy fit:** This preserves discoverability and reduces frustration without forcing players through onboarding again. It is a reversible UI aid, not a simulation change.
 
 #### Skill Assessment (Phase 4)
 

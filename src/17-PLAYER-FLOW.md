@@ -1109,7 +1109,7 @@ Settings are organized in a tabbed layout. Each tab covers one domain. Changes a
 | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Video**    | Resolution, fullscreen/windowed/borderless, render mode (Classic/HD/3D), zoom limits, UI scale, shroud style (hard/smooth edges), FPS limit, VSync. Theme selection (Classic/Remastered/Modern/community). Cutscene playback preference (`Auto` / `Original` / `Clean Remaster` / `AI Enhanced` / `Briefing Fallback`).                                                          |
 | **Audio**    | Master / Music / SFX / Voice / Ambient volume sliders. Music mode (Jukebox/Dynamic/Off). EVA voice. Spatial audio toggle.                                                                                                                                           |
-| **Controls** | Hotkey profile (Classic/OpenRA/Modern/Custom). Full rebinding UI with category filters (Unit Commands, Production, Control Groups, Camera, Chat, Debug). Mouse settings: edge scroll speed, scroll inversion, drag selection shape. Touch settings: handedness (mirror layout), touch target size, hold/drag thresholds, command rail behavior, camera bookmark dock preferences. |
+| **Controls** | Official input profiles by device: `Classic RA (KBM)`, `OpenRA (KBM)`, `Modern RTS (KBM)`, `Gamepad Default`, `Steam Deck Default`, plus `Custom` (profile diff). Full rebinding UI with category filters (Unit Commands, Production, Control Groups, Camera, Communication, UI/System, Debug). Mouse settings: edge scroll speed, scroll inversion, drag selection shape. Controller/Deck settings: deadzones, stick curves, cursor acceleration, radial behavior, gyro sensitivity (when available). Touch settings: handedness (mirror layout), touch target size, hold/drag thresholds, command rail behavior, camera bookmark dock preferences. Includes `Import`, `Export`, and `Share on Workshop` (config-profile packages with scope/diff preview), plus `View Controls Quick Reference` and `What's Changed in Controls` replay entry. |
 | **Gameplay** | Experience profile (one-click preset). Balance preset. Pathfinding preset. AI behavior preset. Full D033 QoL toggle list organized by category: Production, Commands, UI Feedback, Selection, Gameplay. Tutorial hint frequency, Controls Walkthrough prompts, and mobile Tempo Advisor warnings (client-only) also live here. |
 | **Social**   | Voice settings: PTT key, input/output device, voice effect preset, mic test. Chat settings: profanity filter, emojis, auto-translated phrases. Privacy: who can spectate, who can friend-request, online status visibility.                                         |
 | **LLM**      | Provider cards (add/edit/remove LLM providers). Task routing table (which provider handles which task). Connection test. Community config import/export (D047).                                                                                                     |
@@ -1264,6 +1264,10 @@ The walkthrough is device-specific in presentation but concept-identical in cont
 - Phone: touch prompts with bottom build drawer, command rail, and minimap-cluster/bookmark dock highlights
 
 Completion unlocks three actions: `Start Commander School`, `Practice Sandbox`, or `Skip to Game`.
+
+**Controls Quick Reference (always available):** A compact, searchable controls reference is accessible during gameplay, from Pause/Escape, and from `Settings → Controls`. It uses the same semantic action catalog as D065 prompts, so desktop, controller/Deck, and touch players see the correct input wording/icons for the active profile without separate documentation trees.
+
+**Controls-Changed Walkthrough (one-time after updates):** If a patch changes control defaults, official input profile mappings, or touch HUD/gesture behavior, the next launch can show a short "What's Changed in Controls" walkthrough before the main menu (skippable, replayable from `Settings → Controls`). It highlights only changed actions and links to the Controls Quick Reference / Commander School refresher.
 
 ### Layer 4 — Adaptive Pacing
 
@@ -1517,6 +1521,7 @@ IN-GAME OVERLAYS (accessible during gameplay)
 ├── Pause Menu (SP) / Escape Menu (MP) ── [Escape]
 ├── Callvote ──────────────────────────── (triggered by vote)
 ├── Observer Panels ───────────────────── (spectator mode toggles)
+├── Controls Quick Reference ──────────── [F1] / Pause → Controls (profile-aware: KBM / Gamepad / Deck / Touch)
 ├── Developer Console ─────────────────── [Tilde ~]
 └── Debug Overlays ────────────────────── (dev mode only)
 
@@ -1524,7 +1529,7 @@ POST-GAME → [Watch Replay] / [Re-Queue] / [Main Menu]
 
 IC SDK (separate application)
 ├── Start Screen ──────────────────────── New/Open, Validate Project, Upgrade Project, Git status
-├── Scenario Editor ───────────────────── 8 editing modes, Simple/Advanced, Preview/Test/Validate/Publish
+├── Scenario Editor ───────────────────── 8 editing modes, Simple/Advanced, Preview/Test/Validate/Publish, UI Preview Harness (Advanced)
 ├── Asset Studio ──────────────────────── Archive browser, sprite/palette editor, provenance metadata (Advanced)
 └── Campaign Editor ───────────────────── Node graph + validation/localization + optional hero progression tools (Advanced)
 ```

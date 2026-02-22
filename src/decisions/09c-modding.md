@@ -1192,6 +1192,8 @@ AI-enhanced cutscene packs are explicitly **presentation fingerprint** scope unl
 
 If a pack changes gameplay-relevant data, it belongs in gameplay fingerprint scope — not presentation.
 
+**Player configuration profiles (`player-config`, D049) are outside both fingerprint classes.** They are local client preferences (bindings, accessibility, HUD/layout/QoL presets), never lobby-required resources, and must not affect multiplayer/ranked compatibility checks.
+
 ### Storage Efficiency (D049 CAS + D062 Namespace)
 
 Selective installs become practical because IC already uses content-addressed storage and virtual namespace resolution:

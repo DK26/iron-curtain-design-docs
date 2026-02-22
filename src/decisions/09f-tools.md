@@ -3017,6 +3017,25 @@ pub struct HotspotRef {
 }
 ```
 
+### UI Preview Harness (Cross-Device HUD + Tutorial Overlay, Advanced Mode)
+
+To keep mobile/touch UX discoverable and maintainable (and to avoid "gesture folklore"), the SDK includes an **Advanced-mode UI Preview Harness** for testing gameplay HUD layouts and D065 tutorial overlays without launching a full match.
+
+**What it previews:**
+- Desktop / Tablet / Phone layout profiles (`ScreenClass`) with safe-area simulation
+- Handedness mirroring (left/right thumb-zone layouts)
+- Touch HUD clusters (command rail, minimap + bookmark dock, build drawer/sidebar)
+- D065 semantic tutorial prompts (`highlight_ui` aliases resolved to actual widgets)
+- Controls Quick Reference overlay states (desktop + touch variants)
+- Accessibility variants: large touch targets, reduced motion, high contrast
+
+**Design goals:**
+- Validate UI anchor aliases and tutorial highlighting before shipping content
+- Catch overlap/clipping issues (notches, safe areas, compact phone aspect ratios)
+- Give modders and campaign creators a visual way to check tutorial steps and HUD hints
+
+**Scope boundary:** This is a **preview harness**, not a second UI implementation. It renders the same `ic-ui` widgets/layout profiles used by the game and the same D065 prompt/anchor resolution model used at runtime.
+
 ### Simple vs Advanced Mode
 
 Inspired by OFP's Easy/Advanced toggle:
@@ -3030,6 +3049,7 @@ Inspired by OFP's Easy/Advanced toggle:
 | Modules                         | ✓           | ✓             |
 | `Validate` (Quick preset)       | ✓           | ✓             |
 | Publish Readiness screen        | ✓           | ✓             |
+| UI Preview Harness (HUD/tutorial overlays) | — | ✓       |
 | Probability of Presence         | —           | ✓             |
 | Condition of Presence           | —           | ✓             |
 | Custom Lua conditions           | —           | ✓             |

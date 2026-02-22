@@ -2315,6 +2315,144 @@ workshop/
 
 The local CAS store is an optimization that ships alongside the full Workshop in Phase 6a. The initial Workshop (Phase 4–5) can use simpler `.icpkg`-on-disk storage and upgrade to CAS when the full Workshop matures — the manifest.yaml already contains per-file SHA-256 hashes, so the data model is forward-compatible.
 
+### Workshop Player Configuration Profiles (Controls / Accessibility / HUD Presets)
+
+Workshop packages also support an optional **player configuration profile** resource type for sharing non-authoritative client preferences — especially control layouts and accessibility presets.
+
+**Examples:**
+- `player-config` package with a `Modern RTS (KBM)` variant tuned for left-handed mouse users
+- Steam Deck control profile (trackpad cursor + gyro precision + PTT on shoulder)
+- accessibility preset bundle (larger UI targets, sticky modifiers, reduced motion, high-contrast HUD)
+- touch HUD layout preset (handedness + command rail preferences + thresholds)
+
+**Why this fits D049:** These profiles are tiny, versioned, reviewable manifests/data files distributed through the same Workshop identity, trust, and update systems as mods and media packs. Sharing them through Workshop reduces friction for community onboarding ("pro caster layout", "tournament observer profile", "new-player-friendly touch controls") without introducing a separate configuration-sharing platform.
+
+**Hard safety boundaries (non-negotiable):**
+- No secrets/credentials (tokens, API keys, account auth, recovery phrases)
+- No absolute local file paths or device identifiers
+- No executable code, scripts, macros, or automation payloads
+- No hidden application on install — applying a config profile always requires user confirmation with a diff preview
+
+**Manifest guidance (IC-specific package category):**
+- `category: player-config`
+- `game_module`: optional (many profiles are game-agnostic)
+- `config_scope[]`: one or more of `controls`, `touch_layout`, `accessibility`, `ui_layout`, `camera_qol`
+- `compatibility` metadata for controls profiles:
+  - semantic action catalog version (D065)
+  - target input class (`desktop_kbm`, `gamepad`, `deck`, `touch_phone`, `touch_tablet`)
+  - optional `screen_class` hints and required features (gyro, rear buttons, command rail)
+
+**Example `player-config` package (`manifest.yaml`):**
+```yaml
+package:
+  name: "deck-gyro-competitive-profile"
+  publisher: "community-deck-lab"
+  version: "1.0.0"
+  license: "CC-BY-4.0"
+  description: "Steam Deck control profile: right-trackpad cursor, gyro precision, L1 push-to-talk, spectator-friendly quick controls"
+  category: player-config
+  # game_module is optional for generic profiles; omit unless module-specific
+  engine_version: "^0.6.0"
+
+  tags:
+    - controls
+    - steam-deck
+    - accessibility-friendly
+    - spectator
+
+  config_scope:
+    - controls
+    - accessibility
+    - camera_qol
+
+  compatibility:
+    semantic_action_catalog_version: "d065-input-actions-v1"
+    target_input_class: "deck"
+    screen_class: "Desktop"
+    required_features:
+      - right_trackpad
+      - gyro
+    optional_features:
+      - rear_buttons
+    tested_profiles:
+      - "Steam Deck Default@v1"
+    notes: "Falls back cleanly if gyro is disabled; keeps all actions reachable without gyro."
+
+  # Per-file integrity (verified on install/apply download)
+  files:
+    profiles/controls.deck.yaml:
+      sha256: "a1b2c3d4..."
+      size: 8124
+    profiles/accessibility.deck.yaml:
+      sha256: "b2c3d4e5..."
+      size: 1240
+    profiles/camera_qol.yaml:
+      sha256: "c3d4e5f6..."
+      size: 512
+
+  # Server-added on publish (same as other .icpkg categories)
+  distribution:
+    sha256: "full-package-hash..."
+    size: 15642
+    infohash: "btih:abc123def..."
+```
+
+**Example payload file (`profiles/controls.deck.yaml`, controls-only diff):**
+```yaml
+profile:
+  base: "Steam Deck Default@v1"
+  profile_name: "Deck Gyro Competitive"
+  target_input_class: deck
+  semantic_action_catalog_version: "d065-input-actions-v1"
+
+bindings:
+  voice_ptt:
+    primary: { kind: gamepad_button, button: l1, mode: hold }
+  controls_quick_reference:
+    primary: { kind: gamepad_button, button: l5, mode: hold }
+  camera_bookmark_overlay:
+    primary: { kind: gamepad_button, button: r5, mode: hold }
+  ping_wheel:
+    primary: { kind: gamepad_button, button: r3, mode: hold }
+
+axes:
+  cursor:
+    source: right_trackpad
+    sensitivity: 1.1
+    acceleration: 0.2
+  gyro_precision:
+    enabled: true
+    activate_on: l2_hold
+    sensitivity: 0.85
+
+radials:
+  command_radial:
+    trigger: y_hold
+    first_ring:
+      - attack_move
+      - guard
+      - force_action
+      - rally_point
+      - stop
+      - deploy
+```
+
+**Install/apply UX rules:**
+- Installing a `player-config` package does **not** auto-apply it
+- Player sees an **Apply Profile** sheet with:
+  - target device/profile class
+  - scopes included
+  - changed actions/settings summary
+  - conflicts with current bindings (if any)
+- Apply can be partial (e.g., controls only, accessibility only) to avoid clobbering unrelated preferences
+- `Reset to previous profile` / rollback snapshot is created before apply
+
+**Competitive integrity note:** Player config profiles may change bindings and client UI preferences, but they may not include automation/macro behavior. D033 and D059 competitive rules remain unchanged.
+
+**Lobby/ranked compatibility note (D068):** `player-config` packages are **local preference resources**, not gameplay/presentation compatibility content. They are excluded from lobby/ranked fingerprint checks and must never be treated as required room resources or auto-download prerequisites for joining a match.
+
+**Storage / distribution note:** Config profiles are typically tiny (<100 KB), so HTTP delivery is sufficient; P2P remains supported by the generic `.icpkg` pipeline but is not required for good UX.
+
 ### P2P Distribution (BitTorrent/WebTorrent)
 
 **The cost problem:** A popular 500MB mod downloaded 10,000 times generates 5TB of egress. At CDN rates ($0.01–0.09/GB), that's $50–450/month — per mod. For a community project sustained by donations, centralized hosting is financially unsustainable at scale. A BitTorrent tracker VPS costs $5–20/month regardless of popularity.
