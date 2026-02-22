@@ -6,6 +6,8 @@ This document is the canonical reference for the player's navigation journey thr
 
 **Design goal:** A returning Red Alert veteran should be playing a skirmish within 60 seconds of first launch. A competitive player should reach ranked matchmaking in two clicks from the main menu. A modder should find the Workshop in one click. No screen should be a dead end. No feature should require a manual to discover.
 
+**Keywords:** player flow, UI navigation, menus, main menu, campaign flow, skirmish setup, multiplayer lobby, settings screens, SDK screens, no dead-end buttons, mobile layout, publish readiness
+
 ---
 
 ## UX Principles
@@ -42,6 +44,8 @@ No feature should be more than three clicks from the main menu. The most common 
 Every button is always clickable (D033). If a feature requires a download, configuration, or prerequisite, the button opens a guidance panel explaining what's needed and offering a direct path to resolve it — never a greyed-out icon with no explanation. Examples:
 
 - "New Generative Campaign" without an LLM configured → guidance panel with [Configure LLM Provider →] and [Browse Workshop →] links
+- "Campaign" without campaign content installed → guidance panel with [Install Campaign Core (Recommended) →] and [Install Full Campaign (Music + Cutscenes) →] and [Manage Content →]
+- "AI Enhanced Cutscenes" selected but pack not installed → guidance panel with [Install AI Enhanced Cutscene Pack →] and [Use Original Cutscenes →] and [Use Briefing Fallback →]
 - "Ranked Match" without placement matches → explanation of placement system with [Play Placement Match →]
 - Build queue item without prerequisites → tooltip showing "Requires: Radar Dome" with the Radar Dome icon highlighted in the build panel
 
@@ -318,7 +322,7 @@ The campaign graph is a visual world map (or node-and-edge graph for community c
 │            · (locked missions dimmed below)              │
 │                                                          │
 │  Unit Roster: 12 units carried over                      │
-│  [View Roster]  [Mission Briefing →]                     │
+│  [View Roster]  [View Heroes]  [Mission Briefing →]      │
 │                                                          │
 │  Campaign Stats: 3/14 complete  Time: 2h 15m             │
 └──────────────────────────────────────────────────────────┘
@@ -326,7 +330,9 @@ The campaign graph is a visual world map (or node-and-edge graph for community c
 
 **Flow:** Select a node → Mission Briefing screen → click "Begin Mission" → Loading → InGame. After mission: Debrief → next node unlocks on graph.
 
-**Campaign transitions** (D021): Briefing → mission → debrief → next mission. No exit-to-menu between levels unless the player explicitly presses Escape. The debrief screen loads instantly (no black screen), and the next mission's briefing runs concurrently with background asset loading. If a cutscene exists, it plays while assets load — by the time the cutscene ends, the mission is ready. The only loading bar appears on cold start or unusually large asset loads, and even then it's campaign-themed.
+**Campaign transitions** (D021): Briefing → mission → debrief → next mission. No exit-to-menu between levels unless the player explicitly presses Escape. The debrief screen loads instantly (no black screen), and the next mission's briefing runs concurrently with background asset loading. If a cutscene exists and the player's **preferred cutscene variant** (Original / Clean Remaster / AI Enhanced) is installed, that version plays while assets load — by the time the cutscene ends, the mission is ready. If the preferred variant is missing, IC falls back to another installed cutscene variant (preferably Original) before falling back to the mission's briefing/intermission presentation. If no cutscene pack is installed, the campaign uses the mission's fallback briefing/intermission presentation and continues without interruption (with an optional "Download cutscene pack" prompt). The only loading bar appears on cold start or unusually large asset loads, and even then it's campaign-themed.
+
+**Hero campaigns (optional D021 hero toolkit):** A campaign node may chain `Debrief → Hero Sheet / Skill Choice → Armory/Roster → Briefing → Begin Mission` without leaving the campaign flow. These screens appear only when the campaign enables hero progression; classic campaigns keep the simpler debrief/briefing path.
 
 ### Skirmish Setup
 
@@ -674,7 +680,8 @@ The in-game HUD follows the classic Red Alert right-sidebar layout by default (t
 
 | Element               | Location               | Function                                                                                                                                     |
 | --------------------- | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Minimap**           | Top-right sidebar      | Overview map. Click to move camera. Team drawings appear here. Shroud shown.                                                                 |
+| **Minimap / Radar**   | Top-right sidebar (desktop); top-corner minimap cluster on touch | Overview map. Click/tap to move camera. Team drawings appear here. Shroud shown. On touch, the minimap cluster also hosts alerts and the camera bookmark quick dock. |
+| **Camera bookmarks**  | Keyboard (desktop) / minimap-adjacent dock (touch) | Fast camera jump/save locations. Desktop: F5-F8 jump, Ctrl+F5-F8 save quick slots. Touch: tap bookmark chip to jump, long-press to save. |
 | **Credits**           | Below minimap          | Current funds with ticking animation. Flashes when low.                                                                                      |
 | **Power bar**         | Below credits          | Production vs consumption ratio. Yellow = low power. Red = deficit.                                                                          |
 | **Build queue**       | Main sidebar area      | Tabbed by category (Infantry/Vehicle/Aircraft/Naval/Structure/Defense). Click to queue. Right-click to cancel. Prerequisites shown on hover. |
@@ -709,7 +716,17 @@ All gameplay input flows through the `InputSource` trait → `PlayerOrder` pipel
 - Tilde (~): developer console (if enabled)
 - Escape: game menu (pause in SP, overlay in MP)
 - F1: cycle render mode (Classic/HD/3D)
-- F5-F8: camera bookmarks
+- F5-F8: jump to camera bookmarks (slots 1-4); Ctrl+F5-F8 saves current camera to those slots
+
+**Touch (Phone/Tablet):**
+- Tap unit/building: select
+- Tap ground/enemy/valid target: context command (move/attack/harvest/enter/deploy)
+- One-finger drag: pan camera
+- Hold + drag: box select
+- Pinch: zoom in/out
+- Command rail (optional): explicit overrides (attack-move, guard, force-fire, etc.)
+- Control groups: bottom-center bar (tap = select, hold = assign, double-tap = center)
+- Camera bookmarks: minimap-adjacent quick dock (tap = jump, long-press = save)
 
 ### In-Game Overlays
 
@@ -1090,13 +1107,13 @@ Settings are organized in a tabbed layout. Each tab covers one domain. Changes a
 
 | Tab          | Contents                                                                                                                                                                                                                                                            |
 | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Video**    | Resolution, fullscreen/windowed/borderless, render mode (Classic/HD/3D), zoom limits, UI scale, shroud style (hard/smooth edges), FPS limit, VSync. Theme selection (Classic/Remastered/Modern/community).                                                          |
+| **Video**    | Resolution, fullscreen/windowed/borderless, render mode (Classic/HD/3D), zoom limits, UI scale, shroud style (hard/smooth edges), FPS limit, VSync. Theme selection (Classic/Remastered/Modern/community). Cutscene playback preference (`Auto` / `Original` / `Clean Remaster` / `AI Enhanced` / `Briefing Fallback`).                                                          |
 | **Audio**    | Master / Music / SFX / Voice / Ambient volume sliders. Music mode (Jukebox/Dynamic/Off). EVA voice. Spatial audio toggle.                                                                                                                                           |
-| **Controls** | Hotkey profile (Classic/OpenRA/Modern/Custom). Full rebinding UI with category filters (Unit Commands, Production, Control Groups, Camera, Chat, Debug). Mouse settings: edge scroll speed, scroll inversion, drag selection shape.                                 |
-| **Gameplay** | Experience profile (one-click preset). Balance preset. Pathfinding preset. AI behavior preset. Full D033 QoL toggle list organized by category: Production, Commands, UI Feedback, Selection, Gameplay.                                                             |
+| **Controls** | Hotkey profile (Classic/OpenRA/Modern/Custom). Full rebinding UI with category filters (Unit Commands, Production, Control Groups, Camera, Chat, Debug). Mouse settings: edge scroll speed, scroll inversion, drag selection shape. Touch settings: handedness (mirror layout), touch target size, hold/drag thresholds, command rail behavior, camera bookmark dock preferences. |
+| **Gameplay** | Experience profile (one-click preset). Balance preset. Pathfinding preset. AI behavior preset. Full D033 QoL toggle list organized by category: Production, Commands, UI Feedback, Selection, Gameplay. Tutorial hint frequency, Controls Walkthrough prompts, and mobile Tempo Advisor warnings (client-only) also live here. |
 | **Social**   | Voice settings: PTT key, input/output device, voice effect preset, mic test. Chat settings: profanity filter, emojis, auto-translated phrases. Privacy: who can spectate, who can friend-request, online status visibility.                                         |
 | **LLM**      | Provider cards (add/edit/remove LLM providers). Task routing table (which provider handles which task). Connection test. Community config import/export (D047).                                                                                                     |
-| **Data**     | Content sources (detected game installations, manual paths, re-scan). Data health summary. Backup/Restore buttons. Cloud sync toggle. Mod profile manager link. Storage usage. Export profile data (GDPR, D061). Recovery phrase viewer ("Show my 24-word phrase"). |
+| **Data**     | Content sources (detected game installations, manual paths, re-scan). **Installed Content Manager** (install profiles like `Minimal Multiplayer` / `Campaign Core` / `Full`, optional media packs, media variant groups such as cutscenes `Original` / `Clean Remaster` / `AI Enhanced`, size estimates, reclaimable space). Data health summary. Backup/Restore buttons. Cloud sync toggle. Mod profile manager link. Storage usage. Export profile data (GDPR, D061). Recovery phrase viewer ("Show my 24-word phrase"). |
 
 ---
 
@@ -1211,7 +1228,7 @@ The tutorial system (D065) has five layers that integrate throughout the flow ra
 Main Menu → Campaign → Commander School
 ```
 
-A dedicated 10-mission tutorial campaign using the D021 branching graph system. Teaches: camera, selection, movement, combat, building, harvesting, tech tree, control groups, multiplayer basics, advanced tactics. Branching allows skipping known topics. Tutorial AI opponents are below Easy difficulty.
+A dedicated 10-mission tutorial campaign using the D021 branching graph system. Teaches: camera, selection, movement, combat, building, harvesting, tech tree, control groups, multiplayer basics, advanced tactics, and camera bookmarks. Branching allows skipping known topics. Tutorial AI opponents are below Easy difficulty. The campaign content is shared across desktop and touch platforms; prompt wording and UI highlights adapt to `InputCapabilities`/`ScreenClass`.
 
 ### Layer 2 — Contextual Hints
 
@@ -1227,18 +1244,30 @@ Appear throughout the game as translucent overlay callouts at the point of need:
 └──────────────────────────────────────────┘
 ```
 
-YAML-driven triggers, adaptive suppression (hints shown less frequently as the player demonstrates mastery), experience-profile-aware (different hints for vanilla vs. OpenRA vs. Remastered veterans).
+YAML-driven triggers, adaptive suppression (hints shown less frequently as the player demonstrates mastery), experience-profile-aware (different hints for vanilla vs. OpenRA vs. Remastered veterans). Hint text is rendered from semantic action prompts, so desktop can say "Right-click to move" while touch devices render "Tap ground to move" for the same hint definition.
 
 ### Layer 3 — New Player Pipeline
 
 The first-launch self-identification screen (shown earlier) feeds into:
+- A short controls walkthrough (desktop/touch-specific, skippable)
 - Skill assessment from early gameplay
 - Difficulty recommendation for first campaign/skirmish
 - Tutorial invitation (non-mandatory)
 
+### First-Run Controls Walkthrough (Cross-Device, Skippable)
+
+A 60-120 second controls walkthrough is offered after self-identification and before (or alongside) the Commander School invitation. It teaches only the input basics for the current platform: camera pan/zoom, selection, context commands, minimap/radar use, control groups, camera bookmarks, and build UI basics (sidebar on desktop/tablet, build drawer on phone).
+
+The walkthrough is device-specific in presentation but concept-identical in content:
+- Desktop: mouse/keyboard prompts and desktop UI highlights
+- Tablet: touch prompts with sidebar highlights and on-screen hotbar references
+- Phone: touch prompts with bottom build drawer, command rail, and minimap-cluster/bookmark dock highlights
+
+Completion unlocks three actions: `Start Commander School`, `Practice Sandbox`, or `Skip to Game`.
+
 ### Layer 4 — Adaptive Pacing
 
-Behind the scenes: the engine estimates player skill from gameplay metrics and adjusts hint frequency and difficulty recommendations. Not visible as a screen — it's a system that shapes the other layers.
+Behind the scenes: the engine estimates player skill from gameplay metrics and adjusts hint frequency, tutorial prompt density, mobile tempo recommendations (advisory only), and difficulty recommendations. Not visible as a screen — it's a system that shapes the other layers.
 
 ### Layer 5 — Post-Game Learning
 
@@ -1279,11 +1308,15 @@ The SDK is a separate Bevy application from the game (`ic-editor` crate). It sha
 │  ► New Campaign                                          │
 │  ► Open File...                                          │
 │  ► Asset Studio                                          │
+│  ► Validate Project...                                   │
+│  ► Upgrade Project...                                    │
 │                                                          │
 │  Recent:                                                 │
 │  · coastal-fortress.icscn  (yesterday)                   │
 │  · allied-campaign.iccampaign  (3 days ago)              │
 │  · my-mod/rules.yaml  (1 week ago)                       │
+│                                                          │
+│  Git: main • clean                                        │
 │                                                          │
 │  ► Preferences                                           │
 │  ► Documentation                                         │
@@ -1297,23 +1330,25 @@ SDK → New Scenario / Open File
 ```
 
 ```
-┌──────────────────────────────────────────────────────────────┐
-│  [Scenario Editor] [Asset Studio] [Campaign Editor]          │
-├──────────┬───────────────────────────┬───────────────────────┤
-│ MODE     │   ISOMETRIC VIEWPORT      │  PROPERTIES           │
-│ PANEL    │   (ic-render, same as     │  PANEL                │
-│          │    game rendering)        │  (egui)               │
-│ Terrain  │                           │                       │
-│ Entities │                           │  • Selected entity    │
-│ Triggers │                           │  • Properties list    │
-│ Waypoints│                           │  • Transform          │
-│ Modules  ├───────────────────────────┤  • Components         │
-│ Regions  │  BOTTOM PANEL             │                       │
-│ Scripts  │  (triggers/scripts/vars)  │                       │
-│ Layers   ├───────────────────────────┴───────────────────────┤
-│          │  STATUS: cursor (1024, 2048) | Cell (4, 8) | 127  │
-│          │  entities | Simple Mode                           │
-└──────────┴───────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────┐
+│ [Scenario Editor] [Asset Studio] [Campaign Editor]                      │
+│ [Preview] [Test ▼] [Validate] [Publish]   Git: main • 4 changed           │
+│                               validation: Stale • Simple Mode             │
+├──────────┬───────────────────────────────┬───────────────────────────────┤
+│ MODE     │   ISOMETRIC VIEWPORT          │  PROPERTIES                   │
+│ PANEL    │   (ic-render, same as         │  PANEL                        │
+│          │    game rendering)            │  (egui)                       │
+│ Terrain  │                               │                               │
+│ Entities │                               │  • Selected entity            │
+│ Triggers │                               │  • Properties list            │
+│ Waypoints│                               │  • Transform                  │
+│ Modules  ├───────────────────────────────┤  • Components                 │
+│ Regions  │  BOTTOM PANEL                 │                               │
+│ Scripts  │  (triggers/scripts/vars/      │                               │
+│ Layers   │   validation results)         │                               │
+│          ├───────────────────────────────┴───────────────────────────────┤
+│          │ STATUS: cursor (1024, 2048) | Cell (4, 8) | 127 entities      │
+└──────────┴───────────────────────────────────────────────────────────────┘
 ```
 
 **Key features:**
@@ -1322,10 +1357,48 @@ SDK → New Scenario / Open File
 - Entity palette: search-as-you-type, 48×48 thumbnails, favorites, recently placed
 - Trigger editor: visual condition/action builder with countdown timers
 - Module system: 30+ drag-and-drop modules (Wave Spawner, Patrol Route, Reinforcements, etc.)
-- Test button: launches `ic-game` with current scenario, close game returns to editor
-- Publish button: exports → Workshop upload
+- Toolbar flow: `Preview` / `Test` / `Validate` / `Publish` (Validate is optional before preview/test)
+- `Test` dropdown: `Profile Playtest` (Advanced mode only)
+- `Validate`: Quick Validate preset (async, cancelable, no full auto-validate on save)
+- Publish Readiness screen: aggregated validation/export/license/metadata warnings before Workshop upload
+- Git-aware project chrome (read-only): branch, dirty/clean, changed file count, conflict badge
 - Undo/Redo: command pattern, autosave
 - Export-safe authoring mode (D066): live fidelity indicators, feature gating for cross-engine compatibility
+- Migration Workbench entry point: "Upgrade Project" (preview in 6a, apply+rollback in 6b)
+
+**Example: Publish Readiness (AI Cutscene Variant Pack)**
+
+When a creator publishes a campaign or media pack that includes AI-assisted cutscene remasters, Publish Readiness surfaces provenance/labeling checks alongside normal validation results:
+
+```
+┌──────────────────────────────────────────────────────────┐
+│  PUBLISH READINESS — official/ra1-cutscenes-ai-enhanced │
+│  Channel: Release                                       │
+├──────────────────────────────────────────────────────────┤
+│ Errors (2)                                              │
+│  • Missing provenance metadata for 3 video assets       │
+│    (source media reference + rights declaration).       │
+│    [Open Assets] [Apply Batch Metadata]                 │
+│  • Variant labeling missing: pack not marked            │
+│    "AI Enhanced" / "Experimental" in manifest metadata. │
+│    [Open Manifest]                                      │
+├──────────────────────────────────────────────────────────┤
+│ Warnings (1)                                            │
+│  • Subtitle timing drift > 120 ms in A01_BRIEFING_02.   │
+│    [Open Video Preview] [Auto-Align Subtitles]          │
+├──────────────────────────────────────────────────────────┤
+│ Advice (1)                                              │
+│  • Preview radar_comm mode before publish; face crop may│
+│    clip at 4:3-safe area. [Preview Radar Comm]          │
+├──────────────────────────────────────────────────────────┤
+│ [Run Validate Again]                      [Publish Disabled] │
+└──────────────────────────────────────────────────────────┘
+```
+
+**Channel-sensitive behavior (aligned with D040/D068):**
+- `beta/private` Workshop channels may allow publish with warnings and explicit confirmation
+- `release` channel can block publish on missing AI media provenance/rights metadata or required variant labeling
+- Campaign packages referencing missing optional AI remaster packs still publish if fallback briefing/intermission presentation is valid
 
 ### Asset Studio
 
@@ -1348,7 +1421,7 @@ SDK → Asset Studio
 └────────────────────────────────────────┴───────────────────┘
 ```
 
-XCC Mixer replacement with visual editing. Supports SHP, PAL, AUD, VQA, MIX, TMP. Bidirectional conversion (SHP↔PNG, AUD↔WAV). Chrome/theme designer with 9-slice editor and live menu preview.
+XCC Mixer replacement with visual editing. Supports SHP, PAL, AUD, VQA, MIX, TMP. Bidirectional conversion (SHP↔PNG, AUD↔WAV). Chrome/theme designer with 9-slice editor and live menu preview. Advanced mode includes asset provenance/rights metadata panels surfaced primarily through Publish Readiness.
 
 ### Campaign Editor
 
@@ -1356,7 +1429,42 @@ XCC Mixer replacement with visual editing. Supports SHP, PAL, AUD, VQA, MIX, TMP
 SDK → New Campaign / Open Campaign
 ```
 
-Node-and-edge graph editor in a 2D Bevy viewport (separate from isometric). Pan/zoom like a mind map. Nodes = missions (link to scenario files). Edges = outcomes (labeled with named outcome conditions). Weighted random paths configurable.
+Node-and-edge graph editor in a 2D Bevy viewport (separate from isometric). Pan/zoom like a mind map. Nodes = missions (link to scenario files). Edges = outcomes (labeled with named outcome conditions). Weighted random paths configurable. Advanced mode adds validation presets, localization/subtitle workbench, optional hero progression/skill-tree authoring (D021 hero toolkit campaigns), and migration/export readiness checks.
+
+**Advanced panel example: Hero Sheet / Skill Choice authoring (optional D021 hero toolkit)**
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ CAMPAIGN EDITOR — HERO PROGRESSION (Advanced)                 [Validate]   │
+├───────────────────────┬───────────────────────────────────────┬─────────────┤
+│ HERO ROSTER           │ SKILL TREE: Tanya - Black Ops         │ PROPERTIES  │
+│                       │                                       │             │
+│ > Tanya      Lv 3     │     [Commando]   [Stealth] [Demo]     │ Skill:      │
+│   Volkov     Lv 1     │                                       │ Chain        │
+│   Stavros    Lv 2     │   o Dual Pistols Drill (owned)        │ Detonation   │
+│                       │    \\                                 │             │
+│ Hero state preset:    │     o Raid Momentum (owned)           │ Cost: 2 pts  │
+│ [Mission 5 Start ▾]   │      \\                               │ Requires:    │
+│ [Simulate...]         │       o Chain Detonation (locked)     │ - Satchel Mk2│
+│                       │                                       │ - Raid Mom.  │
+│ Unspent points: 1     │   o Silent Step (owned)               │             │
+│ Injury state: None    │    \\                                 │ Effects:     │
+│                       │     o Infiltrator Clearance (locked)  │ + chain exp. │
+├───────────────────────┼───────────────────────────────────────┼─────────────┤
+│ INTERMISSION PREVIEW  │ REWARD / CHOICE AUTHORING                           │
+│ [Hero Sheet] [Skill Choice] [Armory]                                        │
+│ Tanya portrait · Level 3 · XP 420/600 · Skills: 3 owned                     │
+│ Choice Set "Field Upgrade": [Silent Step] [Satchel Charge Mk II]            │
+│ [Preview as Player] [Set branch conditions...] [Export fidelity hints]       │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+**Authoring interactions (hero toolkit campaigns):**
+- Select a hero to edit level/xp defaults, death/injury policy, and loadout slots
+- Build skill trees (requirements, costs, effects) and bind them to named characters
+- Configure debrief/intermission reward choices that grant XP, items, or skill unlocks
+- Preview Hero Sheet / Skill Choice intermission panels without launching a mission
+- Simulate hero state for branch validation and scenario test starts ("Tanya Lv3 + Silent Step")
 
 ---
 
@@ -1415,9 +1523,10 @@ IN-GAME OVERLAYS (accessible during gameplay)
 POST-GAME → [Watch Replay] / [Re-Queue] / [Main Menu]
 
 IC SDK (separate application)
-├── Scenario Editor ───────────────────── 8 editing modes, Simple/Advanced
-├── Asset Studio ──────────────────────── Archive browser, sprite/palette editor
-└── Campaign Editor ───────────────────── Node-and-edge graph editor
+├── Start Screen ──────────────────────── New/Open, Validate Project, Upgrade Project, Git status
+├── Scenario Editor ───────────────────── 8 editing modes, Simple/Advanced, Preview/Test/Validate/Publish
+├── Asset Studio ──────────────────────── Archive browser, sprite/palette editor, provenance metadata (Advanced)
+└── Campaign Editor ───────────────────── Node graph + validation/localization + optional hero progression tools (Advanced)
 ```
 
 ---
@@ -1582,12 +1691,14 @@ The flow described above is the Desktop experience. Other platforms adapt the sa
 | --------------------- | ------------------------------------- | ------------------------------------------------------------- |
 | **Desktop** (default) | Full sidebar, mouse precision UI      | Mouse + keyboard, edge scroll, hotkeys                        |
 | **Steam Deck**        | Same as Desktop, larger touch targets | Gamepad + touchpad, PTT mapped to shoulder button             |
-| **Tablet**            | Sidebar OK, touch-sized targets       | Touch: tap-select, drag-command, pinch-zoom, on-screen hotbar |
-| **Phone**             | Bottom-bar layout, simplified sidebar | Touch: simplified controls, auto-queue, reduced hotbar        |
+| **Tablet**            | Sidebar OK, touch-sized targets       | Touch: context tap + optional command rail, one-finger pan + hold-drag box select, pinch-zoom, minimap-adjacent camera bookmark dock |
+| **Phone**             | Bottom-bar layout, build drawer, compact minimap cluster | Touch (landscape): context tap + optional command rail, one-finger pan + hold-drag box select, pinch-zoom, bottom control-group bar, minimap-adjacent camera bookmark dock, mobile tempo advisory |
 | **TV**                | Large text, gamepad radial menus      | Gamepad: D-pad navigation, radial command wheel               |
 | **Browser (WASM)**    | Same as Desktop                       | Mouse + keyboard, WebRTC VoIP                                 |
 
 `ScreenClass` (Phone/Tablet/Desktop/TV) is detected automatically. `InputCapabilities` (touch, mouse, gamepad) drives interaction mode. The player flow stays identical — only the visual layout and input bindings change.
+
+For touch platforms, the HUD is arranged into mirrored thumb-zone clusters (left/right-handed toggle): command rail on the dominant thumb side, minimap/radar in the opposite top corner, and a camera bookmark quick dock attached to the minimap cluster. Mobile tempo guidance appears as a small advisory chip near speed controls in single-player and casual-hosted contexts, but never blocks the player from choosing a faster speed.
 
 ---
 

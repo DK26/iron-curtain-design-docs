@@ -3,6 +3,7 @@
 [Introduction](00-INDEX.md)
 [Foreword — Why I'm Building This](FOREWORD.md)
 [What Iron Curtain Offers](OVERVIEW.md)
+[LLM / RAG Retrieval Index](LLM-INDEX.md)
 
 ---
 
@@ -19,6 +20,7 @@
 - [Cross-Engine Compatibility](07-CROSS-ENGINE.md)
 - [Development Roadmap](08-ROADMAP.md)
 - [Decision Log](09-DECISIONS.md)
+  - [Decision Capsule Template (LLM/RAG)](decisions/DECISION-CAPSULE-TEMPLATE.md)
   - [Foundation & Core](decisions/09a-foundation.md)
   - [Networking & Multiplayer](decisions/09b-networking.md)
   - [Modding & Compatibility](decisions/09c-modding.md)

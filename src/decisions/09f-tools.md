@@ -2009,11 +2009,65 @@ This means a generated faction can have real art, real sounds, and tested mechan
 
 **Phase:** Phase 7 (alongside other LLM generation features). Requires: YAML unit/faction definition system (Phase 2), Workshop resource API (Phase 6a), `ic-llm` provider system, skill library (D057).
 
+### LLM-Callable Editor Tool Bindings (Phase 7, D038/D040 Bridge)
+
+D016 generates **content** (missions, campaigns, factions as YAML+Lua). D038 and D040 provide **editor operations** (place actor, add trigger, set objective, import sprite, adjust material). There is a natural bridge between them: exposing SDK editor operations as a **structured tool-calling schema** that an LLM can invoke through the same validated paths the GUI uses.
+
+**What this enables:**
+
+An LLM connected via D047 can act as an **editor assistant** — not just generating YAML files, but performing editor actions in context:
+
+- "Add a patrol trigger between these two waypoints" → invokes the trigger-placement operation with parameters
+- "Create a tiberium field in the northwest corner with 3 harvesters" → invokes entity placement + resource field setup
+- "Set up the standard base defense layout for a Soviet mission" → invokes a sequence of entity placements using the module/composition library
+- "Run Quick Validate and tell me what's wrong" → invokes the validation pipeline, reads results
+- "Export this mission to OpenRA format and show me the fidelity report" → invokes the export planner
+
+**Architecture:**
+
+The editor operations already exist as internal commands (every GUI action has a programmatic equivalent — this is a D038 design principle). The tool-calling layer is a thin schema that:
+
+1. **Enumerates available operations** as a tool manifest (name, parameters, return type, description) — similar to how MCP or OpenAI function-calling schemas work
+2. **Routes LLM tool calls** through the same validation and undo/redo pipeline as GUI actions — no special path, no privilege escalation
+3. **Returns structured results** (success/failure, created entity IDs, validation issues) that the LLM can reason about for multi-step workflows
+
+**Crate boundary:** The tool manifest lives in `ic-editor` (it's editor-specific). `ic-llm` consumes it via the same provider routing as other LLM features (D047). The manifest is auto-generated from the editor's command registry — no manual sync needed.
+
+**What this is NOT:**
+
+- **Not autonomous by default.** The LLM proposes actions; the editor shows a preview; the user confirms or edits. Autonomous mode (accept-all) is an opt-in toggle for experienced users, same as any batch operation.
+- **Not a new editor.** This is a communication layer over the existing editor. If the GUI can't do it, the LLM can't do it.
+- **Not required.** The editor works fully without an LLM. This is Layer 3 functionality, same as agentic asset generation in D040.
+
+**Prior art:** The UnrealAI plugin for Unreal Engine 5 (announced February 2026) demonstrates this pattern with 100+ tool bindings for Blueprint creation, Actor placement, Material building, and scene generation from text. Their approach validates that structured tool-calling over editor operations is practical and that multi-provider support (8 providers, local models via Ollama) matches real demand. Key differences: IC's tool bindings route through the same validation/undo pipeline as GUI actions (UnrealAI appears to bypass some editor safeguards); IC's output is always standard YAML+Lua (not engine-specific binary formats); and IC's BYOLLM architecture means no vendor lock-in.
+
+**Phase:** Phase 7. Requires: editor command registry (Phase 6a), `ic-llm` provider system (Phase 7), tool manifest schema. The manifest schema should be designed during Phase 6a so editor commands are registry-friendly from the start, even though LLM integration ships later.
+
 ---
 
 ---
 
 ## D038 — Scenario Editor (OFP/Eden-Inspired, SDK)
+
+**Revision note (2026-02-22):** Revised to formalize two advanced mission-authoring patterns requested for campaign-style scenarios: **Map Segment Unlock** (phase-based expansion of a pre-authored battlefield without runtime map resizing) and **Sub-Scenario Portal** (IC-native transitions into interior/mini-scenario spaces with optional cutscene/briefing bridges and explicit state handoff). This revision clarifies what is first-class in the editor versus what remains a future engine-level runtime-instance feature.
+
+### Decision Capsule (LLM/RAG Summary)
+
+- **Status:** Accepted (Revised 2026-02-22)
+- **Phase:** Phase 6a (core editor + workflow foundation), Phase 6b (maturity features)
+- **Canonical for:** Scenario Editor mission authoring model, SDK authoring workflow (`Preview` / `Test` / `Validate` / `Publish`), and advanced scenario patterns
+- **Scope:** `ic-editor`, `ic-sim` preview/test integration, `ic-render`, `ic-protocol`, SDK UX, creator validation/publish workflow
+- **Decision:** IC ships a full visual RTS scenario editor (terrain + entities + triggers + modules + regions + layers + compositions) inside the separate SDK app, with Simple/Advanced modes sharing one underlying data model.
+- **Why:** Layered complexity, emergent behavior from composable building blocks, and a fast edit→test loop are the proven drivers of long-lived mission communities.
+- **Non-goals:** In-game player-facing editor UI in `ic-game`; mandatory scripting for common mission patterns; true runtime map resizing as a baseline feature.
+- **Invariants preserved:** `ic-game` and `ic-editor` remain separate binaries; simulation stays deterministic and unaware of editor mode; preview/test uses normal `PlayerOrder`/`ic-protocol` paths.
+- **Defaults / UX behavior:** `Preview` and `Test` remain one-click; `Validate` is async and optional before preview/test; `Publish` uses aggregated Publish Readiness checks.
+- **Compatibility / Export impact:** Export-safe authoring and fidelity indicators (D066) are first-class editor concerns; target compatibility is surfaced before publish.
+- **Advanced mission patterns:** `Map Segment Unlock` and `Sub-Scenario Portal` are editor-level authoring features; concurrent nested runtime sub-map instances remain deferred.
+- **Public interfaces / types / commands:** `StableContentId`, `ValidationPreset`, `ValidationResult`, `PerformanceBudgetProfile`, `MigrationReport`, `ic git setup`, `ic content diff`
+- **Affected docs:** `src/17-PLAYER-FLOW.md`, `src/04-MODDING.md`, `src/decisions/09c-modding.md`, `src/10-PERFORMANCE.md`
+- **Revision note summary:** Added first-class authoring support for phase-based map expansion and interior/mini-scenario portal transitions without changing the engine’s baseline runtime map model.
+- **Keywords:** scenario editor, sdk, validate playtest publish, map segment unlock, sub-scenario portal, export-safe authoring, publish readiness
 
 **Resolves:** P005 (Map editor architecture)
 
@@ -2057,8 +2111,8 @@ The scenario editor lives in the `ic-editor` crate and ships as part of the **IC
 │  └──────────────────────────────────────────┘   │
 │                                                  │
 │  ┌─────────┐  ┌──────────┐  ┌──────────────┐   │
-│  │ Layers  │  │ Comps    │  │ Preview/Test │   │
-│  │ Panel   │  │ Library  │  │ Button       │   │
+│  │ Layers  │  │ Comps    │  │ Workflow     │   │
+│  │ Panel   │  │ Library  │  │ Buttons      │   │
 │  └─────────┘  └──────────┘  └──────────────┘   │
 │                                                  │
 │  ┌─────────┐  ┌──────────┐  ┌──────────────┐   │
@@ -2281,6 +2335,54 @@ OFP's editor had no undo and no autosave — one misclick or crash could destroy
 - **Undo history persistence** — the undo stack is included in autosaves. Restoring from autosave also restores the ability to undo recent changes
 - **Manual save is always available** — Ctrl+S saves to the scenario file. Autosave supplements manual save, never replaces it
 
+### Git-First Collaboration (No Custom VCS)
+
+IC does **not** reinvent version control. Git is the source of truth for history, branching, remotes, and merging. The SDK's job is to make editor-authored content behave well *inside* Git, not replace it with a parallel timeline system.
+
+**What IC adds (Git-friendly infrastructure, not a new VCS):**
+- **Stable content IDs** on editor-authored objects (entities, triggers, modules, regions, waypoints, layers, campaign nodes/edges, compositions). Renames and moves diff as modifications instead of delete+add.
+- **Canonical serialization** for editor-owned files (`.icscn`, `.iccampaign`, compositions, editor metadata) — deterministic key ordering, stable list ordering where order is not semantic, explicit persisted order fields where order *is* semantic (e.g., cinematic steps, campaign graph layout).
+- **Semantic diff helpers** (`ic content diff`) that present object-level changes for review and CI summaries while keeping plain-text YAML/Lua as the canonical stored format.
+- **Semantic merge helpers** (`ic content merge`, Phase 6b) for Git merge-driver integration, layered on top of canonical serialization and stable IDs.
+
+**What IC explicitly does NOT add (Phase 6a/6b):**
+- Commit/branch/rebase UI inside the SDK
+- Cloud sync or repository hosting
+- A custom history graph separate from Git
+
+**SDK Git awareness (read-only, low friction):**
+- Small status strip in project chrome: repo detected/not detected, current branch, dirty/clean status, changed file count, conflict badge
+- Utility actions only: "Open in File Manager," "Open in External Git Tool," "Copy Git Status Summary"
+- No modal interruptions to preview/test when a repo is dirty
+
+**Data contracts (Phase 6a/6b):**
+
+```rust
+/// Stable identifier persisted in editor-authored files.
+/// ULID string format for lexicographic sort + uniqueness.
+pub type StableContentId = String;
+
+pub enum EditorFileFormatVersion {
+    V1,
+    // future versions add migration paths; old files remain loadable via migration preview/apply
+}
+
+pub struct SemanticDiff {
+    pub changes: Vec<SemanticChange>,
+}
+
+pub enum SemanticChange {
+    AddObject { id: StableContentId, object_type: String },
+    RemoveObject { id: StableContentId, object_type: String },
+    ModifyField { id: StableContentId, field_path: String },
+    RenameObject { id: StableContentId, old_name: String, new_name: String },
+    MoveObject { id: StableContentId, from_parent: String, to_parent: String },
+    RewireReference { id: StableContentId, field_path: String, from: String, to: String },
+}
+```
+
+The SDK reads/writes plain files; Git remains the source of truth. `ic content diff` / `ic content merge` consume these semantic models while the canonical stored format remains YAML/Lua.
+
 ### Trigger System (RTS-Adapted)
 
 OFP's trigger system adapted for RTS gameplay:
@@ -2346,6 +2448,8 @@ Modules are IC's equivalent of Eden Editor's 154 built-in modules — complex ga
 | **Flow**        | Checkpoint         | trigger, save_state                                                  | Auto-save when trigger fires                                                                                                                                                                                                           |
 | **Flow**        | Branch             | condition, true_path, false_path                                     | Campaign branching point (D021)                                                                                                                                                                                                        |
 | **Flow**        | Difficulty Gate    | min_difficulty, entities[]                                           | Entities only exist above threshold difficulty                                                                                                                                                                                         |
+| **Flow**        | Map Segment Unlock | segments[], reveal_mode, layer_ops[], camera_focus, objective_update | Unlocks one or more **pre-authored map segments** (phase transition): reveals shroud, opens routes, toggles layers, and optionally cues camera/objective updates. This creates the "map extends" effect without runtime map resize. |
+| **Flow**        | Sub-Scenario Portal | target_scenario, entry_units, handoff, return_policy, pre/post_media | Transitions to a linked interior/mini-scenario (IC-native). Parent mission is snapshotted and resumed after return; outcomes flow back via variables/flags/roster deltas. Supports optional pre/post cutscene or briefing.         |
 | **Effects**     | Explosion          | position, size, trigger                                              | Cosmetic explosion on trigger                                                                                                                                                                                                          |
 | **Effects**     | Sound Emitter      | sound_ref, trigger, loop, 3d                                         | Play sound effect — positional (3D) or global                                                                                                                                                                                          |
 | **Effects**     | Music Trigger      | track, trigger, fade_time                                            | Change music track on trigger activation                                                                                                                                                                                               |
@@ -2415,6 +2519,107 @@ Organizational folders for managing complex scenarios:
 - **Visibility toggle** — hide layers in the editor without affecting runtime (essential when a mission has 500+ entities)
 - **Lock toggle** — prevent accidental edits to finalized layers
 - **Runtime show/hide** — Lua can show/hide entire layers at runtime: `Layer.activate("Phase2_Reinforcements")` / `Layer.deactivate(...)`. Activating a layer spawns all entities in it as a batch; deactivating despawns them. These are **sim operations** (deterministic, included in snapshots and replays), not editor operations — the Lua API name uses `Layer`, not `Editor`, to make the boundary clear. Internally, each entity has a `layer: Option<String>` field; activation toggles a per-layer `active` flag that the spawn system reads. Entities in inactive layers do not exist in the sim — they are serialized in the scenario file but not instantiated until activation. **Deactivation is destructive:** calling `Layer.deactivate()` despawns all entities in the layer — any runtime state (damage taken, position changes, veterancy gained) is lost. Re-activating the layer spawns fresh copies from the scenario template. This is intentional: layers model "reinforcement waves" and "phase transitions," not pausable unit groups. For scenarios that need to preserve unit state across activation cycles, use Lua variables or campaign state (D021) to snapshot and restore specific values
+
+### Mission Phase Transitions, Map Segments, and Sub-Scenarios
+
+Classic C&C-style campaign missions often feel like the battlefield "expands" mid-mission: an objective completes, reinforcements arrive, the camera pans to a new front, and the next objective appears in a region the player could not meaningfully access before. IC treats this as a **first-class authoring pattern**.
+
+#### Map Segment Unlock (the "map extension" effect)
+
+**Design rule:** A scenario's map dimensions are fixed at load. IC does **not** rely on runtime map resizing to create phase transitions. Instead, designers author a larger battlefield up front and unlock parts of it over time.
+
+This preserves determinism and keeps pathfinding, spatial indexing, camera bounds, replays, and saves simple. The player still experiences an "extended map" because the newly unlocked region was previously hidden, blocked, or irrelevant.
+
+**Map Segment** is a visual authoring concept in the Scenario Editor:
+
+- A named region (or set of regions) tagged as a mission phase segment: `Beachhead`, `AA_Nest`, `City_Core`, `Soviet_Bunker_Interior_Access`
+- Optional segment metadata:
+  - shroud/fog reveal policy
+  - route blockers/gates linked to triggers
+  - default camera focus point
+  - associated objective group(s)
+  - layer activation/deactivation presets
+
+The **Map Segment Unlock** module provides a visual one-shot transition for common patterns:
+
+- complete objective → reveal next segment
+- remove blockers / open bridge / power gate
+- activate reinforcement layers
+- fire Radar Comm / Dialogue / Cinematic Sequence
+- update objective text and focus camera
+
+This module is intentionally a high-level wrapper over systems that already exist (regions, layers, objectives, media, triggers). Designers can use it for speed, or wire the same behavior manually for full control.
+
+**Example (Tanya-style phase unlock):**
+
+1. Objective: destroy AA emplacements in segment `Harbor_AA`
+2. Trigger fires `Map Segment Unlock`
+3. Module reveals segment `Extraction_Docks`, activates `Phase2_Reinforcements`, deactivates `AA_Spotters`
+4. Module triggers a `Cinematic Sequence` (camera pan + Radar Comm)
+5. Objectives switch to "Escort reinforcements to dock"
+
+#### Sub-Scenario Portal (interior/mini-mission transitions)
+
+Some missions need more than a reveal — they need a different space entirely: "Tanya enters the bunker," "Spy infiltrates HQ," "commando breach interior," or a short puzzle/combat sequence that should not be represented on the same outdoor battlefield.
+
+IC supports this as a **Sub-Scenario Portal** authoring pattern.
+
+**What it is:** A visual module + scenario link that transitions the player from the current mission into a linked IC scenario (usually an interior or small specialized map), then returns with explicit outcomes.
+
+**What it is not (in this revision):** A promise of fully concurrent nested map instances running simultaneously in the same mission timeline. The initial design is a **pause parent → run child → return** model, which is dramatically simpler and covers the majority of campaign use cases.
+
+**Sub-Scenario Portal flow (author-facing):**
+
+1. Place a portal trigger on a building/region/unit interaction (e.g., Tanya reaches `ResearchLab_Entrance`)
+2. Link it to a target scenario (`m03_lab_interior.icscn`)
+3. Define entry-unit filter (specific named character, selected unit set, or scripted roster subset)
+4. Configure handoff payload (campaign variables, mission variables, inventory/key items, optional roster snapshot)
+5. Choose return policy:
+   - return on child mission `victory`
+   - return on named child outcome (`intel_stolen`, `alarm_triggered`, `charges_planted`)
+   - fail parent mission on child defeat (optional)
+6. Optionally chain pre/post media:
+   - pre: radar comm, fullscreen cutscene, briefing panel
+   - post: debrief snippet, objective update, reinforcement spawn, map segment unlock
+
+**Return payload model (explicit, not magic):**
+
+- story flags (`lab_data_stolen = true`)
+- mission variables (`alarm_level = 3`)
+- named character state deltas (health, veterancy, equipment where applicable)
+- inventory/item changes
+- unlock tokens for the parent scenario (`unlock_segment = Extraction_Docks`)
+
+This keeps author intent visible and testable. The editor should never hide critical state transfer behind implicit engine behavior.
+
+#### Editor UX for sophisticated scenario management (Advanced mode)
+
+To keep these patterns powerful without turning the editor into a scripting maze, the Scenario Editor exposes:
+
+- **Segment overlay view** — color-coded map segments with names, objective associations, and unlock dependencies
+- **Portal links view** — graph overlay showing parent scenario ↔ sub-scenario transitions and return outcomes
+- **Phase transition presets** — one-click scaffolds like:
+  - "Objective Complete → Radar Comm → Segment Unlock → Reinforcements → Objective Update"
+  - "Enter Building → Cutscene → Sub-Scenario Portal"
+  - "Return From Sub-Scenario → Debrief Snippet → Branch / Segment Unlock"
+- **Validation checks** (used by `Validate & Playtest`) for:
+  - portal links to missing scenarios
+  - impossible return outcomes
+  - segment unlocks that reveal no reachable path
+  - objective transitions that leave the player with no active win path
+
+These workflows are about **maximum creativity with explicit structure**: visual wrappers for common RTS storytelling patterns, with Lua still available for edge cases.
+
+#### Compatibility and export implications
+
+- **IC native:** Full support (target design)
+- **OpenRA / RA1 export:** `Map Segment Unlock` may downcompile only partially (e.g., to reveal-area + scripted reinforcements), while `Sub-Scenario Portal` is generally IC-native and expected to be stripped, linearized, or exported as separate missions with fidelity warnings (see D066)
+
+#### Phasing
+
+- **Phase 6b:** Visual authoring support for `Map Segment Unlock` (module + segment overlays + validation)
+- **Phase 6b–7:** `Sub-Scenario Portal` authoring and test/playtest integration (IC-native)
+- **Future (only if justified by real usage):** True concurrent nested sub-map instances / seamless runtime map-stack transitions
 
 ### Media & Cinematics
 
@@ -2607,6 +2812,19 @@ The campaign node properties (briefing, debriefing) support media references:
 
 This means a campaign creator can build the full original RA experience — FMV briefing → mission with in-game radar comms → debrief with per-outcome results — entirely through the visual editor.
 
+#### Localization & Subtitle Workbench (Advanced, Phase 6b)
+
+Campaign and media-heavy projects need more than scattered text fields. The SDK adds a dedicated **Localization & Subtitle Workbench** (Advanced mode) for creators shipping multi-language campaigns and cutscene-heavy mods.
+
+**Scope (Phase 6b):**
+- **String table editor** with usage lookup ("where is this key used?" across scenarios, campaign nodes, dialogue, EVA, radar comms)
+- **Subtitle timeline editor** for video playback, radar comms, and dialogue modules (timing, duration, line breaks, speaker tags)
+- **Pseudolocalization preview** to catch clipping/overflow in radar comm overlays, briefing panels, and dialogue UI before publish
+- **Coverage report** for missing translations per language / per campaign branch
+- **Export-aware validation** for target constraints (RA1 string table limits, OpenRA Fluent export readiness)
+
+This is an Advanced-mode tool and stays hidden unless localization assets exist or the creator explicitly enables it. Simple mode continues to use direct text fields.
+
 #### Lua Media API (Advanced)
 
 All media modules map to Lua functions for advanced scripting. The `Media` global (OpenRA-compatible, D024) provides the baseline; IC extensions add richer control:
@@ -2643,12 +2861,161 @@ seq:Play()
 
 The visual modules and Lua API are interchangeable — a Cinematic Sequence created in the editor generates the same data as one built in Lua. Advanced users can start with the visual editor and extend with Lua; Lua-first users get the same capabilities without the GUI.
 
-### Preview / Test
+### Validate & Playtest (Low-Friction Default)
 
-- **Preview button** — starts the sim from current editor state. Play the mission, then return to editor. No compilation, no export, no separate process.
+The default creator workflow is intentionally simple and fast:
+
+```
+[Preview] [Test ▼] [Validate] [Publish]
+```
+
+- **Preview** — starts the sim from current editor state in the SDK. No compilation, no export, no separate process.
+- **Test** — launches `ic-game` with the current scenario/campaign content. One click, real playtest.
+- **Validate** — optional one-click checks. Never required before Preview/Test.
+- **Publish** — opens a single Publish Readiness screen (aggregated checks + warnings), and offers to run Publish Validate if results are stale.
+
+This preserves the "zero barrier between editing and playing" principle while still giving creators a reliable pre-publish safety net.
+
+**Preview/Test quality-of-life:**
 - **Play from cursor** — start the preview with the camera at the current editor position (Eden Editor's "play from here")
 - **Speed controls** — preview at 2x/4x/8x to quickly reach later mission stages
 - **Instant restart** — reset to editor state without re-entering the editor
+
+### Validation Presets (Simple + Advanced)
+
+The SDK exposes validation as presets backed by the same core checks used by the CLI (`ic mod check`, `ic mod test`, `ic mod audit`, `ic export ... --dry-run/--verify`). The SDK is a UI wrapper, not a parallel validation implementation.
+
+**Quick Validate (default `Validate` button, Phase 6a):**
+- Target runtime: fast enough to feel instant on typical scenarios (guideline: ~under 2 seconds)
+- Schema/serialization validity
+- Missing references (entities, regions, layers, campaign node links)
+- Unresolved assets
+- Lua parse/sandbox syntax checks
+- Duplicate IDs/names where uniqueness is required
+- Obvious graph errors (dead links, missing mission outcomes)
+- Export target incompatibilities (only if export-safe mode has a selected target)
+
+**Publish Validate (Phase 6a, launched from Publish Readiness or Advanced panel):**
+- Includes Quick Validate
+- Dependency/license checks (`ic mod audit`-style)
+- Export verification dry-run for selected target(s)
+- Stricter warning set (discoverability/metadata completeness)
+- Optional smoke test (headless `ic mod test` equivalent for playable scenarios)
+
+**Advanced presets (Phase 6b):**
+- `Export`
+- `Multiplayer`
+- `Performance`
+- Batch validation for multiple scenarios/campaign nodes
+
+### Validation UX Contract (Non-Blocking by Default)
+
+To avoid the SDK "getting in the way," validation follows strict UX rules:
+
+- **Asynchronous** — runs in the background; editing remains responsive
+- **Cancelable** — long-running checks can be stopped
+- **No full validate on save** — saving stays fast
+- **Stale badge, not forced rerun** — edits mark prior results as stale; they do not auto-run heavy checks
+
+**Status badge states (project/editor chrome):**
+- `Valid`
+- `Warnings`
+- `Errors`
+- `Stale`
+- `Running`
+
+**Validation output model (single UI, Phase 6a):**
+- **Errors** — block publish until fixed
+- **Warnings** — publish allowed with explicit confirmation (policy-dependent)
+- **Advice** — non-blocking tips
+
+Each issue includes severity, source object/file, short explanation, suggested fix, and a one-click focus/select action where possible.
+
+**Shared validation interfaces (SDK + CLI):**
+
+```rust
+pub enum ValidationPreset { Quick, Publish, Export, Multiplayer, Performance }
+
+pub struct ValidationRunRequest {
+    pub preset: ValidationPreset,
+    pub targets: Vec<String>, // "ic", "openra", "ra1"
+}
+
+pub struct ValidationResult {
+    pub issues: Vec<ValidationIssue>,
+    pub duration_ms: u64,
+}
+
+pub struct ValidationIssue {
+    pub severity: ValidationSeverity, // Error / Warning / Advice
+    pub code: String,
+    pub message: String,
+    pub location: Option<ValidationLocation>,
+    pub suggestion: Option<String>,
+}
+
+pub struct ValidationLocation {
+    pub file: String,
+    pub object_id: Option<StableContentId>,
+    pub field_path: Option<String>,
+}
+```
+
+### Publish Readiness (Single Aggregated Screen)
+
+Before publishing, the SDK shows one **Publish Readiness** screen instead of scattering warnings across multiple panels. It aggregates:
+
+- Validation status (Quick / Publish)
+- Export compatibility status (if an export target is selected)
+- Dependency/license checks
+- Missing metadata
+- Quality/discoverability warnings
+
+**Gating policy defaults:**
+- **Phase 6a:** Errors block publish. Warnings allow publish with explicit confirmation.
+- **Phase 6b (Workshop release channel):** Critical metadata gaps can block release publish; `beta` can proceed with explicit override.
+
+### Profile Playtest (Advanced Mode)
+
+Profiling is deliberately not a primary toolbar button. It is available from:
+- `Test` dropdown → **Profile Playtest** (Advanced mode only)
+- Advanced panel → **Performance** tab
+
+**Profile Playtest goals (Phase 6a):**
+- Provide creator-actionable measurements, not an engine-internals dump
+- Complement (not replace) the Complexity Meter with measured evidence
+
+**Measured outputs (summary-first):**
+- Average and max sim tick time during playtest
+- Top costly systems (grouped for creator readability)
+- Trigger/module hotspots (by object ID/name where traceable)
+- Entity count timeline
+- Asset load/import spikes (Asset Studio profiling integration)
+- Budget comparison (desktop default vs low-end target profile)
+
+The first view is a simple pass/warn/fail summary card with the top 3 hotspots and a few short recommendations. Detailed flame/trace views remain optional in Advanced mode.
+
+**Shared profiling summary interfaces (SDK + CLI/CI, Phase 6b parity):**
+
+```rust
+pub struct PerformanceBudgetProfile {
+    pub name: String,          // "desktop_default", "low_end_2012"
+    pub avg_tick_us_budget: u64,
+    pub max_tick_us_budget: u64,
+}
+
+pub struct PlaytestPerfSummary {
+    pub avg_tick_us: u64,
+    pub max_tick_us: u64,
+    pub hotspots: Vec<HotspotRef>,
+}
+
+pub struct HotspotRef {
+    pub kind: String,          // system / trigger / module / asset_load
+    pub label: String,
+    pub object_id: Option<StableContentId>,
+}
+```
 
 ### Simple vs Advanced Mode
 
@@ -2661,6 +3028,8 @@ Inspired by OFP's Easy/Advanced toggle:
 | Basic triggers (win/lose/timer) | ✓           | ✓             |
 | Waypoints (move/patrol/guard)   | ✓           | ✓             |
 | Modules                         | ✓           | ✓             |
+| `Validate` (Quick preset)       | ✓           | ✓             |
+| Publish Readiness screen        | ✓           | ✓             |
 | Probability of Presence         | —           | ✓             |
 | Condition of Presence           | —           | ✓             |
 | Custom Lua conditions           | —           | ✓             |
@@ -2687,6 +3056,9 @@ Inspired by OFP's Easy/Advanced toggle:
 | Campaign state dashboard        | —           | ✓             |
 | Multiplayer / co-op properties  | —           | ✓             |
 | Game mode templates             | ✓           | ✓             |
+| Git status strip (read-only)    | ✓           | ✓             |
+| Advanced validation presets     | —           | ✓             |
+| Profile Playtest                | —           | ✓             |
 
 Simple mode covers 80% of what a casual scenario creator needs. Advanced mode exposes the full power. Same data format — a mission created in Simple mode can be opened in Advanced mode and extended.
 
@@ -2974,6 +3346,7 @@ A **named character** is a persistent entity identity that survives across missi
 
 | Property          | Description                                                             |
 | ----------------- | ----------------------------------------------------------------------- |
+| **ID**            | Stable identifier (`character_id`) used by campaign state, hero progression, and references; not shown to players |
 | **Name**          | Display name ("Tanya", "Commander Volkov")                              |
 | **Portrait**      | Image reference for dialogue and intermission screens                   |
 | **Unit type**     | Default unit type when spawned (can change per mission)                 |
@@ -2983,7 +3356,7 @@ A **named character** is a persistent entity identity that survives across missi
 | **Must survive**  | If true, character death → mission failure (or specific outcome)        |
 | **Death outcome** | Named outcome triggered if this character dies (e.g., `tanya_killed`)   |
 
-Named characters bridge scenarios and intermissions. Tanya in Mission 1 is the same Tanya in Mission 5 — same veterancy, same kill count, same equipment. If she dies in Mission 3 and doesn't have "must survive," the campaign continues without her — and future dialogue trees skip her lines via conditions.
+Named characters bridge scenarios and intermissions. Tanya in Mission 1 is the same Tanya in Mission 5 — same `character_id`, same veterancy, same kill count, same equipment (even if the display name/portrait changes over time). If she dies in Mission 3 and doesn't have "must survive," the campaign continues without her — and future dialogue trees skip her lines via conditions.
 
 This is the primitive that makes RPG campaigns possible. A designer creates 6 named characters, gives them traits and portraits, writes dialogue between them, and lets the player manage their roster between missions. That's an RPG party in an RTS shell — no engine changes required, just creative use of the campaign editor's building blocks.
 
@@ -3004,6 +3377,124 @@ Items are added via Lua (`Campaign.add_item("captured_mig", 1)`) or via debrief/
 
 Combined with named characters and the roster screen: a player captures enemy equipment in Mission 2, assigns it to a character in the intermission, and that character spawns with it in Mission 3. The system is general-purpose — "items" can be weapons, vehicles, intel documents, key cards, magical artifacts, or anything the designer defines.
 
+#### Hero Campaign Toolkit (Optional, Built-In Layer)
+
+Warcraft III-style hero campaigns (for example, Tanya gaining XP, levels, skills, and persistent equipment) **fit IC's campaign design** and should be authorable **without engine modding**. The common case should be handled entirely by D021 campaign state + D038 campaign/scenario/intermission tooling. Lua remains the escape hatch for unusual mechanics.
+
+> **Canonical schema & Lua API:** The authoritative `HeroProfileState` struct, skill tree YAML schema, and Lua helper functions live in `src/modding/campaigns.md` § "Hero Campaign Toolkit". This section covers only the **editor/authoring UX** — what the designer sees in the Campaign Editor and Scenario Editor.
+
+This is not a separate game mode. It's an **optional authoring layer** that sits on top of:
+- **Named Characters** (persistent hero identities)
+- **Campaign Inventory** (persistent items/loadouts)
+- **Intermission Screens** (hero sheet, skill choice, armory)
+- **Dialogue Editor** (hero-conditioned lines and choices)
+- **D021 persistent state** (XP/level/skills/hero flags)
+
+**Campaign Editor authoring surfaces (Advanced mode):**
+- **Hero Roster & Progression tab** in the Persistent State Dashboard: hero list, level/xp preview, skill trees, death/injury policy, carryover rules
+- **XP / reward authoring** on mission outcomes and debrief/intermission choices (award XP, grant item, unlock skill, set hero stat/flag)
+- **Hero ability loadout editor** (which unlocked abilities are active in the next mission, if the campaign uses ability slots)
+- **Skill tree editor** (graph or list view): prerequisites, costs, descriptions, icon, unlock effects
+- **Hero-conditioned graph validation**: warns if a branch requires a hero/skill that can never be obtained on any reachable path
+
+**Scenario Editor integration (mission-level hooks):**
+- Trigger actions/modules for common hero-campaign patterns:
+  - `Award Hero XP`
+  - `Unlock Hero Skill`
+  - `Set Hero Flag`
+  - `Modify Hero Stat`
+  - `Branch on Hero Condition` (level/skill/flag)
+- `Hero Spawn` / `Apply Hero Loadout` conveniences that bind a scenario actor to a D021 named character profile
+- Preview/test helpers to simulate hero states ("Start with Tanya level 3 + Satchel Charge Mk2")
+
+**Concrete mission example (Tanya AA sabotage → reinforcements → skill-gated infiltration):**
+
+This is a standard D038 scenario using built-in trigger actions/modules (no engine modding, no WASM required for the common case). See `src/modding/campaigns.md` for the full skill tree YAML schema that defines skills like `silent_step` referenced here.
+
+```yaml
+# Scenario excerpt (conceptual D038 serialization)
+hero_bindings:
+  - actor_tag: tanya_spawn
+    character_id: tanya
+    apply_campaign_profile: true      # loads level/xp/skills/loadout from D021 state
+
+objectives:
+  - id: destroy_aa_sites
+    type: compound
+    children: [aa_north, aa_east, aa_west]
+  - id: infiltrate_lab
+    hidden: true
+
+triggers:
+  - id: aa_sites_disabled
+    when:
+      objective_completed: destroy_aa_sites
+    actions:
+      - cinematic_sequence: aa_sabotage_success_pan
+      - award_hero_xp:
+          hero: tanya
+          amount: 150
+          reason: aa_sabotage
+      - set_hero_flag:
+          hero: tanya
+          key: aa_positions_cleared
+          value: true
+      - spawn_reinforcements:
+          faction: allies
+          group_preset: black_ops_team
+          entry_point: south_edge
+      - objective_reveal:
+          id: infiltrate_lab
+      - objective_set_active:
+          id: infiltrate_lab
+      - dialogue_trigger:
+          tree: tanya_aa_success_comm
+
+  - id: lab_side_entrance_interact
+    when:
+      actor_interacted: lab_side_terminal
+    branch:
+      if:
+        hero_condition:
+          hero: tanya
+          any_skill: [silent_step, infiltrator_clearance]
+      then:
+        - open_gate: lab_side_door
+        - set_flag: { key: lab_entry_mode, value: stealth }
+      else:
+        - spawn_patrol: lab_side_response_team
+        - set_flag: { key: lab_entry_mode, value: loud }
+        - advice_popup: "Tanya needs a stealth skill to bypass this terminal quietly."
+
+debrief_rewards:
+  on_outcome: victory
+  choices:
+    - id: field_upgrade
+      label: "Field Upgrade"
+      grant_skill_choice_from: [silent_step, satchel_charge_mk2]
+    - id: requisition_cache
+      label: "Requisition Cache"
+      grant_items:
+        - { id: remote_detonator_pack, qty: 1 }
+```
+
+**Visual-editor equivalent (what the designer sees):**
+- `Objective Completed (Destroy AA Sites)` → `Cinematic Sequence` → `Award Hero XP (Tanya, +150)` → `Spawn Reinforcements` → `Reveal Objective: Infiltrate Lab`
+- `Interact: Lab Terminal` → `Branch on Hero Condition (Tanya has Silent Step OR Infiltrator Clearance)` → stealth path / loud path
+- `Debrief Outcome: Victory` → `Skill Choice or Requisition Cache` (intermission reward panel)
+
+**Intermission support (player-facing):**
+- `Hero Sheet` panel/template — portrait, level, stats, abilities, equipment, biography/progression summary
+- `Skill Choice` panel/template — choose one unlock from a campaign-defined set, spend points, preview effects
+- `Armory + Hero` combined layout presets for RPG-style between-mission management
+
+**Complexity policy (important):**
+- Hidden in **Simple mode** by default (hero campaigns are advanced content)
+- No hero progression UI appears unless the campaign enables the D021 hero toolkit
+- Classic campaigns remain unaffected and as simple as today
+
+**Compatibility / export note (D066):** Hero progression campaigns are often IC-native. Export to RA1/OpenRA may require flattening to flags/carryover stubs or manual rewrites; the SDK surfaces fidelity warnings in Export-Safe mode and Publish Readiness.
+
 #### Campaign Testing
 
 The Campaign Editor includes tools for testing campaign flow without playing every mission to completion:
@@ -3011,9 +3502,10 @@ The Campaign Editor includes tools for testing campaign flow without playing eve
 - **Graph validation** — checks for dead ends (outcomes with no outgoing edge), unreachable missions, circular paths (unless intentional), and missing mission files
 - **Jump to mission** — start any mission with simulated campaign state (set flags, roster, and inventory to test a specific path)
 - **Fast-forward state** — manually set campaign variables and flags to simulate having played earlier missions
+- **Hero state simulation** — set hero levels, skills, equipment, and injury flags for branch testing (hero toolkit campaigns)
 - **Path coverage** — highlights which campaign paths have been test-played and which haven't. Color-coded: green (tested), yellow (partially tested), red (untested)
 - **Campaign playthrough** — play the entire campaign with accelerated sim (or auto-resolve missions) to verify flow and state propagation
-- **State inspector** — during preview, shows live campaign state: current flags, roster, inventory, variables, which path was taken
+- **State inspector** — during preview, shows live campaign state: current flags, roster, inventory, hero progression state (if enabled), variables, which path was taken
 
 #### Reference Material (Campaign Editors)
 
@@ -3409,6 +3901,24 @@ Import is always **best-effort** with clear reporting: "Imported 47 of 52 trigge
 
 **The 30-minute goal:** A veteran editor from ANY background should feel productive within 30 minutes. Not expert — productive. They recognize familiar concepts wearing new names, their muscle memory partially transfers via keybinding presets, and the migration cheat sheet fills the gaps. The learning curve is a gentle slope, not a cliff.
 
+### Migration Workbench (SDK UI over `ic mod migrate`)
+
+IC already commits to migration scripts and deprecation warnings at the CLI/API layer (see `04-MODDING.md` § "Mod API Stability & Compatibility"). The SDK adds a **Migration Workbench** as a visual wrapper over that same migration engine — not a second migration system.
+
+**Phase 6a (read-only, low-friction):**
+- **Upgrade Project** action on the SDK start screen and project menu
+- **Deprecation dashboard** aggregating warnings from `ic mod check` / schema deprecations / editor file format deprecations
+- **Migration preview** showing what `ic mod migrate` would change (read-only diff/report)
+- **Report export** for code review or team handoff
+
+**Phase 6b (apply mode):**
+- Apply migration from the SDK using the same backend as the CLI
+- Automatic rollback snapshot before apply
+- Prompt to run `Validate` after migration
+- Prompt to re-check export compatibility (OpenRA/RA1) if export-safe mode is enabled
+
+The default SDK flow remains unchanged for casual creators. If a project opens cleanly, the Migration Workbench stays out of the way.
+
 ### Controller & Steam Deck Support
 
 Steam Deck is a target platform (Invariant #10), so the editor must be usable without mouse+keyboard — but it doesn't need to be *equally* powerful. The approach: full functionality on mouse+keyboard, comfortable core workflows on controller.
@@ -3450,14 +3960,33 @@ The editor's "accessibility through layered complexity" principle applies to dis
 1. **In-game editor (original design, revised by D040):** The original D038 design embedded the editor inside the game binary. Revised to SDK-separate architecture — players shouldn't see creator tools. The SDK still reuses the same Bevy rendering and sim crates, so there's no loss of live preview capability. See D040 § SDK Architecture for the full rationale.
 2. **Text-only editing (YAML + Lua):** Already supported for power users and LLM generation. The visual editor is the accessibility layer on top of the same data format.
 3. **Node-based visual scripting (like Unreal Blueprints):** Too complex for the casual audience. Modules + triggers cover the sweet spot. Advanced users write Lua directly. A node editor is a potential Phase 7+ community contribution.
+4. **LLM as editor assistant (structured tool-calling):** Not an alternative — a complementary layer. See D016 § "LLM-Callable Editor Tool Bindings" for the Phase 7 design that exposes editor operations as LLM-invokable tools. The editor command registry (Phase 6a) should be designed with this future integration in mind.
 
-**Phase:** Core scenario editor (terrain + entities + triggers + waypoints + modules + compositions + preview + autosave + controller input + accessibility) ships in **Phase 6a** alongside the modding SDK and full Workshop. Campaign editor (graph, state dashboard, intermissions, dialogue, named characters), game mode templates, multiplayer/co-op scenario tools, and Game Master mode ship in **Phase 6b**. Editor onboarding ("Coming From" profiles, keybinding presets, migration cheat sheets, partial import) and touch input ship in **Phase 7**. The campaign editor's graph, state dashboard, and intermission screens build on D021's campaign system (Phase 4) — the sim-side campaign engine must exist before the visual editor can drive it.
+**Phase:** Core scenario editor (terrain + entities + triggers + waypoints + modules + compositions + preview + autosave + controller input + accessibility) ships in **Phase 6a** alongside the modding SDK and full Workshop. Phase 6a also adds the low-friction **Validate & Playtest** toolbar flow (`Preview` / `Test` / `Validate` / `Publish`), Quick/Publish validation presets, non-blocking validation execution with status badges, a Publish Readiness screen, Git-first collaboration foundations (stable IDs + canonical serialization + read-only Git status + semantic diff helper), Advanced-mode **Profile Playtest**, and the read-only Migration Workbench preview. **Phase 6b** ships campaign editor maturity features (graph/state/dashboard/intermissions/dialogue/named characters), game mode templates, multiplayer/co-op scenario tools, Game Master mode, advanced validation presets/batch validation, semantic merge helper + optional conflict resolver panel, Migration Workbench apply mode with rollback, and the Advanced-only Localization & Subtitle Workbench. Editor onboarding ("Coming From" profiles, keybinding presets, migration cheat sheets, partial import) and touch input ship in **Phase 7**. The campaign editor's graph, state dashboard, and intermission screens build on D021's campaign system (Phase 4) — the sim-side campaign engine must exist before the visual editor can drive it.
 
 ---
 
 ---
 
 ## D040: Asset Studio — Visual Resource Editor & Agentic Generation
+
+### Decision Capsule (LLM/RAG Summary)
+
+- **Status:** Accepted
+- **Phase:** Phase 6a (Asset Studio Layers 1–2), Phase 6b (provenance/publish integration), Phase 7 (agentic generation Layer 3)
+- **Canonical for:** Asset Studio scope, SDK asset workflow, format conversion bridge, and agentic asset-generation integration boundaries
+- **Scope:** `ic-editor` (SDK), `ra-formats` codecs/read-write support, `ic-render`/`ic-ui` preview integration, Workshop publishing workflow
+- **Decision:** IC ships an **Asset Studio** inside the separate SDK app for browsing, viewing, converting, validating, and preparing assets for gameplay use; agentic (LLM) generation is optional and layered on top.
+- **Why:** Closes the “last mile” between external art tools and mod-ready assets, preserves legacy C&C asset workflows, and gives creators in-context preview instead of disconnected utilities.
+- **Non-goals:** Replacing Photoshop/Aseprite/Blender; embedding creator tools in the game binary; making LLM generation mandatory.
+- **Invariants preserved:** SDK remains separate from `ic-game`; outputs are standard/mod-ready formats (no proprietary editor-only format); game remains fully functional without LLM providers.
+- **Defaults / UX behavior:** Asset Studio handles browse/view/edit/convert first; provenance/rights checks surface mainly at Publish Readiness, not as blocking editing popups.
+- **Compatibility / Export impact:** D040 provides per-asset conversion foundations used by D066 whole-project export workflows and cross-game asset bridging.
+- **Security / Trust impact:** Asset provenance and AI-generation metadata are captured in Asset Studio (Advanced mode) and enforced primarily at publish time.
+- **Public interfaces / types / commands:** `AssetGenerator`, `AssetProvenance`, `AiGenerationMeta`, `VideoProvider`, `MusicProvider`, `SoundFxProvider`, `VoiceProvider`
+- **Affected docs:** `src/04-MODDING.md`, `src/decisions/09c-modding.md`, `src/17-PLAYER-FLOW.md`, `src/05-FORMATS.md`
+- **Revision note summary:** None
+- **Keywords:** asset studio, sdk, ra-formats, conversion, vqa aud shp, provenance, ai asset generation, video pipeline, last-mile tooling
 
 **Decision:** Ship an Asset Studio as part of the IC SDK — a visual tool for browsing, viewing, editing, and generating game resources (sprites, palettes, terrain tiles, UI chrome, 3D models). Optionally agentic: modders can describe what they want and an LLM generates or modifies assets, with in-context preview and iterative refinement. The Asset Studio is a tab/mode within the SDK application alongside the scenario editor (D038) — separate from the game binary.
 
@@ -3559,10 +4088,69 @@ Scoped asset editing operations. Not pixel painting — structured operations on
 | **Import pipeline**         | Convert standard formats to game-ready assets: PNG → palette-quantized .shp, GLTF → game model with LODs, font → bitmap font sheet                                   | Drag in a 32-bit PNG → auto-quantize to .pal, preview dithering options, export as .shp                                                                                                                           |
 | **Batch operations**        | Apply operations across multiple assets: bulk palette remap, bulk resize, bulk re-export                                                                             | "Remap all Soviet unit sprites to use the Tiberium Sun palette"                                                                                                                                                   |
 | **Diff / compare**          | Side-by-side comparison of two versions of an asset — sprite diff, palette diff, before/after                                                                        | Compare original RA1 sprite with your modified version, pixel-diff highlighted                                                                                                                                    |
-| **Video converter**         | Convert between C&C video formats (.vqa) and modern formats (.mp4, .webm). Trim, crop, resize. Subtitle overlay. Frame rate control.                                 | Record a briefing in OBS → import .mp4 → convert to .vqa for classic feel, or keep as .mp4 for modern campaigns. Extract original RA1 briefings to .mp4 for remixing in Premiere/DaVinci.                         |
+| **Video converter**         | Convert between C&C video formats (.vqa) and modern formats (.mp4, .webm). Trim, crop, resize. Subtitle overlay. Frame rate control. Optional restoration/remaster prep passes and variant-pack export metadata. | Record a briefing in OBS → import .mp4 → convert to .vqa for classic feel, or keep as .mp4 for modern campaigns. Extract original RA1 briefings to .mp4 for remixing in Premiere/DaVinci, then package as original/clean/AI remaster variants. |
 | **Audio converter**         | Convert between C&C audio format (.aud) and modern formats (.wav, .ogg). Trim, normalize, fade in/out. Sample rate conversion. Batch convert entire sound libraries. | Extract all RA1 sound effects to .wav for remixing in Audacity/Reaper. Record custom EVA lines → normalize → convert to .aud for classic feel. Batch-convert a voice pack from .wav to .ogg for Workshop publish. |
 
 **Design rule:** Every operation the Asset Studio performs produces standard output formats. Palette edits produce .pal files. Sprite operations produce .shp or sprite sheet PNGs. Chrome editing produces YAML + sprite sheet PNGs. No proprietary intermediate format — the output is always mod-ready.
+
+#### Asset Provenance & Rights Metadata (Advanced, Publish-Focused)
+
+The Asset Studio is where creators import, convert, and generate assets, so it is the natural place to capture provenance metadata — but **not** to interrupt the core creative loop.
+
+**Design goal:** provenance and rights checks improve trust and publish safety without turning Asset Studio into a compliance wizard.
+
+**Phase 6b behavior (aligned with Publish Readiness in D038):**
+- **Asset metadata panel (Advanced mode)** for source URL/project, author attribution, SPDX license, modification notes, and import method
+- **AI generation metadata** (when Layer 3 is used): provider/model, generation timestamp, optional prompt hash, and a "human-edited" flag
+- **Batch metadata operations** for large imports (apply attribution/license to a selected asset set)
+- **Publish-time surfacing** — most provenance/rules issues appear in the Scenario/Campaign editor's **Publish Readiness** screen, not as blocking popups during editing
+- **Channel-sensitive gating** — local saves and playtests never require complete provenance; release-channel Workshop publishing can enforce stricter metadata completeness than beta/private workflows
+
+This builds on D030/D031/D047/D066 and keeps normal import/preview/edit/test workflows fast.
+
+**Metadata contracts (Phase 6b):**
+
+```rust
+pub struct AssetProvenance {
+    pub source_uri: Option<String>,
+    pub source_author: Option<String>,
+    pub license_spdx: Option<String>,
+    pub import_method: AssetImportMethod, // imported / extracted / generated / converted
+    pub modified_by_creator: bool,
+    pub notes: Option<String>,
+}
+
+pub struct AiGenerationMeta {
+    pub provider: String,
+    pub model: String,
+    pub generated_at: String,   // RFC 3339 UTC
+    pub prompt_hash: Option<String>,
+    pub human_edited: bool,
+}
+```
+
+#### Optional AI-Enhanced Cutscene Remaster Workflow (D068 Integration)
+
+IC can support "better remaster" FMV/cutscene packs, including generative AI-assisted enhancement, but the Asset Studio treats them as **optional presentation variants**, not replacements for original campaign media.
+
+**Asset Studio design rules (when remastering original cutscenes):**
+
+- **Preservation-first output:** original extracted media remains available and publishable as a separate variant pack
+- **Variant packaging:** remastered outputs are packaged as `Original`, `Clean Remaster`, or `AI-Enhanced` media variants (aligned with D068 selective installs)
+- **Clear labeling:** AI-assisted outputs are explicitly labeled in pack metadata and Publish Readiness summaries
+- **Lineage metadata:** provenance records the original source media reference plus restoration/enhancement toolchain details
+- **Human review required:** creators must preview timing, subtitle sync, and radar-comm/fullscreen presentation before publish
+- **Fallback-safe:** campaigns continue using other installed variants or text/briefing fallback if the remaster pack is missing
+
+**Quality guardrails (Publish Readiness surfaces warnings/advice):**
+
+- frame-to-frame consistency / temporal artifact checks (where detectable)
+- subtitle timing drift vs source timestamps
+- audio/video duration mismatch and lip-sync drift
+- excessive sharpening/denoise artifacts (advisory)
+- missing "AI Enhanced" / "Experimental" labeling for AI-assisted remaster packs
+
+This keeps the SDK open to advanced remaster workflows while preserving trust, legal review, and the original media.
 
 #### Layer 3 — Agentic Asset Generation (D016 Extension, Phase 7)
 
@@ -3585,7 +4173,7 @@ LLM-powered asset creation for modders who have ideas but not art skills. Same B
 5. Post-process: palette quantize, frame extract, format convert
 6. Export as mod-ready asset → ready for Workshop publish
 
-**Crate boundary:** `ic-editor` defines an `AssetGenerator` trait (input: text description + format constraints + optional reference → output: generated image data). `ic-llm` implements it by routing to the configured provider. `ic-game` wires them at startup in the SDK binary. Same pattern as `NarrativeGenerator` for the replay-to-scenario pipeline. The SDK works without an LLM — Layers 1 and 2 are fully functional. Layer 3 activates when a provider is configured.
+**Crate boundary:** `ic-editor` defines an `AssetGenerator` trait (input: text description + format constraints + optional reference → output: generated image data). `ic-llm` implements it by routing to the configured provider. `ic-game` wires them at startup in the SDK binary. Same pattern as `NarrativeGenerator` for the replay-to-scenario pipeline. The SDK works without an LLM — Layers 1 and 2 are fully functional. Layer 3 activates when a provider is configured. Asset Studio operations are also exposed through the LLM-callable editor tool bindings (see D016 § "LLM-Callable Editor Tool Bindings"), enabling conversational asset workflows beyond generation — e.g., "apply the volcanic palette to all terrain tiles in this map" or "batch-convert these PNGs to .shp with the Soviet palette."
 
 **What the LLM does NOT replace:**
 - Professional art. LLM-generated sprites are good enough for prototyping, playtesting, and small mods. Professional pixel art for a polished release still benefits from a human artist.
@@ -3627,7 +4215,7 @@ The Asset Studio understands multiple C&C format families and can convert betwee
 
 **ra-formats write support:** Currently `ra-formats` is read-only (parse .mix, .shp, .pal, .vqa, .aud). The Asset Studio requires write support — generating .shp from frames, writing .pal files, encoding .vqa video, encoding .aud audio, optionally packing .mix archives. This is an additive extension to `ra-formats` (no redesign of existing parsers), but non-trivial engineering: .shp writing requires correct header generation, frame offset tables, and optional LCW/RLE compression; .vqa encoding requires VQ codebook generation and frame differencing; .aud encoding requires IMA ADPCM compression with correct `AUDHeaderType` generation and `IndexTable`/`DiffTable` lookup table application; .mix packing requires building the file index and CRC hash table. All encoders reference the EA GPL source code implementations directly (see `05-FORMATS.md` § Binary Format Codec Reference). Budget accordingly in Phase 6a.
 
-**Video pipeline:** The game engine natively plays .mp4 and .webm via standard media decoders (platform-provided or bundled). Campaign creators can use modern formats directly — no conversion needed. The .vqa ↔ .mp4/.webm conversion in the Asset Studio is for creators who *want* the classic C&C aesthetic (palette-quantized, low-res FMV look) or who need to extract and remix original EA cutscenes. The conversion pipeline lives in `ra-formats` (VQA codec) + `ic-editor` (UI, preview, trim/crop tools). Someone recording a briefing with a webcam or screen recorder imports their .mp4, previews it in the Video Playback module's display modes (fullscreen, radar_comm, picture_in_picture), optionally converts to .vqa for retro feel, and publishes via Workshop (D030).
+**Video pipeline:** The game engine natively plays .mp4 and .webm via standard media decoders (platform-provided or bundled). Campaign creators can use modern formats directly — no conversion needed. The .vqa ↔ .mp4/.webm conversion in the Asset Studio is for creators who *want* the classic C&C aesthetic (palette-quantized, low-res FMV look), who need to extract and remix original EA cutscenes, or who want to produce optional remaster variant packs (D068) from preserved source material. The conversion pipeline lives in `ra-formats` (VQA codec) + `ic-editor` (UI, preview, trim/crop tools). Someone recording a briefing with a webcam or screen recorder imports their .mp4, previews it in the Video Playback module's display modes (fullscreen, radar_comm, picture_in_picture), optionally converts to .vqa for retro feel, and publishes via Workshop (D030). Someone remastering classic RA1 briefings can extract `.vqa` to `.mp4`, perform restoration/enhancement (traditional or AI-assisted), validate subtitle/audio sync and display-mode previews in Asset Studio, then publish the result as a clearly labeled optional presentation variant pack instead of replacing the originals.
 
 **Audio pipeline:** The game engine natively plays .wav, .ogg, and .mp3 via standard audio decoders (Bevy audio plugin + platform codecs). Modern formats are the recommended choice for new content — .ogg for music and voice lines (good compression, no licensing issues), .wav for short sound effects (zero decode latency). The .aud ↔ .wav/.ogg conversion in the Asset Studio is for creators who need to extract and remix original EA audio (hundreds of classic sound effects, EVA voice lines, and Hell March variations) or who want to encode custom audio in classic AUD format for OpenRA mod compatibility. The conversion pipeline lives in `ra-formats` (AUD codec — IMA ADPCM encode/decode using the original Westwood `IndexTable`/`DiffTable` from the EA GPL source) + `ic-editor` (UI, waveform preview, trim/normalize/fade tools). Someone recording custom EVA voice lines imports their .wav files, previews with waveform visualization, normalizes volume, optionally converts to .aud for classic feel or keeps as .ogg for modern mods, and publishes via Workshop (D030). Batch conversion handles entire sound libraries — extract all 200+ RA1 sound effects to .wav in one operation.
 
@@ -3642,6 +4230,7 @@ The Asset Studio understands multiple C&C format families and can convert betwee
 
 - **Phase 0:** `ra-formats` delivers CLI asset inspection (dump/inspect/validate) — the text-mode precursor.
 - **Phase 6a:** Asset Studio ships as part of the SDK alongside the scenario editor. Layer 1 (browser/viewer) and Layer 2 (editor) are the deliverables. Chrome designer ships alongside the UI theme system (D032).
+- **Phase 6b:** Asset provenance/rights metadata panel (Advanced mode), batch provenance editing, and Publish Readiness integration (warnings/gating surfaced primarily at publish time, not during normal editing/playtesting).
 - **Phase 7:** Layer 3 (agentic generation via `ic-llm`). Same phase as LLM text generation (D016).
 - **Future:** .vxl/.hva write support (for RA2 module), .w3d viewing (for Generals module), browser-based viewer.
 

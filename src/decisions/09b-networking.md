@@ -6,6 +6,8 @@ Network model, relay server, sub-tick ordering, community servers, ranked play, 
 
 ## D006: Networking — Pluggable via Trait
 
+**Revision note (2026-02-22):** Revised to clarify product-vs-architecture scope. IC ships one default/recommended multiplayer netcode for normal play, but the `NetworkModel` abstraction remains a hard requirement so the project can (a) support future compatibility/bridge experiments with other engines or legacy games where a different network/protocol adapter is needed, and (b) replace the default netcode later if a serious flaw or better architecture is discovered.
+
 **Decision:** Abstract all networking behind a `NetworkModel` trait. Game loop is generic over it.
 
 **Rationale:**
@@ -13,7 +15,9 @@ Network model, relay server, sub-tick ordering, community servers, ranked play, 
 - Full testability (run sim with `LocalNetwork`)
 - Community can contribute netcode without understanding game logic
 - Enables future models: rollback, client-server, cross-engine adapters
-- Players could choose model in lobby
+- Enables bridge/proxy adapters for cross-version/community interoperability experiments without touching `ic-sim`
+- De-risks future netcode replacement (better default / serious flaw response) behind a stable game-loop boundary
+- Selection is a deployment/profile/compatibility policy by default, not a generic "choose any netcode" player-facing lobby toggle
 
 **Key invariant:** `ic-sim` has zero imports from `ic-net`. They only share `ic-protocol`.
 
@@ -24,6 +28,8 @@ Network model, relay server, sub-tick ordering, community servers, ranked play, 
 ---
 
 ## D007: Networking — Relay Server as Default
+
+**Revision note (2026-02-22):** Revised to clarify failure-policy expectations: relay remains the default and ranked authority path, but relay failure handling is mode-specific. Ranked follows degraded-certification / void policy (see `06-SECURITY.md` V32) rather than automatic P2P failover; casual/custom games may offer unranked continuation or fallback paths.
 
 **Decision:** Default multiplayer uses relay server with time authority, not pure P2P. The relay logic (`RelayCore`) is a library component in `ic-net` — it can be deployed as a standalone binary (dedicated server for hosting, server rooms, Raspberry Pi) or embedded inside a game client (listen server — "Host Game" button, zero external infrastructure). Clients connecting to either deployment use the same protocol and cannot distinguish between them.
 
@@ -39,6 +45,8 @@ Network model, relay server, sub-tick ordering, community servers, ranked play, 
 
 **Trust boundary:** For ranked/competitive play, the matchmaking system requires connection to an official or community-verified dedicated relay (untrusted host can't be allowed relay authority). For casual/LAN/custom games, the embedded relay is preferred — zero setup, full relay quality.
 
+**Relay failure policy:** If a relay dies mid-match, ranked/competitive matches do **not** silently fail over to a different authority path (e.g., ad-hoc P2P) because that breaks certification and trust assumptions. Ranked follows the degraded-certification / void policy in `06-SECURITY.md` (V32). Casual/custom games may offer unranked continuation via reconnect or fallback if all participants support it.
+
 **Validated by:** C&C Generals/Zero Hour's "packet router" — a client-side star topology where one player collected and rebroadcast all commands. IC's embedded relay improves on this pattern: the host's orders go through `RelayCore`'s sub-tick pipeline like everyone else's (no peeking, no priority), eliminating the host advantage that Generals had. The dedicated server mode further eliminates any hosting-related advantage. See `research/generals-zero-hour-netcode-analysis.md`. Further validated by Valve's GameNetworkingSockets (GNS), which defaults to relay (Valve SDR — Steam Datagram Relay) for all connections, including P2P-capable scenarios. GNS's rationale mirrors ours: relay eliminates NAT traversal headaches, provides consistent latency measurement, and blocks IP-level attacks. The GNS architecture also validates encrypting all relay traffic (AES-GCM-256 + Curve25519) — see D054 § Transport encryption. See `research/valve-github-analysis.md`. Additionally validated by Embark Studios' **Quilkin** — a production Rust UDP proxy for game servers (1,510★, Apache 2.0, co-developed with Google Cloud Gaming). Quilkin provides a concrete implementation of relay-as-filter-chain: session routing via token-based connection IDs, QCMP latency measurement for server selection, composable filter pipeline (Capture → Firewall → RateLimit → TokenRouter), and full OTEL observability. Quilkin's production deployment on Tokio + tonic confirms that async Rust handles game relay traffic at scale. See `research/embark-studios-rust-gamedev-analysis.md`.
 
 **Alternatives available:** Pure P2P lockstep, fog-authoritative server, rollback — all implementable as `NetworkModel` variants.
@@ -49,11 +57,13 @@ Network model, relay server, sub-tick ordering, community servers, ranked play, 
 
 ## D008: Sub-Tick Timestamps on Orders
 
-**Decision:** Every order carries a sub-tick timestamp. Orders within a tick are processed in chronological order.
+**Revision note (2026-02-22):** Revised to clarify trust semantics. Client-submitted sub-tick timestamps are treated as timing hints. In relay modes, the relay normalizes/clamps them into canonical sub-tick timestamps before broadcast using relay-owned timing calibration and skew bounds. In P2P mode, peers deterministically order by `(sub_tick_time, player_id)` with known fairness limitations.
+
+**Decision:** Every order carries a sub-tick timestamp hint. Orders within a tick are processed in chronological order using a canonical timestamp ordering rule for the active `NetworkModel`.
 
 **Rationale (inspired by CS2):**
 - Fairer results for edge cases (two players competing for same resource/building)
-- Trivial to implement (just attach timestamp at input layer)
+- Simple protocol shape (attach integer timestamp hint at input layer); enforcement/canonicalization happens in the network model
 - Network model preserves but doesn't depend on timestamps
 - If a future model ignores timestamps, no breakage
 
@@ -113,6 +123,24 @@ pub enum OrderRejectionCategory {
 ---
 
 ## D052: Community Servers with Portable Signed Credentials
+
+### Decision Capsule (LLM/RAG Summary)
+
+- **Status:** Accepted
+- **Phase:** Multi-phase (community services, matchmaking/ranked integration, portable credentials)
+- **Canonical for:** Community server federation, portable signed player credentials, and ranking authority trust chain
+- **Scope:** `ic-net` relay/community integration, `ic-server`, ranking/matchmaking services, client credential storage, community federation
+- **Decision:** Multiplayer ranking and competitive identity are hosted by self-hostable **Community Servers** that issue **Ed25519-signed portable credential records** stored locally by the player and presented on join.
+- **Why:** Low server operating cost, federation/self-hosting, local-first privacy, and reuse of relay-certified match results as the trust anchor.
+- **Non-goals:** Mandatory centralized ranking database; JWT-based token design; always-online master account dependency for every ranked/community interaction.
+- **Invariants preserved:** Relay remains the multiplayer time/order authority (D007) but not the long-term ranking database; local-first data philosophy (D034/D042) remains intact.
+- **Defaults / UX behavior:** Players can join multiple communities with separate credentials/rankings; the official IC community is just one community, not a privileged singleton.
+- **Security / Trust impact:** SCR format uses Ed25519 only, no algorithm negotiation, monotonic sequence numbers for replay/revocation handling, and community-key identity binding.
+- **Performance / Ops impact:** Community servers can run on low-cost infrastructure because long-term player history is carried by the player, not stored centrally.
+- **Public interfaces / types / commands:** `CertifiedMatchResult`, `RankingProvider`, Signed Credential Records (SCR), community key rotation / revocation records
+- **Affected docs:** `src/03-NETCODE.md`, `src/06-SECURITY.md`, `src/decisions/09e-community.md`, `src/15-SERVER-GUIDE.md`
+- **Revision note summary:** None
+- **Keywords:** community server, signed credentials, SCR, ed25519, ranking federation, portable rating, self-hosted matchmaking
 
 **Decision:** Multiplayer ranking, matchmaking, and competitive history are managed through **Community Servers** — self-hostable services that federate like Workshop sources (D030/D050). Player skill data is stored **locally** in a per-community SQLite credential file, with each record individually signed by the community server using Ed25519. The player presents the credential file when joining games; the server verifies its signature without needing to look up a central database. This is architecturally equivalent to JWT-style portable tokens, but uses a purpose-built binary format (**Signed Credential Records**, SCR) that eliminates the entire class of JWT vulnerabilities.
 
@@ -1442,6 +1470,24 @@ All three consumers use Ed25519, the same rotation record format, and the same v
 **Phase:** Phase 5 (Multiplayer & Competitive)
 **Depends on:** D041 (RankingProvider), D052 (Community Servers), D053 (Player Profile), D037 (Competitive Governance), D034 (SQLite Storage), D019 (Balance Presets)
 
+### Decision Capsule (LLM/RAG Summary)
+
+- **Status:** Settled
+- **Phase:** Phase 5 (Multiplayer & Competitive)
+- **Canonical for:** Ranked player experience design (tiers, seasons, placement flow, queue behavior) built on the D052/D053 competitive infrastructure
+- **Scope:** ranked ladders/tiers/seasons, matchmaking queue behavior, player-facing competitive UX, ranked-specific policies and displays
+- **Decision:** IC defines a full ranked experience with **named tiers**, **season structure**, **placement flow**, **small-population matchmaking degradation**, and **faction-aware rating presentation**, layered on top of D041/D052/D053 foundations.
+- **Why:** Raw ratings alone are poor motivation/UX, RTS populations are small and need graceful queue behavior, and competitive retention depends on seasonal structure and clear milestones.
+- **Non-goals:** A raw-number-only ladder UX; assuming FPS/MOBA-scale populations; one-size-fits-all ranked rules across all communities/balance presets.
+- **Invariants preserved:** Rating authority remains community-server based (D052); rating algorithms remain trait-backed (`RankingProvider`, D041); ranked flow reuses generic netcode/match lifecycle mechanisms where possible.
+- **Defaults / UX behavior:** Tier names/badges are YAML-driven per game module; seasons are explicit; ranked queue constraints and degradation behavior are product-defined rather than ad hoc.
+- **Security / Trust impact:** Ranked relies on the existing relay + signed credential trust chain and integrates with governance/moderation decisions rather than bypassing them.
+- **Performance / Ops impact:** Queue degradation rules and small-population design reduce matchmaking failures and waiting dead-ends in niche RTS communities.
+- **Public interfaces / types / commands:** tier configuration YAML, `RankingProvider` display integration, ranked queue/lobby settings and vote constraints (see body)
+- **Affected docs:** `src/03-NETCODE.md`, `src/decisions/09e-community.md` (D052/D053/D037), `src/17-PLAYER-FLOW.md`, `src/decisions/09g-interaction.md`
+- **Revision note summary:** None
+- **Keywords:** ranked tiers, seasons, matchmaking queue, placement matches, faction rating, small population matchmaking, competitive ladder
+
 ### Problem
 
 The existing competitive infrastructure (D041's `RankingProvider`, D052's signed credentials, D053's profile) provides the *foundational layer* — a pluggable rating algorithm, cryptographic verification, and display system. But it doesn't define the *player-facing competitive experience*:
@@ -2040,10 +2086,28 @@ This decision is informed by cross-game analysis of CS2/CSGO, StarCraft 2, Leagu
 
 ## D060: Netcode Parameter Philosophy — Automate Everything, Expose Almost Nothing
 
-**Status:** Settled  
-**Decided:** 2026-02  
-**Scope:** `ic-net`, `ic-game` (lobby), D058 (console)  
+**Status:** Settled
+**Decided:** 2026-02
+**Scope:** `ic-net`, `ic-game` (lobby), D058 (console)
 **Phase:** Phase 5 (Multiplayer)
+
+### Decision Capsule (LLM/RAG Summary)
+
+- **Status:** Settled
+- **Phase:** Phase 5 (Multiplayer)
+- **Canonical for:** Netcode parameter exposure policy (what is automated vs player/admin-visible) and multiplayer UX philosophy for netcode tuning
+- **Scope:** `ic-net`, lobby/settings UI in `ic-game`, D058 command/cvar exposure policy
+- **Decision:** IC automates nearly all netcode parameters and exposes only a minimal, player-comprehensible surface, with adaptive systems handling most tuning internally.
+- **Why:** Manual netcode tuning hurts usability and fairness, successful games hide this complexity, and IC’s sub-tick/adaptive systems are designed to self-tune.
+- **Non-goals:** A comprehensive player-facing “advanced netcode settings” panel; exposing internal transport/latency/debug knobs as normal gameplay UX.
+- **Invariants preserved:** D006 pluggable netcode architecture remains intact; automation policy does not prevent internal default changes or future netcode replacement.
+- **Defaults / UX behavior:** Players see only understandable controls (e.g., game speed where applicable); admin/operator controls remain narrowly scoped; developer/debug knobs stay non-player-facing.
+- **Security / Trust impact:** Fewer exposed knobs reduces misconfiguration and exploit/abuse surface in competitive play.
+- **Performance / Ops impact:** Adaptive tuning lowers support burden and avoids brittle hand-tuned presets across diverse network conditions.
+- **Public interfaces / types / commands:** D058 cvar/command exposure policy, lobby parameter surfaces, internal adaptive tuning systems (see body for exact parameters)
+- **Affected docs:** `src/03-NETCODE.md`, `src/17-PLAYER-FLOW.md`, `src/06-SECURITY.md`, `src/decisions/09g-interaction.md`
+- **Revision note summary:** None
+- **Keywords:** netcode parameters, automate everything, expose almost nothing, run-ahead, command delay, tick rate, cvars, multiplayer settings
 
 ### Context
 
@@ -2081,6 +2145,8 @@ IC adopts a **three-tier exposure model** for netcode parameters:
 One setting. Game speed is the only parameter where player preference is legitimate ("I like slower, more strategic games" vs. "I prefer fast-paced gameplay"). In ranked play, game speed is server-enforced and not configurable.
 
 Game speed affects only the interval between sim ticks — system behavior is tick-count-based, so all game logic works identically at any speed. Single-player can change speed mid-game; multiplayer sets it in lobby. This matches how every C&C game handled speed (see `02-ARCHITECTURE.md` § Game Speed).
+
+**Mobile tempo advisor compatibility (D065):** Touch-specific "tempo comfort" recommendations are **client/UI advisory only**. They may highlight a recommended band (`slower`-`normal`, etc.) or warn a host that touch players may be overloaded, but they do not create a new authority path for speed selection. The host/queue-selected game speed remains the only synced value, and ranked speed remains server-enforced.
 
 #### Tier 2: Advanced / Console (Power Users, D058)
 

@@ -8,6 +8,8 @@ We don't achieve this by throwing threads at the problem. We achieve it by wasti
 
 This is a first-class project goal and a primary differentiator over OpenRA.
 
+**Keywords:** performance, efficiency-first, 2012 laptop target, 500 units, low-end hardware, Bevy/wgpu compatibility tiers, zero-allocation hot paths, ECS cache layout, simulation LOD, profiling
+
 ## The Efficiency Pyramid
 
 Ordered by impact. Each layer works on a single core. Only the top layer requires multiple cores.
@@ -154,23 +156,25 @@ Expensive systems don't need to process all entities every tick. Spread the cost
 fn pathfinding_system(
     tick: Res<CurrentTick>,
     query: Query<(Entity, &Position, &MoveTarget, &SimLOD), With<NeedsPath>>,
-    nav: Res<NavMesh>,
+    pathfinder: Res<Box<dyn Pathfinder>>,  // D013/D045 trait seam
 ) {
     let group = tick.0 % 4;  // 4 groups, each updated every 4 ticks
-    
+
     for (entity, pos, target, lod) in &query {
         let should_update = match lod {
             SimLOD::Full    => entity.index() % 4 == group,    // every 4 ticks
             SimLOD::Reduced => entity.index() % 8 == (group * 2) % 8,  // every 8 ticks
             SimLOD::Minimal => false,  // never replan, just follow existing path
         };
-        
+
         if should_update {
-            recompute_path(entity, pos, target, &nav);
+            recompute_path(entity, pos, target, &*pathfinder);
         }
     }
 }
 ```
+
+**API note:** This is pseudocode for scheduling/amortization. The exact `Pathfinder` resource type depends on the game module's dispatch strategy (D013/D045). Hot-path batch queries should prefer caller-owned scratch (`*_into` APIs) over allocation-returning helpers.
 
 **Result:** Pathfinding cost per tick drops 75% for Full-LOD units, 87.5% for Reduced, 100% for Minimal. Combined with SimLOD, a 1000-unit game might recompute ~50 paths per tick instead of 1000.
 
@@ -324,14 +328,14 @@ Only systems where per-entity work is independent and costly:
 
 ```rust
 // YES — pathfinding is expensive and independent per unit
-fn pathfinding_system(query: Query<...>, nav: Res<NavMesh>) {
+fn pathfinding_system(query: Query<...>, pathfinder: Res<Box<dyn Pathfinder>>) {
     let results: Vec<_> = query.par_iter()
         .filter(|(_, _, _, lod)| lod.should_update_path(tick))
         .map(|(entity, pos, target, _)| {
-            (entity, nav.find_path(pos, &target.dest))
+            (entity, pathfinder.find_path(pos, &target.dest))
         })
         .collect();
-    
+
     // Sort for determinism, then apply sequentially
     apply_sorted(results);
 }
@@ -346,6 +350,8 @@ fn movement_system(mut query: Query<(&mut Position, &Velocity)>) {
     }
 }
 ```
+
+**API note:** This parallel example illustrates where parallelism helps, not the exact final pathfinder interface. In IC, parallel work may happen either inside `IcPathfinder` or in a pathfinding system that batches deterministic requests/results through the selected `Pathfinder` implementation. In both cases, caller-owned scratch and deterministic result ordering still apply.
 
 **Rule of thumb:** Only parallelize systems where per-entity work exceeds ~1 microsecond. Simple arithmetic on components is faster to iterate sequentially than to distribute.
 
@@ -400,6 +406,24 @@ See `03-NETCODE.md` § "Why It Feels Faster Than OpenRA" for the full architectu
 
 Bevy renders via `wgpu`, which translates to native GPU APIs. This creates a **hardware floor** that interacts with our "2012 laptop" performance target.
 
+### Compatibility Target Clarification (Original RA Spirit vs Modern Stack Reality)
+
+The project goal is to support **very low-end hardware by modern standards** — especially machines with **no dedicated gaming GPU** (integrated graphics, office PCs, older laptops) — while preserving full gameplay. This matches the spirit of original Red Alert and OpenRA accessibility.
+
+However, we should be explicit about the technical floor:
+
+- **Literal 1996 Red Alert-era hardware is not a realistic runtime target** for a modern Rust + Bevy + `wgpu` engine.
+- A **displayed game window still requires some graphics path** (integrated GPU, compatible driver, or OS-provided software rasterizer path).
+- **Headless components** (relay server, tooling, some tests) remain fully usable without graphics acceleration because the sim/netcode do not depend on rendering.
+
+In practice, the target is:
+
+- **No dedicated GPU required** (integrated graphics should work)
+- **Baseline tier must remain fully playable**
+- **3D render modes and advanced Bevy visual features are optional and may be hidden/disabled automatically**
+
+If the OS/driver stack exposes a software backend (e.g., platform software rasterizer implementations), IC may run as a **best-effort** fallback, but this is not the primary performance target and should be clearly labeled as unsupported for competitive play.
+
 ### wgpu Backend Matrix
 
 | Backend | Min API Version   | Typical GPU Era                              | wgpu Support Level           |
@@ -438,6 +462,8 @@ A typical 2012 laptop has an **Intel HD 4000** (Ivy Bridge). This GPU supports O
 | Audio / Networking / Modding   | **No impact** — none touch the GPU                                   | None     | —                                                 |
 
 **Key insight:** The "2012 laptop" target is achievable for the **simulation** (500 units, < 40ms tick) because the sim is pure CPU. The **rendering** must degrade gracefully — reduced visual effects, not broken gameplay.
+
+**Design rule:** Advanced Bevy features (3D view, heavy post-FX, compute-driven particles, dynamic lighting pipelines) are optional layers on top of the classic sprite renderer. Their absence must never block normal gameplay.
 
 ### Render Quality Tiers
 
@@ -943,6 +969,25 @@ Telemetry is zero-cost when disabled (compile-time feature gate). Release builds
 Never add `par_iter()` without profiling first. Measure single-threaded. If a system takes > 1ms, consider parallelizing. If it takes < 0.1ms, sequential is faster (avoids coordination overhead).
 
 **Recommended profiling tool:** Embark Studios' **puffin** (1,674★, MIT/Apache-2.0) — a frame-based instrumentation profiler built for game loops. Puffin's thread-local profiling streams have ~1ns overhead when disabled (atomic bool check, no allocation), making it safe to leave instrumentation in release builds. Key features validated by production use at Embark: frame-scoped profiling (maps directly to IC's sim tick loop), remote TCP streaming for profiling headless servers (relay server profiling without local UI), and the `puffin_egui` viewer for real-time flame graphs in development builds via `bevy_egui`. IC's `telemetry` feature flag (D031) should gate puffin's collection, maintaining zero-cost when disabled. See `research/embark-studios-rust-gamedev-analysis.md` § puffin.
+
+### SDK Profile Playtest (D038 Integration, Advanced Mode)
+
+Performance tooling must not make the SDK feel heavy for casual creators. The editor should expose profiling as an **opt-in Advanced workflow**, not a required step before every preview/test:
+
+- Default toolbar stays simple: `Preview` / `Test` / `Validate` / `Publish`
+- Profiling lives behind `Test ▼ → Profile Playtest` and an Advanced Performance panel
+- No automatic profiling on save or on every test launch
+
+**Profile Playtest output style (summary-first):**
+- Pass / warn / fail against a selected performance budget profile (desktop default, low-end target, etc.)
+- Top 3 hotspots (creator-readable grouping, not raw ECS internals only)
+- Average / max sim tick time
+- Trigger/module hotspot links where traceability exists
+- Optional detailed flame graph / trace view for advanced debugging
+
+This complements the Scenario Complexity Meter in `decisions/09f-tools.md` § D038: the meter is a heuristic guide, while Profile Playtest provides measured evidence during playtest.
+
+**CLI/CI parity (Phase 6b):** Headless profiling summaries (`ic mod perf-test`) should reuse the same summary schema as the SDK view so teams can gate performance in CI without an SDK-only format.
 
 ## Delta Encoding & Change Tracking Performance
 

@@ -2,7 +2,9 @@
 
 ## Our Netcode
 
-Iron Curtain uses **one** netcode: relay-assisted deterministic lockstep with sub-tick order fairness. It's not a menu of alternatives — it's a single, unified design. The `NetworkModel` trait exists so we can test this netcode, run it in single-player, and deploy it with or without a relay server — not because we're building multiple netcodes.
+Iron Curtain ships **one default gameplay netcode** today: relay-assisted deterministic lockstep with sub-tick order fairness. This is the recommended production path, not a buffet of equal options in the normal player UX. The `NetworkModel` trait still exists for more than testing: it lets us run single-player and replay modes cleanly, support multiple deployments (dedicated relay / embedded relay / P2P LAN), and preserve the ability to introduce future compatibility bridges or replace the default netcode later if evidence warrants it (e.g., cross-engine interop experiments, architectural flaws discovered in production).
+
+**Keywords:** netcode, relay lockstep, `NetworkModel`, sub-tick timestamps, reconnection, desync debugging, replay determinism, compatibility bridge, ranked authority, relay server
 
 Key influences:
 - **Counter-Strike 2** — sub-tick timestamps for order fairness
@@ -29,7 +31,9 @@ pub enum PlayerOrder {
     // ... every possible player action
 }
 
-/// Sub-tick timestamp on every order (CS2-inspired, see below)
+/// Sub-tick timestamp on every order (CS2-inspired, see below).
+/// In relay modes this is a client-submitted timing hint that the relay
+/// normalizes/clamps before broadcasting canonical TickOrders.
 #[derive(Clone, Serialize, Deserialize)]
 pub struct TimestampedOrder {
     pub player: PlayerId,
@@ -50,10 +54,12 @@ impl TickOrders {
     /// CS2-style: process in chronological order within the tick.
     /// Uses a caller-provided scratch buffer to avoid per-tick heap allocation.
     /// The buffer is cleared and reused each tick (see TickScratch pattern in 10-PERFORMANCE.md).
+    /// Tie-break by player ID so equal timestamps remain deterministic in P2P/LAN modes
+    /// (relay modes may already emit canonical normalized timestamps, but the helper stays safe).
     pub fn chronological<'a>(&'a self, scratch: &'a mut Vec<&'a TimestampedOrder>) -> &'a [&'a TimestampedOrder] {
         scratch.clear();
         scratch.extend(self.orders.iter());
-        scratch.sort_by_key(|o| o.sub_tick_time);
+        scratch.sort_by_key(|o| (o.sub_tick_time, o.player));
         scratch.as_slice()
     }
 }
@@ -75,9 +81,10 @@ The relay server is the recommended deployment for multiplayer. It does NOT run 
 
 Every tick:
 1. The relay receives timestamped orders from all players
-2. Orders them chronologically within the tick (CS2 insight — see below)
-3. Broadcasts the canonical `TickOrders` to all clients
-4. All clients run the identical deterministic sim on those orders
+2. Validates/normalizes client timestamp hints into canonical sub-tick timestamps (relay-owned timing calibration + skew bounds)
+3. Orders them chronologically within the tick (CS2 insight — see below)
+4. Broadcasts the canonical `TickOrders` to all clients
+5. All clients run the identical deterministic sim on those orders
 
 The relay also:
 - Detects lag switches and cheating attempts (see anti-lag-switch below)
@@ -114,6 +121,7 @@ pub struct RelayCore {
     pending_orders: Vec<TimestampedOrder>,
     filter_chain: Vec<Box<dyn RelayFilter>>,
     liveness_tokens: HashMap<PlayerId, LivenessToken>,
+    clock_calibration: HashMap<PlayerId, ClockCalibration>,
     // ... anti-lag-switch state, replay signer, etc.
 }
 
@@ -138,7 +146,7 @@ This creates three relay deployment modes:
 | **Listen server**    | Game client embeds it (`EmbeddedRelayNetwork`) | Host plays + others connect  | Full sub-tick, single game, host plays       | Casual, community, "Host Game" button |
 | **P2P direct**       | Nobody — no relay                              | All clients peer directly    | No time authority, client-side sorting       | LAN, ≤3 players                       |
 
-**Listen server vs. Generals' star topology.** C&C Generals used a star topology where the host player collected and rebroadcast orders — but the host had **host advantage**: zero self-latency, ability to peek at orders before broadcasting. With IC's embedded `RelayCore`, the host's own orders go through the same `RelayCore` pipeline as everyone else's. Sub-tick timestamps are set by each client's local clock *before* submission. The relay orders by timestamp, not arrival. The host doesn't peek, doesn't get priority.
+**Listen server vs. Generals' star topology.** C&C Generals used a star topology where the host player collected and rebroadcast orders — but the host had **host advantage**: zero self-latency, ability to peek at orders before broadcasting. With IC's embedded `RelayCore`, the host's own orders go through the same `RelayCore` pipeline as everyone else's. Clients submit sub-tick timestamp *hints* from local clocks; the relay converts them into relay-canonical timestamps using the same normalization logic for every player. The host doesn't get a privileged code path.
 
 **Trust boundary for ranked play.** An embedded relay runs inside the host's process — a malicious host could theoretically modify `RelayCore` behavior (drop opponents' orders, manipulate timestamps). For **ranked/competitive** play, the matchmaking system requires connection to an official or community-verified relay server (standalone binary on trusted infrastructure). For **casual, LAN, and custom games**, the embedded relay is perfect — zero setup, "Host Game" button just works, no external server needed.
 
@@ -242,6 +250,26 @@ At 128 tps, you're running all pathfinding, spatial queries, combat resolution, 
 Critically, **128 tps doesn't even eliminate the problem sub-tick solves.** Two orders landing in the same 8ms window still need a tiebreaker. You've paid 4× the cost and still need sub-tick logic (or unfair player-ID tiebreaking) for simultaneous orders.
 
 Sub-tick **decouples order fairness from simulation rate.** That's why it's the right tool: it solves the fairness problem without paying the simulation cost. A tick's purpose in lockstep is synchronization, and you want the *fewest* synchronization barriers that still produce good gameplay — not the most.
+
+#### Relay-Side Timestamp Normalization (Trust Boundary)
+
+The relay's "time authority" guarantee is only meaningful if it does **not** blindly trust client-claimed sub-tick timestamps. Therefore:
+
+- **Client `sub_tick_time` is a hint, not an authoritative fact**
+- **Relay assigns the canonical timestamp** that is broadcast in `TickOrders`
+- **Impossible timestamps are clamped/flagged**, not accepted as-is
+
+The relay maintains a per-player timing calibration (offset/skew estimate + jitter envelope) derived from transport RTT samples and timing feedback. When an order arrives, the relay:
+
+1. Determines the relay tick window the order belongs to (or drops it as late)
+2. Computes a feasible arrival-time envelope for that player in that tick
+3. Maps the client's `sub_tick_time` hint into relay time using the calibration
+4. Clamps to the feasible envelope and `[0, tick_window_us)` bounds
+5. Emits the **relay-normalized** `sub_tick_time` in canonical `TickOrders`
+
+Orders with repeated timestamp claims outside the allowed skew budget are treated as suspicious (telemetry + anti-abuse scoring; optional strike escalation in ranked relay deployments). This preserves the fairness benefit of sub-tick ordering while preventing "I clicked first" spoofing by client clock manipulation.
+
+In **P2P lockstep**, there is no neutral time authority, so this normalization is not possible. P2P keeps the deterministic `(sub_tick_time, player_id)` ordering rule and explicitly accepts reduced fairness (acceptable for LAN/small-group play).
 
 ### Adaptive Run-Ahead (from C&C Generals)
 
@@ -532,11 +560,11 @@ The relay server (or P2P peers) compares hashes. On mismatch → desync detected
 
 A flat `state_hash()` tells you *that* state diverged, but not *where*. Diagnosing which entity or subsystem diverged requires a full state dump and diff — expensive for large games (500+ units, ~100KB+ of serialized state). IC addresses this by structuring the state hash as a **Merkle tree**, enabling binary search over *state within a tick* — not just binary search over ticks (which is what OpenTTD's snapshot bisection already provides).
 
-The Merkle tree partitions ECS state by archetype (or configurable groupings — e.g., per-player, per-subsystem). Each leaf is the hash of one archetype's serialized components. Interior nodes are `SHA-256(left_child || right_child)`. The root hash is the `state_hash()` used for sync comparison. This costs the same as a flat hash (every byte is still hashed once) — the tree structure is overhead-free for the common case where hashes match.
+The Merkle tree partitions ECS state by archetype (or configurable groupings — e.g., per-player, per-subsystem). Each leaf is the hash of one archetype's serialized components. Interior nodes are `SHA-256(left_child || right_child)` in the full debug representation. For live sync checks, IC transmits a compact **64-bit fast sync hash** (`u64`) derived from the Merkle root (or flat hash in Phase 2), preserving low per-tick bandwidth. Higher debug levels may include full 256-bit node hashes in `DesyncDebugReport` payloads for stronger evidence and better tooling. This costs the same as a flat hash (every byte is still hashed once) — the tree structure is overhead-free for the common case where hashes match.
 
 When hashes *don't* match, the tree enables **logarithmic desync localization**:
 
-1. Clients exchange the Merkle root (same as today — one `u64` per sync frame).
+1. Clients exchange the Merkle root's **fast sync hash** (same as today — one `u64` per sync frame).
 2. On mismatch, clients exchange interior node hashes at depth 1 (2 hashes).
 3. Whichever subtree differs, descend into it — exchange its children (2 more hashes).
 4. Repeat until reaching a leaf: the specific archetype (or entity group) that diverged.
@@ -546,11 +574,12 @@ For a sim with 32 archetypes, this requires ~5 round trips of 2 hashes each (10 
 ```rust
 /// Merkle tree over ECS state for efficient desync localization.
 pub struct StateMerkleTree {
-    /// Leaf hashes, one per archetype or entity group.
+    /// Leaf fast hashes (u64 truncations / fast-sync form), one per archetype or entity group.
+    /// Full SHA-256 nodes may be computed on demand for debug reports.
     pub leaves: Vec<(ArchetypeLabel, u64)>,
-    /// Interior node hashes (computed bottom-up).
+    /// Interior node fast hashes (computed bottom-up).
     pub nodes: Vec<u64>,
-    /// Root hash — this is the state_hash() used for sync comparison.
+    /// Root fast hash — this is the state_hash() used for live sync comparison.
     pub root: u64,
 }
 
@@ -697,9 +726,11 @@ For competitive/ranked games, disconnect blame feeds into the match result: the 
 A disconnected player can rejoin a game in progress. This uses the same snapshottable sim (D010) that enables save games and replays:
 
 1. **Reconnecting client contacts the relay** (or host in P2P). The relay verifies identity via the session key established at game start.
-2. **Server creates a snapshot** of the current sim state and streams it to the reconnecting client. Any pending orders queued during the snapshot are sent alongside it (from OpenTTD: `NetworkSyncCommandQueue`), closing the gap between snapshot creation and delivery.
-3. **Client loads the snapshot** and enters a catchup state, processing ticks at accelerated speed until it reaches the current tick.
-4. **Client becomes active** once it's within one tick of the server. Orders resume flowing normally.
+2. **Relay/host coordinates state transfer.** In P2P, the host is the snapshot source. In relay mode, the relay does **not** run the sim, so it selects a **snapshot donor** from active clients (typically a healthy, low-latency peer) and requests a transfer at a known tick boundary.
+3. **Donor creates snapshot** of its current sim state and streams it (via relay in relay mode) to the reconnecting client. Any pending orders queued during the snapshot are sent alongside it (from OpenTTD: `NetworkSyncCommandQueue`), closing the gap between snapshot creation and delivery.
+4. **Snapshot verification before load.** The reconnecting client verifies the snapshot tick/hash against relay-coordinated sync data (latest agreed sync hash, or an out-of-band sync check requested by the relay immediately before transfer). If verification fails, the relay retries with a different donor or aborts reconnection.
+5. **Client loads the snapshot** and enters a catchup state, processing ticks at accelerated speed until it reaches the current tick.
+6. **Client becomes active** once it's within one tick of the server. Orders resume flowing normally.
 
 ```rust
 pub enum ClientStatus {
@@ -711,7 +742,7 @@ pub enum ClientStatus {
 }
 ```
 
-The relay server sends keepalive messages to the reconnecting client during download (prevents timeout) and queues that player's slot as `PlayerOrder::Idle` until catchup completes. Other players experience no interruption — the game never pauses for a reconnection.
+The relay server sends keepalive messages to the reconnecting client during download (prevents timeout), proxies donor snapshot chunks in relay mode, and queues that player's slot as `PlayerOrder::Idle` until catchup completes. Other players experience no interruption — the game never pauses for a reconnection.
 
 **Frame consumption smoothing during catchup:** When a reconnecting client is processing ticks at accelerated speed (`CatchingUp` state), it must balance sim catchup against rendering responsiveness. If the client devotes 100% of CPU to sim ticks, the screen freezes during catchup — the player sees a frozen frame for seconds, then suddenly jumps to the present. Spring Engine solved this with an 85/15 split: 85% of each frame's time budget goes to sim catchup ticks, 15% goes to rendering the current state (see `research/spring-engine-netcode-analysis.md`). IC adopts a similar approach:
 
@@ -836,7 +867,12 @@ Honest players on good connections always get responsive gameplay. A lagging pla
 
 ## The NetworkModel Trait
 
-The netcode described above is expressed as a trait — not because we're building multiple netcodes, but because it gives us testability, single-player support, and deployment flexibility. The sim and game loop never know which deployment mode is running.
+The netcode described above is expressed as a trait because it gives us testability, single-player support, and deployment flexibility **and** preserves architectural escape hatches. The sim and game loop never know which deployment mode is running, and they also don't need to know if a future phase introduces:
+
+- a compatibility bridge/protocol adapter for cross-engine experiments (e.g., community interop with legacy game versions or OpenRA)
+- a replacement default netcode if production evidence reveals a serious flaw or a better architecture
+
+The product still ships one recommended/default multiplayer path; the trait exists so changing the path later does not require touching `ic-sim` or the game loop.
 
 ```rust
 pub trait NetworkModel: Send + Sync {
@@ -844,7 +880,7 @@ pub trait NetworkModel: Send + Sync {
     fn submit_order(&mut self, order: TimestampedOrder);
     /// Poll for the next tick's confirmed orders (None = not ready yet)
     fn poll_tick(&mut self) -> Option<TickOrders>;
-    /// Report local sim hash for desync detection
+    /// Report local fast sync hash (`u64`) for desync detection
     fn report_sync_hash(&mut self, tick: u64, hash: u64);
     /// Connection/sync status
     fn status(&self) -> NetworkStatus;
@@ -872,6 +908,67 @@ The same netcode runs in five modes. The first two are utility adapters (no netw
 - **`RelayLockstepNetwork`** — clients connect to a standalone relay server on trusted infrastructure. Required for ranked/competitive play (host can't be trusted with relay authority). Recommended for internet play.
 
 All three use adaptive run-ahead, frame resilience, delta-compressed TLV, and Ed25519 signing. The two relay-based modes (`EmbeddedRelayNetwork` and `RelayLockstepNetwork`) share identical `RelayCore` logic — connecting clients use `RelayLockstepNetwork` in both cases and cannot distinguish between them.
+
+These deployments are the current lockstep family. The `NetworkModel` trait intentionally keeps room for future non-default implementations (e.g., bridge adapters, rollback experiments, fog-authoritative tournament servers) without changing sim code or invalidating the architectural boundary.
+
+### Example Future Adapter: `NetcodeBridgeModel` (Compatibility Bridge)
+
+To make the architectural intent concrete, here is the shape of a **future compatibility bridge** implementation. This is not a promise of full cross-play with original RA/OpenRA; it is an example of how the `NetworkModel` boundary allows experimentation without touching `ic-sim`.
+
+**Use cases this enables (future / optional):**
+
+- Community-hosted bridge experiments for legacy game versions or OpenRA
+- Discovery-layer interop plus limited live-play compatibility prototypes
+- Transitional migrations if IC changes its default netcode in a later phase
+
+```rust
+/// Example future adapter. Not part of the initial shipping set.
+/// Wraps a protocol/transport bridge and translates between an external
+/// protocol family and IC's canonical TickOrders interface.
+pub struct NetcodeBridgeModel<B: ProtocolBridge> {
+    bridge: B,
+    inbound_ticks: VecDeque<TickOrders>,
+    diagnostics: NetworkDiagnostics,
+    status: NetworkStatus,
+    // Capability negotiation / compatibility flags:
+    // supported_orders, timing_model, hash_mode, etc.
+}
+
+impl<B: ProtocolBridge> NetworkModel for NetcodeBridgeModel<B> {
+    fn submit_order(&mut self, order: TimestampedOrder) {
+        self.bridge.submit_ic_order(order);
+    }
+
+    fn poll_tick(&mut self) -> Option<TickOrders> {
+        self.bridge.poll_bridge();
+        self.inbound_ticks.pop_front()
+    }
+
+    fn report_sync_hash(&mut self, tick: u64, hash: u64) {
+        self.bridge.report_ic_sync_hash(tick, hash);
+    }
+
+    fn status(&self) -> NetworkStatus { self.status.clone() }
+    fn diagnostics(&self) -> NetworkDiagnostics { self.diagnostics.clone() }
+}
+```
+
+**What a bridge adapter is responsible for:**
+
+- **Protocol translation** — external wire messages ↔ IC `TimestampedOrder` / `TickOrders`
+- **Timing model adaptation** — map external timing/order semantics into IC tick/sub-tick expectations (or degrade gracefully with explicit fairness limits)
+- **Capability negotiation** — detect unsupported features/order types and reject, stub, or map them explicitly
+- **Authority/trust policy** — declare whether the bridge is relay-authoritative, P2P-trust, or observer-only
+- **Diagnostics** — expose compatibility state, dropped/translated orders, and fidelity warnings via `NetworkDiagnostics`
+
+**What a bridge adapter is NOT responsible for:**
+
+- **Making simulations identical** across engines (D011 still applies)
+- **Mutating `ic-sim` rules** to emulate foreign bugs/quirks in core engine code
+- **Bypassing ranked trust rules** (bridge modes are unranked by default unless a future decision explicitly certifies one)
+- **Hiding incompatibilities** — unsupported semantics must be visible to users/operators
+
+**Practical expectation:** Early bridge modes are most likely to ship (if ever) as **observer/replay/discovery** integrations first, then limited casual play experiments, with strict capability constraints. Competitive/ranked bridge play would require a separate explicit decision and a much stronger certification story.
 
 **Sub-tick ordering in P2P:** Without a neutral relay, there is no central time authority. Instead, each client sorts orders deterministically by `(sub_tick_time, player_id)` — the player ID tiebreaker ensures all clients produce the same canonical order even with identical timestamps. This is slightly less fair than relay ordering (clock skew between peers can bias who "clicked first"), but acceptable for LAN/small-group play where latencies are low. The relay-based modes (embedded or dedicated) eliminate this issue entirely with neutral time authority, and additionally provide lag-switch protection, NAT traversal, and signed replays.
 
@@ -1320,7 +1417,7 @@ There must never be a single point of failure that takes down the entire multipl
 
 1. **Just a binary.** Each server is a single Rust executable with zero mandatory external dependencies. Run it directly (`./tracking-server` or `./relay-server`), as a systemd service, in Docker, or in Kubernetes — whatever suits the operator. No external database, no runtime, no JVM. Download, configure, run. Services that need persistent storage use an embedded SQLite database file (D034) — no separate database process to install or operate.
 
-2. **Stateless or self-contained.** The tracking server holds no critical state — listings live in memory with TTL expiry (for multi-instance: shared via Redis). The relay, workshop, and matchmaking servers persist data (match results, resource metadata, ratings) to an embedded SQLite file (D034). Killing a process loses only in-flight game sessions — persistent records survive in the `.db` file. Relay servers hold per-game session state in memory but games are short-lived; if a relay dies, the game reconnects or falls back to P2P.
+2. **Stateless or self-contained.** The tracking server holds no critical state — listings live in memory with TTL expiry (for multi-instance: shared via Redis). The relay, workshop, and matchmaking servers persist data (match results, resource metadata, ratings) to an embedded SQLite file (D034). Killing a process loses only in-flight game sessions — persistent records survive in the `.db` file. Relay servers hold per-game session state in memory but games are short-lived; if a relay dies, recovery is **mode-specific**: casual/custom games may offer unranked continuation or fallback if supported, while ranked follows the degraded-certification / void policy (`06-SECURITY.md` V32) rather than silently switching authority paths.
 
 3. **Community self-hosting is a first-class use case.** A clan, tournament organizer, or hobbyist runs the same binary on their own machine. No cloud account needed. No Docker needed. The binary reads a config file or env vars and starts listening. For those who prefer containers, `docker-compose up` works too. For production scale, Helm charts are available.
 
@@ -1447,7 +1544,7 @@ Both share `ic-protocol` for order serialization. Both are developed in Phase 5 
 | ---------------------------- | ------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------- |
 | Tracking server dies         | Browse requests fail; existing games unaffected                                                        | Restart process; multi-instance setups have other replicas |
 | All tracking servers down    | No game browser; existing games unaffected                                                             | Direct IP, join codes, QR still work                       |
-| Relay server dies            | Games on that instance disconnect; persistent data (match results, profiles) survives in SQLite (D034) | Clients reconnect to another instance or fall back to P2P  |
+| Relay server dies            | Games on that instance disconnect; persistent data (match results, profiles) survives in SQLite (D034) | **Casual/custom:** may offer unranked continuation via reconnect/fallback if supported. **Ranked:** no automatic authority-path switch; use degraded certification / void policy (`06-SECURITY.md` V32). |
 | Official infra fully offline | Community tracking/relay servers still operational                                                     | Federation means no single operator is critical            |
 
 ## Match Lifecycle

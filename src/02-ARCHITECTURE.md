@@ -1,5 +1,7 @@
 # 02 — Core Architecture
 
+**Keywords:** architecture, crate boundaries, `ic-sim`, `ic-net`, `ic-protocol`, `GameLoop<N, I>`, `NetworkModel`, `InputSource`, deterministic simulation, Bevy, platform-agnostic design, game modules
+
 ## Decision: Bevy
 
 **Rationale (revised — see D002 in `decisions/09a-foundation.md`):**
@@ -573,6 +575,8 @@ OpenRA uses hierarchical A* which struggles with large unit groups and lacks loc
 /// The engine core calls this trait — never a specific algorithm.
 pub trait Pathfinder: Send + Sync {
     /// Request a path from origin to destination.
+    /// Returns a local handle (`PathId`) used only inside the running sim instance.
+    /// `PathId` is not part of network protocol or replay/save serialization.
     fn request_path(&mut self, origin: WorldPos, dest: WorldPos, locomotor: LocomotorType) -> PathId;
 
     /// Poll for completed path. Returns waypoints in WorldPos.
@@ -590,14 +594,30 @@ pub trait Pathfinder: Send + Sync {
     fn path_distance(&self, from: WorldPos, to: WorldPos, locomotor: LocomotorType) -> Option<SimCoord>;
 
     /// Batch distance queries — amortizes overhead when AI needs distances to many targets.
-    /// Returns distances in the same order as `targets`. `None` entries mean no path.
+    /// Writes results into caller-provided scratch (`out`) in the same order as `targets`.
+    /// `None` entries mean no path. Implementations must clear/reuse `out` (no hidden heap scratch
+    /// returned to the caller), preserving the zero-allocation hot-path discipline.
     /// Design informed by SC2's batch `RequestQueryPathing` (see `research/blizzard-github-analysis.md` § Part 4).
+    fn batch_distances_into(
+        &self,
+        from: WorldPos,
+        targets: &[WorldPos],
+        locomotor: LocomotorType,
+        out: &mut Vec<Option<SimCoord>>,
+    );
+
+    /// Convenience wrapper for non-hot paths (tools/debug/tests).
+    /// Hot gameplay loops should prefer `batch_distances_into`.
     fn batch_distances(
         &self,
         from: WorldPos,
         targets: &[WorldPos],
         locomotor: LocomotorType,
-    ) -> Vec<Option<SimCoord>>;
+    ) -> Vec<Option<SimCoord>> {
+        let mut out = Vec::with_capacity(targets.len());
+        self.batch_distances_into(from, targets, locomotor, &mut out);
+        out
+    }
 }
 ```
 
@@ -609,7 +629,16 @@ pub trait Pathfinder: Send + Sync {
 /// The engine core queries this trait — never a specific data structure.
 pub trait SpatialIndex: Send + Sync {
     /// Find all entities within range of a position.
-    fn query_range(&self, center: WorldPos, range: SimCoord, filter: EntityFilter) -> &[EntityId];
+    /// Writes results into caller-provided scratch (`out`) with deterministic ordering.
+    /// Contract: for identical sim state + filter, the output order must be identical on all clients.
+    /// Default recommendation is ascending `EntityId`, unless a stricter subsystem-specific contract exists.
+    fn query_range_into(
+        &self,
+        center: WorldPos,
+        range: SimCoord,
+        filter: EntityFilter,
+        out: &mut Vec<EntityId>,
+    );
 
     /// Update entity position in the index.
     fn update_position(&mut self, entity: EntityId, old: WorldPos, new: WorldPos);
@@ -618,6 +647,19 @@ pub trait SpatialIndex: Send + Sync {
     fn remove(&mut self, entity: EntityId);
 }
 ```
+
+### Determinism, Snapshot, and Cache Rules (Pathfinding/Spatial)
+
+The `Pathfinder` and `SpatialIndex` traits are algorithm seams, but they still operate under the simulation's deterministic/snapshottable rules:
+
+- **Authoritative state lives in ECS/components**, not only inside opaque pathfinder internals.
+- **Path IDs are local handles**, not stable serialized identifiers.
+- **Derived caches** (flowfield caches, sector caches, spatial buckets, temporary query results) may be omitted from snapshots and rebuilt on load/restore/reconnect.
+- **Pending path requests** must be either:
+  - represented in authoritative sim state, or
+  - safely reconstructible deterministically on restore.
+- **Internal parallelism is allowed** only if the visible outputs (paths, distances, query results) are deterministic and independent of worker scheduling/order.
+- **Validation/debug tooling** may recompute caches from authoritative state (see `03-NETCODE.md` cache validation) to detect missed invalidation bugs.
 
 ### Why This Matters
 
@@ -698,7 +740,7 @@ Post-milestone toasts (same system as D030's Workshop cleanup prompts) nudge pla
 
 3. **Click-to-world is abstracted behind a trait.** Isometric screen→world (desktop), touch→world (mobile), and raycast→world (3D mod) all implement the same `ScreenToWorld` trait, producing a `WorldPos`. Grid-based game modules convert to `CellPos` as needed. No isometric math or grid assumption hardcoded in the game loop.
 
-4. **Render quality is configurable per device.** FPS cap, particle density, post-FX toggles, resolution scaling, shadow quality — all runtime-configurable. Mobile caps at 30fps; desktop targets 60-240fps. The renderer reads a `RenderSettings` resource, not compile-time constants. Four render quality tiers (Baseline → Standard → Enhanced → Ultra) are auto-detected from `wgpu::Adapter` capabilities at startup. Tier 0 (Baseline) targets GL 3.3 / WebGL2 hardware — no compute shaders, no post-FX, CPU particle fallback, palette tinting for weather. See `10-PERFORMANCE.md` § "GPU & Hardware Compatibility" for tier definitions and hardware floor analysis.
+4. **Render quality is configurable per device.** FPS cap, particle density, post-FX toggles, resolution scaling, shadow quality — all runtime-configurable. Mobile caps at 30fps; desktop targets 60-240fps. The renderer reads a `RenderSettings` resource, not compile-time constants. Four render quality tiers (Baseline → Standard → Enhanced → Ultra) are auto-detected from `wgpu::Adapter` capabilities at startup. Tier 0 (Baseline) targets GL 3.3 / WebGL2 hardware — no compute shaders, no post-FX, CPU particle fallback, palette tinting for weather. **Advanced Bevy rendering features (3D render modes, heavy post-FX, dynamic lighting) are optional layers, not baseline requirements; the classic 2D game must remain fully playable on no-dedicated-GPU systems that meet the downlevel hardware floor.** See `10-PERFORMANCE.md` § "GPU & Hardware Compatibility" for tier definitions and hardware floor analysis.
 
 5. **No raw filesystem I/O.** All asset loading goes through Bevy's asset system, never `std::fs` directly. Mobile and browser have sandboxed filesystems; WASM has no filesystem at all. Save games use platform-appropriate storage (e.g., `localStorage` on web, app sandbox on mobile).
 
@@ -753,8 +795,10 @@ pub enum ScreenClass {
 
 The UI is split into two orthogonal concerns:
 
-- **Layout profiles** — *where* things go. Driven by `ScreenClass` (Phone, Tablet, Desktop, TV). Handles sidebar vs bottom bar, touch target sizes, minimap placement. One per screen class.
+- **Layout profiles** — *where* things go. Driven by `ScreenClass` (Phone, Tablet, Desktop, TV). Handles sidebar vs bottom bar, touch target sizes, minimap placement, mobile minimap clusters (alerts + camera bookmark dock), and semantic UI anchor resolution (e.g., `primary_build_ui` maps to sidebar on desktop/tablet and build drawer on phone). One per screen class.
 - **Themes** — *how* things look. Driven by player preference. Handles colors, chrome sprites, fonts, animations, menu backgrounds. Switchable at any time.
+
+This split is also what enables cross-device tutorial prompts without duplicating tutorial content: D065 references semantic actions and UI aliases, and `ic-ui` resolves them through the active layout profile chosen from `InputCapabilities`.
 
 ### Theme Architecture
 

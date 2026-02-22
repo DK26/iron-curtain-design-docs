@@ -28,6 +28,7 @@ campaign:
     veterancy: true            # unit experience persists
     resources: false           # credits reset per mission
     equipment: true            # captured vehicles/crates persist
+    hero_progression: false    # optional built-in hero toolkit (XP/levels/skills)
     custom_flags: {}           # arbitrary Lua-writable key-value state
 
   missions:
@@ -175,6 +176,7 @@ pub struct CampaignState {
     pub completed_missions: Vec<CompletedMission>,
     pub unit_roster: Vec<RosterUnit>,
     pub equipment_pool: Vec<EquipmentId>,
+    pub hero_profiles: HashMap<String, HeroProfileState>, // optional built-in hero progression state (keyed by character_id)
     pub resources: i64,               // persistent credits (if enabled)
     pub flags: HashMap<String, Value>, // story flags set by Lua
     pub stats: CampaignStats,         // cumulative performance
@@ -213,9 +215,189 @@ pub struct CompletedMission {
     pub units_gained: u32,
     pub score: i64,
 }
+
+/// Persistent progression state for a named hero character (optional toolkit).
+#[derive(Serialize, Deserialize, Clone)]
+pub struct HeroProfileState {
+    pub character_id: String,         // links to D038 Named Character id
+    pub level: u16,
+    pub xp: u32,
+    pub unspent_skill_points: u16,
+    pub unlocked_skills: Vec<String>, // skill ids from the campaign's hero toolkit config
+    pub stats: HashMap<String, i32>,  // module/campaign-defined hero stats (e.g., stealth, leadership)
+    pub flags: HashMap<String, Value>,// per-hero story/progression flags
+    pub injury_state: Option<String>, // optional campaign-defined injury/debuff tag
+}
 ```
 
 Campaign state is fully serializable (D010 — snapshottable sim state). Save games capture the entire campaign progress. Replays can replay an entire campaign run, not just individual missions.
+
+### Hero Campaign Toolkit (Optional, Built-In)
+
+Warcraft III-style hero campaigns (for example, Tanya gaining XP, levels, unlockable abilities, and persistent equipment) **fit D021 directly** and should be possible **without engine modding** (no WASM module required). This is an **optional campaign authoring layer** on top of the existing D021 persistent state model and D038's Named Characters / Inventory / Intermission tooling.
+
+**Design intent:**
+- **No engine modding for common hero campaigns.** Designers should build hero campaigns through YAML + the SDK Campaign Editor.
+- **Optional, not global.** Classic RA-style campaigns remain simple; hero progression is enabled per campaign.
+- **Lua is the escape hatch.** Use Lua for bespoke talent effects, unusual status systems, or custom UI logic beyond the built-in toolkit.
+
+**Built-in hero toolkit capabilities (recommended baseline):**
+- Persistent hero XP, level, and skill points across missions
+- Skill unlocks and mission rewards via debrief/intermission flow
+- Hero death/injury policies per character (`must survive`, `wounded`, `campaign_continue`)
+- Hero-specific flags/stats for branching dialogue and mission conditions
+- Hero loadout/equipment assignment using the standard campaign inventory system
+
+**Example YAML (campaign-level hero progression config):**
+
+```yaml
+campaign:
+  id: tanya_black_ops
+  title: "Tanya: Black Ops"
+
+  persistent_state:
+    unit_roster: true
+    equipment: true
+    hero_progression: true
+
+  hero_toolkit:
+    enabled: true
+    xp_curve:
+      levels:
+        - { level: 1, total_xp: 0,    skill_points: 0 }
+        - { level: 2, total_xp: 120,  skill_points: 1 }
+        - { level: 3, total_xp: 300,  skill_points: 1 }
+        - { level: 4, total_xp: 600,  skill_points: 1 }
+    heroes:
+      - character_id: tanya
+        start_level: 1
+        skill_tree: tanya_commando
+        death_policy: wounded          # must_survive | wounded | campaign_continue
+        stat_defaults:
+          agility: 3
+          stealth: 2
+          demolitions: 4
+    mission_rewards:
+      default_objective_xp: 50
+      bonus_objective_xp: 100
+```
+
+**Concrete example: Tanya commando skill tree (campaign-authored, no engine modding):**
+
+```yaml
+campaign:
+  id: tanya_black_ops
+
+  hero_toolkit:
+    enabled: true
+
+    skill_trees:
+      tanya_commando:
+        display_name: "Tanya - Black Ops Progression"
+        branches:
+          - id: commando
+            display_name: "Commando"
+            color: "#C84A3A"
+          - id: stealth
+            display_name: "Stealth"
+            color: "#3E7C6D"
+          - id: demolitions
+            display_name: "Demolitions"
+            color: "#B88A2E"
+
+        skills:
+          - id: dual_pistols_drill
+            branch: commando
+            tier: 1
+            cost: 1
+            display_name: "Dual Pistols Drill"
+            description: "+10% infantry damage; faster target reacquire"
+            unlock_effects:
+              stat_modifiers:
+                infantry_damage_pct: 10
+                target_reacquire_ticks: -4
+
+          - id: raid_momentum
+            branch: commando
+            tier: 2
+            cost: 1
+            requires: [dual_pistols_drill]
+            display_name: "Raid Momentum"
+            description: "Gain temporary move speed after destroying a structure"
+            unlock_effects:
+              grants_ability: raid_momentum_buff
+
+          - id: silent_step
+            branch: stealth
+            tier: 1
+            cost: 1
+            display_name: "Silent Step"
+            description: "Reduced enemy detection radius while not firing"
+            unlock_effects:
+              stat_modifiers:
+                enemy_detection_radius_pct: -20
+
+          - id: infiltrator_clearance
+            branch: stealth
+            tier: 2
+            cost: 1
+            requires: [silent_step]
+            display_name: "Infiltrator Clearance"
+            description: "Unlocks additional infiltration dialogue/mission branches"
+            unlock_effects:
+              set_hero_flag:
+                key: tanya_infiltration_clearance
+                value: true
+
+          - id: satchel_charge_mk2
+            branch: demolitions
+            tier: 1
+            cost: 1
+            display_name: "Satchel Charge Mk II"
+            description: "Stronger satchel charge with larger structure damage radius"
+            unlock_effects:
+              upgrades_ability:
+                ability_id: satchel_charge
+                variant: mk2
+
+          - id: chain_detonation
+            branch: demolitions
+            tier: 3
+            cost: 2
+            requires: [satchel_charge_mk2, raid_momentum]
+            display_name: "Chain Detonation"
+            description: "Destroyed explosive objectives can trigger nearby explosives"
+            unlock_effects:
+              grants_ability: chain_detonation
+
+    heroes:
+      - character_id: tanya
+        skill_tree: tanya_commando
+        start_level: 1
+        start_skills: [dual_pistols_drill]
+        death_policy: wounded
+        loadout_slots:
+          ability: 3
+          gear: 2
+
+    mission_rewards:
+      by_mission:
+        black_ops_03_aa_sabotage:
+          objective_xp:
+            destroy_aa_sites: 150
+            rescue_spy: 100
+          completion_choices:
+            - id: field_upgrade
+              label: "Field Upgrade"
+              grant_skill_choice_from: [silent_step, satchel_charge_mk2]
+            - id: requisition_cache
+              label: "Requisition Cache"
+              grant_items:
+                - { id: remote_detonator_pack, qty: 1 }
+                - { id: intel_keycard, qty: 1 }
+```
+
+**Why this fits the design:** The engine core stays game-agnostic (hero progression is campaign/game-module content, not an engine-core assumption), and the feature composes cleanly with D021 branches, D038 intermissions, and D065 tutorial/onboarding flows.
 
 ### Lua Campaign API
 
@@ -282,6 +464,33 @@ function OnPlayerBaseDestroyed()
     Campaign.complete("defeat")  -- campaign graph decides what happens next
 end
 ```
+
+#### Hero progression helpers (optional built-in toolkit)
+
+When `hero_toolkit.enabled` is true, the campaign API exposes built-in helpers for common hero-campaign flows. These are convenience functions over D021 campaign state; they do not require WASM or custom engine code.
+
+```lua
+-- Award XP to Tanya after destroying anti-air positions
+Campaign.hero_add_xp("tanya", 150, { reason = "aa_sabotage" })
+
+-- Check level gate before enabling a side objective/dialogue option
+if Campaign.hero_get_level("tanya") >= 3 then
+    Campaign.set_flag("tanya_can_infiltrate_lab", true)
+end
+
+-- Grant a skill as a mission reward or intermission choice outcome
+Campaign.hero_unlock_skill("tanya", "satchel_charge_mk2")
+
+-- Modify hero-specific stats/flags for branching missions/dialogue
+Campaign.hero_set_stat("tanya", "stealth", 4)
+Campaign.hero_set_flag("tanya", "injured_last_mission", false)
+
+-- Query persistent hero state (for UI or mission logic)
+local tanya = Campaign.hero_get("tanya")
+print(tanya.level, tanya.xp, tanya.unspent_skill_points)
+```
+
+**Scope boundary:** These helpers cover common hero-RPG campaign patterns (XP, levels, skills, hero flags, progression rewards). Bespoke systems (random loot affixes, complex proc trees, fully custom hero UIs) remain the domain of Lua (and optionally WASM for extreme cases).
 
 ### Adaptive Difficulty via Campaign State
 

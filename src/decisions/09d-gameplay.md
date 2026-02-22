@@ -17,8 +17,8 @@ Pathfinding, balance presets, QoL toggles, AI systems, render modes, and trait-a
 - Same philosophy as `NetworkModel` (build `LocalNetwork` first, but the seam exists), `WorldPos.z` (costs one `i32`, saves RA2 rewrite), and `InputSource` (build mouse/keyboard first, touch slots in later)
 
 **Concrete design:**
-- `Pathfinder` trait: `request_path()`, `get_path()`, `is_passable()`, `invalidate_area()`, `path_distance()`, `batch_distances()`
-- `SpatialIndex` trait: `query_range()`, `update_position()`, `remove()`
+- `Pathfinder` trait: `request_path()`, `get_path()`, `is_passable()`, `invalidate_area()`, `path_distance()`, `batch_distances_into()` (+ convenience `batch_distances()` wrapper for non-hot paths)
+- `SpatialIndex` trait: `query_range_into()`, `update_position()`, `remove()`
 - RA1 module registers `IcPathfinder` (primary) + `GridSpatialHash`; D045 adds `RemastersPathfinder` and `OpenRaPathfinder` as additional `Pathfinder` implementations for movement feel presets
 - All sim systems call the traits, never grid-specific data structures
 - See `02-ARCHITECTURE.md` § "Pathfinding & Spatial Queries" for trait definitions
@@ -30,7 +30,7 @@ Pathfinding, balance presets, QoL toggles, AI systems, render modes, and trait-a
 
 This follows the same pattern as render modes (D048): the engine ships built-in implementations, mods can add more, and players/modders pick what they want. A Generals-clone mod ships a `LayeredGridPathfinder`; a tower defense mod ships a waypoint pathfinder; a naval mod ships something flow-based. The trait doesn't care — `request_path()` returns waypoints regardless of how they were computed.
 
-**Performance:** identical to hardcoding. Rust traits monomorphize — the trait call compiles to a direct function call when there's one implementation. Zero overhead.
+**Performance:** the architectural seam is **near-zero cost**. Pathfinding/spatial cost is dominated by algorithm choice, cache behavior, and allocations — not dispatch overhead. Hot-path APIs use caller-owned scratch buffers (`*_into` pattern). Dispatch strategy (static vs dynamic) is chosen per-subsystem by profiling, not by dogma.
 
 **What we build first:** `IcPathfinder` and `GridSpatialHash`. The traits exist from day one. `RemastersPathfinder` and `OpenRaPathfinder` are Phase 2 deliverables (D045) — ported from their respective GPL codebases. Community pathfinders can be published to the Workshop from Phase 6a.
 
@@ -789,11 +789,21 @@ Critical for multiplayer: some toggles change game rules, others are purely cosm
 - Stored in player settings, not in the lobby configuration
 - No sim impact — purely visual/UX
 
+**Client-only onboarding/touch comfort settings (D065 integration):**
+- Tutorial hint frequency and category toggles (already in D065)
+- First-run controls walkthrough prompts (show on first launch / replay walkthrough / suppress)
+- Mobile handedness and touch interaction affordance visibility (e.g., command rail hints, bookmark dock labels)
+- Mobile Tempo Advisor warnings and reminder suppression ("don't show again for this profile")
+
+These settings are client-only for the same reason as subtitles or UI scale: they shape presentation and teaching pace, not the simulation. They may reference lobby state (e.g., selected game speed) to display warnings, but they never alter the synced match configuration by themselves.
+
 ### Interaction with Other Systems
 
 **D019 (Balance Presets):** QoL presets and balance presets are independent axes. You can play with `classic` balance + `openra` QoL, or `openra` balance + `vanilla` QoL. The lobby UI shows both selections.
 
 **D032 (UI Themes):** QoL and themes are also independent. The "Classic" theme changes chrome appearance; the "Vanilla" QoL preset changes gameplay behavior. They're separate settings that happen to compose well.
+
+**D065 (Tutorial & New Player Experience):** The tutorial system uses D033 for per-player hint frequency, category toggles, controls walkthrough visibility, and touch comfort guidance. The same mission/tutorial content is shared across platforms; D033 preferences control how aggressively the UI teaches and warns, not what the simulation does.
 
 **Experience Profiles:** The meta-layer above all of these. Selecting "Vanilla RA" experience profile sets D019=classic, D032=classic, D033=vanilla, D043=classic-ra, D045=classic-ra, D048=classic in one click. Selecting "Iron Curtain" sets D019=classic, D032=modern, D033=iron_curtain, D043=ic-default, D045=ic-default, D048=hd. After selecting a profile, any individual setting can still be overridden.
 
@@ -1284,7 +1294,7 @@ pub enum RejectionReason {
 | `RankingProvider` | One trait + `Glicko2Provider`             | Community tracking servers stuck with one rating algorithm                                                 |
 | `OrderValidator`  | One trait + explicit validate() call      | Game modules can silently skip validation; anti-cheat guarantee is informal                                |
 
-All five follow the established pattern: **one trait definition, one default implementation, zero overhead** (Rust monomorphizes single-impl traits to direct calls). The architectural cost is 5 trait definitions (~50 lines total) and 5 wrapper implementations (~200 lines total). The benefit is that none of these subsystems becomes a rewrite-required bottleneck when game modules, mods, or community servers need different behavior.
+All five follow the established pattern: **one trait definition + one default implementation with near-zero architectural cost**. Dispatch strategy is subsystem-dependent (profiling decides, not dogma). The architectural cost is 5 trait definitions (~50 lines total) and 5 wrapper implementations (~200 lines total). The benefit is that none of these subsystems becomes a rewrite-required bottleneck when game modules, mods, or community servers need different behavior.
 
 ### What Does NOT Need a Trait
 
@@ -2490,6 +2500,8 @@ If the mod doesn't specify a pathfinder, it inherits whatever the player's exper
 
 A Tier 3 WASM mod can implement the `Pathfinder` trait and register it as a new option:
 
+**Host ABI note:** The Rust trait-style example below is **conceptual**. A WASM pathfinder does not share a native Rust trait object directly with the engine. In implementation, the engine exposes a stable host ABI and adapts the WASM exports to the `Pathfinder` trait on the host side.
+
 ```rust
 // WASM mod: custom pathfinder (e.g., Generals-style layered grid)
 impl Pathfinder for LayeredGridPathfinder {
@@ -2525,6 +2537,18 @@ Once installed, the community pathfinder appears alongside first-party presets i
 **Workshop distribution:** Community pathfinders are Workshop resources (D030) like any other mod. They can be rated, reviewed, and depended upon. A total conversion mod declares `depends: community/generals-pathfinder@^1.0` and the engine auto-downloads it on lobby join (same as CS:GO-style auto-download).
 
 **Sim-affecting implications:** Because pathfinding is deterministic and sim-affecting, all players in a multiplayer game must use the same pathfinder. A community pathfinder is synced like a first-party preset — the lobby validates that all clients have the same pathfinder WASM module (by SHA-256 hash), same config, same version.
+
+### WASM Pathfinder Policy (Determinism, Performance, Ranked)
+
+Community pathfinders are allowed, but they are not a free-for-all in every mode:
+
+- **Single-player / skirmish / custom lobbies:** allowed by default (subject to normal WASM sandbox rules)
+- **Ranked queues / competitive ladders:** disallowed by default unless a queue/community explicitly certifies and whitelists the pathfinder (hash + version + config schema)
+- **Determinism contract:** no wall-clock time, no nondeterministic RNG, no filesystem/network I/O, no host APIs that expose machine-specific timing/order
+- **Performance contract:** pathfinder modules must declare budget expectations and pass deterministic conformance + performance checks (`ic mod test`, `ic mod perf-test`) on the baseline hardware tier before certification
+- **Failure policy:** if a pathfinder module fails validation/loading/perf certification for a ranked queue, the lobby rejects the configuration before match start (never mid-match fail-open)
+
+This preserves D013's openness for experimentation while protecting ranked integrity, baseline hardware support, and deterministic simulation guarantees.
 
 ### Relationship to Existing Decisions
 

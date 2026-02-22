@@ -647,7 +647,7 @@ Export produces files loadable by the original Red Alert engine (including CnCNe
 | **String tables** | IC YAML localization               | `.eng` / `.ger` / etc. string files                   | IC string keys mapped to RA string table offsets                                                                                                                                          |
 | **Archives**      | Loose files (from export pipeline) | .mix (optional packing)                               | All exported files optionally bundled into a .mix for distribution. CRC hash table generated per ra-formats § MIX                                                                         |
 
-**Fidelity model:** Export is *lossy by design*. IC supports features RA doesn't (conditions, multipliers, 3D positions, complex Lua triggers, unlimited map sizes). The exporter produces the closest RA-compatible equivalent and generates a **fidelity report** — a structured log of every feature that was downgraded, stripped, or approximated. The creator sees: "3 triggers could not be exported (RA has no equivalent for `on_condition_change`). 2 unit abilities were removed (mind control requires engine support). Map was cropped from 200×200 to 128×128." This is the same philosophy as exporting a Photoshop file to JPEG — you know what you'll lose before you commit.
+**Fidelity model:** Export is *lossy by design*. IC supports features RA doesn't (conditions, multipliers, 3D positions, complex Lua triggers, unlimited map sizes, advanced mission-phase tooling like segment unlock wrappers and sub-scenario portals). The exporter produces the closest RA-compatible equivalent and generates a **fidelity report** — a structured log of every feature that was downgraded, stripped, or approximated. The creator sees: "3 triggers could not be exported (RA has no equivalent for `on_condition_change`). 2 unit abilities were removed (mind control requires engine support). Map was cropped from 200×200 to 128×128. Sub-scenario portal `lab_interior` exported as a separate mission stub with manual campaign wiring required." This is the same philosophy as exporting a Photoshop file to JPEG — you know what you'll lose before you commit.
 
 #### Target 2: OpenRA (.oramod / .oramap)
 
@@ -657,7 +657,7 @@ Export produces content loadable by the current OpenRA release:
 | ----------------- | ------------------------------- | -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Maps**          | IC scenario (.yaml)             | `.oramap` (ZIP: map.yaml + map.bin + lua/)               | Full map geometry, actor placement, player definitions, Lua scripts. IC map features beyond OpenRA's support generate warnings                                              |
 | **Mod rules**     | IC YAML unit/weapon definitions | MiniYAML rule files (tab-indented, `^`/`@` syntax)       | IC YAML → MiniYAML via D025 reverse converter. IC trait names mapped back to OpenRA trait names via D023 alias table (bidirectional). IC-only traits stripped with warnings |
-| **Campaigns**     | IC campaign graph (D021)        | OpenRA campaign manifest + sequential mission `.oramaps` | IC's branching campaign graph is linearized (longest path or user-selected branch). Persistent state (roster carry-over) stripped — OpenRA campaigns are stateless          |
+| **Campaigns**     | IC campaign graph (D021)        | OpenRA campaign manifest + sequential mission `.oramaps` | IC's branching campaign graph is linearized (longest path or user-selected branch). Persistent state (roster carry-over, hero progression/skills, hero inventory/loadouts) is stripped or flattened into flags/stubs — OpenRA campaigns are stateless. IC sub-scenario portals are flattened into separate scenarios/steps when exportable; parent↔child outcome handoff may require manual rewrite. |
 | **Lua scripts**   | IC Lua (D024 superset)          | OpenRA-compatible Lua (D024 base API)                    | IC-only Lua API extensions stripped. The exporter validates that remaining Lua uses only OpenRA's 16 globals + standard library                                             |
 | **Sprites**       | .png / sprite sheets            | .png (OpenRA native) or .shp                             | OpenRA loads PNG natively — often no conversion needed. .shp export available for mods targeting the classic sprite pipeline                                                |
 | **Audio**         | .wav / .ogg                     | .wav / .ogg (OpenRA native) or .aud                      | OpenRA loads modern formats natively. .aud export for backwards-compatible mods                                                                                             |
@@ -792,7 +792,14 @@ Custom editor panels, entity palettes, and property inspectors defined via YAML:
 editor_extension:
   name: "RA2 Editor Tools"
   version: "1.0.0"
-  
+  api_version: "1.0"              # editor plugin API version (stable surface)
+  min_sdk_version: "0.6.0"
+  tested_sdk_versions: ["0.6.x"]
+  capabilities:                   # declarative, deny-by-default
+    - editor.panels
+    - editor.palette_categories
+    - editor.terrain_brushes
+
   # Custom entity palette categories
   palette_categories:
     - name: "Voxel Units"
@@ -911,12 +918,19 @@ fn register_editor_plugin(host: &mut EditorHost) {
 
 **Editor extension distribution:** Editor extensions are Workshop packages (D030) with `type: editor_extension` in their manifest. They install into the SDK's extension directory and activate on SDK restart. Extensions declared in a mod profile (D062) auto-activate when that profile is active — a RA2 game module profile automatically loads RA2 editor extensions.
 
+**Plugin manifest compatibility & capabilities (Phase 6b):**
+- **API version contract** — extensions declare an editor plugin API version (`api_version`) separate from engine internals. The SDK checks compatibility before load and disables incompatible extensions with a clear reason ("built for plugin API 0.x, this SDK provides 1.x").
+- **Capability manifest (deny-by-default)** — extensions must declare requested editor capabilities (`editor.panels`, `editor.asset_viewers`, `editor.export_targets`, etc.). Undeclared capability usage is rejected.
+- **Install-time permission review** — the SDK shows the requested capabilities when installing/updating an extension. This is the only prompting point; normal editing sessions are not interrupted.
+- **No VCS/process control capabilities by default** — editor plugins do not get commit/rebase/shell execution powers. Git integration remains an explicit user workflow outside plugins unless a future capability is designed and approved.
+- **Version/provenance metadata** — manifests may include signature/provenance information for Workshop trust badges; absence warns but does not prevent local development installs.
+
 ### Export-Safe Authoring Mode
 
 The scenario editor offers an **export-safe mode** that constrains the authoring environment to features compatible with a chosen export target:
 
 - **Select target:** "I'm building this mission for OpenRA" (or RA1, or IC)
-- **Feature gating:** The editor grays out or hides features the target doesn't support. If targeting RA1: no mind control triggers, no unlimited map size, no branching campaigns. If targeting OpenRA: no IC-only Lua APIs.
+- **Feature gating:** The editor grays out or hides features the target doesn't support. If targeting RA1: no mind control triggers, no unlimited map size, no branching campaigns, no IC-native sub-scenario portals, no IC hero progression toolkit intermissions/skill progression. If targeting OpenRA: no IC-only Lua APIs; advanced `Map Segment Unlock` wrappers show yellow/red fidelity when they depend on IC-only phase orchestration beyond OpenRA-equivalent reveal/reinforcement scripting, and hero progression/skill-tree tooling shows fidelity warnings because OpenRA campaigns are stateless.
 - **Live fidelity indicator:** A traffic-light badge on each entity/trigger: green = exports perfectly, yellow = exports with approximation, red = will be stripped. The creator sees export fidelity as they build, not after.
 - **Export-safe trigger templates:** Pre-built trigger patterns guaranteed to downcompile cleanly to the target. "Timer → Reinforcement" template uses only Lua patterns with known RA1 equivalents.
 - **Dual preview:** Side-by-side preview showing "IC rendering" and "approximate target rendering" (e.g., palette-quantized sprites to simulate how it will look in original RA1).
@@ -940,9 +954,14 @@ ic export --target ra1 --content sprites mod.yaml -o ./sprites-output/
 # Validate export without writing files (dry run)
 ic export --target openra --dry-run mission.yaml
 
+# Stronger export verification (checks exportability + target-facing validation rules)
+ic export --target openra --verify mission.yaml
+
 # Batch export: every map in a directory to all targets
 ic export --target ra1,openra,ic maps/ -o ./export/
 ```
+
+**SDK integration:** The Scenario/Campaign editor's `Validate` and `Publish Readiness` flows call the same export planner/verifier used by `ic export --dry-run` / `--verify`. There is one export validation implementation surfaced through both CLI and GUI.
 
 ### What This Enables
 
@@ -973,7 +992,7 @@ ic export --target ra1,openra,ic maps/ -o ./export/
 - **D025 (Runtime MiniYAML Loading):** The MiniYAML converter is now bidirectional: load at runtime (MiniYAML → IC YAML) and export (IC YAML → MiniYAML).
 - **D026 (Mod Manifest Compatibility):** `mod.yaml` parsing is now bidirectional — import OpenRA manifests AND generate them on export.
 - **D030 (Workshop):** Editor extensions are Workshop packages. Export presets/profiles are shareable via Workshop.
-- **D038 (Scenario Editor):** The scenario editor gains export-safe mode, fidelity indicators, and export-safe trigger templates. Export is a first-class editor action, not a separate tool.
+- **D038 (Scenario Editor):** The scenario editor gains export-safe mode, fidelity indicators, export-safe trigger templates, and Validate/Publish Readiness integration that surfaces target compatibility before publish. Export is a first-class editor action, not a separate tool.
 - **D040 (Asset Studio):** Asset conversion (D040's Cross-Game Asset Bridge) is the per-file foundation. D066 orchestrates whole-project export using D040's converters.
 - **D062 (Mod Profiles):** A mod profile can embed export target preference. "RA1 Compatible" profile constrains features to RA1-exportable subset.
 - **ra-formats write support:** D066 is the primary consumer of ra-formats write support (Phase 6a). The exporter calls into ra-formats encoders for .shp, .pal, .aud, .vqa, .mix generation.
@@ -981,8 +1000,276 @@ ic export --target ra1,openra,ic maps/ -o ./export/
 ### Phase
 
 - **Phase 6a:** Core export pipeline ships alongside the scenario editor and asset studio. Built-in export targets: IC native (trivial), OpenRA (`.oramap` + MiniYAML rules). Export-safe authoring mode in scenario editor. `ic export` CLI.
-- **Phase 6b:** RA1 export target (requires .ini generation, trigger downcompilation, .mix packing). Campaign export (linearization for stateless targets). Editor extensibility API (YAML + Lua tiers). Editor extension Workshop distribution.
+- **Phase 6b:** RA1 export target (requires .ini generation, trigger downcompilation, .mix packing). Campaign export (linearization for stateless targets). Editor extensibility API (YAML + Lua tiers). Editor extension Workshop distribution plus plugin capability manifests / compatibility checks / install-time permission review.
 - **Phase 7:** WASM editor plugins (Tier 3 extensibility). Community-contributed export targets (TS, RA2, Remastered). Agentic export assistance (LLM suggests how to simplify IC-only features for target compatibility).
 
 ---
 
+## D068: Selective Installation & Content Footprints
+
+### Decision Capsule (LLM/RAG Summary)
+
+- **Status:** Accepted
+- **Phase:** Phase 4 (official pack partitioning + prompts), Phase 5 (fingerprint split + CLI workflows), Phase 6a (Installed Content Manager UI), Phase 6b (smart recommendations)
+- **Canonical for:** Selective installs, install profiles, optional media packs, and gameplay-vs-presentation compatibility fingerprinting
+- **Scope:** package manifests, `VirtualNamespace`/D062 integration, Workshop/base content install UX, Settings → Data content manager, creator validation/publish checks
+- **Decision:** IC supports player-facing **install profiles** and **optional content packs** so players can keep only the content they care about (e.g., MP/skirmish only, campaign core without FMV/music) while preserving a complete playable experience for installed features.
+- **Why:** Storage constraints, bandwidth constraints, different player priorities, and a no-dead-end UX that installs missing content on demand instead of forcing monolithic installs.
+- **Non-goals:** Separate executables per mode, mandatory campaign media, or a monolithic “all content only” install model.
+- **Invariants preserved:** D062 logical mod composition stays separate from D068 physical installation selection; D049 CAS remains the storage foundation; missing optional media must never break campaign progression.
+- **Defaults / UX behavior:** Features stay clickable; missing content opens install guidance; campaign media is optional with fallback briefing/subtitles/ambient behavior.
+- **Compatibility / Export impact:** Lobbies/ranked use a **gameplay fingerprint** as the hard gate; media/remaster/voice packs are **presentation fingerprint** scope unless they change gameplay.
+- **AI remaster media policy:** AI-enhanced cutscene packs are optional presentation variants (Original / Clean / AI-Enhanced), clearly labeled, provenance-aware, and never replacements for the canonical originals.
+- **Public interfaces / types / commands:** manifest `install` metadata + optional dependencies/fallbacks, `ic content list`, `ic content apply-profile`, `ic content install/remove`, `ic mod gc`
+- **Affected docs:** `src/17-PLAYER-FLOW.md`, `src/decisions/09e-community.md`, `src/04-MODDING.md`, `src/decisions/09f-tools.md`
+- **Revision note summary:** None
+- **Keywords:** selective install, install profiles, campaign core, optional media, cutscene variants, presentation fingerprint, installed content manager
+
+**Decision:** Support **selective installation** of game content through **content install profiles** and **optional content packs**, while preserving a complete playable experience for installed features. Campaign gameplay content is separable from campaign media (music, voice, cutscenes). Missing optional media must degrade to designer-authored fallbacks (text, subtitles, static imagery, or silence/ambient), never a hard failure.
+
+**Why this matters:** Players have different priorities and constraints:
+
+- Some only want **multiplayer + skirmish**
+- Some want **campaigns** but not high-footprint media packs
+- Some play on **storage-constrained systems** (older laptops, handhelds, small SSDs)
+- Some have **bandwidth constraints** and want staged downloads
+
+IC already has the technical foundation for this (D062 virtual namespace + D049 content-addressed storage). D068 makes it a first-class player-facing workflow instead of an accidental side effect of package modularity.
+
+### Core Model: Installed Content Is a Capability Set
+
+D062 defines **what content is active** (mod profile + virtual namespace). D068 adds a separate concern: **what content is physically installed locally**.
+
+These are distinct:
+
+- **Mod profile (D062):** "What should be active for this play session?"
+- **Install profile (D068):** "What categories of content do I keep on disk?"
+
+A player can have a mod profile that references campaign media they do not currently have installed. The engine resolves this via optional dependencies + fallbacks + install prompts.
+
+### Install Profiles (Player-Facing, Space-Saving)
+
+An **install profile** is a local, player-facing content selection preset focused on disk footprint and feature availability.
+
+Examples:
+
+- **Minimal Multiplayer** — core game module + skirmish + multiplayer maps + essential UI/audio
+- **Campaign Core** — campaign maps/scripts/briefings/dialogue text, no FMV/music/voice media packs
+- **Campaign Full** — campaign core + optional media packs (music/cutscenes/voice)
+- **Classic Full** — base game + classic media + standard assets
+- **Custom** — player picks exactly which packs to keep
+
+Install profiles are separate from D062 mod profiles because they solve a different problem: storage and download scope, not gameplay composition.
+
+### Content Pack Types
+
+Game content is split into installable packs with explicit dependency semantics:
+
+1. **Core runtime packs** (required for the selected game module)
+   - Rules, scripts, base assets, UI essentials, core maps needed for menu/shellmap/skirmish baseline
+2. **Mode packs**
+   - Campaign mission data (maps/scripts/briefing text)
+   - Skirmish map packs
+   - Tutorial/Commander School
+3. **Presentation/media packs** (optional)
+   - Music
+   - Cutscenes / FMV
+   - Cutscene remaster variants (e.g., original / clean remaster / AI-enhanced remaster)
+   - Voice-over packs (per language)
+   - HD art packs / optional presentation packs
+4. **Creator tooling packs**
+   - SDK/editor remains separately distributed (D040), but its downloadable dependencies can use the same installability metadata
+
+### Package Manifest Additions (Installability Metadata)
+
+Workshop/base packages gain installability metadata so the client can reason about optionality and disk usage:
+
+```yaml
+# manifest.yaml (conceptual additions)
+install:
+  category: campaign_media          # core | campaign_core | campaign_media | skirmish_maps | voice_pack | hd_assets | ...
+  default_install: false            # true for required baseline packs
+  optional: true                    # false = required when referenced
+  size_bytes_estimate: 842137600    # shown in install UI before download
+  feature_tags: [campaign, cutscene, music]
+
+dependencies:
+  required:
+    - id: "official/ra1-campaign-core"
+      version: "^1.0"
+  optional:
+    - id: "official/ra1-cutscenes"
+      version: "^1.0"
+      provides: [campaign_cutscenes]
+    - id: "official/ra1-music-classic"
+      version: "^1.0"
+      provides: [campaign_music]
+
+fallbacks:
+  # Declares acceptable degradation paths if optional dependency missing
+  campaign_cutscenes: text_briefing
+  campaign_music: silence_or_ambient
+  voice_lines: subtitles_only
+```
+
+The exact manifest schema can evolve, but the semantics are fixed:
+
+- required dependencies block use until installed
+- optional dependencies unlock enhancements
+- fallback policy defines how gameplay proceeds when optional content is absent
+
+### Cutscene Variant Packs (Original / Clean / AI-Enhanced)
+
+D068 explicitly supports multiple **presentation variants** of the same campaign cutscene set as separate optional packs.
+
+Examples:
+
+- `official/ra1-cutscenes-original` (canonical source-preserving package)
+- `official/ra1-cutscenes-clean-remaster` (traditional restoration: deinterlace/cleanup/color/audio work)
+- `official/ra1-cutscenes-ai-enhanced` (generative restoration/upscaling/interpolation workflow where quality and rights permit)
+
+Design rules:
+
+- **Original assets are never replaced** by AI-enhanced variants; they remain installable/selectable.
+- Variant packs are **presentation-only** and must not alter mission scripting, timing logic, or gameplay data.
+- AI-enhanced variants must be **clearly labeled** in install UI and settings (`AI Enhanced`, `Experimental`, or equivalent policy wording).
+- Campaign flow must remain valid if none of the variant packs are installed (D068 fallback rules still apply).
+- Variant selection is a **player preference**, not a multiplayer compatibility gate.
+
+This lets IC support preservation-first users, storage-constrained users, and "best possible remaster" users without fragmenting campaign logic or installs.
+
+### Optional Media Must Not Break Campaign Flow
+
+This is the central rule.
+
+If a player installs "Campaign Core" but not media packs:
+
+- **Cutscene missing** → show briefing/intermission fallback (text, portrait, static image, or radar comm text)
+- **Music missing** → use silence, ambient loop, or module fallback
+- **Voice missing** → subtitles/text remain available
+
+Campaign progression, mission completion, and save/load must continue normally.
+
+If multiple cutscene variants are installed (Original / Clean / AI-Enhanced), the client uses the player's preferred variant. If the preferred variant is unavailable for a specific cutscene, the client falls back to another installed variant (preferably Original, then Clean, then other configured fallback) before dropping to text/briefing fallback.
+
+This aligns with IC's existing media/cinematic tooling philosophy (D038): media enriches the experience but should not be a hidden gameplay dependency unless a creator explicitly marks a mission as requiring a specific media pack (and Publish validation surfaces that requirement).
+
+### Install-Time and Runtime UX (No Dead Ends)
+
+The player-facing rule follows `17-PLAYER-FLOW.md` § "No Dead-End Buttons":
+
+- Features remain clickable even if supporting content is not installed
+- Clicking opens a **guidance/install panel** with:
+  - what is missing
+  - why it matters
+  - size estimate
+  - one-click choices (minimal vs full)
+
+Examples:
+
+- Clicking **Campaign** without campaign core installed:
+  - `Install Campaign Core (Recommended)`
+  - `Install Full Campaign (Includes Music + Cutscenes)`
+  - `Manage Content`
+- Starting a mission that references an optional cutscene pack not installed:
+  - non-blocking banner: "Optional cutscene pack not installed — using briefing fallback"
+  - action button: `Download Cutscene Pack`
+- Selecting `AI Enhanced Cutscenes` in Settings when the pack is not installed:
+  - guidance panel: `Install AI Enhanced Cutscene Pack` / `Use Original Cutscenes` / `Use Briefing Fallback`
+
+### Multiplayer Compatibility: Gameplay vs Presentation Fingerprints
+
+Selective install introduces a compatibility trap: a player missing music/cutscenes should not fail multiplayer compatibility if gameplay content is identical.
+
+D068 resolves this by splitting namespace compatibility into two fingerprints:
+
+- **Gameplay fingerprint** — rules, scripts, maps, gameplay-affecting assets/data
+- **Presentation fingerprint** — optional media/presentation-only packs (music, cutscenes, voice, HD art when not gameplay-significant)
+
+Lobby compatibility and ranked verification use the **gameplay fingerprint** as the hard gate. The presentation fingerprint is informational (and may affect cosmetics only).
+
+AI-enhanced cutscene packs are explicitly **presentation fingerprint** scope unless they introduce gameplay-significant content (which they should not).
+
+If a pack changes gameplay-relevant data, it belongs in gameplay fingerprint scope — not presentation.
+
+### Storage Efficiency (D049 CAS + D062 Namespace)
+
+Selective installs become practical because IC already uses content-addressed storage and virtual namespace resolution:
+
+- **CAS deduplication (D049)** avoids duplicate storage across packs/mods/versions
+- **Namespace resolution (D062)** allows missing optional content to be handled at lookup time with explicit fallback behavior
+- **GC (`ic mod gc`)** reclaims unreferenced blobs when packs are removed
+
+This means "install campaign without cutscenes/music" is not a special mode — it's just a different install profile + pack set.
+
+### Settings / Content Manager Requirements
+
+The game's Settings/Data area includes an **Installed Content Manager**:
+
+- active install profile (`Minimal Multiplayer`, `Campaign Core`, `Custom`, etc.)
+- pack list with size, installed/not installed status
+- per-pack purpose labels (`Gameplay required`, `Optional media`, `Language voice pack`)
+- media variant groups (e.g., `Cutscenes: Original / Clean / AI-Enhanced`) with preferred variant selection
+- reclaimable space estimate before uninstall
+- one-click switches between install presets
+- "keep gameplay, remove media" shortcut
+
+### CLI / Automation (for power users and packs)
+
+```bash
+# List installed/available packs and sizes
+ic content list
+
+# Apply a local install profile preset
+ic content apply-profile minimal-multiplayer
+
+# Install campaign core without media
+ic content install official/ra1-campaign-core
+
+# Add optional media later
+ic content install official/ra1-cutscenes official/ra1-music-classic
+
+# Remove optional packs and reclaim space
+ic content remove official/ra1-cutscenes official/ra1-music-classic
+ic mod gc
+```
+
+CLI naming can change, but the capability should exist for scripted setups, LAN cafes, and low-storage devices.
+
+### Validation / Publish Rules for Creators
+
+To keep player experience predictable, creator-facing validation (D038 `Validate` / Publish Readiness) checks:
+
+- missions/campaigns with optional media references provide valid fallback paths
+- required media packs are declared explicitly (if truly required)
+- package metadata correctly classifies optional vs required dependencies
+- presentation-only packs do not accidentally modify gameplay hash scope
+- AI-enhanced media/remaster packs include provenance/rights metadata and are clearly labeled as variant presentation packs
+
+This prevents "campaign core" installs from hitting broken missions because a creator assumed FMV/music always exists.
+
+### Integration with Existing Decisions
+
+- **D030 (Workshop):** Installability metadata and optional dependency semantics are part of package distribution and auto-download decisions.
+- **D040 (SDK separation):** SDK remains a separate download; D068 applies the same selective-install philosophy to optional creator dependencies/assets.
+- **D049 (Workshop CAS):** Local content-addressed blob store + GC make selective installs storage-efficient instead of duplicate-heavy.
+- **D062 (Mod Profiles & VirtualNamespace):** D068 adds *physical install selection* on top of D062's *logical activation/composition*. Namespace resolution and fingerprints are extended, not replaced.
+- **D065 (Tutorial/New Player):** First-run can recommend `Campaign Core` vs `Minimal Multiplayer` based on player intent ("I want single-player" / "I only want multiplayer").
+- **17-PLAYER-FLOW.md:** "No Dead-End Buttons" install guidance panels become the primary UX surface for missing content.
+
+### Alternatives Considered
+
+1. **Monolithic install only** — Rejected. Wastes disk space, blocks low-storage users, and conflicts with the project's accessibility goals.
+2. **Make campaign media mandatory** — Rejected. FMV/music/voice are enrichments; campaign gameplay should remain playable without them.
+3. **Separate executables per mode (campaign-only / MP-only)** — Rejected. Increases maintenance and patch complexity. Content packs + install profiles achieve the same user benefit without fragmenting binaries.
+4. **Treat this as only a Workshop problem** — Rejected. Official/base content has the same storage problem (campaign media, voice packs, HD packs).
+
+### Phase
+
+- **Phase 4:** Basic official pack partitioning (campaign core vs optional media) and install prompts for missing campaign content. Campaign fallback behavior validated for first-party campaigns.
+- **Phase 5:** Gameplay vs presentation fingerprint split in lobbies/replays/ranked compatibility checks. CLI content install/remove/list + GC workflows stabilized.
+- **Phase 6a:** Full Installed Content Manager UI, install presets, size estimates, CAS-backed reclaim reporting, and Workshop package installability metadata at scale.
+- **Phase 6b:** Smart recommendations ("You haven’t used campaign media in 90 days — free 4.2 GB?"), per-device install profile sync, and finer-grained prefetch policies.
+- **Phase 7+ / Future:** Optional official/community cutscene remaster variant packs (including AI-enhanced variants where legally and technically viable) can ship under the same D068 install-profile and presentation-fingerprint rules without changing campaign logic.
+
+---

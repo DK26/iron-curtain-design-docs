@@ -295,18 +295,21 @@ Units moving, shooting, dying — headless sim + rendered. Record replay file. P
 - Asset hot-reloading for mod development
 - Mod manager + workshop-style distribution
 - Tera templating for YAML generation (nice-to-have)
-- **`ic` CLI tool (full release):** `ic mod init/check/test/run/server/package/publish/watch/lint` — complete mod development workflow (D020)
+- **`ic` CLI tool (full release):** `ic mod init/check/test/run/server/package/publish/watch/lint` plus Git-first helpers (`ic git setup`, `ic content diff`) — complete mod development workflow (D020)
 - **Mod templates:** `data-mod`, `scripted-mod`, `total-conversion`, `map-pack`, `asset-pack` via `ic mod init`
 - **`mod.yaml` manifest** with typed schema, semver engine version pinning, dependency declarations
 - **VS Code extension** for mod development: YAML schema validation, Lua LSP, `ic` integration
 
 ### Deliverables — Scenario Editor (D038 Core)
-- **SDK scenario editor (D038):** OFP/Eden-inspired visual editor for maps AND mission logic — ships as part of the IC SDK (separate application from the game — D040). Terrain painting, unit placement, triggers (area-based with countdown/timeout timers and min/mid/max randomization), waypoints, pre-built modules (wave spawner, patrol route, guard position, reinforcements, objectives, weather change, time of day, day/night cycle, season, etc.), visual connection lines between triggers/modules/waypoints, Probability of Presence per entity for replayability, compositions (reusable prefabs), layers with lock/visibility, Simple/Advanced mode toggle, Test button (launches ic-game with scenario), autosave with crash recovery, undo/redo, direct Workshop publishing
+- **SDK scenario editor (D038):** OFP/Eden-inspired visual editor for maps AND mission logic — ships as part of the IC SDK (separate application from the game — D040). Terrain painting, unit placement, triggers (area-based with countdown/timeout timers and min/mid/max randomization), waypoints, pre-built modules (wave spawner, patrol route, guard position, reinforcements, objectives, weather change, time of day, day/night cycle, season, etc.), visual connection lines between triggers/modules/waypoints, Probability of Presence per entity for replayability, compositions (reusable prefabs), layers with lock/visibility, Simple/Advanced mode toggle, **Preview/Test/Validate/Publish** toolbar flow, autosave with crash recovery, undo/redo, direct Workshop publishing
 - **Resource stacks (D038):** Ordered media candidates with per-entry conditions and fallback chains — every media property (video, audio, music, portrait) supports stacking. External streaming URIs (YouTube, Spotify, Google Drive) as optional stack entries with mandatory local fallbacks. Workshop publish validation enforces fallback presence.
 - **Environment panel (D038):** Consolidated time/weather/atmosphere setup — clock dial for time of day, day/night cycle toggle with speed slider, weather dropdown with D022 state machine editor, temperature, wind, ambient light, fog style. Live preview in editor viewport.
 - **Achievement Trigger module (D036/D038):** Connects achievements to the visual trigger system — no Lua required for standard achievement unlock logic
 - **Editor vocabulary schema:** Auto-generated machine-readable description of all modules, triggers, compositions, templates, and properties — powers documentation, mod tooling, and the Phase 7 Editor AI Assistant
-- **Version Control / Git integration (D038):** Source Control panel in SDK sidebar (staging, committing, branching, push/pull); visual diff for YAML and Lua files; auto-generated `.gitignore` for IC projects; `ic project init [--git]` CLI command; format-aware merge conflict resolution; standard Git via `git2` library — works with any Git host
+- **Git-first collaboration support (D038):** Stable content IDs + canonical serialization for editor-authored files, read-only Git status strip (branch/dirty/conflicts), `ic git setup` repo-local helpers, `ic content diff` semantic diff viewer/CLI. **No commit/branch/push/pull UI in the SDK** (Git remains the source of truth).
+- **Validate & Playtest workflow (D038):** Quick Validate and Publish Validate presets, async/cancelable validation runs, status badges (`Valid/Warnings/Errors/Stale/Running`), and a single Publish Readiness screen aggregating validation/export/license/metadata warnings
+- **Profile Playtest v1 (D038):** Advanced-mode only performance profiling from `Test` dropdown with summary-first output (avg/max tick time, top hotspots, low-end target budget comparison)
+- **Migration Workbench v1 (D038 + D020):** "Upgrade Project" flow in SDK (read-only migration preview/report wrapper over `ic mod migrate`)
 - **Resource Manager panel (D038):** Unified resource browser with three tiers — Default (game module assets indexed from `.mix` archives, always available), Workshop (inline browsing/search/install from D030), Local (drag-and-drop / file import into project `assets/`); drag-to-editor workflow for all resource types; cross-tier search; duplicate detection; inline preview (sprites, audio playback, palette swatches, video thumbnails); format conversion on import via `ra-formats`
 - Controller input mapping for core editing workflows (Steam Deck compatible)
 - Accessibility: colorblind palette, UI scaling, full keyboard navigation
@@ -332,12 +335,14 @@ Units moving, shooting, dying — headless sim + rendered. Record replay file. P
 ### Deliverables — Cross-Engine Export (D066)
 - **Export pipeline core (D066):** `ExportTarget` trait with built-in IC native and OpenRA backends; `ExportPlanner` produces fidelity reports listing downgraded/stripped features; export-safe authoring mode in scenario editor (feature gating, live fidelity indicators, export-safe trigger templates)
 - **OpenRA export (D066):** IC scenario → `.oramap` (ZIP: map.yaml + map.bin + lua/); IC YAML rules → MiniYAML via bidirectional D025 converter; IC trait names → OpenRA trait names via bidirectional D023 alias table; IC Lua scripts validated against OpenRA's 16-global API surface; mod manifest generation via D026 reverse
-- **`ic export` CLI (D066):** `ic export --target openra mission.yaml -o ./output/`; `--dry-run` for validation-only; `--fidelity-report` for structured loss report; batch export for directories
+- **`ic export` CLI (D066):** `ic export --target openra mission.yaml -o ./output/`; `--dry-run` for validation-only; `--verify` for exportability + target-facing checks; `--fidelity-report` for structured loss report; batch export for directories
 - **Export-safe trigger templates (D066):** Pre-built trigger patterns in scenario editor guaranteed to downcompile cleanly to target engine trigger systems
 
 ### Exit Criteria
 - Someone ports an existing OpenRA mod (Tiberian Dawn, Dune 2000) and it runs
-- SDK scenario editor supports terrain painting, unit placement, triggers with timers, waypoints, modules, compositions, undo/redo, autosave, and Workshop publishing
+- SDK scenario editor supports terrain painting, unit placement, triggers with timers, waypoints, modules, compositions, undo/redo, autosave, **Preview/Test/Validate/Publish**, and Workshop publishing
+- Quick Validate runs asynchronously and surfaces actionable errors/warnings without blocking Preview/Test
+- `ic git setup` and `ic content diff` work on an editor-authored scenario in a Git repo (no SDK commit UI)
 - A mod can declare 3+ Workshop resource dependencies and `ic mod install` resolves, downloads, and caches them correctly
 - `ic mod audit` correctly identifies license incompatibilities in a dependency tree
 - An individual resource (e.g., a music track) can be published to and pulled from the Workshop independently
@@ -345,7 +350,8 @@ Units moving, shooting, dying — headless sim + rendered. Record replay file. P
 - Joining a lobby with required mods triggers auto-download with progress UI
 - Creator reputation badges display correctly on resource listings
 - DMCA/takedown process handles a test case end-to-end within 72 hours
-- SDK Source Control panel can init a repo, stage files, commit, create branches, and push to a configured remote
+- SDK shows read-only Git status (branch/dirty/conflict) for a project repo without blocking editing workflows
+- `ic content diff` produces an object-level diff for an `.icscn` file with stable IDs preserved across reordering/renames
 - Visual diff displays structured YAML changes and syntax-highlighted Lua changes
 - Resource Manager shows Default resources from installed game files, supports Workshop search/install inline, and accepts manual file drag-and-drop import
 - A resource dragged from the Resource Manager onto the editor viewport creates the expected entity/assignment
@@ -366,10 +372,13 @@ Units moving, shooting, dying — headless sim + rendered. Record replay file. P
 - **Named characters:** persistent identity across missions, traits, inventory, must-survive flags
 - **Campaign inventory:** persistent items with category, quantity, assignability to characters
 - **Campaign testing tools:** graph validation, jump-to-mission, path coverage visualization, state inspector
+- **Advanced validation & Publish Readiness refinements (D038):** preset picker (`Quick/Publish/Export/Multiplayer/Performance`), batch validation across scenarios/campaign nodes, validation history panel
 - **Campaign assembly workflow (D038):** Quick Start templates (Linear, Two-Path Branch, Hub and Spoke, Roguelike Pool, Full Branch Tree), Scenario Library panel (workspace/original campaigns/Workshop with search/favorites), drag-to-add nodes, one-click connections with auto-outcome mapping, media drag targets on campaign nodes, campaign property sheets in sidebar, end-to-end "New → Publish" pipeline under 15 minutes for a basic campaign
 - **Original Campaign Asset Library (D038):** Game Asset Index (auto-catalogs all original campaign assets by mission), Campaign Browser panel (browse original RA1/TD campaigns with maps/videos/music/EVA organized per-mission), one-click asset reuse (drag from Campaign Browser to campaign node), Campaign Import / "Recreate" mode (import entire original campaign as editable starting point with pre-filled graph, asset references, and sequencing)
 - **Achievement Editor (D036/D038):** Visual achievement definition and management — campaign-scoped achievements, incremental progress tracking, achievement coverage view, playthrough tracker. Integrates with Achievement Trigger modules from Phase 6a.
-- **Git integration refinements (D038):** Visual terrain diff (overlay highlighting changed map cells), side-by-side image comparison (slider overlay for sprite/portrait changes), campaign graph conflict resolution (visual graph merge view)
+- **Git-first collaboration refinements (D038):** `ic content merge` semantic merge helper, optional conflict resolver panels (including campaign graph conflict view), and richer visual diff overlays (terrain cell overlays, side-by-side image comparison)
+- **Migration Workbench apply mode (D038 + D020):** Apply migrations from SDK with rollback snapshots and post-migration Validate/export-compatibility prompts
+- **Localization & Subtitle Workbench (D038):** Advanced-only string table editor, subtitle timeline editor, pseudolocalization preview, translation coverage report
 
 ### Deliverables — Game Mode Templates & Multiplayer Scenario Tools (D038)
 - **8 core game mode templates:** Skirmish, Survival/Horde, King of the Hill, Regicide, Free for All, Co-op Survival, Sandbox, Base Defense
@@ -383,6 +392,8 @@ Units moving, shooting, dying — headless sim + rendered. Record replay file. P
 - **Campaign export (D066):** IC branching campaign graph → linearized sequential missions for stateless targets (RA1, OpenRA); user selects branch path or exports longest path; persistent state stripped with warnings
 - **Editor extensibility — YAML + Lua tiers (D066):** Custom entity palette categories, property panels, terrain brush presets via YAML; editor automation, custom validators, batch operations via Lua (`Editor.RegisterValidator`, `Editor.RegisterCommand`); editor extensions distributed as Workshop packages (`type: editor_extension`)
 - **Editor extension Workshop distribution (D066):** Editor extensions install into SDK extension directory; mod-profile-aware auto-activation (RA2 profile activates RA2 editor extensions)
+- **Editor plugin hardening (D066):** Plugin API version compatibility checks, capability manifests (deny-by-default), and install-time permission review for editor extensions
+- **Asset provenance / rights checks in Publish Readiness (D040/D038):** Advanced-mode provenance metadata in Asset Studio surfaced primarily during publish with stricter release-channel gating than beta/private workflows
 
 ### Exit Criteria
 - Campaign editor can create a branching 5+ mission campaign with persistent roster, story flags, and intermission screens
@@ -396,6 +407,7 @@ Units moving, shooting, dying — headless sim + rendered. Record replay file. P
 - At least 5 Lua trigger patterns downcompile correctly to RA1 trigger/teamtype equivalents
 - A YAML editor extension adds a custom entity palette category visible in the SDK
 - A Lua editor script registers and executes a batch operation via `Editor.RegisterCommand`
+- Incompatible editor extension plugin API versions are rejected with a clear compatibility message
 
 ## Phase 7: AI Content, Ecosystem & Polish (Months 34–36+)
 

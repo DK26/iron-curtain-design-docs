@@ -2,6 +2,8 @@
 
 Every major design decision, with rationale and alternatives considered. Decisions are organized into thematic sub-documents for efficient navigation.
 
+For improved agentic retrieval / RAG summaries, see the reusable **Decision Capsule** template in `src/decisions/DECISION-CAPSULE-TEMPLATE.md` and the topic routing guide in `src/LLM-INDEX.md`.
+
 ---
 
 ## Sub-Documents
@@ -10,7 +12,7 @@ Every major design decision, with rationale and alternatives considered. Decisio
 | ------------------------------------------------------- | ------------------------------------------------------------------------------------------- | --------------------------------------------------- |
 | [Foundation & Core](decisions/09a-foundation.md)        | Language, framework, data formats, simulation invariants, core engine identity              | D001–D003, D009, D010, D015, D017, D018, D039, D067 |
 | [Networking & Multiplayer](decisions/09b-networking.md) | Network model, relay server, sub-tick ordering, community servers, ranked play              | D006–D008, D011, D012, D052, D055, D060             |
-| [Modding & Compatibility](decisions/09c-modding.md)     | Scripting tiers, OpenRA compatibility, UI themes, mod profiles, licensing, export           | D004, D005, D014, D032, D050, D051, D062, D066      |
+| [Modding & Compatibility](decisions/09c-modding.md)     | Scripting tiers, OpenRA compatibility, UI themes, mod profiles, licensing, export           | D004, D005, D014, D032, D050, D051, D062, D066, D068 |
 | [Gameplay & AI](decisions/09d-gameplay.md)              | Pathfinding, balance, QoL, AI systems, render modes, trait-abstracted subsystems            | D013, D019, D033, D041–D045, D048, D054             |
 | [Community & Platform](decisions/09e-community.md)      | Workshop, telemetry, storage, achievements, governance, profiles, data portability          | D030, D031, D034–D037, D046, D049, D053, D061       |
 | [Tools & Editor](decisions/09f-tools.md)                | LLM mission generation, scenario editor, asset studio, foreign replays, skill library       | D016, D038, D040, D047, D056, D057                  |
@@ -77,6 +79,7 @@ Every major design decision, with rationale and alternatives considered. Decisio
 | D062 | Mod Profiles & Virtual Asset Namespace             | [Modding](decisions/09c-modding.md)         |
 | D066 | Cross-Engine Export & Editor Extensibility         | [Modding](decisions/09c-modding.md)         |
 | D067 | Configuration Format Split — TOML vs YAML          | [Foundation](decisions/09a-foundation.md)   |
+| D068 | Selective Installation & Content Footprints        | [Modding](decisions/09c-modding.md)         |
 
 ---
 

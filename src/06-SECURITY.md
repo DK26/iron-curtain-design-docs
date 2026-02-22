@@ -1,5 +1,7 @@
 # 06 — Security & Threat Model
 
+**Keywords:** security, threat model, relay server, lockstep vulnerabilities, maphack, lag switch, replay signing, order validation, ranked trust, anti-cheat, rate limiting, sandboxing
+
 ## Fundamental Constraint
 
 In deterministic lockstep, every client runs the full simulation. Every player has **complete game state in memory** at all times. This shapes every vulnerability and mitigation.

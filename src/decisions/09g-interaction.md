@@ -14,6 +14,26 @@ Command console, communication systems (chat, voice, pings), and tutorial/new pl
 **Crate ownership:** The `CommandDispatcher` lives in `ic-game` — it cannot live in `ic-sim` (would violate Invariant #1: no I/O in the simulation) and is too cross-cutting for `ic-ui` (CLI and scripts also use it). `ic-game` is the wiring crate that depends on all library crates, making it the natural home for the dispatcher.
 **Inspired by:** Mojang's Brigadier (command tree architecture), Factorio (unified chat+command UX), Source Engine (developer console + cvars)
 
+**Revision note (2026-02-22):** Revised to formalize camera bookmarks (`/bookmark_set`, `/bookmark`) as a first-class cross-platform navigation feature with explicit desktop/touch UI affordances, and to clarify that mobile tempo comfort guidance around `/speed` is advisory UI only (no new simulation/network authority path). This revision was driven by mobile/touch UX design work and cross-device tutorial integration (see D065 and `research/mobile-rts-ux-onboarding-community-platform-analysis.md`).
+
+### Decision Capsule (LLM/RAG Summary)
+
+- **Status:** Settled (Revised 2026-02-22)
+- **Phase:** Phase 3 (chat + basic commands), Phase 4 (Lua console), Phase 6a (mod-registered commands)
+- **Canonical for:** Unified chat/command console design, command dispatch model, cvar/command UX, and competitive-integrity command policy
+- **Scope:** `ic-ui` text input/dev console UI, `ic-game` command dispatcher, command→order routing, Lua console integration, mod command registration
+- **Decision:** IC uses a **unified chat/command input** (Brigadier-style command tree) as the primary interface, plus an optional developer console overlay for power users; both share the same dispatcher and permission/rule system.
+- **Why:** Unified input is more discoverable and portable, while a separate power-user console still serves advanced workflows (multi-line input, cvars, debugging, admin tasks).
+- **Non-goals:** Chat-only magic-string commands with no structured parser; a desktop-only tilde-console model that excludes touch/console platforms.
+- **Invariants preserved:** `CommandDispatcher` lives outside `ic-sim`; commands affecting gameplay flow through normal validated order/network paths; competitive integrity is enforced by permissions/rules, not hidden UI.
+- **Defaults / UX behavior:** Enter opens the primary text field; `/` routes to commands; command/help/autocomplete behavior is shared across unified input and console overlay.
+- **Mobile / accessibility impact:** Command access has GUI/touch-friendly paths; camera bookmarks are first-class across desktop and touch; mobile tempo guidance around `/speed` is advisory UI only.
+- **Security / Trust impact:** Rate limits, permissions, anti-trolling measures, and ranked restrictions are part of the command system design.
+- **Public interfaces / types / commands:** Brigadier-style command tree, cvars, `/bookmark_set`, `/bookmark`, `/speed`, mod-registered commands (`.iccmd`, Lua registration as defined in body)
+- **Affected docs:** `src/03-NETCODE.md`, `src/06-SECURITY.md`, `src/17-PLAYER-FLOW.md`, `src/decisions/09g-interaction.md` (D059/D065)
+- **Revision note summary:** Added formal camera bookmark command/UI semantics and clarified mobile tempo guidance is advisory-only with no new authority path.
+- **Keywords:** command console, unified chat commands, brigadier, cvars, bookmarks, speed command, mod commands, competitive integrity, mobile command UX
+
 ### Problem
 
 IC needs two text-input capabilities during gameplay:
@@ -442,6 +462,8 @@ The design principle: **anything the GUI can do, the console can do.** Every but
 | `/base`                    | Center camera on construction yard                                                                                                                                                                                                                     |
 | `/alert`                   | Jump to last alert position (base under attack, etc.)                                                                                                                                                                                                  |
 
+**Camera bookmarks (Generals-style navigation, client-local):** IC formalizes camera bookmarks as a first-class navigation feature on all platforms. Slots `1-9` are **local UI state only** (not synced, not part of replay determinism, no simulation effect). Desktop exposes quick slots through hotkeys (see `17-PLAYER-FLOW.md`), while touch layouts expose a minimap-adjacent bookmark dock (tap = jump, long-press = save). The `/bookmark_set` and `/bookmark` commands remain the canonical full-slot interface and work consistently across desktop, touch, observer, replay, and editor playtest contexts. Local-only D031 telemetry events (`camera_bookmark.set`, `camera_bookmark.jump`) support UX tuning and tutorial hint validation.
+
 **Game state commands:**
 
 | Command                                             | Description                                                                             |
@@ -455,6 +477,8 @@ The design principle: **anything the GUI can do, the console can do.** Every but
 | `/speed <slowest\|slower\|normal\|faster\|fastest>` | Set game speed (single-player or host-only)                                             |
 | `/pause`                                            | Toggle pause (single-player instant; multiplayer requires consent)                      |
 | `/score`                                            | Display current match score (units killed, resources, etc.)                             |
+
+**Game speed and mobile tempo guidance:** `/speed` remains the authoritative gameplay command surface for single-player and host-controlled matches. Any mobile "Tempo Advisor" or comfort warning UI is **advisory only** — it may recommend a range (for touch usability) but never changes or blocks the requested speed by itself. Ranked multiplayer continues to use server-enforced speed (see D055/D064 and `09b-networking.md`).
 
 **Vote commands (multiplayer — see `03-NETCODE.md` § "In-Match Vote Framework"):**
 
@@ -1226,6 +1250,26 @@ D058 designed the text input/command system (chat box, `/` prefix routing, comma
 ### Decision
 
 Build a unified coordination system with three tiers: text chat channels, relay-forwarded VoIP, and a contextual ping/beacon system — plus novel coordination tools (chat wheel, minimap drawing, tactical markers). Voice is optionally recorded into replays as a separate stream with explicit consent.
+
+**Revision note (2026-02-22):** Revised platform guidance to define mobile minimap/bookmark coexistence (minimap cluster + adjacent bookmark dock) and explicit touch interaction precedence so future mobile coordination features (pings, chat wheel, minimap drawing) do not conflict with fast camera navigation. This revision was informed by mobile RTS UX research and touch-layout requirements (see `research/mobile-rts-ux-onboarding-community-platform-analysis.md`).
+
+### Decision Capsule (LLM/RAG Summary)
+
+- **Status:** Accepted (Revised 2026-02-22)
+- **Phase:** Phase 3 (text chat, beacons), Phase 5 (VoIP, voice-in-replay)
+- **Canonical for:** In-game communication architecture (text chat, voice, pings/beacons, tactical coordination) and integration with commands/replay/network lanes
+- **Scope:** `ic-ui` chat/voice/ping UX, `ic-net` message lanes/relay forwarding, replay voice stream policy, moderation/muting, mobile coordination input behavior
+- **Decision:** IC provides a unified coordination system with **text chat channels**, **relay-forwarded VoIP**, and **contextual pings/beacons/markers**, with optional voice recording in replays via explicit consent.
+- **Why:** RTS coordination needs verbal, textual, and spatial communication; open-source RTS projects under-serve VoIP and modern ping tooling; IC can set a higher baseline.
+- **Non-goals:** Text-only communication as the sole coordination path; separate mobile and desktop communication rules that change gameplay semantics.
+- **Invariants preserved:** Communication integrates with existing order/message infrastructure; D058 remains the input/command console foundation and D012 validation remains relevant for command-side actions.
+- **Defaults / UX behavior:** Text chat channels are first-class and sticky; voice is optional; advanced coordination tools (chat wheel/minimap drawing/tactical markers) layer onto the same system.
+- **Mobile / accessibility impact:** Mobile minimap and bookmark dock coexist in one cluster with explicit touch precedence rules to avoid conflicts between camera navigation and communication gestures.
+- **Security / Trust impact:** Moderation, muting, observer restrictions, and replay/voice consent rules are part of the core communication design.
+- **Public interfaces / types / commands:** `ChatChannel`, chat message orders/routing, voice packet/lane formats, beacon/ping/tactical marker events (see body sections)
+- **Affected docs:** `src/03-NETCODE.md`, `src/06-SECURITY.md`, `src/17-PLAYER-FLOW.md`, `src/decisions/09g-interaction.md` (D058/D065)
+- **Revision note summary:** Added mobile minimap/bookmark cluster coexistence and touch precedence so communication gestures do not break mobile camera navigation.
+- **Keywords:** chat, voip, pings, beacons, minimap drawing, communication lanes, replay voice, mobile coordination, command console integration
 
 ### 1. Text Chat — Channel Architecture
 
@@ -2736,6 +2780,10 @@ pub struct ProtocolLimits {
 | **Steam Deck**      | On-screen KB  | PTT on trigger/bumper    | D-pad or touchpad   | D-pad submenu       | Touch minimap |
 | **Mobile (future)** | On-screen KB  | PTT button on screen     | Tap-hold on minimap | Radial menu on hold | Finger draw   |
 
+**Mobile minimap + bookmark coexistence:** On phone/tablet layouts, camera bookmarks sit in a **bookmark dock adjacent to the minimap/radar cluster** rather than overloading minimap gestures. This keeps minimap interactions free for camera jump, pings, and drawing (D059), while giving touch players a fast, visible "save/jump camera location" affordance similar to C&C Generals. Gesture priority is explicit: touches that start on bookmark chips stay bookmark interactions; touches that start on the minimap stay minimap interactions.
+
+**Layout and handedness:** The minimap cluster (minimap + alerts + bookmark dock) mirrors with the player's handedness setting. The command rail remains on the dominant-thumb side, so minimap communication and camera navigation stay on the opposite side and don't fight for the same thumb.
+
 ### 8. Lua API Extensions (D024)
 
 Building on the existing `Beacon` and `Radar` globals from OpenRA compatibility:
@@ -2934,13 +2982,32 @@ All five responses share the same trigger signal (`ConnectionQuality`), the same
 | **Depends on** | D004 (Lua Scripting), D021 (Branching Campaigns), D033 (QoL Toggles — experience profiles), D034 (SQLite — hint history, skill estimate), D036 (Achievements), D038 (Scenario Editor — tutorial modules), D043 (AI Behavior Presets — tutorial AI tier)                                   |
 | **Driver**     | OpenRA's new player experience is a wiki link to a YouTube video. The Remastered Collection added basic tooltips. No open-source RTS has a structured onboarding system. The genre's complexity is the #1 barrier to new players — players who bounce from one failed match never return. |
 
+**Revision note (2026-02-22):** Revised D065 to support a single cross-device tutorial curriculum with semantic prompt rendering (`InputCapabilities`/`ScreenClass` aware), a skippable first-run controls walkthrough, camera bookmark instruction, and a touch-focused Tempo Advisor (advisory only). This revision incorporates confirmatory prior-art research on mobile strategy UX, platform adaptation, and community distribution friction (`research/mobile-rts-ux-onboarding-community-platform-analysis.md`).
+
+### Decision Capsule (LLM/RAG Summary)
+
+- **Status:** Accepted (Revised 2026-02-22)
+- **Phase:** Phase 3 (pipeline, hints, progressive discovery), Phase 4 (Commander School, assessment, post-game learning)
+- **Canonical for:** Tutorial/new-player onboarding architecture, cross-device tutorial prompt model, controls walkthrough, and onboarding-related adaptive pacing
+- **Scope:** `ic-ui` onboarding systems, tutorial Lua APIs, hint history + skill estimate persistence (SQLite/D034), cross-device prompt rendering, player-facing tutorial UX
+- **Decision:** IC uses a **five-layer onboarding system** (campaign tutorial + contextual hints + first-run pipeline + skill assessment + adaptive pacing) integrated across the product rather than a single tutorial screen/mode.
+- **Why:** RTS newcomers, veterans, and experienced OpenRA/Remastered players have different onboarding needs; one fixed tutorial path either overwhelms or bores large groups.
+- **Non-goals:** Separate desktop and mobile tutorial campaigns; forced full tutorial completion before normal play; mouse-only prompt wording in shared tutorial content.
+- **Invariants preserved:** Input remains abstracted (`InputCapabilities`/`ScreenClass` and core `InputSource` design); tutorial pacing/advisory systems are UI/client-level and do not alter simulation determinism.
+- **Defaults / UX behavior:** Commander School is a first-class campaign; controls walkthrough is short and skippable; tutorial prompts are semantic and rendered per device/input mode.
+- **Mobile / accessibility impact:** Touch platforms use the same curriculum with device-specific prompt text/UI anchors; Tempo Advisor is advisory-only and warns without blocking player choice (except existing ranked authority rules elsewhere).
+- **Public interfaces / types / commands:** `InputPromptAction`, `TutorialPromptContext`, `ResolvedInputPrompt`, `UiAnchorAlias`, `LayoutAnchorResolver`, `TempoAdvisorContext`
+- **Affected docs:** `src/17-PLAYER-FLOW.md`, `src/02-ARCHITECTURE.md`, `src/decisions/09b-networking.md`, `src/decisions/09d-gameplay.md`
+- **Revision note summary:** Added cross-device semantic prompts, skippable controls walkthrough, camera bookmark teaching, and touch tempo advisory hooks based on researched mobile UX constraints.
+- **Keywords:** tutorial, commander school, onboarding, cross-device prompts, controls walkthrough, tempo advisor, mobile tutorial, semantic action prompts
+
 ### Problem
 
 Classic RTS games are notoriously hostile to new players. The original Red Alert's "tutorial" was Mission 1 of the Allied campaign, which assumed the player already understood control groups, attack-move, and ore harvesting. OpenRA offers no in-game tutorial at all. The Remastered Collection added tooltips and a training mode but no structured curriculum.
 
 IC targets three distinct player populations and must serve all of them:
 
-1. **Complete RTS newcomers** — never played any RTS. Need camera, selection, and movement concepts before anything else.
+1. **Complete RTS newcomers** — never played any RTS. Need camera, selection, movement, and minimap/radar concepts before anything else.
 2. **Lapsed RA veterans** — played in the 90s, remember concepts vaguely, need a refresher on specific mechanics and new IC features.
 3. **OpenRA / Remastered players** — know RA well but may not know IC-specific features (weather, experience profiles, campaign persistence, console commands).
 
@@ -2950,9 +3017,13 @@ A single-sized tutorial serves none of them well. Veterans resent being forced t
 
 A five-layer tutorial system that integrates throughout the player experience rather than existing as a single screen or mode. Each layer operates independently — players benefit from whichever layers they encounter, in any order.
 
+**Cross-device curriculum rule:** IC ships one tutorial curriculum (Commander School + hints + skill assessment), not separate desktop and mobile tutorial campaigns. Tutorial content defines **semantic actions** ("move command", "assign control group", "save camera bookmark") and the UI layer renders device-specific instructions and highlights using `InputCapabilities` and `ScreenClass`.
+
+**Controls walkthrough addition (Layer 3):** A short, skippable controls walkthrough (60-120s) is offered during first-run onboarding. It teaches camera pan/zoom, selection, context commands, minimap/radar, control groups, build UI basics, and camera bookmarks for the active platform before the player enters Commander School or regular play.
+
 ### Layer 1 — Commander School (Tutorial Campaign)
 
-A dedicated 10-mission tutorial campaign using the D021 branching graph system, accessible from `Main Menu → Campaign → Commander School`. This is a first-class campaign, not a popup sequence — it has briefings, EVA voice lines, map variety, and a branching graph with remedial branches for players who struggle.
+A dedicated 10-mission tutorial campaign using the D021 branching graph system, accessible from `Main Menu → Campaign → Commander School`. This is a first-class campaign, not a popup sequence — it has briefings, EVA voice lines, map variety, and a branching graph with remedial branches for players who struggle. It is shared across desktop and touch platforms; only prompt wording and UI highlight anchors differ by platform.
 
 #### Mission Structure
 
@@ -2990,8 +3061,8 @@ A dedicated 10-mission tutorial campaign using the D021 branching graph system, 
              │
              ▼
     ┌─────────────────┐
-    │  06: Keyboard    │  Control groups, hotkeys, queue commands
-    │  Commander       │
+    │  06: Command     │  Control groups, hotkeys, camera bookmarks,
+    │  Basics          │  queue commands
     │  (Controls)      │
     └────────┬────────┘
              │
@@ -3048,7 +3119,7 @@ Commander School adapts to the player's experience profile (D033):
 - **RA veteran / OpenRA player:** Skip basic missions, focus on IC-specific features (weather, console, experience profiles)
 - **Custom:** Player chose which missions to unlock via the skill assessment (Layer 3)
 
-The experience profile is read from the first-launch self-identification (see `17-PLAYER-FLOW.md`). It is not a difficulty setting — it controls *what is taught*, not *how hard the AI fights*.
+The experience profile is read from the first-launch self-identification (see `17-PLAYER-FLOW.md`). It is not a difficulty setting — it controls *what is taught*, not *how hard the AI fights*. On touch devices, "slower pacing" also informs the default tutorial tempo recommendation (`slower` on phone/tablet, advisory only and overridable by the player).
 
 #### Campaign YAML Definition
 
@@ -3413,7 +3484,7 @@ Hints are individually toggleable per category in `Settings → QoL → Hints`:
 The first-launch flow (see `17-PLAYER-FLOW.md`) includes a self-identification step:
 
 ```
-Theme Selection (D032) → Self-Identification → Tutorial Offer → Main Menu
+Theme Selection (D032) → Self-Identification → Controls Walkthrough (optional) → Tutorial Offer → Main Menu
 ```
 
 #### Self-Identification Gate
@@ -3443,6 +3514,21 @@ This sets the `experience_profile` used by all five layers. The profile is store
 | OpenRA / Remastered | `openra_player`    | Mod-specific only  | Badge on campaign menu                           |
 | Skip                | `skip`             | All off            | No offer                                         |
 
+#### Controls Walkthrough (Phase 3, Skippable)
+
+A short controls walkthrough is offered immediately after self-identification. It is **platform-specific in presentation** and **shared in intent**:
+
+- **Desktop:** mouse/keyboard prompts ("Right-click to move", `Ctrl+F5` to save camera bookmark)
+- **Tablet:** touch prompts with sidebar + on-screen hotbar highlights
+- **Phone:** touch prompts with build drawer, command rail, minimap cluster, and bookmark dock highlights
+
+The walkthrough teaches only control fundamentals (camera pan/zoom, selection, context commands, control groups, minimap/radar, camera bookmarks, and build UI basics) and ends with three options:
+- `Start Commander School`
+- `Practice Sandbox`
+- `Skip to Game`
+
+This keeps D065's early experience friendly on touch devices without duplicating Commander School missions.
+
 #### Skill Assessment (Phase 4)
 
 After Commander School Mission 01 (or as a standalone 2-minute exercise accessible from `Settings → QoL → Recalibrate`), the engine estimates the player's baseline skill:
@@ -3455,7 +3541,8 @@ After Commander School Mission 01 (or as a standalone 2-minute exercise accessib
 │  ✓  Select and move units to waypoints           │
 │  ✓  Select specific units from a mixed group     │
 │  ►  Camera: pan to each flashing area            │
-│     Timed combat: destroy targets in order        │
+│  ►  Optional: save/jump a camera bookmark        │
+│     Timed combat: destroy targets in order       │
 │                                                  │
 │  [Skip Assessment]                               │
 └──────────────────────────────────────────────────┘
@@ -3464,6 +3551,7 @@ After Commander School Mission 01 (or as a standalone 2-minute exercise accessib
 Measures:
 - **Selection speed** — time to select correct units from a mixed group
 - **Camera fluency** — time to pan to each target area
+- **Camera bookmark fluency (optional)** — time to save and jump to a bookmarked location (measured only on platforms where bookmarks are surfaced in the exercise)
 - **Combat efficiency** — accuracy of focused fire on marked targets
 - **APM estimate** — actions per minute during the exercises
 
@@ -3475,14 +3563,19 @@ CREATE TABLE player_skill_estimate (
     player_id        TEXT PRIMARY KEY,
     selection_speed  INTEGER,    -- percentile (0–100)
     camera_fluency   INTEGER,
+    bookmark_fluency INTEGER,    -- nullable/0 if exercise omitted
     combat_efficiency INTEGER,
     apm_estimate     INTEGER,    -- raw APM
+    input_class      TEXT,       -- 'desktop', 'touch_phone', 'touch_tablet', 'deck'
+    screen_class     TEXT,       -- 'Phone', 'Tablet', 'Desktop', 'TV'
     assessed_at      INTEGER,    -- Unix timestamp
     assessment_type  TEXT        -- 'tutorial_01' or 'standalone'
 );
 ```
 
-The skill estimate feeds Layers 2 and 4: hint frequency scales with skill (fewer hints for skilled players), and the first skirmish AI difficulty recommendation uses the estimate.
+Percentiles are normalized **within input class** (desktop vs touch phone vs touch tablet vs deck) so touch players are not under-rated against mouse/keyboard baselines.
+
+The skill estimate feeds Layers 2 and 4: hint frequency scales with skill (fewer hints for skilled players), the first skirmish AI difficulty recommendation uses the estimate, and touch tempo guidance can widen/narrow its recommended speed band based on demonstrated comfort.
 
 ### Layer 4 — Adaptive Pacing Engine
 
@@ -3494,12 +3587,17 @@ A background system (no direct UI — it shapes the other layers) that continuou
 - `player_skill_estimate` — from the skill assessment
 - `gameplay_events` (D031) — actual in-game actions (build orders, APM, unit losses, idle time)
 - `experience_profile` — self-identified experience level
+- `input_capabilities` / `screen_class` — touch vs mouse/keyboard and phone/tablet layout context
+- optional touch friction signals — misclick proxies, selection retries, camera thrash, pause frequency (single-player)
 
 #### Outputs
 
 - **Hint frequency multiplier** — scales the cooldown on all hints. A player demonstrating mastery gets longer cooldowns (fewer hints). A struggling player gets shorter cooldowns (more hints).
 - **Difficulty recommendation** — suggested AI difficulty for the next skirmish. Displayed as a tooltip in the lobby AI picker: "Based on your recent games, Normal difficulty is recommended."
 - **Feature discovery pacing** — controls how quickly progressive discovery notifications appear (Layer 5 below).
+- **Touch tutorial prompt density** — controls how much on-screen guidance is shown for touch platforms (e.g., keep command-rail hints visible slightly longer for new phone players).
+- **Recommended tempo band (advisory)** — preferred speed range for the current device/input/skill context. Used by UI warnings only; never changes sim state on its own.
+- **Camera bookmark suggestion eligibility** — enables/disables "save camera location" hints based on camera fluency and map scale.
 - **Tutorial EVA activation** — in the Allied/Soviet campaigns (not Commander School), first encounters with new unit types or buildings trigger a brief EVA line if the player hasn't completed the relevant Commander School mission. "Construction complete. This is a Radar Dome — it reveals the minimap." Only triggers once per entity type per campaign playthrough.
 
 #### Pacing Algorithm
@@ -3527,7 +3625,124 @@ recommended_difficulty = match skill_estimate {
 }
 ```
 
+#### Mobile Tempo Advisor (Client-Only, Advisory)
+
+The adaptive pacing engine also powers a **Tempo Advisor** for touch-first play. This system is intentionally non-invasive:
+
+- **Single-player:** any speed allowed; warnings shown outside the recommended band; one-tap "Return to Recommended"
+- **Casual multiplayer (host-controlled):** lobby shows a warning if the selected speed is outside the recommended band for participating touch players
+- **Ranked multiplayer:** informational only; speed remains server/queue enforced (D055/D064, see `09b-networking.md`)
+
+Initial default bands (experimental; tune from playtests):
+
+| Context | Recommended Band | Default |
+| ------- | ---------------- | ------- |
+| Phone (new/average touch) | `slowest`-`normal` | `slower` |
+| Phone (high skill estimate + tutorial complete) | `slower`-`faster` | `normal` |
+| Tablet | `slower`-`faster` | `normal` |
+| Desktop / Deck | unchanged | `normal` |
+
+Commander School on phone/tablet starts at `slower` by default, but players may override it.
+
+The advisor emits local-only analytics events (D031-compatible) such as `mobile_tempo.warning_shown` and `mobile_tempo.warning_dismissed` to validate whether recommendations reduce overload without reducing agency.
+
 This is deterministic and entirely local — no LLM, no network, no privacy concerns. The pacing engine exists in `ic-ui` (not `ic-sim`) because it affects presentation, not simulation.
+
+#### Implementation-Facing Interfaces (Client/UI Layer, No Sim Impact)
+
+These types live in `ic-ui` / `ic-game` client codepaths (not `ic-sim`) and formalize camera bookmarks, semantic prompt resolution, and tempo advice:
+
+```rust
+pub struct CameraBookmarkSlot {
+    pub slot: u8,                    // 1..=9
+    pub label: Option<String>,       // local-only label
+    pub world_pos: WorldPos,
+    pub zoom_level: Option<FixedPoint>, // optional client camera zoom
+}
+
+pub struct CameraBookmarkState {
+    pub slots: [Option<CameraBookmarkSlot>; 9],
+    pub quick_slots: [u8; 4],        // defaults: [1, 2, 3, 4]
+}
+
+pub enum CameraBookmarkIntent {
+    Save { slot: u8 },
+    Jump { slot: u8 },
+    Clear { slot: u8 },
+    Rename { slot: u8, label: String },
+}
+
+pub enum InputPromptAction {
+    Select,
+    BoxSelect,
+    MoveCommand,
+    AttackCommand,
+    AttackMoveCommand,
+    OpenBuildUi,
+    QueueProduction,
+    UseMinimap,
+    SaveCameraBookmark,
+    JumpCameraBookmark,
+}
+
+pub struct TutorialPromptContext {
+    pub input_capabilities: InputCapabilities,
+    pub screen_class: ScreenClass,
+    pub advanced_mode: bool,
+}
+
+pub struct ResolvedInputPrompt {
+    pub text: String,             // localized, device-specific wording
+    pub icon_tokens: Vec<String>, // e.g. "tap", "f5", "ctrl+f5"
+}
+
+pub struct UiAnchorAlias(pub String); // e.g. "primary_build_ui", "minimap_cluster"
+
+pub enum TempoSpeedLevel {
+    Slowest,
+    Slower,
+    Normal,
+    Faster,
+    Fastest,
+}
+
+pub struct TempoComfortBand {
+    pub recommended_min: TempoSpeedLevel,
+    pub recommended_max: TempoSpeedLevel,
+    pub default_speed: TempoSpeedLevel,
+    pub warn_above: Option<TempoSpeedLevel>,
+    pub warn_below: Option<TempoSpeedLevel>,
+}
+
+pub enum InputSourceKind {
+    MouseKeyboard,
+    TouchPhone,
+    TouchTablet,
+    Controller,
+}
+
+pub struct TempoAdvisorContext {
+    pub screen_class: ScreenClass,
+    pub has_touch: bool,
+    pub primary_input: InputSourceKind, // advisory classification only
+    pub skill_estimate: Option<PlayerSkillEstimate>,
+    pub mode: MatchMode,            // SP / casual MP / ranked
+}
+
+pub enum TempoWarning {
+    AboveRecommendedBand,
+    BelowRecommendedBand,
+    TouchOverloadRisk,
+}
+
+pub struct TempoRecommendation {
+    pub band: TempoComfortBand,
+    pub warnings: Vec<TempoWarning>,
+    pub rationale: Vec<String>,     // short UI strings
+}
+```
+
+The touch/mobile control layer maps these UI intents to normal `PlayerOrder`s through the existing `InputSource` pipeline. Bookmarks and tempo advice remain local UI state; they never enter the deterministic simulation.
 
 ### Layer 5 — Post-Game Learning
 
@@ -3629,8 +3844,10 @@ The `Tutorial` global is an IC-exclusive Lua extension available in all game mod
 Tutorial.SetStep(step_id, {
     title = "Step Title",                    -- displayed in the hint overlay header
     hint = "Instructional text for the player", -- main body text
+    hint_action = "move_command",            -- optional semantic prompt token; renderer
+                                             -- resolves to device-specific wording/icons
     focus_area = position_or_region,         -- optional: camera pans to this location
-    highlight_ui = "ui_element_id",          -- optional: highlight a sidebar/UI element
+    highlight_ui = "ui_element_id",          -- optional: logical UI target or semantic alias
     eva_line = "eva_sound_id",               -- optional: play an EVA voice line
     completion = {                           -- when is this step "done"?
         type = "action",                     -- "action", "kill", "kill_all", "build",
@@ -3670,6 +3887,14 @@ Tutorial.ShowHint(text, {
 
 -- Show a hint anchored to a specific actor (follows the actor on screen)
 Tutorial.ShowActorHint(actor, text, options)
+
+-- Show a one-shot hint using a semantic action token. The renderer chooses
+-- desktop/touch wording (e.g., "Right-click" vs "Tap") and icon glyphs.
+Tutorial.ShowActionHint(action_name, {
+    title = "Optional Title",
+    highlight_ui = "ui_element_id",   -- logical UI target or semantic alias
+    duration = 8,
+})
 
 -- Dismiss all currently visible hints
 Tutorial.DismissAllHints()
@@ -3740,9 +3965,14 @@ Tutorial.OnAction(action_name, function(context)
 end)
 ```
 
-#### UI Element IDs for HighlightUI
+#### UI Element IDs and Semantic Aliases for HighlightUI
 
-The `element_id` parameter refers to logical UI element names (not internal Bevy entity IDs):
+The `element_id` parameter refers to logical UI element names (not internal Bevy entity IDs). These IDs may be:
+
+1. **Concrete logical element IDs** (stable names for a specific surface, e.g. `attack_move_button`)
+2. **Semantic UI aliases** resolved by the active layout profile (desktop sidebar vs phone build drawer)
+
+This allows a single tutorial step to say "highlight the primary build UI" while the renderer picks the correct widget for `ScreenClass::Desktop`, `ScreenClass::Tablet`, or `ScreenClass::Phone`.
 
 | Element ID            | What It Highlights                                           |
 | --------------------- | ------------------------------------------------------------ |
@@ -3750,8 +3980,13 @@ The `element_id` parameter refers to logical UI element names (not internal Bevy
 | `sidebar_building`    | The building tab of the sidebar                              |
 | `sidebar_unit`        | The unit tab of the sidebar                                  |
 | `sidebar_item:<type>` | A specific buildable item (e.g., `sidebar_item:power_plant`) |
+| `build_drawer`        | Phone build drawer (collapsed/expanded production UI)        |
 | `minimap`             | The minimap                                                  |
+| `minimap_cluster`     | Touch minimap cluster (minimap + alerts + bookmark dock)     |
 | `command_bar`         | The unit command bar (move, stop, attack, etc.)              |
+| `control_group_bar`   | Bottom control-group strip (desktop or touch)                |
+| `command_rail`        | Touch command rail (attack-move/guard/force-fire, etc.)      |
+| `command_rail_slot:<action>` | Specific touch command-rail slot (e.g., `command_rail_slot:attack_move`) |
 | `attack_move_button`  | The attack-move button specifically                          |
 | `deploy_button`       | The deploy button                                            |
 | `guard_button`        | The guard button                                             |
@@ -3760,8 +3995,22 @@ The `element_id` parameter refers to logical UI element names (not internal Bevy
 | `radar_toggle`        | The radar on/off button                                      |
 | `sell_button`         | The sell (wrench/dollar) button                              |
 | `repair_button`       | The repair button                                            |
+| `camera_bookmark_dock` | Touch bookmark quick dock (phone/tablet minimap cluster)    |
+| `camera_bookmark_slot:<n>` | A specific bookmark slot (e.g., `camera_bookmark_slot:1`) |
 
 Modders can register custom UI element IDs for custom UI panels via `Tutorial.RegisterUIElement(id, description)`.
+
+**Semantic UI alias examples (built-in):**
+
+| Alias | Desktop | Tablet | Phone |
+| ----- | ------- | ------ | ----- |
+| `primary_build_ui` | `sidebar` | `sidebar` | `build_drawer` |
+| `minimap_cluster` | `minimap` | `minimap` | `minimap` (plus bookmark dock/alerts cluster) |
+| `bottom_control_groups` | `command_bar` / HUD bar region | touch group bar | touch group bar |
+| `command_rail_attack_move` | `attack_move_button` | command rail A-move slot | command rail A-move slot |
+| `tempo_speed_picker` | lobby speed dropdown | same | mobile speed picker + advisory chip |
+
+The alias-to-element mapping is provided by the active UI layout profile (`ic-ui`) and keyed by `ScreenClass` + `InputCapabilities`.
 
 ### Tutorial Achievements (D036)
 

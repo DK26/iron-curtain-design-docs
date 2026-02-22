@@ -77,7 +77,58 @@ Development follows eight stages. They're roughly sequential, but later stages f
 - Research is concurrent with other work in later stages — new questions arise during implementation
 - Research is a **continuous discipline**, not a phase that ends. Every new prior art study can challenge assumptions, confirm patterns, or reveal gaps. The project's commit history shows active research throughout pre-development — not tapering early but intensifying as design maturity makes it easier to ask precise questions.
 
-**Current status (February 2026):** The major architectural questions are answered across 14 design chapters, 48+ decisions, and 12+ research analyses. Research continues as a parallel track — recent examples include AI implementation surveys across 7+ codebases and Stratagus/Stargus engine analysis, each producing new cross-references and actionable design refinements. The shift is from *exploratory* research ("what should we build?") to *confirmatory* research ("does this prior art validate or challenge our approach?").
+**Current status (February 2026):** The major architectural questions are answered across 14 design chapters, 56+ decisions, and 35+ research analyses. Research continues as a parallel track — recent examples include AI implementation surveys across 7+ codebases, Stratagus/Stargus engine analysis, and a transcript-backed RTS 2026 trend scan (`research/rts-2026-trend-scan.md`) used to filter "cool ideas" through IC's philosophy before they become design work. Each produces cross-references and actionable refinements. The shift is from *exploratory* research ("what should we build?") to *confirmatory* research ("does this prior art validate or challenge our approach?").
+
+### Trend Scan Checklist (Videos, Listicles, Talks, Showcase Demos)
+
+Use this checklist when the source is a **trend signal** (YouTube roundup, trailer breakdown, conference talk, showcase demo) rather than a primary technical source. The goal is to extract inspiration **without importing hype or scope creep**.
+
+**1. Classify the source (signal quality)**
+- Is it primary evidence (source code/docs/interview with concrete implementation details) or secondary commentary?
+- What is it good for: player excitement signals, UX expectations, mode packaging expectations, aesthetic direction?
+- What is it *not* good for: implementation claims, performance claims, netcode architecture claims?
+
+**2. Extract recurring themes, not one-off hype moments**
+- What patterns recur across multiple titles in the scan (campaign depth, co-op survival, hero systems, terrain spectacle, etc.)?
+- Which themes are framed positively *and* which are repeatedly described as risky (scope creep, genre mashups, unfocused design)?
+
+**3. Map each theme to IC using Fit / Risk / IC Action**
+- `Fit`: high / medium / low with IC's invariants and current roadmap
+- `Risk`: scope, UX complexity, perf/hardware impact, determinism impact, export-fidelity impact, community mismatch
+- `IC Action`: core feature, optional module/template, experimental toggle, "not now", or "not planned"
+
+**4. Apply philosophy gates before proposing changes**
+- Does this solve a real community pain point or improve player/creator experience? ([13-PHILOSOPHY](13-PHILOSOPHY.md) — community first)
+- Is it an optional layer or does it complicate the core flow?
+- If it's experimental, is it explicitly labeled and reversible (preset/toggle/template) rather than becoming accidental default identity?
+
+**5. Apply architecture/invariant gates**
+- Does it preserve deterministic sim, crate boundaries, and existing trait seams?
+- Does it require a parallel system where an existing system can be extended instead?
+- Does it create platform obstacles (mobile, low-end hardware, browser, Deck)?
+
+**6. Decide the right destination for the idea**
+- `decision docs` (normative policy)
+- `research note` (evidence only / inspiration filtering)
+- `roadmap` (future consideration)
+- `player flow` or `tools` docs (UI mock / optional template examples)
+
+**7. Record limitations explicitly**
+- If the source is a listicle/trailer, state that it is **trend signal only**
+- Separate "interesting market signal" from "validated design direction"
+- Note what still requires primary-source research or playtesting
+
+**8. Propagate only what is justified**
+- If the trend scan only confirms existing direction, update research/methodology references and stop
+- If it creates a real design refinement, propagate across affected docs using Stage 5 discipline
+
+**Output artifact (recommended):**
+- A `research/*.md` note with:
+  - source + retrieval method
+  - scope and limitations
+  - recurring signals
+  - `Fit / Risk / IC Action` matrix
+  - cross-references to affected IC docs
 
 **Exit criteria:**
 - Every major subsystem has a design doc section with component definitions, Rust struct signatures, and YAML examples

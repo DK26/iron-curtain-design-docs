@@ -1,5 +1,7 @@
 # 04 — Modding System
 
+**Keywords:** modding, YAML Lua WASM tiers, `ic mod` CLI, mod profiles, virtual namespace, Workshop packages, campaigns, export, compatibility, OpenRA mod migration, selective install
+
 ## Three-Tier Architecture
 
 ```
@@ -807,7 +809,7 @@ mod:
 
 **Security:** Pathfinding host functions are gated by `ModCapabilities.pathfinding`. A pathfinder mod can read terrain and obstacle positions but cannot issue orders, read gameplay state (health, resources, fog), or access render functions. This is a narrower capability than gameplay mods — pathfinders compute routes, nothing else.
 
-**Determinism:** WASM pathfinder mods execute in the deterministic sim context. They use the same `WasmExecutionLimits` fuel budget as other WASM mods. All clients run the same WASM binary (verified by SHA-256 hash in the lobby) with the same inputs, producing identical paths. If the fuel budget is exceeded mid-path-request, the path is truncated deterministically — all clients truncate at the same point.
+**Determinism:** WASM pathfinder mods execute in the deterministic sim context. All clients run the same WASM binary (verified by SHA-256 hash in the lobby) with the same inputs, producing identical path results/deferred requests. Pathfinding uses a dedicated `pathfinder_fuel_per_tick` budget (see below) because its many-calls-per-tick workload differs from one-shot-per-tick WASM systems.
 
 **Pathfinder fuel budget concern:** Pathfinding has fundamentally different call patterns from other WASM mod types. An AI mod calls `ai_decide()` once per tick — one large computation. A pathfinder mod handles `pathfinder_request_path()` potentially hundreds of times per tick (once per moving unit). The flat `WasmExecutionLimits.fuel_per_tick` budget doesn't distinguish between these patterns: a pathfinder that spends 5,000 fuel per path request × 200 moving units = 1,000,000 fuel, consuming the entire default budget on pathfinding alone.
 
@@ -818,7 +820,9 @@ mod:
 - The pathfinder fuel budget is separate from the mod's general `fuel_per_tick` (used for initialization, event handlers, etc.). A pathfinder mod that also handles events gets two budgets.
 - Mod manifests can request a custom `pathfinder_fuel_per_tick` value. The lobby displays this alongside other requested limits.
 
-**Multiplayer sync:** Because pathfinding is sim-affecting, all players must use the same pathfinder. The lobby validates that all clients have the same pathfinder WASM module (hash + version). A modded pathfinder is treated identically to a built-in preset for sync purposes.
+**Multiplayer sync:** Because pathfinding is sim-affecting, all players must use the same pathfinder. The lobby validates that all clients have the same pathfinder WASM module (hash + version + config). A modded pathfinder is treated identically to a built-in preset for sync purposes.
+
+**Ranked policy (D045):** Community pathfinders are allowed in single-player/skirmish/custom lobbies by default, but ranked/community competitive queues reject them unless the exact module hash/version/config profile has been certified and whitelisted (conformance + performance checks).
 
 **Phase:** WASM pathfinding API ships in Phase 6a alongside the mod testing framework and Workshop. Built-in pathfinder presets (D045) ship in Phase 2 as native Rust implementations.
 
@@ -1074,7 +1078,23 @@ Results: 11 passed, 1 failed (2.5s total)
 
 **Headless mode:** The engine initializes `ic-sim` without `ic-render` or `ic-audio`. Orders are injected programmatically. This is the same `LocalNetwork` model used for automated testing of the engine itself. Tests run at maximum speed (no frame rate limit).
 
-**Phase:** Basic test runner (YAML assertions) in Phase 4. Lua test API in Phase 4. Coverage reporting in Phase 6a.
+#### Deterministic Conformance Suites (Pathfinder / SpatialIndex)
+
+Community pathfinders are one of the highest-risk Tier 3 extension points: they are **sim-affecting**, performance-sensitive, and easy to get subtly wrong (nondeterministic ordering, stale invalidation, cache bugs, path output drift across runs). D013/D045 therefore require a built-in conformance layer on top of ordinary scenario tests.
+
+`ic mod test` includes two engine-provided conformance suites: **`PathfinderConformanceTest`** and **`SpatialIndexConformanceTest`**. These are contract tests for "does your implementation satisfy the engine seam safely and deterministically?" — not gameplay-balance tests. They verify deterministic repeatability, output validity, invalidation correctness, snapshot/restore equivalence, and (for spatial) ordering and coherence contracts. Specific test vectors are defined at implementation time.
+
+```bash
+ic mod test --conformance pathfinder
+ic mod test --conformance spatial-index
+ic mod test --conformance all
+```
+
+**Ranked / certification linkage (D045):** Passing conformance is the minimum requirement for community pathfinder certification. Ranked queues may additionally require `ic mod perf-test --conformance pathfinder` on the baseline hardware tier. Uncertified pathfinders remain available in single-player/skirmish/custom by default.
+
+This makes D013's open `Pathfinder` seam practical: experimentation stays easy while deterministic multiplayer and ranked integrity remain protected.
+
+**Phase:** Conformance suites ship in Phase 6a (with WASM pathfinder support); performance conformance hooks integrate with `ic mod perf-test` in Phase 6b.
 
 ### 3D Rendering Mods (Tier 3 Showcase)
 
@@ -1200,9 +1220,11 @@ mod:
     - community/generals-pathfinder@^1.0
 ```
 
-**Multiplayer sync:** All players must use the same pathfinder — the WASM binary hash is validated in the lobby, same as any sim-affecting mod. If a player is missing the pathfinder mod, the engine auto-downloads it from the Workshop (CS:GO-style, per D030).
+**Multiplayer sync:** All players must use the same pathfinder — the WASM binary hash/version/config profile is validated in the lobby, same as any sim-affecting mod. If a player is missing the pathfinder mod, the engine auto-downloads it from the Workshop (CS:GO-style, per D030).
 
-**Performance contract:** Pathfinder mods share the same `WasmExecutionLimits` fuel budget as other WASM mods. The engine monitors per-tick pathfinding time. If a community pathfinder consistently exceeds the budget, the lobby warns players. The engine never falls back silently to a different pathfinder — determinism means all clients must agree on every path. If a WASM pathfinder exhausts its fuel mid-computation, the requesting unit retains its last-known heading for one tick (zero-cost "continue straight" fallback) and the path request is re-queued for the next tick with a shorter search horizon. This prevents unit freezing without breaking determinism.
+**Performance contract:** Pathfinder mods use a dedicated `pathfinder_fuel_per_tick` budget (separate from general WASM fuel). The engine monitors per-tick pathfinding time and deferred-request rates. The engine never falls back silently to a different pathfinder — determinism means all clients must agree on every path. If a WASM pathfinder exhausts its pathfinding fuel for the tick, remaining requests return `PathResult::Deferred` and are re-queued deterministically for subsequent ticks. Community pathfinders targeting ranked certification are expected to pass `PathfinderConformanceTest` and `ic mod perf-test --conformance pathfinder` on the baseline hardware tier (D045 policy).
+
+**Ranked policy:** Community pathfinders are available by default in single-player/skirmish/custom lobbies, but ranked/community competitive queues reject them unless the exact hash/version/config profile has been certified and explicitly whitelisted.
 
 **Phase:** WASM pathfinder mods in Phase 6a. The three built-in pathfinder presets (D045) ship as native Rust in Phase 2.
 
@@ -2070,7 +2092,7 @@ The campaign system (D021) references cutscenes by logical ID in the `video:` fi
 
 > **Moved to [modding/campaigns.md](modding/campaigns.md)** for RAG/context efficiency.
 >
-> Full design for branching mission graphs with persistent state, unit roster carryover, and continuous mission flow. OFP/ArmA-inspired (D021). Includes: campaign graph schema, mission node types, branch conditions, outcome variables, unit persistence, Lua campaign API, adaptive difficulty, tutorial campaigns (D065), and LLM campaign generation.
+> Full design for branching mission graphs with persistent state, unit roster carryover, optional hero progression/toolkit (XP/levels/skills), and continuous mission flow. OFP/ArmA-inspired (D021). Includes: campaign graph schema, mission node types, branch conditions, outcome variables, unit persistence, Lua campaign API, adaptive difficulty, tutorial campaigns (D065), and LLM campaign generation.
 
 ## Workshop (Federated Resource Registry, P2P Distribution, Moderation)
 
@@ -2119,6 +2141,10 @@ ic mod publish             # publish to workshop
 ic mod update-engine       # update engine version in mod.yaml
 ic mod lint                # style/convention checks + llm: metadata completeness
 ic mod watch               # hot-reload mode: watches files, reloads YAML/Lua on change
+ic git setup               # install repo-local .gitattributes and IC diff/merge helper hints (Git-first workflow)
+ic content diff <file>     # semantic diff for IC editor-authored content (human review / CI summaries)
+ic content merge           # semantic merge helper for Git merge-driver integration (Phase 6b)
+ic mod perf-test           # headless playtest profiling summary for CI/perf budgets (Phase 6b)
 ic auth token create       # create scoped API token for CI/CD (publish, promote, admin)
 ic auth token revoke       # revoke a leaked or expired token
 ```
@@ -2129,6 +2155,16 @@ ic auth token revoke       # revoke a leaked or expired token
 - Rich error messages with fix suggestions
 - Integrates with the workshop API
 - Designed for CI/CD — all commands work headless (no interactive prompts)
+
+**Git-first workflow support (no custom VCS):**
+- Git remains the only version-control system (history/branches/remotes/merges)
+- `ic git setup` configures repo-local integration helpers only (no global Git config mutation)
+- `ic content diff` / `ic content merge` improve review and mergeability for editor-authored IC files without changing the canonical "files in Git" workflow
+
+**SDK "Validate" maps to CLI-grade checks, not a separate implementation:**
+- **Quick Validate** wraps fast subsets of `ic mod check` + content graph/reference checks
+- **Publish Validate** layers in `ic mod audit`, export verification (`ic export --dry-run` / `ic export --verify`), and optional smoke tests (`ic mod test`)
+- The SDK is a UX layer over the same validation core used in CI/CD
 
 ### Continuous Deployment for Workshop Authors
 
@@ -2558,6 +2594,7 @@ When a breaking change is unavoidable (major version bump):
 - **`ic mod migrate`** — CLI command that auto-updates mod YAML/Lua to the new schema. Handles field renames, deprecated API replacements, and schema restructuring. Inspired by `rustfix` and Factorio's migration scripts.
 - **Deprecation warnings in `ic mod check`** — flag usage of deprecated fields, globals, or host functions before they become errors. Shows the replacement.
 - **Changelog with migration guide** — every release that touches the mod API surface includes a "For Modders" section with before/after examples.
+- **SDK Migration Workbench (D038 UI wrapper)** — the SDK exposes the same migration backend as a read-only preview/report flow in Phase 6a ("Upgrade Project"), then an apply mode with rollback snapshots in Phase 6b. The SDK does not fork migration logic; it shells into the same engine that powers `ic mod migrate`.
 
 ### Versioned Mod API (Independent of Engine Version)
 
@@ -2595,4 +2632,4 @@ Internally, the engine maintains an adapter between the mod API surface and engi
 
 When engine internals change, the adapter is updated — mods don't notice. This is the same pattern that makes OpenRA's trait aliases (D023) work: the public YAML surface is stable, the internal component routing can change.
 
-**Phase:** Mod API versioning and `ic mod migrate` in Phase 4 (alongside Lua/WASM runtime). Compatibility adapter formalized in Phase 6a (when mod ecosystem is large enough to matter). Deprecation warnings from Phase 2 onward (YAML schema stability starts early).
+**Phase:** Mod API versioning and `ic mod migrate` in Phase 4 (alongside Lua/WASM runtime). Compatibility adapter formalized in Phase 6a (when mod ecosystem is large enough to matter). Deprecation warnings from Phase 2 onward (YAML schema stability starts early). The SDK's Migration Workbench UI ships in Phase 6a as a preview/report wrapper and gains apply/rollback mode in Phase 6b.
