@@ -35,10 +35,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-cb71b11f.js";
+            window.path_to_searchindex_js = "../searchindex-928fa1a5.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-b4a6e245.js"></script>
+        <script src="../toc-a0d63c9c.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -196,8 +196,8 @@
 </ul>
 <p><strong>Concrete design:</strong></p>
 <ul>
-<li><code>Pathfinder</code> trait: <code>request_path()</code>, <code>get_path()</code>, <code>is_passable()</code>, <code>invalidate_area()</code>, <code>path_distance()</code>, <code>batch_distances()</code></li>
-<li><code>SpatialIndex</code> trait: <code>query_range()</code>, <code>update_position()</code>, <code>remove()</code></li>
+<li><code>Pathfinder</code> trait: <code>request_path()</code>, <code>get_path()</code>, <code>is_passable()</code>, <code>invalidate_area()</code>, <code>path_distance()</code>, <code>batch_distances_into()</code> (+ convenience <code>batch_distances()</code> wrapper for non-hot paths)</li>
+<li><code>SpatialIndex</code> trait: <code>query_range_into()</code>, <code>update_position()</code>, <code>remove()</code></li>
 <li>RA1 module registers <code>IcPathfinder</code> (primary) + <code>GridSpatialHash</code>; D045 adds <code>RemastersPathfinder</code> and <code>OpenRaPathfinder</code> as additional <code>Pathfinder</code> implementations for movement feel presets</li>
 <li>All sim systems call the traits, never grid-specific data structures</li>
 <li>See <code>02-ARCHITECTURE.md</code> § “Pathfinding &amp; Spatial Queries” for trait definitions</li>
@@ -209,7 +209,7 @@
 <li><strong>Use someone else’s</strong> community-created pathfinder — just declare it as a dependency in the mod manifest</li>
 </ol>
 <p>This follows the same pattern as render modes (D048): the engine ships built-in implementations, mods can add more, and players/modders pick what they want. A Generals-clone mod ships a <code>LayeredGridPathfinder</code>; a tower defense mod ships a waypoint pathfinder; a naval mod ships something flow-based. The trait doesn’t care — <code>request_path()</code> returns waypoints regardless of how they were computed.</p>
-<p><strong>Performance:</strong> identical to hardcoding. Rust traits monomorphize — the trait call compiles to a direct function call when there’s one implementation. Zero overhead.</p>
+<p><strong>Performance:</strong> the architectural seam is <strong>near-zero cost</strong>. Pathfinding/spatial cost is dominated by algorithm choice, cache behavior, and allocations — not dispatch overhead. Hot-path APIs use caller-owned scratch buffers (<code>*_into</code> pattern). Dispatch strategy (static vs dynamic) is chosen per-subsystem by profiling, not by dogma.</p>
 <p><strong>What we build first:</strong> <code>IcPathfinder</code> and <code>GridSpatialHash</code>. The traits exist from day one. <code>RemastersPathfinder</code> and <code>OpenRaPathfinder</code> are Phase 2 deliverables (D045) — ported from their respective GPL codebases. Community pathfinders can be published to the Workshop from Phase 6a.</p>
 <hr>
 <hr>
@@ -996,9 +996,18 @@ qol:
 <li>Stored in player settings, not in the lobby configuration</li>
 <li>No sim impact — purely visual/UX</li>
 </ul>
+<p><strong>Client-only onboarding/touch comfort settings (D065 integration):</strong></p>
+<ul>
+<li>Tutorial hint frequency and category toggles (already in D065)</li>
+<li>First-run controls walkthrough prompts (show on first launch / replay walkthrough / suppress)</li>
+<li>Mobile handedness and touch interaction affordance visibility (e.g., command rail hints, bookmark dock labels)</li>
+<li>Mobile Tempo Advisor warnings and reminder suppression (“don’t show again for this profile”)</li>
+</ul>
+<p>These settings are client-only for the same reason as subtitles or UI scale: they shape presentation and teaching pace, not the simulation. They may reference lobby state (e.g., selected game speed) to display warnings, but they never alter the synced match configuration by themselves.</p>
 <h3 id="interaction-with-other-systems"><a class="header" href="#interaction-with-other-systems">Interaction with Other Systems</a></h3>
 <p><strong>D019 (Balance Presets):</strong> QoL presets and balance presets are independent axes. You can play with <code>classic</code> balance + <code>openra</code> QoL, or <code>openra</code> balance + <code>vanilla</code> QoL. The lobby UI shows both selections.</p>
 <p><strong>D032 (UI Themes):</strong> QoL and themes are also independent. The “Classic” theme changes chrome appearance; the “Vanilla” QoL preset changes gameplay behavior. They’re separate settings that happen to compose well.</p>
+<p><strong>D065 (Tutorial &amp; New Player Experience):</strong> The tutorial system uses D033 for per-player hint frequency, category toggles, controls walkthrough visibility, and touch comfort guidance. The same mission/tutorial content is shared across platforms; D033 preferences control how aggressively the UI teaches and warns, not what the simulation does.</p>
 <p><strong>Experience Profiles:</strong> The meta-layer above all of these. Selecting “Vanilla RA” experience profile sets D019=classic, D032=classic, D033=vanilla, D043=classic-ra, D045=classic-ra, D048=classic in one click. Selecting “Iron Curtain” sets D019=classic, D032=modern, D033=iron_curtain, D043=ic-default, D045=ic-default, D048=hd. After selecting a profile, any individual setting can still be overridden.</p>
 <p><strong>Modding (Tier 1):</strong> QoL presets are just YAML files in <code>presets/qol/</code>. Modders can create custom QoL presets — a total conversion mod ships its own preset tuned for its gameplay. The <code>mod.yaml</code> manifest can specify a default QoL preset.</p>
 <h3 id="rationale"><a class="header" href="#rationale">Rationale</a></h3>
@@ -1467,7 +1476,7 @@ pub enum RejectionReason {
 </tbody>
 </table>
 </div>
-<p>All five follow the established pattern: <strong>one trait definition, one default implementation, zero overhead</strong> (Rust monomorphizes single-impl traits to direct calls). The architectural cost is 5 trait definitions (~50 lines total) and 5 wrapper implementations (~200 lines total). The benefit is that none of these subsystems becomes a rewrite-required bottleneck when game modules, mods, or community servers need different behavior.</p>
+<p>All five follow the established pattern: <strong>one trait definition + one default implementation with near-zero architectural cost</strong>. Dispatch strategy is subsystem-dependent (profiling decides, not dogma). The architectural cost is 5 trait definitions (~50 lines total) and 5 wrapper implementations (~200 lines total). The benefit is that none of these subsystems becomes a rewrite-required bottleneck when game modules, mods, or community servers need different behavior.</p>
 <h3 id="what-does-not-need-a-trait"><a class="header" href="#what-does-not-need-a-trait">What Does NOT Need a Trait</a></h3>
 <p>These subsystems are already sufficiently modular through data-driven design (YAML/Lua/WASM):</p>
 <div class="table-wrapper">
@@ -2577,6 +2586,7 @@ mod:
 <p>If the mod doesn’t specify a pathfinder, it inherits whatever the player’s experience profile selects. When specified, it overrides the experience profile’s pathfinding axis — the same way <code>scenario.pathfinding.required</code> works (see “Scenario-Required Pathfinding” above), but at the mod level.</p>
 <p><strong>Modder as author — providing a pathfinder:</strong></p>
 <p>A Tier 3 WASM mod can implement the <code>Pathfinder</code> trait and register it as a new option:</p>
+<p><strong>Host ABI note:</strong> The Rust trait-style example below is <strong>conceptual</strong>. A WASM pathfinder does not share a native Rust trait object directly with the engine. In implementation, the engine exposes a stable host ABI and adapts the WASM exports to the <code>Pathfinder</code> trait on the host side.</p>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>// WASM mod: custom pathfinder (e.g., Generals-style layered grid)
@@ -2607,6 +2617,16 @@ mod:
 <p>Once installed, the community pathfinder appears alongside first-party presets in the lobby’s Level 2 per-axis override (“Movement: Classic / OpenRA / Modern / Generals”) and is selectable by other mods via <code>pathfinder: layered-grid-generals</code>.</p>
 <p><strong>Workshop distribution:</strong> Community pathfinders are Workshop resources (D030) like any other mod. They can be rated, reviewed, and depended upon. A total conversion mod declares <code>depends: community/generals-pathfinder@^1.0</code> and the engine auto-downloads it on lobby join (same as CS:GO-style auto-download).</p>
 <p><strong>Sim-affecting implications:</strong> Because pathfinding is deterministic and sim-affecting, all players in a multiplayer game must use the same pathfinder. A community pathfinder is synced like a first-party preset — the lobby validates that all clients have the same pathfinder WASM module (by SHA-256 hash), same config, same version.</p>
+<h3 id="wasm-pathfinder-policy-determinism-performance-ranked"><a class="header" href="#wasm-pathfinder-policy-determinism-performance-ranked">WASM Pathfinder Policy (Determinism, Performance, Ranked)</a></h3>
+<p>Community pathfinders are allowed, but they are not a free-for-all in every mode:</p>
+<ul>
+<li><strong>Single-player / skirmish / custom lobbies:</strong> allowed by default (subject to normal WASM sandbox rules)</li>
+<li><strong>Ranked queues / competitive ladders:</strong> disallowed by default unless a queue/community explicitly certifies and whitelists the pathfinder (hash + version + config schema)</li>
+<li><strong>Determinism contract:</strong> no wall-clock time, no nondeterministic RNG, no filesystem/network I/O, no host APIs that expose machine-specific timing/order</li>
+<li><strong>Performance contract:</strong> pathfinder modules must declare budget expectations and pass deterministic conformance + performance checks (<code>ic mod test</code>, <code>ic mod perf-test</code>) on the baseline hardware tier before certification</li>
+<li><strong>Failure policy:</strong> if a pathfinder module fails validation/loading/perf certification for a ranked queue, the lobby rejects the configuration before match start (never mid-match fail-open)</li>
+</ul>
+<p>This preserves D013’s openness for experimentation while protecting ranked integrity, baseline hardware support, and deterministic simulation guarantees.</p>
 <h3 id="relationship-to-existing-decisions-4"><a class="header" href="#relationship-to-existing-decisions-4">Relationship to Existing Decisions</a></h3>
 <ul>
 <li><strong>D013 (<code>Pathfinder</code> trait):</strong> Each preset is a separate <code>Pathfinder</code> trait implementation. <code>RemastersPathfinder</code>, <code>OpenRaPathfinder</code>, and <code>IcPathfinder</code> are all registered by the RA1 game module. Community mods add more via WASM. The trait boundary serves triple duty: it separates algorithmic families (grid vs. navmesh), behavioral families (Classic vs. Modern), AND first-party from community-provided implementations.</li>

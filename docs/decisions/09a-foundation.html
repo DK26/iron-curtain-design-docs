@@ -35,10 +35,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-cb71b11f.js";
+            window.path_to_searchindex_js = "../searchindex-928fa1a5.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-b4a6e245.js"></script>
+        <script src="../toc-a0d63c9c.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -320,15 +320,17 @@
 <hr>
 <hr>
 <h2 id="d017-bevy-rendering-pipeline--classic-base-modding-possibilities"><a class="header" href="#d017-bevy-rendering-pipeline--classic-base-modding-possibilities">D017: Bevy Rendering Pipeline — Classic Base, Modding Possibilities</a></h2>
-<p><strong>Decision:</strong> Use Bevy’s rendering pipeline (wgpu) to faithfully reproduce the classic Red Alert isometric aesthetic. Bevy’s more advanced rendering capabilities (shaders, post-processing, dynamic lighting, particles, 3D) are available as modding infrastructure — not as base game goals.</p>
+<p><strong>Revision note (2026-02-22):</strong> Clarified hardware-accessibility and feature-tiering intent: Bevy’s advanced rendering/3D capabilities are optional infrastructure, not baseline requirements. The default game path remains classic 2D isometric rendering with aggressive low-end fallbacks for non-gaming hardware / integrated GPUs.</p>
+<p><strong>Decision:</strong> Use Bevy’s rendering pipeline (wgpu) to faithfully reproduce the classic Red Alert isometric aesthetic. Bevy’s more advanced rendering capabilities (shaders, post-processing, dynamic lighting, particles, 3D) are available as optional modding infrastructure — not as base game goals or baseline hardware requirements.</p>
 <p><strong>Rationale:</strong></p>
 <ul>
 <li>The core rendering goal is a faithful classic Red Alert clone: isometric sprites, palette-aware shading, fog of war</li>
 <li>Bevy + wgpu provides this solidly via 2D sprite batching and the isometric layer</li>
 <li>Because Bevy includes a full rendering pipeline, advanced visual capabilities (bloom, color grading, GPU particles, dynamic lighting, custom shaders) are <strong>passively available</strong> to modders without extra engine work</li>
 <li>This enables community-created visual enhancements: shader effects for chrono-shift, tesla arcs, weather particles, or even full 3D rendering mods (see D018, <code>02-ARCHITECTURE.md</code> § “3D Rendering as a Mod”)</li>
-<li>Render quality tiers (Baseline → Ultra) automatically degrade for older hardware — the base classic aesthetic works on all tiers</li>
+<li>Render quality tiers (Baseline → Ultra) automatically degrade for older hardware — the base classic aesthetic works on all tiers, including no-dedicated-GPU systems that only meet the downlevel GL/WebGL path</li>
 </ul>
+<p><strong>Hardware intent (important):</strong> “Optional 3D” means the game’s <strong>core experience</strong> must remain fully playable without Bevy’s advanced 3D/post-FX stack. 3D render modes and heavy visual effects are additive. If the device cannot support them, the player still gets the complete game in classic 2D mode.</p>
 <p><strong>Scope:</strong></p>
 <ul>
 <li>Phase 1: faithful isometric tile renderer, sprite animation, shroud, camera — showcase optional post-processing prototypes to demonstrate modding potential</li>
@@ -877,7 +879,7 @@ pub struct UnitDefinition {
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../09-DECISIONS.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../decisions/DECISION-CAPSULE-TEMPLATE.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                             </a>
 
@@ -891,7 +893,7 @@ pub struct UnitDefinition {
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../09-DECISIONS.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../decisions/DECISION-CAPSULE-TEMPLATE.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                     </a>
 

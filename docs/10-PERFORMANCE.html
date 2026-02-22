@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-cb71b11f.js";
+            window.path_to_searchindex_js = "searchindex-928fa1a5.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-b4a6e245.js"></script>
+        <script src="toc-a0d63c9c.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -185,6 +185,7 @@
 <p><strong>Performance goal: a 2012 laptop with 2 cores and 4GB RAM runs a 500-unit battle smoothly. A modern machine handles 3000 units without sweating.</strong></p>
 <p>We don’t achieve this by throwing threads at the problem. We achieve it by wasting almost nothing — like Datadog Vector’s pipeline or Tokio’s runtime. Every cycle does useful work. Every byte of memory is intentional. Multi-core is a bonus that emerges naturally, not a crutch the engine depends on.</p>
 <p>This is a first-class project goal and a primary differentiator over OpenRA.</p>
+<p><strong>Keywords:</strong> performance, efficiency-first, 2012 laptop target, 500 units, low-end hardware, Bevy/wgpu compatibility tiers, zero-allocation hot paths, ECS cache layout, simulation LOD, profiling</p>
 <h2 id="the-efficiency-pyramid"><a class="header" href="#the-efficiency-pyramid">The Efficiency Pyramid</a></h2>
 <p>Ordered by impact. Each layer works on a single core. Only the top layer requires multiple cores.</p>
 <pre><code>                    ┌──────────────┐
@@ -296,23 +297,24 @@ fn assign_sim_lod(
 </span>fn pathfinding_system(
     tick: Res&lt;CurrentTick&gt;,
     query: Query&lt;(Entity, &amp;Position, &amp;MoveTarget, &amp;SimLOD), With&lt;NeedsPath&gt;&gt;,
-    nav: Res&lt;NavMesh&gt;,
+    pathfinder: Res&lt;Box&lt;dyn Pathfinder&gt;&gt;,  // D013/D045 trait seam
 ) {
     let group = tick.0 % 4;  // 4 groups, each updated every 4 ticks
-    
+
     for (entity, pos, target, lod) in &amp;query {
         let should_update = match lod {
             SimLOD::Full    =&gt; entity.index() % 4 == group,    // every 4 ticks
             SimLOD::Reduced =&gt; entity.index() % 8 == (group * 2) % 8,  // every 8 ticks
             SimLOD::Minimal =&gt; false,  // never replan, just follow existing path
         };
-        
+
         if should_update {
-            recompute_path(entity, pos, target, &amp;nav);
+            recompute_path(entity, pos, target, &amp;*pathfinder);
         }
     }
 }
 <span class="boring">}</span></code></pre>
+<p><strong>API note:</strong> This is pseudocode for scheduling/amortization. The exact <code>Pathfinder</code> resource type depends on the game module’s dispatch strategy (D013/D045). Hot-path batch queries should prefer caller-owned scratch (<code>*_into</code> APIs) over allocation-returning helpers.</p>
 <p><strong>Result:</strong> Pathfinding cost per tick drops 75% for Full-LOD units, 87.5% for Reduced, 100% for Minimal. Combined with SimLOD, a 1000-unit game might recompute ~50 paths per tick instead of 1000.</p>
 <h3 id="stagger-schedule"><a class="header" href="#stagger-schedule">Stagger Schedule</a></h3>
 <div class="table-wrapper">
@@ -458,14 +460,14 @@ impl StringInterner {
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>// YES — pathfinding is expensive and independent per unit
-fn pathfinding_system(query: Query&lt;...&gt;, nav: Res&lt;NavMesh&gt;) {
+fn pathfinding_system(query: Query&lt;...&gt;, pathfinder: Res&lt;Box&lt;dyn Pathfinder&gt;&gt;) {
     let results: Vec&lt;_&gt; = query.par_iter()
         .filter(|(_, _, _, lod)| lod.should_update_path(tick))
         .map(|(entity, pos, target, _)| {
-            (entity, nav.find_path(pos, &amp;target.dest))
+            (entity, pathfinder.find_path(pos, &amp;target.dest))
         })
         .collect();
-    
+
     // Sort for determinism, then apply sequentially
     apply_sorted(results);
 }
@@ -480,6 +482,7 @@ fn movement_system(mut query: Query&lt;(&amp;mut Position, &amp;Velocity)&gt;) {
     }
 }
 <span class="boring">}</span></code></pre>
+<p><strong>API note:</strong> This parallel example illustrates where parallelism helps, not the exact final pathfinder interface. In IC, parallel work may happen either inside <code>IcPathfinder</code> or in a pathfinding system that batches deterministic requests/results through the selected <code>Pathfinder</code> implementation. In both cases, caller-owned scratch and deterministic result ordering still apply.</p>
 <p><strong>Rule of thumb:</strong> Only parallelize systems where per-entity work exceeds ~1 microsecond. Simple arithmetic on components is faster to iterate sequentially than to distribute.</p>
 <h2 id="performance-targets"><a class="header" href="#performance-targets">Performance Targets</a></h2>
 <div class="table-wrapper">
@@ -540,6 +543,21 @@ fn movement_system(mut query: Query&lt;(&amp;mut Position, &amp;Velocity)&gt;) {
 <p>See <code>03-NETCODE.md</code> § “Why It Feels Faster Than OpenRA” for the full architectural analysis, including visual prediction and single-player zero-delay.</p>
 <h2 id="gpu--hardware-compatibility-bevywgpu-constraints"><a class="header" href="#gpu--hardware-compatibility-bevywgpu-constraints">GPU &amp; Hardware Compatibility (Bevy/wgpu Constraints)</a></h2>
 <p>Bevy renders via <code>wgpu</code>, which translates to native GPU APIs. This creates a <strong>hardware floor</strong> that interacts with our “2012 laptop” performance target.</p>
+<h3 id="compatibility-target-clarification-original-ra-spirit-vs-modern-stack-reality"><a class="header" href="#compatibility-target-clarification-original-ra-spirit-vs-modern-stack-reality">Compatibility Target Clarification (Original RA Spirit vs Modern Stack Reality)</a></h3>
+<p>The project goal is to support <strong>very low-end hardware by modern standards</strong> — especially machines with <strong>no dedicated gaming GPU</strong> (integrated graphics, office PCs, older laptops) — while preserving full gameplay. This matches the spirit of original Red Alert and OpenRA accessibility.</p>
+<p>However, we should be explicit about the technical floor:</p>
+<ul>
+<li><strong>Literal 1996 Red Alert-era hardware is not a realistic runtime target</strong> for a modern Rust + Bevy + <code>wgpu</code> engine.</li>
+<li>A <strong>displayed game window still requires some graphics path</strong> (integrated GPU, compatible driver, or OS-provided software rasterizer path).</li>
+<li><strong>Headless components</strong> (relay server, tooling, some tests) remain fully usable without graphics acceleration because the sim/netcode do not depend on rendering.</li>
+</ul>
+<p>In practice, the target is:</p>
+<ul>
+<li><strong>No dedicated GPU required</strong> (integrated graphics should work)</li>
+<li><strong>Baseline tier must remain fully playable</strong></li>
+<li><strong>3D render modes and advanced Bevy visual features are optional and may be hidden/disabled automatically</strong></li>
+</ul>
+<p>If the OS/driver stack exposes a software backend (e.g., platform software rasterizer implementations), IC may run as a <strong>best-effort</strong> fallback, but this is not the primary performance target and should be clearly labeled as unsupported for competitive play.</p>
 <h3 id="wgpu-backend-matrix"><a class="header" href="#wgpu-backend-matrix">wgpu Backend Matrix</a></h3>
 <div class="table-wrapper">
 <table>
@@ -592,6 +610,7 @@ fn movement_system(mut query: Query&lt;(&amp;mut Position, &amp;Velocity)&gt;) {
 </table>
 </div>
 <p><strong>Key insight:</strong> The “2012 laptop” target is achievable for the <strong>simulation</strong> (500 units, &lt; 40ms tick) because the sim is pure CPU. The <strong>rendering</strong> must degrade gracefully — reduced visual effects, not broken gameplay.</p>
+<p><strong>Design rule:</strong> Advanced Bevy features (3D view, heavy post-FX, compute-driven particles, dynamic lighting pipelines) are optional layers on top of the classic sprite renderer. Their absence must never block normal gameplay.</p>
 <h3 id="render-quality-tiers"><a class="header" href="#render-quality-tiers">Render Quality Tiers</a></h3>
 <p><code>ic-render</code> queries device capabilities at startup via wgpu’s adapter limits and selects a render tier stored in the <code>RenderSettings</code> resource. All tiers produce an identical, playable game — they differ only in visual richness.</p>
 <div class="table-wrapper">
@@ -1099,6 +1118,23 @@ smoothing = true                    # Interpolated camera movement between sim t
 <h3 id="profile-before-parallelize"><a class="header" href="#profile-before-parallelize">Profile Before Parallelize</a></h3>
 <p>Never add <code>par_iter()</code> without profiling first. Measure single-threaded. If a system takes &gt; 1ms, consider parallelizing. If it takes &lt; 0.1ms, sequential is faster (avoids coordination overhead).</p>
 <p><strong>Recommended profiling tool:</strong> Embark Studios’ <strong>puffin</strong> (1,674★, MIT/Apache-2.0) — a frame-based instrumentation profiler built for game loops. Puffin’s thread-local profiling streams have ~1ns overhead when disabled (atomic bool check, no allocation), making it safe to leave instrumentation in release builds. Key features validated by production use at Embark: frame-scoped profiling (maps directly to IC’s sim tick loop), remote TCP streaming for profiling headless servers (relay server profiling without local UI), and the <code>puffin_egui</code> viewer for real-time flame graphs in development builds via <code>bevy_egui</code>. IC’s <code>telemetry</code> feature flag (D031) should gate puffin’s collection, maintaining zero-cost when disabled. See <code>research/embark-studios-rust-gamedev-analysis.md</code> § puffin.</p>
+<h3 id="sdk-profile-playtest-d038-integration-advanced-mode"><a class="header" href="#sdk-profile-playtest-d038-integration-advanced-mode">SDK Profile Playtest (D038 Integration, Advanced Mode)</a></h3>
+<p>Performance tooling must not make the SDK feel heavy for casual creators. The editor should expose profiling as an <strong>opt-in Advanced workflow</strong>, not a required step before every preview/test:</p>
+<ul>
+<li>Default toolbar stays simple: <code>Preview</code> / <code>Test</code> / <code>Validate</code> / <code>Publish</code></li>
+<li>Profiling lives behind <code>Test ▼ → Profile Playtest</code> and an Advanced Performance panel</li>
+<li>No automatic profiling on save or on every test launch</li>
+</ul>
+<p><strong>Profile Playtest output style (summary-first):</strong></p>
+<ul>
+<li>Pass / warn / fail against a selected performance budget profile (desktop default, low-end target, etc.)</li>
+<li>Top 3 hotspots (creator-readable grouping, not raw ECS internals only)</li>
+<li>Average / max sim tick time</li>
+<li>Trigger/module hotspot links where traceability exists</li>
+<li>Optional detailed flame graph / trace view for advanced debugging</li>
+</ul>
+<p>This complements the Scenario Complexity Meter in <code>decisions/09f-tools.md</code> § D038: the meter is a heuristic guide, while Profile Playtest provides measured evidence during playtest.</p>
+<p><strong>CLI/CI parity (Phase 6b):</strong> Headless profiling summaries (<code>ic mod perf-test</code>) should reuse the same summary schema as the SDK view so teams can gate performance in CI without an SDK-only format.</p>
 <h2 id="delta-encoding--change-tracking-performance"><a class="header" href="#delta-encoding--change-tracking-performance">Delta Encoding &amp; Change Tracking Performance</a></h2>
 <p>Snapshots (D010) are the foundation of save games, replays, desync debugging, and reconnection. Full snapshots of 1000 units are ~200-400KB (ECS-packed). At 15 tps, saving full snapshots every tick would cost ~3-6 MB/s — wasteful when most fields don’t change most ticks.</p>
 <h3 id="property-level-delta-encoding"><a class="header" href="#property-level-delta-encoding">Property-Level Delta Encoding</a></h3>

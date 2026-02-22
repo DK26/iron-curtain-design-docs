@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-cb71b11f.js";
+            window.path_to_searchindex_js = "searchindex-928fa1a5.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-b4a6e245.js"></script>
+        <script src="toc-a0d63c9c.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -253,7 +253,68 @@
 <li>Research is concurrent with other work in later stages — new questions arise during implementation</li>
 <li>Research is a <strong>continuous discipline</strong>, not a phase that ends. Every new prior art study can challenge assumptions, confirm patterns, or reveal gaps. The project’s commit history shows active research throughout pre-development — not tapering early but intensifying as design maturity makes it easier to ask precise questions.</li>
 </ul>
-<p><strong>Current status (February 2026):</strong> The major architectural questions are answered across 14 design chapters, 48+ decisions, and 12+ research analyses. Research continues as a parallel track — recent examples include AI implementation surveys across 7+ codebases and Stratagus/Stargus engine analysis, each producing new cross-references and actionable design refinements. The shift is from <em>exploratory</em> research (“what should we build?”) to <em>confirmatory</em> research (“does this prior art validate or challenge our approach?”).</p>
+<p><strong>Current status (February 2026):</strong> The major architectural questions are answered across 14 design chapters, 56+ decisions, and 35+ research analyses. Research continues as a parallel track — recent examples include AI implementation surveys across 7+ codebases, Stratagus/Stargus engine analysis, and a transcript-backed RTS 2026 trend scan (<code>research/rts-2026-trend-scan.md</code>) used to filter “cool ideas” through IC’s philosophy before they become design work. Each produces cross-references and actionable refinements. The shift is from <em>exploratory</em> research (“what should we build?”) to <em>confirmatory</em> research (“does this prior art validate or challenge our approach?”).</p>
+<h3 id="trend-scan-checklist-videos-listicles-talks-showcase-demos"><a class="header" href="#trend-scan-checklist-videos-listicles-talks-showcase-demos">Trend Scan Checklist (Videos, Listicles, Talks, Showcase Demos)</a></h3>
+<p>Use this checklist when the source is a <strong>trend signal</strong> (YouTube roundup, trailer breakdown, conference talk, showcase demo) rather than a primary technical source. The goal is to extract inspiration <strong>without importing hype or scope creep</strong>.</p>
+<p><strong>1. Classify the source (signal quality)</strong></p>
+<ul>
+<li>Is it primary evidence (source code/docs/interview with concrete implementation details) or secondary commentary?</li>
+<li>What is it good for: player excitement signals, UX expectations, mode packaging expectations, aesthetic direction?</li>
+<li>What is it <em>not</em> good for: implementation claims, performance claims, netcode architecture claims?</li>
+</ul>
+<p><strong>2. Extract recurring themes, not one-off hype moments</strong></p>
+<ul>
+<li>What patterns recur across multiple titles in the scan (campaign depth, co-op survival, hero systems, terrain spectacle, etc.)?</li>
+<li>Which themes are framed positively <em>and</em> which are repeatedly described as risky (scope creep, genre mashups, unfocused design)?</li>
+</ul>
+<p><strong>3. Map each theme to IC using Fit / Risk / IC Action</strong></p>
+<ul>
+<li><code>Fit</code>: high / medium / low with IC’s invariants and current roadmap</li>
+<li><code>Risk</code>: scope, UX complexity, perf/hardware impact, determinism impact, export-fidelity impact, community mismatch</li>
+<li><code>IC Action</code>: core feature, optional module/template, experimental toggle, “not now”, or “not planned”</li>
+</ul>
+<p><strong>4. Apply philosophy gates before proposing changes</strong></p>
+<ul>
+<li>Does this solve a real community pain point or improve player/creator experience? (<a href="13-PHILOSOPHY.html">13-PHILOSOPHY</a> — community first)</li>
+<li>Is it an optional layer or does it complicate the core flow?</li>
+<li>If it’s experimental, is it explicitly labeled and reversible (preset/toggle/template) rather than becoming accidental default identity?</li>
+</ul>
+<p><strong>5. Apply architecture/invariant gates</strong></p>
+<ul>
+<li>Does it preserve deterministic sim, crate boundaries, and existing trait seams?</li>
+<li>Does it require a parallel system where an existing system can be extended instead?</li>
+<li>Does it create platform obstacles (mobile, low-end hardware, browser, Deck)?</li>
+</ul>
+<p><strong>6. Decide the right destination for the idea</strong></p>
+<ul>
+<li><code>decision docs</code> (normative policy)</li>
+<li><code>research note</code> (evidence only / inspiration filtering)</li>
+<li><code>roadmap</code> (future consideration)</li>
+<li><code>player flow</code> or <code>tools</code> docs (UI mock / optional template examples)</li>
+</ul>
+<p><strong>7. Record limitations explicitly</strong></p>
+<ul>
+<li>If the source is a listicle/trailer, state that it is <strong>trend signal only</strong></li>
+<li>Separate “interesting market signal” from “validated design direction”</li>
+<li>Note what still requires primary-source research or playtesting</li>
+</ul>
+<p><strong>8. Propagate only what is justified</strong></p>
+<ul>
+<li>If the trend scan only confirms existing direction, update research/methodology references and stop</li>
+<li>If it creates a real design refinement, propagate across affected docs using Stage 5 discipline</li>
+</ul>
+<p><strong>Output artifact (recommended):</strong></p>
+<ul>
+<li>A <code>research/*.md</code> note with:
+<ul>
+<li>source + retrieval method</li>
+<li>scope and limitations</li>
+<li>recurring signals</li>
+<li><code>Fit / Risk / IC Action</code> matrix</li>
+<li>cross-references to affected IC docs</li>
+</ul>
+</li>
+</ul>
 <p><strong>Exit criteria:</strong></p>
 <ul>
 <li>Every major subsystem has a design doc section with component definitions, Rust struct signatures, and YAML examples</li>

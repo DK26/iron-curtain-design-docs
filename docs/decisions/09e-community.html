@@ -35,10 +35,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-cb71b11f.js";
+            window.path_to_searchindex_js = "../searchindex-928fa1a5.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-b4a6e245.js"></script>
+        <script src="../toc-a0d63c9c.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -184,6 +184,25 @@
 <p>Workshop, telemetry, storage, achievements, governance, premium content, player profiles, and data portability.</p>
 <hr>
 <h2 id="d030-workshop-resource-registry--dependency-system"><a class="header" href="#d030-workshop-resource-registry--dependency-system">D030: Workshop Resource Registry &amp; Dependency System</a></h2>
+<h3 id="decision-capsule-llmrag-summary"><a class="header" href="#decision-capsule-llmrag-summary">Decision Capsule (LLM/RAG Summary)</a></h3>
+<ul>
+<li><strong>Status:</strong> Accepted</li>
+<li><strong>Phase:</strong> Phase 0–3 (Git index MVP), Phase 3–4 (P2P added), Phase 4–5 (minimal viable Workshop), Phase 6a (full federation), Phase 7+ (advanced discovery)</li>
+<li><strong>Canonical for:</strong> Workshop resource registry model, dependency semantics, resource granularity, and federated package ecosystem strategy</li>
+<li><strong>Scope:</strong> Workshop package identities/manifests, dependency resolution, registry/index architecture, publish/install flows, resource licensing/AI-usage metadata</li>
+<li><strong>Decision:</strong> IC’s Workshop is a <strong>crates.io-style resource registry</strong> where assets and mods are publishable as independent versioned resources with semver dependencies, license metadata, and optional AI-usage permissions.</li>
+<li><strong>Why:</strong> Enables reuse instead of copy-paste, preserves attribution, supports automation/CI publishing, and gives both humans and LLM agents a structured way to discover and compose community content.</li>
+<li><strong>Non-goals:</strong> A monolithic “mods only” Workshop with no reusable resource granularity; forcing a single centralized infrastructure from day one.</li>
+<li><strong>Invariants preserved:</strong> Federation-first architecture (aligned with D050), compatibility with existing mod packaging flows, and community ownership/self-hosting principles.</li>
+<li><strong>Defaults / UX behavior:</strong> Workshop packages are versioned resources; dependencies can be required or optional; auto-download/install resolves dependency trees for players/lobbies.</li>
+<li><strong>Compatibility / Export impact:</strong> Resource registry supports both IC-native and compatibility-oriented content; D049 defines canonical format recommendations and P2P delivery details.</li>
+<li><strong>Security / Trust impact:</strong> License metadata and <code>ai_usage</code> permissions are first-class; supports automated policy checks and creator consent for agentic tooling.</li>
+<li><strong>Performance / Ops impact:</strong> Phased rollout starts with a low-cost Git index and grows toward full infrastructure only as needed.</li>
+<li><strong>Public interfaces / types / commands:</strong> <code>publisher/name@version</code> IDs, semver dependency ranges in <code>mod.yaml</code>, <code>.icpkg</code> packages, <code>ic mod publish/install/init</code></li>
+<li><strong>Affected docs:</strong> <code>src/04-MODDING.md</code>, <code>src/decisions/09e-community.md</code> (D049/D050/D061), <code>src/decisions/09c-modding.md</code>, <code>src/17-PLAYER-FLOW.md</code></li>
+<li><strong>Revision note summary:</strong> None</li>
+<li><strong>Keywords:</strong> workshop registry, dependencies, semver, icpkg, federated workshop, reusable resources, ai_usage permissions, mod publish</li>
+</ul>
 <p><strong>Decision:</strong> The Workshop operates as a crates.io-style resource registry where any game asset — music, sprites, textures, cutscenes, maps, sound effects, palettes, voice lines, UI themes, templates — is publishable as an independent, versioned, licensable resource that others (including LLM agents, with author consent) can discover, depend on, and pull automatically. Authors control AI access to their resources separately from the license via <code>ai_usage</code> permissions.</p>
 <p><strong>Rationale:</strong></p>
 <ul>
@@ -745,6 +764,24 @@ priority = 3
 <hr>
 <hr>
 <h2 id="d031-observability--telemetry--otel-across-engine-servers-and-ai-pipeline"><a class="header" href="#d031-observability--telemetry--otel-across-engine-servers-and-ai-pipeline">D031: Observability &amp; Telemetry — OTEL Across Engine, Servers, and AI Pipeline</a></h2>
+<h3 id="decision-capsule-llmrag-summary-1"><a class="header" href="#decision-capsule-llmrag-summary-1">Decision Capsule (LLM/RAG Summary)</a></h3>
+<ul>
+<li><strong>Status:</strong> Accepted</li>
+<li><strong>Phase:</strong> Multi-phase (instrumentation foundation + server ops + advanced analytics/AI training pipelines)</li>
+<li><strong>Canonical for:</strong> Unified telemetry/observability architecture, local-first telemetry storage, and optional OTEL export policy</li>
+<li><strong>Scope:</strong> game client, relay/tracking/workshop servers, telemetry schema/storage, tracing/export pipeline, debugging and analytics tooling</li>
+<li><strong>Decision:</strong> All components record structured telemetry to <strong>local SQLite</strong> as the primary sink using a shared schema; <strong>OpenTelemetry is optional</strong> export infrastructure for operators who want dashboards/traces.</li>
+<li><strong>Why:</strong> Works offline, supports both players and operators, enables cross-component debugging (including desync analysis), and unifies gameplay/debug/ops/AI data collection under one instrumentation model.</li>
+<li><strong>Non-goals:</strong> Requiring external collectors (Prometheus/OTEL backends) for normal operation; separate incompatible telemetry formats per component.</li>
+<li><strong>Invariants preserved:</strong> Local-first data philosophy (D034/D061), offline-capable components, and mod/game agnosticism at the schema level.</li>
+<li><strong>Defaults / UX behavior:</strong> Telemetry is recorded locally with retention/rotation; operators may optionally enable OTEL export for live dashboards.</li>
+<li><strong>Security / Trust impact:</strong> Structured telemetry is designed for analysis without making external infrastructure mandatory; privacy-sensitive usage depends on the telemetry policy and field discipline in event payloads.</li>
+<li><strong>Performance / Ops impact:</strong> Unified schema simplifies tooling and reduces operational complexity; tracing/puffin stack is chosen for low disabled overhead and production viability.</li>
+<li><strong>Public interfaces / types / commands:</strong> shared <code>telemetry.db</code> schema, <code>tracing</code> instrumentation, optional OTEL exporters, analytics export/query tooling (see body)</li>
+<li><strong>Affected docs:</strong> <code>src/06-SECURITY.md</code>, <code>src/03-NETCODE.md</code>, <code>src/decisions/09e-community.md</code> (D034/D061), <code>src/15-SERVER-GUIDE.md</code></li>
+<li><strong>Revision note summary:</strong> None</li>
+<li><strong>Keywords:</strong> telemetry, observability, OTEL, OpenTelemetry, SQLite telemetry.db, tracing, puffin, local-first analytics, desync debugging</li>
+</ul>
 <p><strong>Decision:</strong> All components — game client, relay server, tracking server, workshop server — record structured telemetry to local SQLite as the primary sink. Every component runs fully offline; no telemetry depends on external infrastructure. OTEL (OpenTelemetry) is an optional export layer for server operators who want Grafana dashboards — it is never a requirement. The instrumentation layer is unified across all components, enabling operational monitoring, gameplay debugging, GUI usage analysis, pattern discovery, and AI/LLM training data collection.</p>
 <p><strong>Rationale:</strong></p>
 <ul>
@@ -2226,6 +2263,25 @@ pub trait PlatformServices: Send + Sync {
 <hr>
 <hr>
 <h2 id="d049-workshop-asset-formats--distribution--bevy-native-canonical-p2p-delivery"><a class="header" href="#d049-workshop-asset-formats--distribution--bevy-native-canonical-p2p-delivery">D049: Workshop Asset Formats &amp; Distribution — Bevy-Native Canonical, P2P Delivery</a></h2>
+<h3 id="decision-capsule-llmrag-summary-2"><a class="header" href="#decision-capsule-llmrag-summary-2">Decision Capsule (LLM/RAG Summary)</a></h3>
+<ul>
+<li><strong>Status:</strong> Accepted</li>
+<li><strong>Phase:</strong> Multi-phase (Workshop foundation + distribution + package tooling)</li>
+<li><strong>Canonical for:</strong> Workshop canonical asset format recommendations and P2P package distribution strategy</li>
+<li><strong>Scope:</strong> Workshop package format/distribution, client download/install pipeline, format recommendations for IC modules, HTTP fallback behavior</li>
+<li><strong>Decision:</strong> The Workshop recommends <strong>modern Bevy-native formats</strong> (OGG/PNG/WAV/WebM/KTX2/GLTF) as canonical for new content while fully supporting legacy C&amp;C formats for compatibility; package delivery uses <strong>P2P (BitTorrent/WebTorrent) with HTTP fallback</strong>.</li>
+<li><strong>Why:</strong> Lower hosting cost, better Bevy integration/tooling, safer/more mature parsers for untrusted content, and lower friction for new creators using standard tools.</li>
+<li><strong>Non-goals:</strong> Dropping legacy C&amp;C format support; making Workshop format choices universal for all future engines/projects consuming the Workshop core library.</li>
+<li><strong>Invariants preserved:</strong> Full resource compatibility for existing C&amp;C assets remains intact; Workshop protocol/package concepts are separable from IC-specific format preferences (D050).</li>
+<li><strong>Defaults / UX behavior:</strong> New content creators are guided toward modern formats; legacy assets still load and publish without forced conversion.</li>
+<li><strong>Compatibility / Export impact:</strong> Legacy formats remain important for OpenRA/RA1 workflows and D040 conversion pipelines; canonical Workshop recommendations do not invalidate export targets.</li>
+<li><strong>Security / Trust impact:</strong> Preference for widely audited decoders is an explicit defense-in-depth choice for untrusted Workshop content.</li>
+<li><strong>Performance / Ops impact:</strong> P2P delivery reduces CDN cost and scales community distribution; modern formats integrate better with Bevy runtime loading paths.</li>
+<li><strong>Public interfaces / types / commands:</strong> <code>.icpkg</code> (IC-specific package wrapper), Workshop P2P/HTTP delivery strategy, <code>ic mod build/publish</code> workflow (as referenced across modding docs)</li>
+<li><strong>Affected docs:</strong> <code>src/04-MODDING.md</code>, <code>src/05-FORMATS.md</code>, <code>src/decisions/09c-modding.md</code>, <code>src/decisions/09f-tools.md</code></li>
+<li><strong>Revision note summary:</strong> None</li>
+<li><strong>Keywords:</strong> workshop formats, p2p delivery, bittorrent, webtorrent, bevy-native assets, png ogg webm, legacy c&amp;c compatibility, icpkg</li>
+</ul>
 <p><strong>Decision:</strong> The Workshop’s canonical asset formats are <strong>Bevy-native modern formats</strong> (OGG, PNG, WAV, WebM, KTX2, GLTF). C&amp;C legacy formats (.aud, .shp, .pal, .vqa, .mix) are fully supported for backward compatibility but are not the recommended distribution format for new content. Workshop delivery uses <strong>peer-to-peer distribution</strong> (BitTorrent/WebTorrent protocol) with HTTP fallback, reducing hosting costs from CDN-level to a lightweight tracker.</p>
 <blockquote>
 <p><strong>Note (D050):</strong> The format recommendations in this section are <strong>IC-specific</strong> — they reflect Bevy’s built-in asset pipeline. The Workshop’s P2P distribution protocol and package format are engine-agnostic (see D050). Future projects consuming the Workshop core library will define their own format recommendations based on their engine’s capabilities. The <code>.icpkg</code> extension, <code>ic mod</code> CLI commands, and <code>game_module</code> manifest fields are likewise IC-specific — the Workshop core library uses configurable equivalents.</p>
