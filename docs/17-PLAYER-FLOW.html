@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-928fa1a5.js";
+            window.path_to_searchindex_js = "searchindex-1e683dcc.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-a0d63c9c.js"></script>
@@ -1133,7 +1133,7 @@ Settings → Mod Profiles
 <tbody>
 <tr><td><strong>Video</strong></td><td>Resolution, fullscreen/windowed/borderless, render mode (Classic/HD/3D), zoom limits, UI scale, shroud style (hard/smooth edges), FPS limit, VSync. Theme selection (Classic/Remastered/Modern/community). Cutscene playback preference (<code>Auto</code> / <code>Original</code> / <code>Clean Remaster</code> / <code>AI Enhanced</code> / <code>Briefing Fallback</code>).</td></tr>
 <tr><td><strong>Audio</strong></td><td>Master / Music / SFX / Voice / Ambient volume sliders. Music mode (Jukebox/Dynamic/Off). EVA voice. Spatial audio toggle.</td></tr>
-<tr><td><strong>Controls</strong></td><td>Hotkey profile (Classic/OpenRA/Modern/Custom). Full rebinding UI with category filters (Unit Commands, Production, Control Groups, Camera, Chat, Debug). Mouse settings: edge scroll speed, scroll inversion, drag selection shape. Touch settings: handedness (mirror layout), touch target size, hold/drag thresholds, command rail behavior, camera bookmark dock preferences.</td></tr>
+<tr><td><strong>Controls</strong></td><td>Official input profiles by device: <code>Classic RA (KBM)</code>, <code>OpenRA (KBM)</code>, <code>Modern RTS (KBM)</code>, <code>Gamepad Default</code>, <code>Steam Deck Default</code>, plus <code>Custom</code> (profile diff). Full rebinding UI with category filters (Unit Commands, Production, Control Groups, Camera, Communication, UI/System, Debug). Mouse settings: edge scroll speed, scroll inversion, drag selection shape. Controller/Deck settings: deadzones, stick curves, cursor acceleration, radial behavior, gyro sensitivity (when available). Touch settings: handedness (mirror layout), touch target size, hold/drag thresholds, command rail behavior, camera bookmark dock preferences. Includes <code>Import</code>, <code>Export</code>, and <code>Share on Workshop</code> (config-profile packages with scope/diff preview), plus <code>View Controls Quick Reference</code> and <code>What's Changed in Controls</code> replay entry.</td></tr>
 <tr><td><strong>Gameplay</strong></td><td>Experience profile (one-click preset). Balance preset. Pathfinding preset. AI behavior preset. Full D033 QoL toggle list organized by category: Production, Commands, UI Feedback, Selection, Gameplay. Tutorial hint frequency, Controls Walkthrough prompts, and mobile Tempo Advisor warnings (client-only) also live here.</td></tr>
 <tr><td><strong>Social</strong></td><td>Voice settings: PTT key, input/output device, voice effect preset, mic test. Chat settings: profanity filter, emojis, auto-translated phrases. Privacy: who can spectate, who can friend-request, online status visibility.</td></tr>
 <tr><td><strong>LLM</strong></td><td>Provider cards (add/edit/remove LLM providers). Task routing table (which provider handles which task). Connection test. Community config import/export (D047).</td></tr>
@@ -1266,6 +1266,8 @@ In-Game → sidebar → right-click unit/building → "View in Encyclopedia"
 <li>Phone: touch prompts with bottom build drawer, command rail, and minimap-cluster/bookmark dock highlights</li>
 </ul>
 <p>Completion unlocks three actions: <code>Start Commander School</code>, <code>Practice Sandbox</code>, or <code>Skip to Game</code>.</p>
+<p><strong>Controls Quick Reference (always available):</strong> A compact, searchable controls reference is accessible during gameplay, from Pause/Escape, and from <code>Settings → Controls</code>. It uses the same semantic action catalog as D065 prompts, so desktop, controller/Deck, and touch players see the correct input wording/icons for the active profile without separate documentation trees.</p>
+<p><strong>Controls-Changed Walkthrough (one-time after updates):</strong> If a patch changes control defaults, official input profile mappings, or touch HUD/gesture behavior, the next launch can show a short “What’s Changed in Controls” walkthrough before the main menu (skippable, replayable from <code>Settings → Controls</code>). It highlights only changed actions and links to the Controls Quick Reference / Commander School refresher.</p>
 <h3 id="layer-4--adaptive-pacing"><a class="header" href="#layer-4--adaptive-pacing">Layer 4 — Adaptive Pacing</a></h3>
 <p>Behind the scenes: the engine estimates player skill from gameplay metrics and adjusts hint frequency, tutorial prompt density, mobile tempo recommendations (advisory only), and difficulty recommendations. Not visible as a screen — it’s a system that shapes the other layers.</p>
 <h3 id="layer-5--post-game-learning"><a class="header" href="#layer-5--post-game-learning">Layer 5 — Post-Game Learning</a></h3>
@@ -1481,6 +1483,7 @@ IN-GAME OVERLAYS (accessible during gameplay)
 ├── Pause Menu (SP) / Escape Menu (MP) ── [Escape]
 ├── Callvote ──────────────────────────── (triggered by vote)
 ├── Observer Panels ───────────────────── (spectator mode toggles)
+├── Controls Quick Reference ──────────── [F1] / Pause → Controls (profile-aware: KBM / Gamepad / Deck / Touch)
 ├── Developer Console ─────────────────── [Tilde ~]
 └── Debug Overlays ────────────────────── (dev mode only)
 
@@ -1488,7 +1491,7 @@ POST-GAME → [Watch Replay] / [Re-Queue] / [Main Menu]
 
 IC SDK (separate application)
 ├── Start Screen ──────────────────────── New/Open, Validate Project, Upgrade Project, Git status
-├── Scenario Editor ───────────────────── 8 editing modes, Simple/Advanced, Preview/Test/Validate/Publish
+├── Scenario Editor ───────────────────── 8 editing modes, Simple/Advanced, Preview/Test/Validate/Publish, UI Preview Harness (Advanced)
 ├── Asset Studio ──────────────────────── Archive browser, sprite/palette editor, provenance metadata (Advanced)
 └── Campaign Editor ───────────────────── Node graph + validation/localization + optional hero progression tools (Advanced)
 </code></pre>

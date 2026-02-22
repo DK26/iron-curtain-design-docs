@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-928fa1a5.js";
+            window.path_to_searchindex_js = "searchindex-1e683dcc.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-a0d63c9c.js"></script>
@@ -17507,6 +17507,7 @@ fallbacks:
 <p>Lobby compatibility and ranked verification use the <strong>gameplay fingerprint</strong> as the hard gate. The presentation fingerprint is informational (and may affect cosmetics only).</p>
 <p>AI-enhanced cutscene packs are explicitly <strong>presentation fingerprint</strong> scope unless they introduce gameplay-significant content (which they should not).</p>
 <p>If a pack changes gameplay-relevant data, it belongs in gameplay fingerprint scope — not presentation.</p>
+<p><strong>Player configuration profiles (<code>player-config</code>, D049) are outside both fingerprint classes.</strong> They are local client preferences (bindings, accessibility, HUD/layout/QoL presets), never lobby-required resources, and must not affect multiplayer/ranked compatibility checks.</p>
 <h3 id="storage-efficiency-d049-cas--d062-namespace"><a class="header" href="#storage-efficiency-d049-cas--d062-namespace">Storage Efficiency (D049 CAS + D062 Namespace)</a></h3>
 <p>Selective installs become practical because IC already uses content-addressed storage and virtual namespace resolution:</p>
 <ul>
@@ -23106,6 +23107,144 @@ pub trait PlatformServices: Send + Sync {
         └── manifest.yaml
 </code></pre>
 <p>The local CAS store is an optimization that ships alongside the full Workshop in Phase 6a. The initial Workshop (Phase 4–5) can use simpler <code>.icpkg</code>-on-disk storage and upgrade to CAS when the full Workshop matures — the manifest.yaml already contains per-file SHA-256 hashes, so the data model is forward-compatible.</p>
+<h3 id="workshop-player-configuration-profiles-controls--accessibility--hud-presets"><a class="header" href="#workshop-player-configuration-profiles-controls--accessibility--hud-presets">Workshop Player Configuration Profiles (Controls / Accessibility / HUD Presets)</a></h3>
+<p>Workshop packages also support an optional <strong>player configuration profile</strong> resource type for sharing non-authoritative client preferences — especially control layouts and accessibility presets.</p>
+<p><strong>Examples:</strong></p>
+<ul>
+<li><code>player-config</code> package with a <code>Modern RTS (KBM)</code> variant tuned for left-handed mouse users</li>
+<li>Steam Deck control profile (trackpad cursor + gyro precision + PTT on shoulder)</li>
+<li>accessibility preset bundle (larger UI targets, sticky modifiers, reduced motion, high-contrast HUD)</li>
+<li>touch HUD layout preset (handedness + command rail preferences + thresholds)</li>
+</ul>
+<p><strong>Why this fits D049:</strong> These profiles are tiny, versioned, reviewable manifests/data files distributed through the same Workshop identity, trust, and update systems as mods and media packs. Sharing them through Workshop reduces friction for community onboarding (“pro caster layout”, “tournament observer profile”, “new-player-friendly touch controls”) without introducing a separate configuration-sharing platform.</p>
+<p><strong>Hard safety boundaries (non-negotiable):</strong></p>
+<ul>
+<li>No secrets/credentials (tokens, API keys, account auth, recovery phrases)</li>
+<li>No absolute local file paths or device identifiers</li>
+<li>No executable code, scripts, macros, or automation payloads</li>
+<li>No hidden application on install — applying a config profile always requires user confirmation with a diff preview</li>
+</ul>
+<p><strong>Manifest guidance (IC-specific package category):</strong></p>
+<ul>
+<li><code>category: player-config</code></li>
+<li><code>game_module</code>: optional (many profiles are game-agnostic)</li>
+<li><code>config_scope[]</code>: one or more of <code>controls</code>, <code>touch_layout</code>, <code>accessibility</code>, <code>ui_layout</code>, <code>camera_qol</code></li>
+<li><code>compatibility</code> metadata for controls profiles:
+<ul>
+<li>semantic action catalog version (D065)</li>
+<li>target input class (<code>desktop_kbm</code>, <code>gamepad</code>, <code>deck</code>, <code>touch_phone</code>, <code>touch_tablet</code>)</li>
+<li>optional <code>screen_class</code> hints and required features (gyro, rear buttons, command rail)</li>
+</ul>
+</li>
+</ul>
+<p><strong>Example <code>player-config</code> package (<code>manifest.yaml</code>):</strong></p>
+<pre><code class="language-yaml">package:
+  name: "deck-gyro-competitive-profile"
+  publisher: "community-deck-lab"
+  version: "1.0.0"
+  license: "CC-BY-4.0"
+  description: "Steam Deck control profile: right-trackpad cursor, gyro precision, L1 push-to-talk, spectator-friendly quick controls"
+  category: player-config
+  # game_module is optional for generic profiles; omit unless module-specific
+  engine_version: "^0.6.0"
+
+  tags:
+    - controls
+    - steam-deck
+    - accessibility-friendly
+    - spectator
+
+  config_scope:
+    - controls
+    - accessibility
+    - camera_qol
+
+  compatibility:
+    semantic_action_catalog_version: "d065-input-actions-v1"
+    target_input_class: "deck"
+    screen_class: "Desktop"
+    required_features:
+      - right_trackpad
+      - gyro
+    optional_features:
+      - rear_buttons
+    tested_profiles:
+      - "Steam Deck Default@v1"
+    notes: "Falls back cleanly if gyro is disabled; keeps all actions reachable without gyro."
+
+  # Per-file integrity (verified on install/apply download)
+  files:
+    profiles/controls.deck.yaml:
+      sha256: "a1b2c3d4..."
+      size: 8124
+    profiles/accessibility.deck.yaml:
+      sha256: "b2c3d4e5..."
+      size: 1240
+    profiles/camera_qol.yaml:
+      sha256: "c3d4e5f6..."
+      size: 512
+
+  # Server-added on publish (same as other .icpkg categories)
+  distribution:
+    sha256: "full-package-hash..."
+    size: 15642
+    infohash: "btih:abc123def..."
+</code></pre>
+<p><strong>Example payload file (<code>profiles/controls.deck.yaml</code>, controls-only diff):</strong></p>
+<pre><code class="language-yaml">profile:
+  base: "Steam Deck Default@v1"
+  profile_name: "Deck Gyro Competitive"
+  target_input_class: deck
+  semantic_action_catalog_version: "d065-input-actions-v1"
+
+bindings:
+  voice_ptt:
+    primary: { kind: gamepad_button, button: l1, mode: hold }
+  controls_quick_reference:
+    primary: { kind: gamepad_button, button: l5, mode: hold }
+  camera_bookmark_overlay:
+    primary: { kind: gamepad_button, button: r5, mode: hold }
+  ping_wheel:
+    primary: { kind: gamepad_button, button: r3, mode: hold }
+
+axes:
+  cursor:
+    source: right_trackpad
+    sensitivity: 1.1
+    acceleration: 0.2
+  gyro_precision:
+    enabled: true
+    activate_on: l2_hold
+    sensitivity: 0.85
+
+radials:
+  command_radial:
+    trigger: y_hold
+    first_ring:
+      - attack_move
+      - guard
+      - force_action
+      - rally_point
+      - stop
+      - deploy
+</code></pre>
+<p><strong>Install/apply UX rules:</strong></p>
+<ul>
+<li>Installing a <code>player-config</code> package does <strong>not</strong> auto-apply it</li>
+<li>Player sees an <strong>Apply Profile</strong> sheet with:
+<ul>
+<li>target device/profile class</li>
+<li>scopes included</li>
+<li>changed actions/settings summary</li>
+<li>conflicts with current bindings (if any)</li>
+</ul>
+</li>
+<li>Apply can be partial (e.g., controls only, accessibility only) to avoid clobbering unrelated preferences</li>
+<li><code>Reset to previous profile</code> / rollback snapshot is created before apply</li>
+</ul>
+<p><strong>Competitive integrity note:</strong> Player config profiles may change bindings and client UI preferences, but they may not include automation/macro behavior. D033 and D059 competitive rules remain unchanged.</p>
+<p><strong>Lobby/ranked compatibility note (D068):</strong> <code>player-config</code> packages are <strong>local preference resources</strong>, not gameplay/presentation compatibility content. They are excluded from lobby/ranked fingerprint checks and must never be treated as required room resources or auto-download prerequisites for joining a match.</p>
+<p><strong>Storage / distribution note:</strong> Config profiles are typically tiny (&lt;100 KB), so HTTP delivery is sufficient; P2P remains supported by the generic <code>.icpkg</code> pipeline but is not required for good UX.</p>
 <h3 id="p2p-distribution-bittorrentwebtorrent"><a class="header" href="#p2p-distribution-bittorrentwebtorrent">P2P Distribution (BitTorrent/WebTorrent)</a></h3>
 <p><strong>The cost problem:</strong> A popular 500MB mod downloaded 10,000 times generates 5TB of egress. At CDN rates ($0.01–0.09/GB), that’s $50–450/month — per mod. For a community project sustained by donations, centralized hosting is financially unsustainable at scale. A BitTorrent tracker VPS costs $5–20/month regardless of popularity.</p>
 <p><strong>The solution:</strong> Workshop distribution uses the <strong>BitTorrent protocol</strong> for large packages, with HTTP direct download as fallback. The Workshop server acts as both metadata registry (SQLite, lightweight) and BitTorrent tracker (peer coordination, lightweight). Actual content transfer happens peer-to-peer between players who have the package.</p>
@@ -27612,6 +27751,24 @@ pub struct HotspotRef {
     pub object_id: Option&lt;StableContentId&gt;,
 }
 <span class="boring">}</span></code></pre>
+<h3 id="ui-preview-harness-cross-device-hud--tutorial-overlay-advanced-mode"><a class="header" href="#ui-preview-harness-cross-device-hud--tutorial-overlay-advanced-mode">UI Preview Harness (Cross-Device HUD + Tutorial Overlay, Advanced Mode)</a></h3>
+<p>To keep mobile/touch UX discoverable and maintainable (and to avoid “gesture folklore”), the SDK includes an <strong>Advanced-mode UI Preview Harness</strong> for testing gameplay HUD layouts and D065 tutorial overlays without launching a full match.</p>
+<p><strong>What it previews:</strong></p>
+<ul>
+<li>Desktop / Tablet / Phone layout profiles (<code>ScreenClass</code>) with safe-area simulation</li>
+<li>Handedness mirroring (left/right thumb-zone layouts)</li>
+<li>Touch HUD clusters (command rail, minimap + bookmark dock, build drawer/sidebar)</li>
+<li>D065 semantic tutorial prompts (<code>highlight_ui</code> aliases resolved to actual widgets)</li>
+<li>Controls Quick Reference overlay states (desktop + touch variants)</li>
+<li>Accessibility variants: large touch targets, reduced motion, high contrast</li>
+</ul>
+<p><strong>Design goals:</strong></p>
+<ul>
+<li>Validate UI anchor aliases and tutorial highlighting before shipping content</li>
+<li>Catch overlap/clipping issues (notches, safe areas, compact phone aspect ratios)</li>
+<li>Give modders and campaign creators a visual way to check tutorial steps and HUD hints</li>
+</ul>
+<p><strong>Scope boundary:</strong> This is a <strong>preview harness</strong>, not a second UI implementation. It renders the same <code>ic-ui</code> widgets/layout profiles used by the game and the same D065 prompt/anchor resolution model used at runtime.</p>
 <h3 id="simple-vs-advanced-mode"><a class="header" href="#simple-vs-advanced-mode">Simple vs Advanced Mode</a></h3>
 <p>Inspired by OFP’s Easy/Advanced toggle:</p>
 <div class="table-wrapper">
@@ -27627,6 +27784,7 @@ pub struct HotspotRef {
 <tr><td>Modules</td><td>✓</td><td>✓</td></tr>
 <tr><td><code>Validate</code> (Quick preset)</td><td>✓</td><td>✓</td></tr>
 <tr><td>Publish Readiness screen</td><td>✓</td><td>✓</td></tr>
+<tr><td>UI Preview Harness (HUD/tutorial overlays)</td><td>—</td><td>✓</td></tr>
 <tr><td>Probability of Presence</td><td>—</td><td>✓</td></tr>
 <tr><td>Condition of Presence</td><td>—</td><td>✓</td></tr>
 <tr><td>Custom Lua conditions</td><td>—</td><td>✓</td></tr>
@@ -32394,6 +32552,8 @@ pub struct VoiceReplayFrame {
 </div>
 <p><strong>Mobile minimap + bookmark coexistence:</strong> On phone/tablet layouts, camera bookmarks sit in a <strong>bookmark dock adjacent to the minimap/radar cluster</strong> rather than overloading minimap gestures. This keeps minimap interactions free for camera jump, pings, and drawing (D059), while giving touch players a fast, visible “save/jump camera location” affordance similar to C&amp;C Generals. Gesture priority is explicit: touches that start on bookmark chips stay bookmark interactions; touches that start on the minimap stay minimap interactions.</p>
 <p><strong>Layout and handedness:</strong> The minimap cluster (minimap + alerts + bookmark dock) mirrors with the player’s handedness setting. The command rail remains on the dominant-thumb side, so minimap communication and camera navigation stay on the opposite side and don’t fight for the same thumb.</p>
+<p><strong>Official binding profile integration (D065):</strong> Communication controls in D059 are not a separate control scheme. They are semantic actions in D065’s canonical input action catalog (e.g., <code>open_chat</code>, <code>voice_ptt</code>, <code>ping_wheel</code>, <code>chat_wheel</code>, <code>minimap_draw</code>, <code>callvote</code>, <code>mute_player</code>) and are mapped through the same official profiles (<code>Classic RA</code>, <code>OpenRA</code>, <code>Modern RTS</code>, <code>Gamepad Default</code>, <code>Steam Deck Default</code>, <code>Touch Phone/Tablet</code>). This keeps tutorial prompts, Quick Reference, and “What’s Changed in Controls” updates consistent across devices and profile changes.</p>
+<p><strong>Discoverability rule (controller/touch):</strong> Every D059 communication action must have a visible UI path in addition to any shortcut/button chord. Example: PTT may be on a shoulder button, but the voice panel still exposes the active binding and a test control; pings/chat wheel may use radial holds, but the pause/controls menu and Quick Reference must show how to trigger them on the current profile.</p>
 <h3 id="8-lua-api-extensions-d024"><a class="header" href="#8-lua-api-extensions-d024">8. Lua API Extensions (D024)</a></h3>
 <p>Building on the existing <code>Beacon</code> and <code>Radar</code> globals from OpenRA compatibility:</p>
 <pre><code class="language-lua">-- Existing OpenRA globals (unchanged)
@@ -33090,6 +33250,238 @@ CREATE TABLE hint_history (
 <li><code>Skip to Game</code></li>
 </ul>
 <p>This keeps D065’s early experience friendly on touch devices without duplicating Commander School missions.</p>
+<h4 id="canonical-input-action-model-and-official-binding-profiles"><a class="header" href="#canonical-input-action-model-and-official-binding-profiles">Canonical Input Action Model and Official Binding Profiles</a></h4>
+<p>To keep desktop, touch, Steam Deck, TV/gamepad, tutorials, and accessibility remaps aligned, D065 defines a <strong>single semantic input action catalog</strong>. The game binds physical inputs to semantic actions; tutorial prompts, the Controls Quick Reference, and the Controls-Changed Walkthrough all render from the same catalog.</p>
+<p><strong>Design rule:</strong> IC does not define “the keyboard layout” as raw keys first. It defines <strong>actions</strong> first, then ships official binding profiles per device/input class.</p>
+<p><strong>Semantic action categories (canonical):</strong></p>
+<ul>
+<li><strong>Camera</strong> — pan, zoom, center-on-selection, cycle alerts, save/jump camera bookmark, minimap jump/scrub</li>
+<li><strong>Selection &amp; Orders</strong> — select, add/remove selection, box select, deselect, context command, attack-move, guard, stop, force action, deploy, stance/ability shortcuts</li>
+<li><strong>Production &amp; Build</strong> — open/close build UI, category navigation, queue/cancel, structure placement confirm/cancel/rotate (module-specific), repair/sell/context build actions</li>
+<li><strong>Control Groups</strong> — select group, assign group, add-to-group, center group</li>
+<li><strong>Communication &amp; Coordination</strong> — open chat, channel shortcuts, whisper, push-to-talk, ping wheel, chat wheel, minimap draw, tactical markers, callvote</li>
+<li><strong>UI / System</strong> — pause/menu, scoreboard, controls quick reference, console (where supported), screenshot, replay controls, observer panels</li>
+</ul>
+<p><strong>Official profile families (shipped defaults):</strong></p>
+<ul>
+<li><code>Classic RA (KBM)</code> — preserves classic RTS muscle memory where practical</li>
+<li><code>OpenRA (KBM)</code> — optimized for OpenRA veterans (matching common command expectations)</li>
+<li><code>Modern RTS (KBM)</code> — IC default desktop profile tuned for discoverability and D065 onboarding</li>
+<li><code>Gamepad Default</code> — cursor/radial hybrid for TV/console-style play</li>
+<li><code>Steam Deck Default</code> — Deck-specific variant (touchpads/optional gyro/OSK-aware), not just generic gamepad</li>
+<li><code>Touch Phone</code> and <code>Touch Tablet</code> — gesture + HUD layout profiles (defined by D059/D065 mobile control rules; not “key” maps, but still part of the same action catalog)</li>
+</ul>
+<p><strong>Binding profile behavior:</strong></p>
+<ul>
+<li>Profiles are versioned. A local profile stores either a stock profile ID or a <strong>diff</strong> from a stock profile (<code>Custom</code>).</li>
+<li>Rebinding UI edits semantic actions, never hardcodes UI-widget-local shortcuts.</li>
+<li>A single action may have multiple bindings (e.g., keyboard key + mouse button chord, or gamepad button + radial fallback).</li>
+<li>Platform-incompatible actions are hidden or remapped with a visible alternative (no dead-end actions on controller/touch).</li>
+<li>Tutorial prompts and quick reference entries resolve against the <strong>active profile + current <code>InputCapabilities</code> + <code>ScreenClass</code></strong>.</li>
+</ul>
+<p><strong>Official baseline defaults (high-level, normative examples):</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Action</th><th>Desktop KBM default (Modern RTS)</th><th>Steam Deck / Gamepad default</th><th>Touch default</th></tr>
+</thead>
+<tbody>
+<tr><td>Select / context command</td><td>Left-click / Right-click</td><td>Cursor confirm button (<code>A</code>/<code>Cross</code>)</td><td>Tap</td></tr>
+<tr><td>Box select</td><td>Left-drag</td><td>Hold modifier + cursor drag / touchpad drag</td><td>Hold + drag</td></tr>
+<tr><td>Attack-Move</td><td><code>A</code> then target</td><td>Command radial → Attack-Move</td><td>Command rail <code>Attack-Move</code> (optional)</td></tr>
+<tr><td>Guard</td><td><code>Q</code> then target/self</td><td>Command radial → Guard</td><td>Command rail <code>Guard</code> (optional)</td></tr>
+<tr><td>Stop</td><td><code>S</code></td><td>Face button / radial shortcut</td><td>Visible button in command rail/overflow</td></tr>
+<tr><td>Deploy</td><td><code>D</code></td><td>Context action / radial</td><td>Context tap or rail button</td></tr>
+<tr><td>Control groups</td><td><code>1–0</code>, <code>Ctrl+1–0</code></td><td>D-pad pages / radial groups (profile-defined)</td><td>Bottom control-group bar chips</td></tr>
+<tr><td>Camera bookmarks</td><td><code>F5–F8</code>, <code>Ctrl+F5–F8</code></td><td>D-pad/overlay quick slots (profile-defined)</td><td>Bookmark dock near minimap (tap/long-press)</td></tr>
+<tr><td>Open chat</td><td><code>Enter</code></td><td>Menu shortcut + OSK</td><td>Chat button + OS keyboard</td></tr>
+<tr><td>Controls Quick Reference</td><td><code>F1</code></td><td>Pause → Controls (optionally bound)</td><td>Pause → Controls</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Controller / Deck interaction model requirements (official profiles):</strong></p>
+<ul>
+<li>Controller profiles must provide a visible, discoverable path to all high-frequency orders (context command + command radial + pause/quick reference fallback)</li>
+<li>Steam Deck profile may use touchpad cursor and optional gyro precision, but every action must remain usable with gamepad-only input</li>
+<li>Text-heavy actions (chat, console where allowed) may invoke OSK; gameplay-critical actions may not depend on text entry</li>
+<li>Communication actions (PTT, ping wheel, chat wheel) must remain reachable without leaving combat camera control for more than one gesture/button chord</li>
+</ul>
+<p><strong>Accessibility requirements for all profiles:</strong></p>
+<ul>
+<li>Full rebinding across keyboard, mouse, gamepad, and Deck controls</li>
+<li>Hold/toggle alternatives (e.g., PTT, radial hold vs tap-toggle, sticky modifiers)</li>
+<li>Adjustable repeat rates, deadzones, stick curves, cursor acceleration, and gyro sensitivity (where supported)</li>
+<li>One-handed / reduced-dexterity viable alternatives for high-frequency commands (via remaps, radials, or quick bars)</li>
+<li>Controls Quick Reference always reflects the player’s current bindings and accessibility overrides, not only stock defaults</li>
+</ul>
+<p><strong>Competitive integrity note:</strong> Binding/remap freedom is supported, but multi-action automation/macros remain governed by D033 competitive equalization policy. Official profiles define discoverable defaults, not privileged input capabilities.</p>
+<h4 id="official-default-binding-matrix-v1-normative-baseline"><a class="header" href="#official-default-binding-matrix-v1-normative-baseline">Official Default Binding Matrix (v1, Normative Baseline)</a></h4>
+<p>The tables below define the <strong>normative baseline defaults</strong> for:</p>
+<ul>
+<li><code>Modern RTS (KBM)</code></li>
+<li><code>Gamepad Default</code></li>
+<li><code>Steam Deck Default</code> (Deck-specific overrides and additions)</li>
+</ul>
+<p><code>Classic RA (KBM)</code> and <code>OpenRA (KBM)</code> are compatibility-oriented profiles layered on the same semantic action catalog. They may differ in key placement, but must expose the same actions and remain fully documented in the Controls Quick Reference.</p>
+<p><strong>Controller naming convention (generic):</strong></p>
+<ul>
+<li><code>Confirm</code> = primary face button (<code>A</code> / <code>Cross</code>)</li>
+<li><code>Cancel</code> = secondary face button (<code>B</code> / <code>Circle</code>)</li>
+<li><code>Cmd Radial</code> = default <strong>hold</strong> command radial button (profile-defined; <code>Y</code> / <code>Triangle</code> by default)</li>
+<li><code>Menu</code> / <code>View</code> = start/select-equivalent buttons</li>
+</ul>
+<p><strong>Steam Deck defaults:</strong> Deck inherits <code>Gamepad Default</code> semantics but prefers <strong>right trackpad cursor</strong> and optional <strong>gyro precision</strong> for fine targeting. All actions remain usable without gyro.</p>
+<h5 id="camera--navigation"><a class="header" href="#camera--navigation">Camera &amp; Navigation</a></h5>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Semantic action</th><th>Modern RTS (KBM)</th><th>Gamepad Default</th><th>Steam Deck Default</th><th>Notes</th></tr>
+</thead>
+<tbody>
+<tr><td>Camera pan</td><td>Mouse to screen edge / Middle-mouse drag</td><td>Left stick</td><td>Left stick</td><td>Edge-scroll can be disabled; drag-pan remains</td></tr>
+<tr><td>Camera zoom in</td><td>Mouse wheel up</td><td><code>RB</code> (tap) or zoom radial</td><td><code>RB</code> (tap) / two-finger trackpad pinch emulation optional</td><td>Profile may swap with category cycling if player prefers</td></tr>
+<tr><td>Camera zoom out</td><td>Mouse wheel down</td><td><code>LB</code> (tap) or zoom radial</td><td><code>LB</code> (tap) / two-finger trackpad pinch emulation optional</td><td>Same binding family as zoom in</td></tr>
+<tr><td>Center on selection</td><td><code>C</code></td><td><code>R3</code> click</td><td><code>R3</code> click / <code>L4</code> (alt binding)</td><td>Mode-safe in gameplay and observer views</td></tr>
+<tr><td>Cycle recent alert</td><td><code>Space</code></td><td><code>D-pad Down</code></td><td><code>D-pad Down</code></td><td>In replay mode, <code>Space</code> is reserved for replay pause/play</td></tr>
+<tr><td>Jump bookmark slot 1–4</td><td><code>F5–F8</code></td><td><code>D-pad Left/Right</code> page + quick slot overlay confirm</td><td>Bookmark dock overlay via <code>R5</code>, then face/d-pad select</td><td>Quick slots map to D065 bookmark system</td></tr>
+<tr><td>Save bookmark slot 1–4</td><td><code>Ctrl+F5–F8</code></td><td>Hold bookmark overlay + <code>Confirm</code> on slot</td><td>Hold bookmark overlay (<code>R5</code>) + slot click/confirm</td><td>Matches desktop/touch semantics</td></tr>
+<tr><td>Open minimap focus / camera jump mode</td><td>Mouse click minimap</td><td><code>View</code> + left stick (minimap focus mode)</td><td>Left trackpad minimap focus (default) / <code>View</code>+stick fallback</td><td>No hidden-only path; visible in quick reference</td></tr>
+</tbody>
+</table>
+</div>
+<h5 id="selection--orders"><a class="header" href="#selection--orders">Selection &amp; Orders</a></h5>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Semantic action</th><th>Modern RTS (KBM)</th><th>Gamepad Default</th><th>Steam Deck Default</th><th>Notes</th></tr>
+</thead>
+<tbody>
+<tr><td>Select / Context command</td><td>Left-click select / Right-click context</td><td>Cursor + <code>Confirm</code></td><td>Trackpad cursor + <code>R2</code> (<code>Confirm</code>)</td><td>Same semantic action, resolved by context</td></tr>
+<tr><td>Add/remove selection modifier</td><td><code>Shift</code> + click/drag</td><td><code>LT</code> modifier while selecting</td><td><code>L2</code> modifier while selecting</td><td>Also used for queue modifier in production UI</td></tr>
+<tr><td>Box select</td><td>Left-drag</td><td>Hold selection modifier + cursor drag</td><td>Hold <code>L2</code> + trackpad drag (or stick drag)</td><td>Touch remains hold+drag (D059/D065 mobile)</td></tr>
+<tr><td>Deselect</td><td><code>Esc</code> / click empty UI space</td><td><code>Cancel</code></td><td><code>B</code> / <code>Cancel</code></td><td><code>Cancel</code> also exits modal targeting</td></tr>
+<tr><td>Attack-Move</td><td><code>A</code>, then target</td><td><code>Cmd Radial</code> → Attack-Move</td><td><code>R1</code> radial → Attack-Move</td><td>High-frequency, surfaced in radial + quick ref</td></tr>
+<tr><td>Guard</td><td><code>Q</code>, then target/self</td><td><code>Cmd Radial</code> → Guard</td><td><code>R1</code> radial → Guard</td><td><code>Q</code> avoids conflict with <code>Hold G</code> ping wheel</td></tr>
+<tr><td>Stop</td><td><code>S</code></td><td><code>X</code> (tap)</td><td><code>X</code> (tap) / <code>R4</code> (alt)</td><td>Immediate command, no target required</td></tr>
+<tr><td>Force Action / Force Fire</td><td><code>F</code>, then target</td><td><code>Cmd Radial</code> → Force Action</td><td><code>R1</code> radial → Force Action</td><td>Name varies by module; semantic action remains</td></tr>
+<tr><td>Deploy / Toggle deploy state</td><td><code>D</code></td><td><code>Y</code> (tap, context-sensitive) or radial</td><td><code>Y</code> / radial</td><td>Falls back to context action if deployable selected</td></tr>
+<tr><td>Scatter / emergency disperse</td><td><code>X</code></td><td><code>Cmd Radial</code> → Scatter</td><td><code>R1</code> radial → Scatter</td><td>Optional per module/profile; present if module supports</td></tr>
+<tr><td>Cycle selected-unit subtype</td><td><code>Ctrl+Tab</code></td><td><code>D-pad Right</code> (selection mode)</td><td><code>D-pad Right</code> (selection mode)</td><td>If selection contains mixed types</td></tr>
+</tbody>
+</table>
+</div>
+<h5 id="production-build-and-control-groups"><a class="header" href="#production-build-and-control-groups">Production, Build, and Control Groups</a></h5>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Semantic action</th><th>Modern RTS (KBM)</th><th>Gamepad Default</th><th>Steam Deck Default</th><th>Notes</th></tr>
+</thead>
+<tbody>
+<tr><td>Open/close production panel focus</td><td><code>B</code> (focus build UI) / click sidebar</td><td><code>D-pad Left</code> (tap)</td><td><code>D-pad Left</code> (tap)</td><td>Does not pause; focus shifts to production UI</td></tr>
+<tr><td>Cycle production categories</td><td><code>Q/E</code> (while build UI focused)</td><td><code>LB/RB</code></td><td><code>LB/RB</code></td><td>Contextual to production focus mode</td></tr>
+<tr><td>Queue selected item</td><td><code>Enter</code> / left-click on item</td><td><code>Confirm</code></td><td><code>R2</code> / trackpad click</td><td>Works in production focus mode</td></tr>
+<tr><td>Queue 5 / repeat modifier</td><td><code>Shift</code> + queue</td><td><code>LT</code> + queue</td><td><code>L2</code> + queue</td><td>Uses same modifier family as selection add</td></tr>
+<tr><td>Cancel queue item</td><td>Right-click queue slot</td><td><code>Cancel</code> on queue slot</td><td><code>B</code> on queue slot</td><td>Contextual in queue UI</td></tr>
+<tr><td>Set rally point / waypoint</td><td><code>R</code>, then target</td><td><code>Cmd Radial</code> → Rally/Waypoint</td><td><code>R1</code> radial → Rally/Waypoint</td><td>Module-specific labeling</td></tr>
+<tr><td>Building placement confirm</td><td>Left-click</td><td><code>Confirm</code></td><td><code>R2</code> / trackpad click</td><td>Ghost preview remains visible</td></tr>
+<tr><td>Building placement cancel</td><td><code>Esc</code> / Right-click</td><td><code>Cancel</code></td><td><code>B</code></td><td>Consistent across modes</td></tr>
+<tr><td>Building placement rotate (if supported)</td><td><code>R</code></td><td><code>Y</code> (placement mode)</td><td><code>Y</code> (placement mode)</td><td>Context-sensitive; only shown if module supports rotation</td></tr>
+<tr><td>Select control group 1–0</td><td><code>1–0</code></td><td>Control-group overlay + slot select (<code>D-pad Up</code> opens)</td><td>Bottom/back-button overlay (<code>L4</code>) + slot select</td><td>Touch uses bottom control-group bar chips</td></tr>
+<tr><td>Assign control group 1–0</td><td><code>Ctrl+1–0</code></td><td>Overlay + hold slot</td><td>Overlay + hold slot</td><td>Assignment is explicit to avoid accidental overwrite</td></tr>
+<tr><td>Center camera on control group</td><td>Double-tap <code>1–0</code></td><td>Overlay + reselect active slot</td><td>Overlay + reselect active slot</td><td>Mirrors desktop double-tap behavior</td></tr>
+</tbody>
+</table>
+</div>
+<h5 id="communication--coordination-d059"><a class="header" href="#communication--coordination-d059">Communication &amp; Coordination (D059)</a></h5>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Semantic action</th><th>Modern RTS (KBM)</th><th>Gamepad Default</th><th>Steam Deck Default</th><th>Notes</th></tr>
+</thead>
+<tbody>
+<tr><td>Open chat input</td><td><code>Enter</code></td><td><code>View</code> (hold) → chat input / OSK</td><td><code>View</code> (hold) or keyboard shortcut + OSK</td><td>D058/D059 command browser remains available where supported</td></tr>
+<tr><td>Team chat shortcut</td><td><code>/team</code> prefix or channel toggle in chat UI</td><td>Chat panel channel tab</td><td>Chat panel channel tab</td><td>Semantic action resolves to channel switch</td></tr>
+<tr><td>All-chat shortcut</td><td><code>/all</code> prefix or channel toggle in chat UI</td><td>Chat panel channel tab</td><td>Chat panel channel tab</td><td>D058 <code>/s</code> remains one-shot send</td></tr>
+<tr><td>Whisper</td><td><code>/w &lt;player&gt;</code> or player context menu</td><td>Player card → Whisper</td><td>Player card → Whisper</td><td>Visible UI path required</td></tr>
+<tr><td>Push-to-talk (PTT)</td><td><code>CapsLock</code> (default, rebindable)</td><td><code>LB</code> (hold)</td><td><code>L1</code> (hold)</td><td>VAD optional, PTT default per D059</td></tr>
+<tr><td>Ping wheel</td><td><code>Hold G</code> + mouse direction</td><td><code>R3</code> (hold) + right stick</td><td><code>R3</code> hold + stick or right trackpad radial</td><td>Matches D059 controller guidance</td></tr>
+<tr><td>Quick ping</td><td><code>G</code> tap</td><td><code>D-pad Up</code> tap</td><td><code>D-pad Up</code> tap</td><td>Tap vs hold disambiguation for ping wheel</td></tr>
+<tr><td>Chat wheel</td><td><code>Hold V</code> + mouse direction</td><td><code>D-pad Right</code> hold</td><td><code>D-pad Right</code> hold</td><td>Quick-reference shows phrase preview by profile</td></tr>
+<tr><td>Minimap draw</td><td><code>Alt</code> + minimap drag</td><td>Minimap focus mode + <code>RT</code> draw</td><td>Touch minimap draw or minimap focus mode + <code>R2</code></td><td>Deck prefers touch minimap when available</td></tr>
+<tr><td>Callvote menu / command</td><td><code>/callvote</code> or Pause → Vote</td><td>Pause → Vote</td><td>Pause → Vote</td><td>Console command remains equivalent where exposed</td></tr>
+<tr><td>Mute/unmute player</td><td>Scoreboard/context menu (<code>Tab</code>)</td><td>Scoreboard/context menu</td><td>Scoreboard/context menu</td><td>No hidden shortcut required</td></tr>
+</tbody>
+</table>
+</div>
+<h5 id="ui--system--replay--spectator"><a class="header" href="#ui--system--replay--spectator">UI / System / Replay / Spectator</a></h5>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Semantic action</th><th>Modern RTS (KBM)</th><th>Gamepad Default</th><th>Steam Deck Default</th><th>Notes</th></tr>
+</thead>
+<tbody>
+<tr><td>Pause / Escape menu</td><td><code>Esc</code></td><td><code>Menu</code></td><td><code>Menu</code></td><td>In multiplayer opens escape menu, not sim pause</td></tr>
+<tr><td>Scoreboard / player list</td><td><code>Tab</code></td><td><code>View</code> (tap)</td><td><code>View</code> (tap)</td><td>Supports mute/report/context actions</td></tr>
+<tr><td>Controls Quick Reference</td><td><code>F1</code></td><td>Pause → Controls (bindable shortcut optional)</td><td><code>L5</code> (hold) optional + Pause → Controls</td><td>Always reachable from pause/settings</td></tr>
+<tr><td>Developer console (where supported)</td><td><code>~</code></td><td>Pause → Command Browser (GUI)</td><td>Pause → Command Browser (GUI)</td><td>No tilde requirement on non-keyboard platforms</td></tr>
+<tr><td>Screenshot</td><td><code>F12</code></td><td>Pause → Photo/Share submenu (platform API)</td><td><code>Steam</code>+<code>R1</code> (OS default) / in-game photo action</td><td>Platform-specific capture APIs may override</td></tr>
+<tr><td>Replay pause/play (replay mode)</td><td><code>Space</code></td><td><code>Confirm</code></td><td><code>R2</code> / <code>Confirm</code></td><td>Mode-specific; does not conflict with live match <code>Space</code> alert cycle</td></tr>
+<tr><td>Replay seek step ±</td><td><code>,</code> / <code>.</code></td><td><code>LB/RB</code> (replay mode)</td><td><code>LB/RB</code> (replay mode)</td><td>Profile may remap to triggers</td></tr>
+<tr><td>Observer panel toggle</td><td><code>O</code></td><td><code>Y</code> (observer mode)</td><td><code>Y</code> (observer mode)</td><td>Only visible in spectator/caster contexts</td></tr>
+</tbody>
+</table>
+</div>
+<h4 id="workshop-shareable-configuration-profiles-optional"><a class="header" href="#workshop-shareable-configuration-profiles-optional">Workshop-Shareable Configuration Profiles (Optional)</a></h4>
+<p>Players can share <strong>configuration profiles</strong> via the Workshop as an optional, non-gameplay resource type. This includes:</p>
+<ul>
+<li>control bindings / input profiles (KBM, gamepad, Deck, touch layout preferences)</li>
+<li>accessibility presets (target size, hold/toggle behavior, deadzones, high-contrast HUD toggles)</li>
+<li>HUD/layout preference bundles (where layout profiles permit customization)</li>
+<li>camera/QoL preference bundles (non-authoritative client settings)</li>
+</ul>
+<p><strong>Hard boundaries (safety / trust):</strong></p>
+<ul>
+<li>No secrets or credentials (API keys, tokens, account auth data) — those remain D047-only local secrets</li>
+<li>No absolute file paths, device serials, hardware IDs, or OS-specific personal data</li>
+<li>No executable scripts/macros bundled in config profiles</li>
+<li>No automatic application on install; imports always show a <strong>scope + diff preview</strong> before apply</li>
+</ul>
+<p><strong>Compatibility metadata (required for controls-focused profiles):</strong></p>
+<ul>
+<li>semantic action catalog version</li>
+<li>target input class (<code>desktop_kbm</code>, <code>gamepad</code>, <code>deck</code>, <code>touch_phone</code>, <code>touch_tablet</code>)</li>
+<li>optional <code>ScreenClass</code> / layout profile compatibility hints</li>
+<li>notes for features required by the profile (e.g., gyro, rear buttons, command rail enabled)</li>
+</ul>
+<p><strong>UX behavior:</strong></p>
+<ul>
+<li>Controls screen supports <code>Import</code>, <code>Export</code>, and <code>Share on Workshop</code></li>
+<li>Workshop pages show the target device/profile class and a human-readable action summary (e.g., “Deck profile: right-trackpad cursor + gyro precision + PTT on L1”)</li>
+<li>Applying a profile can be partial (controls-only, touch-only, accessibility-only) to avoid clobbering unrelated preferences</li>
+</ul>
+<p>This follows the same philosophy as the Controls Quick Reference and D065 prompt system: shared semantics, device-specific presentation, and no hidden behavior.</p>
+<h4 id="controls-quick-reference-always-available-non-blocking"><a class="header" href="#controls-quick-reference-always-available-non-blocking">Controls Quick Reference (Always Available, Non-Blocking)</a></h4>
+<p>D065 also provides a persistent <strong>Controls Quick Reference</strong> overlay/menu entry so advanced actions are never hidden behind memory or community lore.</p>
+<p><strong>Rules:</strong></p>
+<ul>
+<li>Always available from gameplay (desktop, controller/Deck, and touch), pause menu, and settings</li>
+<li>Device-specific presentation, shared semantic content (same action catalog, different prompts/icons)</li>
+<li>Includes core actions + advanced/high-friction actions (camera bookmarks, command rail overrides, build drawer/sidebar interactions, chat/ping wheels)</li>
+<li>Dismissable, searchable, and safe to open/close without disrupting the current mode</li>
+<li>Can be pinned in reduced form during early sessions (optional setting), then auto-unpins as the player demonstrates mastery</li>
+</ul>
+<p>This is a <strong>reference aid</strong>, not a tutorial gate. It never blocks gameplay and does not require completion.</p>
+<h4 id="controls-changed-walkthrough-one-time-after-input-ux-changes"><a class="header" href="#controls-changed-walkthrough-one-time-after-input-ux-changes">Controls-Changed Walkthrough (One-Time After Input UX Changes)</a></h4>
+<p>When a game update changes control defaults, official input profile mappings, touch gesture behavior, command-rail mappings, or HUD placements in a way that affects muscle memory, D065 can show a short <strong>What’s Changed in Controls</strong> walkthrough on next launch.</p>
+<p><strong>Behavior:</strong></p>
+<ul>
+<li>Triggered by a local controls-layout/version mismatch (e.g., input profile schema version or layout profile revision)</li>
+<li>One-time prompt per affected profile/device; skippable and replayable later from Settings</li>
+<li>Focuses only on changed interactions (not a full tutorial replay)</li>
+<li>Prioritizes touch-platform changes (where discoverability regressions are most likely), but desktop can use it too</li>
+<li>Links to the Controls Quick Reference and Commander School for deeper refreshers</li>
+</ul>
+<p><strong>Philosophy fit:</strong> This preserves discoverability and reduces frustration without forcing players through onboarding again. It is a reversible UI aid, not a simulation change.</p>
 <h4 id="skill-assessment-phase-4"><a class="header" href="#skill-assessment-phase-4">Skill Assessment (Phase 4)</a></h4>
 <p>After Commander School Mission 01 (or as a standalone 2-minute exercise accessible from <code>Settings → QoL → Recalibrate</code>), the engine estimates the player’s baseline skill:</p>
 <pre><code>┌──────────────────────────────────────────────────┐
@@ -42126,7 +42518,7 @@ Settings → Mod Profiles
 <tbody>
 <tr><td><strong>Video</strong></td><td>Resolution, fullscreen/windowed/borderless, render mode (Classic/HD/3D), zoom limits, UI scale, shroud style (hard/smooth edges), FPS limit, VSync. Theme selection (Classic/Remastered/Modern/community). Cutscene playback preference (<code>Auto</code> / <code>Original</code> / <code>Clean Remaster</code> / <code>AI Enhanced</code> / <code>Briefing Fallback</code>).</td></tr>
 <tr><td><strong>Audio</strong></td><td>Master / Music / SFX / Voice / Ambient volume sliders. Music mode (Jukebox/Dynamic/Off). EVA voice. Spatial audio toggle.</td></tr>
-<tr><td><strong>Controls</strong></td><td>Hotkey profile (Classic/OpenRA/Modern/Custom). Full rebinding UI with category filters (Unit Commands, Production, Control Groups, Camera, Chat, Debug). Mouse settings: edge scroll speed, scroll inversion, drag selection shape. Touch settings: handedness (mirror layout), touch target size, hold/drag thresholds, command rail behavior, camera bookmark dock preferences.</td></tr>
+<tr><td><strong>Controls</strong></td><td>Official input profiles by device: <code>Classic RA (KBM)</code>, <code>OpenRA (KBM)</code>, <code>Modern RTS (KBM)</code>, <code>Gamepad Default</code>, <code>Steam Deck Default</code>, plus <code>Custom</code> (profile diff). Full rebinding UI with category filters (Unit Commands, Production, Control Groups, Camera, Communication, UI/System, Debug). Mouse settings: edge scroll speed, scroll inversion, drag selection shape. Controller/Deck settings: deadzones, stick curves, cursor acceleration, radial behavior, gyro sensitivity (when available). Touch settings: handedness (mirror layout), touch target size, hold/drag thresholds, command rail behavior, camera bookmark dock preferences. Includes <code>Import</code>, <code>Export</code>, and <code>Share on Workshop</code> (config-profile packages with scope/diff preview), plus <code>View Controls Quick Reference</code> and <code>What's Changed in Controls</code> replay entry.</td></tr>
 <tr><td><strong>Gameplay</strong></td><td>Experience profile (one-click preset). Balance preset. Pathfinding preset. AI behavior preset. Full D033 QoL toggle list organized by category: Production, Commands, UI Feedback, Selection, Gameplay. Tutorial hint frequency, Controls Walkthrough prompts, and mobile Tempo Advisor warnings (client-only) also live here.</td></tr>
 <tr><td><strong>Social</strong></td><td>Voice settings: PTT key, input/output device, voice effect preset, mic test. Chat settings: profanity filter, emojis, auto-translated phrases. Privacy: who can spectate, who can friend-request, online status visibility.</td></tr>
 <tr><td><strong>LLM</strong></td><td>Provider cards (add/edit/remove LLM providers). Task routing table (which provider handles which task). Connection test. Community config import/export (D047).</td></tr>
@@ -42259,6 +42651,8 @@ In-Game → sidebar → right-click unit/building → "View in Encyclopedia"
 <li>Phone: touch prompts with bottom build drawer, command rail, and minimap-cluster/bookmark dock highlights</li>
 </ul>
 <p>Completion unlocks three actions: <code>Start Commander School</code>, <code>Practice Sandbox</code>, or <code>Skip to Game</code>.</p>
+<p><strong>Controls Quick Reference (always available):</strong> A compact, searchable controls reference is accessible during gameplay, from Pause/Escape, and from <code>Settings → Controls</code>. It uses the same semantic action catalog as D065 prompts, so desktop, controller/Deck, and touch players see the correct input wording/icons for the active profile without separate documentation trees.</p>
+<p><strong>Controls-Changed Walkthrough (one-time after updates):</strong> If a patch changes control defaults, official input profile mappings, or touch HUD/gesture behavior, the next launch can show a short “What’s Changed in Controls” walkthrough before the main menu (skippable, replayable from <code>Settings → Controls</code>). It highlights only changed actions and links to the Controls Quick Reference / Commander School refresher.</p>
 <h3 id="layer-4--adaptive-pacing"><a class="header" href="#layer-4--adaptive-pacing">Layer 4 — Adaptive Pacing</a></h3>
 <p>Behind the scenes: the engine estimates player skill from gameplay metrics and adjusts hint frequency, tutorial prompt density, mobile tempo recommendations (advisory only), and difficulty recommendations. Not visible as a screen — it’s a system that shapes the other layers.</p>
 <h3 id="layer-5--post-game-learning-1"><a class="header" href="#layer-5--post-game-learning-1">Layer 5 — Post-Game Learning</a></h3>
@@ -42474,6 +42868,7 @@ IN-GAME OVERLAYS (accessible during gameplay)
 ├── Pause Menu (SP) / Escape Menu (MP) ── [Escape]
 ├── Callvote ──────────────────────────── (triggered by vote)
 ├── Observer Panels ───────────────────── (spectator mode toggles)
+├── Controls Quick Reference ──────────── [F1] / Pause → Controls (profile-aware: KBM / Gamepad / Deck / Touch)
 ├── Developer Console ─────────────────── [Tilde ~]
 └── Debug Overlays ────────────────────── (dev mode only)
 
@@ -42481,7 +42876,7 @@ POST-GAME → [Watch Replay] / [Re-Queue] / [Main Menu]
 
 IC SDK (separate application)
 ├── Start Screen ──────────────────────── New/Open, Validate Project, Upgrade Project, Git status
-├── Scenario Editor ───────────────────── 8 editing modes, Simple/Advanced, Preview/Test/Validate/Publish
+├── Scenario Editor ───────────────────── 8 editing modes, Simple/Advanced, Preview/Test/Validate/Publish, UI Preview Harness (Advanced)
 ├── Asset Studio ──────────────────────── Archive browser, sprite/palette editor, provenance metadata (Advanced)
 └── Campaign Editor ───────────────────── Node graph + validation/localization + optional hero progression tools (Advanced)
 </code></pre>

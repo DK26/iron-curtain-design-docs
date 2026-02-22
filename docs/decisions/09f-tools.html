@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-928fa1a5.js";
+            window.path_to_searchindex_js = "../searchindex-1e683dcc.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-a0d63c9c.js"></script>
@@ -3041,6 +3041,24 @@ pub struct HotspotRef {
     pub object_id: Option&lt;StableContentId&gt;,
 }
 <span class="boring">}</span></code></pre>
+<h3 id="ui-preview-harness-cross-device-hud--tutorial-overlay-advanced-mode"><a class="header" href="#ui-preview-harness-cross-device-hud--tutorial-overlay-advanced-mode">UI Preview Harness (Cross-Device HUD + Tutorial Overlay, Advanced Mode)</a></h3>
+<p>To keep mobile/touch UX discoverable and maintainable (and to avoid “gesture folklore”), the SDK includes an <strong>Advanced-mode UI Preview Harness</strong> for testing gameplay HUD layouts and D065 tutorial overlays without launching a full match.</p>
+<p><strong>What it previews:</strong></p>
+<ul>
+<li>Desktop / Tablet / Phone layout profiles (<code>ScreenClass</code>) with safe-area simulation</li>
+<li>Handedness mirroring (left/right thumb-zone layouts)</li>
+<li>Touch HUD clusters (command rail, minimap + bookmark dock, build drawer/sidebar)</li>
+<li>D065 semantic tutorial prompts (<code>highlight_ui</code> aliases resolved to actual widgets)</li>
+<li>Controls Quick Reference overlay states (desktop + touch variants)</li>
+<li>Accessibility variants: large touch targets, reduced motion, high contrast</li>
+</ul>
+<p><strong>Design goals:</strong></p>
+<ul>
+<li>Validate UI anchor aliases and tutorial highlighting before shipping content</li>
+<li>Catch overlap/clipping issues (notches, safe areas, compact phone aspect ratios)</li>
+<li>Give modders and campaign creators a visual way to check tutorial steps and HUD hints</li>
+</ul>
+<p><strong>Scope boundary:</strong> This is a <strong>preview harness</strong>, not a second UI implementation. It renders the same <code>ic-ui</code> widgets/layout profiles used by the game and the same D065 prompt/anchor resolution model used at runtime.</p>
 <h3 id="simple-vs-advanced-mode"><a class="header" href="#simple-vs-advanced-mode">Simple vs Advanced Mode</a></h3>
 <p>Inspired by OFP’s Easy/Advanced toggle:</p>
 <div class="table-wrapper">
@@ -3056,6 +3074,7 @@ pub struct HotspotRef {
 <tr><td>Modules</td><td>✓</td><td>✓</td></tr>
 <tr><td><code>Validate</code> (Quick preset)</td><td>✓</td><td>✓</td></tr>
 <tr><td>Publish Readiness screen</td><td>✓</td><td>✓</td></tr>
+<tr><td>UI Preview Harness (HUD/tutorial overlays)</td><td>—</td><td>✓</td></tr>
 <tr><td>Probability of Presence</td><td>—</td><td>✓</td></tr>
 <tr><td>Condition of Presence</td><td>—</td><td>✓</td></tr>
 <tr><td>Custom Lua conditions</td><td>—</td><td>✓</td></tr>

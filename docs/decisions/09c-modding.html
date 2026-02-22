@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-928fa1a5.js";
+            window.path_to_searchindex_js = "../searchindex-1e683dcc.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-a0d63c9c.js"></script>
@@ -1324,6 +1324,7 @@ fallbacks:
 <p>Lobby compatibility and ranked verification use the <strong>gameplay fingerprint</strong> as the hard gate. The presentation fingerprint is informational (and may affect cosmetics only).</p>
 <p>AI-enhanced cutscene packs are explicitly <strong>presentation fingerprint</strong> scope unless they introduce gameplay-significant content (which they should not).</p>
 <p>If a pack changes gameplay-relevant data, it belongs in gameplay fingerprint scope — not presentation.</p>
+<p><strong>Player configuration profiles (<code>player-config</code>, D049) are outside both fingerprint classes.</strong> They are local client preferences (bindings, accessibility, HUD/layout/QoL presets), never lobby-required resources, and must not affect multiplayer/ranked compatibility checks.</p>
 <h3 id="storage-efficiency-d049-cas--d062-namespace"><a class="header" href="#storage-efficiency-d049-cas--d062-namespace">Storage Efficiency (D049 CAS + D062 Namespace)</a></h3>
 <p>Selective installs become practical because IC already uses content-addressed storage and virtual namespace resolution:</p>
 <ul>
