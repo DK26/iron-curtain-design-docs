@@ -13,6 +13,7 @@
   - [Match Lifecycle](netcode/match-lifecycle.md)
 - [Modding System](04-MODDING.md)
   - [Campaign System](modding/campaigns.md)
+  - [Workshop](modding/workshop.md)
 - [File Formats & Source Insights](05-FORMATS.md)
 - [Security & Threat Model](06-SECURITY.md)
 - [Cross-Engine Compatibility](07-CROSS-ENGINE.md)

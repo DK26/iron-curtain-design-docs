@@ -541,10 +541,36 @@ Cvars currently write back to `config.yaml`. Under D067, they write back to `con
 # This file is auto-managed by the engine. Manual edits are preserved.
 
 [render]
+tier = "enhanced"           # "baseline", "standard", "enhanced", "ultra", "auto"
+fps_cap = 144               # 30, 60, 144, 240, 0 (uncapped)
+vsync = "adaptive"          # "off", "on", "adaptive", "mailbox"
+resolution_scale = 1.0      # 0.5–2.0
+
+[render.anti_aliasing]
+msaa = "off"
+smaa = "high"               # "off", "low", "medium", "high", "ultra"
+
+[render.post_fx]
+enabled = true
+bloom_intensity = 0.2
+tonemapping = "tony_mcmapface"
+deband_dither = true
+
+[render.lighting]
 shadows = true
-shadow_quality = 2          # 0=off, 1=low, 2=medium, 3=high
-vsync = true
-max_fps = 144
+shadow_quality = "high"     # "off", "low", "medium", "high", "ultra"
+shadow_filter = "gaussian"  # "hardware_2x2", "gaussian", "temporal"
+ambient_occlusion = true
+
+[render.particles]
+density = 0.8
+backend = "gpu"             # "cpu", "gpu"
+
+[render.textures]
+filtering = "trilinear"     # "nearest", "bilinear", "trilinear"
+anisotropic = 8             # 1, 2, 4, 8, 16
+
+# Full [render] schema: see 10-PERFORMANCE.md § "Full config.toml [render] Section"
 
 [audio]
 master_volume = 80

@@ -171,6 +171,7 @@ When you need deeper detail, read the specific design doc. Sub-documents are lis
 | — Match lifecycle: lobby, loading, tick processing, pause, disconnect, desync, replay, post-game                                         | `src/netcode/match-lifecycle.md`       |
 | YAML rules, Lua scripting, WASM modules, sandboxing, LLM metadata, Mod SDK                                                               | `src/04-MODDING.md`                    |
 | — Campaign system: branching graphs, persistent state, unit carryover, co-op                                                             | `src/modding/campaigns.md`             |
+| — Workshop: federated registry, P2P distribution, semver deps, modpacks, moderation, creator reputation, Workshop API                    | `src/modding/workshop.md`              |
 | File formats, EA source code insights, coordinate systems                                                                                | `src/05-FORMATS.md`                    |
 | Threat model, maphack, order validation, replay signing, protocol hardening                                                              | `src/06-SECURITY.md`                   |
 | Cross-engine play, OrderCodec, SimReconciler, ProtocolAdapter                                                                            | `src/07-CROSS-ENGINE.md`               |

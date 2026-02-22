@@ -2070,7 +2070,13 @@ The campaign system (D021) references cutscenes by logical ID in the `video:` fi
 
 > **Moved to [modding/campaigns.md](modding/campaigns.md)** for RAG/context efficiency.
 >
-> Full design for branching mission graphs with persistent state, unit roster carryover, and continuous mission flow. OFP/ArmA-inspired (D021). Includes: campaign graph schema, mission node types, branch conditions, outcome variables, unit persistence, save/checkpoint system, co-op campaign adaptations, and Lua scripting integration.
+> Full design for branching mission graphs with persistent state, unit roster carryover, and continuous mission flow. OFP/ArmA-inspired (D021). Includes: campaign graph schema, mission node types, branch conditions, outcome variables, unit persistence, Lua campaign API, adaptive difficulty, tutorial campaigns (D065), and LLM campaign generation.
+
+## Workshop (Federated Resource Registry, P2P Distribution, Moderation)
+
+> **Moved to [modding/workshop.md](modding/workshop.md)** for RAG/context efficiency.
+>
+> Full design for the Workshop content distribution platform: federated repository architecture, P2P delivery (D049), resource registry with semver dependencies (D030), licensing, moderation, LLM-driven discovery, Steam integration, modpacks, creator reputation (D035), achievement system (D036), and Workshop API.
 
 ## Mod SDK & Developer Experience
 
