@@ -36,10 +36,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-05559aa2.js";
+            window.path_to_searchindex_js = "searchindex-cb71b11f.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-b2bf7f58.js"></script>
+        <script src="toc-b4a6e245.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -197,6 +197,7 @@
 <tr><td>03+</td><td><code>netcode/match-lifecycle.md</code></td><td>Match lifecycle: lobby, loading, tick processing, pause, disconnect, desync, replay, post-game</td><td>You’re tracing the operational flow of a multiplayer match</td></tr>
 <tr><td>04</td><td><code>04-MODDING.md</code></td><td>YAML rules, Lua scripting, WASM modules, templating, resource packs, mod SDK</td><td>You’re working on data formats, scripting, or mod support</td></tr>
 <tr><td>04+</td><td><code>modding/campaigns.md</code></td><td>Campaign system: branching graphs, persistent state, unit carryover, co-op</td><td>You’re designing or implementing campaign missions and branching logic</td></tr>
+<tr><td>04+</td><td><code>modding/workshop.md</code></td><td>Workshop: federated registry, P2P distribution, semver deps, modpacks, moderation, creator reputation, Workshop API</td><td>You’re working on content distribution, Workshop features, mod publishing, or creator tools</td></tr>
 <tr><td>05</td><td><code>05-FORMATS.md</code></td><td>File formats, original source code insights, compatibility layer</td><td>You’re working on asset loading, ra-formats crate, or OpenRA interop</td></tr>
 <tr><td>06</td><td><code>06-SECURITY.md</code></td><td>Threat model, vulnerabilities, mitigations for online play</td><td>You’re working on networking, modding sandbox, or anti-cheat</td></tr>
 <tr><td>07</td><td><code>07-CROSS-ENGINE.md</code></td><td>Cross-engine compatibility, protocol adapters, reconciliation</td><td>You’re exploring OpenRA interop or multi-engine play</td></tr>
@@ -7822,7 +7823,12 @@ Resource Packs     → pack.yaml.tera     + schema.yaml = asset override layer
 <h2 id="campaign-system-branching-persistent-continuous"><a class="header" href="#campaign-system-branching-persistent-continuous">Campaign System (Branching, Persistent, Continuous)</a></h2>
 <blockquote>
 <p><strong>Moved to <a href="#modding-system--campaign-system-branching-persistent-continuous">modding/campaigns.md</a></strong> for RAG/context efficiency.</p>
-<p>Full design for branching mission graphs with persistent state, unit roster carryover, and continuous mission flow. OFP/ArmA-inspired (D021). Includes: campaign graph schema, mission node types, branch conditions, outcome variables, unit persistence, save/checkpoint system, co-op campaign adaptations, and Lua scripting integration.</p>
+<p>Full design for branching mission graphs with persistent state, unit roster carryover, and continuous mission flow. OFP/ArmA-inspired (D021). Includes: campaign graph schema, mission node types, branch conditions, outcome variables, unit persistence, Lua campaign API, adaptive difficulty, tutorial campaigns (D065), and LLM campaign generation.</p>
+</blockquote>
+<h2 id="workshop-federated-resource-registry-p2p-distribution-moderation"><a class="header" href="#workshop-federated-resource-registry-p2p-distribution-moderation">Workshop (Federated Resource Registry, P2P Distribution, Moderation)</a></h2>
+<blockquote>
+<p><strong>Moved to <a href="#modding-system--workshop-federated-resource-registry-p2p-distribution-moderation">modding/workshop.md</a></strong> for RAG/context efficiency.</p>
+<p>Full design for the Workshop content distribution platform: federated repository architecture, P2P delivery (D049), resource registry with semver dependencies (D030), licensing, moderation, LLM-driven discovery, Steam integration, modpacks, creator reputation (D035), achievement system (D036), and Workshop API.</p>
 </blockquote>
 <h2 id="mod-sdk--developer-experience"><a class="header" href="#mod-sdk--developer-experience">Mod SDK &amp; Developer Experience</a></h2>
 <p><em>Inspired by studying the <a href="https://github.com/OpenRA/OpenRAModSDK">OpenRA Mod SDK</a> — see D020.</em></p>
@@ -8753,6 +8759,9 @@ LLM generates:
 <blockquote>
 <p><strong>Security (V40):</strong> LLM-generated content (YAML rules, Lua scripts, briefing text) must pass through the <code>ic mod check</code> validation pipeline before execution — same as Workshop submissions. Additional defenses: cumulative mission-lifetime resource limits, content filter for generated text, sandboxed preview mode. LLM output is treated as untrusted Tier 2 mod content, never trusted first-party. See <code>06-SECURITY.md</code> § Vulnerability 40.</p>
 </blockquote>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="modding-system--workshop-federated-resource-registry-p2p-distribution-moderation"><a class="header" href="#modding-system--workshop-federated-resource-registry-p2p-distribution-moderation">Modding System  Workshop (Federated Resource Registry, P2P Distribution, Moderation)</a></h1>
+<p>Full design for the Workshop content distribution platform: federated repository architecture, P2P delivery, resource registry with semver dependencies, licensing, moderation, LLM-driven discovery, Steam integration, modpacks, and Workshop API. Decisions D030, D035, D036, D049.</p>
 <h3 id="configurable-workshop-server"><a class="header" href="#configurable-workshop-server">Configurable Workshop Server</a></h3>
 <p>The Workshop is the single place players go to <strong>browse, install, and share</strong> game content — mods, maps, music, sprites, voice packs, everything. Behind the scenes it’s a federated resource registry (D030) that merges multiple repository sources into one seamless view. Players never need to know where content is hosted — they just see “Workshop” and hit install.</p>
 <blockquote>
@@ -9332,13 +9341,13 @@ modpack:
       version: "=3.0.1"
     - id: "alice/tank-rebalance"
       version: "=1.1.0"
-  
+
   # Explicit conflict resolutions (if any)
   conflicts:
     - unit: heavy_tank
       field: health.max
       use_mod: "alice/tank-rebalance"
-  
+
   # Configuration overrides applied after all mods load
   config:
     balance_preset: classic
@@ -13538,10 +13547,36 @@ First-party game module development targets the C&amp;C family: Red Alert (defau
 # This file is auto-managed by the engine. Manual edits are preserved.
 
 [render]
+tier = "enhanced"           # "baseline", "standard", "enhanced", "ultra", "auto"
+fps_cap = 144               # 30, 60, 144, 240, 0 (uncapped)
+vsync = "adaptive"          # "off", "on", "adaptive", "mailbox"
+resolution_scale = 1.0      # 0.5–2.0
+
+[render.anti_aliasing]
+msaa = "off"
+smaa = "high"               # "off", "low", "medium", "high", "ultra"
+
+[render.post_fx]
+enabled = true
+bloom_intensity = 0.2
+tonemapping = "tony_mcmapface"
+deband_dither = true
+
+[render.lighting]
 shadows = true
-shadow_quality = 2          # 0=off, 1=low, 2=medium, 3=high
-vsync = true
-max_fps = 144
+shadow_quality = "high"     # "off", "low", "medium", "high", "ultra"
+shadow_filter = "gaussian"  # "hardware_2x2", "gaussian", "temporal"
+ambient_occlusion = true
+
+[render.particles]
+density = 0.8
+backend = "gpu"             # "cpu", "gpu"
+
+[render.textures]
+filtering = "trilinear"     # "nearest", "bilinear", "trilinear"
+anisotropic = 8             # 1, 2, 4, 8, 16
+
+# Full [render] schema: see 10-PERFORMANCE.md § "Full config.toml [render] Section"
 
 [audio]
 master_volume = 80
@@ -32262,15 +32297,54 @@ fn movement_system(mut query: Query&lt;(&amp;mut Position, &amp;Velocity)&gt;) {
 <p><strong>Tier selection is automatic but overridable.</strong> Detected at startup from <code>wgpu::Adapter::limits()</code> and <code>wgpu::Adapter::features()</code>. Players can force a lower tier in settings. Mods can ship tier-specific assets.</p>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
-</span>/// ic-render: runtime render configuration
+</span>/// ic-render: runtime render configuration (Bevy Resource)
+///
+/// Every field here is a tweakable parameter. The engine auto-detects defaults
+/// from hardware at startup, but players can override ANY field via config.toml,
+/// the in-game settings menu, or `/set render.*` console commands (D058).
+/// All fields are hot-reloadable — changes take effect next frame, no restart needed.
 pub struct RenderSettings {
-    pub tier: RenderTier,           // Auto-detected or user-forced
-    pub fps_cap: u32,               // 30, 60, 144, 240, uncapped
-    pub resolution_scale: f32,      // 0.5 - 2.0 (render resolution vs display)
-    pub particle_density: f32,      // 0.0 - 1.0 (scales particle count)
-    pub post_fx_enabled: bool,      // Master toggle for all post-processing
-    pub weather_visual_mode: WeatherVisualMode,  // PaletteTint, Overlay, ShaderBlend
-    pub sprite_sheet_max: u32,      // Derived from adapter texture limits
+    // === Core tier &amp; frame pacing ===
+    pub tier: RenderTier,                       // Auto-detected or user-forced
+    pub fps_cap: FpsCap,                        // V30, V60, V144, V240, Uncapped
+    pub vsync: VsyncMode,                       // Off, On, Adaptive, Mailbox
+    pub resolution_scale: f32,                  // 0.5–2.0 (render resolution vs display)
+
+    // === Anti-aliasing ===
+    pub msaa: MsaaSamples,                      // Off, X2, X4 (maps to Bevy Msaa resource)
+    pub smaa: Option&lt;SmaaPreset&gt;,               // None, Low, Medium, High, Ultra (Bevy SMAA)
+    // MSAA and SMAA are mutually exclusive — if SMAA is Some, MSAA should be Off.
+
+    // === Post-processing chain ===
+    pub post_fx_enabled: bool,                  // Master toggle for ALL post-processing
+    pub bloom: Option&lt;BloomConfig&gt;,             // None = disabled; Some = Bevy Bloom component
+    pub tonemapping: TonemappingMode,           // None, Reinhard, ReinhardLuminance, TonyMcMapface, ...
+    pub deband_dither: bool,                    // Bevy DebandDither — eliminates color banding
+    pub contrast: f32,                          // 0.8–1.2 (1.0 = neutral)
+    pub brightness: f32,                        // 0.8–1.2 (1.0 = neutral)
+    pub gamma: f32,                             // 1.8–2.6 (2.2 = standard sRGB)
+
+    // === Lighting &amp; shadows ===
+    pub dynamic_lighting: bool,                 // Enable/disable dynamic point/spot lights
+    pub shadows_enabled: bool,                  // Master shadow toggle
+    pub shadow_quality: ShadowQuality,          // Off, Low (512), Medium (1024), High (2048), Ultra (4096)
+    pub shadow_filter: ShadowFilterMethod,      // Hardware2x2, Gaussian, Temporal (maps to Bevy enum)
+    pub cascade_shadow_count: u32,              // 1–4 (directional light cascades)
+    pub ambient_occlusion: Option&lt;AoConfig&gt;,    // None or SSAO settings (Bevy SSAO)
+
+    // === Particles &amp; weather ===
+    pub particle_density: f32,                  // 0.0–1.0 (scales particle spawn rates)
+    pub particle_backend: ParticleBackend,      // Cpu, Gpu (auto from tier, overridable)
+    pub weather_visual_mode: WeatherVisualMode, // PaletteTint, Overlay, ShaderBlend
+
+    // === Textures &amp; sprites ===
+    pub sprite_sheet_max: u32,                  // Derived from adapter texture limits
+    pub texture_filtering: TextureFiltering,    // Nearest (pixel-perfect), Bilinear, Trilinear
+    pub anisotropic_filtering: u8,              // 1, 2, 4, 8, 16 (1 = off)
+
+    // === Camera &amp; view ===
+    pub fov_override: Option&lt;f32&gt;,              // None = default isometric; Some = custom (for 3D render modes)
+    pub camera_smoothing: bool,                 // Interpolated camera movement between ticks
 }
 
 pub enum RenderTier {
@@ -32279,7 +32353,373 @@ pub enum RenderTier {
     Enhanced,   // Tier 2: Capable GPU — full visual pipeline
     Ultra,      // Tier 3: High-end — everything maxed
 }
+
+pub enum FpsCap { V30, V60, V144, V240, Uncapped }
+pub enum VsyncMode { Off, On, Adaptive, Mailbox }
+pub enum MsaaSamples { Off, X2, X4 }
+pub enum SmaaPreset { Low, Medium, High, Ultra }
+pub enum ShadowQuality { Off, Low, Medium, High, Ultra }
+pub enum ShadowFilterMethod { Hardware2x2, Gaussian, Temporal }
+pub enum ParticleBackend { Cpu, Gpu }
+pub enum TextureFiltering { Nearest, Bilinear, Trilinear }
+
+pub struct BloomConfig {
+    pub intensity: f32,             // 0.0–1.0 (Bevy Bloom::intensity)
+    pub low_frequency_boost: f32,   // 0.0–1.0
+    pub threshold: f32,             // HDR brightness threshold for bloom
+    pub knee: f32,                  // Soft knee for threshold transition
+}
+
+pub struct AoConfig {
+    pub quality: AoQuality,         // Low (4 samples), Medium (8), High (16), Ultra (32)
+    pub radius: f32,                // World-space AO radius
+    pub intensity: f32,             // 0.0–2.0
+}
+
+pub enum AoQuality { Low, Medium, High, Ultra }
+
+/// Maps Bevy's tonemapping algorithms to player-friendly names.
+/// See Bevy's Tonemapping enum — we expose all of them.
+pub enum TonemappingMode {
+    None,                   // Raw HDR → clamp (only for debugging)
+    Reinhard,               // Simple, classic
+    ReinhardLuminance,      // Luminance-preserving Reinhard
+    AcesFitted,             // Film industry standard
+    AgX,                    // Blender's default — good highlight handling
+    TonyMcMapface,          // Bevy's recommended default — best overall
+    SomewhatBoringDisplayTransform, // Neutral, minimal artistic bias
+}
 <span class="boring">}</span></code></pre>
+<p><strong>Bevy component mapping:</strong> Every field in <code>RenderSettings</code> maps to a Bevy component or resource. The <code>RenderSettingsSync</code> system (runs in <code>PostUpdate</code>) reads changes and applies them:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th><code>RenderSettings</code> field</th><th>Bevy Component / Resource</th><th>Notes</th></tr>
+</thead>
+<tbody>
+<tr><td><code>msaa</code></td><td><code>Msaa</code> (global resource)</td><td>Set to <code>Off</code> when SMAA is active</td></tr>
+<tr><td><code>smaa</code></td><td><code>Smaa</code> (camera component)</td><td>Added/removed on camera entity</td></tr>
+<tr><td><code>bloom</code></td><td><code>Bloom</code> (camera component)</td><td>Added/removed; fields map 1:1</td></tr>
+<tr><td><code>tonemapping</code></td><td><code>Tonemapping</code> (camera component)</td><td>Enum variant maps directly</td></tr>
+<tr><td><code>deband_dither</code></td><td><code>DebandDither</code> (camera component)</td><td><code>Enabled</code> / <code>Disabled</code></td></tr>
+<tr><td><code>shadow_filter</code></td><td><code>ShadowFilteringMethod</code> (camera component)</td><td><code>Hardware2x2</code>, <code>Gaussian</code>, <code>Temporal</code></td></tr>
+<tr><td><code>ambient_occlusion</code></td><td><code>ScreenSpaceAmbientOcclusion</code> (camera component)</td><td>Added/removed with quality settings</td></tr>
+<tr><td><code>vsync</code></td><td><code>WinitSettings</code> / <code>PresentMode</code></td><td>Requires window recreation for some modes</td></tr>
+<tr><td><code>fps_cap</code></td><td>Frame limiter system (custom)</td><td><code>thread::sleep</code> or Bevy <code>FramepacePlugin</code></td></tr>
+<tr><td><code>resolution_scale</code></td><td>Render target size override</td><td>Renders to smaller target, upscales</td></tr>
+<tr><td><code>dynamic_lighting</code></td><td>Point/spot light entity visibility</td><td>Toggles <code>Visibility</code> on light entities</td></tr>
+<tr><td><code>shadows_enabled</code></td><td><code>DirectionalLight.shadows_enabled</code></td><td>Per-light shadow toggle</td></tr>
+<tr><td><code>shadow_quality</code></td><td><code>DirectionalLightShadowMap.size</code></td><td>512 / 1024 / 2048 / 4096</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="auto-detection-algorithm"><a class="header" href="#auto-detection-algorithm">Auto-Detection Algorithm</a></h3>
+<p>At startup, <code>ic-render</code> probes the GPU via <code>wgpu::Adapter</code> and selects the best render tier. The algorithm is deterministic — same hardware always gets the same tier. Players override via <code>config.toml</code> or the settings menu.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Probes GPU capabilities and returns the appropriate render tier.
+/// Called once at startup. Result is stored in RenderSettings and persisted
+/// to config.toml on first run (so subsequent launches skip probing).
+pub fn detect_render_tier(adapter: &amp;wgpu::Adapter) -&gt; RenderTier {
+    let limits = adapter.limits();
+    let features = adapter.features();
+    let info = adapter.get_info();
+
+    // Step 1: Check for hard floor — can we run at all?
+    // wgpu already enforces DownlevelCapabilities; if we got an adapter, we're at least GL 3.3.
+
+    // Step 2: Classify by feature support (most restrictive wins)
+    let has_compute = features.contains(wgpu::Features::default()); // Compute is in default feature set
+    let has_storage_buffers = limits.max_storage_buffers_per_shader_stage &gt;= 4;
+    let has_large_textures = limits.max_texture_dimension_2d &gt;= 8192;
+    let has_depth_clip = features.contains(wgpu::Features::DEPTH_CLIP_CONTROL);
+    let has_timestamp_query = features.contains(wgpu::Features::TIMESTAMP_QUERY);
+    let vram_mb = estimate_vram(&amp;info); // Heuristic from adapter name + backend hints
+
+    // Step 3: Tier assignment (ordered from highest to lowest)
+    if has_compute &amp;&amp; has_large_textures &amp;&amp; has_depth_clip &amp;&amp; vram_mb &gt;= 4096 {
+        RenderTier::Ultra
+    } else if has_compute &amp;&amp; has_large_textures &amp;&amp; has_storage_buffers &amp;&amp; vram_mb &gt;= 2048 {
+        RenderTier::Enhanced
+    } else if has_compute &amp;&amp; has_storage_buffers {
+        RenderTier::Standard
+    } else {
+        RenderTier::Baseline  // GL 3.3 / WebGL2 — everything still works
+    }
+}
+
+/// Builds a complete RenderSettings from the detected tier.
+/// Each tier implies sensible defaults for ALL parameters.
+/// These are the "factory defaults" — config.toml overrides take priority.
+pub fn default_settings_for_tier(tier: RenderTier) -&gt; RenderSettings {
+    match tier {
+        RenderTier::Baseline =&gt; RenderSettings {
+            tier,
+            fps_cap: FpsCap::V60,
+            vsync: VsyncMode::On,
+            resolution_scale: 1.0,
+            msaa: MsaaSamples::Off,
+            smaa: None,
+            post_fx_enabled: false,
+            bloom: None,
+            tonemapping: TonemappingMode::None,
+            deband_dither: false,
+            contrast: 1.0, brightness: 1.0, gamma: 2.2,
+            dynamic_lighting: false,
+            shadows_enabled: false,
+            shadow_quality: ShadowQuality::Off,
+            shadow_filter: ShadowFilterMethod::Hardware2x2,
+            cascade_shadow_count: 0,
+            ambient_occlusion: None,
+            particle_density: 0.3,
+            particle_backend: ParticleBackend::Cpu,
+            weather_visual_mode: WeatherVisualMode::PaletteTint,
+            sprite_sheet_max: 2048,
+            texture_filtering: TextureFiltering::Nearest,
+            anisotropic_filtering: 1,
+            fov_override: None,
+            camera_smoothing: true,
+        },
+        RenderTier::Standard =&gt; RenderSettings {
+            tier,
+            fps_cap: FpsCap::V60,
+            vsync: VsyncMode::On,
+            resolution_scale: 1.0,
+            msaa: MsaaSamples::X2,
+            smaa: None,
+            post_fx_enabled: true,
+            bloom: Some(BloomConfig { intensity: 0.15, low_frequency_boost: 0.5, threshold: 1.0, knee: 0.1 }),
+            tonemapping: TonemappingMode::TonyMcMapface,
+            deband_dither: true,
+            contrast: 1.0, brightness: 1.0, gamma: 2.2,
+            dynamic_lighting: true,
+            shadows_enabled: false,
+            shadow_quality: ShadowQuality::Off,
+            shadow_filter: ShadowFilterMethod::Gaussian,
+            cascade_shadow_count: 0,
+            ambient_occlusion: None,
+            particle_density: 0.6,
+            particle_backend: ParticleBackend::Gpu,
+            weather_visual_mode: WeatherVisualMode::Overlay,
+            sprite_sheet_max: 8192,
+            texture_filtering: TextureFiltering::Bilinear,
+            anisotropic_filtering: 4,
+            fov_override: None,
+            camera_smoothing: true,
+        },
+        RenderTier::Enhanced =&gt; RenderSettings {
+            tier,
+            fps_cap: FpsCap::V144,
+            vsync: VsyncMode::Adaptive,
+            resolution_scale: 1.0,
+            msaa: MsaaSamples::Off,
+            smaa: Some(SmaaPreset::High),
+            post_fx_enabled: true,
+            bloom: Some(BloomConfig { intensity: 0.2, low_frequency_boost: 0.6, threshold: 0.8, knee: 0.15 }),
+            tonemapping: TonemappingMode::TonyMcMapface,
+            deband_dither: true,
+            contrast: 1.0, brightness: 1.0, gamma: 2.2,
+            dynamic_lighting: true,
+            shadows_enabled: true,
+            shadow_quality: ShadowQuality::High,
+            shadow_filter: ShadowFilterMethod::Gaussian,
+            cascade_shadow_count: 2,
+            ambient_occlusion: Some(AoConfig { quality: AoQuality::Medium, radius: 1.0, intensity: 1.0 }),
+            particle_density: 0.8,
+            particle_backend: ParticleBackend::Gpu,
+            weather_visual_mode: WeatherVisualMode::ShaderBlend,
+            sprite_sheet_max: 8192,
+            texture_filtering: TextureFiltering::Trilinear,
+            anisotropic_filtering: 8,
+            fov_override: None,
+            camera_smoothing: true,
+        },
+        RenderTier::Ultra =&gt; RenderSettings {
+            tier,
+            fps_cap: FpsCap::V240,
+            vsync: VsyncMode::Mailbox,
+            resolution_scale: 1.0,
+            msaa: MsaaSamples::Off,
+            smaa: Some(SmaaPreset::Ultra),
+            post_fx_enabled: true,
+            bloom: Some(BloomConfig { intensity: 0.25, low_frequency_boost: 0.7, threshold: 0.6, knee: 0.2 }),
+            tonemapping: TonemappingMode::TonyMcMapface,
+            deband_dither: true,
+            contrast: 1.0, brightness: 1.0, gamma: 2.2,
+            dynamic_lighting: true,
+            shadows_enabled: true,
+            shadow_quality: ShadowQuality::Ultra,
+            shadow_filter: ShadowFilterMethod::Temporal,
+            cascade_shadow_count: 4,
+            ambient_occlusion: Some(AoConfig { quality: AoQuality::Ultra, radius: 1.5, intensity: 1.2 }),
+            particle_density: 1.0,
+            particle_backend: ParticleBackend::Gpu,
+            weather_visual_mode: WeatherVisualMode::ShaderBlend,
+            sprite_sheet_max: 16384,
+            texture_filtering: TextureFiltering::Trilinear,
+            anisotropic_filtering: 16,
+            fov_override: None,
+            camera_smoothing: true,
+        },
+    }
+}
+<span class="boring">}</span></code></pre>
+<h3 id="hardware-specific-auto-configuration-profiles"><a class="header" href="#hardware-specific-auto-configuration-profiles">Hardware-Specific Auto-Configuration Profiles</a></h3>
+<p>Beyond tier detection, the engine recognizes specific hardware families and applies targeted overrides on top of the tier defaults. These are <strong>refinements, not replacements</strong> — tier detection runs first, then hardware-specific tweaks adjust individual parameters.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Hardware Signature</th><th>Detected Via</th><th>Base Tier</th><th>Overrides Applied</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Intel HD 4000</strong> (Ivy Bridge)</td><td><code>adapter_info.name</code> contains “HD 4000” or “Ivy Bridge”</td><td>Baseline</td><td><code>particle_density: 0.2</code>, <code>camera_smoothing: false</code> (save CPU)</td></tr>
+<tr><td><strong>Intel HD 5000–6000</strong> (Haswell/Broadwell)</td><td><code>adapter_info.name</code> match</td><td>Standard</td><td><code>shadow_quality: Off</code>, <code>bloom: None</code> (iGPU bandwidth limited)</td></tr>
+<tr><td><strong>Intel UHD 620–770</strong> (modern iGPU)</td><td><code>adapter_info.name</code> match</td><td>Standard</td><td><code>shadow_quality: Low</code>, <code>particle_density: 0.5</code></td></tr>
+<tr><td><strong>Steam Deck</strong> (AMD Van Gogh)</td><td><code>adapter_info.name</code> contains “Van Gogh” or env <code>SteamDeck=1</code></td><td>Enhanced</td><td><code>fps_cap: V30</code>, <code>resolution_scale: 0.75</code>, <code>shadow_quality: Medium</code>, <code>smaa: Medium</code>, <code>ambient_occlusion: None</code> (battery + thermal)</td></tr>
+<tr><td><strong>GTX 600–700</strong> (Kepler)</td><td><code>adapter_info.name</code> match</td><td>Standard</td><td>Default Standard (no overrides)</td></tr>
+<tr><td><strong>GTX 900 / RX 400</strong> (Maxwell/Polaris)</td><td><code>adapter_info.name</code> match</td><td>Enhanced</td><td>Default Enhanced (no overrides)</td></tr>
+<tr><td><strong>RTX 2000+ / RX 5000+</strong></td><td><code>adapter_info.name</code> match</td><td>Ultra</td><td>Default Ultra (no overrides)</td></tr>
+<tr><td><strong>Apple M1</strong></td><td><code>adapter_info.backend == Metal</code> + name match</td><td>Enhanced</td><td><code>vsync: On</code> (Metal VSync is efficient), <code>anisotropic_filtering: 16</code></td></tr>
+<tr><td><strong>Apple M2+</strong></td><td><code>adapter_info.backend == Metal</code> + name match</td><td>Ultra</td><td>Same Metal-specific tweaks</td></tr>
+<tr><td><strong>WebGPU (browser)</strong></td><td><code>adapter_info.backend == BrowserWebGpu</code></td><td>Standard</td><td><code>fps_cap: V60</code>, <code>resolution_scale: 0.8</code>, <code>ambient_occlusion: None</code> (WASM overhead)</td></tr>
+<tr><td><strong>WebGL2 (browser fallback)</strong></td><td><code>adapter_info.backend == Gl</code> + WASM target</td><td>Baseline</td><td><code>particle_density: 0.15</code>, <code>texture_filtering: Nearest</code></td></tr>
+<tr><td><strong>Mobile (Android/iOS)</strong></td><td>Platform detection</td><td>Standard</td><td><code>fps_cap: V30</code>, <code>resolution_scale: 0.7</code>, <code>shadows_enabled: false</code>, <code>bloom: None</code>, <code>particle_density: 0.3</code> (battery + thermals)</td></tr>
+</tbody>
+</table>
+</div>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Hardware-specific refinements applied after tier detection.
+/// Matches adapter name patterns and platform signals to fine-tune defaults.
+pub fn apply_hardware_overrides(
+    settings: &amp;mut RenderSettings,
+    adapter_info: &amp;wgpu::AdapterInfo,
+    platform: &amp;PlatformInfo,
+) {
+    let name = adapter_info.name.to_lowercase();
+
+    // Steam Deck: capable GPU but battery-constrained handheld
+    if name.contains("van gogh") || platform.env_var("SteamDeck") == Some("1") {
+        settings.fps_cap = FpsCap::V30;
+        settings.resolution_scale = 0.75;
+        settings.shadow_quality = ShadowQuality::Medium;
+        settings.smaa = Some(SmaaPreset::Medium);
+        settings.ambient_occlusion = None;
+        return;
+    }
+
+    // Mobile: aggressive power saving
+    if platform.is_mobile() {
+        settings.fps_cap = FpsCap::V30;
+        settings.resolution_scale = 0.7;
+        settings.shadows_enabled = false;
+        settings.bloom = None;
+        settings.particle_density = 0.3;
+        return;
+    }
+
+    // Browser (WASM): overhead budget
+    if platform.is_wasm() {
+        settings.fps_cap = FpsCap::V60;
+        settings.resolution_scale = 0.8;
+        settings.ambient_occlusion = None;
+        if adapter_info.backend == wgpu::Backend::Gl {
+            // WebGL2 fallback — severe constraints
+            settings.particle_density = 0.15;
+            settings.texture_filtering = TextureFiltering::Nearest;
+        }
+        return;
+    }
+
+    // Intel integrated GPUs: bandwidth-constrained
+    if name.contains("hd 4000") || name.contains("ivy bridge") {
+        settings.particle_density = 0.2;
+        settings.camera_smoothing = false;
+    } else if name.contains("hd 5") || name.contains("hd 6") || name.contains("haswell") {
+        settings.shadow_quality = ShadowQuality::Off;
+        settings.bloom = None;
+    } else if name.contains("uhd") {
+        settings.shadow_quality = ShadowQuality::Low;
+        settings.particle_density = 0.5;
+    }
+
+    // Apple Silicon: Metal-specific optimizations
+    if adapter_info.backend == wgpu::Backend::Metal {
+        settings.vsync = VsyncMode::On; // Metal VSync is very efficient
+        settings.anisotropic_filtering = 16;
+    }
+}
+<span class="boring">}</span></code></pre>
+<h3 id="settings-load-order--override-precedence"><a class="header" href="#settings-load-order--override-precedence">Settings Load Order &amp; Override Precedence</a></h3>
+<pre><code> ┌─────────────────────────────────────────────────────────────────────┐
+ │ 1. wgpu::Adapter probe → detect_render_tier()                      │
+ │ 2. default_settings_for_tier(tier) → factory defaults               │
+ │ 3. apply_hardware_overrides() → device-specific tweaks              │
+ │ 4. Load config.toml [render] → user's saved preferences             │
+ │ 5. Load config.&lt;game_module&gt;.toml [render] → game-specific overrides│
+ │ 6. Command-line args (--render-tier=baseline, --fps-cap=30)         │
+ │ 7. In-game /set render.* commands (D058) → runtime tweaks           │
+ └─────────────────────────────────────────────────────────────────────┘
+ Each layer overrides only the fields it specifies.
+ Unspecified fields inherit from the previous layer.
+ /set commands persist back to config.toml via toml_edit (D067).
+</code></pre>
+<p><strong>First-run experience:</strong> On first launch, the engine runs full auto-detection (steps 1-3), persists the result to <code>config.toml</code>, and shows a brief “Graphics configured for your hardware — [Your GPU Name] / [Tier Name]” notification. The settings menu is one click away for tweaking. Subsequent launches skip detection and load from <code>config.toml</code> (step 4), unless the GPU changes (adapter name mismatch triggers re-detection).</p>
+<h3 id="full-configtoml-render-section"><a class="header" href="#full-configtoml-render-section">Full <code>config.toml</code> <code>[render]</code> Section</a></h3>
+<p>The complete render configuration as persisted to <code>config.toml</code> (D067). Every field maps 1:1 to <code>RenderSettings</code>. Comments are preserved by <code>toml_edit</code> across engine updates.</p>
+<pre><code class="language-toml"># config.toml — [render] section (auto-generated on first run, fully editable)
+# Delete this section to trigger re-detection on next launch.
+
+[render]
+tier = "enhanced"                   # "baseline", "standard", "enhanced", "ultra", or "auto"
+                                    # "auto" = re-detect every launch (useful for laptops with eGPU)
+fps_cap = 144                       # 30, 60, 144, 240, 0 (0 = uncapped)
+vsync = "adaptive"                  # "off", "on", "adaptive", "mailbox"
+resolution_scale = 1.0              # 0.5–2.0 (below 1.0 = render at lower res, upscale)
+
+[render.anti_aliasing]
+msaa = "off"                        # "off", "2x", "4x"
+smaa = "high"                       # "off", "low", "medium", "high", "ultra"
+# MSAA and SMAA are mutually exclusive. If both are set, SMAA wins and MSAA is forced off.
+
+[render.post_fx]
+enabled = true                      # Master toggle — false disables everything below
+bloom_intensity = 0.2               # 0.0–1.0 (0.0 = bloom off)
+bloom_threshold = 0.8               # HDR brightness threshold
+tonemapping = "tony_mcmapface"      # "none", "reinhard", "reinhard_luminance", "aces_fitted",
+                                    # "agx", "tony_mcmapface", "somewhat_boring_display_transform"
+deband_dither = true                # Eliminates color banding in gradients
+contrast = 1.0                      # 0.8–1.2
+brightness = 1.0                    # 0.8–1.2
+gamma = 2.2                         # 1.8–2.6
+
+[render.lighting]
+dynamic = true                      # Enable dynamic point/spot lights
+shadows = true                      # Master shadow toggle
+shadow_quality = "high"             # "off", "low" (512), "medium" (1024), "high" (2048), "ultra" (4096)
+shadow_filter = "gaussian"          # "hardware_2x2", "gaussian", "temporal"
+cascade_count = 2                   # 1–4 (directional light shadow cascades)
+ambient_occlusion = true            # SSAO on/off
+ao_quality = "medium"               # "low", "medium", "high", "ultra"
+ao_radius = 1.0                     # World-space radius
+ao_intensity = 1.0                  # 0.0–2.0
+
+[render.particles]
+density = 0.8                       # 0.0–1.0 (scales spawn rates globally)
+backend = "gpu"                     # "cpu", "gpu" (cpu = forced CPU fallback)
+
+[render.weather]
+visual_mode = "shader_blend"        # "palette_tint", "overlay", "shader_blend"
+
+[render.textures]
+filtering = "trilinear"             # "nearest" (pixel-perfect), "bilinear", "trilinear"
+anisotropic = 8                     # 1, 2, 4, 8, 16 (1 = off)
+
+[render.camera]
+smoothing = true                    # Interpolated camera movement between sim ticks
+# fov_override is only used by 3D render modes (D048), not the default isometric view
+# fov_override = 60.0              # Uncomment for custom FOV in 3D mode
+</code></pre>
 <h3 id="mitigation-strategies"><a class="header" href="#mitigation-strategies">Mitigation Strategies</a></h3>
 <ol>
 <li>
