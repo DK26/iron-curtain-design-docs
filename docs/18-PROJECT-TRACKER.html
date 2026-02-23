@@ -1,0 +1,961 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Project Tracker &amp; Implementation Planning - Iron Curtain — Design Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Design docs for a Rust-native Red Alert RTS engine">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="favicon-8114d1fc.png">
+        <link rel="stylesheet" href="css/variables-8adf115d.css">
+        <link rel="stylesheet" href="css/general-2459343d.css">
+        <link rel="stylesheet" href="css/chrome-ae938929.css">
+        <link rel="stylesheet" href="css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "searchindex-3d47d740.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc-914f79aa.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Iron Curtain — Design Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs/edit/main/src/18-PROJECT-TRACKER.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="18--project-tracker--implementation-planning-overlay"><a class="header" href="#18--project-tracker--implementation-planning-overlay">18 — Project Tracker &amp; Implementation Planning Overlay</a></h1>
+<p>Keywords: milestone overlay, dependency map, progress tracker, design status, implementation status, Dxxx tracker, feature clusters, critical path</p>
+<blockquote>
+<p>This page is a <strong>project-tracking overlay</strong> on top of the canonical roadmap in <a href="08-ROADMAP.html"><code>src/08-ROADMAP.md</code></a>. It does <strong>not</strong> replace the roadmap. It exists to make implementation order, dependencies, and design-vs-code progress visible in one place.</p>
+</blockquote>
+<p><strong>Canonical tracker note:</strong> The <strong>Markdown tracker pages</strong> — this page and <a href="tracking/milestone-dependency-map.html"><code>tracking/milestone-dependency-map.md</code></a> — are the canonical implementation-planning artifacts. Any schema/YAML content is optional automation support only and must not replace these human-facing planning pages.</p>
+<p><strong>Feature intake gate (normative):</strong> A newly added feature (mode, UI flow, tooling capability, platform adaptation, community feature, etc.) is <strong>not considered integrated into the project plan</strong> until it is placed in the execution overlay with:</p>
+<ul>
+<li>a primary milestone (<code>M0–M11</code>)</li>
+<li>a priority class (<code>P-Core</code> / <code>P-Differentiator</code> / <code>P-Creator</code> / <code>P-Scale</code> / <code>P-Optional</code>)</li>
+<li>dependency placement (hard/soft/validation/policy/integration as applicable)</li>
+<li>tracker representation (Dxxx row and/or feature-cluster mapping)</li>
+</ul>
+<h2 id="purpose-and-scope"><a class="header" href="#purpose-and-scope">Purpose and Scope</a></h2>
+<ul>
+<li>Keep <code>src/08-ROADMAP.md</code> as the canonical phase timeline and deliverables.</li>
+<li>Add an implementation-oriented milestone/dependency overlay (<code>M0</code>–<code>M11</code>).</li>
+<li>Track progress at <strong>Dxxx granularity</strong> (one row per decision in <code>src/09-DECISIONS.md</code>).</li>
+<li>Separate <strong>Design Status</strong> from <strong>Code Status</strong> so this design-doc repo can stay honest and useful before implementation exists.</li>
+<li>Provide a stable handoff surface for future engineering planning, delegation, and recovery after pauses.</li>
+</ul>
+<h2 id="how-to-read-this-tracker"><a class="header" href="#how-to-read-this-tracker">How to Read This Tracker</a></h2>
+<ol>
+<li>Read the <strong>Milestone Snapshot</strong> to see where the project stands at a glance.</li>
+<li>Read <strong>Recommended Next Milestone Path</strong> to see the currently preferred execution order.</li>
+<li>Use the <strong>Decision Tracker</strong> to map any <code>Dxxx</code> to the milestone(s) it primarily unlocks.</li>
+<li>Use <a href="tracking/milestone-dependency-map.html"><code>tracking/milestone-dependency-map.md</code></a> for the detailed DAG, feature clusters, and dependency edges.</li>
+</ol>
+<h2 id="status-legend-design-vs-code"><a class="header" href="#status-legend-design-vs-code">Status Legend (Design vs Code)</a></h2>
+<h3 id="design-status-spec-maturity"><a class="header" href="#design-status-spec-maturity">Design Status (spec maturity)</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Status</th><th>Meaning</th></tr>
+</thead>
+<tbody>
+<tr><td><code>NotMapped</code></td><td>Not yet mapped into this tracker overlay</td></tr>
+<tr><td><code>Mentioned</code></td><td>Mentioned in roadmap/docs but not anchored to a canonical decision or cross-doc mapping</td></tr>
+<tr><td><code>Decisioned</code></td><td>Has a canonical decision (or equivalent spec section) but limited cross-doc integration mapping</td></tr>
+<tr><td><code>Integrated</code></td><td>Cross-referenced across relevant docs (architecture/UX/security/modding/etc.)</td></tr>
+<tr><td><code>Audited</code></td><td>Reviewed for contradictions and dependency placement (tracker baseline audit or targeted design audit)</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="code-status-implementation-maturity"><a class="header" href="#code-status-implementation-maturity">Code Status (implementation maturity)</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Status</th><th>Meaning</th></tr>
+</thead>
+<tbody>
+<tr><td><code>NotStarted</code></td><td>No implementation evidence linked</td></tr>
+<tr><td><code>Prototype</code></td><td>Isolated proof-of-concept exists</td></tr>
+<tr><td><code>InProgress</code></td><td>Active implementation underway</td></tr>
+<tr><td><code>VerticalSlice</code></td><td>End-to-end slice works for a narrow path</td></tr>
+<tr><td><code>FeatureComplete</code></td><td>Intended scope implemented</td></tr>
+<tr><td><code>Validated</code></td><td>Feature complete + validated by tests/playtests/ops checks as relevant</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="validation-status-evidence-classification"><a class="header" href="#validation-status-evidence-classification">Validation Status (evidence classification)</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Status</th><th>Meaning</th></tr>
+</thead>
+<tbody>
+<tr><td><code>None</code></td><td>No validation evidence recorded yet</td></tr>
+<tr><td><code>SpecReview</code></td><td>Design-doc review / consistency audit only (common in this repo baseline)</td></tr>
+<tr><td><code>AutomatedTests</code></td><td>Test evidence exists</td></tr>
+<tr><td><code>Playtest</code></td><td>Human playtesting evidence exists</td></tr>
+<tr><td><code>OpsValidated</code></td><td>Service/operations validation evidence exists</td></tr>
+<tr><td><code>Shipped</code></td><td>Released and accepted in a public build</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Evidence rule:</strong> Any row with <code>Code Status != NotStarted</code> must include evidence links (repo path, CI log, demo notes, test report, etc.). In this design-doc repository baseline, most code statuses are expected to remain <code>NotStarted</code>.</p>
+<h2 id="milestone-snapshot-m0m11"><a class="header" href="#milestone-snapshot-m0m11">Milestone Snapshot (M0–M11)</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Milestone</th><th>Objective</th><th>Roadmap Mapping</th><th>Design Status</th><th>Code Status</th><th>Validation</th><th>Current Read</th></tr>
+</thead>
+<tbody>
+<tr><td><code>M0</code></td><td>Design Baseline &amp; Execution Tracker Setup</td><td>pre-Phase overlay</td><td><code>Audited</code></td><td><code>FeatureComplete</code></td><td><code>SpecReview</code></td><td>Tracker pages and overlay are the deliverable. Evidence: <code>src/18-PROJECT-TRACKER.md</code>, <code>src/tracking/*.md</code>.</td></tr>
+<tr><td><code>M1</code></td><td>Resource &amp; Format Fidelity + Visual Rendering Slice</td><td>Phase 0 + Phase 1</td><td><code>Integrated</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>Depends on M0 only; strongest first engineering target.</td></tr>
+<tr><td><code>M2</code></td><td>Deterministic Simulation Core + Replayable Combat Slice</td><td>Phase 2</td><td><code>Integrated</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>Critical path milestone; depends on M1.</td></tr>
+<tr><td><code>M3</code></td><td>Local Playable Skirmish (Single Machine, Dummy AI)</td><td>Phase 3 + Phase 4 prep</td><td><code>Integrated</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>First playable local game slice.</td></tr>
+<tr><td><code>M4</code></td><td>Minimal Online Skirmish (No External Tracker)</td><td>Phase 5 subset (vertical slice)</td><td><code>Integrated</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>Minimal online slice intentionally excludes tracking/ranked.</td></tr>
+<tr><td><code>M5</code></td><td>Campaign Runtime Vertical Slice</td><td>Phase 4 subset</td><td><code>Decisioned</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>Campaign runtime vertical slice can parallelize with M4 after M3.</td></tr>
+<tr><td><code>M6</code></td><td>Full Single-Player Campaigns + Single-Player Maturity</td><td>Phase 4 full</td><td><code>Decisioned</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>Campaign-complete differentiator milestone. Status reflects weakest critical-path decisions (D042, D043, D036 are <code>Decisioned</code>).</td></tr>
+<tr><td><code>M7</code></td><td>Multiplayer Productization (Browser, Ranked, Spectator, Trust)</td><td>Phase 5 full</td><td><code>Integrated</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>Multiplayer productization, trust, ranked, moderation.</td></tr>
+<tr><td><code>M8</code></td><td>Creator Foundation (CLI + Minimal Workshop + Early Mod Workflow)</td><td>Phase 4–5 overlay + 6a foundation</td><td><code>Integrated</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>Creator foundation lane can start after M2 if resourced.</td></tr>
+<tr><td><code>M9</code></td><td>Full SDK Scenario Editor + Full Workshop + OpenRA Export Core</td><td>Phase 6a</td><td><code>Integrated</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>Scenario editor + full workshop + export core.</td></tr>
+<tr><td><code>M10</code></td><td>Campaign Editor + Game Modes + RA1 Export + Editor Extensibility</td><td>Phase 6b</td><td><code>Integrated</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>Campaign editor + advanced game modes + RA1 export.</td></tr>
+<tr><td><code>M11</code></td><td>Ecosystem Polish, Optional AI/LLM, Platform Expansion</td><td>Phase 7</td><td><code>Decisioned</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>Optional/experimental/polish heavy phase.</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="recommended-next-milestone-path"><a class="header" href="#recommended-next-milestone-path">Recommended Next Milestone Path</a></h2>
+<p><strong>Recommended path now:</strong> <code>M0 (complete tracker overlay) -&gt; M1 -&gt; M2 -&gt; M3 -&gt; parallelize M4 and M5 -&gt; M6 -&gt; M7 -&gt; M8/M9 -&gt; M10 -&gt; M11</code></p>
+<p><strong>Rationale:</strong></p>
+<ul>
+<li><code>M1</code> and <code>M2</code> are the shortest path to proving the engine core and de-risking the largest unknowns (format compatibility + deterministic sim).</li>
+<li><code>M3</code> creates the first local playable Red Alert-feeling slice (community-visible progress).</li>
+<li><code>M4</code> satisfies the early online milestone using the finalized netcode architecture without waiting for full tracking/ranked infrastructure.</li>
+<li><code>M5</code>/<code>M6</code> preserve the project’s single-player/campaign differentiator instead of deferring campaign completeness behind multiplayer productization.</li>
+<li><code>M8</code> (creator foundation) can begin after <code>M2</code> on a parallel lane, but full visual SDK/editor (<code>M9+</code>) should wait for stable runtime semantics and content schemas.</li>
+</ul>
+<p><strong>Granular execution order for the first playable slice (recommended):</strong></p>
+<ul>
+<li><code>G1-G3</code> (<code>M1</code>): RA assets parse -&gt; Bevy map/sprite render -&gt; unit animation playback</li>
+<li><code>G4-G5</code> (<code>M2</code> seam prep): cursor/hit-test -&gt; selection baseline</li>
+<li><code>G6-G10</code> (<code>M2</code> core): deterministic sim -&gt; path/move -&gt; shoot/hit/death</li>
+<li><code>G11-G15</code> (<code>M3</code> mission loop): win/loss evaluators -&gt; mission end UI -&gt; EVA/VO -&gt; replay/exit -&gt; feel pass</li>
+<li><code>G16</code> (<code>M3</code> milestone exit): widen into local skirmish loop + narrow <code>D043</code> basic AI subset</li>
+</ul>
+<p>Canonical detailed ladder and dependency edges:</p>
+<ul>
+<li><code>src/tracking/milestone-dependency-map.md</code> → <code>Granular Foundational Execution Ladder (RA First Mission Loop -&gt; Project Completion)</code></li>
+</ul>
+<h2 id="current-active-track-if-implementation-starts-now"><a class="header" href="#current-active-track-if-implementation-starts-now">Current Active Track (If Implementation Starts Now)</a></h2>
+<p>This section is the <strong>immediate execution recommendation</strong> for an implementer starting from this design-doc baseline. It is intentionally narrower than the full roadmap and should be updated whenever the active focus changes.</p>
+<h3 id="active-track-a--first-playable-mission-loop-foundation-m1---m3"><a class="header" href="#active-track-a--first-playable-mission-loop-foundation-m1---m3">Active Track A — First Playable Mission Loop Foundation (<code>M1 -&gt; M3</code>)</a></h3>
+<p><strong>Primary objective:</strong> reach <code>G16</code> (local skirmish milestone exit) through the documented <code>G1-G16</code> ladder with minimal scope drift.</p>
+<p><strong>Start now (parallel where safe):</strong></p>
+<ol>
+<li><strong><code>P002</code> fixed-point scale decision closure</strong> (planning blocker for serious <code>M2</code> sim/path/combat work)</li>
+<li><strong><code>G1</code> RA asset parsing baseline</strong> (<code>.mix</code>, <code>.shp</code>, <code>.pal</code>)</li>
+<li><strong><code>G2</code> Bevy map/sprite render slice</strong></li>
+<li><strong><code>G3</code> unit animation playback</strong></li>
+</ol>
+<p><strong>Then continue in strict sequence (once prerequisites are met):</strong></p>
+<ol>
+<li><code>G4</code> cursor/hit-test</li>
+<li><code>G5</code> selection baseline</li>
+<li><code>G6-G10</code> deterministic sim + movement/path + combat/death (after <code>P002</code>)</li>
+<li><code>G11-G15</code> mission-end evaluators/UI/EVA+VO/feel pass (after <code>P003</code> for final audio/VO polish)</li>
+<li><code>G16</code> widen to local skirmish + frozen <code>D043</code> basic AI subset</li>
+</ol>
+<h3 id="active-track-a-closure-criteria-before-switching-primary-focus"><a class="header" href="#active-track-a-closure-criteria-before-switching-primary-focus">Active Track A Closure Criteria (Before Switching Primary Focus)</a></h3>
+<ul>
+<li><code>M3.SP.SKIRMISH_LOCAL_LOOP</code> validated (local playable skirmish)</li>
+<li><code>G1-G16</code> evidence artifacts collected and linked</li>
+<li><code>P002</code> resolved and reflected in implementation assumptions</li>
+<li><code>P003</code> resolved before finalizing <code>G13/G15</code></li>
+<li><code>D043</code> <code>M3</code> basic AI subset frozen/documented</li>
+</ul>
+<h3 id="secondary-parallel-track-allowed-low-risk"><a class="header" href="#secondary-parallel-track-allowed-low-risk">Secondary Parallel Track (Allowed, Low-Risk)</a></h3>
+<p>These can progress without derailing Active Track A <strong>if resourcing allows</strong>:</p>
+<ul>
+<li><code>M8</code> prep work for <code>G21.1</code> design-to-ticket breakdown (CLI/local-overlay workflow planning only)</li>
+<li><code>P003</code> audio library evaluation spikes (to avoid blocking <code>G13</code>)</li>
+<li>test harness scaffolding for deterministic replay/hash proof artifacts (<code>G6/G9/G10</code>)</li>
+</ul>
+<h3 id="do-not-pull-forward-common-failure-modes"><a class="header" href="#do-not-pull-forward-common-failure-modes">Do Not Pull Forward (Common Failure Modes)</a></h3>
+<ul>
+<li>Full <code>M7</code> multiplayer productization features during <code>M4</code> slice work (browser/ranked/tracker)</li>
+<li>Full <code>M6</code> AI sophistication while implementing <code>G16</code> (<code>M3</code> basic AI subset only)</li>
+<li>Full visual SDK/editor (<code>M9+</code>) before <code>M8</code> foundations and runtime/network stabilization</li>
+</ul>
+<h2 id="m1-m4-how-completeness-audit-baseline"><a class="header" href="#m1-m4-how-completeness-audit-baseline">M1-M4 How-Completeness Audit (Baseline)</a></h2>
+<p>This subsection answers a narrower question than the full tracker: <strong>do we have enough implementation-grade “how” to start the <code>M1 -&gt; M4</code> execution chain in the correct order?</strong></p>
+<p><strong>Baseline answer:</strong> <strong>Yes, with explicit closure items</strong>. The <code>M1-M4</code> chain is sufficiently specified to begin implementation, but a few blockers and scope locks must be resolved or frozen before/while starting the affected milestones.</p>
+<h3 id="milestone-scoped-readiness-summary"><a class="header" href="#milestone-scoped-readiness-summary">Milestone-Scoped Readiness Summary</a></h3>
+<ul>
+<li><strong><code>M1</code> (Resource + Rendering Slice):</strong> implementation-ready enough to start. Main risks are fidelity breadth and file-format quirks, not missing architecture.</li>
+<li><strong><code>M2</code> (Deterministic Sim Core):</strong> implementation-ready <strong>after</strong> <code>P002</code> (fixed-point scale) is resolved.</li>
+<li><strong><code>M3</code> (Local Skirmish):</strong> mostly specified, but depends on <code>P003</code> (audio) and a narrow, explicit <code>D043</code> AI baseline subset.</li>
+<li><strong><code>M4</code> (Minimal Online Slice):</strong> architecture and fairness path are well specified (<code>D007/D008/D012/D060</code> audited), but reconnect remains intentionally “support-or-explicit-defer.”</li>
+</ul>
+<h3 id="m1-m4-closure-checklist-before--during-implementation"><a class="header" href="#m1-m4-closure-checklist-before--during-implementation">M1-M4 Closure Checklist (Before / During Implementation)</a></h3>
+<ol>
+<li>
+<p><strong>Resolve <code>P002</code> fixed-point scale before <code>M2</code> implementation starts.</strong></p>
+<ul>
+<li>Affects <code>D009</code>, <code>D013</code>, <code>D015</code>, <code>D045</code> and downstream tuning.</li>
+<li>See pending gate rows and risk watchlist (<code>P002</code>) below and in the dependency map.</li>
+</ul>
+</li>
+<li>
+<p><strong>Freeze an explicit <code>M3</code> AI baseline subset (from <code>D043</code>) for local skirmish.</strong></p>
+<ul>
+<li><code>M3.SP.SKIRMISH_LOCAL_LOOP</code> depends on <code>D043</code>, but <code>D043</code>’s primary milestone is <code>M6</code>.</li>
+<li>The <code>M3</code> slice should define a narrow “dummy/basic AI” contract and defer broader AI preset sophistication to <code>M6</code>.</li>
+</ul>
+</li>
+<li>
+<p><strong>Resolve <code>P003</code> audio library + music integration before Phase 3 skirmish polish/feel work.</strong></p>
+<ul>
+<li><code>M3.CORE.AUDIO_EVA_MUSIC</code> is a named hard gate for the “feels like RA” milestone.</li>
+</ul>
+</li>
+<li>
+<p><strong>Choose and document the <code>M4</code> reconnect stance early (baseline support vs explicit defer).</strong></p>
+<ul>
+<li><code>M4.NET.RECONNECT_BASELINE</code> intentionally allows “implement or explicitly defer.”</li>
+<li>Either outcome is acceptable for the slice, but it must be explicit to avoid ambiguity during validation and player-facing messaging.</li>
+</ul>
+</li>
+<li>
+<p><strong>Keep <code>M3</code>/<code>M4</code> subset boundaries explicit for imported higher-milestone decisions.</strong></p>
+<ul>
+<li><code>M3</code> skirmish usability references pieces of <code>D059</code>/<code>D060</code>; implement only the local skirmish usability subset, not full comms/ranked/trust surfaces.</li>
+<li><code>M4</code> online UX must not imply full tracking/ranked/browser availability.</li>
+</ul>
+</li>
+</ol>
+<h3 id="evidence-basis-current-tracker-state"><a class="header" href="#evidence-basis-current-tracker-state">Evidence Basis (Current Tracker State)</a></h3>
+<ul>
+<li><code>M1</code> primary decisions: <code>5 Integrated</code>, <code>4 Decisioned</code></li>
+<li><code>M2</code> primary decisions: <code>9 Integrated</code>, <code>2 Audited</code>, <code>3 Decisioned</code></li>
+<li><code>M3</code> primary decisions: <code>3 Integrated</code>, <code>2 Decisioned</code></li>
+<li><code>M4</code> primary decisions: <code>4 Audited</code></li>
+</ul>
+<p>This supports starting the <code>M1 -&gt; M4</code> chain now, while treating <code>P002</code>, <code>P003</code>, and the <code>M3</code>/<code>M4</code> scope locks above as mandatory implementation-planning checkpoints.</p>
+<h2 id="foundational-build-sequence-ra-mission-loop-implementation-order"><a class="header" href="#foundational-build-sequence-ra-mission-loop-implementation-order">Foundational Build Sequence (RA Mission Loop, Implementation Order)</a></h2>
+<p>This is the <strong>implementation-order view</strong> of the early milestones based on the granular ladder in the dependency map. It answers the practical question: <em>what do we build first so we can play one complete mission loop with correct win/loss flow and presentation?</em></p>
+<h3 id="phase-1-render-and-recognize-ra-on-screen-m1"><a class="header" href="#phase-1-render-and-recognize-ra-on-screen-m1">Phase 1: Render and Recognize RA on Screen (<code>M1</code>)</a></h3>
+<ol>
+<li>Parse core RA assets (<code>.mix</code>, <code>.shp</code>, <code>.pal</code>) and enumerate them from a real RA install.</li>
+<li>Render a real RA map scene in Bevy (palette-correct sprites, camera, basic fog/shroud handling).</li>
+<li>Play unit sprite sequences (idle/move/fire/death) so the battlefield is not static.</li>
+</ol>
+<h3 id="phase-2-make-units-interactive-and-deterministic-m2"><a class="header" href="#phase-2-make-units-interactive-and-deterministic-m2">Phase 2: Make Units Interactive and Deterministic (<code>M2</code>)</a></h3>
+<ol>
+<li>Add cursor + hover hit-test primitives (cells/entities).</li>
+<li>Add unit selection (single select, minimum multi-select/box select).</li>
+<li>Implement deterministic sim tick + order application skeleton (<strong>after <code>P002</code> fixed-point scale is resolved</strong>).</li>
+<li>Integrate pathfinding + spatial queries so move orders produce actual movement.</li>
+<li>Sync render presentation to sim state (movement/facing/animation transitions).</li>
+<li>Implement combat baseline (targeting + hit/damage resolution).</li>
+<li>Implement death/destruction state transitions and cleanup.</li>
+</ol>
+<h3 id="phase-3-close-the-first-mission-loop-m3"><a class="header" href="#phase-3-close-the-first-mission-loop-m3">Phase 3: Close the First Mission Loop (<code>M3</code>)</a></h3>
+<ol>
+<li>Implement authoritative mission-end evaluators:
+<ul>
+<li>victory when all enemies are eliminated</li>
+<li>failure when all player units are dead</li>
+</ul>
+</li>
+<li>Implement mission-end UI shell:
+<ul>
+<li><code>Mission Accomplished</code></li>
+<li><code>Mission Failed</code></li>
+</ul>
+</li>
+<li>Integrate EVA/VO mission-end audio (<strong>after <code>P003</code> audio library/music integration is resolved</strong>).</li>
+<li>Implement replay/restart/exit flow for the mission result screen.</li>
+<li>Run a “feel” pass (selection/cursor/audio/result pacing) until the slice is recognizably RA-like.</li>
+<li>Expand from fixed mission slice to local skirmish (<code>M3</code> exit), using a <strong>narrow documented <code>D043</code> basic AI subset</strong>.</li>
+</ol>
+<h3 id="after-the-first-mission-loop-logical-next-steps-through-completion"><a class="header" href="#after-the-first-mission-loop-logical-next-steps-through-completion">After the First Mission Loop: Logical Next Steps (Through Completion)</a></h3>
+<ol>
+<li><code>M4</code>: minimal online skirmish slice (relay/direct connect, no tracker/ranked).</li>
+<li><code>M5</code>: campaign runtime vertical slice (briefing -&gt; mission -&gt; debrief -&gt; next).</li>
+<li><code>M6</code>: full single-player campaigns + SP maturity.</li>
+<li><code>M7</code>: multiplayer productization (browser, ranked, spectator, trust, reports/moderation).</li>
+<li><code>M8</code>: creator foundation lane (CLI + minimal Workshop + profiles), in parallel once <code>M2</code> is stable/resourced.</li>
+<li><code>M9</code>: scenario editor core + full Workshop + OpenRA export core.</li>
+<li><code>M10</code>: campaign editor + advanced game modes + RA1 export + editor extensibility.</li>
+<li><code>M11</code>: ecosystem polish, optional AI/LLM, platform expansion, advanced community governance.</li>
+</ol>
+<h3 id="multiplayer-build-sequence-detailed-m4m7"><a class="header" href="#multiplayer-build-sequence-detailed-m4m7">Multiplayer Build Sequence (Detailed, <code>M4–M7</code>)</a></h3>
+<ol>
+<li><code>M4</code> minimal host/join path using the finalized netcode architecture (<code>NetworkModel</code> seam intact).</li>
+<li><code>M4</code> relay time authority + sub-tick normalization/clamping + sim-side order validation.</li>
+<li><code>M4</code> full minimal online match loop (play a match online end-to-end, result, disconnect cleanly).</li>
+<li><code>M4</code> reconnect baseline decision and implementation <strong>or</strong> explicit defer contract (must be documented and reflected in UX).</li>
+<li><code>M7</code> browser/tracking discovery + trust labels + lobby listings.</li>
+<li><code>M7</code> signed credentials/results and community-server trust path (<code>D052</code>) (<strong>after <code>P004</code></strong> wire details are resolved).</li>
+<li><code>M7</code> ranked queue/tiers/seasons (<code>D055</code>) + queue degradation/health rules.</li>
+<li><code>M7</code> report/block/avoid + moderation evidence attachment + optional review pipeline baseline.</li>
+<li><code>M7</code> spectator/tournament basics + signed replay/evidence workflow.</li>
+</ol>
+<h3 id="creator-platform-build-sequence-detailed-m8m11"><a class="header" href="#creator-platform-build-sequence-detailed-m8m11">Creator Platform Build Sequence (Detailed, <code>M8–M11</code>)</a></h3>
+<ol>
+<li><code>M8</code> <code>ic</code> CLI foundation + local content overlay/dev-profile run path (real runtime iteration, no packaging required).</li>
+<li><code>M8</code> minimal Workshop delivery baseline (<code>publish/install</code> loop).</li>
+<li><code>M8</code> mod profiles + virtual namespace + selective install hooks (<code>D062/D068</code>).</li>
+<li><code>M8</code> authoring reference foundation (generated YAML/Lua/CLI docs, one-source knowledge-base path).</li>
+<li><code>M9</code> Scenario Editor core (<code>D038</code>) + validate/test/publish loop + resource manager basics.</li>
+<li><code>M9</code> Asset Studio baseline (<code>D040</code>) + import/conversion + provenance plumbing.</li>
+<li><code>M9</code> full Workshop/CAS + moderation tooling + OpenRA export core (<code>D049/D066</code>).</li>
+<li><code>M9</code> SDK embedded authoring manual + context help (<code>F1</code>, <code>?</code>) from the generated docs source.</li>
+<li><code>M10</code> Campaign Editor + intermissions/dialogue/named characters + campaign test tools.</li>
+<li><code>M10</code> game mode templates + D070 family toolkit (Commander &amp; SpecOps, commander-avatar variants, experimental survival).</li>
+<li><code>M10</code> RA1 export + plugin/extensibility hardening + localization/subtitle tooling.</li>
+<li><code>M11</code> governance/reputation polish + creator feedback recognition maturity + optional contributor cosmetic rewards.</li>
+<li><code>M11</code> optional BYOLLM stack (<code>D016/D047/D057</code>) and editor assistant surfaces.</li>
+<li><code>M11</code> optional visual/render-mode expansion (<code>D048</code>) + browser/mobile/Deck polish.</li>
+</ol>
+<h3 id="dependency-cross-checks-early-implementation"><a class="header" href="#dependency-cross-checks-early-implementation">Dependency Cross-Checks (Early Implementation)</a></h3>
+<ul>
+<li><code>P002</code> must be resolved before serious <code>M2</code> sim/path/combat implementation.</li>
+<li><code>P003</code> must be resolved before mission-end VO/EVA/audio polish in <code>M3</code>.</li>
+<li><code>P004</code> is <strong>not</strong> a blocker for the <code>M4</code> minimal online slice, but is a blocker for <code>M7</code> multiplayer productization.</li>
+<li><code>M4</code> online slice must remain architecture-faithful but feature-minimal (no tracker/ranked/browser assumptions).</li>
+<li><code>M8</code> creator foundations can parallelize after <code>M2</code>, but full visual SDK/editor work (<code>M9+</code>) should wait for runtime/network product foundations and stable content schemas.</li>
+<li><code>M11</code> remains optional/polish-heavy and must not displace unfinished <code>M7–M10</code> exit criteria unless a new decision/overlay remap explicitly changes that.</li>
+</ul>
+<h2 id="m1-m3-developer-task-checklist-g1-g16"><a class="header" href="#m1-m3-developer-task-checklist-g1-g16">M1-M3 Developer Task Checklist (<code>G1-G16</code>)</a></h2>
+<p>Use this as the implementation handoff checklist for the <strong>first playable Red Alert mission loop</strong>. It is intentionally more concrete than the milestone prose and should be used to structure early engineering tickets/work packages.</p>
+<h3 id="phase-1-checklist-m1-render-and-recognize-ra"><a class="header" href="#phase-1-checklist-m1-render-and-recognize-ra">Phase 1 Checklist (<code>M1</code>: Render and Recognize RA)</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Step</th><th>Work Package (Implementation Bundle)</th><th>Suggested Verification / Proof Artifact</th><th>Completion Notes</th></tr>
+</thead>
+<tbody>
+<tr><td><code>G1</code></td><td>Implement core RA asset parsing in <code>ra-formats</code> for <code>.mix</code>, <code>.shp</code>, <code>.pal</code> + real-install asset enumeration</td><td>Parser corpus tests + sample asset enumeration output</td><td>Include malformed/corrupt fixture expectations and error behavior</td></tr>
+<tr><td><code>G2</code></td><td>Implement Bevy map/sprite render slice (palette-correct draw, camera controls, static scene)</td><td>Known-map visual capture + regression screenshot set</td><td>Palette correctness should be checked against a reference image set</td></tr>
+<tr><td><code>G3</code></td><td>Implement unit sprite sequence playback (idle/move/fire/death)</td><td>Short capture (GIF/video) + sequence timing sanity checks</td><td>Keep sequence lookup conventions compatible with later variant skins/icons</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="phase-2-checklist-m2-interactivity--deterministic-core"><a class="header" href="#phase-2-checklist-m2-interactivity--deterministic-core">Phase 2 Checklist (<code>M2</code>: Interactivity + Deterministic Core)</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Step</th><th>Work Package (Implementation Bundle)</th><th>Suggested Verification / Proof Artifact</th><th>Completion Notes</th></tr>
+</thead>
+<tbody>
+<tr><td><code>G4</code></td><td>Cursor + hover hit-test primitives for cells/entities in gameplay scene</td><td>Manual demo clip + hit-test unit tests (cell/entity under cursor)</td><td>Cursor semantics should remain compatible with D059/D065 input profile layering</td></tr>
+<tr><td><code>G5</code></td><td>Selection baseline (single select + minimum multi-select/box select + selection markers)</td><td>Manual test checklist + screenshot/video for each selection mode</td><td>Use sim-derived selection state; avoid render-only authority</td></tr>
+<tr><td><code>G6</code></td><td>Deterministic sim tick loop + basic order application (<code>move</code>, <code>stop</code>, state transitions)</td><td>Determinism test (<code>same inputs -&gt; same hash</code>) + local replay pass</td><td><strong>Blocked by <code>P002</code></strong> fixed-point scale decision</td></tr>
+<tr><td><code>G7</code></td><td>Integrate <code>Pathfinder</code> + <code>SpatialIndex</code> into movement order execution</td><td>Conformance tests (<code>PathfinderConformanceTest</code>, <code>SpatialIndexConformanceTest</code>) + in-game movement demo</td><td><strong>Blocked by <code>P002</code></strong>; preserve deterministic spatial-query ordering</td></tr>
+<tr><td><code>G8</code></td><td>Render/sim sync for movement/facing/animation transitions</td><td>Visual movement correctness capture + replay-repeat visual spot check</td><td>Prevent sim/render state drift during motion</td></tr>
+<tr><td><code>G9</code></td><td>Combat baseline (targeting + hit/damage resolution or narrow direct-fire first slice)</td><td>Deterministic combat replay test + combat demo clip</td><td>Prefer narrow deterministic slice over broad weapon feature scope</td></tr>
+<tr><td><code>G10</code></td><td>Death/destruction transitions (death state, animation, cleanup/removal)</td><td>Deterministic combat replay with death assertions + cleanup checks</td><td>Removal timing must remain sim-authoritative</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="phase-3-checklist-m3-first-complete-mission-loop"><a class="header" href="#phase-3-checklist-m3-first-complete-mission-loop">Phase 3 Checklist (<code>M3</code>: First Complete Mission Loop)</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Step</th><th>Work Package (Implementation Bundle)</th><th>Suggested Verification / Proof Artifact</th><th>Completion Notes</th></tr>
+</thead>
+<tbody>
+<tr><td><code>G11</code></td><td>Sim-authoritative mission-end evaluators (<code>all enemies dead</code>, <code>all player units dead</code>)</td><td>Unit/integration tests for victory/failure triggers + replay-result consistency test</td><td>Implement result logic in sim state, not UI heuristics</td></tr>
+<tr><td><code>G12</code></td><td>Mission-end UI shell (<code>Mission Accomplished</code> / <code>Mission Failed</code>) + flow pause/transition</td><td>Manual UX walkthrough capture + state-transition assertions</td><td>UI consumes authoritative result from <code>G11</code></td></tr>
+<tr><td><code>G13</code></td><td>EVA/VO integration for mission-end outcomes</td><td>Audio event trace/log + manual verification clip for both result states</td><td><strong>Blocked by <code>P003</code></strong> and <code>M3.CORE.AUDIO_EVA_MUSIC</code> baseline</td></tr>
+<tr><td><code>G14</code></td><td>Restart/exit flow from mission results (replay mission / return to menu)</td><td>Manual loop test (<code>start -&gt; end -&gt; replay</code>, <code>start -&gt; end -&gt; exit</code>)</td><td>This closes the first full mission loop</td></tr>
+<tr><td><code>G15</code></td><td>“Feels like RA” pass (cursor feedback, selection readability, audio timing, result pacing)</td><td>Internal playtest notes + short sign-off checklist</td><td>Keep scope to first mission loop polish, not full skirmish parity</td></tr>
+<tr><td><code>G16</code></td><td>Widen from fixed mission slice to local skirmish + narrow <code>D043</code> basic AI subset</td><td><code>M3.SP.SKIRMISH_LOCAL_LOOP</code> validation run + explicit AI subset scope note</td><td>Freeze <code>M3</code> AI subset before implementation to avoid <code>M6</code> scope creep</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="required-closure-gates-before-marking-m3-exit"><a class="header" href="#required-closure-gates-before-marking-m3-exit">Required Closure Gates Before Marking <code>M3</code> Exit</a></h3>
+<ul>
+<li><code>P002</code> fixed-point scale resolved and reflected in sim/path/combat assumptions (<code>G6-G10</code>)</li>
+<li><code>P003</code> audio library/music integration resolved before finalizing <code>G13/G15</code></li>
+<li><code>D043</code> <strong>M3 basic AI subset</strong> explicitly frozen (scope boundary vs <code>M6</code>)</li>
+<li>End-to-end mission loop validated:
+<ul>
+<li>start mission</li>
+<li>play mission</li>
+<li>trigger victory and failure</li>
+<li>show correct UI + VO</li>
+<li>replay/exit correctly</li>
+</ul>
+</li>
+</ul>
+<h3 id="suggested-evidence-pack-for-the-first-public-playable-update"><a class="header" href="#suggested-evidence-pack-for-the-first-public-playable-update">Suggested Evidence Pack for the First Public “Playable” Update</a></h3>
+<p>When <code>G16</code> is complete, the first public progress update should ideally include:</p>
+<ul>
+<li>one short local skirmish gameplay clip</li>
+<li>one mission-loop clip showing win/fail result screens + EVA/VO</li>
+<li>one deterministic replay/hash proof note (engineering credibility)</li>
+<li>one short note documenting the frozen <code>M3</code> AI subset and deferred <code>M6</code> AI scope</li>
+<li>one tracker update setting relevant <code>M1/M2/M3</code> cluster <code>Code Status</code> values with evidence links</li>
+</ul>
+<p>For ticket breakdown format, use:</p>
+<ul>
+<li><code>src/tracking/implementation-ticket-template.md</code></li>
+</ul>
+<h2 id="m5-m6-developer-task-checklist-campaign-runtime---full-campaign-completion-g181-g196"><a class="header" href="#m5-m6-developer-task-checklist-campaign-runtime---full-campaign-completion-g181-g196">M5-M6 Developer Task Checklist (Campaign Runtime -&gt; Full Campaign Completion, <code>G18.1-G19.6</code>)</a></h2>
+<p>Use this checklist to move from “local skirmish exists” to “campaign-first differentiator delivered.”</p>
+<h3 id="phase-4--m5-checklist-campaign-runtime-vertical-slice"><a class="header" href="#phase-4--m5-checklist-campaign-runtime-vertical-slice">Phase 4 / <code>M5</code> Checklist (Campaign Runtime Vertical Slice)</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Step</th><th>Work Package (Implementation Bundle)</th><th>Suggested Verification / Proof Artifact</th><th>Completion Notes</th></tr>
+</thead>
+<tbody>
+<tr><td><code>G18.1</code></td><td>Lua mission runtime baseline (<code>D004</code>) with deterministic sandbox boundaries and mission lifecycle hooks</td><td>Mission script runtime smoke tests + deterministic replay pass on scripted mission events</td><td>Keep API scope explicit and aligned with D024/D020 docs</td></tr>
+<tr><td><code>G18.2</code></td><td>Campaign graph runtime + persistent campaign state save/load (<code>D021</code>)</td><td>Save/load tests across mission transition + campaign-state roundtrip tests</td><td>Campaign state persistence must be independent of UI flow assumptions</td></tr>
+<tr><td><code>G18.3</code></td><td>Briefing -&gt; mission -&gt; debrief -&gt; next flow (<code>D065</code> UX layer on <code>D021</code>)</td><td>Manual walkthrough capture + scripted regression path for one campaign chain</td><td>UX should consume campaign runtime state, not duplicate it</td></tr>
+<tr><td><code>G18.4</code></td><td>Failure/continue/retry behavior + campaign save/load correctness for the vertical slice</td><td>Failure-path regression tests + manual retry/resume loop test</td><td><code>M5</code> exit requires both success and failure paths to be coherent</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="phase-4--m6-checklist-full-campaigns--sp-maturity"><a class="header" href="#phase-4--m6-checklist-full-campaigns--sp-maturity">Phase 4 / <code>M6</code> Checklist (Full Campaigns + SP Maturity)</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Step</th><th>Work Package (Implementation Bundle)</th><th>Suggested Verification / Proof Artifact</th><th>Completion Notes</th></tr>
+</thead>
+<tbody>
+<tr><td><code>G19.1</code></td><td>Scale campaign runtime to full shipped mission set (scripts/objectives/transitions/outcomes)</td><td>Campaign mission coverage matrix + per-mission load/run smoke tests</td><td>Track missing/unsupported mission behaviors explicitly; no silent omissions</td></tr>
+<tr><td><code>G19.2</code></td><td>Branching persistence, roster carryover, named-character/hero-state carryover correctness</td><td>Multi-mission branch/carryover test suite + state inspection snapshots</td><td>Includes D021 hero/named-character state correctness where used</td></tr>
+<tr><td><code>G19.3</code></td><td>FMV/cutscene/media variant playback + fallback-safe campaign behavior (<code>D068</code>)</td><td>Manual media/no-media campaign path tests + fallback validation checklist</td><td>Campaign must remain playable without optional media packs</td></tr>
+<tr><td><code>G19.4</code></td><td>Skirmish AI baseline maturity + campaign/tutorial script support (<code>D043/D042</code>)</td><td>AI behavior baseline playtests + scripted mission support validation</td><td>Avoid overfitting to campaign scripts at expense of skirmish baseline</td></tr>
+<tr><td><code>G19.5</code></td><td>D065 onboarding baseline for SP (Commander School, progressive hints, controls walkthrough integration)</td><td>Onboarding flow walkthroughs (KBM/controller/touch where supported) + prompt correctness checks</td><td>Prompt drift across input profiles is a known risk; test profile-aware prompts</td></tr>
+<tr><td><code>G19.6</code></td><td>Full RA campaign validation (Allied + Soviet): save/load, media fallback, progression correctness</td><td>Campaign completion matrix + defect list closure + representative gameplay captures</td><td><code>M6</code> exit is content-complete and behavior-correct, not just “most missions run”</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="required-closure-gates-before-marking-m6-exit"><a class="header" href="#required-closure-gates-before-marking-m6-exit">Required Closure Gates Before Marking <code>M6</code> Exit</a></h3>
+<ul>
+<li>All shipped campaign missions can be started and completed in campaign flow (Allied + Soviet)</li>
+<li>Save/load works mid-campaign and across campaign transitions</li>
+<li>Branching/carryover state correctness validated on representative branch paths</li>
+<li>Optional media missing-path remains playable (fallback-safe)</li>
+<li>D065 SP onboarding baseline is enabled and prompt-profile correct for supported input modes</li>
+</ul>
+<h2 id="m4-m7-developer-task-checklist-minimal-online-slice---multiplayer-productization-g171-g205"><a class="header" href="#m4-m7-developer-task-checklist-minimal-online-slice---multiplayer-productization-g171-g205">M4-M7 Developer Task Checklist (Minimal Online Slice -&gt; Multiplayer Productization, <code>G17.1-G20.5</code>)</a></h2>
+<p>Use this checklist to keep the multiplayer path architecture-faithful and staged: <strong>minimal online first, productization second</strong>.</p>
+<h3 id="m4-checklist-minimal-online-slice"><a class="header" href="#m4-checklist-minimal-online-slice"><code>M4</code> Checklist (Minimal Online Slice)</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Step</th><th>Work Package (Implementation Bundle)</th><th>Suggested Verification / Proof Artifact</th><th>Completion Notes</th></tr>
+</thead>
+<tbody>
+<tr><td><code>G17.1</code></td><td>Minimal host/join path (<code>direct connect</code> or <code>join code</code>) on final <code>NetworkModel</code> architecture</td><td>Two-client connect test (same LAN + remote path where possible)</td><td>Do not pull in tracker/browser/ranked assumptions</td></tr>
+<tr><td><code>G17.2</code></td><td>Relay time authority + sub-tick normalization/clamping + sim-side validation path</td><td>Timing/fairness test logs + deterministic reject consistency checks</td><td>Keep trust claims bounded to <code>M4</code> slice guarantees</td></tr>
+<tr><td><code>G17.3</code></td><td>Full minimal online match loop (play -&gt; result -&gt; disconnect)</td><td>Multiplayer demo capture + replay/hash consistency note</td><td>Proves <code>M4</code> architecture in live conditions</td></tr>
+<tr><td><code>G17.4</code></td><td>Reconnect baseline implementation <strong>or</strong> explicit defer contract + UX wording</td><td>Reconnect test evidence or documented defer contract with UX mock proof</td><td>Either path is valid; ambiguity is not</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="m7-checklist-multiplayer-productization"><a class="header" href="#m7-checklist-multiplayer-productization"><code>M7</code> Checklist (Multiplayer Productization)</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Step</th><th>Work Package (Implementation Bundle)</th><th>Suggested Verification / Proof Artifact</th><th>Completion Notes</th></tr>
+</thead>
+<tbody>
+<tr><td><code>G20.1</code></td><td>Tracking/browser discovery + trust labels + lobby listings</td><td>Browser/lobby walkthrough captures + trust-label correctness checklist</td><td>Trust labels must match actual guarantees (D011/D052/07-CROSS-ENGINE)</td></tr>
+<tr><td><code>G20.2</code></td><td>Signed credentials/results + community-server trust path (<code>D052</code>)</td><td>Credential/result signing tests + server trust path validation</td><td><strong>Blocked by <code>P004</code></strong> wire/integration details</td></tr>
+<tr><td><code>G20.3</code></td><td>Ranked queue + tiers/seasons + queue health/degradation rules (<code>D055</code>)</td><td>Ranked queue test plan + queue fallback/degradation scenarios</td><td>Avoid-list guarantees and queue-health messaging must be explicit</td></tr>
+<tr><td><code>G20.4</code></td><td>Report/block/avoid UX + moderation evidence attachment + optional review baseline</td><td>Report workflow demo + evidence attachment audit + sanctions capability-matrix tests</td><td>Keep moderation capabilities granular; avoid coupling failures</td></tr>
+<tr><td><code>G20.5</code></td><td>Spectator/tournament basics + signed replay/evidence workflow</td><td>Spectator match capture + replay evidence verification + tournament-path checklist</td><td><code>M7</code> exit requires browser/ranked/trust/moderation/spectator coherence</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="required-closure-gates-before-marking-m7-exit"><a class="header" href="#required-closure-gates-before-marking-m7-exit">Required Closure Gates Before Marking <code>M7</code> Exit</a></h3>
+<ul>
+<li><code>P004</code> resolved and reflected in multiplayer/lobby integration details</li>
+<li>Trust labels verified against actual host modes and guarantees</li>
+<li>Ranked, report/avoid, and moderation flows are distinct and understandable</li>
+<li>Signed replay/evidence workflow exists for moderation/tournament review paths</li>
+</ul>
+<h2 id="m8-m11-developer-task-checklist-creator-platform---full-authoring-platform---optional-polish-g211-g243"><a class="header" href="#m8-m11-developer-task-checklist-creator-platform---full-authoring-platform---optional-polish-g211-g243">M8-M11 Developer Task Checklist (Creator Platform -&gt; Full Authoring Platform -&gt; Optional Polish, <code>G21.1-G24.3</code>)</a></h2>
+<p>Use this checklist to keep the creator ecosystem and optional/polish work sequenced correctly after runtime/network foundations.</p>
+<h3 id="m8-checklist-creator-foundation"><a class="header" href="#m8-checklist-creator-foundation"><code>M8</code> Checklist (Creator Foundation)</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Step</th><th>Work Package (Implementation Bundle)</th><th>Suggested Verification / Proof Artifact</th><th>Completion Notes</th></tr>
+</thead>
+<tbody>
+<tr><td><code>G21.1</code></td><td><code>ic</code> CLI foundation + local content overlay/dev-profile run path</td><td>CLI command demos + local-overlay run proof via real game runtime</td><td>Must preserve D062 fingerprint/profile boundaries and explicit local-overlay labeling</td></tr>
+<tr><td><code>G21.2</code></td><td>Minimal Workshop delivery baseline (<code>publish/install</code>)</td><td>Publish/install smoke tests + package verification basics</td><td>Keep scope minimal; full federation/CAS belongs to <code>M9</code></td></tr>
+<tr><td><code>G21.3</code></td><td>Mod profiles + virtual namespace + selective install hooks (<code>D062/D068</code>)</td><td>Profile activation/fingerprint tests + install-preset behavior checks</td><td>Fingerprint boundaries (gameplay/presentation/player-config) must remain explicit</td></tr>
+<tr><td><code>G21.4</code></td><td>Authoring reference foundation (generated YAML/Lua/CLI docs, one-source pipeline)</td><td>Generated docs artifact + versioning metadata + search/index smoke test</td><td>This is the foundation for the embedded SDK manual (<code>M9</code>)</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="m9-checklist-scenario-editor-core--workshop--openra-export-core"><a class="header" href="#m9-checklist-scenario-editor-core--workshop--openra-export-core"><code>M9</code> Checklist (Scenario Editor Core + Workshop + OpenRA Export Core)</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Step</th><th>Work Package (Implementation Bundle)</th><th>Suggested Verification / Proof Artifact</th><th>Completion Notes</th></tr>
+</thead>
+<tbody>
+<tr><td><code>G22.1</code></td><td>Scenario Editor core (<code>D038</code>) + validate/test/publish loop + resource manager basics</td><td>End-to-end authoring demo (<code>edit -&gt; validate -&gt; test -&gt; publish</code>)</td><td>Keep simple/advanced mode split intact</td></tr>
+<tr><td><code>G22.2</code></td><td>Asset Studio baseline (<code>D040</code>) + import/conversion + provenance plumbing</td><td>Asset import/edit/publish-readiness demo + provenance metadata checks</td><td>Provenance UI should not block basic authoring flow in simple mode</td></tr>
+<tr><td><code>G22.3</code></td><td>Full Workshop/CAS + moderation tooling + OpenRA export core (<code>D049/D066</code>)</td><td>Full publish/install/autodownload/CAS flow tests + <code>ic export --target openra</code> checks</td><td>Export-safe warnings/fidelity reports must be explicit and accurate</td></tr>
+<tr><td><code>G22.4</code></td><td>SDK embedded authoring manual + context help (<code>F1</code>, <code>?</code>)</td><td>SDK docs browser/context-help demo + offline snapshot proof</td><td>Must consume one-source docs pipeline from <code>G21.4</code>, not a parallel manual</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="m10-checklist-campaign-editor--modes--ra1-export--extensibility"><a class="header" href="#m10-checklist-campaign-editor--modes--ra1-export--extensibility"><code>M10</code> Checklist (Campaign Editor + Modes + RA1 Export + Extensibility)</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Step</th><th>Work Package (Implementation Bundle)</th><th>Suggested Verification / Proof Artifact</th><th>Completion Notes</th></tr>
+</thead>
+<tbody>
+<tr><td><code>G23.1</code></td><td>Campaign Editor + intermissions/dialogue/named characters + campaign test tools</td><td>Campaign authoring demo + campaign test/preview workflow evidence</td><td>Includes hero/named-character authoring UX and state inspection</td></tr>
+<tr><td><code>G23.2</code></td><td>Game mode templates + D070 family toolkit (Commander &amp; SpecOps, commander-avatar variants, experimental survival)</td><td>Authoring + playtest demos for at least one D070 scenario and one experimental template</td><td>Keep experimental labels and PvE-first constraints explicit</td></tr>
+<tr><td><code>G23.3</code></td><td>RA1 export + plugin/extensibility hardening + localization/subtitle tooling</td><td>RA1 export validation + plugin capability/version checks + localization workflow demo</td><td>Maintain simple/advanced authoring UX split while adding power features</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="m11-checklist-ecosystem-polish--optional-systems"><a class="header" href="#m11-checklist-ecosystem-polish--optional-systems"><code>M11</code> Checklist (Ecosystem Polish + Optional Systems)</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Step</th><th>Work Package (Implementation Bundle)</th><th>Suggested Verification / Proof Artifact</th><th>Completion Notes</th></tr>
+</thead>
+<tbody>
+<tr><td><code>G24.1</code></td><td>Governance/reputation polish + creator feedback recognition maturity + optional contributor cosmetic rewards</td><td>Abuse/audit test plan + profile/reward UX walkthrough</td><td>No gameplay/ranked effects; profile-only rewards remain enforced</td></tr>
+<tr><td><code>G24.2</code></td><td>Optional BYOLLM stack (<code>D016/D047/D057</code>) + local/cloud prompt strategy + editor assistant surfaces</td><td>BYOLLM provider matrix tests + prompt-strategy probe/eval demos</td><td>Must remain fully optional and fallback-safe</td></tr>
+<tr><td><code>G24.3</code></td><td>Optional visual/render-mode expansion (<code>D048</code>) + browser/mobile/Deck polish</td><td>Cross-platform visual/perf captures + low-end baseline validation</td><td>Preserve “no dedicated gaming GPU required” path while adding optional visual modes</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="required-closure-gates-before-marking-m9-m10-and-m11-exits"><a class="header" href="#required-closure-gates-before-marking-m9-m10-and-m11-exits">Required Closure Gates Before Marking <code>M9</code>, <code>M10</code>, and <code>M11</code> Exits</a></h3>
+<ul>
+<li><strong><code>M9</code></strong>:
+<ul>
+<li>scenario editor core + asset studio + full Workshop/CAS + OpenRA export core all work together</li>
+<li>embedded authoring manual/context help uses the one-source docs pipeline</li>
+</ul>
+</li>
+<li><strong><code>M10</code></strong>:
+<ul>
+<li>campaign editor + advanced mode templates + RA1 export/extensibility/localization surfaces are validated and usable</li>
+<li>experimental modes remain clearly labeled and do not displace core template validation</li>
+</ul>
+</li>
+<li><strong><code>M11</code></strong>:
+<ul>
+<li>optional systems (<code>BYOLLM</code>, render-mode/platform polish, contributor reward points if enabled) remain optional and do not break lower-milestone guarantees</li>
+<li>any promoted optional system has explicit overlay remapping and updated trust/fairness claims where relevant</li>
+</ul>
+</li>
+</ul>
+<h2 id="decision-tracker-all-dxxx-from-src09-decisionsmd"><a class="header" href="#decision-tracker-all-dxxx-from-src09-decisionsmd">Decision Tracker (All Dxxx from <code>src/09-DECISIONS.md</code>)</a></h2>
+<p>This table tracks <strong>every decision row currently indexed in <a href="09-DECISIONS.html"><code>src/09-DECISIONS.md</code></a></strong> (70 rows after index normalization). Legacy decisions <code>D063</code>/<code>D064</code> are indexed and tracked here with canonical references carried forward in D067 integration notes in <code>src/decisions/09a-foundation.md</code>.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Decision</th><th>Title</th><th>Domain</th><th>Canonical Source</th><th>Milestone (Primary)</th><th>Milestone (Secondary/Prereqs)</th><th>Priority</th><th>Design Status</th><th>Code Status</th><th>Validation</th><th>Key Dependencies</th><th>Blocking Pending Decisions</th><th>Notes / Risks</th><th>Evidence Links</th></tr>
+</thead>
+<tbody>
+<tr><td><code>D001</code></td><td>Language — Rust</td><td>Foundation</td><td><code>src/decisions/09a-foundation.md</code></td><td><code>M1</code></td><td>M0</td><td><code>P-Core</code></td><td><code>Decisioned</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>See <code>tracking/milestone-dependency-map.md</code> for milestone and feature-cluster dependency edges.</td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td><code>D002</code></td><td>Framework — Bevy</td><td>Foundation</td><td><code>src/decisions/09a-foundation.md</code></td><td><code>M1</code></td><td>M0</td><td><code>P-Core</code></td><td><code>Decisioned</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>See <code>tracking/milestone-dependency-map.md</code> for milestone and feature-cluster dependency edges.</td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td><code>D003</code></td><td>Data Format — Real YAML, Not MiniYAML</td><td>Foundation</td><td><code>src/decisions/09a-foundation.md</code></td><td><code>M1</code></td><td>M0</td><td><code>P-Core</code></td><td><code>Decisioned</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>See <code>tracking/milestone-dependency-map.md</code> for milestone and feature-cluster dependency edges.</td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td><code>D004</code></td><td>Modding — Lua (Not Python) for Scripting</td><td>Modding</td><td><code>src/decisions/09c-modding.md</code></td><td><code>M5</code></td><td>M8, M9</td><td><code>P-Differentiator</code></td><td><code>Decisioned</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>See <code>tracking/milestone-dependency-map.md</code> for milestone and feature-cluster dependency edges.</td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td><code>D005</code></td><td>Modding — WASM for Power Users (Tier 3)</td><td>Modding</td><td><code>src/decisions/09c-modding.md</code></td><td><code>M8</code></td><td>M9, M11</td><td><code>P-Creator</code></td><td><code>Decisioned</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>See <code>tracking/milestone-dependency-map.md</code> for milestone and feature-cluster dependency edges.</td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td><code>D006</code></td><td>Networking — Pluggable via Trait</td><td>Networking</td><td><code>src/decisions/09b-networking.md</code></td><td><code>M2</code></td><td>M4</td><td><code>P-Core</code></td><td><code>Integrated</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>D009, D010, D041; <code>M2.CORE.SIM_FIXED_POINT_AND_ORDERS</code></td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td><code>D007</code></td><td>Networking — Relay Server as Default</td><td>Networking</td><td><code>src/decisions/09b-networking.md</code></td><td><code>M4</code></td><td>M7</td><td><code>P-Core</code></td><td><code>Audited</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>D006, D008, D012, D060; <code>M4.NET.MINIMAL_LOCKSTEP_ONLINE</code></td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td><code>D008</code></td><td>Sub-Tick Timestamps on Orders</td><td>Networking</td><td><code>src/decisions/09b-networking.md</code></td><td><code>M4</code></td><td>M7</td><td><code>P-Core</code></td><td><code>Audited</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>D006, D007, D012; relay timestamp normalization path</td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td><code>D009</code></td><td>Simulation — Fixed-Point Math, No Floats</td><td>Foundation</td><td><code>src/decisions/09a-foundation.md</code></td><td><code>M2</code></td><td>M0</td><td><code>P-Core</code></td><td><code>Integrated</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>See <code>tracking/milestone-dependency-map.md</code> for milestone and feature-cluster dependency edges.</td><td>P002</td><td>—</td><td>—</td></tr>
+<tr><td><code>D010</code></td><td>Simulation — Snapshottable State</td><td>Foundation</td><td><code>src/decisions/09a-foundation.md</code></td><td><code>M2</code></td><td>M0</td><td><code>P-Core</code></td><td><code>Integrated</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>See <code>tracking/milestone-dependency-map.md</code> for milestone and feature-cluster dependency edges.</td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td><code>D011</code></td><td>Cross-Engine Play — Community Layer, Not Sim Layer</td><td>Networking</td><td><code>src/decisions/09b-networking.md</code></td><td><code>M7</code></td><td>M11</td><td><code>P-Differentiator</code></td><td><code>Audited</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>D007, D052, <code>src/07-CROSS-ENGINE.md</code> trust matrix, D056</td><td>—</td><td>Cross-engine live play trust is level-specific; no native IC anti-cheat guarantees for foreign clients by default.</td><td>—</td></tr>
+<tr><td><code>D012</code></td><td>Security — Validate Orders in Sim</td><td>Networking</td><td><code>src/decisions/09b-networking.md</code></td><td><code>M4</code></td><td>M7</td><td><code>P-Core</code></td><td><code>Audited</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>D009, D010, D006; sim order validation pipeline</td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td><code>D013</code></td><td>Pathfinding — Trait-Abstracted, Multi-Layer Hybrid</td><td>Gameplay</td><td><code>src/decisions/09d-gameplay.md</code></td><td><code>M2</code></td><td>M3</td><td><code>P-Core</code></td><td><code>Audited</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>D009, D015, D041; <code>M2.CORE.PATHFINDING_SPATIAL</code></td><td>P002</td><td>—</td><td>—</td></tr>
+<tr><td><code>D014</code></td><td>Templating — Tera in Phase 6a (Nice-to-Have)</td><td>Modding</td><td><code>src/decisions/09c-modding.md</code></td><td><code>M9</code></td><td>M11</td><td><code>P-Creator</code></td><td><code>Decisioned</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>See <code>tracking/milestone-dependency-map.md</code> for milestone and feature-cluster dependency edges.</td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td><code>D015</code></td><td>Performance — Efficiency-First, Not Thread-First</td><td>Foundation</td><td><code>src/decisions/09a-foundation.md</code></td><td><code>M2</code></td><td>M0</td><td><code>P-Core</code></td><td><code>Integrated</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>See <code>tracking/milestone-dependency-map.md</code> for milestone and feature-cluster dependency edges.</td><td>P002</td><td>—</td><td>—</td></tr>
+<tr><td><code>D016</code></td><td>LLM-Generated Missions and Campaigns</td><td>Tools</td><td><code>src/decisions/09f-tools.md</code></td><td><code>M11</code></td><td>M9</td><td><code>P-Optional</code></td><td><code>Decisioned</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>See <code>tracking/milestone-dependency-map.md</code> for milestone and feature-cluster dependency edges.</td><td>—</td><td>Optional/BYOLLM; never blocks core engine playability or modding workflows.</td><td>—</td></tr>
+<tr><td><code>D017</code></td><td>Bevy Rendering Pipeline</td><td>Foundation</td><td><code>src/decisions/09a-foundation.md</code></td><td><code>M1</code></td><td>M11</td><td><code>P-Core</code></td><td><code>Integrated</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>See <code>tracking/milestone-dependency-map.md</code> for milestone and feature-cluster dependency edges.</td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td><code>D018</code></td><td>Multi-Game Extensibility (Game Modules)</td><td>Foundation</td><td><code>src/decisions/09a-foundation.md</code></td><td><code>M2</code></td><td>M9, M10</td><td><code>P-Core</code></td><td><code>Integrated</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>D039, D041, D013; game module registration and subsystem seams</td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td><code>D019</code></td><td>Switchable Balance Presets</td><td>Gameplay</td><td><code>src/decisions/09d-gameplay.md</code></td><td><code>M3</code></td><td>M7</td><td><code>P-Core</code></td><td><code>Integrated</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>See <code>tracking/milestone-dependency-map.md</code> for milestone and feature-cluster dependency edges.</td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td><code>D020</code></td><td>Mod SDK &amp; Creative Toolchain</td><td>Gameplay (Tools by function)</td><td><code>src/decisions/09d-gameplay.md</code></td><td><code>M8</code></td><td>M9, M10</td><td><code>P-Creator</code></td><td><code>Integrated</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>D038, D040, D049, D068, D069; CLI + separate SDK app foundation</td><td>—</td><td>Domain is “Tools” by function but canonical decision lives in <code>09d-gameplay.md</code> for historical reasons; detailed workflows extend into <code>04-MODDING.md</code> and D038/D040, including the local content overlay/dev-profile iteration path.</td><td>—</td></tr>
+<tr><td><code>D021</code></td><td>Branching Campaign System with Persistent State</td><td>Gameplay</td><td><code>src/decisions/09d-gameplay.md</code></td><td><code>M5</code></td><td>M6, M10</td><td><code>P-Differentiator</code></td><td><code>Integrated</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>D004, D010, D038, D065; <code>src/modding/campaigns.md</code> runtime/schema details</td><td>—</td><td>Campaign runtime slice (<code>M5</code>) is the first proof point; full campaign completeness lands in <code>M6</code>. <code>src/modding/campaigns.md</code> also carries the canonical named-character presentation override schema used by D038 hero/campaign authoring (presentation-only convenience layer).</td><td>—</td></tr>
+<tr><td><code>D022</code></td><td>Dynamic Weather with Terrain Surface Effects</td><td>Gameplay</td><td><code>src/decisions/09d-gameplay.md</code></td><td><code>M6</code></td><td>M3, M10</td><td><code>P-Differentiator</code></td><td><code>Integrated</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>D010, D015, D022 weather systems in <code>02-ARCHITECTURE.md</code>, D024 (Lua control)</td><td>—</td><td>Decision is intentionally split across sim-side determinism and render-side quality tiers.</td><td>—</td></tr>
+<tr><td><code>D023</code></td><td>OpenRA Vocabulary Compatibility Layer</td><td>Modding</td><td><code>src/decisions/09d-gameplay.md</code></td><td><code>M1</code></td><td>M8, M9</td><td><code>P-Core</code></td><td><code>Integrated</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>D003, D025, D026, D066; <code>M1.CORE.OPENRA_DATA_COMPAT</code></td><td>—</td><td>Core compatibility/familiarity enabler; alias table also feeds export workflows later.</td><td>—</td></tr>
+<tr><td><code>D024</code></td><td>Lua API Superset of OpenRA</td><td>Modding</td><td><code>src/decisions/09d-gameplay.md</code></td><td><code>M5</code></td><td>M6, M8, M9</td><td><code>P-Differentiator</code></td><td><code>Integrated</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>D004, D021, D059, D066; mission scripting compatibility</td><td>—</td><td>Key migration promise for campaign/scripted content; export-safe validation uses OpenRA-safe subset.</td><td>—</td></tr>
+<tr><td><code>D025</code></td><td>Runtime MiniYAML Loading</td><td>Modding</td><td><code>src/decisions/09d-gameplay.md</code></td><td><code>M1</code></td><td>M8, M9</td><td><code>P-Core</code></td><td><code>Integrated</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>D003, D023, D026, D066; runtime compatibility loader</td><td>—</td><td>Canonical content stays YAML (D003); MiniYAML remains accepted compatibility input only.</td><td>—</td></tr>
+<tr><td><code>D026</code></td><td>OpenRA Mod Manifest Compatibility</td><td>Modding</td><td><code>src/decisions/09d-gameplay.md</code></td><td><code>M1</code></td><td>M8, M9</td><td><code>P-Core</code></td><td><code>Integrated</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>D023, D024, D025, D020; zero-friction OpenRA mod import path</td><td>—</td><td>Import is part of early compatibility story; full conversion/publish workflows mature in creator milestones.</td><td>—</td></tr>
+<tr><td><code>D027</code></td><td>Canonical Enum Compatibility with OpenRA</td><td>Gameplay</td><td><code>src/decisions/09d-gameplay.md</code></td><td><code>M2</code></td><td>M1, M9</td><td><code>P-Core</code></td><td><code>Integrated</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>D023, D028, D029; sim enums + parser aliasing</td><td>—</td><td>Keeps versus tables/locomotor and other balance-critical data copy-paste compatible.</td><td>—</td></tr>
+<tr><td><code>D028</code></td><td>Condition and Multiplier Systems as Phase 2 Requirements</td><td>Gameplay</td><td><code>src/decisions/09d-gameplay.md</code></td><td><code>M2</code></td><td>M3, M6</td><td><code>P-Core</code></td><td><code>Integrated</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>D009, D013, D015, D027, D041; <code>M2.CORE.GAP_P0_GAMEPLAY_SYSTEMS</code></td><td>P002</td><td>Hard Phase 2 gate for modding expressiveness and combat fidelity.</td><td>—</td></tr>
+<tr><td><code>D029</code></td><td>Cross-Game Component Library (Phase 2 Targets)</td><td>Gameplay</td><td><code>src/decisions/09d-gameplay.md</code></td><td><code>M2</code></td><td>M3, M6, M10</td><td><code>P-Core</code></td><td><code>Decisioned</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>D028, D041, D048; Phase 2 targets with some early-Phase-3 spillover allowed</td><td>—</td><td>D028 remains the strict Phase 2 exit gate; D029 systems are high-priority targets with phased fallback.</td><td>—</td></tr>
+<tr><td><code>D030</code></td><td>Workshop Resource Registry &amp; Dependency System</td><td>Community</td><td><code>src/decisions/09e-community.md</code></td><td><code>M8</code></td><td>—</td><td><code>P-Creator</code></td><td><code>Integrated</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>D049, D034, D052 (later server integration), D068</td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td><code>D031</code></td><td>Observability &amp; Telemetry (OTEL)</td><td>Community</td><td><code>src/decisions/09e-community.md</code></td><td><code>M2</code></td><td>M7, M11</td><td><code>P-Core</code></td><td><code>Integrated</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>See <code>tracking/milestone-dependency-map.md</code> for milestone and feature-cluster dependency edges.</td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td><code>D032</code></td><td>Switchable UI Themes</td><td>Modding</td><td><code>src/decisions/09c-modding.md</code></td><td><code>M3</code></td><td>M6</td><td><code>P-Core</code></td><td><code>Decisioned</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>See <code>tracking/milestone-dependency-map.md</code> for milestone and feature-cluster dependency edges.</td><td>—</td><td>Audio theme variants (menu music/click sounds per theme) would depend on P003, but core visual theme switching does not.</td><td>—</td></tr>
+<tr><td><code>D033</code></td><td>Toggleable QoL &amp; Gameplay Behavior Presets</td><td>Gameplay</td><td><code>src/decisions/09d-gameplay.md</code></td><td><code>M3</code></td><td>M6</td><td><code>P-Core</code></td><td><code>Decisioned</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>See <code>tracking/milestone-dependency-map.md</code> for milestone and feature-cluster dependency edges.</td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td><code>D034</code></td><td>SQLite as Embedded Storage</td><td>Community</td><td><code>src/decisions/09e-community.md</code></td><td><code>M2</code></td><td>M7, M9</td><td><code>P-Core</code></td><td><code>Integrated</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>See <code>tracking/milestone-dependency-map.md</code> for milestone and feature-cluster dependency edges.</td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td><code>D035</code></td><td>Creator Recognition &amp; Attribution</td><td>Community</td><td><code>src/decisions/09e-community.md</code></td><td><code>M9</code></td><td>M11</td><td><code>P-Scale</code></td><td><code>Decisioned</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>See <code>tracking/milestone-dependency-map.md</code> for milestone and feature-cluster dependency edges.</td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td><code>D036</code></td><td>Achievement System</td><td>Community</td><td><code>src/decisions/09e-community.md</code></td><td><code>M6</code></td><td>M10</td><td><code>P-Differentiator</code></td><td><code>Decisioned</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>See <code>tracking/milestone-dependency-map.md</code> for milestone and feature-cluster dependency edges.</td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td><code>D037</code></td><td>Community Governance &amp; Platform Stewardship</td><td>Community</td><td><code>src/decisions/09e-community.md</code></td><td><code>M0</code></td><td>M7, M11</td><td><code>P-Scale</code></td><td><code>Decisioned</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>See <code>tracking/milestone-dependency-map.md</code> for milestone and feature-cluster dependency edges.</td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td><code>D038</code></td><td>Scenario Editor (OFP/Eden-Inspired, SDK)</td><td>Tools</td><td><code>src/decisions/09f-tools.md</code></td><td><code>M9</code></td><td>M10</td><td><code>P-Creator</code></td><td><code>Integrated</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>D020 (CLI/SDK), D040, D049, D059, D065, D066, D069</td><td>—</td><td>Large multi-topic decision; milestone split between Scenario Editor core (M9) and Campaign/Game Modes (M10). M10 also carries the character presentation override convenience layer (unique hero/operative voice/icon/skin/marker variants) via <code>M10.SDK.D038_CHARACTER_PRESENTATION_OVERRIDES</code>.</td><td>—</td></tr>
+<tr><td><code>D039</code></td><td>Engine Scope — General-Purpose Classic RTS</td><td>Foundation</td><td><code>src/decisions/09a-foundation.md</code></td><td><code>M1</code></td><td>M11</td><td><code>P-Core</code></td><td><code>Decisioned</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>See <code>tracking/milestone-dependency-map.md</code> for milestone and feature-cluster dependency edges.</td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td><code>D040</code></td><td>Asset Studio</td><td>Tools</td><td><code>src/decisions/09f-tools.md</code></td><td><code>M9</code></td><td>M10</td><td><code>P-Creator</code></td><td><code>Integrated</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>D038, D049, D068; Asset Studio + publish readiness/provenance</td><td>—</td><td>Advanced/provenance/editor AI integrations are phased; baseline asset editing is M9.</td><td>—</td></tr>
+<tr><td><code>D041</code></td><td>Trait-Abstracted Subsystem Strategy</td><td>Gameplay</td><td><code>src/decisions/09d-gameplay.md</code></td><td><code>M2</code></td><td>M9</td><td><code>P-Core</code></td><td><code>Decisioned</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>See <code>tracking/milestone-dependency-map.md</code> for milestone and feature-cluster dependency edges.</td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td><code>D042</code></td><td>Player Behavioral Profiles &amp; Training</td><td>Gameplay</td><td><code>src/decisions/09d-gameplay.md</code></td><td><code>M6</code></td><td>M7, M11</td><td><code>P-Differentiator</code></td><td><code>Decisioned</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>See <code>tracking/milestone-dependency-map.md</code> for milestone and feature-cluster dependency edges.</td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td><code>D043</code></td><td>AI Behavior Presets</td><td>Gameplay</td><td><code>src/decisions/09d-gameplay.md</code></td><td><code>M6</code></td><td>M3, M7</td><td><code>P-Differentiator</code></td><td><code>Decisioned</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>See <code>tracking/milestone-dependency-map.md</code> for milestone and feature-cluster dependency edges.</td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td><code>D044</code></td><td>LLM-Enhanced AI</td><td>Gameplay</td><td><code>src/decisions/09d-gameplay.md</code></td><td><code>M11</code></td><td>—</td><td><code>P-Optional</code></td><td><code>Decisioned</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>See <code>tracking/milestone-dependency-map.md</code> for milestone and feature-cluster dependency edges.</td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td><code>D045</code></td><td>Pathfinding Behavior Presets</td><td>Gameplay</td><td><code>src/decisions/09d-gameplay.md</code></td><td><code>M2</code></td><td>M3</td><td><code>P-Core</code></td><td><code>Audited</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>See <code>tracking/milestone-dependency-map.md</code> for milestone and feature-cluster dependency edges.</td><td>P002</td><td>—</td><td>—</td></tr>
+<tr><td><code>D046</code></td><td>Community Platform — Premium Content</td><td>Community</td><td><code>src/decisions/09e-community.md</code></td><td><code>M11</code></td><td>—</td><td><code>P-Scale</code></td><td><code>Decisioned</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>See <code>tracking/milestone-dependency-map.md</code> for milestone and feature-cluster dependency edges.</td><td>—</td><td>Community monetization/premium policy intentionally gated late after core community trust and moderation systems.</td><td>—</td></tr>
+<tr><td><code>D047</code></td><td>LLM Configuration Manager</td><td>Tools</td><td><code>src/decisions/09f-tools.md</code></td><td><code>M11</code></td><td>M9</td><td><code>P-Optional</code></td><td><code>Decisioned</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>See <code>tracking/milestone-dependency-map.md</code> for milestone and feature-cluster dependency edges.</td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td><code>D048</code></td><td>Switchable Render Modes</td><td>Gameplay</td><td><code>src/decisions/09d-gameplay.md</code></td><td><code>M11</code></td><td>M3</td><td><code>P-Optional</code></td><td><code>Decisioned</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>See <code>tracking/milestone-dependency-map.md</code> for milestone and feature-cluster dependency edges.</td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td><code>D049</code></td><td>Workshop Asset Formats &amp; P2P Distribution</td><td>Community</td><td><code>src/decisions/09e-community.md</code></td><td><code>M9</code></td><td>M8, M7</td><td><code>P-Creator</code></td><td><code>Integrated</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>D030, D034, D068; Workshop transport/CAS and package verification</td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td><code>D050</code></td><td>Workshop as Cross-Project Reusable Library</td><td>Modding</td><td><code>src/decisions/09c-modding.md</code></td><td><code>M9</code></td><td>M8</td><td><code>P-Creator</code></td><td><code>Decisioned</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>See <code>tracking/milestone-dependency-map.md</code> for milestone and feature-cluster dependency edges.</td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td><code>D051</code></td><td>Engine License — GPL v3 with Modding Exception</td><td>Modding</td><td><code>src/decisions/09c-modding.md</code></td><td><code>M0</code></td><td>—</td><td><code>P-Core</code></td><td><code>Decisioned</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>See <code>tracking/milestone-dependency-map.md</code> for milestone and feature-cluster dependency edges.</td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td><code>D052</code></td><td>Community Servers with Portable Signed Credentials</td><td>Networking</td><td><code>src/decisions/09b-networking.md</code></td><td><code>M7</code></td><td>M4</td><td><code>P-Differentiator</code></td><td><code>Integrated</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>D007, D055, D061, D031; signed credentials and community servers</td><td>P004</td><td>Community review / moderation pipeline is optional capability layered on top of signed credential infrastructure.</td><td>—</td></tr>
+<tr><td><code>D053</code></td><td>Player Profile System</td><td>Community</td><td><code>src/decisions/09e-community.md</code></td><td><code>M7</code></td><td>M6</td><td><code>P-Scale</code></td><td><code>Decisioned</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>See <code>tracking/milestone-dependency-map.md</code> for milestone and feature-cluster dependency edges.</td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td><code>D054</code></td><td>Extended Switchability</td><td>Gameplay</td><td><code>src/decisions/09d-gameplay.md</code></td><td><code>M7</code></td><td>M11</td><td><code>P-Differentiator</code></td><td><code>Decisioned</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>See <code>tracking/milestone-dependency-map.md</code> for milestone and feature-cluster dependency edges.</td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td><code>D055</code></td><td>Ranked Tiers, Seasons &amp; Matchmaking Queue</td><td>Networking</td><td><code>src/decisions/09b-networking.md</code></td><td><code>M7</code></td><td>M11</td><td><code>P-Differentiator</code></td><td><code>Integrated</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>D052, D053, D059, D060; ranked queue and policy enforcement</td><td>P004</td><td>—</td><td>—</td></tr>
+<tr><td><code>D056</code></td><td>Foreign Replay Import</td><td>Tools</td><td><code>src/decisions/09f-tools.md</code></td><td><code>M7</code></td><td>M9</td><td><code>P-Differentiator</code></td><td><code>Decisioned</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>See <code>tracking/milestone-dependency-map.md</code> for milestone and feature-cluster dependency edges.</td><td>—</td><td>Foreign replay import improves analysis and cross-engine onboarding but is not a blocker for minimal online slice.</td><td>—</td></tr>
+<tr><td><code>D057</code></td><td>LLM Skill Library</td><td>Tools</td><td><code>src/decisions/09f-tools.md</code></td><td><code>M11</code></td><td>M9</td><td><code>P-Optional</code></td><td><code>Decisioned</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>See <code>tracking/milestone-dependency-map.md</code> for milestone and feature-cluster dependency edges.</td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td><code>D058</code></td><td>In-Game Command Console</td><td>Interaction</td><td><code>src/decisions/09g-interaction.md</code></td><td><code>M3</code></td><td>M7, M9</td><td><code>P-Core</code></td><td><code>Integrated</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>See <code>tracking/milestone-dependency-map.md</code> for milestone and feature-cluster dependency edges.</td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td><code>D059</code></td><td>In-Game Communication (Chat, Voice, Pings)</td><td>Interaction</td><td><code>src/decisions/09g-interaction.md</code></td><td><code>M7</code></td><td>M10</td><td><code>P-Differentiator</code></td><td><code>Integrated</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>D058, D052, D055, D065; role-aware comms and moderation UX</td><td>P004</td><td>Includes explicit colored beacon/ping + tactical marker presentation rules (optional short labels, visibility scope, replay-safe metadata, anti-spam/accessibility constraints) for multiplayer readability and D070 reuse.</td><td>—</td></tr>
+<tr><td><code>D060</code></td><td>Netcode Parameter Philosophy</td><td>Networking</td><td><code>src/decisions/09b-networking.md</code></td><td><code>M4</code></td><td>M7</td><td><code>P-Core</code></td><td><code>Audited</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>D007, D008, D012; relay policy and parameter automation constraints</td><td>P004</td><td>Must stay aligned with <code>03-NETCODE.md</code> and <code>06-SECURITY.md</code> trust authority policy.</td><td>—</td></tr>
+<tr><td><code>D065</code></td><td>Tutorial &amp; New Player Experience</td><td>Interaction</td><td><code>src/decisions/09g-interaction.md</code></td><td><code>M6</code></td><td>M3, M7</td><td><code>P-Differentiator</code></td><td><code>Integrated</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>D033, D058, D059, D069; onboarding, prompts, quick reference</td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td><code>D069</code></td><td>Installation &amp; First-Run Setup Wizard</td><td>Interaction</td><td><code>src/decisions/09g-interaction.md</code></td><td><code>M3</code></td><td>M8</td><td><code>P-Core</code></td><td><code>Integrated</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>D061, D068, D030, D033, D034, D049, D065; first-run/maintenance wizard</td><td>—</td><td><code>M3</code> is spec-acceptance/design-integration milestone; implementation delivery targets Phase 4-5. Offline-first and no-dead-end setup rules must remain intact across platform variants.</td><td>—</td></tr>
+<tr><td><code>D070</code></td><td>Asymmetric Co-op Mode — Commander &amp; Field Ops</td><td>Gameplay</td><td><code>src/decisions/09d-gameplay.md</code></td><td><code>M10</code></td><td>M11</td><td><code>P-Differentiator</code></td><td><code>Integrated</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>D038, D059, D065, D021 (campaign runtime), D066 (export warnings)</td><td>—</td><td>IC-native template/toolkit with PvE-first scope; export compatibility intentionally limited in v1. Includes optional prototype-first pacing layer (<code>Operational Momentum</code> / “one more phase”) and adjacent experimental variants.</td><td>—</td></tr>
+<tr><td><code>D061</code></td><td>Player Data Backup &amp; Portability</td><td>Community</td><td><code>src/decisions/09e-community.md</code></td><td><code>M1</code></td><td>M3, M7</td><td><code>P-Core</code></td><td><code>Integrated</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>See <code>tracking/milestone-dependency-map.md</code> for milestone and feature-cluster dependency edges.</td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td><code>D062</code></td><td>Mod Profiles &amp; Virtual Asset Namespace</td><td>Modding</td><td><code>src/decisions/09c-modding.md</code></td><td><code>M8</code></td><td>M9, M7</td><td><code>P-Creator</code></td><td><code>Integrated</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>See <code>tracking/milestone-dependency-map.md</code> for milestone and feature-cluster dependency edges.</td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td><code>D063</code></td><td>Compression Configuration (Carried Forward in D067)</td><td>Foundation</td><td><code>src/decisions/09a-foundation.md</code></td><td><code>M7</code></td><td>M8, M9</td><td><code>P-Scale</code></td><td><code>Integrated</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>D067, D049, D030; server/workshop transfer and storage tuning</td><td>—</td><td>Legacy decision is carried forward through D067 config split + <code>15-SERVER-GUIDE.md</code>; no standalone D063 section currently exists.</td><td>—</td></tr>
+<tr><td><code>D064</code></td><td>Server Configuration System (Carried Forward in D067)</td><td>Foundation</td><td><code>src/decisions/09a-foundation.md</code></td><td><code>M7</code></td><td>M4, M11</td><td><code>P-Scale</code></td><td><code>Integrated</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>D067, D007, D052, D055; server config/cvar registry and deployment profiles</td><td>—</td><td>Legacy decision is carried forward through D067 integration notes and <code>15-SERVER-GUIDE.md</code>; keep server-guide references aligned.</td><td>—</td></tr>
+<tr><td><code>D066</code></td><td>Cross-Engine Export &amp; Editor Extensibility</td><td>Modding</td><td><code>src/decisions/09c-modding.md</code></td><td><code>M9</code></td><td>M10</td><td><code>P-Creator</code></td><td><code>Integrated</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>D023/D025/D026 (compat layer refs), D038, D040, D049</td><td>—</td><td>Export fidelity is IC-native-first; target-specific warnings/gating are expected and intentional.</td><td>—</td></tr>
+<tr><td><code>D067</code></td><td>Configuration Format Split — TOML vs YAML</td><td>Foundation</td><td><code>src/decisions/09a-foundation.md</code></td><td><code>M2</code></td><td>M7</td><td><code>P-Core</code></td><td><code>Decisioned</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>See <code>tracking/milestone-dependency-map.md</code> for milestone and feature-cluster dependency edges.</td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td><code>D068</code></td><td>Selective Installation &amp; Content Footprints</td><td>Modding</td><td><code>src/decisions/09c-modding.md</code></td><td><code>M8</code></td><td>M3, M9</td><td><code>P-Creator</code></td><td><code>Integrated</code></td><td><code>NotStarted</code></td><td><code>SpecReview</code></td><td>D030, D049, D061, D069; install profiles and content footprints</td><td>—</td><td>Player-config packages are explicitly outside gameplay/presentation compatibility fingerprints.</td><td>—</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="feature-cluster-coverage-summary"><a class="header" href="#feature-cluster-coverage-summary">Feature Cluster Coverage Summary</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Source</th><th>Coverage Goal</th><th>Baseline Coverage in This Overlay</th><th>Notes</th></tr>
+</thead>
+<tbody>
+<tr><td><code>src/09-DECISIONS.md</code></td><td>Every indexed <code>Dxxx</code> row mapped to milestone(s) and statuses</td><td><code>70/70</code> decision rows mapped</td><td>Tracker is keyed to the decision index; legacy D063/D064 are indexed via D067 carry-forward notes in Foundation.</td></tr>
+<tr><td><code>src/08-ROADMAP.md</code></td><td>All phases covered by overlay milestones</td><td><code>Phase 0</code>–<code>Phase 7</code> mapped into <code>M1</code>–<code>M11</code> (plus <code>M0</code> tracker bootstrap)</td><td>Roadmap remains canonical; overlay adds dependency/execution view.</td></tr>
+<tr><td><code>src/11-OPENRA-FEATURES.md</code></td><td>Gameplay priority triage (<code>P0</code>–<code>P3</code>) reflected in ordering</td><td><code>P0</code>→<code>M2</code>, <code>P1/P2</code>→<code>M3</code>, <code>P3</code>→<code>M6+</code>/deferred clusters</td><td>Priority tables used as canonical sub-priority for gameplay familiarity implementation.</td></tr>
+<tr><td><code>src/17-PLAYER-FLOW.md</code></td><td>Milestone-gating UX surfaces represented</td><td>Setup, main menu/skirmish, lobby/MP, campaign flow, moderation/review, SDK entry flows mapped</td><td>Prevents backend-only milestone definitions; includes post-play feedback prompt + creator-feedback inbox/helpful-recognition surfaces and SDK authoring-manual/context-help surfaces mapped via <code>M7</code>/<code>M10</code> and <code>M9</code> creator-doc clusters.</td></tr>
+<tr><td><code>src/07-CROSS-ENGINE.md</code></td><td>Trust/host mode packaging reflected in planning</td><td>Mapped into multiplayer packaging and policy clusters (<code>M7</code>, <code>M11</code>)</td><td>Keeps anti-cheat/trust claims level-specific.</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="dependency-risk-watchlist"><a class="header" href="#dependency-risk-watchlist">Dependency Risk Watchlist</a></h2>
+<h3 id="future--deferral-language-audit-status-m0-process-hardening"><a class="header" href="#future--deferral-language-audit-status-m0-process-hardening">Future / Deferral Language Audit Status (M0 Process Hardening)</a></h3>
+<ul>
+<li><strong>Scope:</strong> canonical docs (<code>src/**/*.md</code>) + <code>README.md</code> + <code>AGENTS.md</code></li>
+<li><strong>Baseline inventory:</strong> <code>292</code> hits for <code>future/later/deferred/eventually/TBD/nice-to-have</code> (see <code>tracking/future-language-audit.md</code>)</li>
+<li><strong>Policy:</strong> ambiguous future planning language is not allowed; all future-facing commitments must be classified and, if accepted, placed in the execution overlay</li>
+<li><strong>Execution overlay cluster:</strong> <code>M0.OPS.FUTURE_DEFERRAL_DISCIPLINE_AND_AUDIT</code></li>
+<li><strong>Working mode:</strong> classify -&gt; exempt or rewrite -&gt; map planned deferrals -&gt; track unresolved items until closed</li>
+</ul>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Risk</th><th>Why It Matters</th><th>Affected Milestones</th><th>Mitigation / Tracker Rule</th></tr>
+</thead>
+<tbody>
+<tr><td>Decision index drift (<code>src/09-DECISIONS.md</code> vs referenced <code>D0xx</code> elsewhere)</td><td>The tracker is Dxxx-index keyed; future non-indexed decisions can become invisible</td><td><code>M1</code>–<code>M11</code> (cross-cutting)</td><td>Add index rows in the same change as new <code>Dxxx</code> references and update tracker row count/coverage summary immediately.</td></tr>
+<tr><td><code>P002</code> fixed-point scale unresolved</td><td>Blocks final numeric tuning and can ripple through pathfinding/perf assumptions</td><td><code>M2</code>, <code>M3</code></td><td>Resolve before <code>M2</code> implementation starts; mark affected D rows with <code>P002</code>.</td></tr>
+<tr><td><code>P003</code> audio library + music integration design unresolved</td><td>Blocks final audio/music implementation choices for skirmish “feel” milestone</td><td><code>M3</code>, <code>M6</code></td><td>Resolve before Phase 3 implementation; keep audio cluster explicitly gated.</td></tr>
+<tr><td><code>P004</code> lobby/matchmaking wire details unresolved</td><td>Multiplayer productization details can churn if not locked</td><td><code>M4</code>, <code>M7</code></td><td>Minimal online slice (<code>M4</code>) uses planned architecture and can defer tracker/ranked wire specifics; lock before <code>M7</code>.</td></tr>
+<tr><td>Legal/ops gates for community infrastructure (entity + DMCA agent)</td><td>Workshop/ranked/community infra risk if omitted</td><td><code>M7</code>, <code>M9</code></td><td>Treat as <code>policy_gate</code> nodes in dependency map; do not mark affected milestones validated without them.</td></tr>
+<tr><td>Scope pressure from advanced modes and optional AI (D070, survival variant, D016/D047/D057)</td><td>Can steal bandwidth from core runtime/campaign/multiplayer milestones</td><td><code>M7</code>–<code>M11</code></td><td>Keep <code>P-Optional</code> and experimental features gated; no promotion to core milestones without playtest evidence.</td></tr>
+<tr><td>Feedback-reward farming / positivity bias in creator review recognition</td><td>Can distort review quality and create social abuse incentives if rewards are treated as gameplay, popularity, or review volume</td><td><code>M7</code>, <code>M10</code>, <code>M11</code></td><td>Keep rewards profile-only, sampled prompts, creator helpful-mark auditability, and D037/D052 anti-collusion enforcement; emphasize “helpful/actionable” over positive sentiment; see <code>M7.UX.POST_PLAY_FEEDBACK_PROMPTS</code> + <code>M10.COM.CREATOR_FEEDBACK_HELPFUL_RECOGNITION</code>.</td></tr>
+<tr><td>Community-contribution points inflation / redemption abuse (if enabled)</td><td>Optional redeemable points can become farmed, confusing, or mistaken for a gameplay currency without strict guardrails</td><td><code>M11</code></td><td>Keep points non-tradable/non-cashable/non-gameplay, cap accrual, audit grants/redemptions, support revocation/refund, and use clear “profile/cosmetic-only” labeling via <code>M11.COM.CONTRIBUTOR_POINTS_COSMETIC_REWARDS</code>.</td></tr>
+<tr><td>Authoring manual drift (SDK embedded docs vs web docs vs CLI/API/schema reality)</td><td>Creators lose trust fast if field/flag/script docs are stale or contradictory</td><td><code>M8</code>, <code>M9</code>, <code>M10</code></td><td>Use one-source D037 knowledge-base content + generated references (<code>M8.SDK.AUTHORING_REFERENCE_FOUNDATION</code>) and SDK embedded snapshot/context help as a view (<code>M9.SDK.EMBEDDED_AUTHORING_MANUAL</code>), not a parallel manual.</td></tr>
+<tr><td>Creator iteration friction (local content requires repeated packaging/install loops)</td><td>Strong tooling can still fail adoption if iteration cost is too high during <code>M8</code>/<code>M9</code></td><td><code>M8</code>, <code>M9</code></td><td>Preserve a fast local content overlay/dev-profile workflow in CLI + SDK integration; see <code>research/bar-recoil-source-study.md</code> and mapped clusters in <code>tracking/milestone-dependency-map.md</code> (<code>M8.SDK.CLI_FOUNDATION</code>, <code>M9.SDK.D038_SCENARIO_EDITOR_CORE</code>).</td></tr>
+<tr><td>Netcode diagnostics opacity (buffering/jitter/rejoin behavior hidden from users/admins)</td><td>Lockstep systems can feel unfair or “broken” if queueing/jitter tradeoffs are not visible and explained</td><td><code>M4</code>, <code>M7</code></td><td>Keep relay/buffering diagnostics and trust labels explicit; see BAR/Recoil source-study mappings for <code>M4.NET.RELAY_TIME_AUTHORITY_AND_VALIDATION</code>, <code>M7.SEC.BEHAVIORAL_ANALYSIS_REPORTING</code>, <code>M7.NET.SPECTATOR_TOURNAMENT</code>.</td></tr>
+<tr><td>Cross-engine / 2D-vs-3D parity overclaiming in public messaging</td><td>The long-term vision is compelling, but blanket “fair cross-engine 2D vs 3D play” claims can exceed actual trust/certification guarantees and damage credibility</td><td><code>M7</code>, <code>M11</code></td><td>Treat mixed-client 2D-vs-3D play as a North Star tied to <code>M7.NET.CROSS_ENGINE_BRIDGE_AND_TRUST</code> + <code>M11.VISUAL.D048_AND_RENDER_MOD_INFRA</code>; always use host-mode trust labels and mode-specific fairness claims.</td></tr>
+<tr><td>Ambiguous future/deferral language drift</td><td>Vague “future/later/deferred” wording can create unscheduled commitments and break dependency-first implementation planning</td><td><code>M0</code>–<code>M11</code> (cross-cutting)</td><td>Enforce Future/Deferral Language Discipline (<code>AGENTS.md</code>, <code>14-METHODOLOGY.md</code>), maintain <code>tracking/future-language-audit.md</code>, and require same-change overlay mapping for accepted deferrals.</td></tr>
+<tr><td>Moderation capability coupling (e.g., chat sanctions unintentionally breaking votes/pings)</td><td>Poorly scoped restrictions damage match integrity and create support friction, especially in competitive modes</td><td><code>M7</code>, <code>M11</code></td><td>Preserve capability-scoped moderation controls (<code>Mute</code>/<code>Block</code>/<code>Avoid</code>/<code>Report</code> split, granular restrictions) and test sanctions against critical lobby/match flows; see BAR moderation lesson mapping in dependency overlay.</td></tr>
+<tr><td>Communication marker clutter / color-only beacon semantics</td><td>Pings/beacons/markers become noisy, inaccessible, or hard to review if appearance overrides outrun icon/type semantics and rate limits</td><td><code>M7</code>, <code>M10</code>, <code>M11</code></td><td>Keep D059 marker semantics icon/type-first, bound labels/colors/TTL/visibility via <code>M7.UX.D059_BEACONS_MARKERS_LABELS</code>, and preserve replay-safe metadata + non-color-only cues; see open-source comms-marker study mappings in the dependency overlay.</td></tr>
+<tr><td>Pathfinding API exposure drift (ad hoc script queries bypassing conformance/perf boundaries)</td><td>Convenience APIs can become hidden hot-path liabilities or deterministic hazards if not bounded/documented</td><td><code>M2</code>, <code>M5</code>, <code>M8</code></td><td>Keep <code>D013/D045</code> conformance-first discipline and only expose bounded, documented estimate/path-preview APIs with explicit authority/perf semantics.</td></tr>
+<tr><td>D070 pacing-layer overload (too many agenda lanes/timers or reward snowballing in “one more phase” missions)</td><td>Can make asymmetric missions feel noisy, grindy, or snowball-heavy instead of strategically compelling</td><td><code>M10</code>, <code>M11</code></td><td>Keep <code>M10.GAME.D070_OPERATIONAL_MOMENTUM</code> optional/prototype-first, cap foreground milestones, use bounded/timed rewards, and require playtest evidence before promoting as a recommended preset.</td></tr>
+<tr><td>“Editor before runtime” temptation</td><td>High rework risk if visual editor semantics outrun runtime schemas/validation contracts</td><td><code>M3</code>, <code>M8</code>, <code>M9</code></td><td>Allow CLI/tooling early (<code>M8</code>), defer full D038 visual SDK/editor to <code>M9+</code>.</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="pending-decisions--external-gates"><a class="header" href="#pending-decisions--external-gates">Pending Decisions / External Gates</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Gate</th><th>Type</th><th>Needs Resolution By</th><th>Affects</th><th>Current Handling in Overlay</th></tr>
+</thead>
+<tbody>
+<tr><td><code>P002</code> Fixed-point scale</td><td>Pending decision</td><td><code>M2</code> start</td><td>D009, D013, D015, D045 and downstream balance/pathfinding tuning</td><td>Explicit blocker on affected D rows and <code>M2</code> risk watchlist item.</td></tr>
+<tr><td><code>P003</code> Audio library + music integration</td><td>Pending decision</td><td><code>M3</code> start</td><td>Audio/EVA/music implementation and “feels like RA” polish</td><td><code>M3</code> audio cluster is a named gate in dependency map.</td></tr>
+<tr><td><code>P004</code> Lobby/matchmaking wire details</td><td>Pending decision</td><td><code>M7</code> productization (architecture already resolved)</td><td>D052/D055/D059/D060 integration details</td><td><code>M4</code> vertical slice intentionally avoids full tracker/ranked dependency.</td></tr>
+<tr><td>Legal entity formation</td><td>External/policy gate</td><td>Before public server infra</td><td>Community servers, Workshop, ranked ops</td><td>Modeled as <code>policy_gate</code> for <code>M7</code>/<code>M9</code>; tracked in dependency map.</td></tr>
+<tr><td>DMCA designated agent registration</td><td>External/policy gate</td><td>Before accepting user uploads</td><td>Workshop moderation/takedown process</td><td>Modeled as <code>policy_gate</code> for Workshop production-readiness.</td></tr>
+<tr><td>Trademark registration (optional)</td><td>External/policy (optional)</td><td>Before broad commercialization/branding push</td><td>Community/platform polish (<code>M11</code>)</td><td>Not a blocker for core engine milestones; track as optional ops item.</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="maintenance-rules-how-to-update-this-page"><a class="header" href="#maintenance-rules-how-to-update-this-page">Maintenance Rules (How to update this page)</a></h2>
+<ol>
+<li><strong>Do not replace <code>src/08-ROADMAP.md</code>.</strong> Update roadmap timing/deliverables there; update this page only for execution overlay, dependency, and status mapping.</li>
+<li><strong>When a new decision is added to <code>src/09-DECISIONS.md</code>, add a row here in the same change set.</strong> Default to <code>Design Status = Decisioned</code>, <code>Code Status = NotStarted</code>, <code>Validation = SpecReview</code> until proven otherwise.</li>
+<li><strong>When a new feature is added (even without a new <code>Dxxx</code>), update the execution overlay in the same change set.</strong> Add/update a feature-cluster entry in <code>tracking/milestone-dependency-map.md</code> with milestone placement and dependencies; then reflect the impact here if milestone snapshot/coverage/risk changes.</li>
+<li><strong>Do not append features “for later sorting.”</strong> Place new work in the correct milestone and sequence position immediately based on dependencies and project priorities.</li>
+<li><strong>When a decision is revised across multiple docs, re-check its <code>Design Status</code>.</strong> Upgrade to <code>Integrated</code> only when cross-doc propagation is complete; use <code>Audited</code> for explicit contradiction/dependency audits.</li>
+<li><strong>Do not use percentages by default.</strong> Use evidence-linked statuses instead.</li>
+<li><strong>Do not mark code progress without evidence.</strong> If <code>Code Status != NotStarted</code>, add evidence links (implementation repo path, test result, demo notes, etc.).</li>
+<li><strong>After editing <code>src/08-ROADMAP.md</code>, <code>src/17-PLAYER-FLOW.md</code>, <code>src/11-OPENRA-FEATURES.md</code>, or introducing a major feature proposal, revisit <code>tracking/milestone-dependency-map.md</code>.</strong> These are the main inputs to feature-cluster coverage and milestone ordering.</li>
+<li><strong>If new non-indexed <code>D0xx</code> references appear, normalize the decision index in the same planning pass.</strong> The tracker is Dxxx-index keyed by design.</li>
+<li><strong>Use this page for “where are we / what next?”; use the dependency map for “what blocks what?”</strong> Do not overload one page with both levels of detail.</li>
+<li><strong>If a research/source study changes implementation emphasis or risk posture, link it here or in the dependency map mappings</strong> so the insight affects execution planning and not just historical research notes.</li>
+<li><strong>If canonical docs add or revise future/deferred wording, classify and resolve it in the same change set.</strong> Update <code>tracking/future-language-audit.md</code>, and map accepted work into the overlay (or mark proposal-only / <code>Pxxx</code>) before considering the wording complete.</li>
+</ol>
+<h3 id="new-feature-intake-checklist-execution-overlay"><a class="header" href="#new-feature-intake-checklist-execution-overlay">New Feature Intake Checklist (Execution Overlay)</a></h3>
+<p>Before a feature is treated as “planned” (beyond brainstorming), do all of the following:</p>
+<ol>
+<li><strong>Classify priority</strong> (<code>P-Core</code>, <code>P-Differentiator</code>, <code>P-Creator</code>, <code>P-Scale</code>, <code>P-Optional</code>).</li>
+<li><strong>Assign primary milestone</strong> (<code>M0–M11</code>) using dependency-first sequencing (not novelty/recency).</li>
+<li><strong>Record dependency edges</strong> in <code>tracking/milestone-dependency-map.md</code> (<code>hard</code>, <code>soft</code>, <code>validation</code>, <code>policy</code>, <code>integration</code>).</li>
+<li><strong>Map canonical docs</strong> (decision(s), roadmap phase, UX/security/community docs if affected).</li>
+<li><strong>Update tracker representation</strong>:
+<ul>
+<li>Dxxx row (if decisioned), and/or</li>
+<li>feature-cluster row (if non-decision feature/deliverable)</li>
+</ul>
+</li>
+<li><strong>Check milestone displacement risk</strong> (does this delay a higher-priority critical-path milestone?).</li>
+<li><strong>Mark optional/experimental status explicitly</strong> so it does not silently creep into core milestones.</li>
+<li><strong>Classify future/deferred wording</strong> you add (<code>PlannedDeferral</code>, <code>NorthStarVision</code>, <code>VersioningEvolution</code>, or exempt context) and update <code>tracking/future-language-audit.md</code> for canonical-doc changes.</li>
+</ol>
+<h2 id="related-pages"><a class="header" href="#related-pages">Related Pages</a></h2>
+<ul>
+<li><a href="08-ROADMAP.html"><code>08-ROADMAP.md</code></a> — canonical phase roadmap</li>
+<li><a href="tracking/milestone-dependency-map.html"><code>tracking/milestone-dependency-map.md</code></a> — detailed milestone DAG and feature cluster dependencies</li>
+<li><a href="tracking/project-tracker-schema.html"><code>tracking/project-tracker-schema.md</code></a> — optional automation companion (tracker field meanings + schema/YAML reference)</li>
+<li><a href="tracking/future-language-audit.html"><code>tracking/future-language-audit.md</code></a> — canonical-doc future/deferred wording classification and remediation queue</li>
+<li><a href="tracking/deferral-wording-patterns.html"><code>tracking/deferral-wording-patterns.md</code></a> — replacement wording patterns for planned deferrals / North Star claims / proposal-only notes</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="08-ROADMAP.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="tracking/milestone-dependency-map.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="08-ROADMAP.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="tracking/milestone-dependency-map.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr-ef4e11c1.min.js"></script>
+        <script src="mark-09e88c2c.min.js"></script>
+        <script src="searcher-c2a407aa.js"></script>
+
+        <script src="clipboard-1626706a.min.js"></script>
+        <script src="highlight-abc7f01d.js"></script>
+        <script src="book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

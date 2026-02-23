@@ -1,0 +1,562 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Project Tracker Automation Companion (Optional Schema/YAML Reference) - Iron Curtain — Design Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Design docs for a Rust-native Red Alert RTS engine">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../css/general-2459343d.css">
+        <link rel="stylesheet" href="../css/chrome-ae938929.css">
+        <link rel="stylesheet" href="../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../searchindex-3d47d740.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc-914f79aa.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Iron Curtain — Design Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs/edit/main/src/tracking/project-tracker-schema.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="project-tracker-automation-companion-optional-schema--yaml-reference"><a class="header" href="#project-tracker-automation-companion-optional-schema--yaml-reference">Project Tracker Automation Companion (Optional Schema / YAML Reference)</a></h1>
+<p>Keywords: tracker automation companion, tracker schema, optional yaml reference, design status, code status, validation status, decision tracker row, milestone node, feature cluster node</p>
+<p>This page documents the <strong>field definitions and optional automation schema</strong> for the project tracker overlay in <a href="../18-PROJECT-TRACKER.html"><code>../18-PROJECT-TRACKER.md</code></a> and the dependency map in <a href="milestone-dependency-map.html"><code>milestone-dependency-map.md</code></a>.</p>
+<p><strong>This page is not the canonical tracker.</strong> The canonical implementation-planning artifacts are the Markdown pages:</p>
+<ul>
+<li><a href="../18-PROJECT-TRACKER.html"><code>../18-PROJECT-TRACKER.md</code></a> — milestone snapshot + Dxxx tracker + risks</li>
+<li><a href="milestone-dependency-map.html"><code>milestone-dependency-map.md</code></a> — milestone DAG + feature cluster dependency map</li>
+</ul>
+<p>Use this page only to keep tracker fields/status values stable and to support future automation if needed.</p>
+<h2 id="why-this-automation-companion-exists"><a class="header" href="#why-this-automation-companion-exists">Why this automation companion exists</a></h2>
+<ul>
+<li>Keeps the tracker field definitions stable as the docs evolve</li>
+<li>Makes future automation/script generation possible without locking us into it today</li>
+<li>Prevents silent status-field drift (<code>Decisioned</code> vs <code>Integrated</code>, etc.)</li>
+<li>Gives agents and humans a single reference for what each field means</li>
+</ul>
+<h2 id="scope-and-constraints-markdown-tracker-is-canonical"><a class="header" href="#scope-and-constraints-markdown-tracker-is-canonical">Scope and constraints (Markdown tracker is canonical)</a></h2>
+<p>This repository currently follows an agent rule that edits should be limited to <strong>markdown files under <code>src/</code></strong>. Because of that, the optional machine-readable companion (e.g., <code>tracking/project-tracker.yaml</code>) is <strong>documented here but not created in this baseline patch</strong>.</p>
+<p>The tracker is therefore <strong>Markdown-first</strong> for now, with a documented schema that can later be mirrored into YAML/JSON when implementation tracking moves into a code repo or the constraint is relaxed.</p>
+<h2 id="canonical-enums-tracker-statuses"><a class="header" href="#canonical-enums-tracker-statuses">Canonical Enums (Tracker Statuses)</a></h2>
+<h3 id="designstatus"><a class="header" href="#designstatus"><code>DesignStatus</code></a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Value</th><th>Meaning</th></tr>
+</thead>
+<tbody>
+<tr><td><code>NotMapped</code></td><td>Feature/decision exists but is not yet represented in the tracker overlay</td></tr>
+<tr><td><code>Mentioned</code></td><td>Mentioned in roadmap/docs but not yet tied to a canonical decision or integrated cross-doc mapping</td></tr>
+<tr><td><code>Decisioned</code></td><td>Canonical decision/spec exists, but cross-doc integration or tracker audit is limited</td></tr>
+<tr><td><code>Integrated</code></td><td>Cross-doc propagation is complete enough for planning (architecture + UX + security/modding links where relevant)</td></tr>
+<tr><td><code>Audited</code></td><td>Explicit review performed for contradictions/dependency placement (e.g., netcode/pathfinding audit passes)</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="codestatus"><a class="header" href="#codestatus"><code>CodeStatus</code></a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Value</th><th>Meaning</th></tr>
+</thead>
+<tbody>
+<tr><td><code>NotStarted</code></td><td>No implementation evidence linked</td></tr>
+<tr><td><code>Prototype</code></td><td>Isolated proof-of-concept exists</td></tr>
+<tr><td><code>InProgress</code></td><td>Active implementation underway</td></tr>
+<tr><td><code>VerticalSlice</code></td><td>End-to-end narrow path works</td></tr>
+<tr><td><code>FeatureComplete</code></td><td>Intended feature scope implemented</td></tr>
+<tr><td><code>Validated</code></td><td>Feature complete and validated (tests/playtests/ops checks as appropriate)</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="validationstatus"><a class="header" href="#validationstatus"><code>ValidationStatus</code></a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Value</th><th>Meaning</th></tr>
+</thead>
+<tbody>
+<tr><td><code>None</code></td><td>No validation evidence recorded</td></tr>
+<tr><td><code>SpecReview</code></td><td>Design-doc/spec review only</td></tr>
+<tr><td><code>AutomatedTests</code></td><td>Automated test evidence exists</td></tr>
+<tr><td><code>Playtest</code></td><td>Human playtesting evidence exists</td></tr>
+<tr><td><code>OpsValidated</code></td><td>Operations/service validation evidence exists</td></tr>
+<tr><td><code>Shipped</code></td><td>Public release/ship evidence exists</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="dependencyedgekind"><a class="header" href="#dependencyedgekind"><code>DependencyEdgeKind</code></a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Value</th><th>Meaning</th></tr>
+</thead>
+<tbody>
+<tr><td><code>HardDependsOn</code></td><td>Non-negotiable dependency</td></tr>
+<tr><td><code>SoftDependsOn</code></td><td>Strong preference; stubs/parallel work possible</td></tr>
+<tr><td><code>ValidationDependsOn</code></td><td>Needed to validate/ship, not necessarily to prototype</td></tr>
+<tr><td><code>EnablesParallelWork</code></td><td>Unlocks a lane but is not a direct blocker</td></tr>
+<tr><td><code>PolicyGate</code></td><td>Legal/governance/security prerequisite</td></tr>
+<tr><td><code>IntegrationGate</code></td><td>Feature exists but milestone cannot exit until integration is complete</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="tracker-record-shapes-spec-level"><a class="header" href="#tracker-record-shapes-spec-level">Tracker Record Shapes (Spec-Level)</a></h2>
+<h3 id="decisiontrackerrow-dxxx-row-in-18-project-trackermd"><a class="header" href="#decisiontrackerrow-dxxx-row-in-18-project-trackermd"><code>DecisionTrackerRow</code> (Dxxx row in <code>18-PROJECT-TRACKER.md</code>)</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct DecisionTrackerRow {
+    pub decision_id: String,                 // "D070"
+    pub title: String,
+    pub domain: String,                      // Foundation / Networking / ...
+    pub canonical_source: String,            // src/decisions/09d-gameplay.md
+    pub primary_milestone: String,           // "M10"
+    pub secondary_milestones: Vec&lt;String&gt;,   // ["M11"]
+    pub priority: String,                    // P-Core / P-Differentiator / P-Creator / P-Scale / P-Optional
+    pub design_status: DesignStatus,
+    pub code_status: CodeStatus,
+    pub validation: ValidationStatus,
+    pub dependencies: Vec&lt;String&gt;,           // Dxxx, cluster IDs, milestone IDs, or mixed refs
+    pub blocking_pending_decisions: Vec&lt;String&gt;, // e.g. ["P004"]
+    pub notes: Vec&lt;String&gt;,
+    pub evidence_links: Vec&lt;String&gt;,         // required if code_status != NotStarted
+}
+<span class="boring">}</span></code></pre>
+<h3 id="milestonenode-node-in-dependency-map"><a class="header" href="#milestonenode-node-in-dependency-map"><code>MilestoneNode</code> (node in dependency map)</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct MilestoneNode {
+    pub id: String,                          // "M4"
+    pub name: String,
+    pub objective: String,
+    pub maps_to_roadmap_phases: Vec&lt;String&gt;, // ["Phase 5 (subset)"]
+    pub hard_deps: Vec&lt;String&gt;,              // milestone IDs
+    pub soft_deps: Vec&lt;String&gt;,              // milestone IDs
+    pub unlocks: Vec&lt;String&gt;,                // milestone IDs
+    pub exit_criteria_refs: Vec&lt;String&gt;,     // roadmap/player-flow refs
+}
+<span class="boring">}</span></code></pre>
+<h3 id="featureclusternode-row-in-dependency-matrix"><a class="header" href="#featureclusternode-row-in-dependency-matrix"><code>FeatureClusterNode</code> (row in dependency matrix)</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct FeatureClusterNode {
+    pub id: String,                          // "M4.NET.MINIMAL_LOCKSTEP_ONLINE"
+    pub name: String,
+    pub milestone: String,                   // "M4"
+    pub hard_deps: Vec&lt;String&gt;,              // milestone or cluster IDs
+    pub soft_deps: Vec&lt;String&gt;,
+    pub canonical_docs: Vec&lt;String&gt;,         // docs that define behavior and constraints
+    pub decisions: Vec&lt;String&gt;,              // Dxxx refs (can include non-indexed D refs in notes)
+    pub roadmap_phase: String,
+    pub gap_priority: Option&lt;String&gt;,        // P0..P3 from 11-OPENRA-FEATURES when applicable
+    pub exit_gate: String,
+    pub parallelizable_with: Vec&lt;String&gt;,
+    pub risk_notes: Vec&lt;String&gt;,
+}
+<span class="boring">}</span></code></pre>
+<h2 id="stable-id-conventions"><a class="header" href="#stable-id-conventions">Stable ID Conventions</a></h2>
+<h3 id="milestones"><a class="header" href="#milestones">Milestones</a></h3>
+<ul>
+<li><code>M0</code>–<code>M11</code> (execution overlay milestones only)</li>
+</ul>
+<h3 id="feature-cluster-ids"><a class="header" href="#feature-cluster-ids">Feature cluster IDs</a></h3>
+<ul>
+<li><code>M{N}.CORE.*</code> — core runtime/foundation</li>
+<li><code>M{N}.NET.*</code> — networking/multiplayer</li>
+<li><code>M{N}.SP.*</code> — single-player/campaign</li>
+<li><code>M{N}.SDK.*</code> — SDK/editor/tooling</li>
+<li><code>M{N}.COM.*</code> — Workshop/community/platform services</li>
+<li><code>M{N}.UX.*</code> — player-facing or SDK UX surfaces</li>
+<li><code>M{N}.OPS.*</code> — operations/legal/policy gates</li>
+<li><code>UXG.*</code> — cross-check UX gate clusters (used for milestone completeness checks)</li>
+<li><code>PG.*</code> — pending/policy/legal gate nodes</li>
+</ul>
+<h2 id="evidence-link-rules-normative"><a class="header" href="#evidence-link-rules-normative">Evidence Link Rules (Normative)</a></h2>
+<ol>
+<li><code>Code Status = NotStarted</code> may use <code>—</code> evidence links.</li>
+<li>Any other <code>Code Status</code> must include at least one evidence link.</li>
+<li>Evidence links should point to the <strong>implementation repo or artifacts</strong>, not just design docs.</li>
+<li><code>ValidationStatus</code> should reflect the strongest available evidence level, not the most optimistic one.</li>
+<li>Do not infer progress from roadmap placement. Roadmap phase != implementation status.</li>
+</ol>
+<h2 id="update-workflow-minimal-discipline"><a class="header" href="#update-workflow-minimal-discipline">Update Workflow (Minimal Discipline)</a></h2>
+<h3 id="when-to-update-18-project-trackermd"><a class="header" href="#when-to-update-18-project-trackermd">When to update <code>18-PROJECT-TRACKER.md</code></a></h3>
+<ul>
+<li>A new <code>Dxxx</code> is added to <code>src/09-DECISIONS.md</code></li>
+<li>A decision is revised and its milestone mapping changes</li>
+<li>Implementation evidence appears (or is invalidated)</li>
+<li>A pending decision (<code>P002/P003/P004</code>) is resolved</li>
+</ul>
+<h3 id="when-to-update-milestone-dependency-mapmd"><a class="header" href="#when-to-update-milestone-dependency-mapmd">When to update <code>milestone-dependency-map.md</code></a></h3>
+<ul>
+<li><code>src/08-ROADMAP.md</code> deliverables or exits change</li>
+<li><code>src/11-OPENRA-FEATURES.md</code> priority table changes materially</li>
+<li><code>src/17-PLAYER-FLOW.md</code> adds milestone-gating UX surfaces</li>
+<li>Cross-engine trust/host-mode policy changes (<code>src/07-CROSS-ENGINE.md</code>)</li>
+</ul>
+<h3 id="when-to-upgrade-designstatus"><a class="header" href="#when-to-upgrade-designstatus">When to upgrade <code>DesignStatus</code></a></h3>
+<ul>
+<li><code>Decisioned -&gt; Integrated</code>: after cross-doc propagation is complete (architecture + UX/security/modding references aligned where relevant)</li>
+<li><code>Integrated -&gt; Audited</code>: after explicit contradiction/dependency audit or focused review pass</li>
+</ul>
+<h2 id="optional-machine-readable-companion-deferred-baseline"><a class="header" href="#optional-machine-readable-companion-deferred-baseline">Optional Machine-Readable Companion (Deferred Baseline)</a></h2>
+<p>When allowed/needed, mirror the tracker into a machine-readable file (example path from the plan: <code>tracking/project-tracker.yaml</code>) with:</p>
+<ul>
+<li><code>meta</code> (version, last_updated, source docs)</li>
+<li><code>status_enums</code></li>
+<li><code>milestones[]</code></li>
+<li><code>feature_clusters[]</code></li>
+<li><code>decision_rows[]</code></li>
+<li><code>policy_gates[]</code></li>
+</ul>
+<p>Suggested generation model:</p>
+<ul>
+<li>Markdown remains human-first canonical for now</li>
+<li>YAML is generated from a source script or curated manually only if maintenance cost stays acceptable</li>
+<li>Do <strong>not</strong> maintain two divergent sources of truth</li>
+</ul>
+<h3 id="yaml-adoption-notes-whenif-introduced"><a class="header" href="#yaml-adoption-notes-whenif-introduced">YAML Adoption Notes (When/If Introduced)</a></h3>
+<ul>
+<li>Prefer <strong>one-way generation</strong> (<code>markdown -&gt; yaml</code>) over dual editing.</li>
+<li>If dual editing is ever allowed, define a single canonical source first and document it explicitly.</li>
+<li>Keep IDs stable (<code>M*</code>, cluster IDs, <code>Dxxx</code>, <code>PG.*</code>) so links and tooling do not break across revisions.</li>
+</ul>
+<h2 id="appendix--embedded-yaml-sample-reference-only"><a class="header" href="#appendix--embedded-yaml-sample-reference-only">Appendix — Embedded YAML Sample (Reference Only)</a></h2>
+<p>This sample is <strong>illustrative</strong> and intentionally minimal. It is not the source of truth. Use it as a template if/when a machine-readable tracker companion is introduced.</p>
+<pre><code class="language-yaml">meta:
+  schema_version: 1
+  tracker_overlay_version: 1
+  generated_from:
+    - src/18-PROJECT-TRACKER.md
+    - src/tracking/milestone-dependency-map.md
+    - src/09-DECISIONS.md
+  notes:
+    - "Markdown-first baseline; YAML companion is optional."
+    - "Roadmap remains canonical for phase timing (src/08-ROADMAP.md)."
+
+status_enums:
+  design_status:
+    - NotMapped
+    - Mentioned
+    - Decisioned
+    - Integrated
+    - Audited
+  code_status:
+    - NotStarted
+    - Prototype
+    - InProgress
+    - VerticalSlice
+    - FeatureComplete
+    - Validated
+  validation_status:
+    - None
+    - SpecReview
+    - AutomatedTests
+    - Playtest
+    - OpsValidated
+    - Shipped
+  dependency_edge_kind:
+    - HardDependsOn
+    - SoftDependsOn
+    - ValidationDependsOn
+    - EnablesParallelWork
+    - PolicyGate
+    - IntegrationGate
+
+milestones:
+  - id: M1
+    name: "Resource &amp; Format Fidelity + Visual Rendering Slice"
+    objective: "Bevy can load RA/OpenRA resources and render maps/sprites correctly"
+    maps_to_roadmap_phases:
+      - "Phase 0"
+      - "Phase 1"
+    hard_deps: [M0]
+    soft_deps: []
+    unlocks: [M2]
+    design_status: Integrated
+    code_status: NotStarted
+    validation: SpecReview
+    exit_criteria_refs:
+      - "src/08-ROADMAP.md#phase-0-foundation--format-literacy-months-13"
+      - "src/08-ROADMAP.md#phase-1-rendering-slice-months-36"
+
+feature_clusters:
+  - id: "M1.CORE.RA_FORMATS_PARSE"
+    name: "ra-formats parsing (.mix/.shp/.pal/.aud/.vqa)"
+    milestone: M1
+    roadmap_phase: "Phase 0"
+    hard_deps: [M0.CORE.TRACKER_FOUNDATION]
+    soft_deps: []
+    canonical_docs:
+      - "src/08-ROADMAP.md"
+      - "src/05-FORMATS.md"
+    decisions: [D003, D039]
+    gap_priority: null
+    exit_gate: "Assets parse against known-good corpus"
+    parallelizable_with:
+      - "M1.CORE.OPENRA_DATA_COMPAT"
+    risk_notes:
+      - "Breadth of legacy file quirks"
+
+decision_rows:
+  - decision_id: D007
+    title: "Networking — Relay Server as Default"
+    domain: Networking
+    canonical_source: "src/decisions/09b-networking.md"
+    primary_milestone: M4
+    secondary_milestones: [M7]
+    priority: P-Core
+    design_status: Audited
+    code_status: NotStarted
+    validation: SpecReview
+    dependencies:
+      - D006
+      - D008
+      - D012
+      - D060
+      - "M4.NET.MINIMAL_LOCKSTEP_ONLINE"
+    blocking_pending_decisions: []
+    notes:
+      - "Relay is default multiplayer architecture; minimal online slice excludes tracker/ranked."
+    evidence_links: []
+
+policy_gates:
+  - id: "PG.P004.LOBBY_WIRE_DETAILS"
+    kind: PolicyGate
+    blocks_validation_of: [M7]
+    canonical_source: "src/09-DECISIONS.md"
+    notes:
+      - "Architecture is resolved; wire/product details still need a lock."
+</code></pre>
+<h2 id="summary-guidance-practical-use"><a class="header" href="#summary-guidance-practical-use">Summary Guidance (Practical Use)</a></h2>
+<ul>
+<li>Use <code>18-PROJECT-TRACKER.md</code> to answer: <strong>what should be implemented next / what is the priority?</strong></li>
+<li>Use <code>tracking/milestone-dependency-map.md</code> to answer: <strong>what depends on what / what can be parallelized?</strong></li>
+<li>Use this page only when you need to:
+<ul>
+<li>add/change tracker fields</li>
+<li>validate status vocabulary consistency</li>
+<li>prepare future automation</li>
+</ul>
+</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../tracking/milestone-dependency-map.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../tracking/implementation-ticket-template.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../tracking/milestone-dependency-map.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../tracking/implementation-ticket-template.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../mark-09e88c2c.min.js"></script>
+        <script src="../searcher-c2a407aa.js"></script>
+
+        <script src="../clipboard-1626706a.min.js"></script>
+        <script src="../highlight-abc7f01d.js"></script>
+        <script src="../book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

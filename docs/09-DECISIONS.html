@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-1e683dcc.js";
+            window.path_to_searchindex_js = "searchindex-3d47d740.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-a0d63c9c.js"></script>
+        <script src="toc-914f79aa.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -191,13 +191,13 @@
 <tr><th>Document</th><th>Scope</th><th>Decisions</th></tr>
 </thead>
 <tbody>
-<tr><td><a href="decisions/09a-foundation.html">Foundation &amp; Core</a></td><td>Language, framework, data formats, simulation invariants, core engine identity</td><td>D001–D003, D009, D010, D015, D017, D018, D039, D067</td></tr>
+<tr><td><a href="decisions/09a-foundation.html">Foundation &amp; Core</a></td><td>Language, framework, data formats, simulation invariants, core engine identity</td><td>D001–D003, D009, D010, D015, D017, D018, D039, D063, D064, D067</td></tr>
 <tr><td><a href="decisions/09b-networking.html">Networking &amp; Multiplayer</a></td><td>Network model, relay server, sub-tick ordering, community servers, ranked play</td><td>D006–D008, D011, D012, D052, D055, D060</td></tr>
 <tr><td><a href="decisions/09c-modding.html">Modding &amp; Compatibility</a></td><td>Scripting tiers, OpenRA compatibility, UI themes, mod profiles, licensing, export</td><td>D004, D005, D014, D032, D050, D051, D062, D066, D068</td></tr>
-<tr><td><a href="decisions/09d-gameplay.html">Gameplay &amp; AI</a></td><td>Pathfinding, balance, QoL, AI systems, render modes, trait-abstracted subsystems</td><td>D013, D019, D033, D041–D045, D048, D054</td></tr>
+<tr><td><a href="decisions/09d-gameplay.html">Gameplay &amp; AI</a></td><td>Pathfinding, balance, QoL, AI systems, render modes, trait-abstracted subsystems, asymmetric co-op mode design</td><td>D013, D019–D029, D033, D041–D045, D048, D054, D070</td></tr>
 <tr><td><a href="decisions/09e-community.html">Community &amp; Platform</a></td><td>Workshop, telemetry, storage, achievements, governance, profiles, data portability</td><td>D030, D031, D034–D037, D046, D049, D053, D061</td></tr>
 <tr><td><a href="decisions/09f-tools.html">Tools &amp; Editor</a></td><td>LLM mission generation, scenario editor, asset studio, foreign replays, skill library</td><td>D016, D038, D040, D047, D056, D057</td></tr>
-<tr><td><a href="decisions/09g-interaction.html">In-Game Interaction</a></td><td>Command console, communication systems (chat, voice, pings), tutorial/new player experience</td><td>D058, D059, D065</td></tr>
+<tr><td><a href="decisions/09g-interaction.html">In-Game Interaction</a></td><td>Command console, communication systems (chat, voice, pings), tutorial/new player experience, installation/setup wizard UX</td><td>D058, D059, D065, D069</td></tr>
 </tbody>
 </table>
 </div>
@@ -228,6 +228,16 @@
 <tr><td>D017</td><td>Bevy Rendering Pipeline</td><td><a href="decisions/09a-foundation.html">Foundation</a></td></tr>
 <tr><td>D018</td><td>Multi-Game Extensibility (Game Modules)</td><td><a href="decisions/09a-foundation.html">Foundation</a></td></tr>
 <tr><td>D019</td><td>Switchable Balance Presets</td><td><a href="decisions/09d-gameplay.html">Gameplay</a></td></tr>
+<tr><td>D020</td><td>Mod SDK &amp; Creative Toolchain</td><td><a href="decisions/09d-gameplay.html">Gameplay</a></td></tr>
+<tr><td>D021</td><td>Branching Campaign System with Persistent State</td><td><a href="decisions/09d-gameplay.html">Gameplay</a></td></tr>
+<tr><td>D022</td><td>Dynamic Weather with Terrain Surface Effects</td><td><a href="decisions/09d-gameplay.html">Gameplay</a></td></tr>
+<tr><td>D023</td><td>OpenRA Vocabulary Compatibility Layer</td><td><a href="decisions/09d-gameplay.html">Gameplay</a></td></tr>
+<tr><td>D024</td><td>Lua API Superset of OpenRA</td><td><a href="decisions/09d-gameplay.html">Gameplay</a></td></tr>
+<tr><td>D025</td><td>Runtime MiniYAML Loading</td><td><a href="decisions/09d-gameplay.html">Gameplay</a></td></tr>
+<tr><td>D026</td><td>OpenRA Mod Manifest Compatibility</td><td><a href="decisions/09d-gameplay.html">Gameplay</a></td></tr>
+<tr><td>D027</td><td>Canonical Enum Compatibility with OpenRA</td><td><a href="decisions/09d-gameplay.html">Gameplay</a></td></tr>
+<tr><td>D028</td><td>Condition and Multiplier Systems as Phase 2 Requirements</td><td><a href="decisions/09d-gameplay.html">Gameplay</a></td></tr>
+<tr><td>D029</td><td>Cross-Game Component Library (Phase 2 Targets)</td><td><a href="decisions/09d-gameplay.html">Gameplay</a></td></tr>
 <tr><td>D030</td><td>Workshop Resource Registry &amp; Dependency System</td><td><a href="decisions/09e-community.html">Community</a></td></tr>
 <tr><td>D031</td><td>Observability &amp; Telemetry (OTEL)</td><td><a href="decisions/09e-community.html">Community</a></td></tr>
 <tr><td>D032</td><td>Switchable UI Themes</td><td><a href="decisions/09c-modding.html">Modding</a></td></tr>
@@ -260,8 +270,12 @@
 <tr><td>D059</td><td>In-Game Communication (Chat, Voice, Pings)</td><td><a href="decisions/09g-interaction.html">Interaction</a></td></tr>
 <tr><td>D060</td><td>Netcode Parameter Philosophy</td><td><a href="decisions/09b-networking.html">Networking</a></td></tr>
 <tr><td>D065</td><td>Tutorial &amp; New Player Experience</td><td><a href="decisions/09g-interaction.html">Interaction</a></td></tr>
+<tr><td>D069</td><td>Installation &amp; First-Run Setup Wizard</td><td><a href="decisions/09g-interaction.html">Interaction</a></td></tr>
+<tr><td>D070</td><td>Asymmetric Co-op Mode — Commander &amp; Field Ops</td><td><a href="decisions/09d-gameplay.html">Gameplay</a></td></tr>
 <tr><td>D061</td><td>Player Data Backup &amp; Portability</td><td><a href="decisions/09e-community.html">Community</a></td></tr>
 <tr><td>D062</td><td>Mod Profiles &amp; Virtual Asset Namespace</td><td><a href="decisions/09c-modding.html">Modding</a></td></tr>
+<tr><td>D063</td><td>Compression Configuration (Carried Forward in D067)</td><td><a href="decisions/09a-foundation.html">Foundation</a></td></tr>
+<tr><td>D064</td><td>Server Configuration System (Carried Forward in D067)</td><td><a href="decisions/09a-foundation.html">Foundation</a></td></tr>
 <tr><td>D066</td><td>Cross-Engine Export &amp; Editor Extensibility</td><td><a href="decisions/09c-modding.html">Modding</a></td></tr>
 <tr><td>D067</td><td>Configuration Format Split — TOML vs YAML</td><td><a href="decisions/09a-foundation.html">Foundation</a></td></tr>
 <tr><td>D068</td><td>Selective Installation &amp; Content Footprints</td><td><a href="decisions/09c-modding.html">Modding</a></td></tr>
@@ -287,7 +301,7 @@
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="08-ROADMAP.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="tracking/deferral-wording-patterns.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                             </a>
 
@@ -301,7 +315,7 @@
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="08-ROADMAP.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="tracking/deferral-wording-patterns.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                     </a>
 

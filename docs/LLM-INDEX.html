@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-1e683dcc.js";
+            window.path_to_searchindex_js = "searchindex-3d47d740.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-a0d63c9c.js"></script>
+        <script src="toc-914f79aa.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -224,6 +224,7 @@
 <tr><td><code>src/06-SECURITY.md</code></td><td>Threat model &amp; trust boundaries</td><td>ranked trust, attack surfaces, operational constraints</td><td>UI/UX behavior unless security-gating is the point</td></tr>
 <tr><td><code>src/10-PERFORMANCE.md</code></td><td>Perf philosophy &amp; budgets</td><td>targets, hot-path rules, compatibility tiers</td><td>Final UX/publishing behavior</td></tr>
 <tr><td><code>src/17-PLAYER-FLOW.md</code></td><td>UX navigation &amp; mock screens</td><td>menus, flows, settings surfaces, example panels</td><td>Core architecture invariants</td></tr>
+<tr><td><code>src/18-PROJECT-TRACKER.md</code> + <code>src/tracking/*.md</code></td><td>Execution planning overlay</td><td>implementation order, dependency DAG, milestone status, “what next?”, ticket breakdown templates</td><td>Canonical runtime behavior or roadmap timing (use decisions/architecture + <code>08-ROADMAP.md</code>)</td></tr>
 <tr><td><code>src/08-ROADMAP.md</code></td><td>Phasing</td><td>“when”, not “what”</td><td>Current runtime behavior/spec guarantees</td></tr>
 </tbody>
 </table>
@@ -241,10 +242,13 @@
 <tr><td>Modding tiers (YAML/Lua/WASM) / export / compatibility</td><td><code>src/04-MODDING.md</code>, <code>src/decisions/09c-modding.md</code></td><td><code>src/07-CROSS-ENGINE.md</code></td><td><code>09c</code> is canonical for accepted decisions</td></tr>
 <tr><td>Workshop / packages / CAS / profiles / selective install</td><td><code>src/decisions/09e-community.md</code>, <code>src/decisions/09c-modding.md</code></td><td><code>src/17-PLAYER-FLOW.md</code></td><td>D068 (selective install) is in <code>09c</code>; D049 CAS in <code>09e</code></td></tr>
 <tr><td>Scenario editor / asset studio / SDK UX</td><td><code>src/decisions/09f-tools.md</code></td><td><code>src/17-PLAYER-FLOW.md</code>, <code>src/04-MODDING.md</code></td><td><code>17</code> has mock screens/examples; <code>09f</code> is normative</td></tr>
-<tr><td>In-game controls / mobile UX / chat / voice / tutorial</td><td><code>src/decisions/09g-interaction.md</code></td><td><code>src/17-PLAYER-FLOW.md</code>, <code>src/02-ARCHITECTURE.md</code></td><td><code>17</code> shows surfaces; <code>09g</code> defines interaction rules</td></tr>
+<tr><td>In-game controls / mobile UX / chat / voice / tutorial</td><td><code>src/decisions/09g-interaction.md</code></td><td><code>src/17-PLAYER-FLOW.md</code>, <code>src/02-ARCHITECTURE.md</code>, <code>research/open-source-rts-communication-markers-study.md</code></td><td><code>17</code> shows surfaces; <code>09g</code> defines interaction rules; use the research note for prior-art communication/beacon/marker UX rationale only</td></tr>
 <tr><td>Campaign structure / persistent state / cutscene flow</td><td><code>src/modding/campaigns.md</code>, <code>src/decisions/09f-tools.md</code></td><td><code>src/04-MODDING.md</code>, <code>src/17-PLAYER-FLOW.md</code></td><td><code>modding/campaigns.md</code> is the detailed D021 runtime/schema spec; use <code>17</code> for player-facing transition examples</td></tr>
 <tr><td>Performance budgets / low-end hardware support</td><td><code>src/10-PERFORMANCE.md</code>, <code>src/decisions/09a-foundation.md</code></td><td><code>src/02-ARCHITECTURE.md</code></td><td><code>10</code> is canonical for targets and compatibility tiers</td></tr>
-<tr><td>Philosophy / methodology / design process</td><td><code>src/13-PHILOSOPHY.md</code>, <code>src/14-METHODOLOGY.md</code></td><td><code>research/*.md</code> (e.g., <code>research/mobile-rts-ux-onboarding-community-platform-analysis.md</code>, <code>research/rts-2026-trend-scan.md</code>)</td><td>Use for “is this aligned?” reviews and inspiration filtering</td></tr>
+<tr><td>Philosophy / methodology / design process</td><td><code>src/13-PHILOSOPHY.md</code>, <code>src/14-METHODOLOGY.md</code></td><td><code>research/*.md</code> (e.g., <code>research/mobile-rts-ux-onboarding-community-platform-analysis.md</code>, <code>research/rts-2026-trend-scan.md</code>, <code>research/bar-recoil-source-study.md</code>, <code>research/open-source-rts-communication-markers-study.md</code>)</td><td>Use for “is this aligned?” reviews, source-study takeaways, and inspiration filtering</td></tr>
+<tr><td>Implementation planning / milestone dependencies / project standing</td><td><code>src/18-PROJECT-TRACKER.md</code>, <code>src/tracking/milestone-dependency-map.md</code></td><td><code>src/08-ROADMAP.md</code>, <code>src/09-DECISIONS.md</code>, <code>src/17-PLAYER-FLOW.md</code></td><td>Tracker is an execution overlay: use it for ordering/status; roadmap remains canonical for phase timing</td></tr>
+<tr><td>Ticket breakdown / work-package template for <code>G*</code> steps</td><td><code>src/tracking/implementation-ticket-template.md</code></td><td><code>src/18-PROJECT-TRACKER.md</code>, <code>src/tracking/milestone-dependency-map.md</code></td><td>Use for implementation handoff/work packages after features are mapped into the overlay</td></tr>
+<tr><td>Future/deferral wording audit / “is this planned or vague?”</td><td><code>src/tracking/future-language-audit.md</code>, <code>src/tracking/deferral-wording-patterns.md</code></td><td><code>src/18-PROJECT-TRACKER.md</code>, <code>src/14-METHODOLOGY.md</code>, <code>AGENTS.md</code></td><td>Use for classifying future-facing wording and converting vague prose into planned deferrals / North Star claims</td></tr>
 </tbody>
 </table>
 </div>
@@ -270,6 +274,9 @@
 <h3 id="ranking-heuristics"><a class="header" href="#ranking-heuristics">Ranking Heuristics</a></h3>
 <ul>
 <li>Prefer decision docs for normative questions (“should”, “must”, “decided”)</li>
+<li>Prefer <code>src/18-PROJECT-TRACKER.md</code> + <code>src/tracking/milestone-dependency-map.md</code> for “what next?”, dependency-order, and implementation sequencing questions</li>
+<li>Prefer <code>src/tracking/implementation-ticket-template.md</code> when the user asks for implementer task breakdowns or ticket-ready work packages tied to <code>G*</code> steps</li>
+<li>Prefer <code>src/tracking/future-language-audit.md</code> + <code>src/tracking/deferral-wording-patterns.md</code> for reviews of vague future wording, deferral placement, and North Star claim formatting</li>
 <li>Prefer <code>17-PLAYER-FLOW.md</code> for UI layout / screen wording questions</li>
 <li>Prefer <code>08-ROADMAP.md</code> only for “when / phase” questions</li>
 <li>Prefer research docs only when the question is “why this prior art?” or “what did we learn from X?”</li>

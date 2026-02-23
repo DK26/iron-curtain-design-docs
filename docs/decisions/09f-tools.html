@@ -35,10 +35,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-1e683dcc.js";
+            window.path_to_searchindex_js = "../searchindex-3d47d740.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-a0d63c9c.js"></script>
+        <script src="../toc-914f79aa.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -224,6 +224,14 @@
 <li>All prompts and responses are logged (opt-in) for debugging and sharing</li>
 <li>Offline mode: pre-generated content works without any LLM connection</li>
 </ul>
+<p><strong>Prompt strategy is provider/model-specific (especially local vs cloud):</strong></p>
+<ul>
+<li>IC does <strong>not</strong> assume one universal prompt style works across all BYOLLM providers.</li>
+<li>Local models (Ollama/llama.cpp and other self-hosted backends) often require different <strong>chat templates</strong>, tighter context budgets, simpler output schemas, and more staged task decomposition than frontier cloud APIs.</li>
+<li>A “bad local model result” may actually be a <strong>prompt/template mismatch</strong> (wrong role formatting, unsupported tool-call pattern, too much context, overly complex schema).</li>
+<li>D047 therefore introduces a provider/model-aware <strong>Prompt Strategy Profile</strong> system (auto-selected by capability probe, user-overridable) rather than a single hardcoded prompt preset for every backend.</li>
+</ul>
+<p><strong>Design rule:</strong> Prompt behavior = <code>provider transport + chat template + decoding settings + prompt strategy profile</code>, not just “the text of the prompt.”</p>
 <h3 id="generative-campaign-mode"><a class="header" href="#generative-campaign-mode">Generative Campaign Mode</a></h3>
 <p>The single biggest use of LLM generation: <strong>full branching campaigns created on the fly.</strong> The player picks a faction, adjusts parameters (or accepts defaults), and the LLM generates an entire campaign — backstory, missions, branching paths, persistent characters, and narrative arc — progressively as they play. Every generated campaign is a standard D021 campaign: YAML graph, Lua scripts, maps, briefings. Once generated, a campaign is <strong>fully playable without an LLM</strong> — generation is the creative act; playing is standard IC.</p>
 <h4 id="how-it-works"><a class="header" href="#how-it-works">How It Works</a></h4>
@@ -859,7 +867,7 @@ radar_comms:
 <p>All of it is standard D038 format. All of it is editable after generation. All of it works exactly like hand-crafted content. The LLM just writes it faster.</p>
 <h4 id="generative-media-pipeline-forward-looking"><a class="header" href="#generative-media-pipeline-forward-looking">Generative Media Pipeline (Forward-Looking)</a></h4>
 <p>The sections above describe the LLM generating <em>text</em>: YAML definitions, Lua triggers, briefing scripts, dialogue trees. But the full C&amp;C experience isn’t text — it’s voice-acted briefings, dynamic music, sound effects, and cutscenes. Currently, generative campaigns use existing media assets: game module sound libraries, Workshop music packs, the player’s installed voice collections. A mission briefing is <em>text</em> that the player reads; a radar comm event is a text bubble without voice audio.</p>
-<p>AI-generated media — voice synthesis, music generation, sound effect creation, and eventually video/cutscene generation — is advancing rapidly. By the time IC reaches Phase 7, production-quality AI voice synthesis will be mature (it largely is already in 2025–2026), AI music generation is approaching usable quality, and AI video is on a clear trajectory. The generative media pipeline prepares for this without creating obstacles for a media-free fallback.</p>
+<p>AI-generated media — voice synthesis, music generation, sound effect creation, and a deferred optional <code>M11</code> video/cutscene generation layer — is advancing rapidly. By the time IC reaches Phase 7, production-quality AI voice synthesis will be mature (it largely is already in 2025–2026), AI music generation is approaching usable quality, and AI video is on a clear trajectory. The generative media pipeline prepares for this without creating obstacles for a media-free fallback.</p>
 <p><strong>Core design principle: every generative media feature is a progressive enhancement.</strong> A generative campaign plays identically with or without media generation. Text briefings work. Music from the existing library works. Silent radar comms with text work. When AI media providers are available, they <em>enhance</em> the experience — voiced briefings, custom music, generated sound effects — but nothing <em>depends</em> on them.</p>
 <p><strong>Three tiers of generative media (from most ambitious to most conservative):</strong></p>
 <p><strong>Tier 1 — Live generation during generative campaigns:</strong></p>
@@ -873,7 +881,7 @@ radar_comms:
 <tr><td><strong>Voice lines</strong></td><td>Loading screen / intermission (~15–30s)</td><td>Text-only briefing, text bubble radar comms</td><td>Voice synthesis (ElevenLabs, local TTS, XTTS, Bark, Piper)</td></tr>
 <tr><td><strong>Music tracks</strong></td><td>Pre-generated during campaign setup or between missions</td><td>Existing game module soundtrack, Workshop packs</td><td>Music generation (Suno, Udio, MusicGen, local models)</td></tr>
 <tr><td><strong>Sound FX</strong></td><td>Pre-generated during mission generation</td><td>Game module default sound library</td><td>Sound generation (AudioGen, Stable Audio, local models)</td></tr>
-<tr><td><strong>Cutscenes</strong></td><td>Pre-generated between missions (longer)</td><td>Text+portrait briefing, radar comm text overlay</td><td>Video generation (future — Sora class, Runway, local models)</td></tr>
+<tr><td><strong>Cutscenes</strong></td><td>Pre-generated between missions (longer)</td><td>Text+portrait briefing, radar comm text overlay</td><td>Video generation (deferred optional <code>M11</code> — Sora class, Runway, local models)</td></tr>
 </tbody>
 </table>
 </div>
@@ -961,7 +969,7 @@ pub struct VoiceProfile {
 <li><strong>All mission briefings</strong> — generate voice audio for every briefing text, every radar comm event, every intermission dialogue line.</li>
 <li><strong>Mission music</strong> — generate mood-appropriate tracks for each mission (or select from existing library + generate only gap-filling tracks).</li>
 <li><strong>Mission-specific sound FX</strong> — generate any custom sound effects referenced in mission scripts (ambient weather, unique weapon sounds, environmental audio).</li>
-<li><strong>Cutscenes</strong> (future) — generate video sequences for mission intros, mid-mission cinematics, campaign intro/outro.</li>
+<li><strong>Cutscenes</strong> (deferred optional <code>M11</code>) — generate video sequences for mission intros, mid-mission cinematics, campaign intro/outro.</li>
 </ol>
 <p>Each step is independently skippable — a player might configure voice synthesis but skip music generation, using the game’s built-in soundtrack. The campaign save tracks which media was generated vs. sourced from existing libraries.</p>
 <p><strong>Tier 3 — SDK Asset Studio integration:</strong></p>
@@ -1008,7 +1016,7 @@ pub struct VoiceProfile {
 <tr><td>Voice Synthesis</td><td><code>VoiceProvider</code></td><td>ElevenLabs / Local TTS (quality vs. speed trade-off)</td></tr>
 <tr><td>Music Generation</td><td><code>MusicProvider</code></td><td>Suno API / Local MusicGen</td></tr>
 <tr><td>Sound FX Generation</td><td><code>SoundFxProvider</code></td><td>AudioGen / Stable Audio</td></tr>
-<tr><td>Video/Cutscene (future)</td><td><code>VideoProvider</code></td><td>Cloud API (when mature)</td></tr>
+<tr><td>Video/Cutscene (deferred optional <code>M11</code>)</td><td><code>VideoProvider</code></td><td>Cloud API (when mature)</td></tr>
 <tr><td>Asset Generation (visual)</td><td><code>AssetGenerator</code></td><td>DALL-E / Stable Diffusion / Local</td></tr>
 <tr><td>AI Orchestrator</td><td><code>LlmProvider</code></td><td>Local Ollama (fast)</td></tr>
 <tr><td>Post-Match Coaching</td><td><code>LlmProvider</code></td><td>Local model (fast)</td></tr>
@@ -2172,6 +2180,8 @@ LLM generates:
 <tr><td><strong>Connections</strong></td><td>Link triggers ↔ waypoints ↔ modules visually</td><td>F5 (Synchronization)</td></tr>
 <tr><td><strong>Modules</strong></td><td>Pre-packaged game logic nodes</td><td>F7 (Modules)</td></tr>
 <tr><td><strong>Regions</strong></td><td>Draw named spatial zones reusable across triggers and scripts</td><td>N/A (AoE2/StarCraft concept)</td></tr>
+<tr><td><strong>Layers</strong></td><td>(Advanced) Create/manage named map layers for dynamic expansion. Draw layer bounds, assign entities to layers, configure shroud reveal and camera transitions. Preview layer activation.</td><td>N/A (new — see <code>04-MODDING.md</code> § Dynamic Mission Flow)</td></tr>
+<tr><td><strong>Portals</strong></td><td>(Advanced) Place sub-map portal entities on buildings. Link to interior sub-map files (opens in new tab). Configure entry/exit points, allowed units, transition effects, outcome wiring.</td><td>N/A (new — see <code>04-MODDING.md</code> § Sub-Map Transitions)</td></tr>
 <tr><td><strong>Scripts</strong></td><td>Browse and edit external <code>.lua</code> files referenced by inline scripts</td><td>OFP mission folder <code>.sqs</code>/<code>.sqf</code> files</td></tr>
 <tr><td><strong>Campaign</strong></td><td>Visual campaign graph — mission ordering, branching, persistent state</td><td>N/A (no RTS editor has this)</td></tr>
 </tbody>
@@ -3385,6 +3395,7 @@ nodes:
 <tr><td><strong>Traits</strong></td><td>Arbitrary key-value pairs (strength, charisma, rank — designer-defined)</td></tr>
 <tr><td><strong>Inventory</strong></td><td>Items this character carries (from campaign inventory system)</td></tr>
 <tr><td><strong>Biography</strong></td><td>Text shown in roster screen, updated by Lua as the campaign progresses</td></tr>
+<tr><td><strong>Presentation</strong></td><td>Optional character-level overrides for portrait/icon/voice/skin/markers (convenience layer over unit defaults/resource packs)</td></tr>
 <tr><td><strong>Must survive</strong></td><td>If true, character death → mission failure (or specific outcome)</td></tr>
 <tr><td><strong>Death outcome</strong></td><td>Named outcome triggered if this character dies (e.g., <code>tanya_killed</code>)</td></tr>
 </tbody>
@@ -3392,6 +3403,20 @@ nodes:
 </div>
 <p>Named characters bridge scenarios and intermissions. Tanya in Mission 1 is the same Tanya in Mission 5 — same <code>character_id</code>, same veterancy, same kill count, same equipment (even if the display name/portrait changes over time). If she dies in Mission 3 and doesn’t have “must survive,” the campaign continues without her — and future dialogue trees skip her lines via conditions.</p>
 <p>This is the primitive that makes RPG campaigns possible. A designer creates 6 named characters, gives them traits and portraits, writes dialogue between them, and lets the player manage their roster between missions. That’s an RPG party in an RTS shell — no engine changes required, just creative use of the campaign editor’s building blocks.</p>
+<p><strong>Optional character presentation overrides (convenience layer):</strong> D038 should expose a character-level presentation override panel so designers can make a unit clearly read as a unique hero/operative <strong>without</strong> creating a full custom mod stack for every case. These overrides sit on top of the character’s default unit type + resource pack selection and are intended for identity/readability:</p>
+<ul>
+<li><code>portrait_override</code> (dialogue/intermission/hero sheet portrait)</li>
+<li><code>unit_icon_override</code> (sidebar/build/roster icon where shown)</li>
+<li><code>voice_set_override</code> (selection/move/attack/deny response set)</li>
+<li><code>sprite_sequence_override</code> or <code>sprite_variant</code> (alternate sprite/sequence mapping for the same gameplay role)</li>
+<li><code>palette_variant</code> / tint or marker style (e.g., elite trim, stealth suit tint, squad color accent)</li>
+<li><code>selection_badge</code> / minimap marker variant (hero star, special task force glyph)</li>
+</ul>
+<p><strong>Design rule:</strong> gameplay-changing differences (weapons, stats, abilities) still belong in the unit definition + hero toolkit/skill system. The presentation override layer is a <strong>creator convenience</strong> for making unique characters legible and memorable. It can pair with a gameplay variant unit type, but it should not hide gameplay changes behind purely visual metadata.</p>
+<p><strong>Scope and layering:</strong> overrides may be defined as a campaign-wide default for a named character and optionally as mission-scoped variants (e.g., <code>disguise</code>, <code>winter_gear</code>, <code>captured_uniform</code>). Scenario bindings choose which variant to apply when spawning the character.</p>
+<blockquote>
+<p><strong>Canonical schema:</strong> The shared <code>CharacterPresentationOverrides</code> / variant model used by D038 authoring surfaces is documented in <code>src/modding/campaigns.md</code> § “Named Character Presentation Overrides (Optional Convenience Layer)” so the SDK and campaign runtime/docs stay aligned.</p>
+</blockquote>
 <h4 id="campaign-inventory"><a class="header" href="#campaign-inventory">Campaign Inventory</a></h4>
 <p>Persistent items that exist at the campaign level, not within any specific mission.</p>
 <div class="table-wrapper">
@@ -3430,6 +3455,7 @@ nodes:
 <li><strong>XP / reward authoring</strong> on mission outcomes and debrief/intermission choices (award XP, grant item, unlock skill, set hero stat/flag)</li>
 <li><strong>Hero ability loadout editor</strong> (which unlocked abilities are active in the next mission, if the campaign uses ability slots)</li>
 <li><strong>Skill tree editor</strong> (graph or list view): prerequisites, costs, descriptions, icon, unlock effects</li>
+<li><strong>Character presentation override panel</strong> (portrait/icon/voice/skin/marker variants) with “global default” + mission-scoped variants and in-context preview</li>
 <li><strong>Hero-conditioned graph validation</strong>: warns if a branch requires a hero/skill that can never be obtained on any reachable path</li>
 </ul>
 <p><strong>Scenario Editor integration (mission-level hooks):</strong></p>
@@ -3444,6 +3470,7 @@ nodes:
 </ul>
 </li>
 <li><code>Hero Spawn</code> / <code>Apply Hero Loadout</code> conveniences that bind a scenario actor to a D021 named character profile</li>
+<li><code>Apply Character Presentation Variant</code> convenience (optional): switch a named character between authored variants (<code>default</code>, <code>disguise</code>, <code>winter_ops</code>, etc.) without changing the underlying gameplay profile</li>
 <li>Preview/test helpers to simulate hero states (“Start with Tanya level 3 + Satchel Charge Mk2”)</li>
 </ul>
 <p><strong>Concrete mission example (Tanya AA sabotage → reinforcements → skill-gated infiltration):</strong></p>
@@ -3772,6 +3799,67 @@ debrief_rewards:
 </tbody>
 </table>
 </div>
+<h4 id="asymmetric-commander--field-ops-toolkit-d070"><a class="header" href="#asymmetric-commander--field-ops-toolkit-d070">Asymmetric Commander + Field Ops Toolkit (D070)</a></h4>
+<p>D070 formalizes a specific IC-native asymmetric co-op pattern: <strong>Commander &amp; Field Ops</strong>. In D038, this is implemented as a <strong>template + authoring toolkit</strong>, not a hardcoded engine mode.</p>
+<p><strong>Scenario authoring surfaces (v1 requirements):</strong></p>
+<ul>
+<li><strong>Role Slot editor</strong> — configure role slots (<code>Commander</code>, <code>FieldOps</code>, future <code>CounterOps</code>/<code>Observer</code>) with min/max player counts, UI profile hints, and communication preset links</li>
+<li><strong>Control Scope painter</strong> — assign ownership/control scopes for structures, factories, squads, and scripted attachments (who commands what by default)</li>
+<li><strong>Objective Channels</strong> — mark objectives as <code>Strategic</code>, <code>Field</code>, <code>Joint</code>, or <code>Hidden</code> with visibility/completion-credit per role</li>
+<li><strong>SpecOps Task Catalog presets</strong> — authoring shortcuts/templates for common D070 side-mission categories (economy raid, power sabotage, tech theft, expansion-site clear, superweapon delay, route control, VIP rescue, recon designation)</li>
+<li><strong>Support Catalog + Requisition Rules</strong> — define requestable support actions (CAS/recon/reinforcements/extraction), costs, cooldowns, prerequisites, and UI labels</li>
+<li><strong>Operational Momentum / Agenda Board editor (optional)</strong> — define agenda lanes (e.g., economy/power/intel/command-network/superweapon denial), milestones/rewards, and optional extraction-vs-stay prompts for “one more phase” pacing</li>
+<li><strong>Request/Response Preview Simulation</strong> — in Preview/Test, simulate Field Ops requests and Commander responses to verify timing, cooldown, duplicate-request collapse, and objective wiring without a second human player</li>
+<li><strong>Portal Ops integration</strong> — reuse D038 <code>Sub-Scenario Portal</code> authoring for optional infiltration micro-ops; portal return outcomes can feed Commander/Field/Joint objectives</li>
+</ul>
+<p><strong>Validation profile (D070-aware) checks:</strong></p>
+<ul>
+<li>no role idle-start (both roles have meaningful actions in the first ~90s)</li>
+<li>joint objectives are reachable and have explicit role contributions</li>
+<li>every request type referenced by objectives maps to at least one satisfiable commander action path</li>
+<li>request/reward definitions specify a meaningful war-effort outcome category (economy/power/tech/map-state/timing/intel)</li>
+<li>commander support catalog has valid budget/cooldown definitions</li>
+<li>request spam controls are configured (duplicate collapse or cooldown rule) for missions with repeatable support asks</li>
+<li>if Operational Momentum is enabled, each agenda milestone declares explicit rewards and role visibility</li>
+<li>agenda foreground/timer limits are configured (or safe defaults apply) to avoid HUD overload warnings</li>
+<li>portal return outcomes are wired (success/fail/timeout)</li>
+<li>role communication mappings exist (D059/D065 integration)</li>
+</ul>
+<p><strong>Scope boundary (v1):</strong> D038 supports <strong>same-map asymmetric co-op</strong> and optional portal micro-ops using the existing <code>Sub-Scenario Portal</code> pattern. True concurrent nested sub-map runtime instances remain deferred (D070).</p>
+<p><strong>Pacing guardrail (optional layer):</strong> Operational Momentum / “one more phase” is an <strong>optional template/preset-level pacing system</strong> for D070 scenarios. It must not become a mandatory overlay on all asymmetric missions or a hidden source of unreadable timer spam.</p>
+<h4 id="d070-adjacent-commander-avatar--assassination--presence-authoring-ta-style-variants"><a class="header" href="#d070-adjacent-commander-avatar--assassination--presence-authoring-ta-style-variants">D070-adjacent Commander Avatar / Assassination / Presence authoring (TA-style variants)</a></h4>
+<p>D070’s adjacent <strong>Commander Avatar</strong> mode family (Assassination / Commander Presence / hybrid presets) should be exposed as template/preset-level authoring in D038, not as hidden Lua-only patterns.</p>
+<p><strong>Authoring surfaces (preset extensions):</strong></p>
+<ul>
+<li><strong>Commander Avatar panel</strong> — select the commander avatar unit/archetype, death policy (<code>ImmediateDefeat</code>, <code>DownedRescueTimer</code>, etc.), and warning/UI labels</li>
+<li><strong>Commander Presence profile</strong> — define soft influence bonuses (radius, falloff, effect type, command-network prerequisites)</li>
+<li><strong>Command Network objectives</strong> — tag comm towers/uplinks/relays and wire them to support quality, presence bonuses, or commander ability unlocks</li>
+<li><strong>Commander + SpecOps combo preset</strong> — bind commander avatar rules to D070 role slots so the Commander role owns the avatar and the SpecOps role can support/protect it</li>
+<li><strong>Rescue Bootstrap pattern preset</strong> (campaign-friendly) — starter trigger/objective wiring for “commander missing/captured -&gt; rescue -&gt; unlock command/building/support”</li>
+</ul>
+<p><strong>Validation checks (v1):</strong></p>
+<ul>
+<li>commander defeat/death policy is explicitly configured and visible in briefing/lobby metadata</li>
+<li>commander avatar spawn is not trivially exposed without authored counterplay (warning, not hard fail)</li>
+<li>presence bonuses are soft effects by default (warn on hard control-denial patterns in v1 templates)</li>
+<li>command-network dependencies are wired (no orphan “requires network” rules)</li>
+<li>rescue-bootstrap unlocks show explicit UI/objective messaging when command/building becomes available</li>
+</ul>
+<h4 id="d070-experimental-survival-variant-reuse-last-commando-standing--specops-survival"><a class="header" href="#d070-experimental-survival-variant-reuse-last-commando-standing--specops-survival">D070 Experimental Survival Variant Reuse (<code>Last Commando Standing</code> / <code>SpecOps Survival</code>)</a></h4>
+<p>D070’s experimental SpecOps-focused last-team-standing variant (see D070 “Last Commando Standing / SpecOps Survival”) is <strong>not</strong> the same asymmetric Commander/Field Ops mode, but it reuses part of the same toolkit:</p>
+<ul>
+<li><strong>SpecOps Task Catalog presets</strong> for meaningful side-objectives (economy/power/tech/route/intel)</li>
+<li><strong>Field progression + requisition authoring</strong> (session-local upgrades/supports)</li>
+<li><strong>Objective Channel</strong> visibility patterns (often <code>Field</code> + <code>Hidden</code>, sometimes <code>Joint</code> for team variants)</li>
+<li><strong>Request/response preview</strong> if the survival scenario includes limited support actions</li>
+</ul>
+<p>Additional authoring presets for this experimental variant should be template-driven and optional:</p>
+<ul>
+<li><strong>Hazard Contraction Profiles</strong> (radiation storm, artillery saturation, chrono distortion, firestorm/gas spread) with warning telegraphs and phase timing</li>
+<li><strong>Neutral Objective Clusters</strong> (cache depots, power relays, tech uplinks, bridge controls, extraction points)</li>
+<li><strong>Elimination / Spectate / Redeploy policies</strong> (prototype-specific and scenario-controlled)</li>
+</ul>
+<p><strong>Scope boundary:</strong> D038 should expose this as a <strong>prototype-first template preset</strong>, not a promise of a ranked-ready or large-scale battle-royale system.</p>
 <h4 id="per-player-objectives--triggers"><a class="header" href="#per-player-objectives--triggers">Per-Player Objectives &amp; Triggers</a></h4>
 <p>The key to good co-op missions: players need their own goals, not just shared ones.</p>
 <ul>
@@ -3827,7 +3915,7 @@ debrief_rewards:
 <tr><td><strong>Treaty</strong></td><td>AoE2</td><td>No-combat timer (configurable), force peace during treaty, countdown display, auto-reveal on treaty end</td></tr>
 <tr><td><strong>Nomad</strong></td><td>AoE2</td><td>No starting base — each player gets only an MCV (or equivalent). Random spawn positions. Land grab gameplay.</td></tr>
 <tr><td><strong>Empire Wars</strong></td><td>AoE2 DE</td><td>Pre-built base per player (configurable: small/medium/large), starting army, skip early game</td></tr>
-<tr><td><strong>Assassination</strong></td><td>StarCraft UMS</td><td>Commander unit per player (powerful but fragile), protect yours, kill theirs. Commander death = defeat.</td></tr>
+<tr><td><strong>Assassination</strong></td><td>StarCraft UMS, Total Annihilation commander tension</td><td>Commander avatar unit per player (powerful but fragile), protect yours, kill theirs. Commander death = defeat (or authored downed timer). Optional D070-adjacent <strong>Commander Presence</strong> soft-bonus profile and command-network objective hooks.</td></tr>
 <tr><td><strong>Tower Defense</strong></td><td>Desktop TD, custom WC3 maps</td><td>Pre-defined enemy paths (waypoints), restricted build zones, economy from kills, wave system with boss rounds</td></tr>
 <tr><td><strong>Tug of War</strong></td><td>WC3 custom maps</td><td>Automated unit spawning on timer, player controls upgrades/abilities/composition. Push the enemy back.</td></tr>
 <tr><td><strong>Base Defense</strong></td><td>They Are Billions, C&amp;C missions</td><td>Defend a position for N minutes/waves. Pre-placed base, incoming attacks from multiple directions, escalating difficulty.</td></tr>
@@ -3836,12 +3924,14 @@ debrief_rewards:
 <tr><td><strong>Diplomacy</strong></td><td>Civilization, AoE4</td><td>FFA with dynamic alliance system. Players can propose/accept/break alliances. Shared vision opt-in. Betrayal is a game mechanic.</td></tr>
 <tr><td><strong>Sandbox</strong></td><td>Garry’s Mod, Minecraft Creative</td><td>Unlimited resources, no enemies, no victory condition. Pure building and experimentation. Good for testing and screenshots.</td></tr>
 <tr><td><strong>Co-op Survival</strong></td><td>Deep Rock Galactic, Helldivers</td><td>Multiple human players vs escalating AI waves. Shared base. Team objectives. Difficulty scales with player count.</td></tr>
+<tr><td><strong>Commander &amp; Field Ops Co-op</strong> <em>(player-facing: “Commander &amp; SpecOps”)</em></td><td>Savage, Natural Selection (role asymmetry lesson)</td><td>Commander role slot + Field Ops slot(s), split control scopes, strategic/field/joint objective channels, SpecOps task catalog presets, support request/requisition flows, request-status UI hooks, optional portal micro-op wiring.</td></tr>
+<tr><td><strong>Last Commando Standing</strong> <em>(experimental, D070-adjacent / player-facing alt: “SpecOps Survival”)</em></td><td>RTS commando survival + battle-royale-style tension</td><td>Commando-led squad per player/team, neutral objective clusters, hazard contraction phase presets (RA-themed), match-based field upgrades/requisition, elimination/spectate/redeploy policy hooks, short-round prototype tuning.</td></tr>
 <tr><td><strong>Sudden Death</strong></td><td>Various</td><td>No rebuilding — if a building is destroyed, it’s gone. Every engagement is high-stakes. Smaller starting armies.</td></tr>
 </tbody>
 </table>
 </div>
 <p><strong>Templates are starting points, not constraints.</strong> Open a template, add your own triggers/modules/Lua, publish to Workshop. Templates save 30–60 minutes of boilerplate setup and ensure the core game mode logic is correct.</p>
-<p><strong>Phasing:</strong> Not all 17 templates ship simultaneously. <strong>Phase 6b core set</strong> (8 templates): Skirmish, Survival/Horde, King of the Hill, Regicide, Free for All, Co-op Survival, Sandbox, Base Defense — these cover the most common community needs and validate the template system. <strong>Phase 7 / community-contributed</strong> (9 templates): Treaty, Nomad, Empire Wars, Assassination, Tower Defense, Tug of War, Capture the Flag, Diplomacy, Sudden Death — these are well-defined patterns that the community can build and publish via Workshop before (or instead of) first-party implementation. Scope to what you have (Principle #6); don’t ship 17 mediocre templates when 8 excellent ones plus a thriving Workshop library serves players better.</p>
+<p><strong>Phasing:</strong> Not all templates ship simultaneously. <strong>Phase 6b core set</strong> (8 templates): Skirmish, Survival/Horde, King of the Hill, Regicide, Free for All, Co-op Survival, Sandbox, Base Defense — these cover the most common community needs and validate the template system. <strong>Phase 7 / community-contributed</strong> (remaining classic templates): Treaty, Nomad, Empire Wars, Assassination, Tower Defense, Tug of War, Capture the Flag, Diplomacy, Sudden Death. <strong>D070 Commander &amp; Field Ops Co-op</strong> follows a separate path: prototype/playtest validation first, then promotion to a built-in IC-native template once role-clarity and communication UX are proven. The D070-adjacent <strong>Commander Avatar / Assassination + Commander Presence</strong> presets should ship only after the anti-snipe/readability guardrails and soft-presence tuning are playtested. The D070-adjacent <strong>Last Commando Standing / SpecOps Survival</strong> variant is even more experimental: prototype-first and community/Workshop-friendly before any first-party promotion. Scope to what you have (Principle #6); don’t ship flashy asymmetric/survival variants before the tooling, onboarding, and playtest evidence are actually good.</p>
 <p><strong>Custom game mode templates:</strong> Modders can create new templates and publish them to Workshop (D030). A “Zombie Survival” template, a “MOBA Lanes” template, a “RPG Quest Hub” template — the community extends the library indefinitely. Templates use the same composition + module + trigger format as everything else.</p>
 <p><strong>Community tools &gt; first-party completeness.</strong> Garry’s Mod shipped ~25 built-in tools; the community built hundreds more that matched or exceeded first-party quality — because the tool API was clean enough that addon authors could. The same philosophy applies here: ship 8 excellent templates, make the authoring format so clean that community templates are indistinguishable from built-in ones, and let Workshop do the rest. The limiting factor should be community imagination, not API complexity.</p>
 <p><strong>Sandbox as default preview.</strong> The Sandbox template (unlimited resources, no enemies, no victory condition) doubles as the default environment when the editor’s Preview button is pressed without a specific scenario loaded. This follows Garry’s Mod’s lesson: sandbox mode is how people <strong>learn the tools</strong> before making real content. A zero-pressure environment where every entity and module can be tested without mission constraints.</p>
@@ -3934,6 +4024,86 @@ WC3 Style    — Ctrl+T trigger editor, Ctrl+B triggers browser
 </ul>
 <p>Import is always <strong>best-effort</strong> with clear reporting: “Imported 47 of 52 triggers. 5 triggers used features without IC equivalents — see import log.” Better to import 90% and fix 10% than to recreate 100% from scratch.</p>
 <p><strong>The 30-minute goal:</strong> A veteran editor from ANY background should feel productive within 30 minutes. Not expert — productive. They recognize familiar concepts wearing new names, their muscle memory partially transfers via keybinding presets, and the migration cheat sheet fills the gaps. The learning curve is a gentle slope, not a cliff.</p>
+<h3 id="embedded-authoring-manual--context-help-d038--d037-knowledge-base-integration"><a class="header" href="#embedded-authoring-manual--context-help-d038--d037-knowledge-base-integration">Embedded Authoring Manual &amp; Context Help (D038 + D037 Knowledge Base Integration)</a></h3>
+<p>Powerful editors fail if users cannot discover what each flag, parameter, trigger action, module field, and script hook actually does. IC should ship an <strong>embedded authoring manual</strong> in the SDK, backed by the same D037 knowledge base content (no duplicate documentation system).</p>
+<p><strong>Design goals:</strong></p>
+<ul>
+<li><strong>“What is possible?” discoverability</strong> for advanced creators (OFP/ArmA-style reference depth)</li>
+<li><strong>Fast, contextual answers</strong> without leaving the editor</li>
+<li><strong>Single source of truth</strong> shared between web docs and SDK embedded help</li>
+<li><strong>Version-correct documentation</strong> for the SDK version/project schema the creator is using</li>
+</ul>
+<p><strong>Required SDK help surfaces:</strong></p>
+<ul>
+<li><strong>Global Documentation Browser</strong> (<code>Help</code> / SDK Start Screen → <code>Documentation</code>)
+<ul>
+<li>searchable by term, alias, and old-engine vocabulary (“trigger area”, “waypoint”, “SQF equivalent”, “OpenRA trait alias”)</li>
+<li>filters by domain (<code>Scenario Editor</code>, <code>Campaign Editor</code>, <code>Asset Studio</code>, <code>Lua</code>, <code>WASM</code>, <code>CLI</code>, <code>Export</code>)</li>
+</ul>
+</li>
+<li><strong>Context Help (<code>F1</code>)</strong>
+<ul>
+<li>opens the exact docs page/anchor for the selected field, module, trigger condition/action, command, or warning</li>
+</ul>
+</li>
+<li><strong>Inline <code>?</code> tooltips / “What is this?”</strong>
+<ul>
+<li>concise summary + constraints + defaults + “Open full docs”</li>
+</ul>
+</li>
+<li><strong>Examples panel</strong>
+<ul>
+<li>short snippets (YAML/Lua) and common usage patterns linked from the current feature</li>
+</ul>
+</li>
+</ul>
+<p><strong>Documentation coverage (authoring-focused):</strong></p>
+<ul>
+<li>every editor-exposed parameter/field: meaning, type, accepted values, default, range, side effects</li>
+<li>every trigger condition/action and module field</li>
+<li>every script command/API function (Lua, later WASM host calls)</li>
+<li>every CLI command/flag relevant to creator workflows (<code>ic mod</code>, <code>ic export</code>, validation, migration)</li>
+<li>export-safe / fidelity notes where a feature is IC-native or partially mappable (D066)</li>
+<li>deprecation/migration notes (<code>since</code>, <code>deprecated</code>, replacement)</li>
+</ul>
+<p><strong>Generation/source model (same source as D037 knowledge base):</strong></p>
+<ul>
+<li>Reference pages are generated from schema + API metadata where possible</li>
+<li>Hand-written pages/cookbook entries provide rationale, recipes, and examples</li>
+<li>SDK embeds a versioned offline snapshot and can optionally open/update from the online docs</li>
+<li>SDK docs and web docs must not drift — they are different <strong>views</strong> of the same content set</li>
+</ul>
+<p><strong>Editor metadata requirement (feeds docs + inline UX):</strong></p>
+<ul>
+<li>D038 module/trigger/field definitions should carry doc metadata (<code>summary</code>, <code>description</code>, constraints, examples, deprecation notes)</li>
+<li>Validation errors and warnings should link back to the same documentation anchors for fixes</li>
+<li>The same metadata should be available to future editor assistant features (D057) for grounded help</li>
+</ul>
+<p><strong>UX guardrail:</strong> Help must stay <strong>non-blocking</strong>. The editor should never force modal documentation before editing. Inline hints + F1 + searchable browser are the default pattern.</p>
+<h3 id="local-content-overlay--dev-profile-run-mode-d020d062-integration"><a class="header" href="#local-content-overlay--dev-profile-run-mode-d020d062-integration">Local Content Overlay &amp; Dev Profile Run Mode (D020/D062 Integration)</a></h3>
+<p>Creators should be able to test local scenarios/mod content through the <strong>real game runtime flow</strong> without packaging or publishing on every iteration. The SDK should expose this as a first-class workflow rather than forcing a package/install loop.</p>
+<p><strong>Principle: one runtime, two content-resolution contexts</strong></p>
+<ul>
+<li>The SDK does <strong>not</strong> launch a fake “editor-only runtime.”</li>
+<li><code>Play in Game</code> / <code>Run Local Content</code> launches the normal <code>ic-game</code> runtime path with a <strong>local development profile / overlay</strong> (D020 + D062).</li>
+<li>This keeps testing realistic (menus, loading, runtime init, D069 setup interactions where applicable) and avoids “works in preview, breaks in game” drift.</li>
+</ul>
+<p><strong>Required workflow behavior:</strong></p>
+<ul>
+<li><strong>One-click local playtest from SDK</strong> for the current scenario/campaign/mod context</li>
+<li><strong>Local overlay precedence</strong> for the active project/session only (local files override installed content for that session)</li>
+<li><strong>Clear indicators</strong> in the launched game and SDK session (“Local Content Overlay Active”, profile name/source)</li>
+<li><strong>Optional hot-reload handoff</strong> for YAML/Lua-friendly changes where supported (integrates with D020 <code>ic mod watch</code>)</li>
+<li><strong>No packaging/publish requirement</strong> before local testing</li>
+<li><strong>No silent mutation</strong> of installed Workshop packages or shared profiles</li>
+</ul>
+<p><strong>Relation to existing D038 surfaces:</strong></p>
+<ul>
+<li><code>Preview</code> remains the fastest in-editor loop</li>
+<li><code>Test</code> / <code>Play in Game</code> uses the real runtime path with the local dev overlay</li>
+<li><code>Validate</code> and <code>Publish</code> remain explicit downstream steps (Git-first and Publish Readiness rules unchanged)</li>
+</ul>
+<p><strong>UX guardrail:</strong> This workflow is a DX acceleration feature, not a new content source model. It must remain consistent with D062 profile/fingerprint boundaries and multiplayer compatibility rules (local dev overlays are local and non-canonical until packaged/published).</p>
 <h3 id="migration-workbench-sdk-ui-over-ic-mod-migrate"><a class="header" href="#migration-workbench-sdk-ui-over-ic-mod-migrate">Migration Workbench (SDK UI over <code>ic mod migrate</code>)</a></h3>
 <p>IC already commits to migration scripts and deprecation warnings at the CLI/API layer (see <code>04-MODDING.md</code> § “Mod API Stability &amp; Compatibility”). The SDK adds a <strong>Migration Workbench</strong> as a visual wrapper over that same migration engine — not a second migration system.</p>
 <p><strong>Phase 6a (read-only, low-friction):</strong></p>
@@ -4060,6 +4230,7 @@ WC3 Style    — Ctrl+T trigger editor, Ctrl+B triggers browser
 <li><strong>Hot-reload bridge.</strong> While the game is running from a Test launch, the SDK watches for file changes. Edit a YAML file, save → game hot-reloads. Edit a sprite, save → game picks up the new asset. The iteration loop is seconds, not minutes.</li>
 <li><strong>Shared Bevy crates.</strong> The SDK reuses <code>ic-render</code> for its preview viewports, <code>ic-sim</code> for gameplay preview, <code>ic-ui</code> for shared components. It’s the same rendering and simulation — just in a different window with different chrome.</li>
 </ul>
+<p><strong>D069 shared setup-component reuse (player-first extension):</strong> The SDK’s own first-run setup and maintenance flows should reuse the D069 installation/setup component model (data-dir selection, content source detection, content transfer/verify progress UI, and repair/reclaim patterns) instead of inventing a separate “SDK installer UX.” The SDK layers creator-specific steps on top — Git guidance, optional templates/toolchains, and export-helper dependencies — while preserving the separate <code>ic-editor</code> binary boundary.</p>
 <p><strong>Crate boundary:</strong> <code>ic-editor</code> contains all SDK functionality (scenario editor, asset studio, campaign editor, Game Master mode). It depends on <code>ic-render</code>, <code>ic-sim</code>, <code>ic-ui</code>, <code>ic-protocol</code>, <code>ra-formats</code>, and optionally <code>ic-llm</code> (via traits). <code>ic-game</code> does NOT depend on <code>ic-editor</code>. Both <code>ic-game</code> and <code>ic-editor</code> are separate binary targets in the workspace — they share library crates but produce independent executables.</p>
 <p><strong>Game Master mode exception:</strong> Game Master mode requires real-time manipulation of a live game session. The SDK connects to a running game as a special client — the Game Master’s SDK sends <code>PlayerOrder</code>s through <code>ic-protocol</code> to the game’s <code>NetworkModel</code>, same as any other player. The game doesn’t know it’s being controlled by an SDK — it receives orders. The Game Master’s SDK renders its own view (top-down strategic overview, budget panel, entity palette) but the game session runs in <code>ic-game</code>. Open questions deferred to Phase 6b design: how matchmaking/lobby handles GM slots (dedicated GM slot vs. spectator-with-controls), whether GM can join mid-match, and how GM presence is communicated to players.</p>
 <h3 id="three-layers"><a class="header" href="#three-layers">Three Layers</a></h3>
@@ -4275,10 +4446,12 @@ pub struct AiGenerationMeta {
 <li>Task-specific routing (use a cheap model for real-time AI, expensive model for campaign generation)</li>
 <li>Sharing working configurations with the community (without sharing API keys)</li>
 <li>Discovering which models work well for which IC features</li>
+<li>Different prompt/inference strategies for local vs cloud models (or even model-family-specific behavior)</li>
+<li>Capability probing to detect JSON/tool-call reliability, context limits, and template quirks before assigning a provider to a task</li>
 <li>An achievement for configuring and using LLM features (engagement incentive)</li>
 </ul>
 <h3 id="decision"><a class="header" href="#decision">Decision</a></h3>
-<p>Provide a dedicated <strong>LLM Manager</strong> UI screen and a community-shareable configuration format for LLM provider setups.</p>
+<p>Provide a dedicated <strong>LLM Manager</strong> UI screen, a community-shareable configuration format for LLM provider setups, and a provider/model-aware <strong>Prompt Strategy Profile</strong> system with optional capability probing and task-level overrides.</p>
 <h3 id="llm-manager-ui"><a class="header" href="#llm-manager-ui">LLM Manager UI</a></h3>
 <p>Accessible from Settings → LLM Providers:</p>
 <pre><code>┌─────────────────────────────────────────────────────────┐
@@ -4290,17 +4463,19 @@ pub struct AiGenerationMeta {
 │  ┌─ Local Ollama (llama3.2) ──────── ✓ Active ───────┐ │
 │  │  Endpoint: http://localhost:11434                   │ │
 │  │  Model: llama3.2:8b                                │ │
+│  │  Prompt Mode: Auto → Local-Compact (probed)        │ │
 │  │  Assigned to: AI Orchestrator, Quick coaching       │ │
 │  │  Avg latency: 340ms  │  Status: ● Connected        │ │
-│  │  [Test] [Edit] [Remove]                            │ │
+│  │  [Probe] [Test] [Edit] [Remove]                    │ │
 │  └────────────────────────────────────────────────────┘ │
 │                                                         │
 │  ┌─ OpenAI API (GPT-4o) ───────── ✓ Active ──────────┐ │
 │  │  Endpoint: https://api.openai.com/v1               │ │
 │  │  Model: gpt-4o                                     │ │
+│  │  Prompt Mode: Auto → Cloud-Rich                    │ │
 │  │  Assigned to: Mission generation, Campaign briefings│ │
 │  │  Avg latency: 1.2s   │  Status: ● Connected        │ │
-│  │  [Test] [Edit] [Remove]                            │ │
+│  │  [Probe] [Test] [Edit] [Remove]                    │ │
 │  └────────────────────────────────────────────────────┘ │
 │                                                         │
 │  ┌─ Anthropic API (Claude) ────── ○ Inactive ─────────┐ │
@@ -4312,20 +4487,85 @@ pub struct AiGenerationMeta {
 │                                                         │
 │  Task Routing:                                          │
 │  ┌──────────────────────┬──────────────────────────┐    │
-│  │ Task                 │ Provider                 │    │
+│  │ Task                 │ Provider / Strategy      │    │
 │  ├──────────────────────┼──────────────────────────┤    │
-│  │ AI Orchestrator      │ Local Ollama (fast)      │    │
-│  │ Mission Generation   │ OpenAI API (quality)     │    │
-│  │ Campaign Briefings   │ OpenAI API (quality)     │    │
-│  │ Post-Match Coaching  │ Local Ollama (fast)      │    │
+│  │ AI Orchestrator      │ Local Ollama / Compact   │    │
+│  │ Mission Generation   │ OpenAI / Cloud-Rich      │    │
+│  │ Campaign Briefings   │ OpenAI / Cloud-Rich      │    │
+│  │ Post-Match Coaching  │ Local Ollama / Structured│    │
 │  │ Asset Generation     │ OpenAI API (quality)     │    │
 │  │ Voice Synthesis      │ ElevenLabs (quality)     │    │
 │  │ Music Generation     │ Suno API (quality)       │    │
 │  └──────────────────────┴──────────────────────────┘    │
 │                                                         │
-│  [Export Config] [Import Config] [Browse Community]      │
+│  [Run Prompt Test] [Export Config] [Import Config] [Browse Community] │
 └─────────────────────────────────────────────────────────┘
 </code></pre>
+<h3 id="prompt-strategy-profiles-local-vs-cloud-auto-selectable"><a class="header" href="#prompt-strategy-profiles-local-vs-cloud-auto-selectable">Prompt Strategy Profiles (Local vs Cloud, Auto-Selectable)</a></h3>
+<p>The LLM Manager defines <strong>Prompt Strategy Profiles</strong> that sit between task routing and prompt assembly. This allows IC to adapt behavior for local models without forking every feature prompt manually.</p>
+<p><strong>Examples (built-in profiles):</strong></p>
+<ul>
+<li><code>CloudRich</code> — larger context budget, richer instructions/few-shot examples, complex schema prompts when supported</li>
+<li><code>CloudStructuredJson</code> — strict structured output / repair-pass-oriented profile</li>
+<li><code>LocalCompact</code> — shorter prompts, tighter context budget, reduced examples, simpler schema wording</li>
+<li><code>LocalStructured</code> — conservative JSON/schema mode for local models that pass structured-output probes</li>
+<li><code>LocalStepwise</code> — task decomposition into multiple smaller calls (plan → validate → emit)</li>
+<li><code>Custom</code> — user-defined/Workshop-shared profile</li>
+</ul>
+<p><strong>Why profiles instead of one “local prompt”:</strong></p>
+<ul>
+<li>Different local model families behave differently (<code>llama</code>, <code>qwen</code>, <code>mistral</code>, etc.)</li>
+<li>Quantization level and hardware constraints affect usable context and latency</li>
+<li>Some local setups support tool-calling/JSON reliably; others do not</li>
+<li>The prompt <em>text</em> may be fine while the <strong>chat template</strong> or decoding settings are wrong</li>
+</ul>
+<p><strong>Auto mode (recommended default):</strong></p>
+<ul>
+<li><code>Auto</code> chooses a prompt strategy profile based on:
+<ul>
+<li>provider type (<code>ollama</code>, <code>llama.cpp</code>, cloud API, etc.)</li>
+<li>capability probe results (see below)</li>
+<li>task type (coaching vs mission generation vs orchestrator)</li>
+</ul>
+</li>
+<li>Users can override Auto per-provider and per-task.</li>
+</ul>
+<h3 id="capability-probing-optional-user-triggered--cached"><a class="header" href="#capability-probing-optional-user-triggered--cached">Capability Probing (Optional, User-Triggered + Cached)</a></h3>
+<p>The LLM Manager can run a lightweight <strong>capability probe</strong> against a configured provider/model to guide prompt strategy selection and warn about likely failure modes.</p>
+<p>Probe outputs (examples):</p>
+<ul>
+<li>chat template compatibility (provider-native vs user override)</li>
+<li>structured JSON reliability (pass/fail + repair-needed rate on canned tests)</li>
+<li>effective context window estimate (configured + observed practical limit)</li>
+<li>latency bands for short/medium prompts</li>
+<li>tool-call/function-call support (if provider advertises or passes tests)</li>
+<li>stop-token / truncation behavior quirks</li>
+</ul>
+<p><strong>Probe design rules:</strong></p>
+<ul>
+<li>Probes are explicit (<code>[Probe]</code>) or run during <code>[Test]</code>; no hidden background benchmarking by default.</li>
+<li>Probes use small canned prompts and never access player personalization data.</li>
+<li>Probe results are cached locally and tied to <code>(provider endpoint, model, version fingerprint if available)</code>.</li>
+<li>Probe results are advisory — users can still force a profile.</li>
+</ul>
+<h3 id="prompt-test--eval-harness-d047-ux-d016-reliability-support"><a class="header" href="#prompt-test--eval-harness-d047-ux-d016-reliability-support">Prompt Test / Eval Harness (D047 UX, D016 Reliability Support)</a></h3>
+<p><code>[Run Prompt Test]</code> in the LLM Manager launches a small test harness to validate a provider/profile combo before the user relies on it for campaign generation.</p>
+<p><strong>Modes:</strong></p>
+<ul>
+<li><strong>Smoke test:</strong> connectivity, auth, simple response</li>
+<li><strong>Structured output test:</strong> emit a tiny YAML/JSON snippet and parse/repair it</li>
+<li><strong>Task sample test:</strong> representative mini-task (e.g., 1 mission objective block, coaching summary)</li>
+<li><strong>Latency/cost estimate test:</strong> show rough turnaround and token/cost estimate where available</li>
+</ul>
+<p><strong>Outputs shown to user:</strong></p>
+<ul>
+<li>selected prompt strategy profile (<code>Auto -&gt; LocalCompact</code>, etc.)</li>
+<li>chat template used (advanced view)</li>
+<li>decoding settings used (temperature/top_p/etc.)</li>
+<li>success/failure + parser diagnostics</li>
+<li>recommended adjustments (e.g., “Use LocalStepwise for mission generation on this model”)</li>
+</ul>
+<p>This lowers BYOLLM friction and directly addresses the “prompted like a cloud model” failure mode without requiring users to become prompt-engineering experts.</p>
 <h3 id="community-shareable-configurations"><a class="header" href="#community-shareable-configurations">Community-Shareable Configurations</a></h3>
 <p>LLM configurations can be exported (without API keys) and shared via the Workshop (D030):</p>
 <pre><code class="language-yaml"># Exported LLM configuration (shareable)
@@ -4339,18 +4579,39 @@ llm_config:
       type: ollama
       endpoint: "http://localhost:11434"
       model: "llama3.2:8b"
+      prompt_mode: auto              # auto | explicit profile id
+      preferred_prompt_profile: "local_compact_v1"
       # NO api_key — never exported
     - name: "Cloud Provider"
       type: openai-compatible
       # endpoint intentionally omitted — user fills in their own
       model: "gpt-4o-mini"
+      preferred_prompt_profile: "cloud_rich_v1"
       notes: "Works well with OpenAI or any compatible API"
+  prompt_profiles:
+    - id: "local_compact_v1"
+      base: "LocalCompact"
+      max_context_tokens: 8192
+      few_shot_examples: 1
+      schema_mode: "simplified"
+      retry_repair_passes: 1
+      notes: "Good for 7B-8B local models on consumer hardware."
+    - id: "cloud_rich_v1"
+      base: "CloudRich"
+      few_shot_examples: 3
+      schema_mode: "strict"
+      retry_repair_passes: 2
   routing:
     ai_orchestrator: "Local Ollama"
     mission_generation: "Cloud Provider"
     coaching: "Local Ollama"
     campaign_briefings: "Cloud Provider"
     asset_generation: "Cloud Provider"
+  routing_prompt_profiles:
+    ai_orchestrator: "local_compact_v1"
+    mission_generation: "cloud_rich_v1"
+    coaching: "local_compact_v1"
+    campaign_briefings: "cloud_rich_v1"
   performance_notes: |
     Tested on RTX 3060 + Ryzen 5600X.
     Ollama latency ~300ms for orchestrator (acceptable).
@@ -4363,7 +4624,8 @@ llm_config:
       - "gpt-4o-mini"
       - "gpt-4o"
 </code></pre>
-<p><strong>Security:</strong> API keys are <strong>never</strong> included in exported configurations. The export contains provider types, model names, and routing — the user fills in their own credentials after importing.</p>
+<p><strong>Security:</strong> API keys are <strong>never</strong> included in exported configurations. The export contains provider types, model names, routing, and prompt strategy preferences — the user fills in their own credentials after importing.</p>
+<p><strong>Portability note:</strong> Exported configurations may include prompt strategy profiles and capability hints, but these are treated as <strong>advisory</strong> on import. The importing user can re-run capability probes, and Auto mode may choose a different profile for the same nominal model on different hardware/quantization/provider wrappers.</p>
 <h3 id="workshop-integration"><a class="header" href="#workshop-integration">Workshop Integration</a></h3>
 <p>LLM configurations are a Workshop resource type (D030):</p>
 <ul>
@@ -4405,10 +4667,88 @@ CREATE TABLE llm_task_routing (
     task_name   TEXT PRIMARY KEY,        -- 'ai_orchestrator', 'mission_generation', etc.
     provider_id INTEGER REFERENCES llm_providers(id)
 );
+
+CREATE TABLE llm_prompt_profiles (
+    id              TEXT PRIMARY KEY,    -- e.g. 'local_compact_v1'
+    display_name    TEXT NOT NULL,
+    base_profile    TEXT NOT NULL,       -- built-in family: CloudRich, LocalCompact, etc.
+    config_json     TEXT NOT NULL,       -- profile overrides (schema mode, retries, limits)
+    source          TEXT NOT NULL,       -- 'builtin', 'user', 'workshop'
+    created_at      TEXT NOT NULL
+);
+
+CREATE TABLE llm_task_prompt_strategy (
+    task_name       TEXT PRIMARY KEY,
+    provider_id     INTEGER REFERENCES llm_providers(id),
+    mode            TEXT NOT NULL,       -- 'auto' or 'explicit'
+    profile_id      TEXT REFERENCES llm_prompt_profiles(id)
+);
+
+CREATE TABLE llm_provider_capability_probe (
+    provider_id      INTEGER REFERENCES llm_providers(id),
+    model            TEXT NOT NULL,
+    probed_at        TEXT NOT NULL,
+    provider_fingerprint TEXT,           -- version/model hash if available
+    result_json      TEXT NOT NULL,      -- structured probe results + diagnostics
+    PRIMARY KEY (provider_id, model)
+);
 </code></pre>
+<h3 id="prompt-strategy--capability-interfaces-spec-level"><a class="header" href="#prompt-strategy--capability-interfaces-spec-level">Prompt Strategy &amp; Capability Interfaces (Spec-Level)</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub enum PromptStrategyMode {
+    Auto,
+    Explicit { profile_id: String },
+}
+
+pub enum BuiltinPromptProfile {
+    CloudRich,
+    CloudStructuredJson,
+    LocalCompact,
+    LocalStructured,
+    LocalStepwise,
+}
+
+pub struct PromptStrategyProfile {
+    pub id: String,
+    pub base: BuiltinPromptProfile,
+    pub max_context_tokens: Option&lt;u32&gt;,
+    pub few_shot_examples: u8,
+    pub schema_mode: SchemaPromptMode,
+    pub retry_repair_passes: u8,
+    pub decoding_overrides: Option&lt;DecodingParams&gt;,
+    pub notes: Option&lt;String&gt;,
+}
+
+pub enum SchemaPromptMode {
+    Relaxed,
+    Simplified,
+    Strict,
+}
+
+pub struct ModelCapabilityProbe {
+    pub provider_id: String,
+    pub model: String,
+    pub chat_template_ok: bool,
+    pub json_reliability_score: Option&lt;f32&gt;,
+    pub tool_call_support: Option&lt;bool&gt;,
+    pub effective_context_estimate: Option&lt;u32&gt;,
+    pub latency_short_ms: Option&lt;u32&gt;,
+    pub latency_medium_ms: Option&lt;u32&gt;,
+    pub diagnostics: Vec&lt;String&gt;,
+}
+
+pub struct PromptExecutionPlan {
+    pub selected_profile: String,
+    pub chat_template: Option&lt;String&gt;,
+    pub decoding: DecodingParams,
+    pub staged_steps: Vec&lt;String&gt;, // used by LocalStepwise, etc.
+}
+<span class="boring">}</span></code></pre>
 <h3 id="relationship-to-existing-decisions"><a class="header" href="#relationship-to-existing-decisions">Relationship to Existing Decisions</a></h3>
 <ul>
 <li><strong>D016 (BYOLLM):</strong> D047 is the UI and management layer for D016’s <code>LlmProvider</code> trait. D016 defined the trait and provider types; D047 provides the user experience for configuring them.</li>
+<li><strong>D016 (prompt strategy note):</strong> D047 operationalizes D016’s local-vs-cloud prompt-strategy distinction through Prompt Strategy Profiles, capability probing, and test/eval UX.</li>
 <li><strong>D036 (Achievements):</strong> LLM-related achievements encourage exploration of optional features without making them required.</li>
 <li><strong>D030 (Workshop):</strong> LLM configurations become another shareable resource type.</li>
 <li><strong>D034 (SQLite):</strong> Provider configurations stored locally, encrypted API keys.</li>
@@ -4420,6 +4760,7 @@ CREATE TABLE llm_task_routing (
 <li>No community sharing (rejected — LLM configuration is a significant friction point; community knowledge sharing reduces the barrier)</li>
 <li>Include API keys in exports (rejected — obvious security risk; never export secrets)</li>
 <li>Centralized LLM service run by IC project (rejected — conflicts with BYOLLM principle; users control their own data and costs)</li>
+<li><strong>One universal prompt template/profile for all providers</strong> (rejected — local/cloud/model-family differences make this brittle; capability-driven strategy selection is more reliable)</li>
 </ul>
 <hr>
 <hr>

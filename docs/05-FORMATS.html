@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-1e683dcc.js";
+            window.path_to_searchindex_js = "searchindex-3d47d740.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-a0d63c9c.js"></script>
+        <script src="toc-914f79aa.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -974,7 +974,7 @@ impl CoordTransform {
 </span>pub struct SaveHeader {
     pub magic: [u8; 4],              // b"ICSV" — "Iron Curtain Save"
     pub version: u16,                // Serialization format version (1 = bincode, 2 = postcard)
-    pub compression_algorithm: u8,   // D063: 0x01 = LZ4, future: 0x02 = zstd
+    pub compression_algorithm: u8,   // D063: 0x01 = LZ4 (current), 0x02 reserved for zstd in a later format revision
     pub flags: u8,                   // Bit flags (has_thumbnail, etc.) — repacked from u16 (D063)
     pub metadata_offset: u32,        // Byte offset to metadata section
     pub metadata_length: u32,        // Metadata section length
@@ -1017,7 +1017,7 @@ impl CoordTransform {
 }
 </code></pre>
 <h3 id="payload"><a class="header" href="#payload">Payload</a></h3>
-<p>The payload is a <code>SimSnapshot</code> serialized via <code>serde</code> (bincode format for compactness) and compressed with LZ4 (fast decompression, good ratio for game state data). LZ4 was chosen over LZO (used by original RA) for its better Rust ecosystem support (<code>lz4_flex</code> crate) and superior decompression speed. The save file header’s <code>version</code> field selects the serialization codec — version 1 uses bincode, future version 2 uses postcard. The <code>compression_algorithm</code> byte selects the decompressor independently (D063). Compression level is configurable via <code>settings.toml</code> (<code>compression.save_level</code>: fastest/balanced/compact). See <code>decisions/09d-gameplay.md</code> § D054 for the serialization version-to-codec dispatch and § D063 for the compression strategy.</p>
+<p>The payload is a <code>SimSnapshot</code> serialized via <code>serde</code> (bincode format for compactness) and compressed with LZ4 (fast decompression, good ratio for game state data). LZ4 was chosen over LZO (used by original RA) for its better Rust ecosystem support (<code>lz4_flex</code> crate) and superior decompression speed. The save file header’s <code>version</code> field selects the serialization codec — version <code>1</code> uses bincode; version <code>2</code> is reserved for postcard if introduced under D054’s migration/codec-dispatch path. The <code>compression_algorithm</code> byte selects the decompressor independently (D063). Compression level is configurable via <code>settings.toml</code> (<code>compression.save_level</code>: fastest/balanced/compact). See <code>decisions/09d-gameplay.md</code> § D054 for the serialization version-to-codec dispatch and § D063 for the compression strategy.</p>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>pub struct SimSnapshot {
@@ -1051,7 +1051,7 @@ impl CoordTransform {
 </span>pub struct ReplayHeader {
     pub magic: [u8; 4],              // b"ICRP" — "Iron Curtain Replay"
     pub version: u16,                // Serialization format version (1)
-    pub compression_algorithm: u8,   // D063: 0x01 = LZ4, future: 0x02 = zstd
+    pub compression_algorithm: u8,   // D063: 0x01 = LZ4 (current), 0x02 reserved for zstd in a later format revision
     pub flags: u8,                   // Bit flags (signed, has_events, has_voice) — repacked from u16 (D063)
     pub metadata_offset: u32,
     pub metadata_length: u32,
@@ -1180,7 +1180,7 @@ pub enum ControlGroupAction {
 <li><strong>Independent compression</strong> — the analysis stream is LZ4-compressed in its own block, separate from the order stream. Tools that only need orders skip it; tools that only need stats skip the orders.</li>
 </ul>
 <h3 id="signature-chain-relay-certified-replays"><a class="header" href="#signature-chain-relay-certified-replays">Signature Chain (Relay-Certified Replays)</a></h3>
-<p>For ranked/tournament matches, the relay server signs each tick’s state hash. The signature algorithm is determined by the replay header version — version 1 uses Ed25519 (current), future versions may use post-quantum algorithms via the <code>SignatureScheme</code> enum (D054):</p>
+<p>For ranked/tournament matches, the relay server signs each tick’s state hash. The signature algorithm is determined by the replay header version — version <code>1</code> uses Ed25519 (current). Later replay header versions, if introduced, may select post-quantum algorithms via the <code>SignatureScheme</code> enum (D054) while preserving versioned verification dispatch:</p>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>pub struct ReplaySignature {
@@ -1368,7 +1368,7 @@ pub struct RemasteredRecordedFrame {
 <tr><td><code>.pal</code></td><td>Create/edit palettes, faction-color variants</td><td>Raw 768-byte write, 6-bit VGA range (trivial)</td><td>Phase 6a (D040)</td></tr>
 <tr><td><code>.aud</code></td><td>Convert .wav/.ogg recordings to classic Westwood audio format for mod compatibility</td><td><code>AUDHeaderType</code> generation, IMA ADPCM encoding via <code>IndexTable</code>/<code>DiffTable</code> (§ AUD Audio Format)</td><td>Phase 6a (D040)</td></tr>
 <tr><td><code>.vqa</code></td><td>Convert .mp4/.webm cutscenes to classic VQA format for retro feel</td><td><code>VQAHeader</code> generation, VQ codebook construction, frame differencing, audio interleaving (§ VQA)</td><td>Phase 6a (D040)</td></tr>
-<tr><td><code>.mix</code></td><td>Mod packaging (optional — mods can ship loose files)</td><td><code>FileHeader</code> + <code>SubBlock</code> index generation, CRC filename hashing (§ MIX Archive Format)</td><td>Phase 6a (nice-to-have)</td></tr>
+<tr><td><code>.mix</code></td><td>Mod packaging (optional — mods can ship loose files)</td><td><code>FileHeader</code> + <code>SubBlock</code> index generation, CRC filename hashing (§ MIX Archive Format)</td><td>Deferred to <code>M9</code> / Phase 6a (<code>P-Creator</code>, optional path)</td></tr>
 <tr><td><code>.oramap</code></td><td>SDK scenario editor exports</td><td>ZIP archive with map.yaml + terrain + actors</td><td>Phase 6a (D038)</td></tr>
 <tr><td>YAML</td><td>All IC-native content authoring</td><td><code>serde_yaml</code> — already available</td><td>Phase 0</td></tr>
 <tr><td>MiniYAML</td><td><code>ic mod export --miniyaml</code> for OpenRA compat</td><td>Reverse of D025 converter — IC YAML → MiniYAML with tab indentation</td><td>Phase 6a</td></tr>
@@ -1376,6 +1376,7 @@ pub struct RemasteredRecordedFrame {
 </table>
 </div>
 <p>All binary encoders reference the EA GPL source code implementations documented in § Binary Format Codec Reference. The source provides complete, authoritative struct definitions, compression algorithms, and lookup tables — no reverse engineering required.</p>
+<p><strong>Planned deferral note (<code>.mix</code> write support):</strong> <code>.mix</code> encoding is intentionally deferred to <code>M9</code> / Phase 6a as an optional creator-path feature (<code>P-Creator</code>) after the D040 Asset Studio base and D049 Workshop/CAS packaging flow are in place. Reason: loose-file mod packaging remains a valid path, so <code>.mix</code> writing is not part of <code>M1-M4</code> or <code>M8</code> exit criteria. Validation trigger: <code>M9</code> creator workflows require retro-compatible archive packaging for sharing/export tooling.</p>
 
                     </main>
 

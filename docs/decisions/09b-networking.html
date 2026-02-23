@@ -35,10 +35,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-1e683dcc.js";
+            window.path_to_searchindex_js = "../searchindex-3d47d740.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-a0d63c9c.js"></script>
+        <script src="../toc-914f79aa.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -184,16 +184,16 @@
 <p>Network model, relay server, sub-tick ordering, community servers, ranked play, and matchmaking.</p>
 <hr>
 <h2 id="d006-networking--pluggable-via-trait"><a class="header" href="#d006-networking--pluggable-via-trait">D006: Networking — Pluggable via Trait</a></h2>
-<p><strong>Revision note (2026-02-22):</strong> Revised to clarify product-vs-architecture scope. IC ships one default/recommended multiplayer netcode for normal play, but the <code>NetworkModel</code> abstraction remains a hard requirement so the project can (a) support future compatibility/bridge experiments with other engines or legacy games where a different network/protocol adapter is needed, and (b) replace the default netcode later if a serious flaw or better architecture is discovered.</p>
+<p><strong>Revision note (2026-02-22):</strong> Revised to clarify product-vs-architecture scope. IC ships one default/recommended multiplayer netcode for normal play, but the <code>NetworkModel</code> abstraction remains a hard requirement so the project can (a) support deferred compatibility/bridge experiments (<code>M7+</code>/<code>M11</code>) with other engines or legacy games where a different network/protocol adapter is needed, and (b) replace the default netcode under a separately approved deferred milestone if a serious flaw or better architecture is discovered.</p>
 <p><strong>Decision:</strong> Abstract all networking behind a <code>NetworkModel</code> trait. Game loop is generic over it.</p>
 <p><strong>Rationale:</strong></p>
 <ul>
 <li>Sim never touches networking concerns (clean boundary)</li>
 <li>Full testability (run sim with <code>LocalNetwork</code>)</li>
 <li>Community can contribute netcode without understanding game logic</li>
-<li>Enables future models: rollback, client-server, cross-engine adapters</li>
+<li>Enables deferred non-default models under explicit decision/overlay placement (rollback, client-server, cross-engine adapters)</li>
 <li>Enables bridge/proxy adapters for cross-version/community interoperability experiments without touching <code>ic-sim</code></li>
-<li>De-risks future netcode replacement (better default / serious flaw response) behind a stable game-loop boundary</li>
+<li>De-risks deferred netcode replacement (better default / serious flaw response) behind a stable game-loop boundary</li>
 <li>Selection is a deployment/profile/compatibility policy by default, not a generic “choose any netcode” player-facing lobby toggle</li>
 </ul>
 <p><strong>Key invariant:</strong> <code>ic-sim</code> has zero imports from <code>ic-net</code>. They only share <code>ic-protocol</code>.</p>
@@ -217,6 +217,7 @@
 <p><strong>Trust boundary:</strong> For ranked/competitive play, the matchmaking system requires connection to an official or community-verified dedicated relay (untrusted host can’t be allowed relay authority). For casual/LAN/custom games, the embedded relay is preferred — zero setup, full relay quality.</p>
 <p><strong>Relay failure policy:</strong> If a relay dies mid-match, ranked/competitive matches do <strong>not</strong> silently fail over to a different authority path (e.g., ad-hoc P2P) because that breaks certification and trust assumptions. Ranked follows the degraded-certification / void policy in <code>06-SECURITY.md</code> (V32). Casual/custom games may offer unranked continuation via reconnect or fallback if all participants support it.</p>
 <p><strong>Validated by:</strong> C&amp;C Generals/Zero Hour’s “packet router” — a client-side star topology where one player collected and rebroadcast all commands. IC’s embedded relay improves on this pattern: the host’s orders go through <code>RelayCore</code>‘s sub-tick pipeline like everyone else’s (no peeking, no priority), eliminating the host advantage that Generals had. The dedicated server mode further eliminates any hosting-related advantage. See <code>research/generals-zero-hour-netcode-analysis.md</code>. Further validated by Valve’s GameNetworkingSockets (GNS), which defaults to relay (Valve SDR — Steam Datagram Relay) for all connections, including P2P-capable scenarios. GNS’s rationale mirrors ours: relay eliminates NAT traversal headaches, provides consistent latency measurement, and blocks IP-level attacks. The GNS architecture also validates encrypting all relay traffic (AES-GCM-256 + Curve25519) — see D054 § Transport encryption. See <code>research/valve-github-analysis.md</code>. Additionally validated by Embark Studios’ <strong>Quilkin</strong> — a production Rust UDP proxy for game servers (1,510★, Apache 2.0, co-developed with Google Cloud Gaming). Quilkin provides a concrete implementation of relay-as-filter-chain: session routing via token-based connection IDs, QCMP latency measurement for server selection, composable filter pipeline (Capture → Firewall → RateLimit → TokenRouter), and full OTEL observability. Quilkin’s production deployment on Tokio + tonic confirms that async Rust handles game relay traffic at scale. See <code>research/embark-studios-rust-gamedev-analysis.md</code>.</p>
+<p><strong>Cross-engine hosting:</strong> When IC’s relay hosts a cross-engine match (e.g., OpenRA clients joining an IC server), IC can still provide meaningful relay-layer protections (time authority for the hosted session path, transport/rate-limit defenses, logging/replay signing, and protocol sanity checks after <code>OrderCodec</code> translation). However, this does <strong>not</strong> automatically confer full native IC competitive integrity guarantees to foreign clients/sims. Trust and anti-cheat capability are mode-specific and depend on the compatibility level (<code>07-CROSS-ENGINE.md</code> § “Cross-Engine Trust &amp; Anti-Cheat Capability Matrix”). In practice, “join IC’s server” is usually more observable and better bounded than “IC joins foreign server,” but cross-engine live play remains unranked/experimental by default unless separately certified.</p>
 <p><strong>Alternatives available:</strong> Pure P2P lockstep, fog-authoritative server, rollback — all implementable as <code>NetworkModel</code> variants.</p>
 <hr>
 <hr>
@@ -228,7 +229,7 @@
 <li>Fairer results for edge cases (two players competing for same resource/building)</li>
 <li>Simple protocol shape (attach integer timestamp hint at input layer); enforcement/canonicalization happens in the network model</li>
 <li>Network model preserves but doesn’t depend on timestamps</li>
-<li>If a future model ignores timestamps, no breakage</li>
+<li>If a deferred non-default model ignores timestamps, no breakage</li>
 </ul>
 <hr>
 <hr>
@@ -240,8 +241,9 @@
 <li>Community interop is valuable and achievable: shared server browser, maps, mod format</li>
 <li>Applies equally to OpenRA and CnCNet — both are <code>CommunityBridge</code> targets (shared game browser, community discovery)</li>
 <li>CnCNet integration is discovery-layer only: IC games use IC relay servers (not CnCNet tunnels), IC rankings are separate (different balance, anti-cheat, match certification)</li>
-<li>Architecture keeps the door open for deeper interop later (OrderCodec, SimReconciler, ProtocolAdapter)</li>
+<li>Architecture keeps the door open for deeper interop under deferred <code>M7+</code>/<code>M11</code> work (OrderCodec, SimReconciler, ProtocolAdapter)</li>
 <li>Progressive levels: shared lobby → replay viewing → casual cross-play → competitive cross-play</li>
+<li>Cross-engine live play (Level 2+) is <strong>unranked by default</strong>; trust/anti-cheat capability varies by compatibility level and is documented in <code>src/07-CROSS-ENGINE.md</code> (“Cross-Engine Trust &amp; Anti-Cheat Capability Matrix”)</li>
 </ul>
 <hr>
 <hr>
@@ -320,10 +322,195 @@
 <tr><td><strong>Ranking authority</strong></td><td>Tracks player ratings, signs credential records</td><td>D041 <code>RankingProvider</code> trait, <strong>this decision</strong></td></tr>
 <tr><td><strong>Matchmaking service</strong></td><td>Matches players by skill, manages lobbies</td><td>P004 (partially resolved by this decision)</td></tr>
 <tr><td><strong>Achievement authority</strong></td><td>Signs achievement unlock records</td><td>D036 achievement system</td></tr>
+<tr><td><strong>Campaign benchmarks</strong></td><td>Aggregates opt-in campaign progress statistics</td><td>D021 + D031 + D053 (social-facing, non-ranked)</td></tr>
+<tr><td><strong>Moderation / review</strong></td><td>Stores report cases, runs review queues, applies community sanctions</td><td>D037 governance + D059 reporting + <code>06-SECURITY.md</code></td></tr>
 </tbody>
 </table>
 </div>
-<p>Operators enable/disable each capability independently. A small clan community might run only relay + ranking. A large competitive community runs everything. The official IC community runs all five. The <code>ic-server</code> binary (see D049 § “Netcode ↔ Workshop Cross-Pollination”) bundles all capabilities into a single process with feature flags.</p>
+<p>Operators enable/disable each capability independently. A small clan community might run only relay + ranking. A large competitive community runs everything. The official IC community runs all listed capabilities. The <code>ic-server</code> binary (see D049 § “Netcode ↔ Workshop Cross-Pollination”) bundles all capabilities into a single process with feature flags.</p>
+<h3 id="optional-community-campaign-benchmarks-non-competitive-opt-in"><a class="header" href="#optional-community-campaign-benchmarks-non-competitive-opt-in">Optional Community Campaign Benchmarks (Non-Competitive, Opt-In)</a></h3>
+<p>A Community Server may optionally host <strong>campaign progress benchmark aggregates</strong> (for example, completion percentiles, average progress by difficulty, common branch choices, and ending completion rates). This supports social comparison and replayability discovery for D021 campaigns without turning campaign progress into ranked infrastructure.</p>
+<p><strong>Rules (normative):</strong></p>
+<ul>
+<li><strong>Opt-in only.</strong> Clients must explicitly enable campaign comparison sharing (D053 privacy/profile controls).</li>
+<li><strong>Scoped comparisons.</strong> Aggregates must be keyed by campaign identity + version, game module, difficulty, and balance preset (D021 <code>CampaignComparisonScope</code>).</li>
+<li><strong>Spoiler-safe defaults.</strong> Community APIs should support hidden/locked branch labels until the client has reached the relevant branch point.</li>
+<li><strong>Social-facing only.</strong> Campaign benchmark data is not part of ranked matchmaking, anti-cheat scoring, or room admission decisions.</li>
+<li><strong>Trust labeling.</strong> If the community signs benchmark snapshots or API responses, clients may display a verified source badge; otherwise, clients must label the data as an unsigned community aggregate.</li>
+</ul>
+<p>This capability complements D053 profile/campaign progress cards and D031 telemetry/event analytics. It does not change D052’s competitive trust chain (SCRs, ratings, match certification).</p>
+<h3 id="moderation-reputation-and-community-review-optional-capability"><a class="header" href="#moderation-reputation-and-community-review-optional-capability">Moderation, Reputation, and Community Review (Optional Capability)</a></h3>
+<p>Community servers are the natural home for handling suspected cheaters, griefers, AFK/sabotage behavior, and abusive communication — but IC deliberately separates this into <strong>three different systems</strong> to avoid abuse and UX confusion:</p>
+<ol>
+<li><strong>Social controls (client/local):</strong> <code>mute</code>, <code>block</code>, and hide preferences (D059) — immediate personal protection, no matchmaking guarantees</li>
+<li><strong>Matchmaking avoidance (best-effort):</strong> limited <code>Avoid Player</code> preferences (D055) — queue shaping, not hard matchmaking bans</li>
+<li><strong>Moderation &amp; review (community authority):</strong> reports, evidence triage, reviewer queues, and sanctions — community-scoped enforcement</li>
+</ol>
+<h4 id="optional-community-review-queue-overwatch-style-ic-version"><a class="header" href="#optional-community-review-queue-overwatch-style-ic-version">Optional community review queue (“Overwatch”-style, IC version)</a></h4>
+<p>A Community Server may enable an <strong>Overwatch-style review pipeline</strong> for suspected cheating and griefing. This is an optional moderation capability, not a requirement for all communities.</p>
+<p><strong>What goes into a review case (typical):</strong></p>
+<ul>
+<li>player reports (post-game or in-match context actions), including category and optional note</li>
+<li>relay-signed replay / <code>CertifiedMatchResult</code> references (D007)</li>
+<li>relay telemetry summaries (disconnects, timing anomalies, order-rate spikes, desync events)</li>
+<li>anti-cheat model outputs (e.g., <code>DualModelAssessment</code> status from <code>06-SECURITY.md</code>) when available</li>
+<li>prior community standing/repeat-offense context (EWMA-based standing, D052/D053)</li>
+</ul>
+<p><strong>What reviewers do NOT get by default:</strong></p>
+<ul>
+<li>direct access to raw account identifiers before a verdict (use anonymized case IDs where practical)</li>
+<li>power to issue irreversible global bans from a single case</li>
+<li>hidden moderation tools without audit logging</li>
+</ul>
+<h4 id="reviewer-calibration-and-verdicts-guardrail-first"><a class="header" href="#reviewer-calibration-and-verdicts-guardrail-first">Reviewer calibration and verdicts (guardrail-first)</a></h4>
+<p>If enabled, reviewer queues should use these defaults:</p>
+<ul>
+<li><strong>Eligibility gate:</strong> only established members in good standing (minimum match count, no recent sanctions)</li>
+<li><strong>Calibration cases:</strong> periodic seeded cases with known outcomes to estimate reviewer reliability</li>
+<li><strong>Consensus threshold:</strong> no action from a single reviewer; require weighted agreement</li>
+<li><strong>Audit sampling:</strong> moderator/staff audit of reviewer decisions to detect drift or brigading</li>
+<li><strong>Appeal path:</strong> reviewed actions remain appealable through community moderators (D037)</li>
+</ul>
+<p>Review outcomes are <strong>inputs to moderation decisions</strong>, not automatic convictions by themselves. Communities may choose to use review verdicts to:</p>
+<ul>
+<li>prioritize moderator attention</li>
+<li>apply temporary restrictions (chat/queue cooldowns, low-priority queue)</li>
+<li>strengthen confidence for existing anti-cheat flags</li>
+</ul>
+<p>Permanent or ranked-impacting sanctions should require stronger evidence and moderator review, especially for cheating accusations.</p>
+<h4 id="review-case-schema-implementation-facing-optional-d052-capability"><a class="header" href="#review-case-schema-implementation-facing-optional-d052-capability">Review case schema (implementation-facing, optional D052 capability)</a></h4>
+<p>The review pipeline stores <strong>lightweight case records and verdicts</strong> that reference existing evidence (replays, telemetry, match IDs). It should not duplicate full replay blobs inside the moderation database.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct ReviewCaseId(pub String);      // e.g. "case_2026_02_000123"
+pub struct ReviewAssignmentId(pub String);
+
+pub enum ReviewCaseCategory {
+    Cheating,
+    Griefing,
+    AfkIntentionalIdle,
+    Harassment,
+    SpamDisruptiveComms,
+    Other,
+}
+
+pub enum ReviewCaseState {
+    Queued,                // waiting for assignment
+    InReview,              // active reviewer assignments
+    ConsensusReached,      // verdict available, awaiting moderator action
+    EscalatedToModerator,  // conflicting verdicts or severe case
+    ClosedNoAction,
+    ClosedActionTaken,
+    Appealed,              // under moderator re-review / appeal
+}
+
+pub struct ReviewCase {
+    pub case_id: ReviewCaseId,
+    pub community_id: String,
+    pub category: ReviewCaseCategory,
+    pub state: ReviewCaseState,
+    pub created_at_unix: i64,
+    pub severity_hint: u8, // 0-100, triage signal only
+
+    // Anonymized presentation by default; moderator tools may resolve identities.
+    pub accused_player_ref: String,
+    pub reporter_refs: Vec&lt;String&gt;,
+
+    // Links to existing evidence; do not inline large payloads.
+    pub evidence: Vec&lt;ReviewEvidenceRef&gt;,
+    pub telemetry_summary: Option&lt;ReviewTelemetrySummary&gt;,
+    pub anti_cheat_summary: Option&lt;ReviewAntiCheatSummary&gt;,
+
+    // Operational metadata
+    pub required_reviewers: u8,         // e.g. 3, 5, 7
+    pub calibration_eligible: bool,     // can be used as a seeded calibration case
+    pub labels: Vec&lt;String&gt;,            // e.g. "ranked", "voice", "cross-engine"
+}
+
+pub enum ReviewEvidenceRef {
+    ReplayId { replay_id: String },                 // signed replay or local replay ref
+    MatchId { match_id: String },                   // CertifiedMatchResult linkage
+    TimelineMarkers { marker_ids: Vec&lt;String&gt; },    // suspicious timestamps/events
+    VoiceSegmentRef { replay_id: String, start_ms: u64, end_ms: u64 },
+    AttachmentRef { object_id: String },            // optional screenshots/text attachments
+}
+
+pub struct ReviewTelemetrySummary {
+    pub disconnects: u16,
+    pub desync_events: u16,
+    pub order_rate_spikes: u16,
+    pub timing_anomaly_score: Option&lt;f32&gt;,
+    pub notes: Vec&lt;String&gt;,
+}
+
+pub struct ReviewAntiCheatSummary {
+    pub behavioral_score: Option&lt;f64&gt;,
+    pub statistical_score: Option&lt;f64&gt;,
+    pub combined_score: Option&lt;f64&gt;,
+    pub current_action: Option&lt;String&gt;, // e.g. "Monitor", "FlagForReview"
+}
+
+pub enum ReviewVoteDecision {
+    InsufficientEvidence,
+    LikelyClean,
+    SuspectedGriefing,
+    SuspectedCheating,
+    AbuseComms,
+    Escalate,
+}
+
+pub struct ReviewVote {
+    pub assignment_id: ReviewAssignmentId,
+    pub reviewer_ref: String, // anonymized reviewer ID in storage/export
+    pub case_id: ReviewCaseId,
+    pub submitted_at_unix: i64,
+    pub decision: ReviewVoteDecision,
+    pub confidence: u8,       // 0-100
+    pub notes: Option&lt;String&gt;,
+    pub calibration_case: bool,
+}
+
+pub struct ReviewConsensus {
+    pub case_id: ReviewCaseId,
+    pub weighted_decision: ReviewVoteDecision,
+    pub agreement_ratio: f32,     // 0.0-1.0
+    pub reviewer_count: u8,
+    pub requires_moderator: bool,
+    pub recommended_actions: Vec&lt;ModerationActionRecommendation&gt;,
+}
+
+pub enum ModerationActionRecommendation {
+    Warn,
+    ChatRestriction { hours: u16 },
+    QueueCooldown { hours: u16 },
+    LowPriorityQueue { hours: u16 },
+    RankedSuspension { days: u16 },
+    EscalateManualReview,
+}
+
+pub struct ReviewerCalibrationStats {
+    pub reviewer_ref: String,
+    pub cases_reviewed: u32,
+    pub calibration_cases_seen: u32,
+    pub calibration_accuracy: f32,   // weighted moving average
+    pub moderator_agreement_rate: f32,
+    pub review_weight: f32,          // capped; used for consensus weighting
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Schema rules (normative):</strong></p>
+<ul>
+<li>Reviewer votes and consensus records are <strong>append-only</strong> with audit timestamps.</li>
+<li>Moderator actions reference the case/consenus IDs; they do not overwrite reviewer votes.</li>
+<li>Identity resolution (real player IDs/names) is restricted to moderator/admin tools and should not be shown in default reviewer UI.</li>
+<li>Case retention is community-configurable; low-severity closed cases may expire, but sanction records and audit trails should persist per policy.</li>
+</ul>
+<h4 id="storageops-note-fits-d052s-low-cost-model"><a class="header" href="#storageops-note-fits-d052s-low-cost-model">Storage/ops note (fits D052’s low-cost model)</a></h4>
+<p>This capability is one of the few D052 features that does require server-side state. The intent is still lightweight:</p>
+<ul>
+<li>store <strong>cases, verdicts, and evidence references</strong>, not full duplicate player histories</li>
+<li>keep replay/video blobs in existing replay storage or object storage; reference them from the case record</li>
+<li>use retention policies (e.g., auto-expire low-severity closed cases after N days)</li>
+</ul>
 <h3 id="signed-credential-records-scr--not-jwt"><a class="header" href="#signed-credential-records-scr--not-jwt">Signed Credential Records (SCR) — Not JWT</a></h3>
 <p>Every player interaction with a community produces a <strong>Signed Credential Record</strong>: a compact binary blob signed by the community server’s Ed25519 private key. These records are stored in the player’s local SQLite credential file and presented to servers for verification.</p>
 <p><strong>Why not JWT?</strong></p>
@@ -943,6 +1130,13 @@ pub enum ChatChannel {
 <li><strong>Presence indicators:</strong> Microphone status, ready state, download progress (if syncing resources).</li>
 </ul>
 <p>Clicking a player’s name in the lobby opens a <strong>profile card</strong> — a compact view of their player profile (D053) showing avatar, bio, recent achievements, win rate, and community memberships. This lets players gauge each other before a match without leaving the lobby.</p>
+<p>The profile card also exposes scoped quick actions:</p>
+<ul>
+<li><strong>Mute</strong> (D059, local communication control)</li>
+<li><strong>Block</strong> (local social preference)</li>
+<li><strong>Report</strong> (community moderation signal with evidence handoff to D052 review pipeline)</li>
+<li><strong>Avoid Player</strong> (D055 matchmaking preference, best-effort only — clearly labeled as non-guaranteed in ranked)</li>
+</ul>
 <p><strong>Updated lobby UI with communication:</strong></p>
 <pre><code>┌──────────────────────────────────────────────────────────────────────┐
 │  Room: TKR-4N7  —  Map: Desert Arena  —  RA1 Classic Balance       │
@@ -1942,6 +2136,36 @@ Player B bans 1 → 3 remain
 Player A bans 1 → 2 remain
 Player B bans 1 → 1 remains → this map is played
 </code></pre>
+<p><strong>Player Avoid Preferences (ranked-safe, best-effort):</strong></p>
+<p>Players need a way to avoid repeat bad experiences (toxicity, griefing, suspected cheating) without turning ranked into a dodge-by-name system. IC supports <strong><code>Avoid Player</code></strong> as a <strong>soft matchmaking preference</strong>, not a hard opponent-ban feature.</p>
+<p><strong>Design split (do not merge these):</strong></p>
+<ul>
+<li><strong>Mute / Block</strong> (D059): personal communication controls, immediate and local</li>
+<li><strong>Report</strong> (D059 + D052): moderation signal with evidence and review path</li>
+<li><strong>Avoid Player</strong> (D055): queue matching preference, <strong>best-effort only</strong></li>
+</ul>
+<p><strong>Ranked defaults:</strong></p>
+<ul>
+<li>No permanent “never match me with this opponent again” guarantees</li>
+<li>Avoid entries are <strong>limited</strong> (community-configurable slot count)</li>
+<li>Avoid entries <strong>expire automatically</strong> (recommended 7-30 days)</li>
+<li>Avoid preferences are <strong>community-scoped</strong>, not global across all communities</li>
+<li>Matchmaking may ignore avoid preferences under queue pressure / low population</li>
+<li>UI must label the feature as <strong>best-effort</strong>, not guaranteed</li>
+</ul>
+<p><strong>Team queue policy (recommended):</strong></p>
+<ul>
+<li>Prefer supporting <strong>avoid as teammate</strong> first (higher priority)</li>
+<li>Treat <strong>avoid as opponent</strong> as lower priority or disable it in small populations / high MMR brackets (this should be the <strong>default policy</strong> given IC’s expected RTS population size; operators can loosen in larger communities)</li>
+</ul>
+<p>This addresses griefing/harassment pain in team games without creating a strong queue-dodging tool in 1v1.</p>
+<p><strong>Matchmaking behavior:</strong> Avoid preferences should be implemented as a <strong>candidate-scoring penalty</strong>, not a hard filter:</p>
+<ul>
+<li>prefer non-avoided pairings when multiple acceptable matches exist</li>
+<li>relax the penalty as queue time widens</li>
+<li>never violate <code>min_match_quality</code> just to satisfy avoid preferences</li>
+<li>do not bypass dodge penalties (leaving ready-check/veto remains penalized)</li>
+</ul>
 <p><strong>Small-population matchmaking degradation:</strong></p>
 <p>Critical for RTS communities. The queue must work with 50 players as well as 5,000.</p>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
@@ -2027,7 +2251,7 @@ pub struct MatchmakingConfig {
 <li><strong>10+ named tiers</strong> (rejected — too many tiers for expected RTS population size. Adjacent tiers become meaningless when population is small. 7+2 matches SC2’s proven structure)</li>
 <li><strong>Single global ranking across all community servers</strong> (rejected — violates D052’s federated model. Each community owns its rankings. Cross-community credential verification via SCR ensures portability without centralization)</li>
 <li><strong>Mandatory phone verification for ranked</strong> (rejected as mandatory — makes ranked inaccessible in regions without phone access, on WASM builds, and for privacy-conscious users. Available as opt-in toggle for community operators)</li>
-<li><strong>Performance-based rating adjustments</strong> (deferred — Valorant uses individual stats to adjust RR gains. For RTS this would be complex: which metrics predict skill beyond win/loss? Economy score, APM, unit efficiency? Risks encouraging stat-chasing over winning. Could be a future <code>RankingProvider</code> enhancement if the community wants it)</li>
+<li><strong>Performance-based rating adjustments</strong> (deferred to <code>M11</code>, <code>P-Optional</code> — Valorant uses individual stats to adjust RR gains. For RTS this would be complex: which metrics predict skill beyond win/loss? Economy score, APM, unit efficiency? Risks encouraging stat-chasing over winning. If the community wants it, this would be a <code>RankingProvider</code> extension with a separate fairness review and explicit opt-in policy, not part of launch ranked.)</li>
 <li><strong>SC2-style leagues with player groups</strong> (rejected — SC2’s league system places players into divisions of ~100 who compete against each other within a tier. This requires thousands of concurrent players to fill meaningful groups. IC’s expected population — hundreds to low thousands — can’t sustain this. Ranks are pure rating thresholds: deterministic, portable across federated communities (D052), and functional with 50 players or 50,000. See § “Why Ranks, Not Leagues” above)</li>
 <li><strong>Color bands instead of named ranks</strong> (rejected — CS2 Premier uses color bands (Grey → Gold) which are universal but generic. Military rank names are IC’s thematic identity: “Colonel” means something in an RTS where you command armies. Color bands could be a community-provided alternative via YAML, but the default should carry the Cold War fantasy)</li>
 <li><strong>Enlisted ranks as lower tiers</strong> (rejected — having “Private” or “Corporal” as the lowest ranks breaks the RTS fantasy: the player is always commanding armies, not following orders as a foot soldier. All tiers are officer-grade because the player is always in a command role. “Cadet” as the lowest tier signals “unproven officer” rather than “infantry grunt”)</li>

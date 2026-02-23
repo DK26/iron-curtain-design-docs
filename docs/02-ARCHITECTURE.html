@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-1e683dcc.js";
+            window.path_to_searchindex_js = "searchindex-3d47d740.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-a0d63c9c.js"></script>
+        <script src="toc-914f79aa.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -446,7 +446,7 @@ pub trait FogProvider: Send + Sync {
     fn visible_entities(&amp;self, player: PlayerId) -&gt; &amp;[EntityId];
 }
 <span class="boring">}</span></code></pre>
-<p>RA1 registers <code>RadiusFogProvider</code> (circle-based, fast, matches original RA). RA2/TS would register <code>ElevationFogProvider</code> (raycasts against terrain heightmap). The future fog-authoritative <code>NetworkModel</code> reuses the same trait on the server side to determine which entities to send per client. See D041 in <code>decisions/09d-gameplay.md</code> for full rationale.</p>
+<p>RA1 registers <code>RadiusFogProvider</code> (circle-based, fast, matches original RA). RA2/TS would register <code>ElevationFogProvider</code> (raycasts against terrain heightmap). A deferred fog-authoritative <code>NetworkModel</code> variant (not part of <code>M1-M4</code>; see multiplayer trust/productization milestones) reuses the same trait on the server side to determine which entities to send per client. See D041 in <code>decisions/09d-gameplay.md</code> for full rationale.</p>
 <h4 id="entity-visibility-model"><a class="header" href="#entity-visibility-model">Entity Visibility Model</a></h4>
 <p>The <code>FogProvider</code> output determines how entities appear to each player. Following SC2’s proven model (see <code>research/blizzard-github-analysis.md</code> § 1.4), each entity observed by a player carries a <strong>visibility classification</strong> that controls which data fields are available:</p>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
@@ -600,7 +600,7 @@ impl&lt;N: NetworkModel, I: InputSource&gt; GameLoop&lt;N, I&gt; {
                                                         └──────────┘
 </code></pre>
 <ul>
-<li><strong>Launched → InMenus:</strong> Engine initialization, asset loading, mod registration</li>
+<li><strong>Launched → InMenus:</strong> Engine initialization, asset loading, mod registration, and (when required) entry into the first-run setup wizard / setup assistant flow (D069). This remains menu/UI-only — no sim world exists yet.</li>
 <li><strong>InMenus → Loading:</strong> Player starts a game or joins a lobby; map and rules are loaded</li>
 <li><strong>Loading → InGame:</strong> All assets loaded, <code>NetworkModel</code> connected, sim initialized. See <code>03-NETCODE.md</code> § “Match Lifecycle” for the ready-check and countdown protocol that governs this transition in multiplayer.</li>
 <li><strong>InGame → GameEnded:</strong> Victory/defeat condition met, player surrenders (<code>PlayerOrder::Surrender</code>), vote-driven resolution (kick, remake, draw via the In-Match Vote Framework), or match void. See <code>03-NETCODE.md</code> § “Match Lifecycle” for the surrender mechanic, team vote thresholds, and the generic callvote system.</li>
@@ -611,6 +611,7 @@ impl&lt;N: NetworkModel, I: InputSource&gt; GameLoop&lt;N, I&gt; {
 <li><strong>InGame → Shutdown:</strong> Application exit (snapshot saved for resume on platforms that require it)</li>
 </ul>
 <p>State transitions are events in Bevy’s event system — plugins react to transitions without polling. The sim exists only during <code>InGame</code> and <code>InReplay</code>; all other states are menu/UI-only.</p>
+<p><strong>D069 integration:</strong> The installation/setup wizard is modeled as an <strong><code>InMenus</code> subflow</strong> (UI-only) rather than a separate app state that changes sim/network invariants. Platform/store installers may precede launch, but IC-controlled setup runs after <code>Launched → InMenus</code> using platform capability metadata (see <code>PlatformInstallerCapabilities</code> below).</p>
 <h2 id="state-recording--replay-infrastructure"><a class="header" href="#state-recording--replay-infrastructure">State Recording &amp; Replay Infrastructure</a></h2>
 <p>The sim’s snapshottable design (D010) enables a <strong>StateRecorder/Replayer</strong> pattern for asynchronous background recording — inspired by Valve’s Source Engine <code>StateRecorder</code>/<code>StateReplayer</code> pattern (see <code>research/valve-github-analysis.md</code> § 2.2). The game loop records orders and periodic state snapshots to a background writer; the replay system replays them through the same <code>Simulation::apply_tick()</code> path.</p>
 <h3 id="staterecorder-recording-side"><a class="header" href="#staterecorder-recording-side">StateRecorder (Recording Side)</a></h3>
@@ -817,7 +818,7 @@ pub trait SpatialIndex: Send + Sync {
 </tbody>
 </table>
 </div>
-<p>The RA1 game module registers three <code>Pathfinder</code> implementations — <code>RemastersPathfinder</code>, <code>OpenRaPathfinder</code>, and <code>IcPathfinder</code> (D045) — plus <code>GridSpatialHash</code>. The active pathfinder is selected via experience profiles (D045). A future continuous-space game module registers <code>NavmeshPathfinder</code> and <code>BvhSpatialIndex</code>. The sim core calls the trait — it never knows which one is running. The same principle applies to fog, damage, AI, ranking, and validation — see D041 in <code>decisions/09d-gameplay.md</code> for the full trait definitions and rationale.</p>
+<p>The RA1 game module registers three <code>Pathfinder</code> implementations — <code>RemastersPathfinder</code>, <code>OpenRaPathfinder</code>, and <code>IcPathfinder</code> (D045) — plus <code>GridSpatialHash</code>. The active pathfinder is selected via experience profiles (D045). A deferred/optional continuous-space game module would register <code>NavmeshPathfinder</code> and <code>BvhSpatialIndex</code>. The sim core calls the trait — it never knows which one is running. The same principle applies to fog, damage, AI, ranking, and validation — see D041 in <code>decisions/09d-gameplay.md</code> for the full trait definitions and rationale.</p>
 <h2 id="platform-portability"><a class="header" href="#platform-portability">Platform Portability</a></h2>
 <p>The engine must not create obstacles for any platform. Desktop is the primary dev target, but every architectural choice must be portable to browser (WASM), mobile (Android/iOS), and consoles without rework.</p>
 <h3 id="player-data-directory-d061"><a class="header" href="#player-data-directory-d061">Player Data Directory (D061)</a></h3>
@@ -936,6 +937,37 @@ pub enum ScreenClass {
 }
 <span class="boring">}</span></code></pre>
 <p><code>ic-ui</code> reads <code>InputCapabilities</code> to choose the appropriate layout profile. The sim never sees any of this.</p>
+<h3 id="platform-installer--setup-capability-split-d069"><a class="header" href="#platform-installer--setup-capability-split-d069">Platform Installer / Setup Capability Split (D069)</a></h3>
+<p>The first-run setup wizard (D069) needs a <strong>platform capability view</strong> that is separate from raw input capabilities. This captures what the <strong>distribution channel / platform shell</strong> already handles (binary install/update/verify, cloud availability, file browsing constraints) so IC can avoid duplicating responsibilities.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub enum PlatformInstallChannel {
+    StoreSteam,
+    StoreGog,
+    StoreEpic,
+    StandaloneDesktop,
+    Browser,
+    Mobile,
+    Console,
+}
+
+pub struct PlatformInstallerCapabilities {
+    pub channel: PlatformInstallChannel,
+    pub platform_handles_binary_install: bool,
+    pub platform_handles_binary_updates: bool,
+    pub platform_exposes_verify_action: bool, // Steam/GOG-style "verify files"
+    pub supports_cloud_sync_offer: bool,      // via PlatformServices or platform API
+    pub supports_manual_folder_browse: bool,  // browser/mobile often restricted
+    pub supports_background_downloads: bool,  // policy/OS dependent
+}
+<span class="boring">}</span></code></pre>
+<p><code>ic-game</code> (platform integration layer) populates <code>PlatformInstallerCapabilities</code> and injects it into <code>ic-ui</code>. The D069 setup wizard and maintenance flows use it to decide:</p>
+<ul>
+<li>whether to show platform verify guidance vs IC-side content repair only</li>
+<li>whether to offer manual folder browsing as a primary or fallback path</li>
+<li>whether to present a browser/mobile “setup assistant” variant instead of a desktop-style installer narrative</li>
+</ul>
+<p>This preserves the platform-agnostic engine core while making setup UX platform-aware in a principled way.</p>
 <h2 id="ui-theme-system-d032"><a class="header" href="#ui-theme-system-d032">UI Theme System (D032)</a></h2>
 <p>The UI is split into two orthogonal concerns:</p>
 <ul>
@@ -1601,7 +1633,7 @@ pub struct WasmInstance {
 <li><strong>Defensive recommendation for mod authors:</strong> Mod development docs recommend using integer/fixed-point arithmetic for any computation whose results feed back into <code>PlayerOrder</code>s or are returned to host functions. Floats are safe for mod-internal scratch computation that is consumed and discarded within the same call (e.g., heuristic scoring, weight calculations that produce an integer output).</li>
 <li><strong>Hash verification:</strong> All clients verify the WASM binary hash (SHA-256) before game start. Combined with <code>wasmtime</code>’s NaN canonicalization and identical inputs, this provides a strong determinism guarantee — but it is not formally proven the way <code>ic-sim</code>’s integer-only invariant is. WASM mod desync is tracked as a distinct diagnosis path in the desync debugger.</li>
 </ul>
-<p><strong>Browser builds:</strong> Tier 3 WASM mods are desktop/server-only. The browser build (WASM target) cannot embed <code>wasmtime</code> — see <code>04-MODDING.md</code> § “Browser Build Limitation (WASM-on-WASM)” for the full analysis and future mitigation path (<code>wasmi</code> interpreter fallback).</p>
+<p><strong>Browser builds:</strong> Tier 3 WASM mods are desktop/server-only. The browser build (WASM target) cannot embed <code>wasmtime</code> — see <code>04-MODDING.md</code> § “Browser Build Limitation (WASM-on-WASM)” for the full analysis and the documented mitigation path (<code>wasmi</code> interpreter fallback), which is an optional browser-platform expansion item unless promoted by platform milestone requirements.</p>
 <p><strong>Phase:</strong> Lua runtime in Phase 4. WASM runtime in Phase 4-5. Mod API versioning in Phase 6a.</p>
 <h2 id="install--source-layout-community-friendly-project-structure"><a class="header" href="#install--source-layout-community-friendly-project-structure">Install &amp; Source Layout (Community-Friendly Project Structure)</a></h2>
 <p>The directory structure — both the shipped product and the source repository — is designed to feel immediately navigable to anyone who has worked with OpenRA. OpenRA’s modding community thrived because the project was approachable: open a mod folder, find YAML rules organized by category, edit values, see results. IC preserves that muscle memory while fitting the structure to a Rust/Bevy codebase.</p>

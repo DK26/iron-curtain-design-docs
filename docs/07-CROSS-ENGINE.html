@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-1e683dcc.js";
+            window.path_to_searchindex_js = "searchindex-3d47d740.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-a0d63c9c.js"></script>
+        <script src="toc-914f79aa.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -228,6 +228,380 @@ Layer 1:  Data compatibility        (do they load same rules?)→ Very achievabl
 <p>Your client embeds a headless OpenRA sim process. OpenRA sim is the authority. Your Rust sim runs ahead for prediction and smooth rendering. Reconciler corrects drift. Like FPS client-side prediction, but for RTS.</p>
 <h3 id="level-4-true-lockstep-cross-play-probably-never"><a class="header" href="#level-4-true-lockstep-cross-play-probably-never">Level 4: True Lockstep Cross-Play (Probably Never)</a></h3>
 <p>Requires bit-identical sim. Effectively a port. Architecture doesn’t prevent it, but not worth pursuing.</p>
+<h2 id="where-the-cross-engine-layer-sits-and-where-it-does-not"><a class="header" href="#where-the-cross-engine-layer-sits-and-where-it-does-not">Where the Cross-Engine Layer Sits (and Where It Does NOT)</a></h2>
+<p>Cross-engine compatibility is a <strong>boundary layer around the sim</strong>, not a modification inside it.</p>
+<h3 id="canonical-placement-crate--subsystem-ownership"><a class="header" href="#canonical-placement-crate--subsystem-ownership">Canonical placement (crate / subsystem ownership)</a></h3>
+<pre><code>┌──────────────────────────────────────────────────────────────────────┐
+│                     IC APP / GAME LOOP (ic-game)                    │
+│                                                                      │
+│  UI / Lobby / Browser / Replay Viewer (ic-ui)                        │
+│    └─ engine tags, divergence UI, warnings, compatibility UX         │
+│                                                                      │
+│  Network boundary / adapters (ic-net)                                │
+│    ├─ CommunityBridge (Level 0 discovery / listing / fetch)          │
+│    ├─ ProtocolAdapter + OrderCodec (wire translation)                │
+│    ├─ SimReconciler (Level 2+ drift correction policy)               │
+│    └─ DivergenceTracker / bridge diagnostics                         │
+│                                                                      │
+│  Shared wire types (ic-protocol)                                     │
+│    └─ TimestampedOrder / PlayerOrder / codec seams                   │
+│                                                                      │
+│  Data / asset compatibility (ra-formats)                             │
+│    └─ MiniYAML, maps, replay decoders, coordinate transforms         │
+│                                                                      │
+│  Deterministic simulation (ic-sim)                                   │
+│    └─ NO cross-engine protocol logic, NO foreign-server awareness    │
+│       only public snapshot/restore/apply_correction seams            │
+└──────────────────────────────────────────────────────────────────────┘
+</code></pre>
+<h3 id="hard-boundary-non-negotiable"><a class="header" href="#hard-boundary-non-negotiable">Hard boundary (non-negotiable)</a></h3>
+<p>The cross-engine layer <strong>must not</strong>:</p>
+<ul>
+<li>add foreign-protocol branching inside <code>ic-sim</code></li>
+<li>make <code>ic-sim</code> import foreign engine code/protocols</li>
+<li>bypass deterministic order validation in sim (D012)</li>
+<li>silently weaken relay/ranked trust guarantees for native IC matches</li>
+</ul>
+<p>The cross-engine layer <strong>may</strong>:</p>
+<ul>
+<li>translate wire formats (<code>OrderCodec</code>)</li>
+<li>wrap network models (<code>ProtocolAdapter</code>)</li>
+<li>surface drift and compatibility warnings</li>
+<li>apply bounded external corrections via explicit sim APIs in deferred casual/authority modes (<code>M7+</code>, unranked by default unless separately certified)</li>
+</ul>
+<h3 id="how-it-works-in-practice-by-responsibility"><a class="header" href="#how-it-works-in-practice-by-responsibility">How it works in practice (by responsibility)</a></h3>
+<ul>
+<li><strong>Data compatibility (Layer 1)</strong> lives mostly in <code>ra-formats</code> + content-loading docs (<code>D023</code>, <code>D024</code>, <code>D025</code>) and is usable without any network interop.</li>
+<li><strong>Community/discovery compatibility (Level 0)</strong> lives in <code>CommunityBridge</code> (<code>ic-net</code> / <code>ic-server</code>) and <code>ic-ui</code> browser/lobby UX.</li>
+<li><strong>Replay compatibility (Level 1)</strong> uses replay decoders + foreign order codecs + divergence tracking; it is analysis/viewing tooling, not a live trust path.</li>
+<li><strong>Casual live cross-play (Level 2+)</strong> adds <code>ProtocolAdapter</code> and <code>SimReconciler</code> around a <code>NetworkModel</code>; the sim remains unchanged.</li>
+</ul>
+<h2 id="cross-engine-trust--anti-cheat-capability-matrix-important"><a class="header" href="#cross-engine-trust--anti-cheat-capability-matrix-important">Cross-Engine Trust &amp; Anti-Cheat Capability Matrix (Important)</a></h2>
+<p>Cross-engine compatibility levels are <strong>not equal</strong> from a trust, anti-cheat, or ranked-certification perspective.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Level</th><th>What It Enables</th><th>Trust / Anti-Cheat Capability</th><th>Ranked / Certified Match Policy</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>0</strong> Shared lobby/browser</td><td>Community discovery, map/mod browsing, engine-tagged lobbies</td><td>No live gameplay anti-cheat shared across engines. IC anti-cheat applies only to actual IC-hosted matches. External engine listings retain their own trust model.</td><td>N/A (discovery only)</td></tr>
+<tr><td><strong>1</strong> Replay compatibility</td><td>Import/view/analyze foreign replays, divergence tracking</td><td>Useful for analysis and regression testing. Can support anti-cheat review workflows <strong>only</strong> as evidence tooling (integrity depends on replay signatures/source). No live enforcement.</td><td>Not a live match mode</td></tr>
+<tr><td><strong>2</strong> Casual cross-play + periodic resync</td><td>Playable cross-engine matches with visible drift correction</td><td>Limited anti-cheat posture. <code>SimReconciler</code> bounds/caps help reject absurd corrections, but authority trust and correction semantics create new abuse surfaces. Rubber-banding is expected.</td><td><strong>Unranked by default</strong></td></tr>
+<tr><td><strong>3</strong> Embedded foreign authority + prediction</td><td>Stronger cross-engine fidelity via embedded authority process</td><td>Better behavioral integrity than Level 2 if authority is trusted and verified, but adds binary trust, sandboxing, version drift, and attestation complexity. Still a high-risk trust path.</td><td><strong>Unranked by default</strong> unless separately certified by an explicit <code>M7+</code>/<code>M11</code> decision</td></tr>
+<tr><td><strong>4</strong> True lockstep cross-play</td><td>Bit-identical cross-engine lockstep</td><td>In theory can approach native lockstep trust if the entire stack is equivalent; in practice this is effectively a port and outside project scope.</td><td>Not planned</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="anti-cheat-warning-default-posture"><a class="header" href="#anti-cheat-warning-default-posture">Anti-cheat warning (default posture)</a></h3>
+<ul>
+<li><strong>Native IC ranked play</strong> remains the primary competitive path (IC relay + IC validation + IC certification chain).</li>
+<li><strong>Cross-engine live play</strong> (Level 2+) is a compatibility feature first, not a competitive integrity feature.</li>
+<li>Any promotion of a cross-engine mode to ranked/certified status requires a <strong>separate explicit decision</strong> (<code>M7+</code>/<code>M11</code>) covering trust model, authority attestation, replay/signature requirements, and enforcement/appeals.</li>
+</ul>
+<h2 id="cross-engine-host-modes-operator--product-packaging"><a class="header" href="#cross-engine-host-modes-operator--product-packaging">Cross-Engine Host Modes (Operator / Product Packaging)</a></h2>
+<p>To avoid vague claims like “IC can host cross-engine with anti-cheat,” define host modes by <strong>what IC is actually responsible for</strong>.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Host Mode</th><th>Primary Purpose</th><th>Typical Compatibility Level(s)</th><th>What IC Controls</th><th>Anti-Cheat / Trust Value</th><th>Ranked / Certification</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Discovery Gateway</strong></td><td>Unified browser/listings/maps/mod metadata across communities/engines</td><td>Level 0</td><td>Listing aggregation, engine tagging, join routing, metadata fetch</td><td>UX clarity + trust labeling only. No live gameplay enforcement.</td><td>Not a gameplay mode</td></tr>
+<tr><td><strong>Replay Analysis Authority</strong></td><td>Import/verify/analyze replays for moderation, regression, and education</td><td>Level 1</td><td>Replay decoding, provenance labeling, divergence tracking, evidence tooling</td><td>Detection/review support only; no live prevention. Quality depends on replay integrity/source.</td><td>Not a gameplay mode</td></tr>
+<tr><td><strong>Casual Interop Relay</strong></td><td>Experimental/casual cross-engine live matches</td><td>Level 2 (and some Level 3 experiments)</td><td>Session relay, protocol adaptation, timing normalization (where applicable), bounded reconciliation policy, logs</td><td>Better than unmanaged interop: can reduce abuse and provide evidence, but cannot claim full IC-certified anti-cheat against foreign clients.</td><td><strong>Unranked by default</strong></td></tr>
+<tr><td><strong>Embedded Authority Bridge Host</strong></td><td>Higher-fidelity cross-engine experiments with hosted foreign authority process</td><td>Level 3</td><td>Host process supervision, adapter/reconciler policy, logs, optional attestation scaffolding</td><td>Potentially stronger trust than Level 2, but still high complexity and not equivalent to native IC certified play without explicit certification work.</td><td><strong>Unranked by default</strong> unless separately certified</td></tr>
+<tr><td><strong>Certified IC Relay</strong> <em>(native baseline)</em></td><td>Standard IC multiplayer (same engine)</td><td>Native IC path (not a cross-engine level)</td><td>IC relay authority, IC validation/certification chain, signed replays/results</td><td>Full IC anti-cheat/trust posture (as defined by D007/D012/D052 and security policies).</td><td>Ranked-eligible when queue/mode rules allow</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="practical-interpretation"><a class="header" href="#practical-interpretation">Practical interpretation</a></h3>
+<ul>
+<li>Yes, IC can act as a <strong>better trust gateway</strong> for mixed-engine play (especially logging, relay hygiene, protocol sanity checks, and moderation evidence).</li>
+<li>No, IC cannot automatically grant <strong>native IC anti-cheat guarantees</strong> to foreign clients/sims just by hosting the server.</li>
+<li>The right claim for Level 2/3 is usually: <strong>“more observable and better bounded than unmanaged interop”</strong>, not <strong>“fully secure/certified”</strong>.</li>
+</ul>
+<h2 id="long-term-visual-style-parity-vision-2d-vs-3d-cross-engine"><a class="header" href="#long-term-visual-style-parity-vision-2d-vs-3d-cross-engine">Long-Term Visual-Style Parity Vision (2D vs 3D, Cross-Engine)</a></h2>
+<p>One of IC’s long-term differentiator goals is to allow players to join the <strong>same battle</strong> from different clients and visual styles, for example:</p>
+<ul>
+<li>one player using a classic 2D presentation (IC classic renderer or a foreign client such as OpenRA in a compatible mode)</li>
+<li>another player using an IC 3D visual skin/presentation mode (Bevy-powered render path)</li>
+</ul>
+<p>This is compatible with D011 <strong>if</strong> the project treats it as:</p>
+<ul>
+<li>a <strong>cross-engine / compatibility-layer feature</strong> (not a sim-compatibility promise)</li>
+<li>a <strong>presentation-style parity feature</strong> (2D vs 3D camera/rendering), not different gameplay rules</li>
+<li>a <strong>trust-labeled mode</strong> with explicit fairness and certification boundaries</li>
+</ul>
+<h3 id="fairness-guardrails-for-2d-vs-3d-mixed-client-play"><a class="header" href="#fairness-guardrails-for-2d-vs-3d-mixed-client-play">Fairness guardrails for 2D-vs-3D mixed-client play</a></h3>
+<p>To describe such matches as “fair” in any meaningful sense, IC must preserve gameplay parity:</p>
+<ul>
+<li>same authoritative rules / timing / order semantics for the selected host mode</li>
+<li>no extra hidden information from the 3D client (fog/LOS must match the mode’s rules)</li>
+<li>no camera/zoom/rotation affordances that create unintended scouting or situational-awareness advantages beyond the mode’s declared limits</li>
+<li>no differences in pathing, hit detection semantics, or command timings due to visual skin choice</li>
+<li>trust labels must still reflect the <strong>actual host mode</strong> (<code>IC Certified</code>, <code>Cross-Engine Experimental</code>, <code>Foreign Engine</code>, etc.), not the visual style alone</li>
+</ul>
+<h3 id="productmessaging-rule-important"><a class="header" href="#productmessaging-rule-important">Product/messaging rule (important)</a></h3>
+<p>This is a <strong>North Star vision</strong> tied to both:</p>
+<ul>
+<li>cross-engine host/trust work (Level 2+/D011/D052; <code>M7</code>)</li>
+<li>switchable render modes / visual infrastructure (D048; <code>M11</code>)</li>
+</ul>
+<p>Do not market it as a guaranteed ranked/certified feature unless a separate explicit <code>M7+</code>/<code>M11</code> decision certifies a specific mixed-client trust path.</p>
+<h2 id="ic-hosted-cross-engine-relay-security-architecture"><a class="header" href="#ic-hosted-cross-engine-relay-security-architecture">IC-Hosted Cross-Engine Relay: Security Architecture</a></h2>
+<p>When IC hosts and a foreign client (e.g., OpenRA) joins IC’s relay, IC controls the entire server-side trust pipeline. This section specifies exactly what IC enforces, what it cannot enforce, and the protocol-level design for foreign client sessions. The core principle: <strong>“join our server”</strong> is always more secure than <strong>“we join theirs”</strong> because IC’s relay infrastructure — time authority, order validation, behavioral analysis, replay signing — applies to every connected client regardless of engine.</p>
+<h3 id="foreign-client-connection-pipeline"><a class="header" href="#foreign-client-connection-pipeline">Foreign Client Connection Pipeline</a></h3>
+<pre><code>Foreign Client (OpenRA)                    IC Relay Server
+        │                                        │
+        ├──── TLS 1.3 handshake ────────────────►│
+        │                                        │ verify cert / session token
+        ├──── ProtocolIdentification ───────────►│
+        │     { engine: "openra", version: "..." }│ select OrderCodec
+        │                                        │
+        │◄─── CapabilityNegotiation ─────────────┤
+        │     { supported_orders: [...],          │
+        │       hash_sync: true/false,            │
+        │       validation_level: "structural" }  │
+        │                                        │
+        ├──── JoinLobby ────────────────────────►│ assign trust tier
+        │                                        │ notify all players of tier
+        │◄─── LobbyState + TrustLabels ─────────┤
+</code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Per-connection state for a foreign client on IC's relay.
+pub struct ForeignClientSession {
+    pub player_id: PlayerId,
+    pub codec: Box&lt;dyn OrderCodec&gt;,
+    pub protocol_id: ProtocolId,
+    pub engine_version: String,
+    pub trust_tier: CrossEngineTrustTier,
+    pub capabilities: CrossEngineCapabilities,
+    pub behavior_profile: PlayerBehaviorProfile, // Kaladin — same as native clients
+    pub rejection_count: u32,                    // orders that failed validation
+    pub last_hash_match: Option&lt;u64&gt;,            // last tick where state hashes agreed
+}
+
+/// What the foreign client reported supporting during capability negotiation.
+pub struct CrossEngineCapabilities {
+    pub known_order_types: Vec&lt;OrderTypeId&gt;,  // order types the codec can translate
+    pub supports_hash_sync: bool,             // can produce state hashes for reconciliation
+    pub supports_corrections: bool,           // can apply SimReconciler corrections
+    pub reported_tick_rate: u32,              // client's expected ticks per second
+}
+<span class="boring">}</span></code></pre>
+<h3 id="trust-tier-classification"><a class="header" href="#trust-tier-classification">Trust Tier Classification</a></h3>
+<p>Every connection is classified into a trust tier that determines what IC can guarantee. The tier is assigned at connection time based on protocol handshake results and is <strong>visible to all players in the lobby</strong>.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub enum CrossEngineTrustTier {
+    /// Native IC client. Full anti-cheat pipeline.
+    Native,
+    /// Known foreign engine with version-matched codec. IC validates orders
+    /// through its full pipeline — structural + sim validation.
+    VerifiedForeign { engine: ProtocolId, codec_version: SemVer },
+    /// Unknown engine or unrecognized version. IC can only enforce
+    /// time authority, rate limiting, and replay logging. Order validation
+    /// is structural only (bounds/format) — sim-level validation may
+    /// reject valid foreign orders due to semantic mismatch.
+    UnverifiedForeign { engine: String },
+}
+<span class="boring">}</span></code></pre>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Tier</th><th>Client Type</th><th>IC Enforces</th><th>IC Cannot Enforce</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Tier 0: Native</strong></td><td>IC client</td><td>Time authority, order validation (structural + sim), rate limiting, behavioral analysis, replay signing, match certification</td><td>Maphack (lockstep architectural limit)</td></tr>
+<tr><td><strong>Tier 1: Verified Foreign</strong></td><td>Known engine (e.g., OpenRA) with version-matched <code>OrderCodec</code></td><td>Time authority, order validation (structural + sim — orders translated to IC types), rate limiting, behavioral analysis, replay signing</td><td>Client binary integrity, sim agreement, maphack</td></tr>
+<tr><td><strong>Tier 2: Unverified Foreign</strong></td><td>Unknown engine or version without matched codec</td><td>Time authority, rate limiting, structural order validation (format/bounds only), replay logging</td><td>Sim-level order validation, behavioral baselines (unknown input characteristics), sim agreement, maphack</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Policy:</strong> Ranked/certified matches require all-Tier-0 (native IC only). Cross-engine matches are <strong>unranked by default</strong> but IC’s relay still enforces every layer it can — the match is more secure than unmanaged interop even without ranked certification.</p>
+<h3 id="order-validation-for-foreign-clients"><a class="header" href="#order-validation-for-foreign-clients">Order Validation for Foreign Clients</a></h3>
+<p>Foreign orders pass through the same validation pipeline as native orders, with one additional decoding step:</p>
+<pre><code>Wire bytes → OrderCodec.decode() → TimestampedOrder → validate_order() → accept/reject
+</code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Extends the relay's order processing for foreign client connections.
+pub struct ForeignOrderPipeline {
+    pub codec: Box&lt;dyn OrderCodec&gt;,
+    /// Orders that decode successfully but fail sim validation.
+    /// Logged for behavioral scoring — repeated invalid orders indicate
+    /// a modified client or exploit attempt.
+    pub rejection_log: Vec&lt;(u64, PlayerId, PlayerOrder, OrderValidity)&gt;, // (tick, player, order, reason)
+}
+
+impl ForeignOrderPipeline {
+    pub fn process(&amp;mut self, tick: u64, player: PlayerId, raw: &amp;[u8]) -&gt; Result&lt;TimestampedOrder, ForeignOrderError&gt; {
+        // Step 1: Decode via engine-specific codec
+        let order = self.codec.decode(raw)
+            .map_err(|e| ForeignOrderError::DecodeFailed(e))?;
+
+        // Step 2: Structural validation (field bounds, order type recognized)
+        if !order.order.is_structurally_valid() {
+            return Err(ForeignOrderError::StructurallyInvalid);
+        }
+
+        // Step 3: Sim validation — same path as native clients (D012)
+        // This is the asymmetry advantage: even if the foreign client's own
+        // engine doesn't validate, IC's relay rejects invalid orders before
+        // broadcast. Honest players never see cheated orders.
+        // (Actual sim validation happens in ic-sim after relay forwards)
+
+        Ok(order)
+    }
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Fail-closed policy:</strong> Orders that don’t map to any recognized IC order type are rejected and logged. The relay does not forward unknown order types — this prevents foreign clients from injecting protocol-level payloads that IC can’t validate.</p>
+<p><strong>Validation asymmetry — the key insight:</strong> When IC hosts, the relay validates ALL orders from ALL clients before broadcasting. A foreign client running a modified engine that skips its own validation still has every order checked by IC’s pipeline. This is strictly better than the reverse scenario (IC joining a foreign server) where only IC’s own orders are self-validated and the foreign server may not validate at all.</p>
+<h3 id="behavioral-analysis-on-foreign-clients"><a class="header" href="#behavioral-analysis-on-foreign-clients">Behavioral Analysis on Foreign Clients</a></h3>
+<p>The Kaladin behavioral analysis pattern (<code>06-SECURITY.md</code> § Vulnerability 10) runs identically on foreign client input streams. The relay’s <code>PlayerBehaviorProfile</code> tracks timing coefficient of variation, reaction time distribution, and APM anomaly patterns regardless of which engine produced the input.</p>
+<p><strong>Per-engine baseline calibration:</strong> Foreign engines may buffer, batch, or pace input differently than IC’s client. OpenRA’s TCP-based order submission may introduce different jitter patterns than IC’s relay protocol. To prevent false positives, the behavioral model accepts a <strong>per-<code>ProtocolId</code> noise floor</strong> — a configurable baseline that accounts for engine-specific input characteristics:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Engine-specific behavioral analysis calibration.
+pub struct EngineBaselineProfile {
+    pub protocol_id: ProtocolId,
+    pub expected_timing_jitter_ms: f64,     // additional jitter from engine's input pipeline
+    pub min_reaction_time_ms: f64,          // adjusted floor for this engine
+    pub apm_variance_tolerance: f64,        // wider tolerance if engine batches orders
+}
+<span class="boring">}</span></code></pre>
+<p>Even for unranked cross-engine matches, behavioral scores are recorded and forwarded to the ranking authority’s evidence corpus. This builds the dataset needed for a later explicit certification decision (<code>M7+</code>/<code>M11</code>) on whether cross-engine matches can ever qualify for ranked play.</p>
+<h3 id="sim-reconciliation-under-ic-authority"><a class="header" href="#sim-reconciliation-under-ic-authority">Sim Reconciliation Under IC Authority</a></h3>
+<p>When IC hosts a Level 2 cross-engine match, IC’s simulation is the <strong>reference authority</strong>. This inverts the trust model compared to IC joining a foreign server:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Determines which sim produces authoritative state in cross-engine play.
+pub enum CrossEngineAuthorityMode {
+    /// IC relay hosts the match. IC sim produces authoritative state hashes.
+    /// Foreign clients reconcile TO IC's state. IC never accepts external corrections.
+    IcAuthority {
+        /// Ticks between authoritative hash broadcasts.
+        hash_interval_ticks: u64,          // default: 30 (1 second at 30 tps)
+        /// Maximum entity correction magnitude IC will instruct foreign clients to apply.
+        max_correction_magnitude: FixedPoint,
+    },
+
+    /// Foreign server hosts the match. IC client reconciles to foreign state.
+    /// Bounded by is_sane_correction() (see SimReconciler) — but weaker trust posture.
+    ForeignAuthority {
+        reconciler: Box&lt;dyn SimReconciler&gt;, // existing bounded reconciler
+    },
+}
+<span class="boring">}</span></code></pre>
+<p><strong>IC-as-authority flow:</strong></p>
+<ol>
+<li>IC relay runs <code>ic-sim</code> headlessly (or one IC client’s sim is designated reference)</li>
+<li>Every <code>hash_interval_ticks</code>, IC broadcasts a state hash to all clients</li>
+<li>Foreign clients compare against their own sim state</li>
+<li>On divergence: IC sends <code>EntityCorrection</code> packets to foreign clients (bounded by <code>max_correction_magnitude</code>)</li>
+<li>Foreign clients apply corrections to converge toward IC’s state</li>
+<li><strong>IC never accepts inbound corrections</strong> — <code>SimReconciler</code> is not instantiated on the authority side</li>
+</ol>
+<p><strong>Why this matters:</strong> When IC joins an OpenRA server, IC must trust the foreign server’s corrections (bounded by <code>is_sane_correction()</code>, but still accepting external state). When OpenRA joins IC, the trust arrow points outward — IC dictates state, never receives corrections. A compromised foreign client can refuse corrections (causing visible desync and eventual disconnection) but cannot inject false state into IC’s sim.</p>
+<h3 id="security-comparison-ic-hosts-vs-ic-joins"><a class="header" href="#security-comparison-ic-hosts-vs-ic-joins">Security Comparison: IC Hosts vs. IC Joins</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Security Property</th><th>IC Hosts (foreign joins IC)</th><th>Foreign Hosts (IC joins foreign)</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Time authority</strong></td><td>IC relay — trusted, enforced</td><td>Foreign server — untrusted</td></tr>
+<tr><td><strong>Order validation</strong></td><td>IC validates ALL clients’ orders</td><td>Only IC validates its own orders locally</td></tr>
+<tr><td><strong>Rate limiting</strong></td><td>IC’s 3-layer system on all clients</td><td>Foreign server’s policy (unknown, possibly none)</td></tr>
+<tr><td><strong>Behavioral analysis</strong></td><td>Kaladin on ALL client input streams</td><td>Only on IC client’s own input</td></tr>
+<tr><td><strong>Replay signing</strong></td><td>IC relay signs — certified evidence chain</td><td>Foreign replay format, likely unsigned</td></tr>
+<tr><td><strong>Sim authority</strong></td><td>IC sim is reference — corrections flow outward</td><td>Foreign sim is reference — IC accepts bounded corrections</td></tr>
+<tr><td><strong>Correction trust</strong></td><td>IC never accepts external corrections</td><td>IC must trust foreign corrections (bounded)</td></tr>
+<tr><td><strong>Match certification</strong></td><td>IC relay certifies result (Ed25519 signed)</td><td>Uncertified — P2P trust at best</td></tr>
+<tr><td><strong>Maphack prevention</strong></td><td>Same — lockstep architectural limit</td><td>Same — lockstep architectural limit</td></tr>
+<tr><td><strong>Client integrity</strong></td><td>Cannot verify foreign binary</td><td>Cannot verify foreign binary</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Bottom line:</strong> IC-hosted cross-engine play gives IC control over 7 of 10 security properties. IC-joining-foreign gives IC control over 1 (its own local validation). The recommendation for cross-engine play is clear: <strong>always prefer IC as host</strong>.</p>
+<h3 id="cross-engine-lobby-trust-ux"><a class="header" href="#cross-engine-lobby-trust-ux">Cross-Engine Lobby Trust UX</a></h3>
+<p>When a foreign client joins an IC-hosted lobby, the UI must communicate trust posture clearly:</p>
+<ul>
+<li><strong>Player cards</strong> show an engine badge (<code>IC</code>, <code>OpenRA</code>, <code>Unknown</code>) and trust tier icon (shield for Tier 0, half-shield for Tier 1, outline-shield for Tier 2)</li>
+<li><strong>Warning banner</strong> appears if any player is Tier 1 or Tier 2: <code>"Cross-engine match — IC relay enforces time authority, order validation, and behavioral analysis. Client integrity and sim agreement are not guaranteed."</code></li>
+<li><strong>Tooltip per player</strong> shows exactly what IS and ISN’T enforced for that player’s trust tier</li>
+<li><strong>Host setting:</strong> <code>minimum_trust_tier</code> — host can require all players be Tier 0 (native only) or allow Tier 1/2</li>
+<li><strong>Match record</strong> includes trust tier metadata — so later evidence analysis (for any <code>M7+</code>/<code>M11</code> certification decision) can correlate trust tier with match quality/incidents</li>
+</ul>
+<h2 id="cross-engine-gotchas-design--ux--security-warnings"><a class="header" href="#cross-engine-gotchas-design--ux--security-warnings">Cross-Engine Gotchas (Design + UX + Security Warnings)</a></h2>
+<p>These are the common traps that make cross-engine features look better on paper than they behave in production.</p>
+<h3 id="1-shared-browser--shared-gameplay-trust"><a class="header" href="#1-shared-browser--shared-gameplay-trust">1) Shared browser != shared gameplay trust</a></h3>
+<p>If IC shows OpenRA/CnCNet/other-engine lobbies in one browser, players will assume they can join any game with the same fairness guarantees.</p>
+<p><strong>Required UX warning:</strong> engine tags and trust labels must be visible (<code>IC Certified</code>, <code>IC Casual</code>, <code>Foreign Engine</code>, <code>Cross-Engine Experimental</code>), especially in lobby/join flows.</p>
+<h3 id="2-protocol-compatibility-does-not-create-fair-play-by-itself"><a class="header" href="#2-protocol-compatibility-does-not-create-fair-play-by-itself">2) Protocol compatibility does NOT create fair play by itself</a></h3>
+<p><code>OrderCodec</code> can make packets understandable. It does not:</p>
+<ul>
+<li>align simulations</li>
+<li>align tick semantics</li>
+<li>align sub-tick fairness</li>
+<li>align validation logic</li>
+<li>align anti-cheat evidence chains</li>
+</ul>
+<p>Without an authority/reconciliation plan, protocol interop just produces faster desyncs.</p>
+<h3 id="3-reconciler-corrections-are-a-security-surface"><a class="header" href="#3-reconciler-corrections-are-a-security-surface">3) Reconciler corrections are a security surface</a></h3>
+<p>Any Level 2+ design that applies external corrections introduces a new attack vector:</p>
+<ul>
+<li>malicious or compromised authority sends bad corrections</li>
+<li>stale sync inflates acceptable drift</li>
+<li>correction spam creates invisible advantage or denial-of-service</li>
+</ul>
+<p>Mitigations (documented across <code>07-CROSS-ENGINE.md</code> and <code>06-SECURITY.md</code>) include:</p>
+<ul>
+<li>bounded correction sanity checks (<code>is_sane_correction()</code>)</li>
+<li>capped <code>ticks_since_sync</code></li>
+<li>escalation to <code>Resync</code> / <code>Autonomous</code></li>
+<li>rejection counters and audit logging</li>
+</ul>
+<h3 id="4-replay-import-is-great-evidence-but-evidence-quality-varies"><a class="header" href="#4-replay-import-is-great-evidence-but-evidence-quality-varies">4) Replay import is great evidence, but evidence quality varies</a></h3>
+<p>Foreign replay analysis (Level 1) is excellent for:</p>
+<ul>
+<li>regression testing</li>
+<li>moderation triage</li>
+<li>player education / review</li>
+</ul>
+<p>But anti-cheat enforcement quality depends on source integrity:</p>
+<ul>
+<li>signed relay replays &gt; unsigned local captures</li>
+<li>full packet chain &gt; partial replay summary</li>
+<li>version-matched decoder &gt; best-effort legacy parser</li>
+</ul>
+<p>UI and moderation tooling should label replay provenance clearly.</p>
+<h3 id="5-feature-mismatch-and-semantic-mismatch-are-easy-to-underestimate"><a class="header" href="#5-feature-mismatch-and-semantic-mismatch-are-easy-to-underestimate">5) Feature mismatch and semantic mismatch are easy to underestimate</a></h3>
+<p>Even when names match (“attack-move”, “guard”, “deploy”), semantics may differ:</p>
+<ul>
+<li>targeting rules</li>
+<li>queue behavior</li>
+<li>fog/shroud timing</li>
+<li>pathfinding tie-breaks</li>
+<li>transport/load/unload edge cases</li>
+</ul>
+<p>Cross-engine lobbies/modes must negotiate a <strong>capability profile</strong> and fail fast (with explanation) when required features do not map cleanly.</p>
+<h3 id="6-cross-engine-anti-cheat-capability-is-mode-specific-not-one-global-claim"><a class="header" href="#6-cross-engine-anti-cheat-capability-is-mode-specific-not-one-global-claim">6) Cross-engine anti-cheat capability is mode-specific, not one global claim</a></h3>
+<p>Do not market or document “cross-engine anti-cheat” as a single capability. Instead, describe:</p>
+<ul>
+<li>what is prevented (e.g., absurd state corrections rejected)</li>
+<li>what is only detectable (e.g., replay drift or suspicious timing)</li>
+<li>what is out of scope (e.g., certifying foreign engine client integrity)</li>
+</ul>
+<h3 id="7-competitiveranked-pressure-will-arrive-before-the-trust-model-is-ready"><a class="header" href="#7-competitiveranked-pressure-will-arrive-before-the-trust-model-is-ready">7) Competitive/ranked pressure will arrive before the trust model is ready</a></h3>
+<p>If a cross-engine mode is fun, players will ask for ranked support immediately. The correct default response is:</p>
+<ul>
+<li>keep it unranked/casual</li>
+<li>collect telemetry/replays</li>
+<li>validate stability and trust assumptions</li>
+<li>promote only after a separate certification decision</li>
+</ul>
 <h2 id="architecture-for-compatibility"><a class="header" href="#architecture-for-compatibility">Architecture for Compatibility</a></h2>
 <h3 id="ordercodec-wire-format-translation"><a class="header" href="#ordercodec-wire-format-translation">OrderCodec: Wire Format Translation</a></h3>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
@@ -352,7 +726,7 @@ let game = GameLoop::new(sim, renderer, adapted);
 <p><strong>Relationship to D023 (vocabulary compatibility):</strong> D023 ensures OpenRA trait <em>names</em> are accepted as YAML aliases. This registry addresses the harder problem: even when the names match, the <em>behavior</em> may differ. A mod that depends on specific OpenRA rounding behavior or pathfinding quirks needs to know.</p>
 <p><strong>Phase:</strong> Registry structure defined in Phase 2 (when sim implementation begins and concrete divergences are discovered). Populated incrementally throughout Phase 2-5. Published alongside <code>11-OPENRA-FEATURES.md</code> gap analysis.</p>
 <h2 id="what-to-build-now-phase-0-to-keep-the-door-open"><a class="header" href="#what-to-build-now-phase-0-to-keep-the-door-open">What to Build Now (Phase 0) to Keep the Door Open</a></h2>
-<p>Costs almost nothing today, enables everything later:</p>
+<p>Costs almost nothing today, enables deferred cross-engine milestones (<code>M7</code> trust/interop host modes and <code>M11</code> visual/interop expansion):</p>
 <ol>
 <li><strong><code>OrderCodec</code> trait</strong> in <code>ic-protocol</code> — orders are wire-format-agnostic from day one</li>
 <li><strong><code>CoordTransform</code></strong> in <code>ra-formats</code> — coordinate systems are explicit, not implicit</li>

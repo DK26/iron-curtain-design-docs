@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-1e683dcc.js";
+            window.path_to_searchindex_js = "searchindex-3d47d740.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-a0d63c9c.js"></script>
+        <script src="toc-914f79aa.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -561,7 +561,7 @@ impl RelayServer {
 <p><strong>Statistical model (“Irwin” pattern):</strong> Analyzes an entire match history statistically — compares a player’s decision quality against engine-optimal play. In chess this means comparing moves against Stockfish; in IC, this means comparing orders against an AI advisor’s recommended actions via <strong>post-hoc replay analysis</strong>. A player who consistently makes engine-optimal micro decisions (unit splitting, target selection, ability timing) at rates improbable for human performance is flagged. This requires running the replay through an AI evaluator, so it’s inherently post-hoc and runs in batch on the ranking server, not real-time.</p>
 </li>
 <li>
-<p><strong>Pattern-matching model (“Kaladin” pattern):</strong> Identifies cheat signatures from input timing characteristics — the relay-side <code>PlayerBehaviorProfile</code> from above. Specific patterns: metronomic input spacing (coefficient of variation &lt; 0.05), reaction times clustering below human physiological limits, order precision that never degrades over a multi-hour session (fatigue-free play). This runs in real-time on the relay.</p>
+<p><strong>Pattern-matching model (“Kaladin” pattern):</strong> Identifies cheat signatures from input timing characteristics — the relay-side <code>PlayerBehaviorProfile</code> from above. Specific patterns: metronomic input spacing (coefficient of variation &lt; 0.05), reaction times clustering below human physiological limits, order precision that never degrades over a multi-hour session (fatigue-free play). This runs in real-time on the relay. <strong>Cross-engine note:</strong> Kaladin runs identically on foreign client input streams when IC hosts a cross-engine match. Per-engine baseline calibration (<code>EngineBaselineProfile</code>) accounts for differing input buffering and jitter characteristics across engines — see <code>07-CROSS-ENGINE.md</code> § “IC-Hosted Cross-Engine Relay: Security Architecture”.</p>
 </li>
 </ol>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
@@ -1359,7 +1359,7 @@ fn is_sane_correction(correction: &amp;EntityCorrection, ticks_since_sync: u64) 
 <li>Health corrections capped at the maximum HP of any unit in the active ruleset.</li>
 <li>If corrections are consistently rejected (&gt;5 consecutive rejections), the reconciler escalates to <code>ReconcileAction::Resync</code> (full snapshot reload) or <code>ReconcileAction::Autonomous</code> (disconnect from authority, local sim is truth).</li>
 </ul>
-<p><strong>Phase:</strong> Bounds hardening ships with Level 2+ cross-engine play (future). The constants are defined now for documentation completeness.</p>
+<p><strong>Planned deferral (cross-engine bounds hardening):</strong> Deferred to <code>M7</code> (<code>P-Scale</code>) with <code>M7.NET.CROSS_ENGINE_BRIDGE_AND_TRUST</code> because Level 2+ cross-engine reconciliation is outside the <code>M1-M4</code> runtime and minimal-online slices. The constants are defined now for documentation completeness and auditability, but full bounds-hardening enforcement is <strong>not</strong> part of <code>M4</code> exit criteria. Validation trigger: implementation of a Level 2+ cross-engine bridge/authority path that emits reconciliation corrections.</p>
 <h2 id="vulnerability-36-dualmodelassessment-trust-boundary"><a class="header" href="#vulnerability-36-dualmodelassessment-trust-boundary">Vulnerability 36: DualModelAssessment Trust Boundary</a></h2>
 <h3 id="the-problem-35"><a class="header" href="#the-problem-35">The Problem</a></h3>
 <p>The <code>DualModelAssessment</code> struct (V12 — Automation/Botting) combines behavioral analysis (real-time, relay-side) with statistical analysis (post-hoc, ranking server-side) into a single <code>combined</code> score that drives <code>AntiCheatAction</code>. But the design doesn’t specify:</p>
@@ -1401,6 +1401,15 @@ min_matches = 10
 <li><code>ShadowRestrict</code> lasts a maximum of 7 days before automatic escalation to either <code>Clear</code> (if subsequent matches are clean) or human review.</li>
 <li>Players under <code>FlagForReview</code> or <code>ShadowRestrict</code> can request their <code>DualModelAssessment</code> data via D053’s profile data export (GDPR compliance). The export includes the behavioral and statistical scores, the triggering match IDs, and the specific patterns detected.</li>
 <li>Community moderators (D037) review flagged cases. The anti-cheat system is a tool for moderators, not a replacement for them.</li>
+</ul>
+<p><strong>Community review / “Overwatch”-style guardrails (D052/D059 integration):</strong></p>
+<ul>
+<li>Community review verdicts (if the server enables reviewer queues) are <strong>advisory evidence inputs</strong>, not a sole basis for irreversible anti-cheat action.</li>
+<li>Reviewer queues should use anonymized case presentation where practical (case IDs first, identities revealed only if required by moderator escalation).</li>
+<li>Reviewer reliability should be tracked (calibration cases / agreement rates), and verdicts weighted accordingly — preventing low-quality or brigaded review pools from dominating outcomes.</li>
+<li>A single review batch must not directly produce permanent/global bans without moderator confirmation and stronger evidence (replay + telemetry + model outputs).</li>
+<li>Report volume alone must never map directly to <code>ShadowRestrict</code>; reports are susceptible to brigading and skill-gap false accusations. They raise review priority, not certainty.</li>
+<li>False-report patterns (mass-report brigading, retaliatory reporting rings) should feed community abuse detection and moderator review.</li>
 </ul>
 <p><strong>Phase:</strong> Trust boundary and threshold configuration ship with the anti-cheat system (Phase 5+). Appeal mechanism Phase 5+.</p>
 <h2 id="vulnerability-37-cncnetopenra-protocol-fingerprinting--ip-leakage"><a class="header" href="#vulnerability-37-cncnetopenra-protocol-fingerprinting--ip-leakage">Vulnerability 37: CnCNet/OpenRA Protocol Fingerprinting &amp; IP Leakage</a></h2>

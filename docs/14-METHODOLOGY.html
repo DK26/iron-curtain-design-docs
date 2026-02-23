@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-1e683dcc.js";
+            window.path_to_searchindex_js = "searchindex-3d47d740.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-a0d63c9c.js"></script>
+        <script src="toc-914f79aa.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -253,7 +253,7 @@
 <li>Research is concurrent with other work in later stages — new questions arise during implementation</li>
 <li>Research is a <strong>continuous discipline</strong>, not a phase that ends. Every new prior art study can challenge assumptions, confirm patterns, or reveal gaps. The project’s commit history shows active research throughout pre-development — not tapering early but intensifying as design maturity makes it easier to ask precise questions.</li>
 </ul>
-<p><strong>Current status (February 2026):</strong> The major architectural questions are answered across 14 design chapters, 56+ decisions, and 35+ research analyses. Research continues as a parallel track — recent examples include AI implementation surveys across 7+ codebases, Stratagus/Stargus engine analysis, and a transcript-backed RTS 2026 trend scan (<code>research/rts-2026-trend-scan.md</code>) used to filter “cool ideas” through IC’s philosophy before they become design work. Each produces cross-references and actionable refinements. The shift is from <em>exploratory</em> research (“what should we build?”) to <em>confirmatory</em> research (“does this prior art validate or challenge our approach?”).</p>
+<p><strong>Current status (February 2026):</strong> The major architectural questions are answered across 14 design chapters, 70+ indexed decisions, and 38+ research analyses. Research continues as a parallel track — recent examples include AI implementation surveys across 7+ codebases, Stratagus/Stargus engine analysis, a transcript-backed RTS 2026 trend scan (<code>research/rts-2026-trend-scan.md</code>), a BAR/Recoil source-study (<code>research/bar-recoil-source-study.md</code>) used to refine creator-workflow and scripting-boundary implementation priorities, and an open-source RTS communication/marker study (<code>research/open-source-rts-communication-markers-study.md</code>) used to harden D059 beacon/marker schema and <code>M7</code> communication UX priorities. Each produces cross-references and actionable refinements. The shift is from <em>exploratory</em> research (“what should we build?”) to <em>confirmatory</em> research (“does this prior art validate or challenge our approach?”).</p>
 <h3 id="trend-scan-checklist-videos-listicles-talks-showcase-demos"><a class="header" href="#trend-scan-checklist-videos-listicles-talks-showcase-demos">Trend Scan Checklist (Videos, Listicles, Talks, Showcase Demos)</a></h3>
 <p>Use this checklist when the source is a <strong>trend signal</strong> (YouTube roundup, trailer breakdown, conference talk, showcase demo) rather than a primary technical source. The goal is to extract inspiration <strong>without importing hype or scope creep</strong>.</p>
 <p><strong>1. Classify the source (signal quality)</strong></p>
@@ -418,6 +418,46 @@ Parallel tracks (can proceed alongside sim work):
   research (ongoing — netcode analysis, community feedback)
 </code></pre>
 <p><strong>Key insight:</strong> The simulation (<code>ic-sim</code>) is on almost every critical path. Getting it right early — and getting it testable in isolation — is the single most important scheduling decision.</p>
+<h3 id="execution-overlay-tracker-design-vs-code-status"><a class="header" href="#execution-overlay-tracker-design-vs-code-status">Execution Overlay Tracker (Design vs Code Status)</a></h3>
+<p>To keep long-horizon planning actionable, IC maintains a <strong>milestone/dependency overlay</strong> and <strong>project tracker</strong> alongside the canonical roadmap:</p>
+<ul>
+<li><a href="18-PROJECT-TRACKER.html"><code>18-PROJECT-TRACKER.md</code></a> — execution milestone snapshot + Dxxx-granular status tracking</li>
+<li><a href="tracking/milestone-dependency-map.html"><code>tracking/milestone-dependency-map.md</code></a> — detailed DAG and feature-cluster dependencies</li>
+</ul>
+<p>This overlay does <strong>not</strong> replace <a href="08-ROADMAP.html"><code>08-ROADMAP.md</code></a>. The roadmap stays canonical for phase timing and major deliverables; the tracker exists to answer “what blocks what?” and “what should we build next?”</p>
+<p>The tracker uses a <strong>split status model</strong>:</p>
+<ul>
+<li><strong>Design Status</strong> (spec maturity/integration/audit state)</li>
+<li><strong>Code Status</strong> (implementation progress)</li>
+</ul>
+<p>This avoids the common pre-implementation failure mode where a richly designed feature is mistakenly reported as “implemented.” Code status changes require evidence links (repo paths, tests, demos, ops notes), while design status can advance through documentation integration and audit work.</p>
+<p><strong>Tracker integration gate (mandatory for new features):</strong></p>
+<ul>
+<li>A feature is not “integrated into the plan” just because it appears in a decision doc or player-flow mock.</li>
+<li>In the same planning pass, it must be mapped into the execution overlay with:
+<ul>
+<li>milestone position (<code>M0–M11</code>)</li>
+<li>priority class (<code>P-Core</code> / <code>P-Differentiator</code> / <code>P-Creator</code> / <code>P-Scale</code> / <code>P-Optional</code>)</li>
+<li>dependency edges (<code>hard</code>, <code>soft</code>, <code>validation</code>, <code>policy</code>, <code>integration</code>) where relevant</li>
+<li>tracker representation (Dxxx row and/or feature cluster entry)</li>
+</ul>
+</li>
+<li>If this mapping is missing, the feature remains an idea/proposal, not scheduled work.</li>
+</ul>
+<p><strong>Future/deferral language gate (mandatory for canonical docs):</strong></p>
+<ul>
+<li>Future-facing design statements must be classified as one of: <code>PlannedDeferral</code>, <code>NorthStarVision</code>, <code>VersioningEvolution</code>, or an explicitly non-planning context (narrative example, historical quote, legal phrase).</li>
+<li>Ambiguous future wording (“could add later”, “future convenience”, “deferred” without placement/reason) is not acceptable in canonical docs.</li>
+<li>If a future-facing item is accepted work, map it in the execution overlay in the same planning pass (<code>18-PROJECT-TRACKER.md</code> + <code>tracking/milestone-dependency-map.md</code>).</li>
+<li>If the item cannot yet be placed, convert it into either:
+<ul>
+<li>a <strong>proposal-only</strong> note (not scheduled), or</li>
+<li>a <strong>Pending Decision (<code>Pxxx</code>)</strong> with the missing decision clearly stated.</li>
+</ul>
+</li>
+<li>Use <code>src/tracking/future-language-audit.md</code> for repo-wide audit/remediation tracking and <code>src/tracking/deferral-wording-patterns.md</code> for replacement wording examples.</li>
+<li>Quick audit inventory command (canonical docs): <code>rg -n "\\bfuture\\b|\\blater\\b|\\bdefer(?:red)?\\b|\\beventually\\b|\\bTBD\\b|\\bnice-to-have\\b" src README.md AGENTS.md --glob '!research/**'</code></li>
+</ul>
 <p><strong>Exit criteria:</strong></p>
 <ul>
 <li>Every task has its dependencies identified (hard, soft, test)</li>

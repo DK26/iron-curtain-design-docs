@@ -1,0 +1,622 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Future / Deferral Language Audit - Iron Curtain — Design Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Design docs for a Rust-native Red Alert RTS engine">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../css/general-2459343d.css">
+        <link rel="stylesheet" href="../css/chrome-ae938929.css">
+        <link rel="stylesheet" href="../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../searchindex-3d47d740.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc-914f79aa.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Iron Curtain — Design Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs/edit/main/src/tracking/future-language-audit.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="future--deferral-language-audit-canonical-docs"><a class="header" href="#future--deferral-language-audit-canonical-docs">Future / Deferral Language Audit (Canonical Docs)</a></h1>
+<p>Keywords: future wording audit, deferral discipline, planned deferral, north star claim, ambiguous future language, tracker mapping, proposal-only, pending decision</p>
+<blockquote>
+<p>This page is the <strong>repo-wide audit record</strong> for future/deferred wording in canonical docs. It exists to prevent vague prose from becoming unscheduled work.</p>
+</blockquote>
+<h2 id="purpose"><a class="header" href="#purpose">Purpose</a></h2>
+<ul>
+<li>Classify future/deferred wording in canonical docs (<code>src/**/*.md</code>, <code>README.md</code>, <code>AGENTS.md</code>)</li>
+<li>Separate acceptable uses (<code>NorthStarVision</code>, narrative examples, legal phrases, etc.) from ambiguous planning language</li>
+<li>Track remediation work (rewrite, overlay mapping, or pending decision)</li>
+<li>Provide a repeatable audit workflow so the problem does not reappear</li>
+</ul>
+<p>This page supports the cross-cutting process feature cluster:</p>
+<ul>
+<li><code>M0.OPS.FUTURE_DEFERRAL_DISCIPLINE_AND_AUDIT</code> (<code>P-Core</code>)</li>
+</ul>
+<h2 id="scope"><a class="header" href="#scope">Scope</a></h2>
+<h2 id="strict-canonical-scope"><a class="header" href="#strict-canonical-scope">Strict (canonical) scope</a></h2>
+<ul>
+<li><code>src/**/*.md</code></li>
+<li><code>README.md</code></li>
+<li><code>AGENTS.md</code></li>
+</ul>
+<h2 id="lighter-research-scope"><a class="header" href="#lighter-research-scope">Lighter (research) scope</a></h2>
+<ul>
+<li><code>research/**/*.md</code></li>
+<li>Research notes may use speculative language, but accepted takeaways must be mapped into the execution overlay if adopted.</li>
+</ul>
+<h2 id="out-of-scope"><a class="header" href="#out-of-scope">Out of scope</a></h2>
+<ul>
+<li>Non-doc code files</li>
+<li>Legal/SPDX fixed phrases unless misused as project commitments</li>
+<li>Historical quotations unless presented as project commitments</li>
+</ul>
+<h2 id="policy-summary-what-is-allowed-vs-not"><a class="header" href="#policy-summary-what-is-allowed-vs-not">Policy Summary (What Is Allowed vs Not)</a></h2>
+<ul>
+<li>The word <code>future</code> is <strong>not banned</strong>.</li>
+<li><strong>Ambiguous future intent is banned</strong> in canonical planning/spec docs.</li>
+<li>Every accepted future-facing commitment in canonical docs must be classified and (if it implies work) placed in the execution overlay.</li>
+</ul>
+<p>Accepted classes:</p>
+<ul>
+<li><code>PlannedDeferral</code></li>
+<li><code>NorthStarVision</code></li>
+<li><code>VersioningEvolution</code></li>
+<li><code>NarrativeExample</code></li>
+<li><code>HistoricalQuote</code></li>
+<li><code>LegalTechnicalFixedPhrase</code></li>
+<li><code>ResearchSpeculation</code> (research docs only)</li>
+</ul>
+<p>Forbidden class in canonical docs (after audit rewrite):</p>
+<ul>
+<li><code>Ambiguous</code></li>
+</ul>
+<h2 id="classification-model"><a class="header" href="#classification-model">Classification Model</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Class</th><th>Canonical Docs Allowed?</th><th>Requires Tracker Placement?</th><th>Notes</th></tr>
+</thead>
+<tbody>
+<tr><td><code>PlannedDeferral</code></td><td>Yes</td><td>Yes (or Dxxx row note)</td><td>Must include milestone, priority, deps, reason, scope boundary, trigger</td></tr>
+<tr><td><code>NorthStarVision</code></td><td>Yes</td><td>Usually (milestone prereqs + caveats)</td><td>Must be clearly labeled non-promise, especially for multiplayer fairness claims</td></tr>
+<tr><td><code>VersioningEvolution</code></td><td>Yes</td><td>Usually no new cluster</td><td>Must define current version + migration/version dispatch path</td></tr>
+<tr><td><code>NarrativeExample</code></td><td>Yes</td><td>No</td><td>Story/example chronology only</td></tr>
+<tr><td><code>HistoricalQuote</code></td><td>Yes</td><td>No</td><td>Quote context only</td></tr>
+<tr><td><code>LegalTechnicalFixedPhrase</code></td><td>Yes</td><td>No</td><td>Example: <code>GPL-3.0-or-later</code></td></tr>
+<tr><td><code>ResearchSpeculation</code></td><td>In <code>research/</code> only</td><td>Only if adopted</td><td>Must not silently become canonical commitment</td></tr>
+<tr><td><code>Ambiguous</code></td><td>No (target state)</td><td>N/A</td><td>Rewrite into a valid class or mark proposal-only / <code>Pxxx</code></td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="status-values-audit-workflow"><a class="header" href="#status-values-audit-workflow">Status Values (Audit Workflow)</a></h2>
+<ul>
+<li><code>resolved</code> — rewritten/classified and, if needed, mapped into overlay</li>
+<li><code>exempt</code> — valid non-planning usage (historical/narrative/legal/etc.)</li>
+<li><code>needs rewrite</code> — ambiguous wording in canonical docs</li>
+<li><code>needs tracker placement</code> — wording is specific enough to be accepted work, but overlay mapping is missing</li>
+<li><code>needs pending decision</code> — commitment depends on unresolved policy/architecture choice and should become <code>Pxxx</code></li>
+</ul>
+<h2 id="audit-method-repeatable"><a class="header" href="#audit-method-repeatable">Audit Method (Repeatable)</a></h2>
+<h3 id="baseline-grep-scan-canonical-docs"><a class="header" href="#baseline-grep-scan-canonical-docs">Baseline grep scan (canonical docs)</a></h3>
+<pre><code class="language-bash">rg -n "\bfuture\b|\blater\b|\bdefer(?:red)?\b|\beventually\b|\bTBD\b|\bnice-to-have\b" \
+  src README.md AGENTS.md --glob '!research/**'
+</code></pre>
+<h3 id="ambiguity-focused-triage-scan-canonical-docs"><a class="header" href="#ambiguity-focused-triage-scan-canonical-docs">Ambiguity-focused triage scan (canonical docs)</a></h3>
+<pre><code class="language-bash">rg -n "future convenience|later maybe|could add later|might add later|\beventually\b|\bnice-to-have\b|\bTBD\b" \
+  src README.md AGENTS.md --glob '!research/**'
+</code></pre>
+<h3 id="notes"><a class="header" href="#notes">Notes</a></h3>
+<ul>
+<li>Grep is an inventory tool, not the final classifier.</li>
+<li><code>eventually</code>, <code>later</code>, and <code>future</code> frequently appear in valid historical or narrative contexts.</li>
+<li>Use line-level classification only where the wording implies project planning intent.</li>
+</ul>
+<h2 id="baseline-inventory-canonical-docs"><a class="header" href="#baseline-inventory-canonical-docs">Baseline Inventory (Canonical Docs)</a></h2>
+<h3 id="baseline-snapshot"><a class="header" href="#baseline-snapshot">Baseline snapshot</a></h3>
+<ul>
+<li><strong>Inventory count:</strong> <code>292</code> hits (<code>future/later/deferred/eventually/TBD/nice-to-have</code>)</li>
+<li><strong>Source set:</strong> canonical docs (<code>src/**/*.md</code>) + <code>README.md</code> + <code>AGENTS.md</code></li>
+<li><strong>Purpose:</strong> establish remediation scope for <code>M0.OPS.FUTURE_DEFERRAL_DISCIPLINE_AND_AUDIT</code></li>
+</ul>
+<p>This inventory is a moving count. It will change as docs grow and as ambiguous wording is rewritten.</p>
+<h3 id="highest-volume-files-baseline-triage-priority"><a class="header" href="#highest-volume-files-baseline-triage-priority">Highest-volume files (baseline triage priority)</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Count</th><th>File</th><th>Audit Priority</th><th>Why</th></tr>
+</thead>
+<tbody>
+<tr><td>41</td><td><code>src/decisions/09d-gameplay.md</code></td><td><code>M5-M11</code> high</td><td>Many optional modes/extensions and phase-gated gameplay systems</td></tr>
+<tr><td>30</td><td><code>src/decisions/09f-tools.md</code></td><td><code>M8-M10</code> high</td><td>Tooling/SDK phasing, optional editor features, deferred integrations</td></tr>
+<tr><td>28</td><td><code>src/decisions/09e-community.md</code></td><td><code>M7-M11</code> high</td><td>Community/platform ops, governance, optional services</td></tr>
+<tr><td>21</td><td><code>src/decisions/09g-interaction.md</code></td><td><code>M3-M10</code> medium/high</td><td>Interaction/UX phasing, optional advanced UX</td></tr>
+<tr><td>16</td><td><code>src/03-NETCODE.md</code></td><td><code>M1-M7</code> high</td><td>Core architecture/trust claims require precise wording</td></tr>
+<tr><td>14</td><td><code>src/02-ARCHITECTURE.md</code></td><td><code>M1-M4</code> high</td><td>Core architecture and versioning/evolution wording</td></tr>
+<tr><td>12</td><td><code>src/tracking/milestone-dependency-map.md</code></td><td><code>M0</code> high</td><td>Planning overlay must be the cleanest wording</td></tr>
+<tr><td>12</td><td><code>src/18-PROJECT-TRACKER.md</code></td><td><code>M0</code> high</td><td>Tracker maintenance rules and audit status page</td></tr>
+<tr><td>10</td><td><code>src/17-PLAYER-FLOW.md</code></td><td><code>M3-M10</code> medium</td><td>Mixes mock UI narrative and planned features</td></tr>
+<tr><td>9</td><td><code>README.md</code></td><td><code>M0</code> high</td><td>Public-facing claims must use North Star labels and trust caveats</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="audit-status-current"><a class="header" href="#audit-status-current">Audit Status (Current)</a></h2>
+<h3 id="phase-a--policy-lock"><a class="header" href="#phase-a--policy-lock">Phase A — Policy lock</a></h3>
+<ul>
+<li><code>AGENTS.md</code>: <strong>resolved</strong> (Future / Deferral Language Discipline added)</li>
+<li><code>src/14-METHODOLOGY.md</code>: <strong>resolved</strong> (classification + rewrite rules added)</li>
+<li><code>src/18-PROJECT-TRACKER.md</code>: <strong>resolved</strong> (audit status + maintenance rules + intake checklist)</li>
+<li><code>src/tracking/milestone-dependency-map.md</code>: <strong>resolved</strong> (cluster row + mapping rules + deferred-feature placement examples)</li>
+<li><code>src/decisions/DECISION-CAPSULE-TEMPLATE.md</code>: <strong>resolved</strong> (deferral fields + wording rule)</li>
+</ul>
+<h3 id="phase-b--inventory--classification-audit"><a class="header" href="#phase-b--inventory--classification-audit">Phase B — Inventory &amp; classification audit</a></h3>
+<ul>
+<li><strong>Baseline inventory:</strong> complete (canonical docs)</li>
+<li><strong>Per-hit full classification:</strong> in progress (this page seeds the queue and examples)</li>
+<li><strong>Canonical first-pass focus:</strong> <code>M0</code> docs, then <code>M1-M4</code> docs</li>
+</ul>
+<h3 id="phase-c2--m1-m4-targeted-rewriteclassification-pass-baseline"><a class="header" href="#phase-c2--m1-m4-targeted-rewriteclassification-pass-baseline">Phase C2 — <code>M1-M4</code> targeted rewrite/classification pass (baseline)</a></h3>
+<ul>
+<li><strong>Status:</strong> baseline complete for planning-intent wording; residual hits are classified as exempt/versioning/technical-semantics references and can be audited incrementally</li>
+<li><strong>Resolved in this pass:</strong>
+<ul>
+<li><code>src/05-FORMATS.md</code> ambiguous <code>nice-to-have</code> and versioning “future” wording rewritten as explicit <code>PlannedDeferral</code> / <code>VersioningEvolution</code></li>
+<li><code>src/06-SECURITY.md</code> cross-engine bounds-hardening line rewritten as explicit <code>PlannedDeferral</code> tied to <code>M7</code></li>
+</ul>
+</li>
+<li><code>src/03-NETCODE.md</code> bridge/alternative-netcode wording tightened to explicit deferred/optional scope with <code>M4</code> boundary and trust/certification caveats</li>
+<li><code>src/02-ARCHITECTURE.md</code> example “future” wording tightened in fog/pathfinder/browser mitigation references (architectural headroom remains, ambiguity reduced)</li>
+<li><code>src/17-PLAYER-FLOW.md</code> D070/D053 later-phase wording tied to explicit <code>M10</code>/<code>M11</code> phases</li>
+<li><strong>Residual C2 hits (classified, no rewrite needed by default):</strong>
+<ul>
+<li><code>src/17-PLAYER-FLOW.md</code> setup copy (<code>change later in Settings</code>) -&gt; <code>NarrativeExample</code> / UI copy, not planning commitments</li>
+<li><code>src/17-PLAYER-FLOW.md</code> “later Westwood Online/CnCNet” -&gt; <code>HistoricalQuote</code> / historical product chronology</li>
+<li><code>src/04-MODDING.md</code> OpenRA tier analysis <code>eventually needs code</code> wording -&gt; <code>NarrativeExample</code> (observational product-analysis statement, not IC roadmap commitment)</li>
+<li><code>src/04-MODDING.md</code> “later in load order” -&gt; technical semantics, not planning</li>
+<li><code>src/04-MODDING.md</code> “future alternative” Lua VM wording -&gt; <code>VersioningEvolution</code> / architectural headroom (stable API boundary is the point)</li>
+<li><code>src/04-MODDING.md</code> pathfinding <code>deferred requests</code> wording -&gt; technical runtime semantics, not planning</li>
+<li><code>src/03-NETCODE.md</code> “ticks into the future”, “eventual heartbeat timeout”, “later packets” -&gt; temporal/network mechanics wording, not planning</li>
+<li><code>src/02-ARCHITECTURE.md</code> many “future/later” mentions in trait-capability tables/examples and 3D-title chronology -&gt; architectural headroom examples / scope statements, not scheduled commitments</li>
+</ul>
+</li>
+<li><strong>Still pending in C2 scope:</strong> only newly discovered ambiguous planning statements if future edits add them; otherwise C2 can be treated as closed for the current baseline</li>
+</ul>
+<h3 id="planned-deferral-for-the-remaining-rewrite-pass-explicit"><a class="header" href="#planned-deferral-for-the-remaining-rewrite-pass-explicit">Planned deferral for the remaining rewrite pass (explicit)</a></h3>
+<ul>
+<li><strong>Deferred to:</strong> <code>M0</code> maintenance work under <code>M0.OPS.FUTURE_DEFERRAL_DISCIPLINE_AND_AUDIT</code></li>
+<li><strong>Priority:</strong> <code>P-Core</code></li>
+<li><strong>Depends on:</strong> tracker overlay (<code>src/18-PROJECT-TRACKER.md</code>), dependency map (<code>src/tracking/milestone-dependency-map.md</code>), this audit page, wording patterns page</li>
+<li><strong>Reason:</strong> repo-wide rewrite is cross-cutting and should proceed in prioritized batches instead of ad hoc edits</li>
+<li><strong>Not in current scope:</strong> rewriting every one of the <code>292</code> baseline hits in a single patch</li>
+<li><strong>Validation trigger:</strong> canonical-doc batches (<code>M0</code>, then <code>M1-M4</code>, then <code>M5-M11</code>) audited with ambiguous hits rewritten or reclassified</li>
+</ul>
+<h3 id="phase-c3--m5-m11-targeted-rewriteclassification-pass-baseline"><a class="header" href="#phase-c3--m5-m11-targeted-rewriteclassification-pass-baseline">Phase C3 — <code>M5-M11</code> targeted rewrite/classification pass (baseline)</a></h3>
+<ul>
+<li><strong>Status:</strong> baseline complete for planning-intent wording; residual hits are classified as North Star, versioning evolution, narrative/historical examples, or technical/runtime semantics</li>
+<li><strong>Resolved in this pass (explicit rewrites):</strong>
+<ul>
+<li><code>src/decisions/09d-gameplay.md</code> D042 manual AI personality editor “future nice-to-have” -&gt; explicit <code>M10-M11</code> planned optional deferral with dependencies and out-of-scope boundary</li>
+<li><code>src/decisions/09e-community.md</code> D031/D034 optional OTEL and PostgreSQL scaling wording -&gt; explicit <code>M7</code>/<code>M11</code> planned deferrals (<code>P-Scale</code>)</li>
+<li><code>src/decisions/09e-community.md</code> D035 monetization schema/comments + creator program paid-tier wording -&gt; explicit deferred optional <code>M11+</code> policy path</li>
+<li><code>src/decisions/09f-tools.md</code> D016 generative media video/cutscene wording -&gt; explicit deferred optional <code>M11</code> path</li>
+<li><code>src/decisions/09g-interaction.md</code> D058 RCON and voice-feature deferrals -&gt; explicit <code>M7</code> / <code>M11</code> planned deferrals with scope boundaries</li>
+<li><code>src/07-CROSS-ENGINE.md</code> cross-engine correction/certification/host-mode wording -&gt; explicit deferred <code>M7+</code>/<code>M11</code> certification decisions and North Star guardrails</li>
+<li><code>src/decisions/09b-networking.md</code> D006/D011/D055 “future/later” netcode/ranking wording -&gt; explicit deferred milestone phrasing</li>
+<li><code>src/decisions/09c-modding.md</code> plugin capability wording -&gt; explicit separately approved deferred capability path</li>
+<li><code>README.md</code> cross-engine interop and contributor reward wording -&gt; explicit deferred milestone framing (<code>M7+</code>/<code>M11</code>) while preserving marketing readability</li>
+</ul>
+</li>
+<li><strong>Residual C3 hits (classified, no rewrite needed by default):</strong>
+<ul>
+<li><code>README.md</code> author biography/history and README navigation prose (<code>later</code>, <code>eventually</code>) -&gt; <code>HistoricalQuote</code> / <code>NarrativeExample</code></li>
+<li><code>src/07-CROSS-ENGINE.md</code> replay drift wording (<code>desync eventually</code>) -&gt; technical behavior (<code>NarrativeExample</code>)</li>
+<li><code>src/decisions/09c-modding.md</code> future genres/workshop consumer examples, load-order semantics, migration story examples, reversible UI copy -&gt; <code>NarrativeExample</code> / <code>NorthStarVision</code> / <code>VersioningEvolution</code></li>
+<li><code>src/decisions/09d-gameplay.md</code> architectural-headroom rationale, historical sequencing text, versioning examples, D070 narrative examples -&gt; <code>NarrativeExample</code> / <code>VersioningEvolution</code> / <code>HistoricalQuote</code></li>
+<li><code>src/decisions/09e-community.md</code> UI copy (“Remind me later”), lifecycle semantics, historical platform examples, and maintenance reminders -&gt; <code>NarrativeExample</code> / <code>HistoricalQuote</code></li>
+<li><code>src/decisions/09f-tools.md</code> narrative examples/story chronology, migration/version comments, historical references, and deterministic replay timing descriptions -&gt; <code>NarrativeExample</code> / <code>VersioningEvolution</code></li>
+<li><code>src/decisions/09g-interaction.md</code> competitive-integrity guidance for contributors, historical examples, platform table labels, UI reversibility copy -&gt; <code>NarrativeExample</code> / <code>HistoricalQuote</code> / <code>VersioningEvolution</code></li>
+</ul>
+</li>
+<li><strong>Still pending in C3 scope:</strong> only newly introduced ambiguous planning statements in future edits, plus individually reclassified edge cases discovered during later doc revisions</li>
+</ul>
+<h2 id="initial-classification-queue-seed-batch"><a class="header" href="#initial-classification-queue-seed-batch">Initial Classification Queue (Seed Batch)</a></h2>
+<p>This table records concrete examples to anchor the classification rules and prevent repeat ambiguity.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Ref</th><th>Snippet (short)</th><th>Class</th><th>Status</th><th>Required Action</th></tr>
+</thead>
+<tbody>
+<tr><td><code>AGENTS.md:306</code></td><td>banned phrase examples (<code>future convenience</code>, etc.)</td><td><code>NarrativeExample</code> (policy example)</td><td><code>exempt</code></td><td>None</td></tr>
+<tr><td><code>src/14-METHODOLOGY.md:264</code></td><td>“Ambiguous future wording…”</td><td><code>NarrativeExample</code> (policy text)</td><td><code>exempt</code></td><td>None</td></tr>
+<tr><td><code>src/18-PROJECT-TRACKER.md:229</code></td><td>baseline inventory mentions <code>future/...</code> tokens</td><td><code>NarrativeExample</code> (audit inventory)</td><td><code>exempt</code></td><td>None</td></tr>
+<tr><td><code>README.md</code> long-term mixed-client 2D vs 3D claim</td><td><code>NorthStarVision</code></td><td><code>resolved</code></td><td>Keep non-promise wording + trust caveats + milestone prerequisites</td><td></td></tr>
+<tr><td><code>src/07-CROSS-ENGINE.md</code> visual-style parity vision</td><td><code>NorthStarVision</code></td><td><code>resolved</code></td><td>Keep host-mode trust labels + fairness scope explicit</td><td></td></tr>
+<tr><td><code>src/decisions/09d-gameplay.md:1589</code></td><td>“future nice-to-have” (manual AI personality editor)</td><td><code>PlannedDeferral</code></td><td><code>resolved</code></td><td>Rewritten to explicit <code>M10-M11</code> optional deferral with D042/D038/D053 dependencies and D042 scope boundary</td></tr>
+<tr><td><code>src/08-ROADMAP.md:297</code></td><td>“Tera templating … (nice-to-have)”</td><td><code>PlannedDeferral</code> (candidate)</td><td><code>needs rewrite</code></td><td>Add explicit phase/milestone/optionality wording (or cross-ref existing D014 phasing)</td></tr>
+<tr><td><code>src/05-FORMATS.md:909/956/1141</code></td><td>versioning “future” codec/compression/signature wording</td><td><code>VersioningEvolution</code></td><td><code>resolved</code></td><td>Rewritten as reserved/versioned dispatch language with explicit current defaults</td></tr>
+<tr><td><code>src/05-FORMATS.md:1342</code></td><td><code>.mix</code> write support “Phase 6a (nice-to-have)”</td><td><code>PlannedDeferral</code></td><td><code>resolved</code></td><td>Rewritten as explicit <code>M9</code>/Phase 6a optional deferral + reason + scope boundary + trigger</td></tr>
+<tr><td><code>src/06-SECURITY.md:1349</code></td><td>bounds hardening ships with cross-engine play “(future)”</td><td><code>PlannedDeferral</code></td><td><code>resolved</code></td><td>Rewritten as explicit <code>M7</code>/<code>M7.NET.CROSS_ENGINE_BRIDGE_AND_TRUST</code> deferral with <code>M4</code> boundary and trigger</td></tr>
+<tr><td><code>src/03-NETCODE.md:870/912/916/918/1038</code></td><td>bridge/alternate netcode “future” wording in <code>M1-M4</code>-critical netcode doc</td><td><code>PlannedDeferral</code> / <code>NorthStarVision</code> (bounded examples)</td><td><code>resolved</code></td><td>Rewritten to explicit deferred/optional scope, <code>M4</code> boundary, and trust/certification caveats</td></tr>
+<tr><td><code>src/03-NETCODE.md:5/875/922/916/968/1038</code></td><td>top-level and bridge-netcode trait headroom “later” wording</td><td><code>PlannedDeferral</code></td><td><code>resolved</code></td><td>Rewritten to explicit deferred-milestone / separate-decision wording with <code>M4</code> boundary and tracker-placement requirement</td></tr>
+<tr><td><code>src/02-ARCHITECTURE.md:292/683/1528</code></td><td>architectural “future” examples implying planned work</td><td><code>NarrativeExample</code> / <code>PlannedDeferral</code> (hybrid)</td><td><code>resolved</code></td><td>Reworded to mark deferred/optional scope and reduce planning ambiguity while preserving trait-headroom examples</td></tr>
+<tr><td><code>src/17-PLAYER-FLOW.md:841/1611</code></td><td>“future/later phase” UI/planning wording for D070 + contribution rewards</td><td><code>PlannedDeferral</code></td><td><code>resolved</code></td><td>Tied to explicit D070 expansion phrasing and <code>M10</code>/<code>M11</code> milestone references</td></tr>
+<tr><td><code>src/17-PLAYER-FLOW.md:127/137/140/150/269/277/322</code></td><td>“change later in Settings” wizard copy</td><td><code>NarrativeExample</code> (UI wording)</td><td><code>exempt</code></td><td>User-facing reversibility copy, not implementation-planning text</td></tr>
+<tr><td><code>src/17-PLAYER-FLOW.md:2263</code></td><td>“later Westwood Online/CnCNet” in historical RA menu description</td><td><code>HistoricalQuote</code> / <code>NarrativeExample</code></td><td><code>exempt</code></td><td>Historical chronology reference</td></tr>
+<tr><td><code>src/04-MODDING.md:24</code></td><td>OpenRA mod analysis “eventually needs code”</td><td><code>NarrativeExample</code> (observational analysis)</td><td><code>exempt</code></td><td>Describes observed mod complexity patterns; not an IC roadmap commitment</td></tr>
+<tr><td><code>src/04-MODDING.md:397/529/1562</code></td><td>“later in load order” / “future alternative” / “future generation”</td><td><code>NarrativeExample</code> / <code>VersioningEvolution</code></td><td><code>exempt</code></td><td>Technical semantics, VM headroom, and D057 generation context — not unplaced project commitments</td></tr>
+<tr><td><code>src/04-MODDING.md:890/1303</code></td><td><code>PathResult::Deferred</code> / deferred-request pathfinding wording</td><td><code>NarrativeExample</code> (technical runtime behavior)</td><td><code>exempt</code></td><td>Deterministic pathfinding request semantics, not planning deferral language</td></tr>
+<tr><td><code>src/03-NETCODE.md:276/345/426/708/1042</code></td><td>“future/later/eventually” in timing/mechanics explanations</td><td><code>NarrativeExample</code> (technical behavior)</td><td><code>exempt</code></td><td>Describes packet/order timing and buffering semantics, not roadmap commitments</td></tr>
+<tr><td><code>src/02-ARCHITECTURE.md:563/668/874/1281/1768/1799/2156/2161/2163/2192/2227</code></td><td>architectural headroom tables, historical timeline, scope chronology, and examples</td><td><code>NarrativeExample</code> / <code>HistoricalQuote</code> / <code>VersioningEvolution</code></td><td><code>exempt</code></td><td>Architectural examples and historical/scope context; no unscheduled feature commitment by themselves</td></tr>
+<tr><td><code>src/decisions/09e-community.md:768/1758/1799/1862-1868/2087</code></td><td>OTEL and storage/monetization optionality (“nice-to-have”, “future optimization”, “future paid”)</td><td><code>PlannedDeferral</code> / <code>VersioningEvolution</code></td><td><code>resolved</code></td><td>Rewritten to explicit <code>M7</code>/<code>M11</code> deferrals and deferred-schema/policy wording with launch-scope boundaries</td></tr>
+<tr><td><code>src/decisions/09f-tools.md:721/736/823/866</code></td><td>AI media pipeline “eventually/future” video-cutscene generation</td><td><code>PlannedDeferral</code></td><td><code>resolved</code></td><td>Rewritten to explicit deferred optional <code>M11</code> media-layer path (D016/D047/D040 context retained)</td></tr>
+<tr><td><code>src/decisions/09g-interaction.md:1204/2954-2956/4517/4757/4773</code></td><td>RCON/voice feature/install-platform “future/deferred” wording</td><td><code>PlannedDeferral</code></td><td><code>resolved</code></td><td>Rewritten to explicit <code>M7</code>/<code>M11</code> deferrals and deferred platform/shared-flow labels</td></tr>
+<tr><td><code>src/07-CROSS-ENGINE.md:114/132/139/187/323/384/592</code></td><td>cross-engine certification/correction/vision “future/later” wording</td><td><code>PlannedDeferral</code> / <code>NorthStarVision</code></td><td><code>resolved</code></td><td>Rewritten to explicit <code>M7+</code>/<code>M11</code> certification-decision gating and deferred-milestone wording</td></tr>
+<tr><td><code>src/decisions/09b-networking.md:9/17/19/70/85/2264</code></td><td>networking/ranking “future/later” capability and deferred ranking enhancement wording</td><td><code>PlannedDeferral</code></td><td><code>resolved</code></td><td>Rewritten to explicit deferred milestone / separate-decision language (<code>M7+</code>/<code>M11</code>)</td></tr>
+<tr><td><code>src/decisions/09c-modding.md:925</code></td><td>editor plugin “future capability” wording</td><td><code>PlannedDeferral</code></td><td><code>resolved</code></td><td>Rewritten to separately approved deferred capability + execution-overlay placement wording</td></tr>
+<tr><td><code>README.md:27/37/90/149/213</code></td><td>project-facing “later” module/interops/rewards wording</td><td><code>NorthStarVision</code> / <code>PlannedDeferral</code></td><td><code>resolved</code></td><td>Rewritten to explicit deferred milestone framing while preserving marketing readability</td></tr>
+<tr><td><code>README.md:71/246/248/321</code></td><td>README prose/history “later/eventually” wording</td><td><code>NarrativeExample</code> / <code>HistoricalQuote</code></td><td><code>exempt</code></td><td>README structure note + author story + historical quote context; not project commitments</td></tr>
+<tr><td><code>src/07-CROSS-ENGINE.md:53</code></td><td>replay drift “desync eventually” wording</td><td><code>NarrativeExample</code> (technical behavior)</td><td><code>exempt</code></td><td>Describes expected replay divergence, not roadmap commitment</td></tr>
+<tr><td><code>src/decisions/09c-modding.md:204/303/309/450/970/1190/1257</code></td><td>future-genre examples, load-order semantics, migration story, UI/CLI “later” copy</td><td><code>NarrativeExample</code> / <code>NorthStarVision</code> / <code>VersioningEvolution</code></td><td><code>exempt</code></td><td>Product examples, technical semantics, and user-copy reversibility — no unscheduled commitment by themselves</td></tr>
+<tr><td><code>src/decisions/09d-gameplay.md:16/17/341/532/554/877/881/1053/1059/1092/1340/1343/1588/1698/2323/2766/3091/3166-3167/3209/3217/3241/3334/3410/3429/3462-3463/3496/3568/3572/3574/3773/3775/3790/3818/3918/4196/4234/4236</code></td><td>architectural headroom, versioning, D070 narrative examples, and explicit deferrals already scoped in-context</td><td><code>NarrativeExample</code> / <code>VersioningEvolution</code> / <code>PlannedDeferral</code></td><td><code>exempt</code></td><td>Broad set includes accepted architectural headroom language, explicit D070 optional/deferred scope, and historical/example wording; no hidden planning ambiguity after C3 baseline pass</td></tr>
+<tr><td><code>src/decisions/09e-community.md:279/338/401/628/2067/2193/2199/2280/2315/2634/2837/2904/2921/2926/3633/3657/3999/4022/4188/4193/4367</code></td><td>UI reminders, lifecycle semantics, historical examples, platform table labels, and explicit optional/deferred backup/customization scope</td><td><code>NarrativeExample</code> / <code>HistoricalQuote</code> / <code>VersioningEvolution</code> / <code>PlannedDeferral</code></td><td><code>exempt</code></td><td>User-copy semantics, examples, and already explicit optional/deferred features; no additional rewrite needed for baseline C3</td></tr>
+<tr><td><code>src/decisions/09f-tools.md:147/673/1235/1533/1580/1859/2052/2060/2074/2330/2377/2891/3390/3422/3679/3786/3807/4042/4056/4143/4226/4243/4388/5010/5120/5397</code></td><td>narrative examples, versioning comments, explicit deferred scope, and technical timing wording</td><td><code>NarrativeExample</code> / <code>VersioningEvolution</code> / <code>PlannedDeferral</code></td><td><code>exempt</code></td><td>Includes story examples, migration/version comments, explicit D070/D016/D040 deferrals, and technical timing descriptions — baseline ambiguity resolved</td></tr>
+<tr><td><code>src/decisions/09g-interaction.md:629/649/700/759/1163-1164/1254/1662/1935/2468/2814/3846/4546/4670/4864</code></td><td>contributor guidance, history examples, platform labels, and reversible UI copy</td><td><code>NarrativeExample</code> / <code>HistoricalQuote</code> / <code>VersioningEvolution</code></td><td><code>exempt</code></td><td>Competitive-integrity guidance and UX copy use “future/later” descriptively, not as unplaced commitments</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="exempt-patterns-allowed-do-not-fix-into-planning"><a class="header" href="#exempt-patterns-allowed-do-not-fix-into-planning">Exempt Patterns (Allowed, Do Not “Fix” Into Planning)</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Pattern</th><th>Example</th><th>Class</th><th>Why Exempt</th></tr>
+</thead>
+<tbody>
+<tr><td>Historical quote / biography timeline</td><td><code>README.md:246</code> (“eventually found Rust”)</td><td><code>HistoricalQuote</code> / <code>NarrativeExample</code></td><td>Not a project plan statement</td></tr>
+<tr><td>Historical quote in philosophy</td><td><code>src/13-PHILOSOPHY.md:405</code></td><td><code>HistoricalQuote</code></td><td>Quoted source context</td></tr>
+<tr><td>Story/example chronology</td><td>“future missions” in campaign examples</td><td><code>NarrativeExample</code></td><td>Narrative, not implementation planning</td></tr>
+<tr><td>Legal fixed phrase</td><td><code>GPL-3.0-or-later</code></td><td><code>LegalTechnicalFixedPhrase</code></td><td>Standard identifier, not planning language</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="prioritized-rewrite-batches-canonical-docs"><a class="header" href="#prioritized-rewrite-batches-canonical-docs">Prioritized Rewrite Batches (Canonical Docs)</a></h2>
+<h2 id="batch-c1--m0-planning-docs-first"><a class="header" href="#batch-c1--m0-planning-docs-first">Batch C1 — M0 planning docs (first)</a></h2>
+<ul>
+<li><code>AGENTS.md</code> — policy text complete; maintain as the strict gate</li>
+<li><code>src/18-PROJECT-TRACKER.md</code> — policy + audit status complete; keep inventory current</li>
+<li><code>src/tracking/milestone-dependency-map.md</code> — rules + examples complete; keep new clusters mapped</li>
+<li><code>src/14-METHODOLOGY.md</code> — process rule complete; keep grep snippet current</li>
+<li><code>src/09-DECISIONS.md</code> — scan for ambiguous deferral wording in summaries/index notes</li>
+</ul>
+<h2 id="batch-c2--m1-m4-milestone-critical-docs"><a class="header" href="#batch-c2--m1-m4-milestone-critical-docs">Batch C2 — M1-M4 milestone-critical docs</a></h2>
+<ul>
+<li><code>src/02-ARCHITECTURE.md</code></li>
+<li><code>src/03-NETCODE.md</code></li>
+<li><code>src/04-MODDING.md</code></li>
+<li><code>src/05-FORMATS.md</code></li>
+<li><code>src/06-SECURITY.md</code></li>
+<li><code>src/17-PLAYER-FLOW.md</code> (milestone-critical commitments only)</li>
+</ul>
+<h2 id="batch-c3--m5-m11-canonical-docs"><a class="header" href="#batch-c3--m5-m11-canonical-docs">Batch C3 — M5-M11 canonical docs</a></h2>
+<ul>
+<li><code>src/decisions/09b-networking.md</code></li>
+<li><code>src/decisions/09c-modding.md</code></li>
+<li><code>src/decisions/09d-gameplay.md</code></li>
+<li><code>src/decisions/09e-community.md</code></li>
+<li><code>src/decisions/09f-tools.md</code></li>
+<li><code>src/decisions/09g-interaction.md</code></li>
+<li><code>src/07-CROSS-ENGINE.md</code></li>
+<li><code>README.md</code> (North Star wording review, not feature deletion)</li>
+</ul>
+<h2 id="remediation-workflow-per-hit"><a class="header" href="#remediation-workflow-per-hit">Remediation Workflow (Per Hit)</a></h2>
+<ol>
+<li><strong>Classify</strong> the reference (<code>PlannedDeferral</code>, <code>NorthStarVision</code>, etc.).</li>
+<li>If <code>PlannedDeferral</code>, ensure wording includes:
+<ul>
+<li>milestone</li>
+<li>priority</li>
+<li>dependency placement (or direct cluster/Dxxx refs)</li>
+<li>reason</li>
+<li>out-of-scope boundary</li>
+<li>validation trigger</li>
+</ul>
+</li>
+<li>If accepted work is implied, <strong>map it in the execution overlay</strong> (<code>18-PROJECT-TRACKER.md</code> and/or <code>tracking/milestone-dependency-map.md</code>) in the same change.</li>
+<li>If it cannot be placed yet, rewrite as:
+<ul>
+<li><strong>proposal-only</strong> (not scheduled), or</li>
+<li><strong>Pending Decision (<code>Pxxx</code>)</strong></li>
+</ul>
+</li>
+<li>Update this audit page status (<code>resolved</code>, <code>exempt</code>, etc.) for the touched item/batch.</li>
+</ol>
+<h2 id="doc-process-interface-sketches-planning-apis"><a class="header" href="#doc-process-interface-sketches-planning-apis">Doc-Process Interface Sketches (Planning APIs)</a></h2>
+<p>These are planning-system interfaces for consistent audit records and wording review, not runtime code APIs.</p>
+<h3 id="futurereferencerecord"><a class="header" href="#futurereferencerecord"><code>FutureReferenceRecord</code></a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub enum FutureReferenceClass {
+    PlannedDeferral,
+    NorthStarVision,
+    VersioningEvolution,
+    NarrativeExample,
+    HistoricalQuote,
+    LegalTechnicalFixedPhrase,
+    ResearchSpeculation,
+    Ambiguous, // forbidden in canonical docs after audit
+}
+
+pub struct FutureReferenceRecord {
+    pub file: String,
+    pub line: u32,
+    pub snippet: String,
+    pub class: FutureReferenceClass,
+    pub canonical_doc: bool,
+    pub requires_rewrite: bool,
+    pub milestone: Option&lt;String&gt;,   // M0..M11 for PlannedDeferral/NorthStar as applicable
+    pub priority: Option&lt;String&gt;,    // P-Core ... P-Optional
+    pub dependencies: Vec&lt;String&gt;,   // cluster IDs / Dxxx / Pxxx
+    pub reason: Option&lt;String&gt;,
+    pub non_goal_boundary: Option&lt;String&gt;,
+    pub validation_trigger: Option&lt;String&gt;,
+    pub tracker_refs: Vec&lt;String&gt;,
+    pub status: String,              // resolved / exempt / needs_rewrite / needs_mapping / needs_P_decision
+}
+<span class="boring">}</span></code></pre>
+<h3 id="deferralwordingrule"><a class="header" href="#deferralwordingrule"><code>DeferralWordingRule</code></a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct DeferralWordingRule {
+    pub banned_pattern: String,
+    pub replacement_requirements: Vec&lt;String&gt;, // milestone, priority, deps, reason, trigger
+    pub examples: Vec&lt;String&gt;,
+}
+<span class="boring">}</span></code></pre>
+<h3 id="northstarclaimrecord"><a class="header" href="#northstarclaimrecord"><code>NorthStarClaimRecord</code></a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct NorthStarClaimRecord {
+    pub claim_id: String,
+    pub statement: String,
+    pub fairness_or_trust_scope: Option&lt;String&gt;,
+    pub milestone_prereqs: Vec&lt;String&gt;,
+    pub non_promise_label_required: bool,
+    pub canonical_sources: Vec&lt;String&gt;,
+}
+<span class="boring">}</span></code></pre>
+<h2 id="maintenance-rules-keep-this-page-useful"><a class="header" href="#maintenance-rules-keep-this-page-useful">Maintenance Rules (Keep This Page Useful)</a></h2>
+<ol>
+<li>Update the baseline count only when re-running the same canonical-doc scan (document the command).</li>
+<li>Do not treat grep hits as automatically wrong; classify before rewriting.</li>
+<li>Keep <strong>M0/M1-M4</strong> batches current before spending time polishing low-risk narrative wording.</li>
+<li>If a rewrite creates/changes planned work, update the execution overlay in the same change.</li>
+<li>Use <code>src/tracking/deferral-wording-patterns.md</code> for consistent replacement wording instead of inventing one-off phrasing.</li>
+</ol>
+<h2 id="related-pages"><a class="header" href="#related-pages">Related Pages</a></h2>
+<ul>
+<li><a href="../18-PROJECT-TRACKER.html"><code>../18-PROJECT-TRACKER.md</code></a></li>
+<li><a href="milestone-dependency-map.html"><code>milestone-dependency-map.md</code></a></li>
+<li><a href="deferral-wording-patterns.html"><code>deferral-wording-patterns.md</code></a></li>
+<li><a href="../14-METHODOLOGY.html"><code>../14-METHODOLOGY.md</code></a></li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../tracking/implementation-ticket-template.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../tracking/deferral-wording-patterns.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../tracking/implementation-ticket-template.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../tracking/deferral-wording-patterns.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../mark-09e88c2c.min.js"></script>
+        <script src="../searcher-c2a407aa.js"></script>
+
+        <script src="../clipboard-1626706a.min.js"></script>
+        <script src="../highlight-abc7f01d.js"></script>
+        <script src="../book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

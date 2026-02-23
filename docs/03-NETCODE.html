@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-1e683dcc.js";
+            window.path_to_searchindex_js = "searchindex-3d47d740.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-a0d63c9c.js"></script>
+        <script src="toc-914f79aa.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -182,7 +182,7 @@
                     <main>
                         <h1 id="03--network-architecture"><a class="header" href="#03--network-architecture">03 — Network Architecture</a></h1>
 <h2 id="our-netcode"><a class="header" href="#our-netcode">Our Netcode</a></h2>
-<p>Iron Curtain ships <strong>one default gameplay netcode</strong> today: relay-assisted deterministic lockstep with sub-tick order fairness. This is the recommended production path, not a buffet of equal options in the normal player UX. The <code>NetworkModel</code> trait still exists for more than testing: it lets us run single-player and replay modes cleanly, support multiple deployments (dedicated relay / embedded relay / P2P LAN), and preserve the ability to introduce future compatibility bridges or replace the default netcode later if evidence warrants it (e.g., cross-engine interop experiments, architectural flaws discovered in production).</p>
+<p>Iron Curtain ships <strong>one default gameplay netcode</strong> today: relay-assisted deterministic lockstep with sub-tick order fairness. This is the recommended production path, not a buffet of equal options in the normal player UX. The <code>NetworkModel</code> trait still exists for more than testing: it lets us run single-player and replay modes cleanly, support multiple deployments (dedicated relay / embedded relay / P2P LAN), and preserve the ability to introduce deferred compatibility bridges or replace the default netcode under explicitly deferred milestones (for example <code>M7+</code> interop experiments or <code>M11</code> optional architecture work) if evidence warrants it (e.g., cross-engine interop experiments, architectural flaws discovered in production). Those paths require explicit decision/tracker placement and are not part of <code>M4</code> exit criteria.</p>
 <p><strong>Keywords:</strong> netcode, relay lockstep, <code>NetworkModel</code>, sub-tick timestamps, reconnection, desync debugging, replay determinism, compatibility bridge, ranked authority, relay server</p>
 <p>Key influences:</p>
 <ul>
@@ -937,17 +937,17 @@ pub struct CosmeticRng(pub ThreadRng); // seeded from OS entropy per client
 <tr><td>Visual feedback on click</td><td>Waits for order confirmation</td><td>Immediate (cosmetic prediction)</td><td>Perceived lag drops to near-zero</td></tr>
 <tr><td>Single-player order delay</td><td>1 projected frame (~66ms at 15 tps)</td><td>0 frames (<code>LocalNetwork</code> = next tick)</td><td>Zero delay</td></tr>
 <tr><td>Worst connection impact</td><td>Freezes all players</td><td>Only affects the lagging player</td><td>Architectural fairness</td></tr>
-<tr><td>Architectural headroom</td><td>No sim snapshots</td><td>Snapshottable sim (D010) enables future rollback/GGPO</td><td>Path to eliminating perceived MP delay</td></tr>
+<tr><td>Architectural headroom</td><td>No sim snapshots</td><td>Snapshottable sim (D010) enables optional rollback/GGPO experiments (<code>M11</code>, <code>P-Optional</code>)</td><td>Path to eliminating perceived MP delay</td></tr>
 </tbody>
 </table>
 </div>
 <h2 id="the-networkmodel-trait"><a class="header" href="#the-networkmodel-trait">The NetworkModel Trait</a></h2>
-<p>The netcode described above is expressed as a trait because it gives us testability, single-player support, and deployment flexibility <strong>and</strong> preserves architectural escape hatches. The sim and game loop never know which deployment mode is running, and they also don’t need to know if a future phase introduces:</p>
+<p>The netcode described above is expressed as a trait because it gives us testability, single-player support, and deployment flexibility <strong>and</strong> preserves architectural escape hatches. The sim and game loop never know which deployment mode is running, and they also don’t need to know if deferred milestones introduce (outside the <code>M4</code> minimal-online slice):</p>
 <ul>
 <li>a compatibility bridge/protocol adapter for cross-engine experiments (e.g., community interop with legacy game versions or OpenRA)</li>
 <li>a replacement default netcode if production evidence reveals a serious flaw or a better architecture</li>
 </ul>
-<p>The product still ships one recommended/default multiplayer path; the trait exists so changing the path later does not require touching <code>ic-sim</code> or the game loop.</p>
+<p>The product still ships one recommended/default multiplayer path; the trait exists so changing the path under a deferred milestone does not require touching <code>ic-sim</code> or the game loop.</p>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>pub trait NetworkModel: Send + Sync {
@@ -986,18 +986,18 @@ pub struct CosmeticRng(pub ThreadRng); // seeded from OS entropy per client
 <li><strong><code>RelayLockstepNetwork</code></strong> — clients connect to a standalone relay server on trusted infrastructure. Required for ranked/competitive play (host can’t be trusted with relay authority). Recommended for internet play.</li>
 </ul>
 <p>All three use adaptive run-ahead, frame resilience, delta-compressed TLV, and Ed25519 signing. The two relay-based modes (<code>EmbeddedRelayNetwork</code> and <code>RelayLockstepNetwork</code>) share identical <code>RelayCore</code> logic — connecting clients use <code>RelayLockstepNetwork</code> in both cases and cannot distinguish between them.</p>
-<p>These deployments are the current lockstep family. The <code>NetworkModel</code> trait intentionally keeps room for future non-default implementations (e.g., bridge adapters, rollback experiments, fog-authoritative tournament servers) without changing sim code or invalidating the architectural boundary.</p>
-<h3 id="example-future-adapter-netcodebridgemodel-compatibility-bridge"><a class="header" href="#example-future-adapter-netcodebridgemodel-compatibility-bridge">Example Future Adapter: <code>NetcodeBridgeModel</code> (Compatibility Bridge)</a></h3>
-<p>To make the architectural intent concrete, here is the shape of a <strong>future compatibility bridge</strong> implementation. This is not a promise of full cross-play with original RA/OpenRA; it is an example of how the <code>NetworkModel</code> boundary allows experimentation without touching <code>ic-sim</code>.</p>
-<p><strong>Use cases this enables (future / optional):</strong></p>
+<p>These deployments are the current lockstep family. The <code>NetworkModel</code> trait intentionally keeps room for deferred non-default implementations (e.g., bridge adapters, rollback experiments, fog-authoritative tournament servers) without changing sim code or invalidating the architectural boundary. Those paths are optional and not part of <code>M4</code> exit criteria.</p>
+<h3 id="example-deferred-adapter-netcodebridgemodel-compatibility-bridge"><a class="header" href="#example-deferred-adapter-netcodebridgemodel-compatibility-bridge">Example Deferred Adapter: <code>NetcodeBridgeModel</code> (Compatibility Bridge)</a></h3>
+<p>To make the architectural intent concrete, here is the shape of a <strong>deferred compatibility bridge</strong> implementation. This is not a promise of full cross-play with original RA/OpenRA; it is an example of how the <code>NetworkModel</code> boundary allows experimentation without touching <code>ic-sim</code>. Planned-deferral scope: cross-engine bridge experiments are tied to <code>M7.NET.CROSS_ENGINE_BRIDGE_AND_TRUST</code> / <code>M11</code> visual+interop follow-ons and are unranked by default unless a separate explicit decision certifies a mode.</p>
+<p><strong>Use cases this enables (deferred / optional, <code>M7+</code> and <code>M11</code>):</strong></p>
 <ul>
 <li>Community-hosted bridge experiments for legacy game versions or OpenRA</li>
 <li>Discovery-layer interop plus limited live-play compatibility prototypes</li>
-<li>Transitional migrations if IC changes its default netcode in a later phase</li>
+<li>Transitional migrations if IC changes its default netcode under a separately approved deferred milestone</li>
 </ul>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
-</span>/// Example future adapter. Not part of the initial shipping set.
+</span>/// Example deferred adapter. Not part of the initial shipping set.
 /// Wraps a protocol/transport bridge and translates between an external
 /// protocol family and IC's canonical TickOrders interface.
 pub struct NetcodeBridgeModel&lt;B: ProtocolBridge&gt; {
@@ -1039,7 +1039,7 @@ impl&lt;B: ProtocolBridge&gt; NetworkModel for NetcodeBridgeModel&lt;B&gt; {
 <ul>
 <li><strong>Making simulations identical</strong> across engines (D011 still applies)</li>
 <li><strong>Mutating <code>ic-sim</code> rules</strong> to emulate foreign bugs/quirks in core engine code</li>
-<li><strong>Bypassing ranked trust rules</strong> (bridge modes are unranked by default unless a future decision explicitly certifies one)</li>
+<li><strong>Bypassing ranked trust rules</strong> (bridge modes are unranked by default unless a separate explicit decision (<code>Dxxx</code> / <code>Pxxx</code>) certifies one)</li>
 <li><strong>Hiding incompatibilities</strong> — unsupported semantics must be visible to users/operators</li>
 </ul>
 <p><strong>Practical expectation:</strong> Early bridge modes are most likely to ship (if ever) as <strong>observer/replay/discovery</strong> integrations first, then limited casual play experiments, with strict capability constraints. Competitive/ranked bridge play would require a separate explicit decision and a much stronger certification story.</p>
@@ -1095,8 +1095,8 @@ impl BackgroundReplayWriter {
 <p><strong>Security (V45):</strong> <code>try_send</code> silently drops frames when the channel is full — contradicting the code comment. Lost frames break the Ed25519 signature chain (V4). Mitigations: track frame loss count in replay header, use <code>send_timeout(frame, 5ms)</code> instead of <code>try_send</code>, mark replays with lost frames as <code>incomplete</code> (playable but not ranked-verifiable), handle signature chain gaps explicitly. See <code>06-SECURITY.md</code> § Vulnerability 45.</p>
 </blockquote>
 <p>The background thread writes frames incrementally — the <code>.icrep</code> file is always valid (see <code>05-FORMATS.md</code> § Replay File Format). If the game crashes, the replay up to the last flushed frame is recoverable. On game end, the writer flushes remaining frames, writes the final header (total ticks, final state hash), and closes the file.</p>
-<h2 id="future-architectures"><a class="header" href="#future-architectures">Future Architectures</a></h2>
-<p>The <code>NetworkModel</code> trait also keeps the door open for fundamentally different networking approaches in the future. These are NOT the same netcode — they are genuinely different architectures with different trade-offs. None are planned for initial development.</p>
+<h2 id="deferred-optional-architectures"><a class="header" href="#deferred-optional-architectures">Deferred Optional Architectures</a></h2>
+<p>The <code>NetworkModel</code> trait also keeps the door open for fundamentally different networking approaches as deferred optional work. These are NOT the same netcode — they are genuinely different architectures with different trade-offs. They are outside <code>M4</code> and <code>M7</code> core lockstep productization scope unless promoted by a separate explicit decision and execution-overlay placement.</p>
 <h3 id="fog-authoritative-server-anti-maphack"><a class="header" href="#fog-authoritative-server-anti-maphack">Fog-Authoritative Server (anti-maphack)</a></h3>
 <p>Server runs full sim, sends each client only entities they should see. Breaks pure lockstep (clients run partial sims), requires server compute per game. Uses Fiedler’s priority accumulator (2015) for bandwidth-bounded entity updates — units in combat are highest priority, distant static structures are deferred but eventually sent. See <code>06-SECURITY.md</code> § Vulnerability 1 for the full design including entity prioritization and traffic class segregation.</p>
 <h3 id="rollback--ggpo-style-experimental"><a class="header" href="#rollback--ggpo-style-experimental">Rollback / GGPO-Style (experimental)</a></h3>

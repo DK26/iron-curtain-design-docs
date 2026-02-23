@@ -35,10 +35,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-1e683dcc.js";
+            window.path_to_searchindex_js = "../searchindex-3d47d740.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-a0d63c9c.js"></script>
+        <script src="../toc-914f79aa.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -436,7 +436,7 @@ ic mod status           # disk usage summary: total, by category, by state, larg
 </div>
 <p><strong>Pinned vs. Transient — the core distinction:</strong></p>
 <ul>
-<li><strong>Pinned</strong> resources are things the player explicitly chose: they clicked “Install,” ran <code>ic mod install</code>, or marked a resource as “Keep.” Pinned resources stay on disk forever until the player explicitly removes them. This is the default state for deliberate installations.</li>
+<li><strong>Pinned</strong> resources are things the player explicitly chose: they clicked “Install,” ran <code>ic mod install</code>, marked a resource as “Keep,” or selected a content preset/pack in the D069 setup or maintenance wizard. Pinned resources stay on disk forever until the player explicitly removes them. This is the default state for deliberate installations.</li>
 <li><strong>Transient</strong> resources arrived automatically — lobby auto-downloads, dependencies pulled transitively by other transient resources. They’re fully functional (loaded, playable, seedable) but have a time-to-live. After <code>transient_ttl_days</code> without being used in a game session (default: 30 days), they enter the <strong>Expiring</strong> state.</li>
 </ul>
 <p>This distinction means a player who joins a modded lobby once doesn’t accumulate permanent disk debt. The resources work for that session and stick around for a month in case the player returns to similar lobbies — then quietly clean up.</p>
@@ -735,6 +735,52 @@ priority = 3
 <li><strong>Curator</strong> — maintains high-quality curated collections</li>
 </ul>
 <p>Reputation is displayed but not gatekeeping — any registered user can publish. Reputation helps players discover trustworthy content in a growing registry.</p>
+<h3 id="post-play-feedback-prompts--helpful-review-recognition-optional-profile-only-rewards"><a class="header" href="#post-play-feedback-prompts--helpful-review-recognition-optional-profile-only-rewards">Post-Play Feedback Prompts &amp; Helpful Review Recognition (Optional, Profile-Only Rewards)</a></h3>
+<p>IC may prompt players <strong>after a match/session/campaign step</strong> for lightweight feedback on the experience and, when relevant, the active mode/mod/campaign package. This is intended to improve creator iteration quality without becoming a nag loop.</p>
+<p><strong>Prompt design rules (normative):</strong></p>
+<ul>
+<li><strong>Sampled, not every match.</strong> Use cooldowns/sampling and minimum playtime thresholds before prompting.</li>
+<li><strong>Skippable and snoozeable.</strong> Always provide <code>Skip</code>, <code>Snooze</code>, and <code>Don't ask for this mode/mod</code> options.</li>
+<li><strong>Non-blocking.</strong> Feedback prompts must not delay replay save, re-queue, or returning to menu.</li>
+<li><strong>Scope-labeled.</strong> The UI should clearly state what the feedback applies to (base mode, specific Workshop mod, campaign pack, etc.).</li>
+</ul>
+<p><strong>Creator feedback inbox (Workshop / My Content / Publishing):</strong></p>
+<ul>
+<li>Resource authors can view submitted feedback for their own resources (subject to community/server policy and privacy settings).</li>
+<li>Authors can triage entries as <code>Helpful</code>, <code>Needs follow-up</code>, <code>Duplicate</code>, or <code>Not actionable</code>.</li>
+<li>Marking a review as <strong>Helpful</strong> is a creator-quality signal, not a moderation verdict and not a rating override.</li>
+</ul>
+<p><strong>Helpful-review rewards (strictly profile/social only):</strong></p>
+<ul>
+<li>Allowed examples: profile badges, reviewer reputation progress, cosmetic titles, creator acknowledgements (“Thanks from <creator>”)</creator></li>
+<li>Disallowed examples: gameplay currency, ranked benefits, unlocks that affect matches, hidden matchmaking advantages</li>
+<li>Reward state must be revocable if abuse/fraud is later detected (D037 governance + D052 moderation support)</li>
+</ul>
+<p><strong>Community contribution recognition tiers (optional, profile-only):</strong></p>
+<ul>
+<li><strong>Badges (M10)</strong> — visible milestones (e.g., <code>Helpful Reviewer</code>, <code>Field Analyst I–III</code>, <code>Creator Favorite</code>, <code>Community Tester</code>)</li>
+<li><strong>Contribution reputation (M10)</strong> — a profile/social signal summarizing sustained helpful feedback quality (separate from ranked rating and Workshop star ratings)</li>
+<li><strong>Contribution points (M11+, optional)</strong> — non-tradable, non-cashable, revocable points usable only for approved <strong>profile/cosmetic</strong> rewards (for example profile frames, banners, titles, showcase cosmetics). This is not a gameplay economy.</li>
+<li><strong>Contribution achievements (M10/M11)</strong> — achievement entries for feedback quality milestones and creator acknowledgements (can include rare/manual “Exceptional Contributor” style recognition under community governance policy)</li>
+</ul>
+<p><strong>Points / redemption guardrails (if enabled in Phase 7+):</strong></p>
+<ul>
+<li>Points are earned from <strong>helpful/actionable</strong> recognition, not positivity or review volume alone</li>
+<li>Points and reputation are <strong>non-transferable</strong>, <strong>non-tradable</strong>, and <strong>cannot</strong> be exchanged for paid currency</li>
+<li>Redeemable rewards must be <strong>profile/cosmetic-only</strong> (no gameplay, no ranked, no matchmaking weight)</li>
+<li>Communities may cap accrual, delay grants pending abuse checks, and revoke points/redeemed cosmetics if fraud/collusion is confirmed (D037)</li>
+<li>UI wording should prefer “community contribution rewards” or “profile rewards” over ambiguous “bonuses”</li>
+</ul>
+<p><strong>Anti-abuse guardrails (normative):</strong></p>
+<ul>
+<li>One helpful-mark reward per review (idempotent if toggled)</li>
+<li>Minimum account age / playtime requirements before a review is eligible for helpful-reward recognition</li>
+<li>No self-reviews, collaborator self-dealing, or same-identity reward loops</li>
+<li>Rate limits and anomaly detection for reciprocal helpful-mark rings / alt-account farming</li>
+<li>“Helpful” must not be synonymous with “positive” — negative-but-actionable feedback remains eligible</li>
+<li>Communities may audit or revoke abusive helpful marks; repeated abuse affects creator reputation/moderation standing</li>
+</ul>
+<p><strong>Relationship to D053:</strong> Helpful-review recognition appears on the player’s profile as a <strong>community contribution / feedback quality</strong> signal, separate from ranked stats and separate from Workshop star ratings.</p>
 <h3 id="content-moderation--dmcatakedown-policy"><a class="header" href="#content-moderation--dmcatakedown-policy">Content Moderation &amp; DMCA/Takedown Policy</a></h3>
 <p>The Workshop requires a clear content policy and takedown process:</p>
 <p><strong>Prohibited content:</strong></p>
@@ -836,7 +882,7 @@ FROM telemetry_events WHERE event = 'match.pace'
 GROUP BY mod_fingerprint;
 </code></pre>
 <p><strong>Relay servers</strong> set <code>game_module</code> and <code>mod_fingerprint</code> per-game from the lobby’s negotiated settings — all events for that game inherit the context. When the relay hosts multiple concurrent games with different mods, each game’s events carry the correct mod context independently.</p>
-<p><strong>OTEL is an optional export layer, not the primary sink.</strong> Server operators who want real-time dashboards (Grafana, Prometheus, Jaeger) can enable OTEL export — but it’s a “nice-to-have” for sophisticated deployments, not a dependency. A community member running a relay server on a spare machine doesn’t need to set up Prometheus. They get full telemetry in a SQLite file they can query with any SQL tool.</p>
+<p><strong>OTEL is an optional export layer, not the primary sink.</strong> Server operators who want real-time dashboards (Grafana, Prometheus, Jaeger) can enable OTEL export — but this is a planned optional operations enhancement (<code>M7</code> operator usability baseline with deeper <code>M11</code> scale hardening), not a deployment dependency. A community member running a relay server on a spare machine doesn’t need to set up Prometheus. They get full telemetry in a SQLite file they can query with any SQL tool.</p>
 <p><strong>Retention and rotation:</strong> Each component’s <code>telemetry.db</code> has a configurable max size (default: 100 MB for client, 500 MB for servers). When the limit is reached, the oldest events are pruned. <code>/analytics export</code> exports a date range to a separate file before pruning. Servers can also configure time-based retention (e.g., <code>telemetry.retention_days = 30</code>).</p>
 <h3 id="three-telemetry-signals-otel-standard"><a class="header" href="#three-telemetry-signals-otel-standard">Three Telemetry Signals (OTEL Standard)</a></h3>
 <div class="table-wrapper">
@@ -1087,6 +1133,50 @@ pub enum GameplayEvent {
 </tbody>
 </table>
 </div>
+<h4 id="post-play-feedback--content-evaluation-events-workshop--modes--campaigns"><a class="header" href="#post-play-feedback--content-evaluation-events-workshop--modes--campaigns">Post-Play Feedback &amp; Content Evaluation Events (Workshop / Modes / Campaigns)</a></h4>
+<p>These events measure whether IC’s post-game / post-session feedback prompts are useful without becoming spam. They support UX tuning and creator-tooling iteration, but they are <strong>not</strong> moderation verdicts and they do <strong>not</strong> carry gameplay rewards.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Event</th><th>JSON <code>data</code> Fields</th><th>What It Reveals</th></tr>
+</thead>
+<tbody>
+<tr><td><code>feedback.prompt.shown</code></td><td><code>surface</code> (post_game/campaign_end/workshop_detail), <code>target_kind</code> (match_mode/workshop_resource/campaign), <code>target_id</code> (optional), <code>session_number</code>, <code>sampling_reason</code></td><td>Prompt frequency and where feedback is requested</td></tr>
+<tr><td><code>feedback.prompt.action</code></td><td><code>surface</code>, <code>target_kind</code>, <code>action</code> (submitted/skipped/snoozed/disabled_for_target/disabled_global), <code>time_on_prompt_ms</code></td><td>Whether the prompt is helpful or intrusive</td></tr>
+<tr><td><code>feedback.review.submit</code></td><td><code>target_kind</code>, <code>target_id</code>, <code>rating</code> (optional 1-5), <code>text_length</code>, <code>playtime_s</code>, <code>community_submit</code> (bool), <code>contains_spoiler_opt_in</code> (bool)</td><td>Review quality and submission patterns across modes/mods/campaigns</td></tr>
+<tr><td><code>feedback.review.helpful_mark</code></td><td><code>resource_id</code>, <code>review_id</code>, <code>actor_role</code> (author/moderator), <code>outcome</code> (marked/unmarked/rejected), <code>reward_granted</code> (bool), <code>reward_type</code> (badge/title/acknowledgement/reputation/points/none)</td><td>Creator triage behavior and helpful-review recognition usage</td></tr>
+<tr><td><code>feedback.review.reward_grant</code></td><td><code>review_id</code>, <code>resource_id</code>, <code>reward_type</code>, <code>recipient_scope</code> (local_profile/community_profile), <code>revocable</code> (bool), <code>points_amount</code> (optional)</td><td>How often profile-only rewards are granted and what types are used</td></tr>
+<tr><td><code>feedback.review.reward_redeem</code></td><td><code>reward_catalog_id</code>, <code>cost_points</code>, <code>recipient_scope</code>, <code>outcome</code> (success/rejected/revoked/refunded), <code>reason</code></td><td>Cosmetic/profile reward redemption usage and abuse/policy tuning (if enabled)</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Privacy / reward boundary (normative):</strong></p>
+<ul>
+<li>These are <strong>product/community UX analytics</strong> events, not ranked, matchmaking, or anti-cheat signals.</li>
+<li><code>helpful_mark</code> and reward events must never imply gameplay advantages (no credits, ranking bonuses, unlock power, or competitive matchmaking weight).</li>
+<li>Review text itself remains under Workshop/community review storage rules (D049/D037). D031 records event metadata for UX/ops tuning, not a second copy of user text by default.</li>
+</ul>
+<h4 id="campaign-progress-events-d021-local-first"><a class="header" href="#campaign-progress-events-d021-local-first">Campaign Progress Events (D021, Local-First)</a></h4>
+<p>Campaign telemetry supports local campaign dashboards, branching progress summaries, and (if the player opts in) community benchmark aggregates. These events are <strong>social/analytics-facing</strong>, not ranked or anti-cheat signals.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Event</th><th>JSON <code>data</code> Fields</th><th>What It Reveals</th></tr>
+</thead>
+<tbody>
+<tr><td><code>campaign.run.start</code></td><td><code>campaign_id</code>, <code>campaign_version</code>, <code>game_module</code>, <code>difficulty</code>, <code>balance_preset</code>, <code>save_slot</code>, <code>continued</code></td><td>Which campaigns are being played and under what ruleset</td></tr>
+<tr><td><code>campaign.node.complete</code></td><td><code>campaign_id</code>, <code>mission_id</code>, <code>outcome</code>, <code>path_depth</code>, <code>time_s</code>, <code>units_lost</code>, <code>score</code>, <code>branch_revealed_count</code></td><td>Mission outcomes, pacing, branching progress, friction points</td></tr>
+<tr><td><code>campaign.progress_snapshot</code></td><td><code>campaign_id</code>, <code>campaign_version</code>, <code>unique_completed</code>, <code>total_missions</code>, <code>current_path_depth</code>, <code>best_path_depth</code>, <code>endings_unlocked</code>, <code>time_played_s</code></td><td>Branching-safe progress metrics for campaign browser/profile/dashboard UIs</td></tr>
+<tr><td><code>campaign.run.end</code></td><td><code>campaign_id</code>, <code>reason</code> (completed/abandoned/defeat_branch/pause_for_later), <code>best_path_depth</code>, <code>unique_completed</code>, <code>ending_id</code> (optional), <code>session_time_s</code></td><td>Campaign completion/abandonment rates and session outcomes</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Privacy / sharing boundary (normative):</strong></p>
+<ul>
+<li>These events are always available for <strong>local dashboards</strong> (campaign browser, profile campaign card, career stats).</li>
+<li>Upload/export for <strong>community benchmark comparisons</strong> is opt-in and should default to aggregated summaries (<code>campaign.progress_snapshot</code>) rather than full mission-by-mission histories.</li>
+<li>Community comparisons must be normalized by campaign version + difficulty + balance preset and presented with spoiler-safe UI defaults (D021/D053).</li>
+</ul>
 <h4 id="session--lifecycle-events"><a class="header" href="#session--lifecycle-events">Session &amp; Lifecycle Events</a></h4>
 <div class="table-wrapper">
 <table>
@@ -1814,7 +1904,7 @@ fn leave_gameplay_mode(conn: &amp;Connection, normal_threshold: u32) -&gt; rusql
 </ul>
 <p>These adjustments are applied automatically by the <code>DbConfig</code> builder when it detects the WASM target at compile time (<code>#[cfg(target_arch = "wasm32")]</code>).</p>
 <h3 id="scaling-path"><a class="header" href="#scaling-path">Scaling Path</a></h3>
-<p>SQLite is the default and the right choice for 95% of deployments. For the official infrastructure at high scale, individual services can optionally be configured to use PostgreSQL by swapping the storage backend trait implementation. The schema is designed to be portable (standard SQL, no SQLite-specific syntax). FTS5 is used for full-text search on Workshop and replay catalogs — a PostgreSQL backend would substitute <code>tsvector</code>/<code>tsquery</code> for the same queries. This is a future optimization, not a launch requirement.</p>
+<p>SQLite is the default and the right choice for 95% of deployments. For the official infrastructure at high scale, individual services can optionally be configured to use PostgreSQL by swapping the storage backend trait implementation. The schema is designed to be portable (standard SQL, no SQLite-specific syntax). FTS5 is used for full-text search on Workshop and replay catalogs — a PostgreSQL backend would substitute <code>tsvector</code>/<code>tsquery</code> for the same queries. This is a planned scale optimization deferred to <code>M11</code> (<code>P-Scale</code>) unless production scale evidence pulls it forward, and it is not a launch requirement.</p>
 <p>Each service defines its own storage trait — no god-trait mixing unrelated concerns:</p>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -1853,7 +1943,7 @@ pub trait WorkshopStorage: Send + Sync {
 <li><strong>Custom binary format</strong> (rejected — maximum vendor lock-in; the community can’t build anything on top of it without reverse engineering; contradicts the open-standard philosophy)</li>
 <li><strong>No persistent storage; compute everything from replay files</strong> (rejected — replays are large, parsing is expensive, and many queries span multiple sessions; pre-computed aggregates in SQLite make career stats and AI adaptation instant)</li>
 </ul>
-<p><strong>Phase:</strong> SQLite storage for relay and client lands in Phase 2 (replay catalog, save game index, gameplay event log). Workshop server storage lands in Phase 6a (D030). Matchmaking and tournament storage land in Phase 5 (competitive infrastructure). The <code>StorageBackend</code> trait is defined early but PostgreSQL implementation is deferred until scale requires it.</p>
+<p><strong>Phase:</strong> SQLite storage for relay and client lands in Phase 2 (replay catalog, save game index, gameplay event log). Workshop server storage lands in Phase 6a (D030). Matchmaking and tournament storage land in Phase 5 (competitive infrastructure). The <code>StorageBackend</code> trait is defined early but PostgreSQL implementation is a planned <code>M11</code> (<code>P-Scale</code>) deferral unless scale evidence requires earlier promotion through the execution overlay.</p>
 <hr>
 <hr>
 <h2 id="d035-creator-recognition--attribution"><a class="header" href="#d035-creator-recognition--attribution">D035: Creator Recognition &amp; Attribution</a></h2>
@@ -1909,13 +1999,13 @@ creator:
 <p><strong>No loot boxes, no skin gambling, no speculative economy.</strong> CS:GO’s skin economy generated massive revenue but also attracted gambling sites, scams, and regulatory scrutiny. IC’s creator recognition model is direct and transparent.</p>
 <h3 id="future-expansion-path"><a class="header" href="#future-expansion-path">Future Expansion Path</a></h3>
 <p>The Workshop schema supports monetization metadata from day one, but launches with tips-only:</p>
-<pre><code class="language-yaml"># Future schema (not implemented at launch)
+<pre><code class="language-yaml"># Deferred schema extension (not implemented at launch; `M11+`, separate monetization policy decision)
 mod:
   pricing:
-    model: "free"                    # free | tip | paid (paid = future)
+    model: "free"                    # free | tip | paid (paid = deferred optional `M11+`)
     tip_links: [...]                 # voluntary compensation
-    # price: "2.99"                  # future: optional price for premium content
-    # revenue_split: "70/30"         # future: creator/platform split
+    # price: "2.99"                  # deferred optional `M11+`: premium content pricing
+    # revenue_split: "70/30"         # deferred optional `M11+`: creator/platform split
 </code></pre>
 <p>If the community evolves toward wanting paid content (e.g., professional-quality campaign packs), the schema is ready. But this is a community decision, not a launch feature.</p>
 <p><strong>Alternatives considered:</strong></p>
@@ -2082,8 +2172,31 @@ achievements:
 <li><strong>Community cookbook</strong> — recipe-style pages: “How to add a new unit type,” “How to create a branching campaign,” “How to publish a resource pack.” Short, copy-pasteable, maintained by the community.</li>
 </ul>
 <p><strong>Implementation:</strong> The knowledge base is a static site (mdbook or similar) with source in a public git repository. Community contributions via pull requests — same workflow as code contributions. Auto-generated API reference pages are rebuilt on each engine release. The in-game help system links to knowledge base pages contextually (e.g., the scenario editor’s trigger panel links to the triggers documentation).</p>
+<p><strong>Authoring reference manual requirement (editor/SDK, OFP-style discoverability):</strong></p>
+<p>The knowledge base is also the canonical source for a <strong>comprehensive authoring manual</strong> covering what creators can do in the SDK and data/scripting layers. The goal is the same kind of “what is possible?” depth that made Operation Flashpoint/ArmA community documentation so valuable.</p>
+<p>Required reference coverage (versioned and searchable):</p>
+<ul>
+<li><strong>YAML field/flag/parameter reference</strong> — every schema field, accepted values, defaults, ranges, constraints, and deprecation notes</li>
+<li><strong>Editor feature reference</strong> — every D038 mode/panel/module/trigger/action with usage notes and examples</li>
+<li><strong>Lua scripting reference</strong> — globals, functions, event hooks, argument types, return values, examples, migration notes (OpenRA aliases + IC extensions)</li>
+<li><strong>WASM host function reference</strong> (where applicable) with capability/security notes</li>
+<li><strong>CLI command reference</strong> — every <code>ic</code> command/subcommand/flag, examples, and CI/headless notes</li>
+<li><strong>Cross-links and “see also” paths</strong> between features (e.g., trigger action -&gt; Lua equivalent -&gt; export-safe warning -&gt; tutorial recipe)</li>
+</ul>
+<p><strong>SDK embedding (offline-first, context-sensitive):</strong></p>
+<ul>
+<li>The SDK ships with an <strong>embedded snapshot</strong> of the authoring manual for offline use</li>
+<li>Context help (<code>F1</code>, <code>?</code> buttons, right-click “What is this?”) deep-links to the relevant page/anchor for the selected field/module/trigger/command</li>
+<li>When online, the SDK may offer a newer docs snapshot or open the web version, but the embedded snapshot remains the baseline</li>
+<li>The embedded view and web knowledge base are the <strong>same source material</strong>, not parallel documentation trees</li>
+</ul>
+<p><strong>Authoring metadata requirement (for generation quality):</strong></p>
+<ul>
+<li>Editor-visible features (modules, triggers, actions, parameters) should carry doc metadata (<code>summary</code>, <code>description</code>, <code>constraints</code>, <code>examples</code>, <code>since</code>, <code>deprecated</code>) so the manual can be partly auto-generated and remain accurate as features evolve</li>
+<li>This metadata also improves SDK inline help, validation messages, and future LLM/editor-assistant grounding (D057)</li>
+</ul>
 <p><strong>Not a forum.</strong> The knowledge base is reference documentation, not discussion. Community discussion happens on whatever platforms the community chooses (Discord, forums, etc.). IC provides infrastructure for shared knowledge, not social interaction beyond Community Groups.</p>
-<p><strong>Phase:</strong> Phase 4 (auto-generated API reference from Lua/YAML schema). Phase 6a (community-editable tutorials, cookbook). Seeded by the project maintainer during development — the design docs themselves are the initial knowledge base.</p>
+<p><strong>Phase:</strong> Phase 4 (auto-generated API reference from Lua/YAML schema + initial CLI command reference). Phase 6a (SDK-embedded offline snapshot + context-sensitive authoring manual links, community-editable tutorials/cookbook). Seeded by the project maintainer during development — the design docs themselves are the initial knowledge base.</p>
 <h3 id="creator-content-program"><a class="header" href="#creator-content-program">Creator Content Program</a></h3>
 <p><strong>Lesson from ArmA/OFP:</strong> Bohemia Interactive’s Creator DLC program (launched 2019) showed that a structured quality ladder — from hobbyist to featured to commercially published — works when the criteria are transparent and the community governs curation. The program produced professional-quality content (Global Mobilization, S.O.G. Prairie Fire, CSLA Iron Curtain) while keeping the free modding ecosystem healthy.</p>
 <p>IC adapts this concept within D035’s voluntary framework (no mandatory paywalls, no IC platform fee):</p>
@@ -2102,13 +2215,25 @@ achievements:
 </div>
 <p><strong>Key differences from Bohemia’s Creator DLC:</strong></p>
 <ul>
-<li><strong>No paid tier at launch.</strong> All tiers are free. D035’s future <code>paid</code> pricing model is available if the community evolves toward it, but the quality ladder operates independently of monetization.</li>
+<li><strong>No paid tier at launch.</strong> All tiers are free. D035’s deferred optional <code>paid</code> pricing model (<code>M11+</code>, separate policy/governance decision) is available if the community evolves toward it, but the quality ladder operates independently of monetization.</li>
 <li><strong>Community curation, not publisher curation.</strong> Workshop moderators and the competitive committee (both community roles) make tier decisions, not the project maintainer.</li>
 <li><strong>Transparent criteria.</strong> Published criteria for each tier — creators know exactly what’s needed to reach “Reviewed” or “Featured” status.</li>
 <li><strong>No exclusive distribution.</strong> Featured content is Workshop content — it can be forked, depended on, and mirrored. No lock-in.</li>
 </ul>
 <p>The Creator Content Program is a recognition and quality signal system, not a gatekeeping mechanism. The Workshop remains open to all — tiers help players find high-quality content, not restrict who can publish.</p>
 <p><strong>Phase:</strong> Phase 6a (integrated with Workshop moderator role from D037 governance structure). “Published” tier is automatic from Workshop launch (Phase 4–5). “Reviewed” and “Featured” require active moderators.</p>
+<h3 id="feedback-recognition-governance-helpful-review-marks--creator-triage"><a class="header" href="#feedback-recognition-governance-helpful-review-marks--creator-triage">Feedback Recognition Governance (Helpful Review Marks / Creator Triage)</a></h3>
+<p>If communities enable the optional “helpful review” recognition flow (D049/D053), governance rules must make clear that this is a <strong>creator-feedback quality tool</strong>, not a popularity contest or gameplay reward channel.</p>
+<p><strong>Required governance guardrails:</strong></p>
+<ul>
+<li><strong>Documented criteria:</strong> “Helpful” means actionable/useful for improvement, not necessarily positive sentiment.</li>
+<li><strong>Auditability:</strong> Helpful-mark actions are logged and reviewable by moderators/community admins.</li>
+<li><strong>Anti-collusion enforcement:</strong> Communities may revoke helpful marks and profile rewards if creator-reviewer collusion or alt-account farming is detected.</li>
+<li><strong>Contribution-point controls (if enabled):</strong> Point grants/redemptions must remain profile/cosmetic-only, reversible, rate-limited, and auditable; no community may market them as gameplay advantages or ranked boosters.</li>
+<li><strong>Appeal path:</strong> Players can appeal abuse-related revocations or sanctions under the same moderation framework as other D037 community actions.</li>
+<li><strong>Separation of concerns:</strong> Helpful marks do not alter star ratings, report verdicts, ranked eligibility, or anti-cheat outcomes.</li>
+</ul>
+<p>This keeps the system valuable for creator iteration while preventing “reward the nice reviews only” degeneration.</p>
 <h3 id="code-of-conduct"><a class="header" href="#code-of-conduct">Code of Conduct</a></h3>
 <p>Standard open-source code of conduct (Contributor Covenant or similar) applies to:</p>
 <ul>
@@ -2548,6 +2673,7 @@ radials:
 <p><strong>Competitive integrity note:</strong> Player config profiles may change bindings and client UI preferences, but they may not include automation/macro behavior. D033 and D059 competitive rules remain unchanged.</p>
 <p><strong>Lobby/ranked compatibility note (D068):</strong> <code>player-config</code> packages are <strong>local preference resources</strong>, not gameplay/presentation compatibility content. They are excluded from lobby/ranked fingerprint checks and must never be treated as required room resources or auto-download prerequisites for joining a match.</p>
 <p><strong>Storage / distribution note:</strong> Config profiles are typically tiny (&lt;100 KB), so HTTP delivery is sufficient; P2P remains supported by the generic <code>.icpkg</code> pipeline but is not required for good UX.</p>
+<p><strong>D070 asymmetric co-op packaging note:</strong> <code>Commander &amp; Field Ops</code> scenarios/templates (D070) are published as ordinary scenario/template content packages through the same D030/D049 pipeline. They do <strong>not</strong> receive special network/runtime privileges from Workshop packaging; role permissions, support requests, and asymmetric HUD behavior are validated at scenario/runtime layers (D038/D059/D070), not granted by package type.</p>
 <h3 id="p2p-distribution-bittorrentwebtorrent"><a class="header" href="#p2p-distribution-bittorrentwebtorrent">P2P Distribution (BitTorrent/WebTorrent)</a></h3>
 <p><strong>The cost problem:</strong> A popular 500MB mod downloaded 10,000 times generates 5TB of egress. At CDN rates ($0.01–0.09/GB), that’s $50–450/month — per mod. For a community project sustained by donations, centralized hosting is financially unsustainable at scale. A BitTorrent tracker VPS costs $5–20/month regardless of popularity.</p>
 <p><strong>The solution:</strong> Workshop distribution uses the <strong>BitTorrent protocol</strong> for large packages, with HTTP direct download as fallback. The Workshop server acts as both metadata registry (SQLite, lightweight) and BitTorrent tracker (peer coordination, lightweight). Actual content transfer happens peer-to-peer between players who have the package.</p>
@@ -2589,6 +2715,21 @@ radials:
 </table>
 </div>
 <p>Thresholds are configurable in <code>settings.toml</code>. Players on connections where BitTorrent is throttled or blocked can force HTTP-only mode.</p>
+<p><strong>D069 setup/maintenance wizard transport policy:</strong> The installation/setup wizard (D069) and its maintenance flows reuse the same transport stack with stricter UX-oriented defaults:</p>
+<ul>
+<li><strong>Initial setup downloads</strong> use <code>user-requested</code> priority (not <code>background</code>) and surface source indicators (<code>P2P</code> / <code>HTTP</code>) in progress UI.</li>
+<li><strong>Small setup assets/config packages</strong> (including <code>player-config</code> profiles, small language packs, and tiny metadata-driven fixes) should default to <strong>HTTP direct</strong> per the size strategy above to avoid P2P startup overhead.</li>
+<li><strong>Large optional media packs</strong> (cutscenes, HD assets) remain P2P-preferred with HTTP fallback, but the wizard must explain this transparently (“faster from peers when available”).</li>
+<li><strong>Offline-first behavior:</strong> if no network is available, the setup wizard completes local-only steps and defers downloadable packs instead of failing the entire flow.</li>
+</ul>
+<p><strong>D069 repair/verify mapping:</strong> The maintenance wizard’s <code>Repair &amp; Verify</code> actions map directly to D049 primitives:</p>
+<ul>
+<li><strong>Verify installed packages</strong> → re-check <code>.icpkg</code>/blob hashes against manifests and registry metadata</li>
+<li><strong>Repair package content</strong> → re-fetch missing/corrupt blobs/packages (HTTP or P2P based on size/policy)</li>
+<li><strong>Rebuild indexes/metadata</strong> → rebuild local package/cache indexes from installed manifests + blob store</li>
+<li><strong>Reclaim space</strong> → run GC over unreferenced blobs/package references (same CAS cleanup model)</li>
+</ul>
+<p>Repair/verify is an IC-side content/setup operation. Store-platform binary verification (Steam/GOG) remains a separate platform responsibility and is only linked/guided from the wizard.</p>
 <p><strong>Auto-download on lobby join (D030 interaction):</strong> When joining a lobby with missing resources, the client first attempts P2P download (likely fast, since other players in the lobby are already seeding). If the lobby timer is short or P2P is slow, falls back to HTTP. The lobby UI shows download progress with source indicators (P2P/HTTP). See D052 § “In-Lobby P2P Resource Sharing” for the detailed lobby protocol, including host-as-tracker, verification against Workshop index, and security constraints.</p>
 <p><strong>Gaming industry precedent:</strong></p>
 <ul>
@@ -3047,6 +3188,34 @@ pub enum AvatarSource {
 <li><strong>Verification badge:</strong> Each stat line shows which community signed it and whether the viewer’s client successfully verified the signature. A ✅ means “signature valid, community key recognized.” A ⚠️ means “signature valid, but community key not in your trusted list.” A ❌ means “signature verification failed — possible tampering.” This is visible in the detailed stats view, not the compact tooltip (to avoid visual clutter).</li>
 <li><strong>Inspect credential:</strong> Any SCR-backed number in the profile is clickable. Clicking opens a verification detail panel showing: signing community name + public key fingerprint, SCR sequence number, signature timestamp, raw signed payload (hex-encoded), and verification result. This is the blockchain-style “prove it” button — except it’s just Ed25519 signatures, no blockchain needed.</li>
 </ul>
+<p><strong>Campaign Progress &amp; PvE Progress Card (local-first, optional community comparison):</strong></p>
+<p>Campaign progress is valuable social and motivational context (especially for D021 branching campaigns), but it is <strong>not</strong> the same kind of data as ranked SCR-backed statistics. D053 therefore treats campaign progress as a separate profile card with explicit source/trust labeling.</p>
+<pre><code>┌──────────────────────────────────────────────────────┐
+│ 🗺️ Campaign Progress — Allied Campaign (RA1)         │
+│                                                      │
+│  Progress:        5 / 14 missions (36%)             │
+│  Current Path:    Depth 6                           │
+│  Best Path:       Depth 9                           │
+│  Endings:         1 / 3 unlocked                    │
+│  Last Played:     2 days ago                        │
+│                                                      │
+│  Community Benchmarks (Normal / IC Default):        │
+│  • Ahead of 62% of players        [Community ✓]     │
+│  • Avg completion: 41%            [Community]       │
+│  • Most common branch after M3: Hidden until seen   │
+│                                                      │
+│  [View Campaign Details →]  [Privacy / Sharing...]  │
+└──────────────────────────────────────────────────────┘
+</code></pre>
+<p><strong>Rules (normative):</strong></p>
+<ul>
+<li><strong>Local-first by default.</strong> Your own campaign progress card works offline from local save/history data (D021 + D034/D031).</li>
+<li><strong>Branching-safe metrics.</strong> Show <code>unique missions completed</code>, <code>current path depth</code>, and <code>best path depth</code> separately; do not collapse them into a single ambiguous “farthest mission” number.</li>
+<li><strong>Spoiler-safe defaults.</strong> Locked mission names, hidden endings, and unreached branch labels are redacted unless the player has discovered them (or the campaign author explicitly allows full reveal).</li>
+<li><strong>Opt-in social sharing.</strong> Community comparison metrics require player opt-in and are scoped per campaign version + difficulty + balance preset.</li>
+<li><strong>Trust/source labeling.</strong> Campaign benchmark lines must show whether they are local-only, unsigned community aggregates, or community-verified signed snapshots (if the community provides signed aggregate exports).</li>
+<li><strong>No competitive implications.</strong> Campaign progress comparison data must not affect ranked eligibility, matchmaking, or anti-cheat scoring.</li>
+</ul>
 <p><strong>4. Match History</strong></p>
 <p>Scrollable list of recent matches, each showing:</p>
 <div class="table-wrapper">
@@ -3169,6 +3338,39 @@ pub struct FriendEntry {
 └──────────────────────────────────────────────────────┘
 </code></pre>
 <p>This section appears only for players who have published at least one Workshop resource. Download counts and publication metadata come from the Workshop registry index (D030). Creator tips (D035) link from here.</p>
+<p><strong>Creator feedback inbox / review triage integration (optional):</strong></p>
+<ul>
+<li>Authors may access a feedback inbox for their own Workshop resources (D049) from the creator profile or Workshop publishing surfaces.</li>
+<li>Helpful-review marks granted by the author are displayed as creator activity (e.g., “Helpful reviews acknowledged”), but the profile UI must distinguish this from moderation powers.</li>
+<li>Communities may expose trust labels for creator-side helpful marks (e.g., local-only vs. community-synced metadata).</li>
+</ul>
+<p><strong>Community Feedback Contribution Recognition (profile-only, non-competitive):</strong></p>
+<p>Players who leave reviews that creators mark as helpful can receive <strong>profile/social recognition</strong> (not gameplay rewards). This is presented as a separate contributor signal:</p>
+<pre><code>┌──────────────────────────────────────────────────────┐
+│ 📝 Community Feedback Contributions                  │
+│                                                      │
+│  Helpful reviews marked by creators: 14             │
+│  Creator acknowledgements: 6                        │
+│  Badge: Field Analyst II                            │
+│                                                      │
+│  [View Feedback History →]  [Privacy / Sharing...]  │
+└──────────────────────────────────────────────────────┘
+</code></pre>
+<p><strong>Rules (normative):</strong></p>
+<ul>
+<li>Profile-only recognition (badges/titles/acknowledgements) — no gameplay or ranked impact</li>
+<li>Source/trust labeling applies (local profile state vs. community-synced recognition metadata)</li>
+<li>Visibility is privacy-controlled like other profile sections (default managed by D053 privacy settings)</li>
+<li>Helpful-review recognition is optional and may be disabled per community policy (D037)</li>
+</ul>
+<p><strong>Contribution reputation + points (optional extension, Phase 7+ hardening):</strong></p>
+<ul>
+<li>Communities may expose a <strong>feedback contribution reputation</strong> signal (quality-focused, not positivity/volume-only)</li>
+<li>Communities may optionally enable <strong>Community Contribution Points</strong> redeemable for <strong>profile/cosmetic-only</strong> items</li>
+<li>Point balances and redemption history must be clearly labeled as <strong>non-gameplay / non-ranked</strong></li>
+<li>Rare/manual badges (e.g., <code>Exceptional Contributor</code>) should be policy-governed and auditable, not arbitrary hidden grants</li>
+<li>All grants and redemptions remain subject to revocation if abuse/collusion is confirmed (D037/D052)</li>
+</ul>
 <p><strong>8. Custom Profile Elements</strong></p>
 <p>Optional fields that add personality without cluttering the default view:</p>
 <div class="table-wrapper">
@@ -3237,6 +3439,7 @@ pub struct FriendEntry {
 <tr><td>Friends List</td><td>Friends</td></tr>
 <tr><td>Community Memberships</td><td>Public</td></tr>
 <tr><td>Workshop Creator</td><td>Public</td></tr>
+<tr><td>Community Feedback Contributions</td><td>Public</td></tr>
 <tr><td>Custom Elements</td><td>Friends</td></tr>
 <tr><td>Behavioral Profile (D042)</td><td><strong>Private (immutable — never exposed)</strong></td></tr>
 </tbody>

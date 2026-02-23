@@ -35,10 +35,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-1e683dcc.js";
+            window.path_to_searchindex_js = "../searchindex-3d47d740.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-a0d63c9c.js"></script>
+        <script src="../toc-914f79aa.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -797,7 +797,7 @@ pub enum ResolutionReason {
 </tbody>
 </table>
 </div>
-<p><strong>Fidelity model:</strong> Export is <em>lossy by design</em>. IC supports features RA doesn’t (conditions, multipliers, 3D positions, complex Lua triggers, unlimited map sizes, advanced mission-phase tooling like segment unlock wrappers and sub-scenario portals). The exporter produces the closest RA-compatible equivalent and generates a <strong>fidelity report</strong> — a structured log of every feature that was downgraded, stripped, or approximated. The creator sees: “3 triggers could not be exported (RA has no equivalent for <code>on_condition_change</code>). 2 unit abilities were removed (mind control requires engine support). Map was cropped from 200×200 to 128×128. Sub-scenario portal <code>lab_interior</code> exported as a separate mission stub with manual campaign wiring required.” This is the same philosophy as exporting a Photoshop file to JPEG — you know what you’ll lose before you commit.</p>
+<p><strong>Fidelity model:</strong> Export is <em>lossy by design</em>. IC supports features RA doesn’t (conditions, multipliers, 3D positions, complex Lua triggers, unlimited map sizes, advanced mission-phase tooling like segment unlock wrappers and sub-scenario portals, and IC-native asymmetric role orchestration such as D070 Commander/Field Ops support-request flows and role HUD/objective-channel semantics). The exporter produces the closest RA-compatible equivalent and generates a <strong>fidelity report</strong> — a structured log of every feature that was downgraded, stripped, or approximated. The creator sees: “3 triggers could not be exported (RA has no equivalent for <code>on_condition_change</code>). 2 unit abilities were removed (mind control requires engine support). Map was cropped from 200×200 to 128×128. Sub-scenario portal <code>lab_interior</code> exported as a separate mission stub with manual campaign wiring required. D070 support request queue and role HUD presets are IC-native and were stripped.” This is the same philosophy as exporting a Photoshop file to JPEG — you know what you’ll lose before you commit.</p>
 <h4 id="target-2-openra-oramod--oramap"><a class="header" href="#target-2-openra-oramod--oramap">Target 2: OpenRA (.oramod / .oramap)</a></h4>
 <p>Export produces content loadable by the current OpenRA release:</p>
 <div class="table-wrapper">
@@ -1055,14 +1055,14 @@ fn register_editor_plugin(host: &amp;mut EditorHost) {
 <li><strong>API version contract</strong> — extensions declare an editor plugin API version (<code>api_version</code>) separate from engine internals. The SDK checks compatibility before load and disables incompatible extensions with a clear reason (“built for plugin API 0.x, this SDK provides 1.x”).</li>
 <li><strong>Capability manifest (deny-by-default)</strong> — extensions must declare requested editor capabilities (<code>editor.panels</code>, <code>editor.asset_viewers</code>, <code>editor.export_targets</code>, etc.). Undeclared capability usage is rejected.</li>
 <li><strong>Install-time permission review</strong> — the SDK shows the requested capabilities when installing/updating an extension. This is the only prompting point; normal editing sessions are not interrupted.</li>
-<li><strong>No VCS/process control capabilities by default</strong> — editor plugins do not get commit/rebase/shell execution powers. Git integration remains an explicit user workflow outside plugins unless a future capability is designed and approved.</li>
+<li><strong>No VCS/process control capabilities by default</strong> — editor plugins do not get commit/rebase/shell execution powers. Git integration remains an explicit user workflow outside plugins unless a separately approved deferred capability is designed and placed in the execution overlay.</li>
 <li><strong>Version/provenance metadata</strong> — manifests may include signature/provenance information for Workshop trust badges; absence warns but does not prevent local development installs.</li>
 </ul>
 <h3 id="export-safe-authoring-mode"><a class="header" href="#export-safe-authoring-mode">Export-Safe Authoring Mode</a></h3>
 <p>The scenario editor offers an <strong>export-safe mode</strong> that constrains the authoring environment to features compatible with a chosen export target:</p>
 <ul>
 <li><strong>Select target:</strong> “I’m building this mission for OpenRA” (or RA1, or IC)</li>
-<li><strong>Feature gating:</strong> The editor grays out or hides features the target doesn’t support. If targeting RA1: no mind control triggers, no unlimited map size, no branching campaigns, no IC-native sub-scenario portals, no IC hero progression toolkit intermissions/skill progression. If targeting OpenRA: no IC-only Lua APIs; advanced <code>Map Segment Unlock</code> wrappers show yellow/red fidelity when they depend on IC-only phase orchestration beyond OpenRA-equivalent reveal/reinforcement scripting, and hero progression/skill-tree tooling shows fidelity warnings because OpenRA campaigns are stateless.</li>
+<li><strong>Feature gating:</strong> The editor grays out or hides features the target doesn’t support. If targeting RA1: no mind control triggers, no unlimited map size, no branching campaigns, no IC-native sub-scenario portals, no IC hero progression toolkit intermissions/skill progression, and no D070 asymmetric Commander/Field Ops role orchestration (role HUD presets, support request queues, objective-channel semantics beyond plain trigger/objective export). If targeting OpenRA: no IC-only Lua APIs; advanced <code>Map Segment Unlock</code> wrappers show yellow/red fidelity when they depend on IC-only phase orchestration beyond OpenRA-equivalent reveal/reinforcement scripting, hero progression/skill-tree tooling shows fidelity warnings because OpenRA campaigns are stateless, and D070 asymmetric role/support UX is treated as IC-native with strip/flatten warnings.</li>
 <li><strong>Live fidelity indicator:</strong> A traffic-light badge on each entity/trigger: green = exports perfectly, yellow = exports with approximation, red = will be stripped. The creator sees export fidelity as they build, not after.</li>
 <li><strong>Export-safe trigger templates:</strong> Pre-built trigger patterns guaranteed to downcompile cleanly to the target. “Timer → Reinforcement” template uses only Lua patterns with known RA1 equivalents.</li>
 <li><strong>Dual preview:</strong> Side-by-side preview showing “IC rendering” and “approximate target rendering” (e.g., palette-quantized sprites to simulate how it will look in original RA1).</li>
@@ -1130,6 +1130,7 @@ ic export --target ra1,openra,ic maps/ -o ./export/
 <li><strong>D026 (Mod Manifest Compatibility):</strong> <code>mod.yaml</code> parsing is now bidirectional — import OpenRA manifests AND generate them on export.</li>
 <li><strong>D030 (Workshop):</strong> Editor extensions are Workshop packages. Export presets/profiles are shareable via Workshop.</li>
 <li><strong>D038 (Scenario Editor):</strong> The scenario editor gains export-safe mode, fidelity indicators, export-safe trigger templates, and Validate/Publish Readiness integration that surfaces target compatibility before publish. Export is a first-class editor action, not a separate tool.</li>
+<li><strong>D070 (Asymmetric Commander &amp; Field Ops Co-op):</strong> D070 scenarios/templates are expected to be IC-native. Exporters may downcompile fragments (maps, units, simple triggers), but role orchestration, request/response HUD flows, and asymmetric role permissions require fidelity warnings and usually manual redesign.</li>
 <li><strong>D040 (Asset Studio):</strong> Asset conversion (D040’s Cross-Game Asset Bridge) is the per-file foundation. D066 orchestrates whole-project export using D040’s converters.</li>
 <li><strong>D062 (Mod Profiles):</strong> A mod profile can embed export target preference. “RA1 Compatible” profile constrains features to RA1-exportable subset.</li>
 <li><strong>ra-formats write support:</strong> D066 is the primary consumer of ra-formats write support (Phase 6a). The exporter calls into ra-formats encoders for .shp, .pal, .aud, .vqa, .mix generation.</li>
@@ -1156,7 +1157,7 @@ ic export --target ra1,openra,ic maps/ -o ./export/
 <li><strong>Compatibility / Export impact:</strong> Lobbies/ranked use a <strong>gameplay fingerprint</strong> as the hard gate; media/remaster/voice packs are <strong>presentation fingerprint</strong> scope unless they change gameplay.</li>
 <li><strong>AI remaster media policy:</strong> AI-enhanced cutscene packs are optional presentation variants (Original / Clean / AI-Enhanced), clearly labeled, provenance-aware, and never replacements for the canonical originals.</li>
 <li><strong>Public interfaces / types / commands:</strong> manifest <code>install</code> metadata + optional dependencies/fallbacks, <code>ic content list</code>, <code>ic content apply-profile</code>, <code>ic content install/remove</code>, <code>ic mod gc</code></li>
-<li><strong>Affected docs:</strong> <code>src/17-PLAYER-FLOW.md</code>, <code>src/decisions/09e-community.md</code>, <code>src/04-MODDING.md</code>, <code>src/decisions/09f-tools.md</code></li>
+<li><strong>Affected docs:</strong> <code>src/17-PLAYER-FLOW.md</code>, <code>src/decisions/09e-community.md</code>, <code>src/decisions/09g-interaction.md</code>, <code>src/04-MODDING.md</code>, <code>src/decisions/09f-tools.md</code></li>
 <li><strong>Revision note summary:</strong> None</li>
 <li><strong>Keywords:</strong> selective install, install profiles, campaign core, optional media, cutscene variants, presentation fingerprint, installed content manager</li>
 </ul>
@@ -1314,6 +1315,17 @@ fallbacks:
 </ul>
 </li>
 </ul>
+<h3 id="first-run-setup-wizard-integration-d069"><a class="header" href="#first-run-setup-wizard-integration-d069">First-Run Setup Wizard Integration (D069)</a></h3>
+<p>D068 is the content-planning model used by the <strong>D069 First-Run Setup Wizard</strong>.</p>
+<p>Wizard rules:</p>
+<ul>
+<li>The setup wizard presents D068 install presets during first-run setup and maintenance re-entry.</li>
+<li><strong>Wizard default preset is <code>Full Install</code></strong> (player-facing default chosen for D069), with visible one-click alternatives (<code>Campaign Core</code>, <code>Minimal Multiplayer</code>, <code>Custom</code>).</li>
+<li>The wizard must show <strong>size estimates</strong> and <strong>feature summaries</strong> before starting transfers/downloads.</li>
+<li>The wizard may select a preset automatically in Quick Setup, but the player can switch before committing.</li>
+<li>Any wizard selection remains fully reversible later through <code>Settings → Data</code> (Installed Content Manager).</li>
+</ul>
+<p>This keeps first-run setup fast while preserving D068’s space-saving flexibility.</p>
 <h3 id="multiplayer-compatibility-gameplay-vs-presentation-fingerprints"><a class="header" href="#multiplayer-compatibility-gameplay-vs-presentation-fingerprints">Multiplayer Compatibility: Gameplay vs Presentation Fingerprints</a></h3>
 <p>Selective install introduces a compatibility trap: a player missing music/cutscenes should not fail multiplayer compatibility if gameplay content is identical.</p>
 <p>D068 resolves this by splitting namespace compatibility into two fingerprints:</p>
@@ -1344,6 +1356,19 @@ fallbacks:
 <li>one-click switches between install presets</li>
 <li>“keep gameplay, remove media” shortcut</li>
 </ul>
+<h3 id="d069-maintenance-wizard-handoff"><a class="header" href="#d069-maintenance-wizard-handoff">D069 Maintenance Wizard Handoff</a></h3>
+<p>The Installed Content Manager is the long-lived management surface; D069 provides the guided entry points and recovery flow.</p>
+<ul>
+<li><strong>D069 (“Modify Installation”)</strong> can launch directly into a preset-switch or pack-selection step using the same D068 data model.</li>
+<li><strong>D069 (“Repair &amp; Verify”)</strong> can branch into checksum verification, metadata/index rebuild, source re-scan, and reclaim-space actions, then return to the Installed Content Manager summary.</li>
+<li>Missing-content guidance panels (D033 no-dead-end behavior) should offer both:
+<ul>
+<li>a quick one-click install action, and</li>
+<li><code>Open Modify Installation</code> for the full D069 maintenance flow</li>
+</ul>
+</li>
+</ul>
+<p>D068 intentionally avoids duplicating wizard mechanics; it defines the content semantics the wizard and the Installed Content Manager share.</p>
 <h3 id="cli--automation-for-power-users-and-packs"><a class="header" href="#cli--automation-for-power-users-and-packs">CLI / Automation (for power users and packs)</a></h3>
 <pre><code class="language-bash"># List installed/available packs and sizes
 ic content list
@@ -1379,6 +1404,7 @@ ic mod gc
 <li><strong>D049 (Workshop CAS):</strong> Local content-addressed blob store + GC make selective installs storage-efficient instead of duplicate-heavy.</li>
 <li><strong>D062 (Mod Profiles &amp; VirtualNamespace):</strong> D068 adds <em>physical install selection</em> on top of D062’s <em>logical activation/composition</em>. Namespace resolution and fingerprints are extended, not replaced.</li>
 <li><strong>D065 (Tutorial/New Player):</strong> First-run can recommend <code>Campaign Core</code> vs <code>Minimal Multiplayer</code> based on player intent (“I want single-player” / “I only want multiplayer”).</li>
+<li><strong>D069 (Installation &amp; First-Run Setup Wizard):</strong> D069 is the canonical wizard UX that presents D068 install presets, size estimates, transfer/verify progress, and maintenance re-entry flows.</li>
 <li><strong>17-PLAYER-FLOW.md:</strong> “No Dead-End Buttons” install guidance panels become the primary UX surface for missing content.</li>
 </ul>
 <h3 id="alternatives-considered-2"><a class="header" href="#alternatives-considered-2">Alternatives Considered</a></h3>

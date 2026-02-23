@@ -35,10 +35,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-1e683dcc.js";
+            window.path_to_searchindex_js = "../searchindex-3d47d740.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-a0d63c9c.js"></script>
+        <script src="../toc-914f79aa.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -201,11 +201,15 @@
 
 - **Status:** Accepted | Revised | Draft | Superseded
 - **Phase:** Phase X (or "multi-phase"; note first ship phase)
+- **Execution overlay mapping:** Primary milestone (`M#`), priority (`P-*`), key dependency notes (optional but recommended)
+- **Deferred features / extensions:** (explicitly list and classify deferred follow-ons; use `none` if not applicable)
+- **Deferral trigger:** (what evidence/milestone/dependency causes a deferred item to move forward)
 - **Canonical for:** (what this decision is the primary source for)
 - **Scope:** (crates/systems/docs affected)
 - **Decision:** (1-3 sentence normative summary; include defaults)
 - **Why:** (top reasons only; 3-5 bullets max)
 - **Non-goals:** (what this decision explicitly does NOT do)
+- **Out of current scope:** (what may be desirable but is intentionally not in this phase/milestone)
 - **Invariants preserved:** (list relevant invariants/trait boundaries)
 - **Defaults / UX behavior:** (player-facing defaults, optionality, gating)
 - **Compatibility / Export impact:** (if applicable)
@@ -223,6 +227,8 @@
 <li>Keep it <strong>short</strong> (usually 10–16 bullets)</li>
 <li>Include <strong>the default behavior</strong> and <strong>the main exception(s)</strong></li>
 <li>Include <strong>non-goals</strong> to prevent over-interpretation</li>
+<li>Include <strong>execution overlay mapping</strong> (or explicitly mark “TBD”) so new decisions are easier to place in implementation order</li>
+<li>If using words like <code>future</code>, <code>later</code>, or <code>deferred</code>, classify them explicitly (planned deferral / north-star / versioning) and include the deferral trigger</li>
 <li>Use stable identifiers (<code>D068</code>, <code>NetworkModel</code>, <code>VirtualNamespace</code>, <code>Publish Readiness</code>)</li>
 <li>Avoid duplicating long examples or alternatives already in the body</li>
 </ul>
