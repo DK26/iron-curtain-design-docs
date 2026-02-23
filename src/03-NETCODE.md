@@ -2,7 +2,7 @@
 
 ## Our Netcode
 
-Iron Curtain ships **one default gameplay netcode** today: relay-assisted deterministic lockstep with sub-tick order fairness. This is the recommended production path, not a buffet of equal options in the normal player UX. The `NetworkModel` trait still exists for more than testing: it lets us run single-player and replay modes cleanly, support multiple deployments (dedicated relay / embedded relay / P2P LAN), and preserve the ability to introduce future compatibility bridges or replace the default netcode later if evidence warrants it (e.g., cross-engine interop experiments, architectural flaws discovered in production).
+Iron Curtain ships **one default gameplay netcode** today: relay-assisted deterministic lockstep with sub-tick order fairness. This is the recommended production path, not a buffet of equal options in the normal player UX. The `NetworkModel` trait still exists for more than testing: it lets us run single-player and replay modes cleanly, support multiple deployments (dedicated relay / embedded relay / P2P LAN), and preserve the ability to introduce deferred compatibility bridges or replace the default netcode under explicitly deferred milestones (for example `M7+` interop experiments or `M11` optional architecture work) if evidence warrants it (e.g., cross-engine interop experiments, architectural flaws discovered in production). Those paths require explicit decision/tracker placement and are not part of `M4` exit criteria.
 
 **Keywords:** netcode, relay lockstep, `NetworkModel`, sub-tick timestamps, reconnection, desync debugging, replay determinism, compatibility bridge, ranked authority, relay server
 
@@ -863,16 +863,16 @@ Honest players on good connections always get responsive gameplay. A lagging pla
 | Visual feedback on click    | Waits for order confirmation         | Immediate (cosmetic prediction)                       | Perceived lag drops to near-zero       |
 | Single-player order delay   | 1 projected frame (~66ms at 15 tps)  | 0 frames (`LocalNetwork` = next tick)                 | Zero delay                             |
 | Worst connection impact     | Freezes all players                  | Only affects the lagging player                       | Architectural fairness                 |
-| Architectural headroom      | No sim snapshots                     | Snapshottable sim (D010) enables future rollback/GGPO | Path to eliminating perceived MP delay |
+| Architectural headroom      | No sim snapshots                     | Snapshottable sim (D010) enables optional rollback/GGPO experiments (`M11`, `P-Optional`) | Path to eliminating perceived MP delay |
 
 ## The NetworkModel Trait
 
-The netcode described above is expressed as a trait because it gives us testability, single-player support, and deployment flexibility **and** preserves architectural escape hatches. The sim and game loop never know which deployment mode is running, and they also don't need to know if a future phase introduces:
+The netcode described above is expressed as a trait because it gives us testability, single-player support, and deployment flexibility **and** preserves architectural escape hatches. The sim and game loop never know which deployment mode is running, and they also don't need to know if deferred milestones introduce (outside the `M4` minimal-online slice):
 
 - a compatibility bridge/protocol adapter for cross-engine experiments (e.g., community interop with legacy game versions or OpenRA)
 - a replacement default netcode if production evidence reveals a serious flaw or a better architecture
 
-The product still ships one recommended/default multiplayer path; the trait exists so changing the path later does not require touching `ic-sim` or the game loop.
+The product still ships one recommended/default multiplayer path; the trait exists so changing the path under a deferred milestone does not require touching `ic-sim` or the game loop.
 
 ```rust
 pub trait NetworkModel: Send + Sync {
@@ -909,20 +909,20 @@ The same netcode runs in five modes. The first two are utility adapters (no netw
 
 All three use adaptive run-ahead, frame resilience, delta-compressed TLV, and Ed25519 signing. The two relay-based modes (`EmbeddedRelayNetwork` and `RelayLockstepNetwork`) share identical `RelayCore` logic — connecting clients use `RelayLockstepNetwork` in both cases and cannot distinguish between them.
 
-These deployments are the current lockstep family. The `NetworkModel` trait intentionally keeps room for future non-default implementations (e.g., bridge adapters, rollback experiments, fog-authoritative tournament servers) without changing sim code or invalidating the architectural boundary.
+These deployments are the current lockstep family. The `NetworkModel` trait intentionally keeps room for deferred non-default implementations (e.g., bridge adapters, rollback experiments, fog-authoritative tournament servers) without changing sim code or invalidating the architectural boundary. Those paths are optional and not part of `M4` exit criteria.
 
-### Example Future Adapter: `NetcodeBridgeModel` (Compatibility Bridge)
+### Example Deferred Adapter: `NetcodeBridgeModel` (Compatibility Bridge)
 
-To make the architectural intent concrete, here is the shape of a **future compatibility bridge** implementation. This is not a promise of full cross-play with original RA/OpenRA; it is an example of how the `NetworkModel` boundary allows experimentation without touching `ic-sim`.
+To make the architectural intent concrete, here is the shape of a **deferred compatibility bridge** implementation. This is not a promise of full cross-play with original RA/OpenRA; it is an example of how the `NetworkModel` boundary allows experimentation without touching `ic-sim`. Planned-deferral scope: cross-engine bridge experiments are tied to `M7.NET.CROSS_ENGINE_BRIDGE_AND_TRUST` / `M11` visual+interop follow-ons and are unranked by default unless a separate explicit decision certifies a mode.
 
-**Use cases this enables (future / optional):**
+**Use cases this enables (deferred / optional, `M7+` and `M11`):**
 
 - Community-hosted bridge experiments for legacy game versions or OpenRA
 - Discovery-layer interop plus limited live-play compatibility prototypes
-- Transitional migrations if IC changes its default netcode in a later phase
+- Transitional migrations if IC changes its default netcode under a separately approved deferred milestone
 
 ```rust
-/// Example future adapter. Not part of the initial shipping set.
+/// Example deferred adapter. Not part of the initial shipping set.
 /// Wraps a protocol/transport bridge and translates between an external
 /// protocol family and IC's canonical TickOrders interface.
 pub struct NetcodeBridgeModel<B: ProtocolBridge> {
@@ -965,7 +965,7 @@ impl<B: ProtocolBridge> NetworkModel for NetcodeBridgeModel<B> {
 
 - **Making simulations identical** across engines (D011 still applies)
 - **Mutating `ic-sim` rules** to emulate foreign bugs/quirks in core engine code
-- **Bypassing ranked trust rules** (bridge modes are unranked by default unless a future decision explicitly certifies one)
+- **Bypassing ranked trust rules** (bridge modes are unranked by default unless a separate explicit decision (`Dxxx` / `Pxxx`) certifies one)
 - **Hiding incompatibilities** — unsupported semantics must be visible to users/operators
 
 **Practical expectation:** Early bridge modes are most likely to ship (if ever) as **observer/replay/discovery** integrations first, then limited casual play experiments, with strict capability constraints. Competitive/ranked bridge play would require a separate explicit decision and a much stronger certification story.
@@ -1033,9 +1033,9 @@ impl BackgroundReplayWriter {
 
 The background thread writes frames incrementally — the `.icrep` file is always valid (see `05-FORMATS.md` § Replay File Format). If the game crashes, the replay up to the last flushed frame is recoverable. On game end, the writer flushes remaining frames, writes the final header (total ticks, final state hash), and closes the file.
 
-## Future Architectures
+## Deferred Optional Architectures
 
-The `NetworkModel` trait also keeps the door open for fundamentally different networking approaches in the future. These are NOT the same netcode — they are genuinely different architectures with different trade-offs. None are planned for initial development.
+The `NetworkModel` trait also keeps the door open for fundamentally different networking approaches as deferred optional work. These are NOT the same netcode — they are genuinely different architectures with different trade-offs. They are outside `M4` and `M7` core lockstep productization scope unless promoted by a separate explicit decision and execution-overlay placement.
 
 ### Fog-Authoritative Server (anti-maphack)
 

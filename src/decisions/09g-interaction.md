@@ -1201,7 +1201,7 @@ This is a convenience for power users who prefer text files over GUI settings. T
 - **Chat only, no developer console** (rejected — power users need multi-line Lua input, scrollback, cvar browsing, and syntax highlighting. A single-line chat field can't provide this. The developer console is a thin UI layer over the same dispatcher — minimal implementation cost.)
 - **GUI-only commands like OpenRA** (rejected — checkbox menus are fine for 7 dev mode flags but don't scale to dozens of commands, mod-injected commands, or Lua execution. A text interface is necessary for extensibility.)
 - **Custom command syntax instead of `/` prefix** (rejected — `/` is the universal standard across Minecraft, Factorio, Discord, IRC, MMOs, and dozens of other games. Any other prefix would surprise users.)
-- **RCON protocol for remote administration** (deferred — useful for dedicated servers but out of scope for Phase 3. Can be added later as a `CommandOrigin::Rcon` variant with `Admin` permission level. The command dispatcher is origin-agnostic by design.)
+- **RCON protocol for remote administration** (deferred to `M7` / Phase 5 productization, `P-Scale` — useful for dedicated/community servers but out of scope for Phase 3. Planned implementation path: add `CommandOrigin::Rcon` with `Admin` permission level; the command dispatcher is origin-agnostic by design. Not part of Phase 3 exit criteria.)
 - **Unrestricted Lua console without achievement consequences** (rejected — every game that has tried this has created a split community where "did you use the console?" is a constant question. Factorio's model — use it freely, but achievements are permanently disabled — is honest and universally understood.)
 - **Disable console commands in multiplayer to prevent scripting** (rejected — console commands produce the same `PlayerOrder` as GUI actions. Removing them doesn't prevent scripting — external tools like AutoHotKey can automate mouse/keyboard input. Worse, a modified open-source client can send orders directly, bypassing all input methods. Removing the console punishes legitimate power users and accessibility needs while providing zero security benefit. The correct defense is D033 equalization, input source tracking, and community governance — see "Competitive Integrity in Multiplayer.")
 
@@ -1661,6 +1661,14 @@ Per-player mute is client-side AND relay-enforced:
 
 **Mute persistence:** Per-player mute decisions are stored in local SQLite (D034) keyed by the player's Ed25519 public key (D052). Muting "Bob" in one game persists across future games with the same player. The relay does not store mute relationships — mute is a client preference, communicated to the relay as a routing hint.
 
+**Scope split (social controls vs matchmaking vs moderation):**
+- **Mute** (D059): communication routing and local comfort (voice/text)
+- **Block** (D059 + lobby/profile UI): social interaction preference (messages/invites/profile contact)
+- **Avoid Player** (D055): matchmaking preference, best-effort only (not a communication feature)
+- **Report** (D059 + D052 moderation): evidence-backed moderation signal for griefing/cheating/abuse
+
+This separation prevents UX confusion ("I blocked them, why did I still get matched?") and avoids turning social tools into stealth matchmaking exploits.
+
 **Hotmic protection:** If PTT is held continuously for longer than `voice.max_ptt_duration` (default 120 seconds, configurable), transmission is automatically cut and the player sees a "PTT timeout — release and re-press to continue" notification. This prevents stuck-key scenarios where a player unknowingly broadcasts for an entire match (keyboard malfunction, key binding conflict, cat on keyboard). Discord implements similar detection; CS2 cuts after ~60 seconds continuous transmission. The timeout resets immediately on key release — there is no cooldown.
 
 **Communication abuse penalties:** Repeated mute/report actions against a player across multiple games trigger **progressive communication restrictions** on that player's community profile (D052/D053). The community server (D052) tracks reports per player:
@@ -1673,6 +1681,31 @@ Per-player mute is client-side AND relay-enforced:
 | Repeated offenses    | Escalated to community moderators (D037) for manual review | Until resolved | Per community server |
 
 Thresholds are configurable per community server — tournament communities may be stricter. Penalties are community-scoped (D052 federation), not global. A player comm-banned on one community can still speak on others. Text chat follows the same escalation path. False report abuse is itself a reportable offense.
+
+#### Player Reports and Community Review Handoff (D052 integration)
+
+D059 owns the **reporting UX and event capture**, but not final enforcement. Reports are routed to the community server's moderation/review pipeline (D052).
+
+**Report categories (minimum):**
+- `cheating`
+- `griefing / team sabotage`
+- `afk / intentional idle`
+- `harassment / abusive chat/voice`
+- `spam / disruptive comms`
+- `other` (freeform note)
+
+**Evidence attachment defaults (when available):**
+- replay reference / signed replay ID (`.icrep`, D007)
+- match ID / `CertifiedMatchResult` reference
+- timestamps and player IDs
+- communication context (muted/report counts, voice/text events) for abuse reports
+- relay telemetry summary flags (disconnects/desyncs/timing anomalies) for cheating/griefing reports
+
+**UX and trust rules:**
+- Reports are **signals**, not automatic guilt
+- The UI should communicate "submitted for review" rather than "player punished"
+- False/malicious reporting is itself sanctionable by the community server (D052/D037)
+- Community review (Overwatch-style, if enabled) is advisory input to moderators/anti-cheat workflows, not a replacement for evidence and thresholds
 
 #### Jitter Buffer
 
@@ -2451,6 +2484,13 @@ pub struct PingMarker {
     pub duration: Duration,
     /// Audio cue played on placement. Each PingType has a distinct sound.
     pub audio_cue: PingAudioCue,
+    /// Optional short label for typed/role-aware pings (e.g., "AA", "LZ A").
+    /// Empty by default for quick pings. Bounded and sanitized.
+    pub label: Option<String>,
+    /// Optional appearance override for scripted beacons / D070 typed markers.
+    /// Core ping semantics still require shape/icon cues; color cannot be the
+    /// only differentiator (accessibility and ranked readability).
+    pub style: Option<CoordinationMarkerStyle>,
     /// Tick when placed (for expiration).
     pub placed_at: u64,
 }
@@ -2461,6 +2501,68 @@ pub struct PingMarker {
 **Ping persistence:** Pings are ephemeral — they expire after `duration` (default 8 seconds). They do NOT persist in save games. They DO appear in replays (via `PlayerOrder::TacticalPing` in the order stream).
 
 **Audio feedback:** Each ping type has a distinct short audio cue (< 300ms). Incoming pings from teammates play the cue with a minimap flash. Audio volume follows the `voice.ping_volume` cvar (D058). Repeated rapid pings from the same player have diminishing audio (third ping in 5 seconds is silent) to reduce annoyance.
+
+#### Beacon/Marker Colors and Optional Labels (Generals/OpenRA-style clarity, explicit in IC)
+
+IC already supports pings and tactical markers; this section makes the **appearance and text-label rules explicit** so "colored beaconing with optional text" is a first-class, replay-safe communication feature (not an implied UI detail).
+
+```rust
+/// Shared style metadata used by pings/beacons/tactical markers.
+/// Presentation-only; gameplay semantics remain in ping/marker type.
+pub struct CoordinationMarkerStyle {
+    pub color: MarkerColorStyle,
+    pub text_label: Option<String>,       // bounded, sanitized, max 16 chars
+    pub visibility: MarkerVisibility,     // team/allies/observers/scripted
+    pub ttl_ticks: Option<u64>,           // None = persistent until cleared
+}
+
+#[derive(Clone, Copy, Debug)]
+pub enum MarkerColorStyle {
+    /// Use the canonical color for the ping/marker type (default).
+    Canonical,
+    /// Use the sender's player color (for team readability / ownership).
+    PlayerColor,
+    /// Use a predefined semantic color override (`Purple`, `White`, etc.).
+    /// Mods/scenarios can expose a safe palette, not arbitrary RGB strings.
+    Preset(CoordinationColorPreset),
+}
+
+#[derive(Clone, Copy, Debug)]
+pub enum CoordinationColorPreset {
+    White,
+    Cyan,
+    Purple,
+    Orange,
+    Red,
+    Blue,
+    Green,
+    Yellow,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub enum MarkerVisibility {
+    Team,
+    AlliedTeams,
+    Observer,        // tournament/admin overlays
+    ScriptedAudience // mission-authored overlays / tutorials
+}
+```
+
+**Rules (normative):**
+
+- **Core ping types keep canonical meaning.** `Attack`, `Danger`, `Defend`, etc. retain distinct icons/shapes/audio, even if a style override adjusts accent color.
+- **Color is never the only signal.** Icons, animation, shape, and text cues remain required (colorblind-safe requirement).
+- **Optional labels are short and tactical.** Max 16 chars, sanitized, no markup; examples: `AA`, `LZ-A`, `Bridge`, `Push 1`.
+- **Rate limits still apply.** Styled/labeled beacons count against the same ping/marker budgets (no spam bypass via labels/colors).
+- **Replay-safe.** Label text and style metadata are preserved in replay coordination events (subject to replay stripping rules where applicable).
+- **Fog-of-war and audience scope still apply.** Visibility follows team/observer/scripted rules; styling cannot leak hidden intel.
+
+**Recommended defaults:**
+
+- Quick ping (`G` tap): no label, canonical color, ephemeral
+- Ping wheel (`Hold G`): no label by default, canonical color
+- Tactical marker/beacon (`/marker`, marker submenu): optional short label + optional preset color
+- D070 typed support markers (`lz`, `cas_target`, `recon_sector`): canonical type color by default, optional short label (`LZ B`, `CAS 2`)
 
 ### 4. Novel Coordination Mechanics
 
@@ -2574,6 +2676,7 @@ pub struct TacticalMarker {
     pub marker_type: MarkerType,
     pub pos: WorldPos,
     pub label: Option<String>,   // max 16 chars, e.g., "Expand", "Ambush"
+    pub style: CoordinationMarkerStyle,
     pub placed_at: u64,
 }
 
@@ -2588,7 +2691,7 @@ pub enum MarkerType {
 }
 ```
 
-**Access:** Place via ping wheel (hold longer to access marker submenu) or via commands (`/marker waypoint 1`, `/marker objective "Expand here"`, `/marker hazard 50`). Remove with `/marker clear` or right-click on existing marker.
+**Access:** Place via ping wheel (hold longer to access marker submenu) or via commands (`/marker waypoint 1`, `/marker objective "Expand here"`, `/marker hazard 50`). Optional style arguments (preset color + short label) are available in the marker panel/console, but the marker type remains the authoritative gameplay meaning. Remove with `/marker clear` or right-click on existing marker.
 
 **Use case:** Before a coordinated push, the team leader places waypoint markers 1-3 showing the attack route, an objective marker on the target, and a hazard zone on the enemy's defensive line. These persist until the push is complete, giving the team a shared tactical picture.
 
@@ -2806,9 +2909,10 @@ Ping.ClearAll()                             -- Clear all pings (mission use)
 ChatWheel.Send(player, phraseId)           -- Trigger a chat wheel phrase
 ChatWheel.RegisterPhrase(id, translations) -- Register a custom phrase
 
-Marker.Place(player, pos, markerType, label) -- Place tactical marker
-Marker.Remove(player, markerId)              -- Remove a marker
-Marker.ClearAll(player)                      -- Clear all markers
+Marker.Place(player, pos, markerType, label)       -- Place tactical marker (default style)
+Marker.PlaceStyled(player, pos, markerType, label, style) -- Optional color/TTL/visibility style
+Marker.Remove(player, markerId)                    -- Remove a marker
+Marker.ClearAll(player)                            -- Clear all markers
 
 Chat.Send(player, channel, message)        -- Send a chat message
 Chat.SendToAll(player, message)            -- Convenience: all-chat
@@ -2828,6 +2932,12 @@ All coordination features are accessible via the command console:
 /mute <player>           # Mute player (voice + text)
 /unmute <player>         # Unmute player
 /mutelist                # Show muted players
+/block <player>          # Block player socially (messages/invites/profile contact)
+/unblock <player>        # Remove social block
+/blocklist               # Show blocked players
+/report <player> <category> [note] # Submit moderation report (D052 review pipeline)
+/avoid <player>          # Add best-effort matchmaking avoid preference (D055; queue feature)
+/unavoid <player>        # Remove matchmaking avoid preference
 /voice volume <0-100>    # Set incoming voice volume
 /voice ptt <key>         # Set push-to-talk key
 /voice toggle            # Toggle voice on/off
@@ -2838,14 +2948,69 @@ All coordination features are accessible via the command console:
 /voice effect preview <name>  # Play sample clip with effect applied
 /voice effect info <name>     # Show preset details (stages, CPU estimate, author)
 /voice isolation toggle  # Toggle enhanced voice isolation (receiver-side double-pass)
-/ping <type> [x] [y]     # Place a ping (type: attack, defend, danger, etc.)
+/ping <type> [x] [y] [label] [color] # Place a ping (optional short label/preset color)
 /ping clear              # Clear your pings
 /draw                    # Toggle minimap drawing mode
-/marker <type> [label]   # Place tactical marker at cursor
+/marker <type> [label] [color] [ttl] [scope] # Place tactical marker/beacon at cursor
 /marker clear [id|all]   # Remove marker(s)
 /wheel <phrase_id>       # Send chat wheel phrase by ID
+/support request <type> [target] [note] # D070 support/requisition request
+/support respond <id> <approve|deny|eta|hold> [reason] # D070 commander response
 /replay strip-voice <file> # Remove voice from replay file
 ```
+
+### 10. Role-Aware Coordination Presets (D070 Commander & Field Ops Co-op)
+
+D070's asymmetric co-op mode (`Commander & Field Ops`) extends D059 with a **standardized request/response coordination layer**. This is a D059 communication feature, not a separate subsystem.
+
+**Scope split:**
+- **D059 owns** request/response UX, typed markers, status vocabulary, shortcuts, and replay-visible coordination events
+- **D070/D038 scenarios own** gameplay meaning (which support exists, costs/cooldowns, what happens on approval)
+
+#### Support request lifecycle (D070 extension)
+
+For D070 scenarios, D059 supports a visible lifecycle for role-aware support requests:
+
+- `Pending`
+- `Approved`
+- `Denied`
+- `Queued`
+- `Inbound`
+- `Completed`
+- `Failed`
+- `CooldownBlocked`
+
+These statuses appear in role-specific HUD panels (Commander queue, Field Ops request feedback) and can be mirrored to chat/log output for accessibility and replay review.
+
+#### Role-aware coordination surfaces (minimum v1)
+
+- Field Ops request wheel / quick actions (`Need CAS`, `Need Recon`, `Need Reinforcements`, `Need Extraction`, `Need Funds`, `Objective Complete`)
+- Commander response shortcuts (`Approved`, `Denied`, `On Cooldown`, `ETA`, `Marking LZ`, `Hold Position`)
+- Typed support markers/pings (`lz`, `cas_target`, `recon_sector`, `extraction`, `fallback`)
+- Request queue + status panel on Commander HUD
+- Request status feedback on Field Ops HUD (not chat-only)
+
+#### Request economy / anti-spam UX requirements (D070)
+
+D059 must support D070's request economy by providing UI and status affordances for:
+- duplicate-request collapse ("same request already pending")
+- cooldown/availability reasons (`On Cooldown`, `Insufficient Budget`, `Not Unlocked`, `Out of Range`, etc.)
+- queue ordering / urgency visibility on the Commander side
+- fast Commander acknowledgments that reduce chat/voice load under pressure
+- typed support-marker labels and color accents (optional) without replacing marker-type semantics
+
+This keeps the communication layer useful when commandos/spec-ops become high-impact enough that both teams may counter with their own special units.
+
+#### Replay / determinism policy
+
+Request creation/response actions and typed coordination markers should be represented as deterministic coordination events/orders (same design intent as pings/chat wheel) so replays preserve the teamwork context. Actual support execution remains normal gameplay orders validated by the sim (D012).
+
+#### Discoverability / accessibility rule (reinforced for D070)
+
+Every D070 role-critical coordination action must have:
+- a shortcut path (keyboard/controller/touch quick access)
+- a visible UI path
+- non-color-only status signaling for request states
 
 ### Alternatives Considered
 
@@ -2858,9 +3023,9 @@ All coordination features are accessible via the command console:
 - **Opus alternative: Lyra/Codec2** (rejected — Lyra is a Google ML-based codec with excellent compression (3 kbps) but requires ML model distribution, is not WASM-friendly, and has no Rust bindings. Codec2 is designed for amateur radio with lower quality than Opus at comparable bitrates. Opus is the industry standard, has mature Rust bindings, and is universally supported.)
 - **Custom ping types per mod** (partially accepted — the engine defines the 8 core ping types; game modules can register additional types via YAML. This avoids UI inconsistency while allowing mod creativity. Custom ping types inherit the rate-limiting and visual framework.)
 - **Sender-side voice effects** (rejected — applying DSP effects before Opus encoding wastes codec bits on the effect rather than the voice, degrades quality, and forces the sender's aesthetic choice on all listeners. Receiver-side effects let each player choose their own experience while preserving clean audio for replays and broadcast.)
-- **External DSP library (fundsp/dasp) for voice effects** (deferred — the built-in DSP stages (biquad, compressor, soft-clip, noise gate, reverb, de-esser) are ~500 lines of straightforward Rust. External libraries add dependency weight for operations that don't need their generality. If future effects require convolution reverb or FFT-based processing, `fundsp` becomes a justified addition.)
-- **Voice morphing / pitch shifting** (deferred — AI-powered voice morphing (deeper voice, gender shifting, character voices) is technically feasible but raises toxicity concerns: voice morphing enables identity manipulation in team games. Competitive games that implemented voice morphing (Fortnite's party effects) limit it to cosmetic fun modes. IC could add this as a Phase 7 Workshop resource type with appropriate social guardrails — deferred, not rejected.)
-- **Shared audio channels / proximity voice** (deferred — proximity voice where you hear players based on their units' positions is interesting for immersive scenarios but confusing for competitive play. The `SPATIAL` flag provides spatial panning as a toggle-able approximation. Full proximity voice could be added in Phase 7 as an optional game mode feature.)
+- **External DSP library (fundsp/dasp) for voice effects** (deferred to `M11` / Phase 7+, `P-Optional` — the built-in DSP stages (biquad, compressor, soft-clip, noise gate, reverb, de-esser) are ~500 lines of straightforward Rust. External libraries add dependency weight for operations that don't need their generality. Validation trigger: convolution reverb / FFT-based effects become part of accepted scope.)
+- **Voice morphing / pitch shifting** (deferred to `M11` / Phase 7+, `P-Optional` — AI-powered voice morphing (deeper voice, gender shifting, character voices) is technically feasible but raises toxicity concerns: voice morphing enables identity manipulation in team games. Competitive games that implemented voice morphing (Fortnite's party effects) limit it to cosmetic fun modes. If adopted, it is a Workshop resource type with social guardrails, not a competitive baseline feature.)
+- **Shared audio channels / proximity voice** (deferred to `M11` / Phase 7+, `P-Optional` — proximity voice where you hear players based on their units' positions is interesting for immersive scenarios but confusing for competitive play. The `SPATIAL` flag provides spatial panning as a toggle-able approximation. Full proximity voice is outside the current competitive baseline and requires game-mode-specific validation.)
 
 ### Integration with Existing Decisions
 
@@ -2871,6 +3036,7 @@ All coordination features are accessible via the command console:
 - **D054 (Transport):** On native builds, voice uses the same `Transport` trait connection as orders — Opus frames are sent on `MessageLane::Voice` over `UdpTransport`. On browser builds, voice uses a parallel `str0m` WebRTC session *alongside* (not through) the `Transport` trait, because browser audio capture/playback requires WebRTC media APIs. The relay bridges between the two: it receives voice from native clients on `MessageLane::Voice` and from browser clients via WebRTC, then forwards to each recipient using their respective transport. The `VoiceTransport` enum (`Native` / `WebRtc`) selects the appropriate path per platform.
 - **D055 (Ranked Matchmaking):** Voice is stripped from ranked replay submissions. Chat and pings are preserved (they are orders in the deterministic stream).
 - **D058 (Chat/Command Console):** All coordination features are accessible via console commands. D058 defined the input system; D059 defines the routing, voice, spatial signaling, and voice effect selection that D058's commands control. The `/all`, `/team`, `/w` commands were placeholder in D058 — D059 specifies their routing implementation. Voice effect commands (`/voice effect list`, `/voice effect set`, `/voice effect preview`) give console-first access to the voice effects system.
+- **D070 (Asymmetric Commander & Field Ops Co-op):** D059 provides the standardized request/response coordination UX, typed support markers, and status vocabulary for D070 scenarios. D070 defines gameplay meaning and authoring; D059 defines the communication surfaces and feedback loops.
 - **05-FORMATS.md (Replay Format):** Voice stream extends the replay file format with a new section. The replay header gains `voice_offset`/`voice_length` fields and a `HAS_VOICE` flag bit. Voice is independent of the order and analysis streams — tools that don't process voice ignore it.
 - **06-SECURITY.md:** New `ProtocolLimits` fields for voice, ping, and drawing rate limits. Voice spoofing prevention (relay-stamped speaker ID). Voice-in-replay consent model addresses privacy requirements.
 - **D010 (Snapshots) / Analysis Event Stream:** The replay analysis event stream now includes **camera position samples** (`CameraPositionSample`), **selection tracking** (`SelectionChanged`), **control group events** (`ControlGroupEvent`), **ability usage** (`AbilityUsed`), **pause events** (`PauseEvent`), and **match end events** (`MatchEnded`) — see `05-FORMATS.md` § "Analysis Event Stream" for the full enum. Camera samples are lightweight (~8 bytes per player per sample at 2 Hz = ~1 KB/min for 8 players). D059 notes this integration because voice-in-replay is most valuable when combined with camera tracking — hearing what a player said while seeing what they were looking at.
@@ -3544,7 +3710,7 @@ To keep desktop, touch, Steam Deck, TV/gamepad, tutorials, and accessibility rem
 - **Selection & Orders** — select, add/remove selection, box select, deselect, context command, attack-move, guard, stop, force action, deploy, stance/ability shortcuts
 - **Production & Build** — open/close build UI, category navigation, queue/cancel, structure placement confirm/cancel/rotate (module-specific), repair/sell/context build actions
 - **Control Groups** — select group, assign group, add-to-group, center group
-- **Communication & Coordination** — open chat, channel shortcuts, whisper, push-to-talk, ping wheel, chat wheel, minimap draw, tactical markers, callvote
+- **Communication & Coordination** — open chat, channel shortcuts, whisper, push-to-talk, ping wheel, chat wheel, minimap draw, tactical markers, callvote, and role-aware support request/response actions for asymmetric modes (D070)
 - **UI / System** — pause/menu, scoreboard, controls quick reference, console (where supported), screenshot, replay controls, observer panels
 
 **Official profile families (shipped defaults):**
@@ -3554,6 +3720,8 @@ To keep desktop, touch, Steam Deck, TV/gamepad, tutorials, and accessibility rem
 - `Gamepad Default` — cursor/radial hybrid for TV/console-style play
 - `Steam Deck Default` — Deck-specific variant (touchpads/optional gyro/OSK-aware), not just generic gamepad
 - `Touch Phone` and `Touch Tablet` — gesture + HUD layout profiles (defined by D059/D065 mobile control rules; not "key" maps, but still part of the same action catalog)
+
+**D070 role actions:** Asymmetric mode actions (e.g., `support_request_cas`, `support_request_recon`, `support_response_approve`, `support_response_eta`) are additional semantic actions layered onto the same catalog and surfaced only when the active scenario/mode assigns a role that uses them.
 
 **Binding profile behavior:**
 - Profiles are versioned. A local profile stores either a stock profile ID or a **diff** from a stock profile (`Custom`).
@@ -3723,6 +3891,23 @@ D065 also provides a persistent **Controls Quick Reference** overlay/menu entry 
 - Can be pinned in reduced form during early sessions (optional setting), then auto-unpins as the player demonstrates mastery
 
 This is a **reference aid**, not a tutorial gate. It never blocks gameplay and does not require completion.
+
+#### Asymmetric Co-op Role Onboarding (D070 Extension)
+
+When a player enters a D070 `Commander & Field Ops` scenario for the first time, D065 can offer a short, skippable **role onboarding** overlay before match start (or as a replayable help entry from pause/settings).
+
+**What it teaches (v1):**
+- the assigned role (`Commander` vs `Field Ops`)
+- role-specific HUD regions and priorities
+- request/response coordination loop (request support ↔ approve/deny/ETA)
+- objective channel semantics (`Strategic`, `Field`, `Joint`)
+- where to find the role-specific Controls Quick Reference page
+
+**Rules:**
+- skippable and replayable
+- concept-first, not mission-specific scripting
+- uses the same D065 semantic action prompt model (no separate input prompt system)
+- profile/device aware (`KBM`, controller/Deck, touch) where the scenario/platform supports the role
 
 #### Controls-Changed Walkthrough (One-Time After Input UX Changes)
 
@@ -4375,7 +4560,412 @@ These guidelines apply to modders creating campaigns intended for the `category:
 - **D038 (Scenario Editor):** Tutorial Step and Tutorial Hint modules enable visual tutorial creation without Lua. See D038's module library.
 - **D043 (AI Behavior Presets):** Tutorial AI tier sits below Easy difficulty. It's Lua-scripted per mission, not a general-purpose AI.
 - **D058 (Command Console):** `/hints` and `/discovery` console commands for hint management and discovery milestone control.
+- **D070 (Asymmetric Commander & Field Ops Co-op):** D065 provides role onboarding overlays and role-aware Quick Reference surfaces using the same semantic input action catalog and prompt renderer.
+- **D069 (Installation & First-Run Setup Wizard):** D069 hands off to D065 after content is playable (experience profile gate + controls walkthrough offer) and reuses D065 prompt/Quick Reference systems during setup and post-update control changes.
 - **D031 (Telemetry):** New player pipeline emits `onboarding.step` telemetry events. Hint shows/dismissals are tracked in `gameplay_events` for UX analysis.
 - **`17-PLAYER-FLOW.md`:** Full player flow mockups for all five tutorial layers, including the self-identification screen, Commander School entry, multiplayer onboarding, and post-game tips.
 - **`08-ROADMAP.md`:** Phase 3 deliverables (hint system, new player pipeline, progressive discovery), Phase 4 deliverables (Commander School, skill assessment, post-game learning, tutorial achievements).
+
+---
+
+---
+
+## D069: Installation & First-Run Setup Wizard — Player-First, Offline-First, Cross-Platform
+
+|                |                                                                                                                                                                                                                                                                              |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Status**     | Accepted                                                                                                                                                                                                                                                                     |
+| **Phase**      | Phase 4–5 (first-run setup flow + preset selection + repair entry points), Phase 6a (resume/checkpointing + full maintenance wizard + Deck polish), Phase 6b+ (platform variants expanded, smart recommendations, SDK parity)                                           |
+| **Depends on** | D030/D049 (Workshop transport + package verification), D034 (SQLite for checkpoints/setup state), D061 (data/backup/restore UX), D065 (experience profile + controls walkthrough handoff), D068 (selective install profiles/content packs), D033 (no-dead-end UX rule) |
+| **Driver**     | Players need a tactful, reversible, fast path from "installed binary" to "playable game" without being trapped by store-specific assumptions, online/account gates, or confusing mod/content prerequisites.                                                               |
+
+### Decision Capsule (LLM/RAG Summary)
+
+- **Status:** Accepted
+- **Phase:** Phase 4–5 (desktop/store baseline), Phase 6a (maintenance/resume maturity), Phase 6b+ (advanced variants)
+- **Canonical for:** Installation/setup wizard UX, first-run setup sequencing, maintenance/repair wizard re-entry, platform-specific install responsibility split
+- **Scope:** `ic-ui` setup wizard flow, `ic-game` platform capability integration, content source detection + install preset planning, transfer/verify UX, post-install maintenance/repair entry points
+- **Decision:** IC uses a **two-layer installation model**: platform/store/native package handles **binary install/update**, and IC provides a **shared in-app First-Run Setup Wizard** (plus maintenance wizard) for identity, content sources, selective installs, verification, and onboarding handoff.
+- **Why:** Avoids launcher bloat and duplicated patchers while giving players a consistent, no-dead-end setup experience across Steam/GOG/standalone and deferred browser/mobile platform variants.
+- **Non-goals:** Replacing platform installers/patchers (Steam/GOG/Epic), mandatory online/account setup, monolithic irreversible install choices, full console certification install-flow detail at this phase.
+- **Invariants preserved:** Platform-agnostic architecture (`InputSource`, `ScreenClass`), D068 selective installs and fingerprints, D049 verification/P2P transport, D061 offline-portable data ownership, D065 onboarding handoff.
+- **Defaults / UX behavior:** `Full Install` preset is the default in the wizard (with visible alternatives and size estimates); offline-first optional setup; all choices reversible via Settings → Data maintenance flows.
+- **Public interfaces / types:** `InstallWizardState`, `InstallWizardMode`, `InstallStepId`, `ContentSourceCandidate`, `ContentInstallPlan`, `InstallTransferProgress`, `RepairPlan`, `WizardCheckpoint`, `PlatformInstallerCapabilities`
+- **Affected docs:** `src/17-PLAYER-FLOW.md`, `src/decisions/09c-modding.md` (D068), `src/decisions/09e-community.md` (D030/D049), `src/02-ARCHITECTURE.md`, `src/04-MODDING.md`, `src/decisions/09f-tools.md`
+- **Revision note summary:** None
+- **Keywords:** install wizard, first-run setup, setup assistant, repair verify, content detection, selective install presets, offline-first, platform installer, Steam Deck setup
+
+### Problem
+
+IC already has strong pieces of the setup experience — first-launch identity setup (D061), content detection, no-dead-end guidance (D033), and selective installs (D068) — but they are not yet formalized as a single, tactful **installation and setup wizard**.
+
+Without a unified design, the project risks:
+
+- duplicating platform installer functionality in-store builds
+- inconsistent first-run behavior across Steam/GOG/standalone/browser builds
+- confusing transitions between asset detection, content install prompts, and onboarding
+- poor recovery/repair UX when sources move, files are corrupted, or content packs are removed
+
+The wizard must fit IC's philosophy: **fast, reversible, offline-capable, and clear within one second**.
+
+### Decision
+
+Define a **two-layer install/setup model**:
+
+1. **Distribution installer entry (platform/store/standalone specific)** — installs/updates the **binary**
+2. **IC First-Run Setup Wizard (shared, platform-adaptive)** — configures the **playable experience**
+
+The in-app wizard is the canonical IC-controlled setup UX and is re-enterable later as a **maintenance wizard** for modify/repair/reinstall-style operations.
+
+### Design Principles (Normative)
+
+#### Lean Toward
+
+- platform-native binary installation/update (Steam/GOG/Epic/OS package managers)
+- quick vs advanced setup split
+- preset/component selection with size estimates
+- resumable/checkpointed setup operations
+- source detection with confidence/status and merge guidance
+- repair/verify/re-scan as first-class actions
+- no-dead-end guidance panels and direct remediation paths
+
+#### Avoid
+
+- launcher bloat (always-on heavyweight patcher/launcher for normal play)
+- redundant binary updaters on store builds
+- mandatory online/account setup before local play
+- dark patterns or irreversible setup choices
+- raw filesystem path workflows as the primary path on touch/mobile platforms
+
+### Two-Layer Install Model
+
+#### Layer 1 — Distribution Install Entry (Platform/Store/Standalone)
+
+Purpose: place/update the **IC binary** on the device.
+
+Profiles:
+- **Store builds (Steam/GOG/Epic):** platform installs/updates/uninstalls binaries
+- **Standalone desktop:** IC-provided bootstrap package/installer handles binary placement and shortcuts
+- **Browser / mobile / console:** no traditional installer; jump to a setup-assistant variant
+
+Rules:
+- IC does **not** duplicate store patch/update UX
+- IC may offer **guidance links** to platform verify/repair actions
+- IC may independently verify and repair **IC-side content/setup state** (packages, cache, source mappings, indexes)
+
+#### Layer 2 — IC First-Run Setup Wizard (Shared, Platform-Adaptive)
+
+Purpose: reach a **playable configured state**.
+
+Primary outcomes:
+- identity initialized (or recovered)
+- optional cloud sync decision captured
+- content sources detected and selected
+- install preset/content plan applied (D068)
+- transfer/copy/download/verify/index steps completed
+- D065 onboarding handoff offered (experience profile + controls walkthrough)
+- player reaches the main menu in a ready state
+
+### Wizard Modes
+
+#### Quick Setup (Default Path)
+
+Uses the fastest path with visible "Change" affordances:
+- best detected content source (or prompts if ambiguous)
+- `Full Install` preset preselected (default in D069)
+- offline-first path (online features optional)
+- default data directory
+
+#### Advanced Setup (Optional)
+
+Adds advanced controls without blocking the quick path:
+- data directory override / portable-style data placement guidance
+- content preset / custom pack selection (D068)
+- source priority ordering (Steam vs GOG vs OpenRA vs manual)
+- bandwidth/background download behavior
+- optional verification depth (basic vs full hash scan)
+- accessibility setup before gameplay (text size, high contrast, reduced motion)
+
+### Wizard Step Sequence (Desktop/Store Baseline)
+
+The setup wizard is a UI flow inside `InMenus` (menu/UI-only state). It does not instantiate the sim.
+
+#### 1. Welcome / Setup Intent
+
+Actions:
+- `Quick Setup`
+- `Advanced Setup`
+- `Restore from Backup / Recovery Phrase`
+- `Exit`
+
+Purpose: set expectations and mode, not collect technical settings.
+
+#### 2. Identity Setup (Preserves Existing First-Launch Order)
+
+Uses the current D061-first flow:
+- recovery phrase creation (or restore path)
+- cloud sync offer (optional, if platform service exists)
+
+UX requirements:
+- concise copy
+- explicit skip for cloud sync
+- "Already have an account?" visible
+- deeper explanations behind "Learn more"
+
+#### 3. Content Source Detection
+
+Builds on the existing `17-PLAYER-FLOW` content detection:
+- probe Steam, GOG, EA/Origin, OpenRA, manual folder
+- show found/not found status
+- allow source selection or merge when valid
+- if none found, provide guidance to acquisition options and manual browse
+
+Additions in D069:
+- source verification status (basic compatibility/probe confidence)
+- per-source hint ("why use this source")
+- saved source preferences and re-scan hooks
+
+#### 4. Content Install Plan (D068 Integration)
+
+Defaults:
+- `Full Install` preselected
+- alternatives visible with size estimates:
+  - `Campaign Core`
+  - `Minimal Multiplayer`
+  - `Custom`
+
+Wizard must show:
+- estimated download size
+- estimated disk usage (CAS-aware if available; conservative otherwise)
+- feature summary for each preset
+- optional media/language variants
+- explicit note: changeable later in `Settings → Data`
+
+#### 5. Transfer / Copy / Verify Progress
+
+Unified progress UI for:
+- local asset import/copy
+- Workshop/base package downloads
+- checksum verification
+- optional indexing/decompression/conversion
+
+Rules:
+- resumable
+- cancelable (with clear consequences)
+- step-level and overall progress
+- actionable error messages
+
+#### 6. Experience Profile & Controls Walkthrough Offer (D065 Handoff)
+
+After content is playable:
+- D065 self-identification gate
+- optional controls walkthrough
+- `Just let me play` remains prominent
+
+#### 7. Ready Screen
+
+Summary:
+- install preset
+- selected content sources
+- cloud sync state (if any)
+
+Actions:
+- `Play Campaign`
+- `Play Skirmish`
+- `Multiplayer`
+- `Settings → Data / Controls`
+- `Modify Installation`
+
+### Maintenance Wizard (Modify / Repair / Reinstall UX)
+
+The setup wizard is re-enterable after install as a **maintenance wizard**.
+
+Entry points:
+- `Settings → Data → Modify Installation`
+- `Settings → Data → Repair / Verify`
+- no-dead-end guidance panels when missing content or configuration is detected
+
+Supported operations:
+- switch install presets (`Full` ↔ `Campaign Core` ↔ `Minimal Multiplayer` ↔ `Custom`)
+- add/remove optional media and language packs
+- switch or repair cutscene variant packs (D068)
+- re-scan content sources
+- verify package checksums / repair metadata/indexes
+- reclaim disk space (`ic mod gc` / D049 CAS cleanup)
+- reset setup checkpoints / re-run setup assistant
+
+### Platform Variants (Concept Complete)
+
+#### Steam / GOG / Epic (Desktop)
+
+- platform manages binary install/update
+- IC launches directly into D069 setup wizard when setup is incomplete
+- cloud sync step uses `PlatformServices` when available
+- "Verify binary files" surfaces platform guidance where supported
+- IC still owns content packs, source detection, optional media, and setup repair
+
+#### Standalone Desktop (Windows/macOS/Linux)
+
+- lightweight bootstrap installer/package handles binary placement + shortcuts
+- then launches D069 setup wizard
+- optional advanced data-dir override / portable usage guidance (`IC_DATA_DIR`, `--data-dir`)
+- no mandatory background service
+
+#### Steam Deck
+
+- same D069 semantics as desktop
+- Deck-first navigation and larger targets
+- avoid keyboard-heavy steps in the primary flow
+- source detection and install presets unchanged in meaning
+
+#### Browser (WASM)
+
+No traditional installer; use a **Setup Assistant** variant:
+- storage permission/capacity checks (OPFS)
+- asset import/source selection
+- optional offline caching prompts
+- same D065 onboarding handoff once playable
+
+#### Mobile / Console (Deferred Concept, `M11+`)
+
+- store install + in-app setup assistant
+- guided content package choices, not raw filesystem paths as the primary flow
+- optional online/account setup, never hidden command-console requirements
+
+### Player-First SDK Extension (Shared Components)
+
+D069 is player-first, but its components are reusable for the SDK (`ic-editor`) setup path.
+
+Shared components:
+- data directory selection and health checks
+- content source detection (reused for asset import/reference workflows)
+- optional pack install/repair/reclaim UI patterns
+- transfer/progress/error presentation patterns
+
+SDK-specific additions (deferred shared-flow variant; `M9+` after player-first D069 baseline):
+- Git availability check (guidance only, no hard gate)
+- optional creator components/toolchains/templates
+- no forced installation of heavy creator packs by default
+
+### Shared Interfaces / Types (Spec-Level Sketches)
+
+```rust
+pub enum InstallWizardMode {
+    Quick,
+    Advanced,
+    Maintenance,
+}
+
+pub enum InstallStepId {
+    Welcome,
+    IdentitySetup,
+    CloudSyncOffer,
+    ContentSourceDetection,
+    ContentInstallPlan,
+    TransferAndVerify,
+    ExperienceProfileGate,
+    Ready,
+}
+
+pub struct InstallWizardState {
+    pub mode: InstallWizardMode,
+    pub current_step: InstallStepId,
+    pub checkpoints: Vec<WizardCheckpoint>,
+    pub selected_sources: Vec<ContentSourceSelection>,
+    pub install_plan: Option<ContentInstallPlan>,
+    pub platform_capabilities: PlatformInstallerCapabilities,
+    pub network_mode: SetupNetworkMode, // offline / online-optional / online-active
+    pub resume_token: Option<String>,
+}
+
+pub struct ContentSourceCandidate {
+    pub source_kind: ContentSourceKind, // steam/gog/openra/manual
+    pub path: String,
+    pub probe_status: ProbeStatus,
+    pub detected_assets: Vec<DetectedAssetSet>,
+    pub notes: Vec<String>,
+}
+
+pub struct ContentInstallPlan {
+    pub preset: InstallPresetId, // full / campaign_core / minimal_mp / custom
+    pub required_packs: Vec<ResourceId>,
+    pub optional_packs: Vec<ResourceId>,
+    pub estimated_download_bytes: u64,
+    pub estimated_disk_bytes: u64,
+    pub feature_summary: Vec<String>,
+}
+
+pub struct InstallTransferProgress {
+    pub phase: TransferPhase, // copy / download / verify / index
+    pub current_item: Option<String>,
+    pub completed_bytes: u64,
+    pub total_bytes: Option<u64>,
+    pub warnings: Vec<InstallWarning>,
+}
+
+pub struct RepairPlan {
+    pub verify_binary_via_platform: bool,
+    pub verify_workshop_packages: bool,
+    pub rescan_content_sources: bool,
+    pub rebuild_indexes: bool,
+    pub reclaim_space: bool,
+}
+
+pub struct WizardCheckpoint {
+    pub step: InstallStepId,
+    pub completed_at_unix: i64,
+    pub status: StepStatus, // complete / partial / failed / skipped
+    pub data_hash: Option<String>,
+}
+```
+
+### Optional CLI / Support Tooling (Future Capability Targets)
+
+- `ic setup doctor` — inspect setup state, sources, and missing prerequisites
+- `ic setup reset` — reset setup checkpoints while preserving content/data
+- `ic content verify` — verify installed content packs/checksums
+- `ic content repair` — guided repair (rebuild metadata/indexes + re-fetch as needed)
+
+Command names can change; the capability set is the requirement.
+
+### UX Rules (Normative)
+
+- **No dead-end buttons** applies to setup and maintenance flows
+- **Offline-first optional:** no account/community/cloud step blocks local play
+- **`Full Install` default** with visible alternatives and clear sizes
+- **Always reversible:** setup choices can be changed later in `Settings → Data` / `Settings → Controls`
+- **No surprise background behavior:** seeding/background downloads/autostart choices must be explicit
+- **One-screen purpose:** each step has one primary CTA and a clear back/skip path where safe
+- **Accessibility from step 1:** text size, high contrast, reduced motion, and device-appropriate navigation supported in the wizard itself
+
+### Research / Benchmark Workstream (Pre-Copy / UX Polish)
+
+Create a methodology-compliant research note (e.g., `research/install-setup-wizard-ux-analysis.md`) covering:
+- game/store installers and repair flows (Steam, GOG Galaxy, Battle.net, EA App)
+- RTS/community examples (OpenRA, C&C Remastered launcher/workshop-adjacent flows, mod managers)
+- cross-platform app installers/updaters (VS Code, Firefox, Discord)
+
+Use the standard **Fit / Risk / IC Action** format and explicitly record:
+- lean toward / avoid patterns
+- repair/verify UX examples
+- progress/error-handling examples
+- dark-pattern warnings
+
+### Alternatives Considered
+
+1. **Platform/store installer only, no IC setup wizard** — Rejected. Leaves content detection, selective installs, and repair UX fragmented and inconsistent.
+2. **Custom launcher/updater for all builds** — Rejected. Duplicates platform patching, adds bloat, and conflicts with offline-first simplicity.
+3. **Mandatory online account setup during install** — Rejected. Violates portability/offline goals and creates unnecessary friction.
+4. **Monolithic install with no maintenance wizard** — Rejected. Conflicts with D068 selective installs and tactful no-dead-end UX.
+
+### Cross-References
+
+- **D061 (Player Data Backup & Portability):** Recovery phrase, cloud sync offer, and restore UX are preserved as the early setup steps.
+- **D065 (Tutorial & New Player Experience):** D069 hands off to the D065 self-identification gate and controls walkthrough after content is playable.
+- **D068 (Selective Installation):** Install presets, content packs, optional media, and the Installed Content Manager are the core content-planning model used by D069.
+- **D030/D049 (Workshop):** Setup uses Workshop transport and checksum verification for content downloads; maintenance wizard reuses the same verification and cache-management primitives.
+- **D033 (QoL / No Dead Ends):** Installation/setup adopts the same no-dead-end button rule and reversible UX philosophy.
+- **`17-PLAYER-FLOW.md`:** First-launch and maintenance wizard screen flows/mocks.
+- **`02-ARCHITECTURE.md`:** Platform capability split (store/standalone/browser setup responsibilities) and UI/platform adaptation hooks.
+
 

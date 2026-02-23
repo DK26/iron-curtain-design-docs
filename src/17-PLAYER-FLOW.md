@@ -115,7 +115,94 @@ Every screen in this document exists within one of these states. The sim ECS wor
 
 ## First Launch Flow
 
-The first time a player launches Iron Curtain, the game must accomplish three things: establish identity, locate game assets, and get them playing — in that order, as fast as possible.
+The first time a player launches Iron Curtain, the game runs the **D069 First-Run Setup Wizard** (player-facing, in-app). The wizard's job is to establish identity, locate content sources, apply an install preset, and get the player into a playable main menu state — in that order, as fast as possible, with an offline-first path and no dead ends.
+
+### Setup Wizard Entry (D069)
+
+```
+┌─────────────────────────────────────────────────────┐
+│  SET UP IRON CURTAIN                               │
+│                                                     │
+│  Get playable in a few steps. You can change       │
+│  everything later in Settings → Data / Controls.   │
+│                                                     │
+│  [Quick Setup]     (default: Full Install preset)   │
+│  [Advanced Setup]  (paths, presets, bandwidth, etc.)│
+│                                                     │
+│  [Restore from Backup / Recovery Phrase]            │
+│  [Exit]                                             │
+└─────────────────────────────────────────────────────┘
+```
+
+- **Quick Setup** uses the fastest path with visible "Change" actions later
+- **Advanced Setup** exposes data dir, custom install preset, source priority, and verification options
+- **Restore** jumps to D061 restore/recovery flows before continuing wizard steps
+- The wizard is **re-enterable later** as a maintenance flow (`Settings → Data → Modify Installation` / `Repair & Verify`)
+
+#### Quick Setup Screen (D069, default path)
+
+Quick Setup is optimized for "get me playing" while still showing the choices being made and offering a clear path to change them.
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  QUICK SETUP                                      [Advanced ▸]  │
+│                                                                 │
+│  We'll use the fastest path. You can change any choice later.   │
+│                                                                 │
+│  Content Source        Steam Remastered ✓         [Change]       │
+│  Install Preset        Full Install (default)     [Change]       │
+│  Data Location         Default data folder        [Change]       │
+│  Cloud Sync            Ask me after identity step [Change]       │
+│                                                                 │
+│  Estimated download    1.8 GB                                   │
+│  Estimated disk use    8.4 GB                                   │
+│                                                                 │
+│  [Start Setup]                              [Back]               │
+│                                                                 │
+│  Need less storage? [Campaign Core] [Minimal Multiplayer]       │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+- Defaults are visible, not hidden
+- "Change" links avoid forcing Advanced mode for one-off tweaks
+- Smaller preset shortcuts are available inline (no dead ends)
+
+#### Advanced Setup Screen (D069, optional)
+
+Advanced Setup exposes install and transport controls for storage-constrained, bandwidth-constrained, or power users without slowing down the Quick path.
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  ADVANCED SETUP                                   [Quick ▸]     │
+│                                                                 │
+│  [Sources] [Content] [Storage] [Network] [Accessibility]        │
+│  ──────────────────────────────────────────────────────────────  │
+│                                                                 │
+│  Sources (priority order):                                      │
+│   1. Steam Remastered      ✓ found       [Move] [Disable]       │
+│   2. OpenRA (RA mod)       ✓ found       [Move] [Disable]       │
+│   3. Manual folder         (not set)     [Browse…]              │
+│                                                                 │
+│  Install preset:  [Custom ▾]                                    │
+│  Included packs:                                                │
+│   ☑ Campaign Core       ☑ Multiplayer Maps                      │
+│   ☑ Tutorial            ☑ Classic Music                         │
+│   ☐ Cutscenes (FMV)     ☐ AI Enhanced Cutscenes                 │
+│   ☑ Original Cutscenes  ☐ HD Art Pack                           │
+│                                                                 │
+│  Verification:   [Basic Probe ▾] (Basic / Full Hash Scan)       │
+│  Download mode:   P2P preferred + HTTP fallback   [Change]      │
+│  Data folder:     ~/.local/share/iron-curtain     [Change]      │
+│                                                                 │
+│  Download now: 0.9 GB      Est. disk: 5.7 GB                    │
+│                                                                 │
+│  [Apply & Continue]                      [Back]                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+- Advanced options are grouped by purpose, not dumped on one page
+- Verification and transport are explicit (but still use sane defaults)
+- Optional media remains clearly optional
 
 ### Identity Setup
 
@@ -161,6 +248,59 @@ The first time a player launches Iron Curtain, the game must accomplish three th
 - If multiple sources found: player picks preferred source (or uses all — assets merge)
 - Detection results are saved; re-scan available from Settings
 
+### Content Install Plan (D069 + D068)
+
+After sources are selected, the wizard shows an install-preset step with size estimates and feature summaries:
+
+```
+┌─────────────────────────────────────────────────────┐
+│ Install Content                                     │
+│                                                     │
+│ Source: Steam Remastered assets  ✓                  │
+│                                                     │
+│ ► Full Install (default)            8.4 GB disk     │
+│   Campaign + Multiplayer + Media packs              │
+│                                                     │
+│   Campaign Core                     3.1 GB disk     │
+│   Minimal Multiplayer               2.2 GB disk     │
+│   Custom…                           [Choose packs]  │
+│                                                     │
+│ Download now: 1.8 GB   Est. disk: 8.4 GB            │
+│ Can change later: Settings → Data                   │
+│                                                     │
+│ [Continue]   [Back]                                 │
+└─────────────────────────────────────────────────────┘
+```
+
+- Default is **`Full Install`** (this wizard's default posture), with visible alternatives
+- D068 install presets remain reversible in `Settings → Data`
+- Optional media variants/language packs appear in `Custom` (and can be added later)
+
+### Transfer / Copy / Verify (D069)
+
+The wizard then performs local imports/copies and package downloads in a unified progress screen:
+
+```
+┌─────────────────────────────────────────────────────┐
+│ Setting Up Content                                  │
+│                                                     │
+│ Step 2/4: Verify package checksums                  │
+│ [███████████████░░░░░] 73%                          │
+│                                                     │
+│ Current item: official/ra1-campaign-core@1.0        │
+│ Source: HTTP fallback (P2P unavailable)             │
+│                                                     │
+│ [Pause] [Cancel]                                    │
+│                                                     │
+│ Need help? [Repair options]                         │
+└─────────────────────────────────────────────────────┘
+```
+
+- Handles local asset import, package download, verification, and indexing
+- Resumable/checkpointed (restart continues safely)
+- Cancelable with clear consequences
+- Errors are actionable (retry source, change preset, repair, inspect details)
+
 ### New Player Gate
 
 After content detection, first-time players see a brief self-identification screen (D065):
@@ -183,7 +323,15 @@ This sets the initial experience profile (D033) and determines whether the tutor
 
 ### Transition to Main Menu
 
-After identity + content + profile gate (or "Just let me play"), the player lands on the main menu with the shellmap running behind it. Total time: under 30 seconds for a "Just let me play" player with auto-detected assets.
+After identity + source detection + content install plan + transfer/verify + profile gate (or "Just let me play"), the player lands on the main menu with the shellmap running behind it.
+
+**Ready screen (D069) summary before main menu entry may include:**
+- install preset selected (`Full` / `Campaign Core` / `Minimal Multiplayer` / `Custom`)
+- content sources in use (Steam/GOG/OpenRA/manual)
+- cloud sync state (enabled / skipped)
+- quick actions: `Play Campaign`, `Play Skirmish`, `Multiplayer`, `Settings → Data / Controls`, `Modify Installation`
+
+Target: under 30 seconds for a "Just let me play" player with auto-detected assets and minimal/no downloads; longer paths remain clear and resumable.
 
 ---
 
@@ -267,6 +415,8 @@ Main Menu → Campaign
 │  │  CAMPAIGN   │  │  CAMPAIGN   │  │  CAMPAIGNS  │     │
 │  │             │  │             │  │             │     │
 │  │ Missions:14 │  │ Missions:14 │  │ Browse →    │     │
+│  │ 5/14 (36%)  │  │ 2/14 (14%)  │  │             │     │
+│  │ Best: 9/14  │  │ Best: 3/14  │  │             │     │
 │  │ [New Game]  │  │ [New Game]  │  │             │     │
 │  │ [Continue]  │  │ [Continue]  │  │             │     │
 │  └─────────────┘  └─────────────┘  └─────────────┘     │
@@ -291,6 +441,7 @@ Main Menu → Campaign
 | Continue (Allied/Soviet) | Campaign Graph → next available mission                                   |
 | Workshop Campaigns       | Workshop Browser (filtered to campaigns)                                  |
 | Commander School         | Tutorial campaign (D065, 10 branching missions)                           |
+| Ops Prologue *(optional / D070 validation mini-campaign)* | Campaign Browser / Featured (when enabled)                     |
 | Generative Campaign      | Generative Campaign Setup (D016) — or guidance panel if no LLM configured |
 | ← Back                   | Main Menu                                                                 |
 
@@ -324,15 +475,33 @@ The campaign graph is a visual world map (or node-and-edge graph for community c
 │  Unit Roster: 12 units carried over                      │
 │  [View Roster]  [View Heroes]  [Mission Briefing →]      │
 │                                                          │
-│  Campaign Stats: 3/14 complete  Time: 2h 15m             │
+│  Campaign Stats: 3/14 complete (21%)  Time: 2h 15m       │
+│  Current Path: 4   Best Path: 6   Endings: 0/2           │
+│  [Details ▾] [Community Benchmarks ▾]                    │
 └──────────────────────────────────────────────────────────┘
 ```
 
 **Flow:** Select a node → Mission Briefing screen → click "Begin Mission" → Loading → InGame. After mission: Debrief → next node unlocks on graph.
 
+**Branching-safe progress display (D021):**
+- `Progress` defaults to **unique missions completed / total missions in graph**.
+- `Current Path` and `Best Path` are shown separately because "farthest mission reached" is ambiguous in branching campaigns.
+- For linear campaigns, the UI may simplify this to a single `Missions: X / Y` line.
+
+**Optional community benchmarks (D052/D053, opt-in):**
+- Hidden unless the player enables campaign comparison sharing in profile/privacy settings.
+- Normalized by **campaign version + difficulty + balance preset**.
+- Spoiler-safe by default (no locked mission names/hidden ending names before discovery).
+- Example summary: `Ahead of 62% (Normal, IC Default)` and `Average completion: 41%`.
+- Benchmark cards show a trust/source badge (for example `Local Aggregate`, `Community Aggregate`, `Community Aggregate ✓ Verified`).
+
 **Campaign transitions** (D021): Briefing → mission → debrief → next mission. No exit-to-menu between levels unless the player explicitly presses Escape. The debrief screen loads instantly (no black screen), and the next mission's briefing runs concurrently with background asset loading. If a cutscene exists and the player's **preferred cutscene variant** (Original / Clean Remaster / AI Enhanced) is installed, that version plays while assets load — by the time the cutscene ends, the mission is ready. If the preferred variant is missing, IC falls back to another installed cutscene variant (preferably Original) before falling back to the mission's briefing/intermission presentation. If no cutscene pack is installed, the campaign uses the mission's fallback briefing/intermission presentation and continues without interruption (with an optional "Download cutscene pack" prompt). The only loading bar appears on cold start or unusually large asset loads, and even then it's campaign-themed.
 
 **Hero campaigns (optional D021 hero toolkit):** A campaign node may chain `Debrief → Hero Sheet / Skill Choice → Armory/Roster → Briefing → Begin Mission` without leaving the campaign flow. These screens appear only when the campaign enables hero progression; classic campaigns keep the simpler debrief/briefing path.
+
+**Commander rescue bootstrap (optional D021 + D070 pattern, planned for `M10`):** A campaign/mini-campaign may begin with a **SpecOps rescue mission** where command/building systems are intentionally restricted because the commander is captured or missing. On success, the campaign sets a flag (for example `commander_recovered = true`) and subsequent missions unlock commander-avatar presence, broader unit coordination, base construction/production, and commander support powers. The UI should state both the restriction and the unlock explicitly so this reads as narrative progression, not a missing feature.
+
+**D070 proving mini-campaign ("Ops Prologue", optional, planned for `M10`):** A short mini-campaign may double as both a player-facing experience and a mode-validation vertical slice for `Commander & SpecOps`: Mission 1 teaches SpecOps rescue/infiltration, Mission 2 unlocks limited commander support/building, and Mission 3+ runs the full Commander + SpecOps loop. If exposed to players, the UI should label it clearly as a mini-campaign / prologue (not the only way to play D070 modes).
 
 ### Skirmish Setup
 
@@ -570,7 +739,7 @@ Direct Connect → Enter IP
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│  GAME LOBBY                           Code: IRON-7K3M       │
+│  GAME LOBBY     Trust: IC Certified    Code: IRON-7K3M       │
 │                                                              │
 │  ┌──────────────────┐  ┌──────────────────────────────────┐ │
 │  │ MAP              │  │ PLAYERS                           │ │
@@ -586,6 +755,7 @@ Direct Connect → Enter IP
 │  │ Balance: [IC Default ▾]  Speed: [Normal ▾]            │   │
 │  │ Fog: [Shroud ▾]  Crates: [On ▾]  Starting $: [10k ▾] │   │
 │  │ Mods: vanilla (fingerprint: a3f2...)                   │   │
+│  │ Engine: Iron Curtain  Netcode: IC Relay (Certified)    │   │
 │  └──────────────────────────────────────────────────────┘   │
 │                                                              │
 │  ┌──────────────────────────────────────────────────────┐   │
@@ -608,8 +778,139 @@ Direct Connect → Enter IP
 - **Chat** — Text chat within the lobby. Voice indicators if VoIP is active (D059).
 - **Share** — Copy join code (`IRON-7K3M`) or deep link for Discord/Steam.
 - **Spectator slots** — Visible if enabled. Join as spectator option.
+- **Trust label** — Lobby header and join dialog show trust/certification status (`IC Certified`, `IC Casual`, `Cross-Engine Experimental`, `Foreign Engine`) before Ready.
 
 **Lobby → Game transition:** Host clicks "Start Game" → all clients enter Loading state → per-player progress bars → 3-second countdown → InGame.
+
+#### Lobby Trust Labels & Cross-Engine Warnings (D011 / `07-CROSS-ENGINE`)
+
+When browsing mixed-engine/community listings, the lobby/join flow must clearly label trust and anti-cheat posture. Shared browser visibility does **not** imply equal gameplay integrity or ranked eligibility.
+
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│  JOIN GAME?                                                          │
+│  OpenRA Community Lobby — "Desert Arena 2v2"                         │
+│                                                                      │
+│  Engine: OpenRA                 Trust: Foreign Engine                │
+│  Mode: Cross-Engine Experimental (Level 0 browser / no live join)   │
+│  Anti-Cheat: External / community-specific                           │
+│  Ranked / Certification: Not eligible in IC                          │
+│                                                                      │
+│  [View Details] [Browse Map/Mods] [Open With Compatible Client]      │
+│  [Cancel]                                                            │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+**Label semantics (player-facing):**
+- **`IC Certified`** — IC relay + certified match path; ranked-eligible when mode/rules permit
+- **`IC Casual`** — IC-hosted/casual path; IC rules apply but not a certified ranked session
+- **`Cross-Engine Experimental`** — compatibility feature; may include drift correction and reduced anti-cheat guarantees; unranked by default
+- **`Foreign Engine`** — external engine/community trust model; IC can browse/discover/analyze but does not claim IC anti-cheat guarantees
+
+**UX rules:**
+- trust label is shown in browser cards, lobby header, and start/join confirmation
+- ranked/certified restrictions are explicit before Ready/Start
+- warnings describe capability differences without implying "unsafe" if simply non-IC-certified
+
+#### Asymmetric Co-op Lobby Variant (D070 Commander & Field Ops / Player-Facing "Commander & SpecOps")
+
+For D070 `Commander & Field Ops` scenarios/templates, the lobby adds **role slots** and **role readiness previews** on top of the standard player-slot system.
+
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│  COMMANDER & SPECOPS LOBBY                             Code: OPS-4N2 │
+│                                                                      │
+│  ROLE SLOTS                                                          │
+│  [Commander]  HostPlayer      [Ready ✓]   HUD: commander_hud         │
+│  [SpecOps Lead] You           [Not Ready] HUD: field_ops_hud         │
+│  [Observer]   [Open Slot]                                              │
+│                                                                      │
+│  MODE CONFIG                                                         │
+│  Objective Lanes: Strategic + Field + Joint                          │
+│  Field Progression: Match-Based Loadout (session only)               │
+│  Portal Micro-Ops: Optional                                           │
+│  Support Catalog: CAS / Recon / Reinforcements / Extraction          │
+│                                                                      │
+│  [Preview Commander HUD]  [Preview SpecOps HUD]  [Role Help]         │
+│                                                                      │
+│  [Ready] [Leave]                                                     │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+**Key additions (D070):**
+- role slot assignment (`Commander`, `Field Ops`; `CounterOps` variants are proposal-only, not scheduled — see D070 post-v1 expansion notes)
+- role HUD preview / help before match start
+- role-specific readiness validation (required role slots filled before start)
+- quick link to D065 role onboarding / Controls Quick Reference
+- optional casual/custom drop-in policy for open `FieldOps` (`SpecOps`) role slots (scenario/host controlled)
+
+#### Experimental Survival Lobby Variant (D070-adjacent `Last Commando Standing` / `SpecOps Survival`) — Proposal-Only, `M10+`, `P-Optional`
+
+> **Deferral classification:** This variant is **proposal-only** (not scheduled). It requires D070 baseline co-op to ship and be validated first. Promotion to planned work requires prototype playtest evidence and a separate scheduling decision. See D070 § "D070-Adjacent Mode Family" for validation criteria.
+
+For the D070-adjacent experimental survival variant, the lobby emphasizes **squad start**, **hazard profile**, and **round rules** rather than commander/field role slots.
+
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│  LAST COMMANDO STANDING (EXPERIMENTAL)                 Code: LCS-9Q7 │
+│                                                                      │
+│  PLAYERS / TEAMS                                                     │
+│  [Team 1] You + Open Slot      Squad Preset: SpecOps Duo            │
+│  [Team 2] PlayerX + PlayerY    Squad Preset: Raider Team            │
+│  [Team 3] [Open Slot]          Squad Preset: Random (Host Allowed)  │
+│                                                                      │
+│  ROUND RULES                                                         │
+│  Victory: Last Team Standing                                         │
+│  Hazard Profile: Chrono Distortion (Phase Timer: 3:00)              │
+│  Neutral Objectives: Caches / Power Relays / Tech Uplinks           │
+│  Elimination Policy: Spectate + Optional Redeploy Token             │
+│  Progression: Match-Based Field Upgrades (session only)             │
+│                                                                      │
+│  [Preview Hazard Phases] [Objective Rewards] [Mode Help]            │
+│                                                                      │
+│  [Ready] [Leave]                                                     │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+**Key additions (D070-adjacent survival):**
+- squad/team composition presets instead of base-role slot assignments
+- hazard contraction profile preview (`radiation`, `artillery`, `chrono`, etc.)
+- neutral objective/reward summary (what is worth contesting)
+- explicit elimination/redeploy policy before match start
+- prototype-first labeling in UI (`Experimental`) to set expectations
+
+#### Commander Avatar / Assassination Lobby Variant (D070-adjacent, TA-style) — Proposal-Only, `M10+`, `P-Optional`
+
+> **Deferral classification:** This variant is **proposal-only** (not scheduled). It requires D070 baseline co-op validation and D038 template integration. Promotion to planned work requires prototype playtest evidence. See D070 § "D070-Adjacent Mode Family" for validation criteria.
+
+For D070-adjacent commander-avatar scenarios (for example `Assassination`, `Commander Presence`, or hybrid presets), the lobby emphasizes **commander survival rules**, **presence profile**, and **command-network map rules**.
+
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│  ASSASSINATION (COMMANDER AVATAR)                     Code: CMD-7R4 │
+│                                                                      │
+│  PLAYERS / TEAMS                                                     │
+│  [Team 1] HostPlayer     Commander Avatar: Allied Field Commander    │
+│  [Team 2] You            Commander Avatar: Soviet Front Marshal      │
+│                                                                      │
+│  COMMANDER RULES                                                     │
+│  Commander Mode: Assassination + Presence                            │
+│  Defeat Policy: Downed Rescue Timer (01:30)                          │
+│  Presence Profile: Forward Command (CAS/recon + local aura)          │
+│  Command Network: Comm Towers + Radar Relays Enabled                 │
+│                                                                      │
+│  [Preview Commander Rules] [Counterplay Tips] [Mode Help]            │
+│                                                                      │
+│  [Ready] [Leave]                                                     │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+**Key additions (Commander Avatar / Assassination):**
+- commander avatar identity/role preview (which unit matters)
+- explicit defeat policy (instant defeat vs downed rescue timer)
+- presence profile summary (what positioning changes)
+- command-network rules summary (which map objectives affect command power)
+- anti-snipe/counterplay hinting before match start
 
 ### Loading Screen
 
@@ -680,7 +981,7 @@ The in-game HUD follows the classic Red Alert right-sidebar layout by default (t
 
 | Element               | Location               | Function                                                                                                                                     |
 | --------------------- | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Minimap / Radar**   | Top-right sidebar (desktop); top-corner minimap cluster on touch | Overview map. Click/tap to move camera. Team drawings appear here. Shroud shown. On touch, the minimap cluster also hosts alerts and the camera bookmark quick dock. |
+| **Minimap / Radar**   | Top-right sidebar (desktop); top-corner minimap cluster on touch | Overview map. Click/tap to move camera. Team drawings, pings/beacons, and tactical markers appear here (with icon/shape + color cues; optional labels where enabled). Shroud shown. On touch, the minimap cluster also hosts alerts and the camera bookmark quick dock. |
 | **Camera bookmarks**  | Keyboard (desktop) / minimap-adjacent dock (touch) | Fast camera jump/save locations. Desktop: F5-F8 jump, Ctrl+F5-F8 save quick slots. Touch: tap bookmark chip to jump, long-press to save. |
 | **Credits**           | Below minimap          | Current funds with ticking animation. Flashes when low.                                                                                      |
 | **Power bar**         | Below credits          | Production vs consumption ratio. Yellow = low power. Red = deficit.                                                                          |
@@ -689,6 +990,95 @@ The in-game HUD follows the classic Red Alert right-sidebar layout by default (t
 | **Chat area**         | Bottom-left            | Recent chat messages. Fades out. Press Enter to type.                                                                                        |
 | **Game clock**        | Bottom-right           | Match timer.                                                                                                                                 |
 | **Notification area** | Top-center (transient) | EVA voice line text: "Base under attack," "Building complete," etc.                                                                          |
+
+#### Asymmetric Co-op HUD Variants (D070 Commander & Field Ops)
+
+D070 scenarios use the same core HUD language but apply **role-specific layouts/panels**.
+
+**Commander HUD (macro + support queue):**
+- standard economy/production/base control surfaces
+- **Support Request Queue** panel (pending/approved/queued/inbound/cooldown)
+- strategic + joint objective tracker
+- optional **Operational Agenda / War-Effort Board** (D070 pacing layer) with a small foreground milestone set and "next payoff" emphasis
+- typed support marker tools (LZ, CAS target, recon sector)
+
+**Field Ops / SpecOps HUD (squad + requests):**
+- squad composition/status strip (selected squad, health, key abilities)
+- **Request Panel / Request Wheel** shortcuts (`Need CAS`, `Need Recon`, `Need Reinforcements`, `Need Extraction`, etc.)
+- field + joint objective tracker
+- optional **Ops Momentum** chip/board showing the next relevant field or joint milestone reward (if D070 Operational Momentum is enabled)
+- request status feedback chip/timeline (pending/ETA/inbound/failed)
+- optional **Extract vs Stay** prompt card when the scenario presents a risk/reward extraction decision
+
+**Shared D070 HUD rules:**
+- both roles always see teammate state and shared mission status
+- request statuses are visible and not color-only
+- role-critical actions have both shortcut and visible UI path (D059/D065)
+- if Operational Momentum is enabled, only the most relevant next milestones/timers are foregrounded (no timer wall)
+
+#### Optional D070 Pacing Layer: Operational Momentum / "One More Phase"
+
+Some D070 scenarios can enable an optional pacing layer that creates a Civilization-like **"one more turn" pull** using RTS-compatible **"one more phase"** milestones.
+
+**Player-facing presentation goals:**
+- show one near-term actionable milestone and one meaningful next payoff (not a full spreadsheet of timers)
+- make war-effort rewards legible (`economy`, `power`, `intel`, `command network`, `superweapon delay`, etc.)
+- support both roles in co-op (`Commander`, `SpecOps`) with role-appropriate visibility
+- preserve clear stopping points even while tempting "one more objective" decisions
+
+**UX rules (when enabled):**
+- Operational Agenda / War-Effort Board is optional and scenario-authored (not universal HUD chrome)
+- milestone rewards and risks are explicit (especially extraction-vs-stay prompts)
+- hidden mandatory chains are not presented as optional opportunities
+- milestone/timer foregrounding remains bounded to preserve combat readability
+- campaign wrappers (`Ops Campaign`) summarize progress in spoiler-safe, branching-safe terms
+#### Experimental Survival HUD Variant (D070-adjacent `Last Commando Standing` / `SpecOps Survival`) — Proposal-Only
+
+This D070-adjacent survival variant (proposal-only, `M10+`, `P-Optional`) keeps the IC HUD language but replaces commander/request emphasis with **survival pressure**, **objective contesting**, and **elimination-state clarity**.
+
+**Core HUD additions (survival prototype):**
+- **Hazard phase timer + warning banner** (e.g., `Chrono Distortion closes Sector C in 00:42`)
+- **Contested Objective feed** (cache captured, relay hacked, uplink online, bridge destroyed)
+- **Field requisition / upgrade points** with quick spend panel or hotkeys
+- **Squad state strip** (commando + support team status, downed/revive state if the scenario supports it)
+- **Threat pressure cues** (incoming hazard edge marker, high-danger sector outlines)
+
+**Elimination / redeploy / spectate state (scenario-controlled):**
+- if eliminated, the player sees an explicit state panel (not a silent dead camera):
+  - `Spectating Teammate`
+  - `Redeploy Available` (if token/rule exists)
+  - `Redeploy Locked` with reason (`no token`, `phase lock`, `team wiped`)
+  - `Return to Post-Game` (custom/casual host policy permitting)
+- if team-based and one operative survives, the HUD shows the surviving squadmate and redeploy conditions clearly
+- if solo FFA, elimination transitions directly to spectator/post-game flow per scenario policy
+
+**Survival-specific HUD rule:** hazard pressure and contested-objective information must be visible without obscuring squad control and combat readability.
+
+#### Commander Avatar / Assassination HUD Variant (D070-adjacent, TA-style) — Proposal-Only
+
+Commander-avatar scenarios (proposal-only, `M10+`, `P-Optional`) keep the IC HUD language but add **commander survival/presence state** as a first-class UI concern.
+
+**Core HUD additions (Commander Avatar / Presence):**
+- **Commander Avatar status panel** (health, protection state, key abilities)
+- **Defeat policy indicator** (`Commander Death = Defeat` or `Downed Rescue Timer`) with visible countdown when triggered
+- **Presence / command influence panel** showing active local command bonuses and blocked effects (if command network is disrupted)
+- **Command Network status strip** (relay/uplink control, jammed/offline nodes, support impact)
+- **Threat alerts** for commander-targeted attacks/markers (D059 pings + EVA/notification text)
+
+**Design rules (HUD):**
+- commander survival state must be visible without replacing economy/production readability
+- defeat policy messaging must be explicit (no hidden "why did we lose?" edge cases)
+- presence effects should be surfaced as bonuses/availability changes, not invisible hidden math
+- if a mode uses a downed timer, rescue path markers/objectives should appear immediately
+
+#### Optional Portal Micro-Op Transition (D070 + D038 `Sub-Scenario Portal`)
+
+When a D070 mission uses an authored portal micro-op (e.g., infiltration interior):
+- the Field Ops player transitions into the authored sub-scenario
+- the Commander remains in a support-focused state (support console panel if authored, otherwise spectator + macro queue awareness)
+- the transition UI clearly states expected outcomes and timeout/failure consequences
+
+Portal micro-ops in D070 v1 use D038's existing portal pattern; they do not require true concurrent nested runtime instances.
 
 ### In-Game Interactions
 
@@ -752,6 +1142,9 @@ These appear as overlays on top of the game viewport, triggered by specific acti
 
 8 segments: Attack Here / Defend Here / Danger / Retreat / Help / Rally Here / On My Way / Generic Ping. Release on a segment to place the ping at the cursor's world position. Rate-limited (3 per 5 seconds).
 
+- Quick pings default to canonical type color + no text label.
+- Optional short labels/preset color accents are available via marker/beacon placement UI/commands (D059), but core ping semantics remain icon/shape/audio-driven.
+
 #### Chat Wheel
 
 ```
@@ -759,6 +1152,18 @@ These appear as overlays on top of the game viewport, triggered by specific acti
 ```
 
 32 pre-defined phrases with auto-translation (Dota 2 pattern). Categories: tactical, social, strategic. Phrases like "Attack now," "Defend base," "Good game," "Need help." Mod-extensible via YAML.
+
+#### Tactical Beacons / Markers
+
+```
+[Marker submenu or /marker] → Place labeled tactical marker / beacon
+```
+
+- Persistent (until cleared) markers for waypoints/objectives/hazard zones
+- Optional short text label (`max 16 chars`) and optional preset color accent
+- Type/icon remains the primary meaning (color is supplemental, not color-only)
+- Team/allied/observer visibility scope depends on mode/server policy
+- Appears on world view + minimap and is preserved in replay coordination events
 
 #### Pause Overlay (Single Player / Custom Games)
 
@@ -925,6 +1330,180 @@ InGame → Victory/Defeat → Post-Game
 - **Re-Queue** → Back to matchmaking queue (ranked)
 - **Main Menu** → Return to main menu
 - **Report Player** → Report dialog (reason dropdown, optional text)
+- **Post-play feedback pulse** (optional, sampled) — quick "how was this?" prompt for mode/mod/campaign with skip/snooze controls
+
+#### Post-Play Feedback Prompt (Modes / Mods / Campaigns; Optional D049 + D053)
+
+The post-game screen may show a **sampled, skippable** feedback prompt. It is designed to help mode/mod/campaign authors improve content without blocking normal post-game actions.
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│  HOW WAS THIS MATCH / MODE?                                 │
+│                                                              │
+│  Target: Commander & SpecOps (IC-native mode)               │
+│  Optional mod in use: "Combined Arms v2.1"                  │
+│                                                              │
+│  Fun / Experience:  [★] [★] [★] [★] [★]                    │
+│  Quick tags: [Fun] [Confusing] [Too fast] [Great co-op]     │
+│                                                              │
+│  Feedback (optional): [__________________________________]  │
+│                                                              │
+│  If sent to the author/community, constructive feedback may │
+│  earn profile-only recognition if marked helpful.           │
+│  (No gameplay or ranked bonuses.)                           │
+│                                                              │
+│  [Send Feedback] [Skip] [Snooze] [Don't Ask for This Mode]  │
+└──────────────────────────────────────────────────────────────┘
+```
+
+**UX rules:**
+- sampled/cooldown-based, not every match/session
+- non-blocking: replay/save/requeue/main-menu actions remain available
+- clearly labeled target (`mode`, `campaign`, `Workshop resource`)
+- spoiler-safe defaults for campaign feedback prompts
+- "helpful review" recognition wording is explicit about **profile-only** rewards
+
+#### Report / Block / Avoid Player Dialog (D059 + D052 + D055)
+
+The `Report Player` action (also available from lobby/player-list context menus) opens a compact moderation dialog with local safety controls and queue preferences in the same place, but with clear scope labels.
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│  REPORT PLAYER: Opponent                                    │
+│                                                              │
+│  Category: [Cheating ▾]                                      │
+│  Note (optional): [Suspicious impossible scout timing...]    │
+│                                                              │
+│  Evidence to attach (auto):                                  │
+│   ✓ Signed replay / match ID                                 │
+│   ✓ Relay telemetry summary                                  │
+│   ✓ Timestamps / event markers                               │
+│                                                              │
+│  Quick actions                                               │
+│   [Mute Player]  (Local comms)                               │
+│   [Block Player] (Local social)                              │
+│   [Avoid Player] (Queue preference, best-effort)             │
+│                                                              │
+│  Reports are reviewed by the community server. Submission    │
+│  does not guarantee punishment. False reports may be penalized│
+│                                                              │
+│  [Submit Report]  [Cancel]                                   │
+└──────────────────────────────────────────────────────────────┘
+```
+
+**UX rules:**
+- `Avoid Player` is labeled **best-effort** and links to ranked queue constraints (D055)
+- `Mute`/`Block` remain usable without submitting a report
+- Evidence is attached by reference/ID when possible (no unnecessary duplicate upload). The reporter does **not** see raw relay telemetry — only the moderation backend and reviewers with appropriate privileges access telemetry summaries.
+- The dialog is available post-game, from scoreboard/player list, and from lobby profile/context menus
+
+#### Community Review Queue (Optional D052 "Overwatch"-Style, Reviewer/Moderator Surface)
+
+Eligible community reviewers (or moderators) may access an optional review queue if the community server enables D052's review capability. This is a **separate role surface** from normal player matchmaking UX.
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│  COMMUNITY REVIEW QUEUE (Official IC Community)             │
+│  Reviewer: calibrated ✓   Weight: 0.84                      │
+│                                                              │
+│  Case: #2026-02-000123        Category: Suspected Cheating   │
+│  State: In Review             Evidence: Replay + Telemetry   │
+│  Anonymized Subject: Player-7F3A                             │
+│                                                              │
+│  ┌────────────────────────────────────────────────────────┐  │
+│  │ Replay timeline (flagged markers)                     │  │
+│  │ 12:14  suspicious scout timing                        │  │
+│  │ 15:33  repeated impossible reaction window            │  │
+│  │ 18:07  order-rate spike                               │  │
+│  │ [Watch Clip] [Full Replay] [Telemetry Summary]        │  │
+│  └────────────────────────────────────────────────────────┘  │
+│                                                              │
+│  Vote                                                        │
+│  [Likely Clean] [Suspected Griefing] [Suspected Cheating]    │
+│  [Insufficient Evidence] [Escalate]                          │
+│  Confidence: [70 ▮▮▮▮▮▮▮□□□]                                 │
+│  Notes (optional): [____________________________________]    │
+│                                                              │
+│  [Submit Vote]   [Skip Case]   [Reviewer Guide]             │
+└──────────────────────────────────────────────────────────────┘
+```
+
+**Reviewer UI rules (D052/D037/`06-SECURITY`):**
+- anonymized subject identity by default; identity resolution requires moderator privileges
+- no direct "ban player" buttons in reviewer UI
+- case verdicts feed consensus/moderator workflows; they do not apply irreversible sanctions directly
+- calibration and reviewer-weight details are visible to the reviewer for transparency, but not editable
+- audit logging records case assignment, replay access, and vote submission events
+
+#### Moderator Case Resolution (Optional D052)
+
+Moderator tools extend the reviewer surface with:
+- identity resolution (subject + reporters) when needed
+- consensus summary + reviewer agreement breakdown
+- prior sanctions / community standing context
+- action panel (warn, comms restriction, queue cooldown, low-priority queue, ranked suspension)
+- appeal state management and case notes
+
+This keeps the "Overwatch"-style layer useful for scaling review while preserving D037 moderator accountability for final enforcement.
+
+#### Asymmetric Co-op Post-Game Breakdown (D070)
+
+D070 matches add a role-aware breakdown tab/card to the post-game screen:
+
+- **Commander support efficiency**
+  - requests answered / denied / timed out
+  - average request response time
+  - support impact events (e.g., CAS confirmed kills, successful extraction)
+- **SpecOps objective execution**
+  - field objectives completed
+  - infiltration/sabotage/rescue success rate
+  - squad survival / losses / requisition spend
+- **War-effort impact categories**
+  - economy gains/denials
+  - power/tech disruptions
+  - route/bridge/expansion unlock events
+  - superweapon delay / denial events
+- **Joint coordination highlights** (optional)
+  - moments where Field Ops objective completion unlocked a commander push (segment unlock, AA disable, radar outage)
+
+This reinforces the mode's cooperative identity and provides actionable learning without forcing competitive scoring semantics onto a PvE-first mode.
+
+#### Experimental Survival Post-Game Breakdown (D070-adjacent `Last Commando Standing` / `SpecOps Survival`) — Proposal-Only
+
+D070-adjacent survival matches (proposal-only, `M10+`, `P-Optional`) add a placement- and objective-focused breakdown so players understand **why** they survived (or were eliminated), not just who got the last hit.
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│  LAST COMMANDO STANDING — 2nd PLACE / 8 Teams               │
+│  Iron Wastes — 18:42                                        │
+│                                                              │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │ SURVIVAL SUMMARY                                      │  │
+│  │ Team Eliminations: 3      Squad Losses: 7            │  │
+│  │ Hazard Escapes: 5         Final Hazard Phase: 6      │  │
+│  │ Objective Captures: 4     Redeploy Tokens Used: 1    │  │
+│  │ Requisition Spent: 1,240  Unspent: 180              │  │
+│  └───────────────────────────────────────────────────────┘  │
+│                                                              │
+│  KEY OBJECTIVE IMPACTS                                        │
+│  • Captured Tech Uplink → Recon Sweep unlocked (Phase 3)     │
+│  • Destroyed Bridge → Forced Team Delta into hazard lane     │
+│  • Failed Power Relay Hold → Lost safe corridor window       │
+│                                                              │
+│  ELIMINATION CONTEXT                                           │
+│  Phase 6 chrono contraction + enemy ambush near Depot C      │
+│  [Watch Replay] [View Timeline] [Save Replay] [Main Menu]     │
+└──────────────────────────────────────────────────────────────┘
+```
+
+**Survival breakdown focus (prototype-first):**
+- **Placement + elimination context** (where/how the run ended)
+- **Objective contesting and reward impact** (what captures actually changed)
+- **Hazard pressure stats** (escapes, hazard-phase survival, hazard-caused vs combat-caused losses)
+- **Squad/redeploy usage** (downs, revives/redeploys, token efficiency)
+- **Field progression spend** (what upgrades/support buys were used)
+
+This keeps the D070-adjacent survival mode readable and learnable without forcing a generic battle-royale scoreboard style onto an RTS-flavored commando mode.
 
 ---
 
@@ -1046,6 +1625,9 @@ Main Menu → Workshop
 - Disk management dashboard (D030): pinned/transient/expiring resources with sizes, TTL, and source
 - Bulk actions: pin, unpin, delete, redownload
 - Storage used / cleanup recommendations
+- If the player is a creator: **Feedback Inbox** for owned resources (triage reviews as `Helpful`, `Needs follow-up`, `Duplicate`, `Not actionable`)
+- Helpful-review marks show anti-abuse/trust notices and only grant **profile/social** recognition to reviewers (no gameplay rewards)
+- If community contribution rewards are enabled (`M10` badges/reputation; `M11` optional points): creator inbox/helpful-mark UI may show badge/reputation/points outcomes, but labels must remain **non-gameplay / profile-only**
 
 ### Mod Profile Manager
 
@@ -1111,9 +1693,129 @@ Settings are organized in a tabbed layout. Each tab covers one domain. Changes a
 | **Audio**    | Master / Music / SFX / Voice / Ambient volume sliders. Music mode (Jukebox/Dynamic/Off). EVA voice. Spatial audio toggle.                                                                                                                                           |
 | **Controls** | Official input profiles by device: `Classic RA (KBM)`, `OpenRA (KBM)`, `Modern RTS (KBM)`, `Gamepad Default`, `Steam Deck Default`, plus `Custom` (profile diff). Full rebinding UI with category filters (Unit Commands, Production, Control Groups, Camera, Communication, UI/System, Debug). Mouse settings: edge scroll speed, scroll inversion, drag selection shape. Controller/Deck settings: deadzones, stick curves, cursor acceleration, radial behavior, gyro sensitivity (when available). Touch settings: handedness (mirror layout), touch target size, hold/drag thresholds, command rail behavior, camera bookmark dock preferences. Includes `Import`, `Export`, and `Share on Workshop` (config-profile packages with scope/diff preview), plus `View Controls Quick Reference` and `What's Changed in Controls` replay entry. |
 | **Gameplay** | Experience profile (one-click preset). Balance preset. Pathfinding preset. AI behavior preset. Full D033 QoL toggle list organized by category: Production, Commands, UI Feedback, Selection, Gameplay. Tutorial hint frequency, Controls Walkthrough prompts, and mobile Tempo Advisor warnings (client-only) also live here. |
-| **Social**   | Voice settings: PTT key, input/output device, voice effect preset, mic test. Chat settings: profanity filter, emojis, auto-translated phrases. Privacy: who can spectate, who can friend-request, online status visibility.                                         |
+| **Social**   | Voice settings: PTT key, input/output device, voice effect preset, mic test. Chat settings: profanity filter, emojis, auto-translated phrases. Privacy: who can spectate, who can friend-request, online status visibility, and **campaign progress / benchmark sharing** controls (D021/D052/D053).                                         |
 | **LLM**      | Provider cards (add/edit/remove LLM providers). Task routing table (which provider handles which task). Connection test. Community config import/export (D047).                                                                                                     |
-| **Data**     | Content sources (detected game installations, manual paths, re-scan). **Installed Content Manager** (install profiles like `Minimal Multiplayer` / `Campaign Core` / `Full`, optional media packs, media variant groups such as cutscenes `Original` / `Clean Remaster` / `AI Enhanced`, size estimates, reclaimable space). Data health summary. Backup/Restore buttons. Cloud sync toggle. Mod profile manager link. Storage usage. Export profile data (GDPR, D061). Recovery phrase viewer ("Show my 24-word phrase"). |
+| **Data**     | Content sources (detected game installations, manual paths, re-scan). **Installed Content Manager** (install profiles like `Minimal Multiplayer` / `Campaign Core` / `Full`, optional media packs, media variant groups such as cutscenes `Original` / `Clean Remaster` / `AI Enhanced`, size estimates, reclaimable space). **Modify Installation / Repair & Verify** (D069 maintenance wizard re-entry). Data health summary. Backup/Restore buttons. Cloud sync toggle. Mod profile manager link. Storage usage. Export profile data (GDPR, D061). Recovery phrase viewer ("Show my 24-word phrase"). |
+
+---
+
+### Campaign Progress Sharing & Privacy (Settings → Social)
+
+Campaign progress cards and community benchmarks are **local-first** and **opt-in**. The player controls whether campaign progress leaves the machine, which communities may receive aggregated snapshots, and how spoiler-sensitive comparisons are displayed.
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  SETTINGS → SOCIAL → PRIVACY (CAMPAIGN PROGRESS)               │
+│                                                                 │
+│  Campaign Progress (local UI)                                   │
+│  ☑ Show campaign progress on profile stats card                 │
+│  ☑ Show campaign progress in campaign browser cards             │
+│                                                                 │
+│  Community Benchmarks (optional)                                │
+│  ☐ Share campaign progress for community benchmarks             │
+│     Sends aggregated progress snapshots only (not full mission  │
+│     history) when enabled. Works per campaign version /         │
+│     difficulty / balance preset.                                │
+│                                                                 │
+│  If sharing is enabled:                                         │
+│  Scope: [Trusted Communities Only ▾]                            │
+│         (Trusted Only / Selected Communities / All Joined)      │
+│  [Select Communities…]  (Official IC ✓, Clan Wolfpack ✗, ...)   │
+│                                                                 │
+│  Spoiler handling for benchmark UI: [Spoiler-Safe (Default) ▾]  │
+│     Spoiler-Safe / Reveal Reached Branches / Full Reveal*       │
+│     *If campaign author permits full reveal metadata            │
+│                                                                 │
+│  Benchmark source labels: [Always Show ✓]                       │
+│  Benchmark trust labels:  [Always Show ✓]                       │
+│                                                                 │
+│  [Preview My Shared Snapshot →]                                 │
+│  [Reset benchmark sharing for this device]                      │
+│                                                                 │
+│  Note: Campaign benchmarks are social/comparison features only. │
+│  They do not affect matchmaking, ranked, or anti-cheat systems. │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Defaults (normative):**
+- Community benchmark sharing is **off** by default.
+- Spoiler mode defaults to **Spoiler-Safe**.
+- Source/trust labels are visible by default when benchmark data is shown.
+- Disabling sharing does **not** disable local campaign progress UI.
+
+---
+
+### Installation Maintenance Wizard (D069, Settings → Data)
+
+The D069 wizard is re-enterable after first launch for guided maintenance and recovery tasks. It complements (not replaces) the Installed Content Manager.
+
+#### Maintenance Hub (Modify / Repair / Verify)
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  MODIFY INSTALLATION / REPAIR                                  │
+│                                                                 │
+│  Status: Playable ✓   Last verify: 14 days ago                  │
+│  Active preset: Full Install                                    │
+│  Sources: Steam Remastered + OpenRA (fallback)                  │
+│                                                                 │
+│  What do you want to do?                                        │
+│                                                                 │
+│  [Change Install Preset / Packs]                                │
+│     Add/remove media packs, switch variants, reclaim space      │
+│                                                                 │
+│  [Repair & Verify Content]                                      │
+│     Check hashes, re-download corrupt files, rebuild indexes     │
+│                                                                 │
+│  [Re-Scan Content Sources]                                      │
+│     Re-detect Steam/GOG/OpenRA/manual folders                    │
+│                                                                 │
+│  [Reset Setup Assistant]                                        │
+│     Re-run D069 setup flow (keeps installed content)            │
+│                                                                 │
+│  [Close]                                                        │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+#### Repair & Verify Flow (Guided)
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  REPAIR & VERIFY CONTENT                          Step 1/3      │
+│                                                                 │
+│  Select repair actions:                                         │
+│   ☑ Verify installed packages (checksums)                       │
+│   ☑ Rebuild content indexes / metadata                          │
+│   ☑ Re-scan content source mappings                             │
+│   ☐ Reclaim unreferenced blobs (GC)                             │
+│                                                                 │
+│  Binary files (Steam build):                                    │
+│   [Open Steam "Verify integrity" guide]                         │
+│                                                                 │
+│  [Start Repair]                              [Back]             │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  REPAIR & VERIFY CONTENT                          Step 2/3      │
+│                                                                 │
+│  Verifying installed packages…                                  │
+│  [██████████████████░░░░░░░░] 61%                               │
+│                                                                 │
+│  ✓ official/ra1-campaign-core@1.0                               │
+│  ! official/ra1-cutscenes-original@1.0  (1 file corrupted)      │
+│                                                                 │
+│  Recommended fix: Re-download 1 corrupted file (42 MB)          │
+│  Source: P2P preferred / HTTP fallback                          │
+│                                                                 │
+│  [Apply Fix] [Skip Optional Pack] [Show Details]                │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+- Repair separates **platform binary verification** from **IC content/setup verification**
+- Optional packs can be skipped without breaking campaign core (D068 fallback rules)
+- The same flow is reachable from no-dead-end guidance panels when missing/corrupt content is detected
 
 ---
 
@@ -1154,11 +1856,37 @@ Post-Game → click player → Full Profile
 
 | Tab               | Contents                                                                                                                                                                                  |
 | ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Stats**         | Per-game-module Glicko-2 ratings, rank tier badge, rating graph (last 50 matches), faction distribution pie chart, win streak, career totals. Click rating → Rating Details Panel (D055). |
+| **Stats**         | Per-game-module Glicko-2 ratings, rank tier badge, rating graph (last 50 matches), faction distribution pie chart, win streak, career totals, and a **Campaign Progress** card (local-first). Optional community campaign benchmarks are opt-in, spoiler-safe, and normalized by campaign version/difficulty/preset. Click rating → Rating Details Panel (D055). |
 | **Achievements**  | All achievements by category (Campaign/Skirmish/Multiplayer/Community). Pin up to 6 to profile. Rarity percentages. Per-game-module.                                                      |
 | **Match History** | Scrollable list: date, map, players, result, rating delta, [Replay] button. Filter by mode/date/result.                                                                                   |
 | **Friends**       | Platform friends (Steam/GOG) + IC community friends. Presence states (Online/InGame/InLobby/Away/Invisible/Offline). [Join]/[Spectate]/[Invite] buttons. Block list. Private notes.       |
-| **Social**        | Community memberships with verified/unverified badges. Workshop creator profile (published count, downloads). Country flag. Social links.                                                 |
+| **Social**        | Community memberships with verified/unverified badges. Workshop creator profile (published count, downloads, helpful reviews acknowledged). Community feedback contribution recognition (helpful-review badges / creator acknowledgements, non-competitive). Country flag. Social links. |
+
+#### Community Contribution Rewards (Profile → Social, Optional D053/D049)
+
+The profile may show a dedicated panel for community-feedback contribution recognition. This is a **social/profile system**, not a gameplay progression system.
+
+```
+┌──────────────────────────────────────────────────────┐
+│ 🏅 Community Contribution Rewards                    │
+│                                                      │
+│  Helpful reviews: 14   Creator acknowledgements: 6   │
+│  Contribution reputation: 412  (Trusted)             │
+│  Badges: [Field Analyst II] [Creator Favorite]       │
+│                                                      │
+│  Contribution points: 120  (profile/cosmetic only)   │
+│  Next reward: "Recon Frame" (150)                    │
+│                                                      │
+│  [Rewards Catalog →] [History →] [Privacy / Sharing] │
+└──────────────────────────────────────────────────────┘
+```
+
+**UI rules:**
+- always labeled as **profile/cosmetic-only** (no gameplay, ranked, or matchmaking effects)
+- helpful/actionable contribution messaging (not "positive review" messaging)
+- source/trust labels apply to synced reputation/points/badges
+- rewards catalog (if enabled) only contains profile cosmetics/titles/showcase items
+- communities may disable points while keeping badges/reputation enabled
 
 ### Rating Details Panel
 
@@ -1327,6 +2055,12 @@ The SDK is a separate Bevy application from the game (`ic-editor` crate). It sha
 └──────────────────────────────────────────────────────────┘
 ```
 
+**SDK Documentation** (`D037`/`D038`, authoring manual):
+- Opens a searchable **Authoring Reference Browser** (offline snapshot bundled with the SDK)
+- Covers editor parameters/flags, triggers/modules, YAML schema fields, Lua/WASM APIs, and `ic` CLI commands
+- Supports search by IC term and familiar aliases (e.g., OFP/AoE2/WC3 terminology)
+- Can open online docs when available, but the embedded snapshot is the baseline
+
 ### Scenario Editor
 
 ```
@@ -1361,8 +2095,10 @@ SDK → New Scenario / Open File
 - Entity palette: search-as-you-type, 48×48 thumbnails, favorites, recently placed
 - Trigger editor: visual condition/action builder with countdown timers
 - Module system: 30+ drag-and-drop modules (Wave Spawner, Patrol Route, Reinforcements, etc.)
+- `F1` / `?` context help opens the exact authoring-manual page for the selected field/module/trigger/action, with examples and constraints
 - Toolbar flow: `Preview` / `Test` / `Validate` / `Publish` (Validate is optional before preview/test)
-- `Test` dropdown: `Profile Playtest` (Advanced mode only)
+- `Test` launches the real game runtime path (not an editor-only runtime) using a local dev overlay profile when run from the SDK
+- `Test` dropdown includes `Play in Game (Local Overlay)` / `Run Local Content` (canonical local-iteration path) and `Profile Playtest` (Advanced mode only)
 - `Validate`: Quick Validate preset (async, cancelable, no full auto-validate on save)
 - Publish Readiness screen: aggregated validation/export/license/metadata warnings before Workshop upload
 - Git-aware project chrome (read-only): branch, dirty/clean, changed file count, conflict badge
@@ -1466,6 +2202,7 @@ Node-and-edge graph editor in a 2D Bevy viewport (separate from isometric). Pan/
 **Authoring interactions (hero toolkit campaigns):**
 - Select a hero to edit level/xp defaults, death/injury policy, and loadout slots
 - Build skill trees (requirements, costs, effects) and bind them to named characters
+- Author character presentation overrides/variants (portrait/icon/voice/skin/marker) with preview so unique heroes/operatives are readable in mission and UI
 - Configure debrief/intermission reward choices that grant XP, items, or skill unlocks
 - Preview Hero Sheet / Skill Choice intermission panels without launching a mission
 - Simulate hero state for branch validation and scenario test starts ("Tanya Lv3 + Silent Step")
@@ -1723,6 +2460,7 @@ This document consolidates UI/UX information from across the design docs. The ca
 | In-game communication (chat, VoIP, pings) | `decisions/09g-interaction.md` § D059                                         |
 | Command console                           | `decisions/09g-interaction.md` § D058                                         |
 | Tutorial & new player experience          | `decisions/09g-interaction.md` § D065                                         |
+| Asymmetric commander/field co-op mode     | `decisions/09d-gameplay.md` § D070, `decisions/09g-interaction.md` § D059     |
 | Workshop browser & mod management         | `decisions/09e-community.md` § D030                                         |
 | Mod profiles                              | `decisions/09c-modding.md` § D062                                         |
 | LLM configuration                         | `decisions/09f-tools.md` § D047                                         |

@@ -1,0 +1,359 @@
+# Milestone Dependency Map (Execution Overlay)
+
+Keywords: milestone dag, dependency graph, critical path, feature clusters, roadmap overlay, implementation order, hard dependency, soft dependency
+
+> This page is the **detailed dependency companion** to [`../18-PROJECT-TRACKER.md`](../18-PROJECT-TRACKER.md). It does not replace [`../08-ROADMAP.md`](../08-ROADMAP.md); it translates roadmap phases and accepted decisions into an implementation-oriented milestone DAG and feature-cluster dependency map.
+
+## Purpose
+
+Use this page to answer:
+
+- What blocks what?
+- What can run in parallel?
+- Which milestone exits require which feature clusters?
+- Which policy/legal gates block validation even if code exists?
+- Where do `Dxxx` decisions land in implementation order?
+
+## Dependency Edge Kinds (Canonical)
+
+| Edge Kind | Meaning | Example |
+| --- | --- | --- |
+| `hard_depends_on` | Cannot start meaningfully before predecessor exists | `M2` depends on `M1` (sim needs parsed rules + assets/render slice confidence) |
+| `soft_depends_on` | Strongly preferred order; can parallelize with stubs | `M8` creator foundations benefit from `M3`, but can start after `M2` |
+| `validation_depends_on` | Can prototype earlier, but cannot validate/exit without predecessor | `M7` anti-cheat moderation UX can prototype before full signed replay chain, but validation depends on D052/D007 evidence |
+| `enables_parallel_work` | Unlocks a new independent lane | `M2` enables `M8` creator foundation lane |
+| `policy_gate` | Legal/governance/security prerequisite | DMCA agent registration before validating full Workshop upload ops |
+| `integration_gate` | Feature exists but must integrate with another system before milestone exit | D069 setup wizard + D068 selective install + D049 package verification before “ready” maintenance flow is considered complete |
+
+## Milestone DAG Summary (Canonical Shape)
+
+```text
+M0 -> M1 -> M2 -> M3
+               ├-> M4 (minimal online slice)
+               ├-> M8 (creator foundation lane)
+               └-> M5 -> M6
+
+M4 + M6 -> M7
+M7 + M8 -> M9
+M9 -> M10
+M7 + M10 -> M11
+```
+
+## Milestone Nodes (M0–M11)
+
+| Milestone | Objective | Maps to Roadmap | `hard_depends_on` | `soft_depends_on` | Unlocks / Enables |
+| --- | --- | --- | --- | --- | --- |
+| `M0` | Tracker + execution overlay baseline | Pre-phase docs/process | — | — | `M1` planning clarity |
+| `M1` | Resource/format fidelity + rendering slice | Phase 0 + Phase 1 | `M0` | — | `M2` |
+| `M2` | Deterministic sim + replayable combat slice | Phase 2 | `M1` | — | `M3`, `M4`, `M5`, `M8` |
+| `M3` | Local playable skirmish | Phase 3 + Phase 4 prep | `M2` | — | `M4`, `M5`, `M6` |
+| `M4` | Minimal online skirmish (no tracker/ranked) | Phase 5 subset | `M3` | `M5` (parallel) | `M7` |
+| `M5` | Campaign runtime vertical slice | Phase 4 subset | `M3` | `M4` (parallel) | `M6` |
+| `M6` | Full campaigns + SP maturity | Phase 4 full | `M5` | `M4` | `M7` |
+| `M7` | Multiplayer productization | Phase 5 full | `M4`, `M6` | — | `M9`, `M11` |
+| `M8` | Creator foundation (CLI + minimal Workshop) | Phase 4–5 overlay + 6a foundation | `M2` | `M3`, `M4` | `M9` |
+| `M9` | Scenario editor core + full Workshop + OpenRA export core | Phase 6a | `M7`, `M8` | — | `M10` |
+| `M10` | Campaign editor + modes + RA1 export + ext. | Phase 6b | `M9` | — | `M11` |
+| `M11` | Ecosystem polish + optional AI/LLM + platform breadth | Phase 7 | `M7`, `M10` | — | Ongoing product evolution |
+
+## Critical Path Table (Recommended Baseline)
+
+| Order | Milestone | Why It Is On the Critical Path |
+| --- | --- | --- |
+| 1 | `M1` | Without format/resource fidelity and rendering confidence, sim correctness and game-feel validation are blind |
+| 2 | `M2` | Deterministic simulation is the core dependency for skirmish, campaign, and multiplayer |
+| 3 | `M3` | First playable local loop is the gateway to meaningful online and campaign runtime validation |
+| 4 | `M4` | Minimal online slice proves the netcode architecture in real conditions before productization |
+| 5 | `M5` | Campaign runtime slice de-risks the continuous flow/campaign graph stack |
+| 6 | `M6` | Full campaign completeness is a differentiator and prerequisite for final multiplayer-vs-campaign prioritization decisions |
+| 7 | `M7` | Ranked/trust/browser/spectator/community infra depend on both mature runtime and online vertical slice learnings |
+| 8 | `M8` | Creator foundation can parallelize, but `M9` cannot exit without it |
+| 9 | `M9` | Scenario editor + full Workshop + export core unlock the authoring platform promise |
+| 10 | `M10` | Campaign editor and advanced templates mature the content platform |
+| 11 | `M11` | Optional AI/LLM and platform polish should build on stabilized gameplay/multiplayer/editor foundations |
+
+## Parallel Lanes (Planned)
+
+| Lane | Start After | Primary Scope | Why Parallelizable |
+| --- | --- | --- | --- |
+| `Lane A: Runtime Core` | `M1` | `M2 -> M3 -> M4` | Core engine and minimal netcode slice |
+| `Lane B: Campaign Runtime` | `M3` | `M5 -> M6` | Reuses sim/game chrome while net productization proceeds |
+| `Lane C: Creator Foundation` | `M2` | `M8` | CLI/minimal Workshop/profile foundations can advance without full visual editor |
+| `Lane D: Multiplayer Productization` | `M4 + M6` | `M7` | Needs runtime and net slice maturity plus content/gameplay maturity |
+| `Lane E: Authoring Platform` | `M7 + M8` | `M9 -> M10` | Depends on productized runtime/networking and creator infra |
+| `Lane F: Optional AI/Polish` | `M7 + M10` | `M11` | Optional systems should not steal bandwidth from core delivery |
+
+## Granular Foundational Execution Ladder (RA First Mission Loop -> Project Completion)
+
+> This section refines the early critical path into a **build-order ladder** for the first playable Red Alert mission loop. It does not replace `M0–M11`; it decomposes the early milestones into implementation steps and then reconnects them to the milestone sequence through completion.
+
+### A. First RA Mission Loop (Detailed Build Order, `M1–M3`)
+
+| Step ID | Build Step (What to Implement) | Primary Milestone | Priority | Hard Depends On | Exit Artifact / Proof |
+| --- | --- | --- | --- | --- | --- |
+| `G1` | `ra-formats` can parse core RA asset formats (`.mix`, `.shp`, `.pal`) and enumerate assets from real data dirs | `M1` | `P-Core` | `M0` | Parser corpus test pass + asset listing on real RA data |
+| `G2` | Bevy can load parsed map tiles/sprites and render a RA map scene correctly (camera + palette-correct sprite draw) | `M1` | `P-Core` | `G1` | Static map render slice (faithful map + sprite placement) |
+| `G3` | Unit sprite animation playback baseline (idle/move/fire/death sequences) | `M1` | `P-Core` | `G2` | Animated units visible in rendered scene with correct sequence timing |
+| `G4` | Input/cursor baseline in gameplay scene (cursor state changes, hover hit-test, click targeting primitives) | `M2` (early UI seam work) | `P-Core` | `G2` | Cursor + hover feedback working on entities/cells |
+| `G5` | Unit selection baseline (single select, multi-select/box select minimum, selection markers) | `M2` (feeds `M3`) | `P-Core` | `G4`, `G3` | Selectable units with visible selection feedback |
+| `G6` | Deterministic sim tick loop + order application skeleton (`move`, `stop`, state transitions) | `M2` | `P-Core` | `G2`, `PG.P002.FIXED_POINT_SCALE` | Repeatable sim ticks with stable state hashes |
+| `G7` | Pathfinder + spatial query baseline (`Pathfinder`/`SpatialIndex`) integrated into unit movement order execution | `M2` | `P-Core` | `G6`, `PG.P002.FIXED_POINT_SCALE` | Units can receive move orders and path around blockers deterministically |
+| `G8` | Movement presentation sync (render follows sim state: facing/animation/state transitions) | `M2` | `P-Core` | `G7`, `G3` | Units visibly move correctly under player orders |
+| `G9` | Combat baseline: targeting + projectile/hit resolution (or direct-fire hit pipeline for first slice) | `M2` | `P-Core` | `G7`, `G6` | Units can attack and reduce enemy health deterministically |
+| `G10` | Death/destruction baseline (unit death state, removal, death animation/cleanup) | `M2` | `P-Core` | `G9`, `G3` | Combat kills units cleanly with deterministic removal |
+| `G11` | Mission-state baseline: victory/failure evaluators (`all enemies dead`, `all player units dead`) | `M3` (mission loop UX) | `P-Core` | `G10`, `G6` | Win/loss condition fires from sim state, not UI heuristics |
+| `G12` | Mission-end UX shell (`Mission Accomplished` / `Mission Failed` screens + flow pause/transition) | `M3` | `P-Core` | `G11`, `M3.UX.GAME_CHROME_CORE` | Mission-end screen appears with correct result and blocks/resumes flow correctly |
+| `G13` | EVA/VO mission-end audio integration (`Mission Accomplished` / `Mission Failed`) | `M3` | `P-Core` | `G12`, `M3.CORE.AUDIO_EVA_MUSIC`, `PG.P003.AUDIO_LIBRARY` | Correct VO plays on mission result with no duplicate/late triggers |
+| `G14` | Minimal mission restart/exit loop (replay same mission / return to menu) | `M3` | `P-Core` | `G12` | First complete single-mission play loop (start -> play -> end -> replay/exit) |
+| `G15` | RA “feel” pass for first mission loop (cursor feedback, selection readability, audio timing, result pacing) | `M3` | `P-Core` | `G14`, `G13` | Internal playtest says “recognizably RA-like” for mission loop baseline |
+| `G16` | Promote to `M3` skirmish path by widening from fixed mission slice to local skirmish loop + basic AI subset (`D043`) | `M3` | `P-Core` | `G15`, `M3.CORE.GAP_P1_GAMEPLAY_SYSTEMS`, `M3.CORE.GAP_P2_SKIRMISH_FAMILIARITY` | Local skirmish playable milestone exit (`M3.SP.SKIRMISH_LOCAL_LOOP`) |
+
+### B. Continuation Chain After the First Mission Loop (Milestone-Level, Through Completion)
+
+| Step ID | Next Logical Step | Primary Milestone | Priority | Hard Depends On | Why This Is Next |
+| --- | --- | --- | --- | --- | --- |
+| `G17` | Minimal online skirmish slice (relay/direct connect, no tracker/ranked) | `M4` | `P-Core` | `G16`, `M2.CORE.SNAPSHOT_HASH_REPLAY_BASE` | Proves finalized netcode architecture in the smallest real deployment slice |
+| `G18` | Campaign runtime vertical slice (briefing -> mission -> debrief -> next mission) | `M5` | `P-Differentiator` | `G16`, `M5.SP.LUA_MISSION_RUNTIME` | Proves campaign graph/runtime flow before scaling campaign content |
+| `G19` | Full campaign correctness/completeness (Allied/Soviet + media fallback-safe flow) | `M6` | `P-Differentiator` | `G18` | Delivers the campaign-first product promise and stabilizes SP maturity |
+| `G20` | Multiplayer productization (browser, ranked, trust labels, reports/review, spectator) | `M7` | `P-Differentiator` / `P-Scale` | `G17`, `G19`, `PG.P004.LOBBY_WIRE_DETAILS` | Expands “it works online” into a trustworthy multiplayer product |
+| `G21` | Creator foundation lane (CLI + minimal Workshop + profiles/namespace) | `M8` | `P-Creator` | `M2` (can run in parallel before `G20`) | Reduces creator-loop friction without waiting for full SDK |
+| `G22` | Scenario editor core + full Workshop + OpenRA export core | `M9` | `P-Creator` | `G20`, `G21` | Delivers the first full creator-platform promise |
+| `G23` | Campaign editor + advanced game modes + RA1 export + editor extensibility | `M10` | `P-Creator` / `P-Differentiator` | `G22` | Enables advanced authored experiences and D070-family mode tooling |
+| `G24` | Ecosystem polish + optional BYOLLM + visual/render-mode expansion + platform breadth | `M11` | `P-Optional` / `P-Scale` | `G20`, `G23` | Keeps optional/polish systems after core gameplay/multiplayer/editor foundations are stable |
+
+### C. Dependency Notes for the First Mission Loop (Non-Obvious Blockers)
+
+- **`PG.P002.FIXED_POINT_SCALE` is a hard gate before `G6/G7/G9`.**
+  - Do not start serious sim/path/combat implementation before this is resolved.
+- **`PG.P003.AUDIO_LIBRARY` is a hard gate before `G13` and a practical gate before `G15`.**
+  - You can prototype mission-end UI (`G12`) before audio is finalized.
+- **`M3` AI scope must be frozen before `G16`.**
+  - Use the documented “dummy/basic AI baseline” subset from `D043`; do not pull full `M6` AI sophistication into the `M3` exit.
+- **`G11` mission-end evaluators should be implemented as sim-derived logic, then surfaced through UI (`G12`).**
+  - Prevents UI-side win/loss heuristics from diverging from the authoritative state model.
+- **`G17` online slice must keep strict `M4` boundaries.**
+  - No tracker browser, no ranked queue, no broad community infra assumptions in the `M4` exit.
+
+### D. Campaign Execution Ladder (Campaign Runtime Slice -> Full Campaign Completeness, `M5–M6`)
+
+| Step ID | Build Step (What to Implement) | Primary Milestone | Priority | Hard Depends On | Exit Artifact / Proof |
+| --- | --- | --- | --- | --- | --- |
+| `G18.1` | Lua mission runtime baseline (`D004`) with deterministic sandbox boundaries and mission script lifecycle | `M5` | `P-Differentiator` | `G16`, `M2.CORE.SIM_FIXED_POINT_AND_ORDERS` | Mission scripts run in real runtime with deterministic-safe APIs |
+| `G18.2` | Campaign graph runtime + persistent campaign state save/load (`D021`) | `M5` | `P-Differentiator` | `G18.1`, `D010` | Campaign state survives mission transitions and reloads |
+| `G18.3` | Briefing -> mission -> debrief -> next flow (`D065` UX layer over `D021`) | `M5` | `P-Differentiator` | `G18.2`, `M3.UX.FIRST_RUN_SETUP_AND_MAIN_MENU` | One authored campaign chain is playable end-to-end |
+| `G18.4` | Failure/continue behavior, retry path, and campaign save/load correctness for the vertical slice | `M5` | `P-Differentiator` | `G18.3` | `M5` campaign runtime slice exit proven with save/load and failure branches |
+| `G19.1` | Scale campaign runtime to full mission set (mission scripts, objectives, transitions, outcomes) | `M6` | `P-Differentiator` | `G18.4` | All shipped campaign missions load/run in campaign flow |
+| `G19.2` | Branching persistence, roster carryover, named-character/hero-state carryover correctness | `M6` | `P-Differentiator` | `G19.1`, `D021` state model | Branching outcomes and carryover state validate across multi-mission chains |
+| `G19.3` | FMV/cutscene/media variant playback + fallback-safe campaign behavior (`D068`) | `M6` | `P-Differentiator` | `G19.1`, `M3.CORE.AUDIO_EVA_MUSIC` | Campaigns remain playable with/without optional media packs |
+| `G19.4` | Skirmish AI baseline maturity + campaign/tutorial script support (`D043/D042` baseline) | `M6` | `P-Differentiator` | `G16`, `M6.SP.SKIRMISH_AI_BASELINE` | AI is good enough for shipped SP content and onboarding use |
+| `G19.5` | D065 onboarding baseline for SP (Commander School, progressive hints, controls walkthrough integration) | `M6` | `P-Differentiator` | `G19.4`, `M3.UX.FIRST_RUN_SETUP_AND_MAIN_MENU` | New-player SP onboarding baseline is live and coherent |
+| `G19.6` | End-to-end validation of full RA campaigns (Allied + Soviet) with save/load, media fallback, and progression correctness | `M6` | `P-Differentiator` | `G19.2`, `G19.3`, `G19.5` | `M6` exit: full campaign-complete SP milestone validated |
+
+### E. Multiplayer Execution Ladder (Minimal Online Slice -> Productized MP, `M4–M7`)
+
+| Step ID | Build Step (What to Implement) | Primary Milestone | Priority | Hard Depends On | Exit Artifact / Proof |
+| --- | --- | --- | --- | --- | --- |
+| `G17.1` | Minimal host/join path (`direct connect` or `join code`) wired to final `NetworkModel` architecture | `M4` | `P-Core` | `G16`, `D006`, `D007` | Two local/remote clients can establish a match using the planned netcode seam |
+| `G17.2` | Relay time authority + sub-tick timestamp normalization/clamping + sim order validation path | `M4` | `P-Core` | `G17.1`, `D008`, `D012` | Online orders resolve consistently with bounded timing fairness and deterministic rejections |
+| `G17.3` | Minimal online skirmish end-to-end play (complete match, result, disconnect cleanly) | `M4` | `P-Core` | `G17.2`, `G16` | `M4.NET.MINIMAL_LOCKSTEP_ONLINE` exit proven in real play sessions |
+| `G17.4` | Reconnect baseline decision and implementation or explicit defer contract (with user-facing wording) | `M4` | `P-Core` | `G17.3`, `D010` | Reconnect works in the documented baseline **or** defer contract is locked and reflected in UX/docs |
+| `G20.1` | Tracking/browser discovery + trust labels + lobby listings | `M7` | `P-Differentiator` | `G17.3`, `G19`, `D052` baseline infrastructure | Browser-based discoverability works with correct trust label semantics |
+| `G20.2` | Signed credentials/results and certified community-server trust path (`D052`) | `M7` | `P-Differentiator` | `G20.1`, `M2.COM.TELEMETRY_DB_FOUNDATION`, `PG.P004.LOBBY_WIRE_DETAILS` | Signed identity/results path works and is reflected in lobby/trust UX |
+| `G20.3` | Ranked queue + tiers/seasons + queue health/degradation rules (`D055`) | `M7` | `P-Differentiator` | `G20.2`, `PG.P004.LOBBY_WIRE_DETAILS` | Ranked 1v1 queue works and is explainable to players |
+| `G20.4` | Report / block / avoid UX + moderation evidence attachment + optional review pipeline baseline | `M7` | `P-Scale` | `G20.1`, `G20.2`, `D059`, `D052` | Player moderation/reporting loop works without capability coupling confusion |
+| `G20.5` | Spectator + tournament basics + signed replay/exported evidence workflow | `M7` | `P-Differentiator` / `P-Scale` | `G20.2`, `G20.3`, `D010` replay chain | Multiplayer productization milestone (`M7`) exit: browser, ranked, trust, moderation, spectator all coherent |
+
+### F. Creator Platform & Long-Tail Execution Ladder (`M8–M11`)
+
+| Step ID | Build Step (What to Implement) | Primary Milestone | Priority | Hard Depends On | Exit Artifact / Proof |
+| --- | --- | --- | --- | --- | --- |
+| `G21.1` | `ic` CLI foundation (init/check/test/run loops) + local content overlay/dev-profile run path | `M8` | `P-Creator` | `M2`, `D020` | Creators can iterate through real game runtime without packaging/publishing |
+| `G21.2` | Minimal Workshop delivery + package install/publish baseline (`D030/D049`) | `M8` | `P-Creator` | `G21.1`, `M2.COM.TELEMETRY_DB_FOUNDATION` | Minimal Workshop path works for creator iteration and sharing |
+| `G21.3` | Mod profiles + virtual namespace + selective install hooks (`D062/D068`) | `M8` | `P-Creator` | `G21.2`, `D061` data-dir foundation | Profile activation/fingerprint/install-footprint behavior is stable |
+| `G21.4` | Authoring reference foundation (generated YAML/Lua/CLI docs; one-source docs pipeline) | `M8` | `P-Creator` | `G21.1`, `D037` knowledge-base path | Canonical creator docs pipeline exists before full SDK embedding |
+| `G22.1` | Scenario Editor core (`D038`) + validate/test/publish loop + resource manager basics | `M9` | `P-Creator` | `G20.5`, `G21.3` | Scenario authoring works end-to-end using real runtime/test flows |
+| `G22.2` | Asset Studio baseline (`D040`) + import/conversion + provenance plumbing + publish-readiness integration | `M9` | `P-Creator` | `G22.1`, `G21.2` | Asset creation/import supports scenario authoring and publish checks |
+| `G22.3` | Full Workshop/CAS + moderation tooling + OpenRA export core (`D049/D066`) | `M9` | `P-Creator` / `P-Scale` | `G22.1`, `G22.2`, `G20.2` | `M9` exit: full creator platform baseline works (scenario editor + Workshop + OpenRA export core) |
+| `G22.4` | SDK embedded authoring manual + context help (`F1`, `?`) from the generated doc source | `M9` | `P-Creator` | `G21.4`, `G22.1` | In-SDK docs are version-correct and searchable without creating a parallel manual |
+| `G23.1` | Campaign Editor + intermissions/dialogue/named characters + campaign test tools | `M10` | `P-Creator` | `G22.3`, `G19` | Branching campaign authoring works in the SDK |
+| `G23.2` | Game mode templates + D070 family toolkit (Commander & SpecOps, Commander Avatar variants, experimental survival) | `M10` | `P-Differentiator` | `G23.1`, `G22.1`, `D070` | Advanced mode templates are authorable/testable with role-aware UX and validation |
+| `G23.3` | RA1 export + editor extensibility/plugin hardening + localization/subtitle workbench | `M10` | `P-Creator` | `G22.3`, `G23.1`, `G22.2` | `M10` exit: advanced authoring platform maturity (campaign editor + modes + RA1 export + extensions) |
+| `G24.1` | Ecosystem governance polish + creator feedback recognition maturity + optional contributor cosmetic rewards | `M11` | `P-Scale` / `P-Optional` | `G20.4`, `G23.3` | Community governance/reputation features are mature and abuse-hardened |
+| `G24.2` | Optional BYOLLM stack (`D016/D047/D057`) with local/cloud prompt strategies and editor assistant surfaces | `M11` | `P-Optional` | `G23.3`, `G22.4` | LLM tooling is fully optional, schema-grounded, and does not block core workflows |
+| `G24.3` | Visual/render-mode infrastructure expansion (`D048`) + platform breadth polish (browser/mobile/Deck) | `M11` | `P-Optional` / `P-Scale` | `G20.5`, `G23.3`, `D017` baseline | `M11` exit: optional visual/platform breadth work lands without breaking low-end baseline |
+
+### G. Cross-Lane Sequencing Rules (Completion Planning Guardrails)
+
+- **Do not start `G22.*` (full visual SDK/editor platform) before `G20.5` + `G21.3`.**
+  - This prevents editor semantics and content schemas from outrunning runtime/network/product foundations.
+- **`G21.*` is intentionally parallelizable after `M2`, but `G22.*` is not.**
+  - Early creator CLI/workshop foundations reduce rework; full visual SDK needs stabilized runtime semantics.
+- **`G24.*` remains optional/polish unless explicitly promoted by a new decision and overlay remap.**
+  - `M11` should not displace unfinished `M7–M10` exit criteria.
+
+## Feature Cluster Sources and Extraction Scope (Baseline)
+
+| Source | Extraction Scope in This Map | Baseline Status |
+| --- | --- | --- |
+| `src/08-ROADMAP.md` | Phase deliverables + exit criteria grouped into milestone clusters | Included (clustered, not 1:1 bullet mirroring) |
+| `src/09-DECISIONS.md` | Dxxx mapping handled in tracker; referenced here via cluster-level `Decisions` column | Included via cluster references |
+| `src/11-OPENRA-FEATURES.md` | Gameplay familiarity priority groups (`P0`–`P3`) mapped to milestone gates | Included |
+| `src/17-PLAYER-FLOW.md` | Milestone-gating UX surfaces (setup, menu/skirmish, lobby/MP, campaign flow, moderation/review, SDK entry) | Included |
+| `src/07-CROSS-ENGINE.md` | Trust/host-mode packaging and anti-cheat capability constraints | Included |
+
+## Feature Cluster Dependency Matrix (Detailed Baseline)
+
+> Cluster IDs are stable and referenced by the tracker and future implementation notes. This matrix is intentionally grouped by milestone and feature family rather than mirroring roadmap bullets line-by-line.
+
+| Cluster ID | Feature Cluster | Milestone | Depends On (Hard) | Depends On (Soft) | Canonical Docs | Decisions | Roadmap Phase | Gap Priority | Exit Gate | Parallelizable With | Risk Notes |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `M0.CORE.TRACKER_FOUNDATION` | Project tracker page + status model + Dxxx row mapping | `M0` | — | — | `18-PROJECT-TRACKER.md`, `09-DECISIONS.md` | — | Overlay | — | Tracker exists and is discoverable | `M0.CORE.DEP_GRAPH_SCHEMA` | Must stay overlay-only (do not replace roadmap) |
+| `M0.CORE.DEP_GRAPH_SCHEMA` | Milestone DAG, edge semantics, cluster schema | `M0` | — | — | `tracking/milestone-dependency-map.md` | — | Overlay | — | Edge kinds and DAG documented | `M0.UX.TRACKER_DISCOVERABILITY` | Drift if roadmap changes are not propagated |
+| `M0.UX.TRACKER_DISCOVERABILITY` | mdBook + LLM-index + methodology wiring | `M0` | `M0.CORE.TRACKER_FOUNDATION` | — | `SUMMARY.md`, `LLM-INDEX.md`, `14-METHODOLOGY.md` | — | Overlay | — | Pages are reachable and routed | — | None |
+| `M0.OPS.MAINTENANCE_RULES` | Update rules, evidence rules, index-drift watchlist | `M0` | `M0.CORE.TRACKER_FOUNDATION` | — | `18-PROJECT-TRACKER.md` | — | Overlay | — | Maintenance section present | — | Tracker becomes stale without this |
+| `M0.OPS.FUTURE_DEFERRAL_DISCIPLINE_AND_AUDIT` | Future/deferral wording discipline, classification rules, and repo-wide audit/remediation workflow for canonical docs | `M0` | `M0.CORE.TRACKER_FOUNDATION`, `M0.CORE.DEP_GRAPH_SCHEMA`, `M0.OPS.MAINTENANCE_RULES` | `M0.UX.TRACKER_DISCOVERABILITY` | `AGENTS.md`, `14-METHODOLOGY.md`, `18-PROJECT-TRACKER.md`, `tracking/future-language-audit.md`, `tracking/deferral-wording-patterns.md` | — | Overlay (cross-cutting planning hardening) | — | Ambiguous future planning language is classified, mapped, or explicitly marked proposal-only/`Pxxx`; audit page exists and is maintainable | — | `P-Core` process feature: wording ambiguity becomes planning debt and can silently bypass milestone/dependency discipline |
+| `M1.CORE.RA_FORMATS_PARSE` | `ra-formats` parsing (`.mix`, `.shp`, `.pal`, `.aud`, `.vqa`) | `M1` | `M0` | — | `08-ROADMAP.md`, `05-FORMATS.md` | D003, D039 | Phase 0 | — | Assets parse against known-good corpus | `M1.CORE.OPENRA_DATA_COMPAT` | Breadth of legacy file quirks |
+| `M1.CORE.OPENRA_DATA_COMPAT` | OpenRA YAML/MiniYAML/runtime aliases and mod manifest loading | `M1` | `M1.CORE.RA_FORMATS_PARSE` | — | `08-ROADMAP.md`, `04-MODDING.md` | D003, D023, D025, D026 | Phase 0 | — | OpenRA mods load to typed structs | — | Keep D023/D025/D026 mapping aligned with both import and export workflows as D066 evolves |
+| `M1.CORE.RENDERER_SLICE` | Bevy isometric map + sprite renderer, camera, fog/shroud basics | `M1` | `M1.CORE.RA_FORMATS_PARSE` | `M1.CORE.OPENRA_DATA_COMPAT` | `08-ROADMAP.md`, `02-ARCHITECTURE.md`, `10-PERFORMANCE.md` | D002, D017, D039 | Phase 1 | — | Any OpenRA RA map renders faithfully | `M1.UX.VISUAL_SHOWCASE` | Resist premature post-FX complexity |
+| `M1.UX.VISUAL_SHOWCASE` | Public visual slice (map rendered, animated units, camera feel) | `M1` | `M1.CORE.RENDERER_SLICE` | — | `08-ROADMAP.md`, `17-PLAYER-FLOW.md` | D017 | Phase 1 | — | Community-visible slice exists | — | Not a substitute for sim correctness |
+| `M1.CORE.DATA_DIR_AND_PORTABILITY_BASE` | `<data_dir>` layout, overrides, early backup/portability foundation | `M1` | `M0` | — | `08-ROADMAP.md`, `04-MODDING.md` | D061 | Phase 0 | — | Data dir layout and overrides are stable | `M1.CORE.RA_FORMATS_PARSE` | Affects later install/setup and profile flows |
+| `M2.CORE.SIM_FIXED_POINT_AND_ORDERS` | Deterministic sim core, fixed-point math, order application | `M2` | `M1.CORE.OPENRA_DATA_COMPAT`, `M1.CORE.RENDERER_SLICE` | — | `08-ROADMAP.md`, `02-ARCHITECTURE.md`, `03-NETCODE.md` | D006, D009, D041 | Phase 2 | — | Deterministic sim tick loop exists | `M2.CORE.SNAPSHOT_HASH_REPLAY_BASE`, `M2.CORE.PATH_SPATIAL` | `P002` fixed-point scale gate |
+| `M2.CORE.SNAPSHOT_HASH_REPLAY_BASE` | Snapshots, state hashing, replay foundation, local network/replay playback | `M2` | `M2.CORE.SIM_FIXED_POINT_AND_ORDERS` | — | `08-ROADMAP.md`, `03-NETCODE.md` | D010, D034 | Phase 2 | — | Replay and hash equality on repeat runs | `M2.COM.TELEMETRY_DB_FOUNDATION` | Compression/header evolution can cause churn later |
+| `M2.CORE.PATH_SPATIAL` | `Pathfinder` + `SpatialIndex` implementations, deterministic query ordering | `M2` | `M2.CORE.SIM_FIXED_POINT_AND_ORDERS` | `M1.CORE.RENDERER_SLICE` | `02-ARCHITECTURE.md`, `10-PERFORMANCE.md`, `04-MODDING.md` | D013, D045, D015 | Phase 2 | `P0` support | Path and spatial conformance pass | `M2.CORE.GAP_P0_GAMEPLAY_SYSTEMS` | `P002` fixed-point scale gate |
+| `M2.CORE.GAP_P0_GAMEPLAY_SYSTEMS` | OpenRA familiarity `P0` systems (conditions, multipliers, warheads, projectile pipeline, building mechanics, support powers, damage model) | `M2` | `M2.CORE.SIM_FIXED_POINT_AND_ORDERS`, `M2.CORE.PATH_SPATIAL` | — | `11-OPENRA-FEATURES.md`, `02-ARCHITECTURE.md` | D013, D027, D028, D029, D041 | Phase 2 | `P0` | P0 systems operational in combat slice | `M2.CORE.SNAPSHOT_HASH_REPLAY_BASE` | D028 is the hard Phase 2 gate; D029 systems are targets with explicit early-Phase-3 spillover allowance |
+| `M2.CORE.GAME_MODULE_AND_SUBSYSTEM_SEAMS` | `GameModule` registration and trait-abstracted subsystem seams | `M2` | `M2.CORE.SIM_FIXED_POINT_AND_ORDERS` | `M2.CORE.PATH_SPATIAL` | `02-ARCHITECTURE.md`, `09a-foundation.md` | D018, D041, D039 | Phase 2 | — | Engine core remains game-agnostic while RA1 module runs | `M8.SDK.CLI_FOUNDATION` | Over-coupling to RA1 is the main risk |
+| `M2.COM.TELEMETRY_DB_FOUNDATION` | Local SQLite + telemetry schema, zero-cost instrumentation disabled path | `M2` | `M2.CORE.SIM_FIXED_POINT_AND_ORDERS` | `M2.CORE.SNAPSHOT_HASH_REPLAY_BASE` | `08-ROADMAP.md`, `09e-community.md` | D031, D034 | Phase 2 | — | Telemetry + local db foundation operational | `M8.COM.MINIMAL_WORKSHOP`, `M7.SEC.BEHAVIORAL_ANALYSIS_REPORTING` | Observability scope creep before core sim maturity |
+| `M3.UX.GAME_CHROME_CORE` | Sidebar, power bar, credits, radar/minimap, selection basics | `M3` | `M2.CORE.GAP_P0_GAMEPLAY_SYSTEMS`, `M2.CORE.GAME_MODULE_AND_SUBSYSTEM_SEAMS` | `M1.CORE.RENDERER_SLICE` | `08-ROADMAP.md`, `17-PLAYER-FLOW.md`, `09g-interaction.md` | D032, D033, D058 | Phase 3 | `P2` support | Feels like RA chrome + control baseline | `M3.UX.FIRST_RUN_SETUP_AND_MAIN_MENU`, `M3.SP.SKIRMISH_LOCAL_LOOP` | UI fidelity vs speed tradeoffs |
+| `M3.CORE.GAP_P1_GAMEPLAY_SYSTEMS` | OpenRA familiarity `P1` systems (transport/cargo, capture, stealth, death mechanics, sub-cells, veterancy, docking, deploy, power) | `M3` | `M2.CORE.GAP_P0_GAMEPLAY_SYSTEMS` | — | `11-OPENRA-FEATURES.md`, `02-ARCHITECTURE.md` | D033, D045 | Phase 3/4 prep | `P1` | P1 systems needed for normal skirmish/campaign feel | `M3.SP.SKIRMISH_LOCAL_LOOP`, `M5.SP.CAMPAIGN_RUNTIME_SLICE` | Too much “just enough” here harms later campaign parity |
+| `M3.CORE.GAP_P2_SKIRMISH_FAMILIARITY` | OpenRA familiarity `P2` systems needed for skirmish usability (guard, cursor, hotkeys, selection details, speed presets, notifications) | `M3` | `M3.UX.GAME_CHROME_CORE`, `M3.CORE.GAP_P1_GAMEPLAY_SYSTEMS` | — | `11-OPENRA-FEATURES.md`, `09g-interaction.md` | D033, D058, D059, D060 | Phase 3 | `P2` | Skirmish usability and command ergonomics are acceptable | `M4.UX.MINIMAL_ONLINE_CONNECT_FLOW` | Hotkey/profile drift across input modes |
+| `M3.CORE.AUDIO_EVA_MUSIC` | Audio playback, unit responses, ambient, EVA, music state machine baseline | `M3` | `M1.CORE.RA_FORMATS_PARSE`, `M3.UX.GAME_CHROME_CORE` | — | `08-ROADMAP.md`, `02-ARCHITECTURE.md` | D032 | Phase 3 | — | Audio works and contributes to “feels like RA” | — | `P003` hard gate |
+| `M3.UX.FIRST_RUN_SETUP_AND_MAIN_MENU` | D069 first-run setup wizard baseline + main menu path to skirmish/campaign | `M3` | `M1.CORE.DATA_DIR_AND_PORTABILITY_BASE`, `M3.UX.GAME_CHROME_CORE` | `M8.MOD.SELECTIVE_INSTALL_INFRA_HOOKS` | `17-PLAYER-FLOW.md`, `09g-interaction.md` | D061, D065, D069 | Phase 3 | — | New player can reach local play with offline-first flow | `M3.SP.SKIRMISH_LOCAL_LOOP` | Keep no-dead-end and offline-first guarantees |
+| `M3.SP.SKIRMISH_LOCAL_LOOP` | Local skirmish playable loop vs scripted dummy/basic AI | `M3` | `M3.UX.GAME_CHROME_CORE`, `M3.CORE.GAP_P1_GAMEPLAY_SYSTEMS`, `M3.CORE.GAP_P2_SKIRMISH_FAMILIARITY` | `M3.CORE.AUDIO_EVA_MUSIC` | `08-ROADMAP.md`, `17-PLAYER-FLOW.md` | D019, D033, D043, D032 | Phase 3 | `P1/P2` | First playable milestone complete | `M4.NET.MINIMAL_LOCKSTEP_ONLINE`, `M5.SP.CAMPAIGN_RUNTIME_SLICE` | AI scope creep can delay milestone |
+| `M4.NET.MINIMAL_LOCKSTEP_ONLINE` | Minimal lockstep/relay online path using final architecture (no tracker/ranked) | `M4` | `M3.SP.SKIRMISH_LOCAL_LOOP`, `M2.CORE.SNAPSHOT_HASH_REPLAY_BASE` | — | `03-NETCODE.md`, `08-ROADMAP.md` | D006, D007, D008, D012, D060 | Phase 5 (subset) | — | Two players play online in simplest supported path | `M5.SP.CAMPAIGN_RUNTIME_SLICE` | Resist feature creep (browser/ranked/spectator) |
+| `M4.NET.RELAY_TIME_AUTHORITY_AND_VALIDATION` | Relay clock authority, timestamp normalization, sim-side validation path | `M4` | `M4.NET.MINIMAL_LOCKSTEP_ONLINE` | — | `03-NETCODE.md`, `06-SECURITY.md` | D007, D008, D012, D060 | Phase 5 (subset) | — | Basic fairness and anti-abuse architecture proven | `M7.SEC.BEHAVIORAL_ANALYSIS_REPORTING` | Trust claims must stay bounded |
+| `M4.UX.MINIMAL_ONLINE_CONNECT_FLOW` | Direct connect/join code/embedded relay flow (no external tracking requirement) | `M4` | `M4.NET.MINIMAL_LOCKSTEP_ONLINE` | `M3.UX.FIRST_RUN_SETUP_AND_MAIN_MENU` | `17-PLAYER-FLOW.md`, `03-NETCODE.md` | D069, D060 | Phase 5 (subset) | — | Player can host/join minimal online match | — | Must not imply ranked/tracker availability |
+| `M4.NET.RECONNECT_BASELINE` | Basic reconnect (if feasible) or explicit defer contract | `M4` | `M4.NET.MINIMAL_LOCKSTEP_ONLINE`, `M2.CORE.SNAPSHOT_HASH_REPLAY_BASE` | — | `03-NETCODE.md`, `09b-networking.md` | D010, D007 | Phase 5 (subset) | — | Reconnect supported or clearly deferred with documented constraints | — | Snapshot donor/verification behavior must stay explicit |
+| `M5.SP.LUA_MISSION_RUNTIME` | Lua sandbox + mission script runtime for authored scenarios | `M5` | `M2.CORE.SIM_FIXED_POINT_AND_ORDERS`, `M3.SP.SKIRMISH_LOCAL_LOOP` | `M8.SDK.CLI_FOUNDATION` | `04-MODDING.md`, `08-ROADMAP.md` | D004 | Phase 4 subset | — | Mission scripts execute in runtime | `M5.SP.CAMPAIGN_RUNTIME_SLICE` | Sandbox/capability boundaries |
+| `M5.SP.CAMPAIGN_RUNTIME_SLICE` | D021 campaign graph runtime (basic path), state, save/load, mission transitions | `M5` | `M5.SP.LUA_MISSION_RUNTIME`, `M3.UX.FIRST_RUN_SETUP_AND_MAIN_MENU` | `M3.CORE.AUDIO_EVA_MUSIC` | `modding/campaigns.md`, `17-PLAYER-FLOW.md`, `08-ROADMAP.md` | D004, D065 | Phase 4 subset | — | One campaign chain works end-to-end with save/load | `M4.NET.MINIMAL_LOCKSTEP_ONLINE` | Continuous flow correctness is more important than quantity |
+| `M5.UX.BRIEFING_DEBRIEF_NEXT_FLOW` | Briefing → mission → debrief → next mission UX and failure/continue path | `M5` | `M5.SP.CAMPAIGN_RUNTIME_SLICE` | — | `17-PLAYER-FLOW.md`, `09g-interaction.md` | D065 | Phase 4 subset | — | Campaign runtime is player-comprehensible, not just technically chained | — | UX drift from campaign runtime semantics |
+| `M6.SP.FULL_RA_CAMPAIGNS` | Full Allied/Soviet campaign completeness and correctness | `M6` | `M5.SP.CAMPAIGN_RUNTIME_SLICE`, `M5.UX.BRIEFING_DEBRIEF_NEXT_FLOW` | — | `08-ROADMAP.md`, `17-PLAYER-FLOW.md` | D065 | Phase 4 full | — | Can play all shipped campaigns start-to-finish | `M6.SP.SKIRMISH_AI_BASELINE` | Content completeness and correctness workload |
+| `M6.SP.SKIRMISH_AI_BASELINE` | Basic skirmish AI challenge + behavior presets baseline | `M6` | `M3.SP.SKIRMISH_LOCAL_LOOP`, `M3.CORE.GAP_P1_GAMEPLAY_SYSTEMS` | `M2.COM.TELEMETRY_DB_FOUNDATION` | `08-ROADMAP.md`, `09d-gameplay.md` | D043, D042 | Phase 4 full | — | AI is good enough to support skirmish and tutorial/campaign scripts | `M6.UX.D065_ONBOARDING_COMMANDER_SCHOOL` | Avoid overfitting before telemetry data |
+| `M6.UX.D065_ONBOARDING_COMMANDER_SCHOOL` | Commander School, skill assessment, progressive hints, controls walkthrough integration | `M6` | `M3.UX.FIRST_RUN_SETUP_AND_MAIN_MENU`, `M3.UX.GAME_CHROME_CORE`, `M6.SP.SKIRMISH_AI_BASELINE` | `M7.UX.MULTIPLAYER_ONBOARDING` | `09g-interaction.md`, `17-PLAYER-FLOW.md` | D065, D058, D059, D069 | Phase 4 (and Phase 3 stretch) | — | New-player and campaign onboarding baseline exists | — | Prompt drift across input profiles/device classes |
+| `M6.SP.MEDIA_VARIANTS_AND_FALLBACKS` | FMV/cutscene playback + D068 media fallback behavior in campaigns | `M6` | `M5.SP.CAMPAIGN_RUNTIME_SLICE`, `M3.CORE.AUDIO_EVA_MUSIC` | `M8.MOD.SELECTIVE_INSTALL_INFRA_HOOKS` | `17-PLAYER-FLOW.md`, `09c-modding.md`, `09f-tools.md` | D068, D040 | Phase 4 full (with later D068 polish) | — | Campaigns remain playable with media variants missing (fallback-safe) | — | Media/cutscene path can balloon if remaster workflows leak into core milestone |
+| `M6.CORE.GAP_P3_FULL_EXPERIENCE` | OpenRA familiarity `P3` systems and polish needed for full experience (observer UI/replay browser UI/localization/encyclopedia etc. as applicable) | `M6` | `M3` baseline, `M5` campaign runtime | `M7` for multiplayer-specific P3 items | `11-OPENRA-FEATURES.md`, `17-PLAYER-FLOW.md` | D036, D065 | Phase 4+ | `P3` | P3 items are mapped, intentionally phased, and not silently forgotten | `M7`, `M10`, `M11` | Defer by default; avoid smuggling into earlier critical path |
+| `M7.NET.TRACKING_BROWSER_DISCOVERY` | Shared browser/tracking server integration, lobby listings, trust labels | `M7` | `M4.NET.MINIMAL_LOCKSTEP_ONLINE`, `M6.SP.FULL_RA_CAMPAIGNS` | — | `03-NETCODE.md`, `17-PLAYER-FLOW.md` | D052, D060, D011 | Phase 5 full | — | Browser-based discoverability + trust indicators working | `M7.NET.RANKED_MATCHMAKING`, `M7.NET.CROSS_ENGINE_BRIDGE` | Trust labeling must match actual guarantees |
+| `M7.NET.D052_SIGNED_CREDS_RESULTS` | Portable signed credentials, certified results, community server trust baseline | `M7` | `M4.NET.RELAY_TIME_AUTHORITY_AND_VALIDATION`, `M2.COM.TELEMETRY_DB_FOUNDATION` | — | `09b-networking.md`, `06-SECURITY.md` | D052, D061, D031 | Phase 5 full | — | Signed credentials/results and server trust path functional | `M7.SEC.BEHAVIORAL_ANALYSIS_REPORTING` | `P004` integration details gate |
+| `M7.NET.RANKED_MATCHMAKING` | Ranked queue, tiers/seasons, leaderboards, queue degradation logic | `M7` | `M7.NET.D052_SIGNED_CREDS_RESULTS`, `M7.NET.TRACKING_BROWSER_DISCOVERY` | `M7.UX.REPORT_BLOCK_AVOID_REVIEW` | `09b-networking.md`, `17-PLAYER-FLOW.md` | D055, D053, D060 | Phase 5 full | — | Ranked 1v1 functional and explainable | `M7.NET.SPECTATOR_TOURNAMENT` | Queue health and avoid-list abuse |
+| `M7.NET.SPECTATOR_TOURNAMENT` | Spectator mode, broadcast delay, tournament-certified match paths | `M7` | `M7.NET.TRACKING_BROWSER_DISCOVERY`, `M7.NET.D052_SIGNED_CREDS_RESULTS` | `M7.NET.RANKED_MATCHMAKING` | `03-NETCODE.md`, `17-PLAYER-FLOW.md`, `15-SERVER-GUIDE.md` | D052, D055 | Phase 5 full | `P3` observer UI tie-in | Spectator and tournament basics work | — | Extra ops complexity |
+| `M7.SEC.BEHAVIORAL_ANALYSIS_REPORTING` | Relay-side behavioral anti-cheat signals + report evidence pipeline | `M7` | `M7.NET.D052_SIGNED_CREDS_RESULTS`, `M2.COM.TELEMETRY_DB_FOUNDATION` | `M7.UX.REPORT_BLOCK_AVOID_REVIEW` | `06-SECURITY.md`, `09b-networking.md`, `17-PLAYER-FLOW.md` | D052, D031, D059 | Phase 5 full | — | Reports include evidence and moderation signals without overclaiming certainty | `M7.UX.REPORT_BLOCK_AVOID_REVIEW` | False positives / trust messaging |
+| `M7.UX.D059_BEACONS_MARKERS_LABELS` | D059 colored beacon/ping + tactical marker presentation rules (optional short labels, preset color accents, visibility scope, replay-safe metadata, anti-spam) | `M7` | `M7.NET.TRACKING_BROWSER_DISCOVERY` | `M7.UX.REPORT_BLOCK_AVOID_REVIEW`, `M7.SEC.BEHAVIORAL_ANALYSIS_REPORTING` | `09g-interaction.md`, `17-PLAYER-FLOW.md`, `06-SECURITY.md` | D059, D065, D052 | Phase 5 full (with D070 typed-support marker reuse in M10) | — | Marker/beacon communication is readable, accessible (not color-only), rate-limited, and replay-preserving across KBM/controller/touch flows | `M10.GAME.D070_TEMPLATE_TOOLKIT` | Ping spam, color-only semantics, or unlabeled marker clutter can degrade coordination and moderation clarity |
+| `M7.UX.REPORT_BLOCK_AVOID_REVIEW` | Mute/block/avoid/report UX + optional community-review/Overwatch surfaces | `M7` | `M7.NET.TRACKING_BROWSER_DISCOVERY` | `M7.SEC.BEHAVIORAL_ANALYSIS_REPORTING`, `M7.NET.RANKED_MATCHMAKING` | `17-PLAYER-FLOW.md`, `09g-interaction.md`, `09b-networking.md`, `06-SECURITY.md` | D059, D052, D055 | Phase 5 full (and later moderation expansion) | — | Personal control + moderation/reporting flows are distinct and understandable | — | Avoid/ranked guarantee confusion |
+| `M7.UX.POST_PLAY_FEEDBACK_PROMPTS` | Sampled post-game/post-session feedback prompts for modes/mods/campaigns + local-first feedback telemetry + opt-in community submission hooks | `M7` | `M2.COM.TELEMETRY_DB_FOUNDATION`, `M7.NET.TRACKING_BROWSER_DISCOVERY` | `M7.UX.REPORT_BLOCK_AVOID_REVIEW`, `M9.COM.D049_FULL_WORKSHOP_CAS` | `17-PLAYER-FLOW.md`, `09e-community.md` | D031, D049, D053, D037 | Phase 5 full (with later Workshop/creator expansion) | — | Prompts are skippable, non-blocking, and useful without survey fatigue; local-first analytics and opt-in submission boundaries are clear | `M10.COM.CREATOR_FEEDBACK_HELPFUL_RECOGNITION` | `P-Scale`: avoid spammy prompts, positivity bias, and reward wording that implies gameplay bonuses |
+| `M7.NET.CROSS_ENGINE_BRIDGE_AND_TRUST` | Cross-engine browser/community bridge, trust labels, host-mode packaging, replay import integration | `M7` | `M7.NET.TRACKING_BROWSER_DISCOVERY`, `M7.NET.D052_SIGNED_CREDS_RESULTS` | `M7.SEC.BEHAVIORAL_ANALYSIS_REPORTING` | `07-CROSS-ENGINE.md`, `03-NETCODE.md`, `17-PLAYER-FLOW.md` | D011, D056, D052 | Phase 5 full + later polish | — | Cross-engine modes are clearly labeled and policy-correct | `M11.PLAT.CROSS_ENGINE_POLISH` | Anti-cheat guarantee confusion |
+| `M8.SDK.CLI_FOUNDATION` | `ic` CLI core workflows, validation/testing scaffolding, early creator loop | `M8` | `M2.CORE.SIM_FIXED_POINT_AND_ORDERS` | `M5.SP.LUA_MISSION_RUNTIME` | `04-MODDING.md`, `08-ROADMAP.md` | D004, D005, D062 | Phase 4–5 overlay | — | Creators can init/check/run/test content without visual SDK | `M8.COM.MINIMAL_WORKSHOP` | Keep CLI aligned with later SDK naming/flows |
+| `M8.SDK.AUTHORING_REFERENCE_FOUNDATION` | Auto-generated authoring reference foundation (YAML schema/Lua API/CLI command docs) + knowledge-base publishing pipeline | `M8` | `M8.SDK.CLI_FOUNDATION`, `M2.COM.TELEMETRY_DB_FOUNDATION` | `M5.SP.LUA_MISSION_RUNTIME` | `09e-community.md`, `04-MODDING.md` | D037, D020, D004, D005 | Phase 4–5 overlay (with 6a SDK embedding consumers) | — | Canonical authoring reference sources exist and are versioned/searchable outside the SDK | `M8.COM.MINIMAL_WORKSHOP`, `M9.SDK.EMBEDDED_AUTHORING_MANUAL` | `P-Creator`: metadata/doc generation drift if command/API/schema docs are hand-maintained in parallel |
+| `M8.COM.MINIMAL_WORKSHOP` | Minimal central Workshop delivery (`publish/install/browser/autodownload` early slice) | `M8` | `M8.SDK.CLI_FOUNDATION`, `M2.COM.TELEMETRY_DB_FOUNDATION` | `M7.NET.TRACKING_BROWSER_DISCOVERY` | `08-ROADMAP.md`, `09e-community.md`, `04-MODDING.md` | D030, D049, D034 | Phase 4–5 overlay | — | Minimal Workshop works before full federation features | `M8.MOD.PROFILES_NAMESPACE_FOUNDATION` | Do not overbuild full D030 too early |
+| `M8.MOD.PROFILES_NAMESPACE_FOUNDATION` | D062 mod profiles + virtual namespace + fingerprints baseline | `M8` | `M2.CORE.SNAPSHOT_HASH_REPLAY_BASE`, `M8.SDK.CLI_FOUNDATION` | `M8.COM.MINIMAL_WORKSHOP` | `04-MODDING.md`, `09c-modding.md` | D062, D068 | Phase 4–5 overlay / 6a foundation | — | Profile save/activate/fingerprint flow stable | `M7.NET.RANKED_MATCHMAKING` | Lobby/profile mismatch UX complexity |
+| `M8.MOD.SELECTIVE_INSTALL_INFRA_HOOKS` | D068 install presets/content-footprint hooks reused by D069 and content manager | `M8` | `M8.COM.MINIMAL_WORKSHOP`, `M1.CORE.DATA_DIR_AND_PORTABILITY_BASE` | `M3.UX.FIRST_RUN_SETUP_AND_MAIN_MENU` | `09c-modding.md`, `17-PLAYER-FLOW.md`, `09g-interaction.md` | D068, D069, D049 | Phase 6a foundation (with earlier wizard integration) | — | Install profiles and maintenance hooks are stable before full SDK/content-manager polish | — | Keep gameplay/presentation/player-config fingerprint boundaries explicit |
+| `M9.SDK.D038_SCENARIO_EDITOR_CORE` | Scenario editor core (terrain, entities, triggers, modules, compositions, validate/test/publish flow) | `M9` | `M8.SDK.CLI_FOUNDATION`, `M7.NET.TRACKING_BROWSER_DISCOVERY`, `M8.MOD.PROFILES_NAMESPACE_FOUNDATION` | `M6.UX.D065_ONBOARDING_COMMANDER_SCHOOL` | `09f-tools.md`, `17-PLAYER-FLOW.md`, `04-MODDING.md` | D038, D065, D069 | Phase 6a | — | D038 core authoring loop works end-to-end | `M9.SDK.D040_ASSET_STUDIO`, `M9.MOD.D066_OPENRA_EXPORT_CORE` | Runtime/schema drift if started too early |
+| `M9.SDK.EMBEDDED_AUTHORING_MANUAL` | SDK-embedded authoring manual + context help (`F1`, `?`, searchable docs browser) using D037 knowledge-base content | `M9` | `M9.SDK.D038_SCENARIO_EDITOR_CORE`, `M8.SDK.AUTHORING_REFERENCE_FOUNDATION` | `M9.SDK.D040_ASSET_STUDIO`, `M10.SDK.D038_CAMPAIGN_EDITOR` | `09f-tools.md`, `17-PLAYER-FLOW.md`, `09e-community.md` | D038, D037, D020 | Phase 6a (with 6b campaign/editor-surface expansion) | — | Creators can inspect parameters/flags/API docs in-context without leaving the SDK; offline snapshot works | `M9.SDK.GIT_VALIDATE_PROFILE_PLAYTEST` | `P-Creator`: must stay one-source docs (web + SDK snapshot), not a second manual |
+| `M9.SDK.D040_ASSET_STUDIO` | Asset Studio baseline + conversion/import + provenance plumbing + publish readiness integration | `M9` | `M9.SDK.D038_SCENARIO_EDITOR_CORE`, `M8.COM.MINIMAL_WORKSHOP` | — | `09f-tools.md`, `17-PLAYER-FLOW.md` | D040, D049, D068 | Phase 6a | — | Asset editing/import pipeline supports scenario authoring | `M9.UX.RESOURCE_MANAGER_AND_PUBLISH_READINESS` | Provenance/rules UI complexity should stay advanced-only |
+| `M9.COM.D049_FULL_WORKSHOP_CAS` | Full Workshop federation/CAS/P2P distribution and moderation tooling | `M9` | `M8.COM.MINIMAL_WORKSHOP`, `M7.NET.D052_SIGNED_CREDS_RESULTS` | `M7.UX.REPORT_BLOCK_AVOID_REVIEW` | `09e-community.md`, `15-SERVER-GUIDE.md` | D049, D030, D052, D037 | Phase 6a | — | Full Workshop features validated (CAS, moderation, auto-download, reputation) | `M9.MOD.D066_OPENRA_EXPORT_CORE` | Legal/policy gates must be treated as validation blockers |
+| `M9.MOD.D066_OPENRA_EXPORT_CORE` | OpenRA export core, fidelity reports, export-safe authoring mode | `M9` | `M9.SDK.D038_SCENARIO_EDITOR_CORE`, `M9.SDK.D040_ASSET_STUDIO`, `M9.COM.D049_FULL_WORKSHOP_CAS` | `M7.NET.CROSS_ENGINE_BRIDGE_AND_TRUST` | `09c-modding.md`, `09f-tools.md`, `04-MODDING.md` | D066, D038, D040, D049 | Phase 6a | — | `ic export --target openra` valid for supported scenarios + fidelity report | — | Must preserve IC-native-first stance |
+| `M9.SDK.GIT_VALIDATE_PROFILE_PLAYTEST` | Git-first collaboration, Validate & Playtest, Profile Playtest v1, migration preview | `M9` | `M9.SDK.D038_SCENARIO_EDITOR_CORE` | `M2.COM.TELEMETRY_DB_FOUNDATION` | `09f-tools.md`, `10-PERFORMANCE.md`, `17-PLAYER-FLOW.md` | D038, D040 | Phase 6a | — | Authoring validation and profiling are usable without blocking preview/test | — | UX must stay simple-first |
+| `M9.UX.RESOURCE_MANAGER_AND_PUBLISH_READINESS` | Resource Manager panel + unified publish readiness UX | `M9` | `M9.SDK.D038_SCENARIO_EDITOR_CORE`, `M9.SDK.D040_ASSET_STUDIO`, `M8.MOD.SELECTIVE_INSTALL_INFRA_HOOKS` | — | `09f-tools.md`, `17-PLAYER-FLOW.md` | D038, D040, D068, D049 | Phase 6a | — | Resource flows and publish checks are non-dead-end and understandable | — | Avoid scattering warnings across panels |
+| `M10.SDK.D038_CAMPAIGN_EDITOR` | Campaign graph editor, intermissions, dialogue, named chars, testing tools | `M10` | `M9.SDK.D038_SCENARIO_EDITOR_CORE`, `M6.SP.FULL_RA_CAMPAIGNS` | `M9.SDK.GIT_VALIDATE_PROFILE_PLAYTEST` | `09f-tools.md`, `modding/campaigns.md`, `17-PLAYER-FLOW.md` | D038, D065 | Phase 6b | — | Campaign authoring works for branching multi-mission campaigns | `M10.GAME.D070_TEMPLATE_TOOLKIT` | Scope explosion in intermission tooling |
+| `M10.SDK.D038_CHARACTER_PRESENTATION_OVERRIDES` | Named-character presentation override convenience layer (voice/icon/portrait/sprite/palette/marker variants) with mission-scoped variant selection and preview | `M10` | `M10.SDK.D038_CAMPAIGN_EDITOR`, `M9.SDK.D040_ASSET_STUDIO` | `M9.SDK.EMBEDDED_AUTHORING_MANUAL`, `M10.GAME.D070_TEMPLATE_TOOLKIT` | `09f-tools.md`, `modding/campaigns.md`, `17-PLAYER-FLOW.md`, `04-MODDING.md` | D038, D021, D040, D068 | Phase 6b | — | Creators can define unique hero/operative readability (voice/skin/icon markers) without hiding gameplay changes in visual metadata; mission-level variant switching previews correctly | `M10.GAME.MODE_TEMPLATES_MP_TOOLS`, `M10.MOD.D066_RA1_EXPORT_EXTENSIBILITY` | `P-Creator` + `P-Differentiator`: keep gameplay-vs-presentation boundary explicit and avoid accidental compatibility/fingerprint confusion |
+| `M10.GAME.MODE_TEMPLATES_MP_TOOLS` | Game mode templates + multiplayer scenario tooling + Game Master mode | `M10` | `M9.SDK.D038_SCENARIO_EDITOR_CORE`, `M7.NET.RANKED_MATCHMAKING` (for MP semantics baseline) | `M10.SDK.D038_CAMPAIGN_EDITOR` | `09f-tools.md`, `17-PLAYER-FLOW.md` | D038 | Phase 6b | — | Multiple templates produce playable matches; MP scenario tooling works | `M10.GAME.D070_TEMPLATE_TOOLKIT` | Template sprawl before validation |
+| `M10.GAME.D070_TEMPLATE_TOOLKIT` | Commander & SpecOps (D070) template toolkit and role-aware authoring/UX integration | `M10` | `M10.GAME.MODE_TEMPLATES_MP_TOOLS`, `M7.UX.REPORT_BLOCK_AVOID_REVIEW`, `M7.NET.CROSS_ENGINE_BRIDGE_AND_TRUST` (policy awareness only) | `M10.SDK.D038_CAMPAIGN_EDITOR` | `09d-gameplay.md`, `09f-tools.md`, `09g-interaction.md`, `17-PLAYER-FLOW.md` | D070, D059, D065, D038, D066 | Phase 6b | — | D070 template validates, role HUDs and request lifecycle UX are wired | `M10.GAME.EXPERIMENTAL_SPECOPS_SURVIVAL` | Keep PvE-first and export limitations explicit |
+| `M10.GAME.D070_OPERATIONAL_MOMENTUM` | Optional D070 pacing layer (`Operational Momentum` / "one more phase") with agenda lanes, milestone rewards, and extraction-vs-stay prompts | `M10` | `M10.GAME.D070_TEMPLATE_TOOLKIT` | `M10.SDK.D038_CAMPAIGN_EDITOR`, `M10.GAME.EXPERIMENTAL_SPECOPS_SURVIVAL` | `09d-gameplay.md`, `09f-tools.md`, `modding/campaigns.md`, `17-PLAYER-FLOW.md` | D070, D038, D021, D065, D059 | Phase 6b/7 (prototype-first optional layer) | — | Optional pacing layer is validated without HUD overload; milestone rewards are explicit and can compose with `Ops Prologue`/`Ops Campaign` flags where authored | `M10.GAME.EXPERIMENTAL_SPECOPS_SURVIVAL` | `P-Optional`: timer walls, reward snowballing, or hidden mandatory chains can damage D070 readability if not tightly bounded |
+| `M10.GAME.EXPERIMENTAL_SPECOPS_SURVIVAL` | Experimental `Last Commando Standing` / `SpecOps Survival` template | `M10` | `M10.GAME.D070_TEMPLATE_TOOLKIT` | `M10.GAME.MODE_TEMPLATES_MP_TOOLS` | `09d-gameplay.md`, `09f-tools.md`, `17-PLAYER-FLOW.md` | D070 | Phase 6b (experimental) | — | Experimental lobby/HUD/post-game surfaces exist and stay clearly labeled | — | Do not let this displace core template validation |
+| `M10.MOD.D066_RA1_EXPORT_EXTENSIBILITY` | RA1 export + editor extensibility/plugin hardening + YAML/Lua extension tiers | `M10` | `M9.MOD.D066_OPENRA_EXPORT_CORE`, `M10.SDK.D038_CAMPAIGN_EDITOR`, `M9.COM.D049_FULL_WORKSHOP_CAS` | — | `09c-modding.md`, `09f-tools.md` | D066, D038, D040, D049 | Phase 6b | — | RA1 export works for supported scenarios/campaign paths + editor extension system is safe | `M10.SDK.LOCALIZATION_PLUGIN_HARDENING` | API compatibility and capability manifests must be explicit |
+| `M10.SDK.LOCALIZATION_PLUGIN_HARDENING` | Localization/subtitle workbench + editor plugin capability/version hardening + provenance release gating refinements | `M10` | `M9.SDK.D040_ASSET_STUDIO`, `M9.UX.RESOURCE_MANAGER_AND_PUBLISH_READINESS`, `M10.MOD.D066_RA1_EXPORT_EXTENSIBILITY` | — | `09f-tools.md`, `17-PLAYER-FLOW.md`, `09c-modding.md` | D040, D066, D068 | Phase 6b | `P3` localization tie-in | Advanced authoring polish features land without cluttering simple mode | — | Keep simple/advanced separation intact |
+| `M10.COM.CREATOR_FEEDBACK_HELPFUL_RECOGNITION` | Creator feedback inbox/review triage + helpful-mark workflow + profile-only reviewer recognition (badges/reputation/acknowledgements) | `M10` | `M9.COM.D049_FULL_WORKSHOP_CAS`, `M7.UX.POST_PLAY_FEEDBACK_PROMPTS`, `M7.NET.D052_SIGNED_CREDS_RESULTS` | `M11.COM.ECOSYSTEM_POLISH_GOVERNANCE`, `M11.COM.CONTRIBUTOR_POINTS_COSMETIC_REWARDS` | `09e-community.md`, `17-PLAYER-FLOW.md`, `06-SECURITY.md` | D049, D053, D031, D037, D052 | Phase 6b (with Phase 7 governance hardening) | — | Authors can triage feedback and mark reviews helpful; profile-only recognition is granted/revocable with clear trust labels and no gameplay effects | `M11.COM.ECOSYSTEM_POLISH_GOVERNANCE`, `M11.COM.CONTRIBUTOR_POINTS_COSMETIC_REWARDS` | `P-Creator` + `P-Scale`: collusion rings, alt-farming, and positivity-bias incentives require audit/revocation tooling |
+| `M11.COM.CONTRIBUTOR_POINTS_COSMETIC_REWARDS` | Optional community-contribution points + cosmetic/profile reward catalog/redemption (non-tradable, non-gameplay) | `M11` | `M10.COM.CREATOR_FEEDBACK_HELPFUL_RECOGNITION`, `M11.COM.ECOSYSTEM_POLISH_GOVERNANCE` | `M11.PLAT.BROWSER_MOBILE_POLISH` | `09e-community.md`, `17-PLAYER-FLOW.md`, `06-SECURITY.md` | D049, D053, D037, D031, D052 | Phase 7 (optional ecosystem polish) | — | Points/redeemables are clearly profile-only, revocable, auditable, and cannot affect gameplay/ranked outcomes | — | `P-Scale` + `P-Optional`: reward-farming, inflation, and unclear wording can create abuse and player mistrust |
+| `M11.AI.D016_CONTENT_GENERATION` | Optional BYOLLM mission/campaign/world-domination generation | `M11` | `M10.SDK.D038_CAMPAIGN_EDITOR`, `M9.COM.D049_FULL_WORKSHOP_CAS` | `M6.UX.D065_ONBOARDING_COMMANDER_SCHOOL` | `09f-tools.md`, `04-MODDING.md`, `17-PLAYER-FLOW.md` | D016, D038 | Phase 7 | — | Optional generation works and outputs standard YAML/Lua | `M11.AI.D047_PROMPT_STRATEGY` | Must remain optional and fallback-safe |
+| `M11.AI.D047_PROMPT_STRATEGY` | Provider management, prompt strategy profiles, local-vs-cloud capability probing/evals | `M11` | `M11.AI.D016_CONTENT_GENERATION` | `M9.SDK.D040_ASSET_STUDIO` | `09f-tools.md` | D047, D016 | Phase 7 | — | BYOLLM provider UX is reliable across local/cloud with prompt strategy profiles | — | Local model template mismatch confusion |
+| `M11.AI.D057_SKILL_LIBRARY_EDITOR_ASSIST` | LLM skill library + editor AI assistant tooling | `M11` | `M11.AI.D016_CONTENT_GENERATION`, `M11.AI.D047_PROMPT_STRATEGY`, `M9.SDK.D038_SCENARIO_EDITOR_CORE` | `M10.SDK.D038_CAMPAIGN_EDITOR` | `09f-tools.md` | D057, D016, D047, D038 | Phase 7 | — | AI assistance stays undoable, optional, and schema-grounded | — | Over-automation harming author control |
+| `M11.VISUAL.D048_AND_RENDER_MOD_INFRA` | Switchable render modes + visual modding infrastructure (classic/HD/3D support and modder effects) | `M11` | `M1.CORE.RENDERER_SLICE`, `M9.SDK.D040_ASSET_STUDIO` | `M10.MOD.D066_RA1_EXPORT_EXTENSIBILITY` | `09d-gameplay.md`, `10-PERFORMANCE.md`, `09a-foundation.md` | D048, D017, D015 | Phase 7 | — | Optional render modes and visual infra exist without breaking low-end baseline | — | Must preserve “no dedicated gaming GPU required” path |
+| `M11.PLAT.BROWSER_MOBILE_POLISH` | Browser/mobile/Deck parity and platform-specific polish over existing abstractions | `M11` | `M3.UX.FIRST_RUN_SETUP_AND_MAIN_MENU`, `M7.NET.TRACKING_BROWSER_DISCOVERY`, `M10.SDK.LOCALIZATION_PLUGIN_HARDENING` | `M11.VISUAL.D048_AND_RENDER_MOD_INFRA` | `02-ARCHITECTURE.md`, `09g-interaction.md`, `17-PLAYER-FLOW.md` | D069, D065, D059, D048 | Phase 7 | — | Platform variants remain obstacle-free and UX-consistent | — | Platform-specific UX drift |
+| `M11.COM.ECOSYSTEM_POLISH_GOVERNANCE` | Governance tooling, community moderation polish, premium-content policy, creator ecosystem polish | `M11` | `M7.UX.REPORT_BLOCK_AVOID_REVIEW`, `M9.COM.D049_FULL_WORKSHOP_CAS` | `M10.GAME.MODE_TEMPLATES_MP_TOOLS` | `09e-community.md`, `17-PLAYER-FLOW.md` | D037, D035, D046, D036 | Phase 7 | — | Governance/tooling/policy features mature after core platform trust exists | — | Avoid monetization/policy complexity before core community trust |
+
+## UX Surface Gate Clusters (Cross-Check for Milestone Completeness)
+
+These clusters are used to prevent milestone definitions from becoming backend-only.
+
+| UX Cluster ID | Milestone Gate | Required Flow Surface | Canonical Docs |
+| --- | --- | --- | --- |
+| `UXG.M3.FIRST_RUN_TO_SKIRMISH` | `M3` | D069 setup → main menu → skirmish launch path | `17-PLAYER-FLOW.md`, `09g-interaction.md` |
+| `UXG.M4.ONLINE_CONNECT_MINIMAL` | `M4` | Minimal online connect/host flow without tracker/ranked assumptions | `17-PLAYER-FLOW.md`, `03-NETCODE.md` |
+| `UXG.M5.CAMPAIGN_RUNTIME_LOOP` | `M5` | Briefing → mission → debrief → next flow + save/load | `17-PLAYER-FLOW.md`, `modding/campaigns.md` |
+| `UXG.M7.LOBBY_BROWSER_RANKED_TRUST` | `M7` | Browser/lobby/ranked trust labels + report/block/avoid/reporting surfaces | `17-PLAYER-FLOW.md`, `07-CROSS-ENGINE.md` |
+| `UXG.M9.SDK_SCENARIO_AUTHORING` | `M9` | SDK scenario editor + validate/test/publish + resource manager + workshop hooks | `17-PLAYER-FLOW.md`, `09f-tools.md` |
+| `UXG.M10.SDK_CAMPAIGN_AND_MODES` | `M10` | Campaign editor + game mode templates + D070 role-aware authoring surfaces | `17-PLAYER-FLOW.md`, `09f-tools.md`, `09d-gameplay.md` |
+
+## Policy / External Gate Nodes
+
+| Gate Node ID | Type | Blocks Validation Of | Canonical Source | Notes |
+| --- | --- | --- | --- | --- |
+| `PG.P002.FIXED_POINT_SCALE` | Pending decision | `M2`, `M3` | `09-DECISIONS.md` pending table | Numeric scale must be fixed before implementing/tuning deterministic math and pathfinding |
+| `PG.P003.AUDIO_LIBRARY` | Pending decision | `M3`, `M6` | `09-DECISIONS.md` pending table | Blocks final audio/music integration choice |
+| `PG.P004.LOBBY_WIRE_DETAILS` | Pending decision | `M7` (and some `M4` polish) | `09-DECISIONS.md` pending table | Architecture is resolved; wire/product details still need a lock |
+| `PG.LEGAL.ENTITY_FORMED` | Policy gate | `M7`, `M9` production validation | `08-ROADMAP.md`, `06-SECURITY.md` | Needed before public server infra and user-data-bearing services go live |
+| `PG.LEGAL.DMCA_AGENT` | Policy gate | `M9` Workshop production validation | `08-ROADMAP.md`, `09e-community.md` | Required before accepting user uploads under safe harbor expectations |
+
+## External Source Study Mappings (Confirmatory Research -> Overlay)
+
+Use this section to record **accepted takeaways** from source studies that refine implementation emphasis, docs, or execution sequencing without necessarily creating a new `Dxxx`.
+
+| Source Study | Accepted Takeaway | Mapped Clusters | Action Type | Why It Matters |
+| --- | --- | --- | --- | --- |
+| `research/bar-recoil-source-study.md` | Fast local creator iteration through a real game path (BAR `.sdd`/devmode-style concept adapted to IC) | `M8.SDK.CLI_FOUNDATION`, `M8.COM.MINIMAL_WORKSHOP`, `M9.SDK.D038_SCENARIO_EDITOR_CORE` | Execution emphasis / DX refinement | Reduces creator-loop friction and prevents "package/install every test" workflow debt |
+| `research/bar-recoil-source-study.md` | Explicit authoritative vs client-local scripting/API labeling (Recoil synced/unsynced lesson adapted to IC docs/tooling) | `M5.SP.LUA_MISSION_RUNTIME`, `M8.SDK.AUTHORING_REFERENCE_FOUNDATION`, `M9.SDK.EMBEDDED_AUTHORING_MANUAL`, `M7.SEC.BEHAVIORAL_ANALYSIS_REPORTING` | Docs taxonomy / trust-boundary clarity | Protects determinism and anti-cheat/trust messaging by making authority scope obvious to creators |
+| `research/bar-recoil-source-study.md` | Extension taxonomy for gameplay-authoritative vs local UI/QoL addons (adapted, not copied) | `M9.COM.D049_FULL_WORKSHOP_CAS`, `M10.MOD.D066_RA1_EXPORT_EXTENSIBILITY`, `M10.SDK.LOCALIZATION_PLUGIN_HARDENING` | Ecosystem policy vocabulary / labeling | Prevents plugin/UI extension ambiguity and competitive-integrity confusion as creator ecosystem grows |
+| `research/bar-recoil-source-study.md` | Deep, searchable manual/docs are product-critical (BAR/Recoil docs culture) | `M8.SDK.AUTHORING_REFERENCE_FOUNDATION`, `M9.SDK.EMBEDDED_AUTHORING_MANUAL` | Priority reinforcement (no milestone shift) | Confirms current sequencing that docs/manual work belongs in creator milestones, not post-polish |
+| `research/bar-recoil-source-study.md` | Keep lockstep buffering/jitter/rejoin behavior visible in diagnostics/trust messaging (Recoil lockstep pain confirms IC emphasis) | `M4.NET.RELAY_TIME_AUTHORITY_AND_VALIDATION`, `M4.UX.MINIMAL_ONLINE_CONNECT_FLOW`, `M7.SEC.BEHAVIORAL_ANALYSIS_REPORTING`, `M7.NET.SPECTATOR_TOURNAMENT` | Diagnostics/UX emphasis (no milestone shift) | Prevents opaque "net feels bad" failure modes and preserves honest trust claims |
+| `research/bar-recoil-source-study.md` | Protocol migration hygiene: explicit capability/trust labels for experimental vs certified paths (BAR Tachyon rollout signal) | `M7.NET.TRACKING_BROWSER_DISCOVERY`, `M7.NET.CROSS_ENGINE_BRIDGE_AND_TRUST`, `M7.NET.D052_SIGNED_CREDS_RESULTS` | Rollout/process UX emphasis | Helps netcode/bridge evolution without confusing users about ranked/certified guarantees |
+| `research/bar-recoil-source-study.md` | Moderation capability granularity: avoid "mute" semantics that accidentally disable unrelated functions (BAR moderation lesson) | `M7.UX.REPORT_BLOCK_AVOID_REVIEW`, `M7.NET.RANKED_MATCHMAKING`, `M11.COM.ECOSYSTEM_POLISH_GOVERNANCE` | Moderation policy/UX refinement | Keeps sanctions proportional and prevents protocol-coupled UX breakage |
+| `research/bar-recoil-source-study.md` | Pathfinding API/tuning humility: bounded script-facing path estimates + conformance-first exposure (Recoil changelog signal) | `M2.CORE.PATH_SPATIAL`, `M5.SP.LUA_MISSION_RUNTIME`, `M8.SDK.AUTHORING_REFERENCE_FOUNDATION` | API surface discipline / regression emphasis | Protects deterministic hot paths and frames path queries as explicit, documented capabilities |
+| `research/open-source-rts-communication-markers-study.md` | Treat OpenRA-compatible beacons/radar pings as a first-class D059 compatibility and replay-UX requirement (not just a Lua edge case) | `M5.SP.LUA_MISSION_RUNTIME`, `M7.UX.D059_BEACONS_MARKERS_LABELS`, `M10.GAME.D070_TEMPLATE_TOOLKIT` | Communication compatibility / schema hardening | Keeps Lua/UI/console/replay marker behavior coherent for classic C&C expectations and co-op authoring |
+| `research/open-source-rts-communication-markers-study.md` | Marker semantics must stay icon/type-first; color + labels are bounded style metadata (accessibility and spectator clarity) | `M7.UX.D059_BEACONS_MARKERS_LABELS`, `M7.NET.SPECTATOR_TOURNAMENT`, `M11.PLAT.BROWSER_MOBILE_POLISH` | UX/readability discipline | Prevents color-only beacon semantics and preserves clarity across KBM/controller/touch and replay/spectator views |
+| `research/open-source-rts-communication-markers-study.md` | Communication capability scoping (chat/voice/ping/draw/vote) must remain distinct under moderation/sanctions | `M7.UX.REPORT_BLOCK_AVOID_REVIEW`, `M7.NET.RANKED_MATCHMAKING`, `M11.COM.ECOSYSTEM_POLISH_GOVERNANCE`, `M7.UX.D059_BEACONS_MARKERS_LABELS` | Moderation/comms UX hardening | Avoids sanction side effects that break tactical coordination or ranked match integrity |
+| `research/open-source-rts-communication-markers-study.md` | Replay-preserved coordination context (pings/markers/labels) is a force multiplier for moderation, teaching, and D070 iteration | `M7.SEC.BEHAVIORAL_ANALYSIS_REPORTING`, `M7.NET.SPECTATOR_TOURNAMENT`, `M7.UX.D059_BEACONS_MARKERS_LABELS`, `M10.GAME.D070_TEMPLATE_TOOLKIT` | Replay/moderation/co-op iteration emphasis | Improves post-match understanding and reduces guesswork in moderation and co-op mode tuning |
+| `research/open-source-rts-communication-markers-study.md` | Generals-derived UX refinements: explicit recipient/visibility semantics behind UI chat scopes, persistent-marker active caps with clear failure feedback, and draft-preserving chat entry behavior | `M7.UX.D059_BEACONS_MARKERS_LABELS`, `M7.UX.REPORT_BLOCK_AVOID_REVIEW`, `M7.NET.SPECTATOR_TOURNAMENT`, `M11.PLAT.BROWSER_MOBILE_POLISH` | Communication UX hardening / anti-spam refinement | Converts concrete Generals source patterns into IC D059 deliverables without importing legacy engine/network assumptions |
+
+## Mapping Rules (How to Keep This Page Useful)
+
+1. **Cluster-level, not bullet-level sprawl:** map roadmap deliverables and exit criteria into stable feature clusters unless a bullet is itself a dependency boundary.
+2. **Dxxx ownership lives in `18-PROJECT-TRACKER.md`:** this page references decisions at cluster level for dependency reasoning.
+3. **Gameplay familiarity ordering follows `11-OPENRA-FEATURES.md`:** `P0` gates `M2`, `P1/P2` gate `M3`, `P3` is explicitly deferred and tracked.
+4. **Mark policy/legal prerequisites as `policy_gate` nodes, not hidden assumptions.**
+5. **Keep the “minimal online slice” narrow:** `M4` must not absorb browser/ranked/spectator requirements.
+6. **Keep “creator foundation” distinct from “full visual editor”:** `M8` is a parallel lane, `M9` is the visual authoring platform milestone.
+7. **New features must be inserted in sequence, not appended as unsorted TODOs:** every accepted feature proposal gets a milestone position and dependency edges in the same planning pass.
+8. **Priority is mandatory for placement decisions:** new clusters should be classified (`P-Core`, `P-Differentiator`, `P-Creator`, `P-Scale`, `P-Optional`) and placed so higher-priority critical-path work is not silently displaced.
+9. **If a feature spans multiple milestones, split the cluster or add explicit `validation_depends_on` / `integration_gate` edges** instead of hiding sequencing inside notes.
+10. **If non-indexed decision references reappear, normalize the decision index in the same planning pass** and update tracker coverage.
+11. **When a source study yields accepted implementation refinements, map them here** (cluster references + action type) so they influence execution planning instead of living only in `research/*.md`.
+12. **Future/deferred wording in canonical docs must map here when it implies accepted work.** If a statement is a planned deferral, add/update the affected cluster row (or create one) in the same planning pass and update `tracking/future-language-audit.md`; if it cannot be placed, it is proposal-only or a `Pxxx`, not scheduled work.
+
+## New Feature Intake (Dependency Map Workflow)
+
+Use this workflow whenever a new feature/mode/tooling surface is added to the design:
+
+1. **Decide whether it is a `Dxxx` decision, a feature cluster, or both.**
+2. **Assign a primary milestone** (`M0–M11`) based on what must exist before the feature becomes implementable.
+3. **Add hard/soft/validation/policy/integration edges** to existing milestones/clusters.
+4. **Record the canonical docs + roadmap phase mapping** in the cluster row.
+5. **Check for milestone displacement:** if the feature would delay a higher-priority milestone, mark it `P-Optional`/experimental or move it later.
+6. **Update `18-PROJECT-TRACKER.md` in the same change set** (milestone snapshot/risk/coverage impact and Dxxx row if applicable).
+7. **If the feature docs introduce future/deferred wording, classify it and update `tracking/future-language-audit.md`** (and use `tracking/deferral-wording-patterns.md` for replacement wording where needed).
+
+### Deferred Feature Placement Examples (Canonical Patterns)
+
+- **Good (planned deferral):** "Deferred to `M10` (`P-Creator`) after `M9.SDK.D038_SCENARIO_EDITOR_CORE`; not part of `M9` exit criteria."  
+  Result: add/update an `M10.*` cluster row with hard/soft edges and note the out-of-scope boundary.
+- **Good (north star):** "Long-term vision only; depends on `M7.NET.CROSS_ENGINE_BRIDGE_AND_TRUST` + `M11.VISUAL.D048_AND_RENDER_MOD_INFRA`; trust-labeled and not a ranked promise."  
+  Result: no new cluster if already covered, but add/update tracker risk/trust-label notes.
+- **Bad (ambiguous):** "Could add later if players want it."  
+  Result: rewrite into planned deferral + overlay mapping, or mark proposal-only / `Pxxx`.

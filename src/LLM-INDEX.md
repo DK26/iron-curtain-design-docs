@@ -47,6 +47,7 @@ If conflict exists between a decision doc and a non-decision doc, prefer the dec
 | `src/06-SECURITY.md` | Threat model & trust boundaries | ranked trust, attack surfaces, operational constraints | UI/UX behavior unless security-gating is the point |
 | `src/10-PERFORMANCE.md` | Perf philosophy & budgets | targets, hot-path rules, compatibility tiers | Final UX/publishing behavior |
 | `src/17-PLAYER-FLOW.md` | UX navigation & mock screens | menus, flows, settings surfaces, example panels | Core architecture invariants |
+| `src/18-PROJECT-TRACKER.md` + `src/tracking/*.md` | Execution planning overlay | implementation order, dependency DAG, milestone status, “what next?”, ticket breakdown templates | Canonical runtime behavior or roadmap timing (use decisions/architecture + `08-ROADMAP.md`) |
 | `src/08-ROADMAP.md` | Phasing | "when", not "what" | Current runtime behavior/spec guarantees |
 
 ---
@@ -60,10 +61,13 @@ If conflict exists between a decision doc and a non-decision doc, prefer the dec
 | Modding tiers (YAML/Lua/WASM) / export / compatibility | `src/04-MODDING.md`, `src/decisions/09c-modding.md` | `src/07-CROSS-ENGINE.md` | `09c` is canonical for accepted decisions |
 | Workshop / packages / CAS / profiles / selective install | `src/decisions/09e-community.md`, `src/decisions/09c-modding.md` | `src/17-PLAYER-FLOW.md` | D068 (selective install) is in `09c`; D049 CAS in `09e` |
 | Scenario editor / asset studio / SDK UX | `src/decisions/09f-tools.md` | `src/17-PLAYER-FLOW.md`, `src/04-MODDING.md` | `17` has mock screens/examples; `09f` is normative |
-| In-game controls / mobile UX / chat / voice / tutorial | `src/decisions/09g-interaction.md` | `src/17-PLAYER-FLOW.md`, `src/02-ARCHITECTURE.md` | `17` shows surfaces; `09g` defines interaction rules |
+| In-game controls / mobile UX / chat / voice / tutorial | `src/decisions/09g-interaction.md` | `src/17-PLAYER-FLOW.md`, `src/02-ARCHITECTURE.md`, `research/open-source-rts-communication-markers-study.md` | `17` shows surfaces; `09g` defines interaction rules; use the research note for prior-art communication/beacon/marker UX rationale only |
 | Campaign structure / persistent state / cutscene flow | `src/modding/campaigns.md`, `src/decisions/09f-tools.md` | `src/04-MODDING.md`, `src/17-PLAYER-FLOW.md` | `modding/campaigns.md` is the detailed D021 runtime/schema spec; use `17` for player-facing transition examples |
 | Performance budgets / low-end hardware support | `src/10-PERFORMANCE.md`, `src/decisions/09a-foundation.md` | `src/02-ARCHITECTURE.md` | `10` is canonical for targets and compatibility tiers |
-| Philosophy / methodology / design process | `src/13-PHILOSOPHY.md`, `src/14-METHODOLOGY.md` | `research/*.md` (e.g., `research/mobile-rts-ux-onboarding-community-platform-analysis.md`, `research/rts-2026-trend-scan.md`) | Use for "is this aligned?" reviews and inspiration filtering |
+| Philosophy / methodology / design process | `src/13-PHILOSOPHY.md`, `src/14-METHODOLOGY.md` | `research/*.md` (e.g., `research/mobile-rts-ux-onboarding-community-platform-analysis.md`, `research/rts-2026-trend-scan.md`, `research/bar-recoil-source-study.md`, `research/open-source-rts-communication-markers-study.md`) | Use for "is this aligned?" reviews, source-study takeaways, and inspiration filtering |
+| Implementation planning / milestone dependencies / project standing | `src/18-PROJECT-TRACKER.md`, `src/tracking/milestone-dependency-map.md` | `src/08-ROADMAP.md`, `src/09-DECISIONS.md`, `src/17-PLAYER-FLOW.md` | Tracker is an execution overlay: use it for ordering/status; roadmap remains canonical for phase timing |
+| Ticket breakdown / work-package template for `G*` steps | `src/tracking/implementation-ticket-template.md` | `src/18-PROJECT-TRACKER.md`, `src/tracking/milestone-dependency-map.md` | Use for implementation handoff/work packages after features are mapped into the overlay |
+| Future/deferral wording audit / "is this planned or vague?" | `src/tracking/future-language-audit.md`, `src/tracking/deferral-wording-patterns.md` | `src/18-PROJECT-TRACKER.md`, `src/14-METHODOLOGY.md`, `AGENTS.md` | Use for classifying future-facing wording and converting vague prose into planned deferrals / North Star claims |
 
 ---
 
@@ -86,6 +90,9 @@ If conflict exists between a decision doc and a non-decision doc, prefer the dec
 ### Ranking Heuristics
 
 - Prefer decision docs for normative questions ("should", "must", "decided")
+- Prefer `src/18-PROJECT-TRACKER.md` + `src/tracking/milestone-dependency-map.md` for “what next?”, dependency-order, and implementation sequencing questions
+- Prefer `src/tracking/implementation-ticket-template.md` when the user asks for implementer task breakdowns or ticket-ready work packages tied to `G*` steps
+- Prefer `src/tracking/future-language-audit.md` + `src/tracking/deferral-wording-patterns.md` for reviews of vague future wording, deferral placement, and North Star claim formatting
 - Prefer `17-PLAYER-FLOW.md` for UI layout / screen wording questions
 - Prefer `08-ROADMAP.md` only for "when / phase" questions
 - Prefer research docs only when the question is "why this prior art?" or "what did we learn from X?"

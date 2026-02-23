@@ -24,11 +24,15 @@ This does not replace the full decision. It improves:
 
 - **Status:** Accepted | Revised | Draft | Superseded
 - **Phase:** Phase X (or "multi-phase"; note first ship phase)
+- **Execution overlay mapping:** Primary milestone (`M#`), priority (`P-*`), key dependency notes (optional but recommended)
+- **Deferred features / extensions:** (explicitly list and classify deferred follow-ons; use `none` if not applicable)
+- **Deferral trigger:** (what evidence/milestone/dependency causes a deferred item to move forward)
 - **Canonical for:** (what this decision is the primary source for)
 - **Scope:** (crates/systems/docs affected)
 - **Decision:** (1-3 sentence normative summary; include defaults)
 - **Why:** (top reasons only; 3-5 bullets max)
 - **Non-goals:** (what this decision explicitly does NOT do)
+- **Out of current scope:** (what may be desirable but is intentionally not in this phase/milestone)
 - **Invariants preserved:** (list relevant invariants/trait boundaries)
 - **Defaults / UX behavior:** (player-facing defaults, optionality, gating)
 - **Compatibility / Export impact:** (if applicable)
@@ -48,6 +52,8 @@ This does not replace the full decision. It improves:
 - Keep it **short** (usually 10–16 bullets)
 - Include **the default behavior** and **the main exception(s)**
 - Include **non-goals** to prevent over-interpretation
+- Include **execution overlay mapping** (or explicitly mark "TBD") so new decisions are easier to place in implementation order
+- If using words like `future`, `later`, or `deferred`, classify them explicitly (planned deferral / north-star / versioning) and include the deferral trigger
 - Use stable identifiers (`D068`, `NetworkModel`, `VirtualNamespace`, `Publish Readiness`)
 - Avoid duplicating long examples or alternatives already in the body
 
@@ -89,4 +95,3 @@ Apply this template first to the largest, most frequently queried decisions:
 - `D068` (`src/decisions/09c-modding.md`)
 
 This gives the biggest RAG/token-efficiency gains before any file-splitting refactor.
-

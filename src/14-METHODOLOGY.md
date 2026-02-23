@@ -77,7 +77,7 @@ Development follows eight stages. They're roughly sequential, but later stages f
 - Research is concurrent with other work in later stages — new questions arise during implementation
 - Research is a **continuous discipline**, not a phase that ends. Every new prior art study can challenge assumptions, confirm patterns, or reveal gaps. The project's commit history shows active research throughout pre-development — not tapering early but intensifying as design maturity makes it easier to ask precise questions.
 
-**Current status (February 2026):** The major architectural questions are answered across 14 design chapters, 56+ decisions, and 35+ research analyses. Research continues as a parallel track — recent examples include AI implementation surveys across 7+ codebases, Stratagus/Stargus engine analysis, and a transcript-backed RTS 2026 trend scan (`research/rts-2026-trend-scan.md`) used to filter "cool ideas" through IC's philosophy before they become design work. Each produces cross-references and actionable refinements. The shift is from *exploratory* research ("what should we build?") to *confirmatory* research ("does this prior art validate or challenge our approach?").
+**Current status (February 2026):** The major architectural questions are answered across 14 design chapters, 70+ indexed decisions, and 38+ research analyses. Research continues as a parallel track — recent examples include AI implementation surveys across 7+ codebases, Stratagus/Stargus engine analysis, a transcript-backed RTS 2026 trend scan (`research/rts-2026-trend-scan.md`), a BAR/Recoil source-study (`research/bar-recoil-source-study.md`) used to refine creator-workflow and scripting-boundary implementation priorities, and an open-source RTS communication/marker study (`research/open-source-rts-communication-markers-study.md`) used to harden D059 beacon/marker schema and `M7` communication UX priorities. Each produces cross-references and actionable refinements. The shift is from *exploratory* research ("what should we build?") to *confirmatory* research ("does this prior art validate or challenge our approach?").
 
 ### Trend Scan Checklist (Videos, Listicles, Talks, Showcase Demos)
 
@@ -233,6 +233,41 @@ Parallel tracks (can proceed alongside sim work):
 ```
 
 **Key insight:** The simulation (`ic-sim`) is on almost every critical path. Getting it right early — and getting it testable in isolation — is the single most important scheduling decision.
+
+### Execution Overlay Tracker (Design vs Code Status)
+
+To keep long-horizon planning actionable, IC maintains a **milestone/dependency overlay** and **project tracker** alongside the canonical roadmap:
+
+- [`18-PROJECT-TRACKER.md`](18-PROJECT-TRACKER.md) — execution milestone snapshot + Dxxx-granular status tracking
+- [`tracking/milestone-dependency-map.md`](tracking/milestone-dependency-map.md) — detailed DAG and feature-cluster dependencies
+
+This overlay does **not** replace [`08-ROADMAP.md`](08-ROADMAP.md). The roadmap stays canonical for phase timing and major deliverables; the tracker exists to answer “what blocks what?” and “what should we build next?”
+
+The tracker uses a **split status model**:
+
+- **Design Status** (spec maturity/integration/audit state)
+- **Code Status** (implementation progress)
+
+This avoids the common pre-implementation failure mode where a richly designed feature is mistakenly reported as “implemented.” Code status changes require evidence links (repo paths, tests, demos, ops notes), while design status can advance through documentation integration and audit work.
+
+**Tracker integration gate (mandatory for new features):**
+- A feature is not “integrated into the plan” just because it appears in a decision doc or player-flow mock.
+- In the same planning pass, it must be mapped into the execution overlay with:
+  - milestone position (`M0–M11`)
+  - priority class (`P-Core` / `P-Differentiator` / `P-Creator` / `P-Scale` / `P-Optional`)
+  - dependency edges (`hard`, `soft`, `validation`, `policy`, `integration`) where relevant
+  - tracker representation (Dxxx row and/or feature cluster entry)
+- If this mapping is missing, the feature remains an idea/proposal, not scheduled work.
+
+**Future/deferral language gate (mandatory for canonical docs):**
+- Future-facing design statements must be classified as one of: `PlannedDeferral`, `NorthStarVision`, `VersioningEvolution`, or an explicitly non-planning context (narrative example, historical quote, legal phrase).
+- Ambiguous future wording ("could add later", "future convenience", "deferred" without placement/reason) is not acceptable in canonical docs.
+- If a future-facing item is accepted work, map it in the execution overlay in the same planning pass (`18-PROJECT-TRACKER.md` + `tracking/milestone-dependency-map.md`).
+- If the item cannot yet be placed, convert it into either:
+  - a **proposal-only** note (not scheduled), or
+  - a **Pending Decision (`Pxxx`)** with the missing decision clearly stated.
+- Use `src/tracking/future-language-audit.md` for repo-wide audit/remediation tracking and `src/tracking/deferral-wording-patterns.md` for replacement wording examples.
+- Quick audit inventory command (canonical docs): `rg -n "\\bfuture\\b|\\blater\\b|\\bdefer(?:red)?\\b|\\beventually\\b|\\bTBD\\b|\\bnice-to-have\\b" src README.md AGENTS.md --glob '!research/**'`
 
 **Exit criteria:**
 - Every task has its dependencies identified (hard, soft, test)

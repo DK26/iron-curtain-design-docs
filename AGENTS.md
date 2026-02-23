@@ -259,6 +259,58 @@ These are not design decisions — they are operational/legal tasks tied to spec
 - **Never run `mdbook build`, `mdbook serve`, or any mdbook command.** The book is built manually by the maintainer when ready. Only edit the markdown source files in `src/`.
 - **When linking to design docs from public-facing files (README, etc.), use the hosted mdbook URL:** `https://dk26.github.io/iron-curtain-design-docs/`. Link to `.html` pages (e.g., `01-VISION.html`), not the raw `src/*.md` source files.
 
+### Implementation Overlay Discipline (Milestones / Dependencies / Priority)
+
+This project uses an **execution overlay** (milestones `M0–M11`, feature clusters, dependency DAG) in addition to the canonical phase roadmap. Agents must keep new features correctly placed in that overlay.
+
+**Rule:** A newly added feature (mode, UI flow, tooling capability, platform adaptation, community feature, etc.) is **not considered integrated into the project plan** until it is mapped into the implementation overlay.
+
+Required in the **same change set**:
+1. Assign a **priority class** (`P-Core`, `P-Differentiator`, `P-Creator`, `P-Scale`, `P-Optional`)
+2. Assign a **primary milestone** (`M0–M11`)
+3. Record **dependency placement** (hard / soft / validation / policy / integration) where applicable
+4. Update tracker representation:
+   - `src/18-PROJECT-TRACKER.md` (Dxxx row and/or milestone impact)
+   - `src/tracking/milestone-dependency-map.md` (feature cluster + dependency edges)
+
+Additional rules:
+- **Do not append unsorted “later” feature ideas** into planning docs without placing them in milestone sequence.
+- **Mark experimental/optional features explicitly** so they do not silently creep into core milestones.
+- A feature may be documented as a proposal/idea without tracker placement, but it is **not scheduled/planned work** until mapped into the overlay.
+
+Canonical references:
+- `src/18-PROJECT-TRACKER.md` (what next / status overlay)
+- `src/tracking/milestone-dependency-map.md` (what blocks what)
+- `src/14-METHODOLOGY.md` (tracker integration gate + process discipline)
+
+### Future / Deferral Language Discipline
+
+Canonical docs must not contain **ambiguous future intent**. The word `future` itself is allowed, but future-facing commitments must be explicit and planned.
+
+**Rule:** Any future-facing design commitment in canonical docs (`src/**/*.md`, `README.md`, `AGENTS.md`) must be one of:
+- **Planned deferral** (mapped to milestone/priority/dependencies in the execution overlay)
+- **North Star / vision** (explicitly labeled as non-promise with trust/fairness caveats where relevant)
+- **Versioning/evolution statement** (current version + migration/version path defined)
+- **Narrative/historical/legal usage** (clearly non-planning context)
+
+Required in the **same change set** when adding a future-facing commitment:
+1. Classify the statement (planned deferral / north star / versioning / exempt context)
+2. If it is planned work, map it into:
+   - `src/18-PROJECT-TRACKER.md`
+   - `src/tracking/milestone-dependency-map.md`
+3. If it is not yet placeable, label it explicitly as:
+   - **proposal-only** (not scheduled), or
+   - a **Pending Decision (`Pxxx`)**
+
+Banned in canonical planning/spec wording unless immediately resolved in the same sentence:
+- vague phrases like `future convenience`, `later maybe`, `could add later`, `might add later`
+- `deferred` without saying **to what** and **why**
+- `nice-to-have` without explicit phase/milestone and optionality
+
+Canonical references:
+- `src/tracking/future-language-audit.md` (classification + remediation queue)
+- `src/tracking/deferral-wording-patterns.md` (wording transformations / examples)
+
 ### Code Style
 - Idiomatic Rust. Use `clippy` and `rustfmt`.
 - Prefer zero-allocation patterns in hot paths. Use `Vec::clear()` over `Vec::new()`.

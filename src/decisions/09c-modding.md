@@ -647,7 +647,7 @@ Export produces files loadable by the original Red Alert engine (including CnCNe
 | **String tables** | IC YAML localization               | `.eng` / `.ger` / etc. string files                   | IC string keys mapped to RA string table offsets                                                                                                                                          |
 | **Archives**      | Loose files (from export pipeline) | .mix (optional packing)                               | All exported files optionally bundled into a .mix for distribution. CRC hash table generated per ra-formats § MIX                                                                         |
 
-**Fidelity model:** Export is *lossy by design*. IC supports features RA doesn't (conditions, multipliers, 3D positions, complex Lua triggers, unlimited map sizes, advanced mission-phase tooling like segment unlock wrappers and sub-scenario portals). The exporter produces the closest RA-compatible equivalent and generates a **fidelity report** — a structured log of every feature that was downgraded, stripped, or approximated. The creator sees: "3 triggers could not be exported (RA has no equivalent for `on_condition_change`). 2 unit abilities were removed (mind control requires engine support). Map was cropped from 200×200 to 128×128. Sub-scenario portal `lab_interior` exported as a separate mission stub with manual campaign wiring required." This is the same philosophy as exporting a Photoshop file to JPEG — you know what you'll lose before you commit.
+**Fidelity model:** Export is *lossy by design*. IC supports features RA doesn't (conditions, multipliers, 3D positions, complex Lua triggers, unlimited map sizes, advanced mission-phase tooling like segment unlock wrappers and sub-scenario portals, and IC-native asymmetric role orchestration such as D070 Commander/Field Ops support-request flows and role HUD/objective-channel semantics). The exporter produces the closest RA-compatible equivalent and generates a **fidelity report** — a structured log of every feature that was downgraded, stripped, or approximated. The creator sees: "3 triggers could not be exported (RA has no equivalent for `on_condition_change`). 2 unit abilities were removed (mind control requires engine support). Map was cropped from 200×200 to 128×128. Sub-scenario portal `lab_interior` exported as a separate mission stub with manual campaign wiring required. D070 support request queue and role HUD presets are IC-native and were stripped." This is the same philosophy as exporting a Photoshop file to JPEG — you know what you'll lose before you commit.
 
 #### Target 2: OpenRA (.oramod / .oramap)
 
@@ -922,7 +922,7 @@ fn register_editor_plugin(host: &mut EditorHost) {
 - **API version contract** — extensions declare an editor plugin API version (`api_version`) separate from engine internals. The SDK checks compatibility before load and disables incompatible extensions with a clear reason ("built for plugin API 0.x, this SDK provides 1.x").
 - **Capability manifest (deny-by-default)** — extensions must declare requested editor capabilities (`editor.panels`, `editor.asset_viewers`, `editor.export_targets`, etc.). Undeclared capability usage is rejected.
 - **Install-time permission review** — the SDK shows the requested capabilities when installing/updating an extension. This is the only prompting point; normal editing sessions are not interrupted.
-- **No VCS/process control capabilities by default** — editor plugins do not get commit/rebase/shell execution powers. Git integration remains an explicit user workflow outside plugins unless a future capability is designed and approved.
+- **No VCS/process control capabilities by default** — editor plugins do not get commit/rebase/shell execution powers. Git integration remains an explicit user workflow outside plugins unless a separately approved deferred capability is designed and placed in the execution overlay.
 - **Version/provenance metadata** — manifests may include signature/provenance information for Workshop trust badges; absence warns but does not prevent local development installs.
 
 ### Export-Safe Authoring Mode
@@ -930,7 +930,7 @@ fn register_editor_plugin(host: &mut EditorHost) {
 The scenario editor offers an **export-safe mode** that constrains the authoring environment to features compatible with a chosen export target:
 
 - **Select target:** "I'm building this mission for OpenRA" (or RA1, or IC)
-- **Feature gating:** The editor grays out or hides features the target doesn't support. If targeting RA1: no mind control triggers, no unlimited map size, no branching campaigns, no IC-native sub-scenario portals, no IC hero progression toolkit intermissions/skill progression. If targeting OpenRA: no IC-only Lua APIs; advanced `Map Segment Unlock` wrappers show yellow/red fidelity when they depend on IC-only phase orchestration beyond OpenRA-equivalent reveal/reinforcement scripting, and hero progression/skill-tree tooling shows fidelity warnings because OpenRA campaigns are stateless.
+- **Feature gating:** The editor grays out or hides features the target doesn't support. If targeting RA1: no mind control triggers, no unlimited map size, no branching campaigns, no IC-native sub-scenario portals, no IC hero progression toolkit intermissions/skill progression, and no D070 asymmetric Commander/Field Ops role orchestration (role HUD presets, support request queues, objective-channel semantics beyond plain trigger/objective export). If targeting OpenRA: no IC-only Lua APIs; advanced `Map Segment Unlock` wrappers show yellow/red fidelity when they depend on IC-only phase orchestration beyond OpenRA-equivalent reveal/reinforcement scripting, hero progression/skill-tree tooling shows fidelity warnings because OpenRA campaigns are stateless, and D070 asymmetric role/support UX is treated as IC-native with strip/flatten warnings.
 - **Live fidelity indicator:** A traffic-light badge on each entity/trigger: green = exports perfectly, yellow = exports with approximation, red = will be stripped. The creator sees export fidelity as they build, not after.
 - **Export-safe trigger templates:** Pre-built trigger patterns guaranteed to downcompile cleanly to the target. "Timer → Reinforcement" template uses only Lua patterns with known RA1 equivalents.
 - **Dual preview:** Side-by-side preview showing "IC rendering" and "approximate target rendering" (e.g., palette-quantized sprites to simulate how it will look in original RA1).
@@ -993,6 +993,7 @@ ic export --target ra1,openra,ic maps/ -o ./export/
 - **D026 (Mod Manifest Compatibility):** `mod.yaml` parsing is now bidirectional — import OpenRA manifests AND generate them on export.
 - **D030 (Workshop):** Editor extensions are Workshop packages. Export presets/profiles are shareable via Workshop.
 - **D038 (Scenario Editor):** The scenario editor gains export-safe mode, fidelity indicators, export-safe trigger templates, and Validate/Publish Readiness integration that surfaces target compatibility before publish. Export is a first-class editor action, not a separate tool.
+- **D070 (Asymmetric Commander & Field Ops Co-op):** D070 scenarios/templates are expected to be IC-native. Exporters may downcompile fragments (maps, units, simple triggers), but role orchestration, request/response HUD flows, and asymmetric role permissions require fidelity warnings and usually manual redesign.
 - **D040 (Asset Studio):** Asset conversion (D040's Cross-Game Asset Bridge) is the per-file foundation. D066 orchestrates whole-project export using D040's converters.
 - **D062 (Mod Profiles):** A mod profile can embed export target preference. "RA1 Compatible" profile constrains features to RA1-exportable subset.
 - **ra-formats write support:** D066 is the primary consumer of ra-formats write support (Phase 6a). The exporter calls into ra-formats encoders for .shp, .pal, .aud, .vqa, .mix generation.
@@ -1021,7 +1022,7 @@ ic export --target ra1,openra,ic maps/ -o ./export/
 - **Compatibility / Export impact:** Lobbies/ranked use a **gameplay fingerprint** as the hard gate; media/remaster/voice packs are **presentation fingerprint** scope unless they change gameplay.
 - **AI remaster media policy:** AI-enhanced cutscene packs are optional presentation variants (Original / Clean / AI-Enhanced), clearly labeled, provenance-aware, and never replacements for the canonical originals.
 - **Public interfaces / types / commands:** manifest `install` metadata + optional dependencies/fallbacks, `ic content list`, `ic content apply-profile`, `ic content install/remove`, `ic mod gc`
-- **Affected docs:** `src/17-PLAYER-FLOW.md`, `src/decisions/09e-community.md`, `src/04-MODDING.md`, `src/decisions/09f-tools.md`
+- **Affected docs:** `src/17-PLAYER-FLOW.md`, `src/decisions/09e-community.md`, `src/decisions/09g-interaction.md`, `src/04-MODDING.md`, `src/decisions/09f-tools.md`
 - **Revision note summary:** None
 - **Keywords:** selective install, install profiles, campaign core, optional media, cutscene variants, presentation fingerprint, installed content manager
 
@@ -1177,6 +1178,19 @@ Examples:
 - Selecting `AI Enhanced Cutscenes` in Settings when the pack is not installed:
   - guidance panel: `Install AI Enhanced Cutscene Pack` / `Use Original Cutscenes` / `Use Briefing Fallback`
 
+### First-Run Setup Wizard Integration (D069)
+
+D068 is the content-planning model used by the **D069 First-Run Setup Wizard**.
+
+Wizard rules:
+- The setup wizard presents D068 install presets during first-run setup and maintenance re-entry.
+- **Wizard default preset is `Full Install`** (player-facing default chosen for D069), with visible one-click alternatives (`Campaign Core`, `Minimal Multiplayer`, `Custom`).
+- The wizard must show **size estimates** and **feature summaries** before starting transfers/downloads.
+- The wizard may select a preset automatically in Quick Setup, but the player can switch before committing.
+- Any wizard selection remains fully reversible later through `Settings → Data` (Installed Content Manager).
+
+This keeps first-run setup fast while preserving D068's space-saving flexibility.
+
 ### Multiplayer Compatibility: Gameplay vs Presentation Fingerprints
 
 Selective install introduces a compatibility trap: a player missing music/cutscenes should not fail multiplayer compatibility if gameplay content is identical.
@@ -1215,6 +1229,18 @@ The game's Settings/Data area includes an **Installed Content Manager**:
 - reclaimable space estimate before uninstall
 - one-click switches between install presets
 - "keep gameplay, remove media" shortcut
+
+### D069 Maintenance Wizard Handoff
+
+The Installed Content Manager is the long-lived management surface; D069 provides the guided entry points and recovery flow.
+
+- **D069 ("Modify Installation")** can launch directly into a preset-switch or pack-selection step using the same D068 data model.
+- **D069 ("Repair & Verify")** can branch into checksum verification, metadata/index rebuild, source re-scan, and reclaim-space actions, then return to the Installed Content Manager summary.
+- Missing-content guidance panels (D033 no-dead-end behavior) should offer both:
+  - a quick one-click install action, and
+  - `Open Modify Installation` for the full D069 maintenance flow
+
+D068 intentionally avoids duplicating wizard mechanics; it defines the content semantics the wizard and the Installed Content Manager share.
 
 ### CLI / Automation (for power users and packs)
 
@@ -1257,6 +1283,7 @@ This prevents "campaign core" installs from hitting broken missions because a cr
 - **D049 (Workshop CAS):** Local content-addressed blob store + GC make selective installs storage-efficient instead of duplicate-heavy.
 - **D062 (Mod Profiles & VirtualNamespace):** D068 adds *physical install selection* on top of D062's *logical activation/composition*. Namespace resolution and fingerprints are extended, not replaced.
 - **D065 (Tutorial/New Player):** First-run can recommend `Campaign Core` vs `Minimal Multiplayer` based on player intent ("I want single-player" / "I only want multiplayer").
+- **D069 (Installation & First-Run Setup Wizard):** D069 is the canonical wizard UX that presents D068 install presets, size estimates, transfer/verify progress, and maintenance re-entry flows.
 - **17-PLAYER-FLOW.md:** "No Dead-End Buttons" install guidance panels become the primary UX surface for missing content.
 
 ### Alternatives Considered

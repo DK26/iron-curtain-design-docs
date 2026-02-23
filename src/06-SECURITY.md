@@ -431,7 +431,7 @@ Lichess, the world's largest open-source competitive gaming platform, runs two c
 
 1. **Statistical model ("Irwin" pattern):** Analyzes an entire match history statistically — compares a player's decision quality against engine-optimal play. In chess this means comparing moves against Stockfish; in IC, this means comparing orders against an AI advisor's recommended actions via **post-hoc replay analysis**. A player who consistently makes engine-optimal micro decisions (unit splitting, target selection, ability timing) at rates improbable for human performance is flagged. This requires running the replay through an AI evaluator, so it's inherently post-hoc and runs in batch on the ranking server, not real-time.
 
-2. **Pattern-matching model ("Kaladin" pattern):** Identifies cheat signatures from input timing characteristics — the relay-side `PlayerBehaviorProfile` from above. Specific patterns: metronomic input spacing (coefficient of variation < 0.05), reaction times clustering below human physiological limits, order precision that never degrades over a multi-hour session (fatigue-free play). This runs in real-time on the relay.
+2. **Pattern-matching model ("Kaladin" pattern):** Identifies cheat signatures from input timing characteristics — the relay-side `PlayerBehaviorProfile` from above. Specific patterns: metronomic input spacing (coefficient of variation < 0.05), reaction times clustering below human physiological limits, order precision that never degrades over a multi-hour session (fatigue-free play). This runs in real-time on the relay. **Cross-engine note:** Kaladin runs identically on foreign client input streams when IC hosts a cross-engine match. Per-engine baseline calibration (`EngineBaselineProfile`) accounts for differing input buffering and jitter characteristics across engines — see `07-CROSS-ENGINE.md` § "IC-Hosted Cross-Engine Relay: Security Architecture".
 
 ```rust
 /// Combined suspicion assessment — both models must agree
@@ -1346,7 +1346,7 @@ fn is_sane_correction(correction: &EntityCorrection, ticks_since_sync: u64) -> b
 - Health corrections capped at the maximum HP of any unit in the active ruleset.
 - If corrections are consistently rejected (>5 consecutive rejections), the reconciler escalates to `ReconcileAction::Resync` (full snapshot reload) or `ReconcileAction::Autonomous` (disconnect from authority, local sim is truth).
 
-**Phase:** Bounds hardening ships with Level 2+ cross-engine play (future). The constants are defined now for documentation completeness.
+**Planned deferral (cross-engine bounds hardening):** Deferred to `M7` (`P-Scale`) with `M7.NET.CROSS_ENGINE_BRIDGE_AND_TRUST` because Level 2+ cross-engine reconciliation is outside the `M1-M4` runtime and minimal-online slices. The constants are defined now for documentation completeness and auditability, but full bounds-hardening enforcement is **not** part of `M4` exit criteria. Validation trigger: implementation of a Level 2+ cross-engine bridge/authority path that emits reconciliation corrections.
 
 ## Vulnerability 36: DualModelAssessment Trust Boundary
 
@@ -1394,6 +1394,15 @@ min_matches = 10
 - `ShadowRestrict` lasts a maximum of 7 days before automatic escalation to either `Clear` (if subsequent matches are clean) or human review.
 - Players under `FlagForReview` or `ShadowRestrict` can request their `DualModelAssessment` data via D053's profile data export (GDPR compliance). The export includes the behavioral and statistical scores, the triggering match IDs, and the specific patterns detected.
 - Community moderators (D037) review flagged cases. The anti-cheat system is a tool for moderators, not a replacement for them.
+
+**Community review / "Overwatch"-style guardrails (D052/D059 integration):**
+
+- Community review verdicts (if the server enables reviewer queues) are **advisory evidence inputs**, not a sole basis for irreversible anti-cheat action.
+- Reviewer queues should use anonymized case presentation where practical (case IDs first, identities revealed only if required by moderator escalation).
+- Reviewer reliability should be tracked (calibration cases / agreement rates), and verdicts weighted accordingly — preventing low-quality or brigaded review pools from dominating outcomes.
+- A single review batch must not directly produce permanent/global bans without moderator confirmation and stronger evidence (replay + telemetry + model outputs).
+- Report volume alone must never map directly to `ShadowRestrict`; reports are susceptible to brigading and skill-gap false accusations. They raise review priority, not certainty.
+- False-report patterns (mass-report brigading, retaliatory reporting rings) should feed community abuse detection and moderator review.
 
 **Phase:** Trust boundary and threshold configuration ship with the anti-cheat system (Phase 5+). Appeal mechanism Phase 5+.
 

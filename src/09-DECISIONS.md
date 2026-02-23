@@ -10,13 +10,13 @@ For improved agentic retrieval / RAG summaries, see the reusable **Decision Caps
 
 | Document                                                | Scope                                                                                       | Decisions                                           |
 | ------------------------------------------------------- | ------------------------------------------------------------------------------------------- | --------------------------------------------------- |
-| [Foundation & Core](decisions/09a-foundation.md)        | Language, framework, data formats, simulation invariants, core engine identity              | D001–D003, D009, D010, D015, D017, D018, D039, D067 |
+| [Foundation & Core](decisions/09a-foundation.md)        | Language, framework, data formats, simulation invariants, core engine identity              | D001–D003, D009, D010, D015, D017, D018, D039, D063, D064, D067 |
 | [Networking & Multiplayer](decisions/09b-networking.md) | Network model, relay server, sub-tick ordering, community servers, ranked play              | D006–D008, D011, D012, D052, D055, D060             |
 | [Modding & Compatibility](decisions/09c-modding.md)     | Scripting tiers, OpenRA compatibility, UI themes, mod profiles, licensing, export           | D004, D005, D014, D032, D050, D051, D062, D066, D068 |
-| [Gameplay & AI](decisions/09d-gameplay.md)              | Pathfinding, balance, QoL, AI systems, render modes, trait-abstracted subsystems            | D013, D019, D033, D041–D045, D048, D054             |
+| [Gameplay & AI](decisions/09d-gameplay.md)              | Pathfinding, balance, QoL, AI systems, render modes, trait-abstracted subsystems, asymmetric co-op mode design | D013, D019–D029, D033, D041–D045, D048, D054, D070       |
 | [Community & Platform](decisions/09e-community.md)      | Workshop, telemetry, storage, achievements, governance, profiles, data portability          | D030, D031, D034–D037, D046, D049, D053, D061       |
 | [Tools & Editor](decisions/09f-tools.md)                | LLM mission generation, scenario editor, asset studio, foreign replays, skill library       | D016, D038, D040, D047, D056, D057                  |
-| [In-Game Interaction](decisions/09g-interaction.md)     | Command console, communication systems (chat, voice, pings), tutorial/new player experience | D058, D059, D065                                    |
+| [In-Game Interaction](decisions/09g-interaction.md)     | Command console, communication systems (chat, voice, pings), tutorial/new player experience, installation/setup wizard UX | D058, D059, D065, D069                                    |
 
 ---
 
@@ -43,6 +43,16 @@ For improved agentic retrieval / RAG summaries, see the reusable **Decision Caps
 | D017 | Bevy Rendering Pipeline                            | [Foundation](decisions/09a-foundation.md)   |
 | D018 | Multi-Game Extensibility (Game Modules)            | [Foundation](decisions/09a-foundation.md)   |
 | D019 | Switchable Balance Presets                         | [Gameplay](decisions/09d-gameplay.md)       |
+| D020 | Mod SDK & Creative Toolchain                       | [Gameplay](decisions/09d-gameplay.md)       |
+| D021 | Branching Campaign System with Persistent State    | [Gameplay](decisions/09d-gameplay.md)       |
+| D022 | Dynamic Weather with Terrain Surface Effects       | [Gameplay](decisions/09d-gameplay.md)       |
+| D023 | OpenRA Vocabulary Compatibility Layer              | [Gameplay](decisions/09d-gameplay.md)       |
+| D024 | Lua API Superset of OpenRA                         | [Gameplay](decisions/09d-gameplay.md)       |
+| D025 | Runtime MiniYAML Loading                           | [Gameplay](decisions/09d-gameplay.md)       |
+| D026 | OpenRA Mod Manifest Compatibility                  | [Gameplay](decisions/09d-gameplay.md)       |
+| D027 | Canonical Enum Compatibility with OpenRA           | [Gameplay](decisions/09d-gameplay.md)       |
+| D028 | Condition and Multiplier Systems as Phase 2 Requirements | [Gameplay](decisions/09d-gameplay.md)  |
+| D029 | Cross-Game Component Library (Phase 2 Targets)     | [Gameplay](decisions/09d-gameplay.md)       |
 | D030 | Workshop Resource Registry & Dependency System     | [Community](decisions/09e-community.md)     |
 | D031 | Observability & Telemetry (OTEL)                   | [Community](decisions/09e-community.md)     |
 | D032 | Switchable UI Themes                               | [Modding](decisions/09c-modding.md)         |
@@ -75,8 +85,12 @@ For improved agentic retrieval / RAG summaries, see the reusable **Decision Caps
 | D059 | In-Game Communication (Chat, Voice, Pings)         | [Interaction](decisions/09g-interaction.md) |
 | D060 | Netcode Parameter Philosophy                       | [Networking](decisions/09b-networking.md)   |
 | D065 | Tutorial & New Player Experience                   | [Interaction](decisions/09g-interaction.md) |
+| D069 | Installation & First-Run Setup Wizard              | [Interaction](decisions/09g-interaction.md) |
+| D070 | Asymmetric Co-op Mode — Commander & Field Ops      | [Gameplay](decisions/09d-gameplay.md)       |
 | D061 | Player Data Backup & Portability                   | [Community](decisions/09e-community.md)     |
 | D062 | Mod Profiles & Virtual Asset Namespace             | [Modding](decisions/09c-modding.md)         |
+| D063 | Compression Configuration (Carried Forward in D067) | [Foundation](decisions/09a-foundation.md)  |
+| D064 | Server Configuration System (Carried Forward in D067) | [Foundation](decisions/09a-foundation.md) |
 | D066 | Cross-Engine Export & Editor Extensibility         | [Modding](decisions/09c-modding.md)         |
 | D067 | Configuration Format Split — TOML vs YAML          | [Foundation](decisions/09a-foundation.md)   |
 | D068 | Selective Installation & Content Footprints        | [Modding](decisions/09c-modding.md)         |

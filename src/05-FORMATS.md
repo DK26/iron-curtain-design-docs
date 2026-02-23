@@ -906,7 +906,7 @@ iron_curtain_save_v1.icsave  (file extension: .icsave)
 pub struct SaveHeader {
     pub magic: [u8; 4],              // b"ICSV" — "Iron Curtain Save"
     pub version: u16,                // Serialization format version (1 = bincode, 2 = postcard)
-    pub compression_algorithm: u8,   // D063: 0x01 = LZ4, future: 0x02 = zstd
+    pub compression_algorithm: u8,   // D063: 0x01 = LZ4 (current), 0x02 reserved for zstd in a later format revision
     pub flags: u8,                   // Bit flags (has_thumbnail, etc.) — repacked from u16 (D063)
     pub metadata_offset: u32,        // Byte offset to metadata section
     pub metadata_length: u32,        // Metadata section length
@@ -953,7 +953,7 @@ Human-readable metadata for the save browser UI. Stored as JSON (not the binary 
 
 ### Payload
 
-The payload is a `SimSnapshot` serialized via `serde` (bincode format for compactness) and compressed with LZ4 (fast decompression, good ratio for game state data). LZ4 was chosen over LZO (used by original RA) for its better Rust ecosystem support (`lz4_flex` crate) and superior decompression speed. The save file header's `version` field selects the serialization codec — version 1 uses bincode, future version 2 uses postcard. The `compression_algorithm` byte selects the decompressor independently (D063). Compression level is configurable via `settings.toml` (`compression.save_level`: fastest/balanced/compact). See `decisions/09d-gameplay.md` § D054 for the serialization version-to-codec dispatch and § D063 for the compression strategy.
+The payload is a `SimSnapshot` serialized via `serde` (bincode format for compactness) and compressed with LZ4 (fast decompression, good ratio for game state data). LZ4 was chosen over LZO (used by original RA) for its better Rust ecosystem support (`lz4_flex` crate) and superior decompression speed. The save file header's `version` field selects the serialization codec — version `1` uses bincode; version `2` is reserved for postcard if introduced under D054's migration/codec-dispatch path. The `compression_algorithm` byte selects the decompressor independently (D063). Compression level is configurable via `settings.toml` (`compression.save_level`: fastest/balanced/compact). See `decisions/09d-gameplay.md` § D054 for the serialization version-to-codec dispatch and § D063 for the compression strategy.
 
 ```rust
 pub struct SimSnapshot {
@@ -997,7 +997,7 @@ iron_curtain_replay_v1.icrep  (file extension: .icrep)
 pub struct ReplayHeader {
     pub magic: [u8; 4],              // b"ICRP" — "Iron Curtain Replay"
     pub version: u16,                // Serialization format version (1)
-    pub compression_algorithm: u8,   // D063: 0x01 = LZ4, future: 0x02 = zstd
+    pub compression_algorithm: u8,   // D063: 0x01 = LZ4 (current), 0x02 reserved for zstd in a later format revision
     pub flags: u8,                   // Bit flags (signed, has_events, has_voice) — repacked from u16 (D063)
     pub metadata_offset: u32,
     pub metadata_length: u32,
@@ -1138,7 +1138,7 @@ pub enum ControlGroupAction {
 
 ### Signature Chain (Relay-Certified Replays)
 
-For ranked/tournament matches, the relay server signs each tick's state hash. The signature algorithm is determined by the replay header version — version 1 uses Ed25519 (current), future versions may use post-quantum algorithms via the `SignatureScheme` enum (D054):
+For ranked/tournament matches, the relay server signs each tick's state hash. The signature algorithm is determined by the replay header version — version `1` uses Ed25519 (current). Later replay header versions, if introduced, may select post-quantum algorithms via the `SignatureScheme` enum (D054) while preserving versioned verification dispatch:
 
 ```rust
 pub struct ReplaySignature {
@@ -1339,9 +1339,11 @@ Screenshots are standard PNG images with IC-specific metadata in PNG `tEXt` chun
 | `.pal`    | Create/edit palettes, faction-color variants                                        | Raw 768-byte write, 6-bit VGA range (trivial)                                                    | Phase 6a (D040)         |
 | `.aud`    | Convert .wav/.ogg recordings to classic Westwood audio format for mod compatibility | `AUDHeaderType` generation, IMA ADPCM encoding via `IndexTable`/`DiffTable` (§ AUD Audio Format) | Phase 6a (D040)         |
 | `.vqa`    | Convert .mp4/.webm cutscenes to classic VQA format for retro feel                   | `VQAHeader` generation, VQ codebook construction, frame differencing, audio interleaving (§ VQA) | Phase 6a (D040)         |
-| `.mix`    | Mod packaging (optional — mods can ship loose files)                                | `FileHeader` + `SubBlock` index generation, CRC filename hashing (§ MIX Archive Format)          | Phase 6a (nice-to-have) |
+| `.mix`    | Mod packaging (optional — mods can ship loose files)                                | `FileHeader` + `SubBlock` index generation, CRC filename hashing (§ MIX Archive Format)          | Deferred to `M9` / Phase 6a (`P-Creator`, optional path) |
 | `.oramap` | SDK scenario editor exports                                                         | ZIP archive with map.yaml + terrain + actors                                                     | Phase 6a (D038)         |
 | YAML      | All IC-native content authoring                                                     | `serde_yaml` — already available                                                                 | Phase 0                 |
 | MiniYAML  | `ic mod export --miniyaml` for OpenRA compat                                        | Reverse of D025 converter — IC YAML → MiniYAML with tab indentation                              | Phase 6a                |
 
 All binary encoders reference the EA GPL source code implementations documented in § Binary Format Codec Reference. The source provides complete, authoritative struct definitions, compression algorithms, and lookup tables — no reverse engineering required.
+
+**Planned deferral note (`.mix` write support):** `.mix` encoding is intentionally deferred to `M9` / Phase 6a as an optional creator-path feature (`P-Creator`) after the D040 Asset Studio base and D049 Workshop/CAS packaging flow are in place. Reason: loose-file mod packaging remains a valid path, so `.mix` writing is not part of `M1-M4` or `M8` exit criteria. Validation trigger: `M9` creator workflows require retro-compatible archive packaging for sharing/export tooling.
