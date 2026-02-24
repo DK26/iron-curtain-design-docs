@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-3d47d740.js";
+            window.path_to_searchindex_js = "searchindex-61d2369b.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-914f79aa.js"></script>
+        <script src="toc-1553b04b.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -193,10 +193,10 @@
 <tbody>
 <tr><td><a href="decisions/09a-foundation.html">Foundation &amp; Core</a></td><td>Language, framework, data formats, simulation invariants, core engine identity</td><td>D001–D003, D009, D010, D015, D017, D018, D039, D063, D064, D067</td></tr>
 <tr><td><a href="decisions/09b-networking.html">Networking &amp; Multiplayer</a></td><td>Network model, relay server, sub-tick ordering, community servers, ranked play</td><td>D006–D008, D011, D012, D052, D055, D060</td></tr>
-<tr><td><a href="decisions/09c-modding.html">Modding &amp; Compatibility</a></td><td>Scripting tiers, OpenRA compatibility, UI themes, mod profiles, licensing, export</td><td>D004, D005, D014, D032, D050, D051, D062, D066, D068</td></tr>
-<tr><td><a href="decisions/09d-gameplay.html">Gameplay &amp; AI</a></td><td>Pathfinding, balance, QoL, AI systems, render modes, trait-abstracted subsystems, asymmetric co-op mode design</td><td>D013, D019–D029, D033, D041–D045, D048, D054, D070</td></tr>
+<tr><td><a href="decisions/09c-modding.html">Modding &amp; Compatibility</a></td><td>Scripting tiers, OpenRA compatibility, UI themes, mod profiles, licensing, export</td><td>D004, D005, D014, D023–D027, D032, D050, D051, D062, D066, D068</td></tr>
+<tr><td><a href="decisions/09d-gameplay.html">Gameplay &amp; AI</a></td><td>Pathfinding, balance, QoL, AI systems, render modes, trait-abstracted subsystems, asymmetric co-op mode design</td><td>D013, D019, D021, D022, D028, D029, D033, D041–D045, D048, D054, D070</td></tr>
 <tr><td><a href="decisions/09e-community.html">Community &amp; Platform</a></td><td>Workshop, telemetry, storage, achievements, governance, profiles, data portability</td><td>D030, D031, D034–D037, D046, D049, D053, D061</td></tr>
-<tr><td><a href="decisions/09f-tools.html">Tools &amp; Editor</a></td><td>LLM mission generation, scenario editor, asset studio, foreign replays, skill library</td><td>D016, D038, D040, D047, D056, D057</td></tr>
+<tr><td><a href="decisions/09f-tools.html">Tools &amp; Editor</a></td><td>LLM mission generation, scenario editor, asset studio, mod SDK, foreign replays, skill library</td><td>D016, D020, D038, D040, D047, D056, D057</td></tr>
 <tr><td><a href="decisions/09g-interaction.html">In-Game Interaction</a></td><td>Command console, communication systems (chat, voice, pings), tutorial/new player experience, installation/setup wizard UX</td><td>D058, D059, D065, D069</td></tr>
 </tbody>
 </table>
@@ -214,71 +214,71 @@
 <tr><td>D003</td><td>Data Format — Real YAML, Not MiniYAML</td><td><a href="decisions/09a-foundation.html">Foundation</a></td></tr>
 <tr><td>D004</td><td>Modding — Lua (Not Python) for Scripting</td><td><a href="decisions/09c-modding.html">Modding</a></td></tr>
 <tr><td>D005</td><td>Modding — WASM for Power Users (Tier 3)</td><td><a href="decisions/09c-modding.html">Modding</a></td></tr>
-<tr><td>D006</td><td>Networking — Pluggable via Trait</td><td><a href="decisions/09b-networking.html">Networking</a></td></tr>
-<tr><td>D007</td><td>Networking — Relay Server as Default</td><td><a href="decisions/09b-networking.html">Networking</a></td></tr>
-<tr><td>D008</td><td>Sub-Tick Timestamps on Orders</td><td><a href="decisions/09b-networking.html">Networking</a></td></tr>
+<tr><td>D006</td><td>Networking — Pluggable via Trait</td><td><a href="decisions/09b/D006-pluggable-net.html">Networking</a></td></tr>
+<tr><td>D007</td><td>Networking — Relay Server as Default</td><td><a href="decisions/09b/D007-relay-default.html">Networking</a></td></tr>
+<tr><td>D008</td><td>Sub-Tick Timestamps on Orders</td><td><a href="decisions/09b/D008-sub-tick.html">Networking</a></td></tr>
 <tr><td>D009</td><td>Simulation — Fixed-Point Math, No Floats</td><td><a href="decisions/09a-foundation.html">Foundation</a></td></tr>
 <tr><td>D010</td><td>Simulation — Snapshottable State</td><td><a href="decisions/09a-foundation.html">Foundation</a></td></tr>
-<tr><td>D011</td><td>Cross-Engine Play — Community Layer, Not Sim Layer</td><td><a href="decisions/09b-networking.html">Networking</a></td></tr>
-<tr><td>D012</td><td>Security — Validate Orders in Sim</td><td><a href="decisions/09b-networking.html">Networking</a></td></tr>
-<tr><td>D013</td><td>Pathfinding — Trait-Abstracted, Multi-Layer Hybrid</td><td><a href="decisions/09d-gameplay.html">Gameplay</a></td></tr>
+<tr><td>D011</td><td>Cross-Engine Play — Community Layer, Not Sim Layer</td><td><a href="decisions/09b/D011-cross-engine.html">Networking</a></td></tr>
+<tr><td>D012</td><td>Security — Validate Orders in Sim</td><td><a href="decisions/09b/D012-order-validation.html">Networking</a></td></tr>
+<tr><td>D013</td><td>Pathfinding — Trait-Abstracted, Multi-Layer Hybrid</td><td><a href="decisions/09d/D013-pathfinding.html">Gameplay</a></td></tr>
 <tr><td>D014</td><td>Templating — Tera in Phase 6a (Nice-to-Have)</td><td><a href="decisions/09c-modding.html">Modding</a></td></tr>
 <tr><td>D015</td><td>Performance — Efficiency-First, Not Thread-First</td><td><a href="decisions/09a-foundation.html">Foundation</a></td></tr>
-<tr><td>D016</td><td>LLM-Generated Missions and Campaigns</td><td><a href="decisions/09f-tools.html">Tools</a></td></tr>
+<tr><td>D016</td><td>LLM-Generated Missions and Campaigns</td><td><a href="decisions/09f/D016-llm-missions.html">Tools</a></td></tr>
 <tr><td>D017</td><td>Bevy Rendering Pipeline</td><td><a href="decisions/09a-foundation.html">Foundation</a></td></tr>
 <tr><td>D018</td><td>Multi-Game Extensibility (Game Modules)</td><td><a href="decisions/09a-foundation.html">Foundation</a></td></tr>
-<tr><td>D019</td><td>Switchable Balance Presets</td><td><a href="decisions/09d-gameplay.html">Gameplay</a></td></tr>
-<tr><td>D020</td><td>Mod SDK &amp; Creative Toolchain</td><td><a href="decisions/09d-gameplay.html">Gameplay</a></td></tr>
-<tr><td>D021</td><td>Branching Campaign System with Persistent State</td><td><a href="decisions/09d-gameplay.html">Gameplay</a></td></tr>
-<tr><td>D022</td><td>Dynamic Weather with Terrain Surface Effects</td><td><a href="decisions/09d-gameplay.html">Gameplay</a></td></tr>
-<tr><td>D023</td><td>OpenRA Vocabulary Compatibility Layer</td><td><a href="decisions/09d-gameplay.html">Gameplay</a></td></tr>
-<tr><td>D024</td><td>Lua API Superset of OpenRA</td><td><a href="decisions/09d-gameplay.html">Gameplay</a></td></tr>
-<tr><td>D025</td><td>Runtime MiniYAML Loading</td><td><a href="decisions/09d-gameplay.html">Gameplay</a></td></tr>
-<tr><td>D026</td><td>OpenRA Mod Manifest Compatibility</td><td><a href="decisions/09d-gameplay.html">Gameplay</a></td></tr>
-<tr><td>D027</td><td>Canonical Enum Compatibility with OpenRA</td><td><a href="decisions/09d-gameplay.html">Gameplay</a></td></tr>
-<tr><td>D028</td><td>Condition and Multiplier Systems as Phase 2 Requirements</td><td><a href="decisions/09d-gameplay.html">Gameplay</a></td></tr>
-<tr><td>D029</td><td>Cross-Game Component Library (Phase 2 Targets)</td><td><a href="decisions/09d-gameplay.html">Gameplay</a></td></tr>
-<tr><td>D030</td><td>Workshop Resource Registry &amp; Dependency System</td><td><a href="decisions/09e-community.html">Community</a></td></tr>
-<tr><td>D031</td><td>Observability &amp; Telemetry (OTEL)</td><td><a href="decisions/09e-community.html">Community</a></td></tr>
+<tr><td>D019</td><td>Switchable Balance Presets</td><td><a href="decisions/09d/D019-balance-presets.html">Gameplay</a></td></tr>
+<tr><td>D020</td><td>Mod SDK &amp; Creative Toolchain</td><td><a href="decisions/09f/D020-mod-sdk.html">Tools</a></td></tr>
+<tr><td>D021</td><td>Branching Campaign System with Persistent State</td><td><a href="decisions/09d/D021-branching-campaigns.html">Gameplay</a></td></tr>
+<tr><td>D022</td><td>Dynamic Weather with Terrain Surface Effects</td><td><a href="decisions/09d/D022-dynamic-weather.html">Gameplay</a></td></tr>
+<tr><td>D023</td><td>OpenRA Vocabulary Compatibility Layer</td><td><a href="decisions/09c/D023-vocabulary-compat.html">Modding</a></td></tr>
+<tr><td>D024</td><td>Lua API Superset of OpenRA</td><td><a href="decisions/09c/D024-lua-superset.html">Modding</a></td></tr>
+<tr><td>D025</td><td>Runtime MiniYAML Loading</td><td><a href="decisions/09c/D025-miniyaml-runtime.html">Modding</a></td></tr>
+<tr><td>D026</td><td>OpenRA Mod Manifest Compatibility</td><td><a href="decisions/09c/D026-mod-manifest.html">Modding</a></td></tr>
+<tr><td>D027</td><td>Canonical Enum Compatibility with OpenRA</td><td><a href="decisions/09c/D027-canonical-enums.html">Modding</a></td></tr>
+<tr><td>D028</td><td>Condition and Multiplier Systems as Phase 2 Requirements</td><td><a href="decisions/09d/D028-conditions-multipliers.html">Gameplay</a></td></tr>
+<tr><td>D029</td><td>Cross-Game Component Library (Phase 2 Targets)</td><td><a href="decisions/09d/D029-cross-game-components.html">Gameplay</a></td></tr>
+<tr><td>D030</td><td>Workshop Resource Registry &amp; Dependency System</td><td><a href="decisions/09e/D030-workshop-registry.html">Community</a></td></tr>
+<tr><td>D031</td><td>Observability &amp; Telemetry (OTEL)</td><td><a href="decisions/09e/D031-observability.html">Community</a></td></tr>
 <tr><td>D032</td><td>Switchable UI Themes</td><td><a href="decisions/09c-modding.html">Modding</a></td></tr>
-<tr><td>D033</td><td>Toggleable QoL &amp; Gameplay Behavior Presets</td><td><a href="decisions/09d-gameplay.html">Gameplay</a></td></tr>
-<tr><td>D034</td><td>SQLite as Embedded Storage</td><td><a href="decisions/09e-community.html">Community</a></td></tr>
-<tr><td>D035</td><td>Creator Recognition &amp; Attribution</td><td><a href="decisions/09e-community.html">Community</a></td></tr>
-<tr><td>D036</td><td>Achievement System</td><td><a href="decisions/09e-community.html">Community</a></td></tr>
-<tr><td>D037</td><td>Community Governance &amp; Platform Stewardship</td><td><a href="decisions/09e-community.html">Community</a></td></tr>
-<tr><td>D038</td><td>Scenario Editor (OFP/Eden-Inspired, SDK)</td><td><a href="decisions/09f-tools.html">Tools</a></td></tr>
+<tr><td>D033</td><td>Toggleable QoL &amp; Gameplay Behavior Presets</td><td><a href="decisions/09d/D033-qol-presets.html">Gameplay</a></td></tr>
+<tr><td>D034</td><td>SQLite as Embedded Storage</td><td><a href="decisions/09e/D034-sqlite.html">Community</a></td></tr>
+<tr><td>D035</td><td>Creator Recognition &amp; Attribution</td><td><a href="decisions/09e/D035-creator-attribution.html">Community</a></td></tr>
+<tr><td>D036</td><td>Achievement System</td><td><a href="decisions/09e/D036-achievements.html">Community</a></td></tr>
+<tr><td>D037</td><td>Community Governance &amp; Platform Stewardship</td><td><a href="decisions/09e/D037-governance.html">Community</a></td></tr>
+<tr><td>D038</td><td>Scenario Editor (OFP/Eden-Inspired, SDK)</td><td><a href="decisions/09f/D038-scenario-editor.html">Tools</a></td></tr>
 <tr><td>D039</td><td>Engine Scope — General-Purpose Classic RTS</td><td><a href="decisions/09a-foundation.html">Foundation</a></td></tr>
-<tr><td>D040</td><td>Asset Studio</td><td><a href="decisions/09f-tools.html">Tools</a></td></tr>
-<tr><td>D041</td><td>Trait-Abstracted Subsystem Strategy</td><td><a href="decisions/09d-gameplay.html">Gameplay</a></td></tr>
-<tr><td>D042</td><td>Player Behavioral Profiles &amp; Training</td><td><a href="decisions/09d-gameplay.html">Gameplay</a></td></tr>
-<tr><td>D043</td><td>AI Behavior Presets</td><td><a href="decisions/09d-gameplay.html">Gameplay</a></td></tr>
-<tr><td>D044</td><td>LLM-Enhanced AI</td><td><a href="decisions/09d-gameplay.html">Gameplay</a></td></tr>
-<tr><td>D045</td><td>Pathfinding Behavior Presets</td><td><a href="decisions/09d-gameplay.html">Gameplay</a></td></tr>
-<tr><td>D046</td><td>Community Platform — Premium Content</td><td><a href="decisions/09e-community.html">Community</a></td></tr>
-<tr><td>D047</td><td>LLM Configuration Manager</td><td><a href="decisions/09f-tools.html">Tools</a></td></tr>
-<tr><td>D048</td><td>Switchable Render Modes</td><td><a href="decisions/09d-gameplay.html">Gameplay</a></td></tr>
-<tr><td>D049</td><td>Workshop Asset Formats &amp; P2P Distribution</td><td><a href="decisions/09e-community.html">Community</a></td></tr>
+<tr><td>D040</td><td>Asset Studio</td><td><a href="decisions/09f/D040-asset-studio.html">Tools</a></td></tr>
+<tr><td>D041</td><td>Trait-Abstracted Subsystem Strategy</td><td><a href="decisions/09d/D041-trait-abstraction.html">Gameplay</a></td></tr>
+<tr><td>D042</td><td>Player Behavioral Profiles &amp; Training</td><td><a href="decisions/09d/D042-behavioral-profiles.html">Gameplay</a></td></tr>
+<tr><td>D043</td><td>AI Behavior Presets</td><td><a href="decisions/09d/D043-ai-presets.html">Gameplay</a></td></tr>
+<tr><td>D044</td><td>LLM-Enhanced AI</td><td><a href="decisions/09d/D044-llm-ai.html">Gameplay</a></td></tr>
+<tr><td>D045</td><td>Pathfinding Behavior Presets</td><td><a href="decisions/09d/D045-pathfinding-presets.html">Gameplay</a></td></tr>
+<tr><td>D046</td><td>Community Platform — Premium Content</td><td><a href="decisions/09e/D046-community-platform.html">Community</a></td></tr>
+<tr><td>D047</td><td>LLM Configuration Manager</td><td><a href="decisions/09f/D047-llm-config.html">Tools</a></td></tr>
+<tr><td>D048</td><td>Switchable Render Modes</td><td><a href="decisions/09d/D048-render-modes.html">Gameplay</a></td></tr>
+<tr><td>D049</td><td>Workshop Asset Formats &amp; P2P Distribution</td><td><a href="decisions/09e/D049-workshop-assets.html">Community</a></td></tr>
 <tr><td>D050</td><td>Workshop as Cross-Project Reusable Library</td><td><a href="decisions/09c-modding.html">Modding</a></td></tr>
 <tr><td>D051</td><td>Engine License — GPL v3 with Modding Exception</td><td><a href="decisions/09c-modding.html">Modding</a></td></tr>
-<tr><td>D052</td><td>Community Servers with Portable Signed Credentials</td><td><a href="decisions/09b-networking.html">Networking</a></td></tr>
-<tr><td>D053</td><td>Player Profile System</td><td><a href="decisions/09e-community.html">Community</a></td></tr>
-<tr><td>D054</td><td>Extended Switchability</td><td><a href="decisions/09d-gameplay.html">Gameplay</a></td></tr>
-<tr><td>D055</td><td>Ranked Tiers, Seasons &amp; Matchmaking Queue</td><td><a href="decisions/09b-networking.html">Networking</a></td></tr>
-<tr><td>D056</td><td>Foreign Replay Import</td><td><a href="decisions/09f-tools.html">Tools</a></td></tr>
-<tr><td>D057</td><td>LLM Skill Library</td><td><a href="decisions/09f-tools.html">Tools</a></td></tr>
-<tr><td>D058</td><td>In-Game Command Console</td><td><a href="decisions/09g-interaction.html">Interaction</a></td></tr>
-<tr><td>D059</td><td>In-Game Communication (Chat, Voice, Pings)</td><td><a href="decisions/09g-interaction.html">Interaction</a></td></tr>
-<tr><td>D060</td><td>Netcode Parameter Philosophy</td><td><a href="decisions/09b-networking.html">Networking</a></td></tr>
-<tr><td>D065</td><td>Tutorial &amp; New Player Experience</td><td><a href="decisions/09g-interaction.html">Interaction</a></td></tr>
-<tr><td>D069</td><td>Installation &amp; First-Run Setup Wizard</td><td><a href="decisions/09g-interaction.html">Interaction</a></td></tr>
-<tr><td>D070</td><td>Asymmetric Co-op Mode — Commander &amp; Field Ops</td><td><a href="decisions/09d-gameplay.html">Gameplay</a></td></tr>
-<tr><td>D061</td><td>Player Data Backup &amp; Portability</td><td><a href="decisions/09e-community.html">Community</a></td></tr>
+<tr><td>D052</td><td>Community Servers with Portable Signed Credentials</td><td><a href="decisions/09b/D052-community-servers.html">Networking</a></td></tr>
+<tr><td>D053</td><td>Player Profile System</td><td><a href="decisions/09e/D053-player-profile.html">Community</a></td></tr>
+<tr><td>D054</td><td>Extended Switchability</td><td><a href="decisions/09d/D054-extended-switchability.html">Gameplay</a></td></tr>
+<tr><td>D055</td><td>Ranked Tiers, Seasons &amp; Matchmaking Queue</td><td><a href="decisions/09b/D055-ranked-matchmaking.html">Networking</a></td></tr>
+<tr><td>D056</td><td>Foreign Replay Import</td><td><a href="decisions/09f/D056-replay-import.html">Tools</a></td></tr>
+<tr><td>D057</td><td>LLM Skill Library</td><td><a href="decisions/09f/D057-llm-skill-library.html">Tools</a></td></tr>
+<tr><td>D058</td><td>In-Game Command Console</td><td><a href="decisions/09g/D058-command-console.html">Interaction</a></td></tr>
+<tr><td>D059</td><td>In-Game Communication (Chat, Voice, Pings)</td><td><a href="decisions/09g/D059-communication.html">Interaction</a></td></tr>
+<tr><td>D060</td><td>Netcode Parameter Philosophy</td><td><a href="decisions/09b/D060-netcode-params.html">Networking</a></td></tr>
+<tr><td>D061</td><td>Player Data Backup &amp; Portability</td><td><a href="decisions/09e/D061-data-backup.html">Community</a></td></tr>
 <tr><td>D062</td><td>Mod Profiles &amp; Virtual Asset Namespace</td><td><a href="decisions/09c-modding.html">Modding</a></td></tr>
 <tr><td>D063</td><td>Compression Configuration (Carried Forward in D067)</td><td><a href="decisions/09a-foundation.html">Foundation</a></td></tr>
 <tr><td>D064</td><td>Server Configuration System (Carried Forward in D067)</td><td><a href="decisions/09a-foundation.html">Foundation</a></td></tr>
+<tr><td>D065</td><td>Tutorial &amp; New Player Experience</td><td><a href="decisions/09g/D065-tutorial.html">Interaction</a></td></tr>
 <tr><td>D066</td><td>Cross-Engine Export &amp; Editor Extensibility</td><td><a href="decisions/09c-modding.html">Modding</a></td></tr>
 <tr><td>D067</td><td>Configuration Format Split — TOML vs YAML</td><td><a href="decisions/09a-foundation.html">Foundation</a></td></tr>
 <tr><td>D068</td><td>Selective Installation &amp; Content Footprints</td><td><a href="decisions/09c-modding.html">Modding</a></td></tr>
+<tr><td>D069</td><td>Installation &amp; First-Run Setup Wizard</td><td><a href="decisions/09g/D069-install-wizard.html">Interaction</a></td></tr>
+<tr><td>D070</td><td>Asymmetric Co-op Mode — Commander &amp; Field Ops</td><td><a href="decisions/09d/D070-asymmetric-coop.html">Gameplay</a></td></tr>
 </tbody>
 </table>
 </div>
@@ -301,7 +301,7 @@
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="tracking/deferral-wording-patterns.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="tracking/testing-strategy.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                             </a>
 
@@ -315,7 +315,7 @@
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="tracking/deferral-wording-patterns.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="tracking/testing-strategy.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                     </a>
 

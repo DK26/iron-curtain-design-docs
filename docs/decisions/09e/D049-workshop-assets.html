@@ -1,0 +1,1012 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>D049 — Workshop Assets - Iron Curtain — Design Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Design docs for a Rust-native Red Alert RTS engine">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../../css/general-2459343d.css">
+        <link rel="stylesheet" href="../../css/chrome-ae938929.css">
+        <link rel="stylesheet" href="../../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../../searchindex-61d2369b.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../../toc-1553b04b.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Iron Curtain — Design Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs/edit/main/src/decisions/09e/D049-workshop-assets.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h2 id="d049-workshop-asset-formats--distribution--bevy-native-canonical-p2p-delivery"><a class="header" href="#d049-workshop-asset-formats--distribution--bevy-native-canonical-p2p-delivery">D049: Workshop Asset Formats &amp; Distribution — Bevy-Native Canonical, P2P Delivery</a></h2>
+<h3 id="decision-capsule-llmrag-summary"><a class="header" href="#decision-capsule-llmrag-summary">Decision Capsule (LLM/RAG Summary)</a></h3>
+<ul>
+<li><strong>Status:</strong> Accepted</li>
+<li><strong>Phase:</strong> Multi-phase (Workshop foundation + distribution + package tooling)</li>
+<li><strong>Canonical for:</strong> Workshop canonical asset format recommendations and P2P package distribution strategy</li>
+<li><strong>Scope:</strong> Workshop package format/distribution, client download/install pipeline, format recommendations for IC modules, HTTP fallback behavior</li>
+<li><strong>Decision:</strong> The Workshop recommends <strong>modern Bevy-native formats</strong> (OGG/PNG/WAV/WebM/KTX2/GLTF) as canonical for new content while fully supporting legacy C&amp;C formats for compatibility; package delivery uses <strong>P2P (BitTorrent/WebTorrent) with HTTP fallback</strong>.</li>
+<li><strong>Why:</strong> Lower hosting cost, better Bevy integration/tooling, safer/more mature parsers for untrusted content, and lower friction for new creators using standard tools.</li>
+<li><strong>Non-goals:</strong> Dropping legacy C&amp;C format support; making Workshop format choices universal for all future engines/projects consuming the Workshop core library.</li>
+<li><strong>Invariants preserved:</strong> Full resource compatibility for existing C&amp;C assets remains intact; Workshop protocol/package concepts are separable from IC-specific format preferences (D050).</li>
+<li><strong>Defaults / UX behavior:</strong> New content creators are guided toward modern formats; legacy assets still load and publish without forced conversion.</li>
+<li><strong>Compatibility / Export impact:</strong> Legacy formats remain important for OpenRA/RA1 workflows and D040 conversion pipelines; canonical Workshop recommendations do not invalidate export targets.</li>
+<li><strong>Security / Trust impact:</strong> Preference for widely audited decoders is an explicit defense-in-depth choice for untrusted Workshop content.</li>
+<li><strong>Performance / Ops impact:</strong> P2P delivery reduces CDN cost and scales community distribution; modern formats integrate better with Bevy runtime loading paths.</li>
+<li><strong>Public interfaces / types / commands:</strong> <code>.icpkg</code> (IC-specific package wrapper), Workshop P2P/HTTP delivery strategy, <code>ic mod build/publish</code> workflow (as referenced across modding docs)</li>
+<li><strong>Affected docs:</strong> <code>src/04-MODDING.md</code>, <code>src/05-FORMATS.md</code>, <code>src/decisions/09c-modding.md</code>, <code>src/decisions/09f-tools.md</code></li>
+<li><strong>Revision note summary:</strong> None</li>
+<li><strong>Keywords:</strong> workshop formats, p2p delivery, bittorrent, webtorrent, bevy-native assets, png ogg webm, legacy c&amp;c compatibility, icpkg</li>
+</ul>
+<p><strong>Decision:</strong> The Workshop’s canonical asset formats are <strong>Bevy-native modern formats</strong> (OGG, PNG, WAV, WebM, KTX2, GLTF). C&amp;C legacy formats (.aud, .shp, .pal, .vqa, .mix) are fully supported for backward compatibility but are not the recommended distribution format for new content. Workshop delivery uses <strong>peer-to-peer distribution</strong> (BitTorrent/WebTorrent protocol) with HTTP fallback, reducing hosting costs from CDN-level to a lightweight tracker.</p>
+<blockquote>
+<p><strong>Note (D050):</strong> The format recommendations in this section are <strong>IC-specific</strong> — they reflect Bevy’s built-in asset pipeline. The Workshop’s P2P distribution protocol and package format are engine-agnostic (see D050). Future projects consuming the Workshop core library will define their own format recommendations based on their engine’s capabilities. The <code>.icpkg</code> extension, <code>ic mod</code> CLI commands, and <code>game_module</code> manifest fields are likewise IC-specific — the Workshop core library uses configurable equivalents.</p>
+</blockquote>
+<h3 id="the-format-problem"><a class="header" href="#the-format-problem">The Format Problem</a></h3>
+<p>The engine serves two audiences with conflicting format needs:</p>
+<ol>
+<li><strong>Legacy community:</strong> Thousands of existing .shp, .aud, .mix, .pal assets. OpenRA mods. Original game files. These must load.</li>
+<li><strong>New content creators:</strong> Making sprites in Aseprite/Photoshop, recording audio in Audacity/Reaper, editing video in DaVinci Resolve. These tools export PNG, OGG, WAV, WebM — not .shp or .aud.</li>
+</ol>
+<p>Forcing new creators to encode into C&amp;C formats creates unnecessary friction. Forcing legacy content through format converters before it can load breaks the “community’s existing work is sacred” invariant. The answer is: <strong>accept both, recommend modern.</strong></p>
+<h3 id="canonical-format-recommendations"><a class="header" href="#canonical-format-recommendations">Canonical Format Recommendations</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Asset Type</th><th>Workshop Format (new content)</th><th>Legacy Support (existing)</th><th>Runtime Decode</th><th>Rationale</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Music</strong></td><td>OGG Vorbis (128–320kbps)</td><td>.aud (ra-formats decode)</td><td>PCM via rodio</td><td>Bevy default feature, excellent quality/size ratio, open/patent-free, WASM-safe. OGG at 192kbps ≈ 1.4MB/min vs .aud at ~0.5MB/min but dramatically higher quality (stereo, 44.1kHz vs mono 22kHz)</td></tr>
+<tr><td><strong>SFX</strong></td><td>WAV (16-bit PCM) or OGG</td><td>.aud (ra-formats decode)</td><td>PCM via rodio</td><td>WAV = zero decode latency for gameplay-critical sounds (weapon fire, explosions). OGG for larger ambient/UI sounds where decode latency is acceptable</td></tr>
+<tr><td><strong>Voice</strong></td><td>OGG Vorbis (96–128kbps)</td><td>.aud (ra-formats decode)</td><td>PCM via rodio</td><td>Speech compresses well. OGG at 96kbps is transparent for voice. EVA packs with 200+ lines stay under 30MB</td></tr>
+<tr><td><strong>Sprites</strong></td><td>PNG (RGBA, indexed, or truecolor)</td><td>.shp+.pal (ra-formats)</td><td>GPU texture via Bevy</td><td>Bevy-native via <code>image</code> crate. Lossless. Every art tool exports it. Palette-indexed PNG preserves classic aesthetic. HD packs use truecolor RGBA</td></tr>
+<tr><td><strong>HD Textures</strong></td><td>KTX2 (GPU-compressed: BC7/ASTC)</td><td>N/A</td><td>Zero-cost GPU upload</td><td>Bevy-native. No decode — GPU reads directly. Best runtime performance. <code>ic mod build</code> can batch-convert PNG→KTX2 for release builds</td></tr>
+<tr><td><strong>Terrain</strong></td><td>PNG tiles (indexed or RGBA)</td><td>.tmp+.pal (ra-formats)</td><td>GPU texture</td><td>Same as sprites. Theater tilesets are sprite sheets</td></tr>
+<tr><td><strong>Cutscenes</strong></td><td>WebM (VP9, 720p–1080p)</td><td>.vqa (ra-formats decode)</td><td>Frame→texture (custom)</td><td>Open, royalty-free, browser-compatible (WASM target). VP9 achieves ~5MB/min at 720p. Neither WebM nor VQA is Bevy-native — both need custom decode, so no advantage to VQA here</td></tr>
+<tr><td><strong>3D Models</strong></td><td>GLTF/GLB</td><td>N/A (future: .vxl)</td><td>Bevy mesh</td><td>Bevy’s native 3D format. Community 3D mods (D048) use this</td></tr>
+<tr><td><strong>Palettes</strong></td><td>.pal (768 bytes) or PNG strip</td><td>.pal (ra-formats)</td><td>Palette texture</td><td>.pal is already tiny and universal in the C&amp;C community. No reason to change. PNG strip is an alternative for tools that don’t understand .pal</td></tr>
+<tr><td><strong>Maps</strong></td><td>IC YAML (native)</td><td>.oramap (ZIP+MiniYAML)</td><td>ECS world state</td><td>Already designed (D025, D026)</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="why-modern-formats-as-default"><a class="header" href="#why-modern-formats-as-default">Why Modern Formats as Default</a></h3>
+<p><strong>Bevy integration:</strong> OGG, WAV, PNG, KTX2, and GLTF load through Bevy’s built-in asset pipeline with zero custom code. Every Bevy feature — hot-reload, asset dependencies, async loading, platform abstraction — works automatically. C&amp;C formats require custom <code>AssetLoader</code> implementations in ra-formats with manual integration into Bevy’s pipeline.</p>
+<p><strong>Security:</strong> OGG (lewton/rodio), PNG (image crate), and WebM decoders in the Rust ecosystem have been fuzz-tested and used in production by thousands of projects. Browser vendors (Chrome, Firefox, Safari) have security-audited these formats for decades. Our .aud/.shp/.vqa parsers in ra-formats are custom code that has never been independently security-audited. For Workshop content downloaded from untrusted sources, mature parsers with established security track records are strictly safer. C&amp;C format parsers use <code>BoundedReader</code> (see <code>06-SECURITY.md</code>), but defense in depth favors formats with deeper audit history.</p>
+<p><strong>Multi-game:</strong> Non-C&amp;C game modules (D039) won’t use .shp or .aud at all. A tower defense mod, a naval RTS, a Dune-inspired game — these ship PNG sprites and OGG audio. The Workshop serves all game modules, not just the C&amp;C family.</p>
+<p><strong>Tooling:</strong> Every image editor saves PNG. Every DAW exports WAV/OGG. Every video editor exports WebM/MP4. Nobody’s toolchain outputs .aud or .shp. Requiring C&amp;C formats forces creators through a conversion step before they can publish — unnecessary friction.</p>
+<p><strong>WASM/browser:</strong> OGG and PNG work in Bevy’s WASM builds out of the box. C&amp;C formats need custom WASM decoders compiled into the browser bundle.</p>
+<p><strong>Storage efficiency comparison:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Content</th><th>C&amp;C Format</th><th>Modern Format</th><th>Notes</th></tr>
+</thead>
+<tbody>
+<tr><td>3min music track</td><td>.aud: ~1.5MB (22kHz mono ADPCM)</td><td>OGG: ~2.8MB (44.1kHz stereo 128kbps)</td><td>OGG is 2× larger but dramatically higher quality. At mono 22kHz OGG: ~0.7MB</td></tr>
+<tr><td>Full soundtrack (30 tracks)</td><td>.aud: ~45MB</td><td>OGG 128kbps: ~84MB</td><td>Acceptable for modern bandwidth/storage</td></tr>
+<tr><td>Unit sprite sheet (200 frames)</td><td>.shp+.pal: ~50KB</td><td>PNG indexed: ~80KB</td><td>PNG slightly larger but universal tooling</td></tr>
+<tr><td>HD sprite sheet (200 frames)</td><td>N/A (.shp can’t do HD)</td><td>PNG RGBA: ~500KB</td><td>Only modern format option for HD content</td></tr>
+<tr><td>3min cutscene (720p)</td><td>.vqa: ~15MB</td><td>WebM VP9: ~15MB</td><td>Comparable. WebM quality is higher at same bitrate</td></tr>
+</tbody>
+</table>
+</div>
+<p>Modern formats are somewhat larger for legacy-quality content but the difference is small relative to modern storage and bandwidth. For HD content, modern formats are the only option.</p>
+<h3 id="the-conversion-escape-hatch"><a class="header" href="#the-conversion-escape-hatch">The Conversion Escape Hatch</a></h3>
+<p>The Asset Studio (D040) converts in both directions:</p>
+<ul>
+<li><strong>Import:</strong> .aud/.shp/.vqa/.pal → OGG/PNG/WebM/.pal (for modders working with legacy assets)</li>
+<li><strong>Export:</strong> OGG/PNG/WebM → .aud/.shp/.vqa (for modders targeting OpenRA compatibility or classic aesthetic)</li>
+<li><strong>Batch convert:</strong> <code>ic mod convert --to-modern</code> or <code>ic mod convert --to-classic</code> converts entire mod directories</li>
+</ul>
+<p>The engine loads both format families at runtime. <code>ra-formats</code> decoders handle legacy formats; Bevy’s built-in loaders handle modern formats. No manual conversion is ever required — only recommended for new Workshop publications.</p>
+<h3 id="workshop-package-format-icpkg"><a class="header" href="#workshop-package-format-icpkg">Workshop Package Format (.icpkg)</a></h3>
+<p>Workshop packages are <strong>ZIP archives</strong> with a standardized manifest — the same pattern as <code>.oramap</code> but generalized to any resource type:</p>
+<pre><code>my-hd-sprites-1.2.0.icpkg          # ZIP archive
+├── manifest.yaml                    # Package metadata (required)
+├── README.md                        # Long description (optional)
+├── CHANGELOG.md                     # Version history (optional)
+├── preview.png                      # Thumbnail, max 512×512 (required for Workshop listing)
+└── assets/                          # Actual content files
+    ├── sprites/
+    │   ├── infantry-allied.png
+    │   └── vehicles-soviet.png
+    └── palettes/
+        └── temperate-hd.pal
+</code></pre>
+<p><strong>manifest.yaml:</strong></p>
+<pre><code class="language-yaml">package:
+  name: "hd-allied-sprites"
+  publisher: "community-hd-project"
+  version: "1.2.0"
+  license: "CC-BY-SA-4.0"
+  description: "HD sprite replacements for Allied infantry and vehicles"
+  category: sprites
+  game_module: ra1
+  engine_version: "^0.3.0"
+
+  # Per-file integrity (verified on install)
+  files:
+    sprites/infantry-allied.png:
+      sha256: "a1b2c3d4..."
+      size: 524288
+    sprites/vehicles-soviet.png:
+      sha256: "e5f6a7b8..."
+      size: 1048576
+
+  dependencies:
+    - id: "community-hd-project/base-palettes"
+      version: "^1.0"
+
+  # P2P distribution metadata (added by Workshop server on publish)
+  distribution:
+    sha256: "full-package-hash..."        # Hash of entire .icpkg
+    size: 1572864                          # Total package size in bytes
+    infohash: "btih:abc123def..."          # BitTorrent info hash (for P2P)
+</code></pre>
+<p>ZIP was chosen over tar.gz because: random access to individual files (no full decompression to read manifest.yaml), universal tooling, <code>.oramap</code> precedent, and Rust’s <code>zip</code> crate is mature.</p>
+<p><strong>VPK-style indexed manifest (from Valve Source Engine):</strong> The <code>.icpkg</code> manifest (manifest.yaml) is placed at the <strong>start</strong> of the archive, not at the end. This follows Valve’s VPK (Valve Pak) format design, where the directory/index appears at the beginning of the file — allowing tools to read metadata, file listings, and dependencies without downloading or decompressing the entire package. For Workshop browsing, the tracker can serve just the first ~4KB of a package (the manifest) to populate search results, preview images, and dependency resolution without fetching the full archive. ZIP’s central directory is at the <em>end</em> of the file, so ZIP-based <code>.icpkg</code> files include a redundant manifest at offset 0 (outside the ZIP structure, in a fixed-size header) for fast remote reads, with the canonical copy inside the ZIP for standard tooling compatibility. See <code>research/valve-github-analysis.md</code> § 6.4.</p>
+<p><strong>Content-addressed asset deduplication (from Valve Fossilize):</strong> Workshop asset storage uses <strong>content-addressed hashing</strong> for deduplication — each file is identified by <code>SHA-256(content)</code>, not by path or name. When a modder publishes a new version that changes only 2 of 50 files, only the 2 changed files are uploaded; the remaining 48 reference existing content hashes already in the Workshop. This reduces upload size, storage cost, and download time for updates. The pattern comes from Fossilize’s content hashing (FOSS_BLOB_HASH = SHA-256 of serialized data, see <code>research/valve-github-analysis.md</code> § 3.2) and is also used by Git (content-addressed object store), Docker (layer deduplication), and IPFS (CID-based storage). The per-file SHA-256 hashes already present in manifest.yaml serve as content addresses — no additional metadata needed.</p>
+<p><strong>Local cache CAS deduplication:</strong> The same content-addressed pattern extends to the player’s local <code>workshop/</code> directory. Instead of storing raw <code>.icpkg</code> ZIP files — where 10 mods bundling the same HD sprite pack each contain a separate copy — the Workshop client unpacks downloaded packages into a <strong>content-addressed blob store</strong> (<code>workshop/blobs/&lt;sha256-prefix&gt;/&lt;sha256&gt;</code>). Each installed package’s manifest maps logical file paths to blob hashes; the package directory contains only symlinks or lightweight references to the shared blob store. Benefits:</p>
+<ul>
+<li><strong>Disk savings:</strong> Popular shared resources (HD sprite packs, sound effect libraries, font packs) stored once regardless of how many mods depend on them. Ten mods using the same 200MB HD pack → 200MB stored, not 2GB.</li>
+<li><strong>Faster installs:</strong> When installing a new mod, the client checks blob hashes against the local store before downloading. Files already present (from other mods) are skipped — only genuinely new content is fetched.</li>
+<li><strong>Atomic updates:</strong> Updating a mod replaces only changed blob references. Unchanged files (same hash) are already in the store.</li>
+<li><strong>Garbage collection:</strong> <code>ic mod gc</code> removes blobs no longer referenced by any installed package. Runs automatically during Workshop cleanup prompts (D030 budget system).</li>
+</ul>
+<pre><code>workshop/
+├── cache.db              # Package metadata, manifests, dependency graph
+├── blobs/                # Content-addressed blob store
+│   ├── a1/a1b2c3...     # SHA-256 hash → file content
+│   ├── d4/d4e5f6...
+│   └── ...
+└── packages/             # Per-package manifests (references into blobs/)
+    ├── alice--hd-sprites-2.0.0/
+    │   └── manifest.yaml # Maps logical paths → blob hashes
+    └── bob--desert-map-1.1.0/
+        └── manifest.yaml
+</code></pre>
+<p>The local CAS store is an optimization that ships alongside the full Workshop in Phase 6a. The initial Workshop (Phase 4–5) can use simpler <code>.icpkg</code>-on-disk storage and upgrade to CAS when the full Workshop matures — the manifest.yaml already contains per-file SHA-256 hashes, so the data model is forward-compatible.</p>
+<h3 id="workshop-player-configuration-profiles-controls--accessibility--hud-presets"><a class="header" href="#workshop-player-configuration-profiles-controls--accessibility--hud-presets">Workshop Player Configuration Profiles (Controls / Accessibility / HUD Presets)</a></h3>
+<p>Workshop packages also support an optional <strong>player configuration profile</strong> resource type for sharing non-authoritative client preferences — especially control layouts and accessibility presets.</p>
+<p><strong>Examples:</strong></p>
+<ul>
+<li><code>player-config</code> package with a <code>Modern RTS (KBM)</code> variant tuned for left-handed mouse users</li>
+<li>Steam Deck control profile (trackpad cursor + gyro precision + PTT on shoulder)</li>
+<li>accessibility preset bundle (larger UI targets, sticky modifiers, reduced motion, high-contrast HUD)</li>
+<li>touch HUD layout preset (handedness + command rail preferences + thresholds)</li>
+</ul>
+<p><strong>Why this fits D049:</strong> These profiles are tiny, versioned, reviewable manifests/data files distributed through the same Workshop identity, trust, and update systems as mods and media packs. Sharing them through Workshop reduces friction for community onboarding (“pro caster layout”, “tournament observer profile”, “new-player-friendly touch controls”) without introducing a separate configuration-sharing platform.</p>
+<p><strong>Hard safety boundaries (non-negotiable):</strong></p>
+<ul>
+<li>No secrets/credentials (tokens, API keys, account auth, recovery phrases)</li>
+<li>No absolute local file paths or device identifiers</li>
+<li>No executable code, scripts, macros, or automation payloads</li>
+<li>No hidden application on install — applying a config profile always requires user confirmation with a diff preview</li>
+</ul>
+<p><strong>Manifest guidance (IC-specific package category):</strong></p>
+<ul>
+<li><code>category: player-config</code></li>
+<li><code>game_module</code>: optional (many profiles are game-agnostic)</li>
+<li><code>config_scope[]</code>: one or more of <code>controls</code>, <code>touch_layout</code>, <code>accessibility</code>, <code>ui_layout</code>, <code>camera_qol</code></li>
+<li><code>compatibility</code> metadata for controls profiles:
+<ul>
+<li>semantic action catalog version (D065)</li>
+<li>target input class (<code>desktop_kbm</code>, <code>gamepad</code>, <code>deck</code>, <code>touch_phone</code>, <code>touch_tablet</code>)</li>
+<li>optional <code>screen_class</code> hints and required features (gyro, rear buttons, command rail)</li>
+</ul>
+</li>
+</ul>
+<p><strong>Example <code>player-config</code> package (<code>manifest.yaml</code>):</strong></p>
+<pre><code class="language-yaml">package:
+  name: "deck-gyro-competitive-profile"
+  publisher: "community-deck-lab"
+  version: "1.0.0"
+  license: "CC-BY-4.0"
+  description: "Steam Deck control profile: right-trackpad cursor, gyro precision, L1 push-to-talk, spectator-friendly quick controls"
+  category: player-config
+  # game_module is optional for generic profiles; omit unless module-specific
+  engine_version: "^0.6.0"
+
+  tags:
+    - controls
+    - steam-deck
+    - accessibility-friendly
+    - spectator
+
+  config_scope:
+    - controls
+    - accessibility
+    - camera_qol
+
+  compatibility:
+    semantic_action_catalog_version: "d065-input-actions-v1"
+    target_input_class: "deck"
+    screen_class: "Desktop"
+    required_features:
+      - right_trackpad
+      - gyro
+    optional_features:
+      - rear_buttons
+    tested_profiles:
+      - "Steam Deck Default@v1"
+    notes: "Falls back cleanly if gyro is disabled; keeps all actions reachable without gyro."
+
+  # Per-file integrity (verified on install/apply download)
+  files:
+    profiles/controls.deck.yaml:
+      sha256: "a1b2c3d4..."
+      size: 8124
+    profiles/accessibility.deck.yaml:
+      sha256: "b2c3d4e5..."
+      size: 1240
+    profiles/camera_qol.yaml:
+      sha256: "c3d4e5f6..."
+      size: 512
+
+  # Server-added on publish (same as other .icpkg categories)
+  distribution:
+    sha256: "full-package-hash..."
+    size: 15642
+    infohash: "btih:abc123def..."
+</code></pre>
+<p><strong>Example payload file (<code>profiles/controls.deck.yaml</code>, controls-only diff):</strong></p>
+<pre><code class="language-yaml">profile:
+  base: "Steam Deck Default@v1"
+  profile_name: "Deck Gyro Competitive"
+  target_input_class: deck
+  semantic_action_catalog_version: "d065-input-actions-v1"
+
+bindings:
+  voice_ptt:
+    primary: { kind: gamepad_button, button: l1, mode: hold }
+  controls_quick_reference:
+    primary: { kind: gamepad_button, button: l5, mode: hold }
+  camera_bookmark_overlay:
+    primary: { kind: gamepad_button, button: r5, mode: hold }
+  ping_wheel:
+    primary: { kind: gamepad_button, button: r3, mode: hold }
+
+axes:
+  cursor:
+    source: right_trackpad
+    sensitivity: 1.1
+    acceleration: 0.2
+  gyro_precision:
+    enabled: true
+    activate_on: l2_hold
+    sensitivity: 0.85
+
+radials:
+  command_radial:
+    trigger: y_hold
+    first_ring:
+      - attack_move
+      - guard
+      - force_action
+      - rally_point
+      - stop
+      - deploy
+</code></pre>
+<p><strong>Install/apply UX rules:</strong></p>
+<ul>
+<li>Installing a <code>player-config</code> package does <strong>not</strong> auto-apply it</li>
+<li>Player sees an <strong>Apply Profile</strong> sheet with:
+<ul>
+<li>target device/profile class</li>
+<li>scopes included</li>
+<li>changed actions/settings summary</li>
+<li>conflicts with current bindings (if any)</li>
+</ul>
+</li>
+<li>Apply can be partial (e.g., controls only, accessibility only) to avoid clobbering unrelated preferences</li>
+<li><code>Reset to previous profile</code> / rollback snapshot is created before apply</li>
+</ul>
+<p><strong>Competitive integrity note:</strong> Player config profiles may change bindings and client UI preferences, but they may not include automation/macro behavior. D033 and D059 competitive rules remain unchanged.</p>
+<p><strong>Lobby/ranked compatibility note (D068):</strong> <code>player-config</code> packages are <strong>local preference resources</strong>, not gameplay/presentation compatibility content. They are excluded from lobby/ranked fingerprint checks and must never be treated as required room resources or auto-download prerequisites for joining a match.</p>
+<p><strong>Storage / distribution note:</strong> Config profiles are typically tiny (&lt;100 KB), so HTTP delivery is sufficient; P2P remains supported by the generic <code>.icpkg</code> pipeline but is not required for good UX.</p>
+<p><strong>D070 asymmetric co-op packaging note:</strong> <code>Commander &amp; Field Ops</code> scenarios/templates (D070) are published as ordinary scenario/template content packages through the same D030/D049 pipeline. They do <strong>not</strong> receive special network/runtime privileges from Workshop packaging; role permissions, support requests, and asymmetric HUD behavior are validated at scenario/runtime layers (D038/D059/D070), not granted by package type.</p>
+<h3 id="p2p-distribution-bittorrentwebtorrent"><a class="header" href="#p2p-distribution-bittorrentwebtorrent">P2P Distribution (BitTorrent/WebTorrent)</a></h3>
+<p><strong>The cost problem:</strong> A popular 500MB mod downloaded 10,000 times generates 5TB of egress. At CDN rates ($0.01–0.09/GB), that’s $50–450/month — per mod. For a community project sustained by donations, centralized hosting is financially unsustainable at scale. A BitTorrent tracker VPS costs $5–20/month regardless of popularity.</p>
+<p><strong>The solution:</strong> Workshop distribution uses the <strong>BitTorrent protocol</strong> for large packages, with HTTP direct download as fallback. The Workshop server acts as both metadata registry (SQLite, lightweight) and BitTorrent tracker (peer coordination, lightweight). Actual content transfer happens peer-to-peer between players who have the package.</p>
+<p><strong>How it works:</strong></p>
+<pre><code>┌─────────────┐     1. Search/browse     ┌──────────────────┐
+│  ic CLI /    │ ───────────────────────► │  Workshop Server │
+│  In-Game     │ ◄─────────────────────── │  (metadata +     │
+│  Browser     │  2. manifest.yaml +      │   tracker)       │
+│              │     torrent info         │                  │
+│              │                          └──────────────────┘
+│              │     3. P2P download
+│              │ ◄──────────────────────► Other players (peers/seeds)
+│              │     (BitTorrent protocol)
+│              │
+│              │     4. Fallback: HTTP direct download
+│              │ ◄─────────────────────── Workshop server / mirrors / seed box
+└─────────────┘     5. Verify SHA-256
+</code></pre>
+<ol>
+<li><strong>Publish:</strong> <code>ic mod publish</code> uploads .icpkg to Workshop server. Server computes SHA-256, generates torrent metadata (info hash), starts seeding the package alongside any initial seed infrastructure.</li>
+<li><strong>Browse/Search:</strong> Workshop server handles all metadata queries (search, dependency resolution, ratings) via the existing SQLite + FTS5 design. Lightweight.</li>
+<li><strong>Install:</strong> <code>ic mod install</code> fetches the manifest from the server, then downloads the .icpkg via BitTorrent from other players who have it. Falls back to HTTP direct download if no peers are available or if P2P is too slow.</li>
+<li><strong>Seed:</strong> Players who have downloaded a package automatically seed it to others (opt-out in settings). The more popular a resource, the faster it downloads — the opposite of CDN economics where popularity means higher cost.</li>
+<li><strong>Verify:</strong> SHA-256 checksum validation on the complete package, regardless of download method. BitTorrent’s built-in piece-level hashing provides additional integrity during transfer.</li>
+</ol>
+<p><strong>WebTorrent for browser builds (WASM):</strong> Standard BitTorrent uses TCP/UDP, which browsers can’t access. <a href="https://webtorrent.io/">WebTorrent</a> extends the BitTorrent protocol over WebRTC, enabling browser-to-browser P2P. The Workshop server includes a WebTorrent tracker endpoint. Desktop clients and browser clients can interoperate — desktop seeds serve browser peers and vice versa through hybrid WebSocket/WebRTC bridges. <strong>HTTP fallback is mandatory:</strong> if WebTorrent signaling fails (signaling server down, WebRTC blocked), the client must fall back to direct HTTP download without user intervention. Multiple signaling servers are maintained for redundancy. Signaling servers only facilitate WebRTC negotiation — they never see package content, so even a compromised signaling server cannot serve tampered data (SHA-256 verification catches that).</p>
+<p><strong>Tracker authentication &amp; token rotation:</strong> P2P tracker access uses per-session tokens tied to client authentication (Workshop credentials or anonymous session token), not static URL secrets. Tokens rotate every release cycle. Even unauthorized peers joining a swarm cannot serve corrupt data (SHA-256 + piece hashing), but token rotation limits unauthorized swarm observation and bandwidth waste. See <code>06-SECURITY.md</code> for the broader security model.</p>
+<p><strong>Transport strategy by package size:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Package Size</th><th>Strategy</th><th>Rationale</th></tr>
+</thead>
+<tbody>
+<tr><td>&lt; 5MB</td><td>HTTP direct only</td><td>P2P overhead exceeds benefit for small files. Maps, balance presets, palettes.</td></tr>
+<tr><td>5–50MB</td><td>P2P preferred, HTTP fallback</td><td>Small sprite packs, sound effect packs, script libraries. P2P helps but HTTP is acceptable.</td></tr>
+<tr><td>&gt; 50MB</td><td>P2P strongly preferred</td><td>HD resource packs, cutscene packs, full mods. P2P’s cost advantage is decisive.</td></tr>
+</tbody>
+</table>
+</div>
+<p>Thresholds are configurable in <code>settings.toml</code>. Players on connections where BitTorrent is throttled or blocked can force HTTP-only mode.</p>
+<p><strong>D069 setup/maintenance wizard transport policy:</strong> The installation/setup wizard (D069) and its maintenance flows reuse the same transport stack with stricter UX-oriented defaults:</p>
+<ul>
+<li><strong>Initial setup downloads</strong> use <code>user-requested</code> priority (not <code>background</code>) and surface source indicators (<code>P2P</code> / <code>HTTP</code>) in progress UI.</li>
+<li><strong>Small setup assets/config packages</strong> (including <code>player-config</code> profiles, small language packs, and tiny metadata-driven fixes) should default to <strong>HTTP direct</strong> per the size strategy above to avoid P2P startup overhead.</li>
+<li><strong>Large optional media packs</strong> (cutscenes, HD assets) remain P2P-preferred with HTTP fallback, but the wizard must explain this transparently (“faster from peers when available”).</li>
+<li><strong>Offline-first behavior:</strong> if no network is available, the setup wizard completes local-only steps and defers downloadable packs instead of failing the entire flow.</li>
+</ul>
+<p><strong>D069 repair/verify mapping:</strong> The maintenance wizard’s <code>Repair &amp; Verify</code> actions map directly to D049 primitives:</p>
+<ul>
+<li><strong>Verify installed packages</strong> → re-check <code>.icpkg</code>/blob hashes against manifests and registry metadata</li>
+<li><strong>Repair package content</strong> → re-fetch missing/corrupt blobs/packages (HTTP or P2P based on size/policy)</li>
+<li><strong>Rebuild indexes/metadata</strong> → rebuild local package/cache indexes from installed manifests + blob store</li>
+<li><strong>Reclaim space</strong> → run GC over unreferenced blobs/package references (same CAS cleanup model)</li>
+</ul>
+<p>Repair/verify is an IC-side content/setup operation. Store-platform binary verification (Steam/GOG) remains a separate platform responsibility and is only linked/guided from the wizard.</p>
+<p><strong>Auto-download on lobby join (D030 interaction):</strong> When joining a lobby with missing resources, the client first attempts P2P download (likely fast, since other players in the lobby are already seeding). If the lobby timer is short or P2P is slow, falls back to HTTP. The lobby UI shows download progress with source indicators (P2P/HTTP). See D052 § “In-Lobby P2P Resource Sharing” for the detailed lobby protocol, including host-as-tracker, verification against Workshop index, and security constraints.</p>
+<p><strong>Gaming industry precedent:</strong></p>
+<ul>
+<li><strong>Blizzard (WoW, StarCraft 2, Diablo 3):</strong> Used a custom P2P downloader (“Blizzard Downloader”, later integrated into Battle.net) for game patches and updates from 2004–2016. Saved millions in CDN costs for multi-GB patches distributed to millions of players.</li>
+<li><strong>Wargaming (World of Tanks):</strong> Used P2P distribution for game updates.</li>
+<li><strong>Linux distributions:</strong> Ubuntu, Fedora, Arch all offer torrent downloads for ISOs — the standard solution for distributing large files from community infrastructure.</li>
+<li><strong>Steam Workshop:</strong> Steam subsidizes centralized hosting from game sales revenue. We don’t have that luxury — P2P is the community-sustainable alternative.</li>
+</ul>
+<p><strong>Competitive landscape — game mod platforms:</strong></p>
+<p>IC’s Workshop exists in a space with several established modding platforms. None offer the combination of P2P distribution, federation, self-hosting, and in-engine integration that IC targets.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Platform</th><th>Model</th><th>Scale</th><th>In-game integration</th><th>P2P</th><th>Federation / Self-host</th><th>Dependencies</th><th>Open source</th></tr>
+</thead>
+<tbody>
+<tr><td><strong><a href="https://www.nexusmods.com">Nexus Mods</a></strong></td><td>Centralized web portal + Vortex mod manager. CDN distribution, throttled for free users. Revenue: premium membership + ads.</td><td>70.7M users, 4,297 games, 21B downloads. Largest modding platform.</td><td>None — external app (Vortex).</td><td>❌</td><td>❌</td><td>❌</td><td>Vortex client (GPL-3.0). Backend proprietary.</td></tr>
+<tr><td><strong><a href="https://mod.io">mod.io</a></strong></td><td>UGC middleware — embeddable SDKs (Unreal/Unity/C++), REST API, white-label UI. Revenue: B2B SaaS (free tier + enterprise).</td><td>2.5B downloads, 38M MAU, 332 live games. Backed by Tencent ($26M Series A).</td><td>Yes — SDK provides in-game browsing, download, moderation. Console-certified (PS/Xbox/Switch).</td><td>❌</td><td>❌</td><td>partial</td><td>SDKs open (MIT/Apache). Backend/service proprietary.</td></tr>
+<tr><td><strong><a href="https://modrinth.com">Modrinth</a></strong></td><td>Open-source mod registry. Centralized CDN. Revenue: ads + donations.</td><td>~100K projects, millions of monthly downloads. Growing fast.</td><td>Through third-party launchers (Prism, etc).</td><td>❌</td><td>❌</td><td>✅</td><td>Server (AGPL), API open.</td></tr>
+<tr><td><strong><a href="https://www.curseforge.com">CurseForge</a></strong> (Overwolf)</td><td>Centralized mod registry + CurseForge app. Revenue: Overwolf overlay ads.</td><td>Dominant for Minecraft, WoW, other Blizzard games.</td><td>CurseForge app, some launcher integrations.</td><td>❌</td><td>❌</td><td>✅</td><td>❌</td></tr>
+<tr><td><strong><a href="https://thunderstore.io">Thunderstore</a></strong></td><td>Open-source mod registry. Centralized CDN.</td><td>Popular for Risk of Rain 2, Lethal Company, Valheim.</td><td>Through r2modman manager.</td><td>❌</td><td>❌</td><td>✅</td><td>Server (AGPL-3.0).</td></tr>
+<tr><td><strong>Steam Workshop</strong></td><td>Integrated into Steam. Free hosting (subsidized by game sales revenue).</td><td>Thousands of games, billions of downloads.</td><td>Deep Steam integration.</td><td>❌</td><td>❌</td><td>❌</td><td>❌</td></tr>
+<tr><td><strong><a href="https://moddb.com">ModDB</a> / <a href="https://gamebanana.com">GameBanana</a></strong></td><td>Web portals — manual upload/download, community features, editorial content. Legacy platforms (2001–2002).</td><td>ModDB: 12.5K+ mods, 108M+ downloads. GameBanana: strong in Source Engine games.</td><td>None.</td><td>❌</td><td>❌</td><td>❌</td><td>❌</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Competitive landscape — P2P + Registry infrastructure:</strong></p>
+<p>The game mod platforms above are all centralized. A separate set of projects tackle P2P distribution at the infrastructure level, but none target game modding specifically. See <code>research/p2p-federated-registry-analysis.md</code> for a comprehensive standalone analysis of this space and its applicability beyond IC.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Project</th><th>Architecture</th><th>Domain</th><th>How it relates to IC Workshop</th></tr>
+</thead>
+<tbody>
+<tr><td><strong><a href="https://github.com/uber/kraken">Uber Kraken</a></strong> (6.6k★)</td><td>P2P Docker registry — custom BitTorrent-like protocol, Agent/Origin/Tracker/Build-Index. Pluggable storage (S3/GCS/HDFS).</td><td>Container images (datacenter)</td><td>Closest architectural match. Kraken’s Agent/Origin/Tracker/Build-Index maps to IC’s Peer/Seed-box/Tracker/Workshop-Index. IC’s P2P protocol design (peer selection policy, piece request strategy, connection state machine, announce cycle, bandwidth limiting) is directly informed by Kraken’s production experience — see protocol details above and <code>research/p2p-federated-registry-analysis.md</code> § “Uber Kraken — Deep Dive” for the full analysis. Key difference: Kraken is intra-datacenter (3s announce, 10Gbps links), IC is internet-scale (30s announce, residential connections).</td></tr>
+<tr><td><strong><a href="https://github.com/dragonflyoss/dragonfly">Dragonfly</a></strong> (3k★, CNCF Graduated)</td><td>P2P content distribution — Manager/Scheduler/Seed-Peer/Peer. Centralized evaluator-based scheduling with 4-dimensional peer scoring (<code>LoadQuality×0.6 + IDCAffinity×0.2 + LocationAffinity×0.1 + HostType×0.1</code>). DAG-based peer graph, back-to-source fallback. Persistent cache with replica management. Client rewritten in Rust (v2). Trail of Bits audited (2023).</td><td>Container images, AI models, artifacts</td><td>Same P2P-with-fallback pattern. Dragonfly’s hierarchical location affinity (<code>country|province|city|zone</code>), statistical bad-peer detection (three-sigma rule), capacity-aware scoring, persistent replica count, and download priority tiers are all patterns IC adapts. Key differences: Dragonfly uses centralized scheduling (IC uses BitTorrent swarm — simpler, more resilient to churn), Dragonfly is single-cluster with no cross-cluster P2P (IC is federated), Dragonfly requires K8s+Redis+MySQL (IC requires only SQLite). Dragonfly’s own RFC #3713 acknowledges piece-level selection is FCFS — BitTorrent’s rarest-first is already better. See <code>research/p2p-federated-registry-analysis.md</code> § “Dragonfly — CNCF P2P Distribution (Deep Dive)” for full analysis.</td></tr>
+<tr><td><strong>JFrog Artifactory P2P</strong> (proprietary)</td><td>Enterprise P2P distribution — mesh of nodes sharing cached binary artifacts within corporate networks.</td><td>Enterprise build artifacts</td><td>The direct inspiration for IC’s repository model. JFrog added P2P because CDN costs for large binaries at scale are unsustainable — same motivation as IC.</td></tr>
+<tr><td><strong>Blizzard NGDP/Agent</strong> (proprietary)</td><td>Custom P2P game patching — BitTorrent-based, CDN+P2P hybrid, integrated into Battle.net launcher.</td><td>Game patches (WoW, SC2, Diablo)</td><td>Closest gaming precedent. Proved P2P game content distribution works at massive scale. Proprietary, not a registry (no search/ratings/deps), not federated.</td></tr>
+<tr><td><strong>Homebrew / crates.io-index</strong></td><td>Git-backed package indexes. CDN for actual downloads.</td><td>Software packages</td><td>IC’s Phase 0–3 git-index is directly inspired by these. No P2P distribution.</td></tr>
+<tr><td><strong>IPFS</strong></td><td>Content-addressed P2P storage — any content gets a CID, any node can pin and serve it. DHT-based discovery. Bitswap protocol for block exchange with Decision Engine and Score Ledger.</td><td>General-purpose decentralized storage</td><td>Rejected as primary distribution protocol (too general, slow cold-content discovery, complex setup, poor game-quality UX). However, IPFS’s Bitswap protocol contributes significant patterns IC adopts: EWMA peer scoring with time-decaying reputation (Score Ledger), per-peer fairness caps (<code>MaxOutstandingBytesPerPeer</code>), want-have/want-block two-phase discovery, broadcast control (target proven-useful peers), dual WAN/LAN discovery (validates IC’s LAN party mode), delegated HTTP routing (validates IC’s registry-as-router), server/client mode separation, and batch provider announcements (Sweep Provider). IPFS’s 9-year-unresolved bandwidth limiting issue (#3065, 73 👍) proves bandwidth caps must ship day one. See <code>research/p2p-federated-registry-analysis.md</code> § “IPFS — Content-Addressed P2P Storage (Deep Dive)” for full analysis.</td></tr>
+<tr><td><strong>Microsoft Delivery Optimization</strong></td><td>Windows Update P2P — peers on the same network share update packages.</td><td>OS updates</td><td>Proves P2P works for verified package distribution at billions-of-devices scale. Proprietary, no registry model.</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>What’s novel about IC’s combination:</strong> No existing system — modding platform or infrastructure — combines (1) federated registry with repository types, (2) P2P distribution via BitTorrent/WebTorrent, (3) zero-infrastructure git-hosted bootstrap, (4) browser-compatible P2P via WebTorrent, (5) in-engine integration with lobby auto-download, and (6) fully open-source with self-hosting as a first-class use case. The closest architectural comparison is mod.io (embeddable SDK approach, in-game integration) but mod.io is a proprietary centralized SaaS — no P2P, no federation, no self-hosting. The closest distribution comparison is Uber Kraken (P2P registry) but it has no modding features. Each piece has strong precedent; the combination is new. The Workshop architecture is game-agnostic and could serve as a standalone platform — see the research analysis for exploration of this possibility.</p>
+<p><strong>Seeding infrastructure:</strong></p>
+<p>The Workshop doesn’t rely solely on player altruism for seeding:</p>
+<ul>
+<li><strong>Workshop seed server:</strong> A dedicated seed box (modest: a VPS with good upload bandwidth) that permanently seeds all Workshop content. This ensures new/unpopular packages are always downloadable even with zero player peers. Cost: ~$20-50/month for a VPS with 1TB+ storage and unmetered bandwidth.</li>
+<li><strong>Community seed volunteers:</strong> Players who opt in to extended seeding (beyond just while the game is running). Similar to how Linux mirror operators volunteer bandwidth. Could be incentivized with Workshop badges/reputation (D036/D037).</li>
+<li><strong>Mirror servers (federation):</strong> Community-hosted Workshop servers (D030 federation) also seed the content they host. Regional community servers naturally become regional seeds.</li>
+<li><strong>Lobby-optimized seeding:</strong> When a lobby host has required mods, the game client prioritizes seeding to joining players who are downloading. The “auto-download on lobby join” flow becomes: download from lobby peers first → swarm → HTTP fallback.</li>
+</ul>
+<p><strong>Privacy and security:</strong></p>
+<ul>
+<li><strong>IP visibility:</strong> Standard BitTorrent exposes peer IP addresses. This is the same exposure as any multiplayer game (players already see each other’s IPs or relay IPs). For privacy-sensitive users, HTTP-only mode avoids P2P IP exposure.</li>
+<li><strong>Content integrity:</strong> SHA-256 verification on complete packages catches any tampering. BitTorrent’s piece-level hashing catches corruption during transfer. Double-verified.</li>
+<li><strong>No metadata leakage:</strong> The tracker only knows which peers have which packages (by info hash). It doesn’t inspect content. Package contents are just game assets — sprites, audio, maps.</li>
+<li><strong>ISP throttling mitigation:</strong> BitTorrent traffic can be throttled by ISPs. Mitigations: protocol encryption (standard in modern BT clients), WebSocket transport (looks like web traffic), and HTTP fallback as ultimate escape. Settings allow forcing HTTP-only mode.</li>
+<li><strong>Resource exhaustion:</strong> Rate-limited seeding (configurable upload cap in settings). Players control how much bandwidth they donate. Default: 1MB/s upload, adjustable to 0 (leech-only, no seeding — discouraged but available).</li>
+</ul>
+<p><strong>P2P protocol design details:</strong></p>
+<p>The Workshop’s P2P engine is informed by production experience from Uber Kraken (Apache 2.0, 6.6k★) and Dragonfly (Apache 2.0, CNCF Graduated). Kraken distributes 1M+ container images/day across 15K+ hosts using a custom BitTorrent-inspired protocol; Dragonfly uses centralized evaluator-based scheduling at Alibaba scale. IC adapts Kraken’s connection management and Dragonfly’s scoring insights for internet-scale game mod distribution. See <code>research/p2p-federated-registry-analysis.md</code> for full architectural analyses of both systems.</p>
+<blockquote>
+<p><strong>Cross-pollination with IC netcode and community infrastructure.</strong> The Workshop P2P engine and IC’s netcode infrastructure (relay server, tracking server — <code>03-NETCODE.md</code>) share deep structural parallels: federation, heartbeat/TTL, rate control, connection state machines, observability, deployment model. Patterns flow both directions — netcode’s three-layer rate control and token-based liveness improve Workshop; Workshop’s EWMA scoring and multi-dimensional peer evaluation improve relay server quality tracking. A full cross-pollination analysis (including shared infrastructure opportunities: unified server binary, federation library, auth/identity layer) is in <code>research/p2p-federated-registry-analysis.md</code> § “Netcode ↔ Workshop Cross-Pollination.” Additional cross-pollination with D052/D053 (community servers, player profiles, trust-based filtering) is catalogued in D052 § “Cross-Pollination” — highlights include: two-key architecture for index signing and publisher identity, trust-based source filtering, server-side validation as a shared invariant, and trust-verified peer selection scoring.</p>
+</blockquote>
+<p><em>Peer selection policy (tracker-side):</em> The tracker returns a sorted peer list on each announce response. The sorting policy is <strong>pluggable</strong> — inspired by Kraken’s <code>assignmentPolicy</code> interface pattern. IC’s default policy prioritizes:</p>
+<ol>
+<li><strong>Seeders</strong> (completed packages — highest priority, like Kraken’s <code>completeness</code> policy)</li>
+<li><strong>Lobby peers</strong> (peers in the same multiplayer lobby — guaranteed to have the content, lowest latency)</li>
+<li><strong>Geographically close peers</strong> (same region/ASN — reduces cross-continent transfers)</li>
+<li><strong>High-completion peers</strong> (more pieces available — better utilization of each connection)</li>
+<li><strong>Random</strong> (fallback for ties — prevents herding)</li>
+</ol>
+<p>Peer handout limit: 30 peers per announce response (Kraken uses 50, but IC has fewer total peers per package). Community-hosted trackers can implement custom policies via the server config.</p>
+<p><em>Planned evolution — weighted multi-dimensional scoring (Phase 5+):</em> Dragonfly’s evaluator demonstrates that combining capacity, locality, and node type into a weighted score produces better peer selection than linear priority tiers. IC’s Phase 5+ peer selection evolves to a weighted scoring model informed by Dragonfly’s approach:</p>
+<pre><code>PeerScore = Capacity(0.4) + Locality(0.3) + SeedStatus(0.2) + LobbyContext(0.1)
+</code></pre>
+<ul>
+<li><strong>Capacity (weight 0.4):</strong> Spare bandwidth reported in announce (<code>1 - upload_bw_used / upload_bw_max</code>). Peers with more headroom score higher. Inspired by Dragonfly’s <code>LoadQuality</code> metric (which sub-decomposes into peak bandwidth, sustained load, and concurrency). IC uses a single utilization ratio — simpler, captures the same core insight.</li>
+<li><strong>Locality (weight 0.3):</strong> Hierarchical location matching. Clients self-report location as <code>continent|country|region|city</code> (4-level, pipe-delimited — adapted from Dragonfly’s 5-level <code>country|province|city|zone|cluster</code>). Score = <code>matched_prefix_elements / 4</code>. Two peers in the same city score 0.75; same country but different region: 0.5; same continent: 0.25.</li>
+<li><strong>SeedStatus (weight 0.2):</strong> Seed box = 1.0, completed seeder = 0.7, uploading leecher = 0.3. Inspired by Dragonfly’s <code>HostType</code> score (seed peers = 1.0, normal = 0.5).</li>
+<li><strong>LobbyContext (weight 0.1):</strong> Same lobby = 1.0, same game session = 0.5, no context = 0. IC-specific — Dragonfly has no equivalent (no lobby concept).</li>
+</ul>
+<p>The initial 5-tier priority system (above) ships first and is adequate for community scale. Weighted scoring is additive — the same pluggable policy interface supports both approaches. Community servers can configure their own weights or contribute custom scoring policies.</p>
+<p><em>Piece request strategy (client-side):</em> The engine uses <strong>rarest-first</strong> piece selection by default — a priority queue sorted by fewest peers having each piece. This is standard BitTorrent behavior, well-validated for internet conditions. Kraken also implements this as <code>rarestFirstPolicy</code>.</p>
+<ul>
+<li><strong>Pipeline limit:</strong> 3 concurrent piece requests per peer (matches Kraken’s default). Prevents overwhelming slow peers.</li>
+<li><strong>Piece request timeout:</strong> 8s base + 6s per MB of piece size (more generous than Kraken’s 4s+4s/MB, compensating for residential internet variance).</li>
+<li><strong>Endgame mode:</strong> When remaining pieces ≤ 5, the engine sends duplicate piece requests to multiple peers. This prevents the “last piece stall” — a well-known BitTorrent problem where the final piece’s sole holder is slow. Kraken implements this as <code>EndgameThreshold</code> — it’s essential.</li>
+</ul>
+<p><em>Connection state machine (client-side):</em></p>
+<pre><code>pending ──connect──► active ──timeout/error──► blacklisted
+   ▲                    │                          │
+   │                    │                          │
+   └──────────── cooldown (5min) ◄─────────────────┘
+</code></pre>
+<ul>
+<li><code>MaxConnectionsPerPackage: 8</code> (lower than Kraken’s 10 — residential connections have less bandwidth to share)</li>
+<li>Blacklisting: peers that produce zero useful throughput over 30 seconds are temporarily blacklisted (5-minute cooldown). Catches both dead peers and ISP-throttled connections.</li>
+<li><em>Sybil resistance:</em> Maximum 3 peers per /24 subnet in a single swarm. Prefer peers from diverse autonomous systems (ASNs) when possible. Sybil attacks can waste bandwidth but cannot serve corrupt data (SHA-256 integrity), so the risk ceiling is low.</li>
+<li><em>Statistical degradation detection (Phase 5+):</em> Inspired by Dragonfly’s <code>IsBadParent</code> algorithm — track per-peer piece transfer times. Peers whose last transfer exceeds <code>max(3 × mean, 2 × p95)</code> of observed transfer times are demoted in scoring (not hard-blacklisted — they may recover). For sparse data (&lt; 50 samples per peer), fall back to the simpler “20× mean” ratio check. Hard blacklist remains only for zero-throughput (complete failure). This catches degrading peers before they fail completely.</li>
+<li>Connections have TTL — idle connections are closed after 60 seconds to free resources.</li>
+</ul>
+<p><em>Announce cycle (client → tracker):</em> Clients announce to the tracker every <strong>30 seconds</strong> (Kraken uses 3s for datacenter — far too aggressive for internet). The tracker can dynamically adjust: faster intervals (10s) during active downloads, slower (60s) when seeding idle content. Max interval cap (120s) prevents unbounded growth. Announce payload includes: PeerID, package info hash, bitfield (what pieces the client has), upload/download speed.</p>
+<p><em>Size-based piece length:</em> Different package sizes use different piece lengths to balance metadata overhead against download granularity (inspired by Kraken’s <code>PieceLengths</code> config):</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Package Size</th><th>Piece Length</th><th>Rationale</th></tr>
+</thead>
+<tbody>
+<tr><td>&lt; 5MB</td><td>N/A — HTTP only</td><td>P2P overhead exceeds benefit</td></tr>
+<tr><td>5–50MB</td><td>256KB</td><td>Fine-grained. Good for partial recovery and slow connections.</td></tr>
+<tr><td>50–500MB</td><td>1MB</td><td>Balanced. Reasonable metadata overhead.</td></tr>
+<tr><td>&gt; 500MB</td><td>4MB</td><td>Reduced metadata overhead for large packages.</td></tr>
+</tbody>
+</table>
+</div>
+<p><em>Bandwidth limiting:</em> Configurable per-client in <code>settings.toml</code>. Residential users cannot have their connection saturated by mod seeding — this is a hard requirement that Kraken solves with <code>egress_bits_per_sec</code>/<code>ingress_bits_per_sec</code> and IC must match.</p>
+<pre><code class="language-toml"># settings.toml — P2P bandwidth configuration
+[workshop.p2p]
+max_upload_speed = "1 MB/s"          # Default. 0 = unlimited, "0 B/s" = no seeding
+max_download_speed = "unlimited"      # Default. Most users won't limit.
+seed_after_download = true            # Keep seeding while game is running
+seed_duration_after_exit = "30m"      # Background seeding after game closes (0 = none)
+cache_size_limit = "2 GB"             # LRU eviction when exceeded
+prefer_p2p = true                     # false = always use HTTP direct
+</code></pre>
+<p><em>Health checks:</em> Seed boxes implement heartbeat health checks (30s interval, 3 failures → unhealthy, 2 passes → healthy again — matching Kraken’s active health check parameters). The tracker marks peers as offline after 2× announce interval without contact. Unhealthy seed boxes are removed from the announce response until they recover.</p>
+<p><em>Content lifecycle:</em> Downloaded packages stay in the seeding pool for 30 minutes after the game exits (configurable via <code>seed_duration_after_exit</code>). This is longer than Kraken’s 5-minute <code>seeder_tti</code> because IC has fewer peers per package — each seeder is more valuable. Disk cache uses LRU eviction when over <code>cache_size_limit</code>. Packages currently in use or being seeded are never evicted.</p>
+<p><em>Download priority tiers:</em> Inspired by Dragonfly’s 7-level priority system (Level0–Level6), IC uses 3 priority tiers to enable QoS differentiation. Higher-priority downloads preempt lower-priority ones (pause background downloads, reallocate bandwidth and connection slots):</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Priority</th><th>Name</th><th>When Used</th><th>Behavior</th></tr>
+</thead>
+<tbody>
+<tr><td>1 (high)</td><td><code>lobby-urgent</code></td><td>Player joining a lobby that requires missing mods</td><td>Preempts all other downloads. Uses all available bandwidth</td></tr>
+<tr><td>2 (mid)</td><td><code>user-requested</code></td><td>Player manually downloads from Workshop browser</td><td>Normal bandwidth. Runs alongside background.</td></tr>
+<tr><td>3 (low)</td><td><code>background</code></td><td>Cache warming, auto-updates, subscribed mod pre-download</td><td>Bandwidth-limited. Paused when higher-priority active.</td></tr>
+</tbody>
+</table>
+</div>
+<p><em>Preheat / prefetch:</em> Adapted from Dragonfly’s preheat jobs (which pre-warm content on seed peers before demand). IC uses two prefetch patterns:</p>
+<ul>
+<li><strong>Lobby prefetch:</strong> When a lobby host sets required mods, the Workshop server (Phase 5+) can pre-seed those mods to seed boxes before players join. The lobby creation event is the prefetch signal. This ensures seed infrastructure is warm when players start downloading.</li>
+<li><strong>Subscription prefetch:</strong> Players can subscribe to Workshop publishers or resources. Subscribed content auto-downloads in the background at <code>background</code> priority. When a subscribed mod updates, the new version downloads automatically before the player next launches the game.</li>
+</ul>
+<p><em>Persistent replica count (Phase 5+):</em> Inspired by Dragonfly’s <code>PersistentReplicaCount</code>, the Workshop server tracks how many seed boxes hold each resource. If the count drops below a configurable threshold (default: 2 for popular resources, 1 for all others), the server triggers automatic re-seeding from HTTP origin. This ensures the “always available” guarantee — even if all player peers are offline, seed infrastructure maintains minimum replica coverage.</p>
+<p><strong>Early-phase bootstrap — Git-hosted package index:</strong></p>
+<p>Before the full Workshop server is built (Phase 4-5), a <strong>GitHub-hosted package index repository</strong> serves as the Workshop’s discovery and coordination layer. This is a well-proven pattern — Homebrew (<code>homebrew-core</code>), Rust (<code>crates.io-index</code>), Winget (<code>winget-pkgs</code>), and Nixpkgs all use a git repository as their canonical package index.</p>
+<p><strong>How it works:</strong></p>
+<p>A public GitHub repository (e.g., <code>iron-curtain/workshop-index</code>) contains YAML manifest files — one per package — that describe available resources, their versions, checksums, download locations, and dependencies. The repo itself contains NO asset files — only lightweight metadata.</p>
+<pre><code>workshop-index/                      # The git-hosted package index
+├── index.yaml                       # Consolidated index (single-fetch for game client)
+├── packages/
+│   ├── alice/
+│   │   └── soviet-march-music/
+│   │       ├── 1.0.0.yaml           # Per-version manifests
+│   │       └── 1.1.0.yaml
+│   ├── community-hd-project/
+│   │   └── allied-infantry-hd/
+│   │       └── 2.0.0.yaml
+│   └── ...
+├── sources.yaml                     # List of storage servers, mirrors, seed boxes
+└── .github/
+    └── workflows/
+        └── validate.yml             # CI: validates manifest format, checks SHA-256
+</code></pre>
+<p><strong>Per-package manifest (<code>packages/alice/soviet-march-music/1.1.0.yaml</code>):</strong></p>
+<pre><code class="language-yaml">name: soviet-march-music
+publisher: alice
+version: 1.1.0
+license: CC-BY-4.0
+description: "Soviet faction battle music pack"
+size: 48_000_000  # 48MB
+sha256: "a1b2c3d4..."
+
+sources:
+  - type: http
+    url: "https://github.com/iron-curtain/workshop-packages/releases/download/alice-soviet-march-music-1.1.0/soviet-march-music-1.1.0.icpkg"
+  - type: torrent
+    info_hash: "e5f6a7b8..."
+    trackers:
+      - "wss://tracker.ironcurtain.gg/announce"   # WebTorrent tracker
+      - "udp://tracker.ironcurtain.gg:6969/announce"
+
+dependencies:
+  community-hd-project/base-audio-lib: "^1.0"
+
+game_modules: [ra]
+tags: [music, soviet, battle]
+</code></pre>
+<p><strong><code>sources.yaml</code> — storage server and tracker registry:</strong></p>
+<pre><code class="language-yaml"># Where to find actual .icpkg files and BitTorrent peers.
+# The engine reads this to discover available download sources.
+# Adding an official server later = adding a line here.
+storage_servers:
+  - url: "https://github.com/iron-curtain/workshop-packages/releases"  # GitHub Releases (Phase 0-3)
+    type: github-releases
+    priority: 1
+  # - url: "https://cdn.ironcurtain.gg"   # Future: official CDN (Phase 5+)
+  #   type: http
+  #   priority: 1
+
+torrent_trackers:
+  - "wss://tracker.ironcurtain.gg/announce"      # WebTorrent (browser + desktop)
+  - "udp://tracker.ironcurtain.gg:6969/announce"  # UDP (desktop only)
+
+seed_boxes:
+  - "https://seed1.ironcurtain.gg"  # Permanent seeder for all packages
+</code></pre>
+<p><strong>Two client access patterns:</strong></p>
+<ol>
+<li><strong>HTTP fetch</strong> (game client default): The engine fetches <code>index.yaml</code> via <code>raw.githubusercontent.com</code> — a single GET request returns the full package listing. Fast, no git dependency, CDN-backed globally by GitHub. Cached locally with ETag/Last-Modified for incremental updates.</li>
+<li><strong>Git clone/pull</strong> (SDK, power users, offline): <code>git clone</code> the entire index repo. <code>git pull</code> for incremental atomic updates. Full offline browsing. Better for the SDK/editor and users who want to script against the index.</li>
+</ol>
+<p>The engine’s Workshop source configuration (D030) treats this as a new source type:</p>
+<pre><code class="language-toml"># settings.toml — Phase 0-3 configuration
+[[workshop.sources]]
+url = "https://github.com/iron-curtain/workshop-index"   # git-index source
+type = "git-index"
+priority = 1
+
+[[workshop.sources]]
+path = "C:/my-local-workshop"    # local development
+type = "local"
+priority = 2
+</code></pre>
+<p><strong>Community contribution workflow (manual):</strong></p>
+<ol>
+<li>Modder creates a <code>.icpkg</code> package and uploads it to GitHub Releases (or any HTTP host)</li>
+<li>Modder submits a PR to <code>workshop-index</code> adding a manifest YAML with SHA-256 and download URL</li>
+<li>GitHub Actions validates manifest format, checks SHA-256 against the download URL, verifies metadata</li>
+<li>Maintainers review and merge → package is discoverable to all players on next index fetch</li>
+<li>When the full Workshop server ships (Phase 4-5), published packages migrate automatically — the manifest format is the same</li>
+</ol>
+<p><strong>Git-index security hardening</strong> (see <code>06-SECURITY.md</code> § Vulnerabilities 20–21 and <code>research/workshop-registry-vulnerability-analysis.md</code> for full threat analysis):</p>
+<ul>
+<li><strong>Path-scoped PR validation:</strong> CI rejects PRs that modify files outside the submitter’s package directory. A PR adding <code>packages/alice/tanks/1.0.0.yaml</code> may ONLY modify files under <code>packages/alice/</code>. Modification of other paths → automatic CI failure.</li>
+<li><strong>CODEOWNERS:</strong> Maps <code>packages/alice/** @alice-github</code>. GitHub enforces that only the package owner can approve changes to their manifests.</li>
+<li><strong><code>manifest_hash</code> verification:</strong> CI downloads the <code>.icpkg</code>, extracts <code>manifest.yaml</code>, computes its SHA-256, and verifies it matches the <code>manifest_hash</code> field in the index entry. Prevents manifest confusion (registry entry diverging from package contents).</li>
+<li><strong>Consolidated <code>index.yaml</code> is CI-generated:</strong> Deterministically rebuilt from per-package manifests — never hand-edited. Any contributor can reproduce locally to verify integrity.</li>
+<li><strong>Index signing (Phase 3–4):</strong> CI signs the consolidated <code>index.yaml</code> with an Ed25519 key stored outside GitHub. Clients verify the signature. Repository compromise without the signing key produces unsigned (rejected) indexes. Uses the <strong>two-key architecture</strong> from D052 (§ Key Lifecycle): the CI-held key is the Signing Key (SK); a Recovery Key (RK), held offline by ≥2 maintainers, enables key rotation on compromise without breaking client trust chains. See D052 § “Cross-Pollination” for the full rationale.</li>
+<li><strong>Actions pinned to commit SHAs:</strong> All GitHub Actions referenced by SHA, not by mutable tag. Minimal <code>GITHUB_TOKEN</code> permissions. No secrets in the PR validation pipeline.</li>
+<li><strong>Branch protection on main:</strong> Require signed commits, no force-push, require PR reviews, no single-person merge. Repository must have ≥3 maintainers.</li>
+</ul>
+<p><strong>Automated publish via <code>ic</code> CLI (same UX as Phase 5+):</strong></p>
+<p>The <code>ic mod publish</code> command works against the git-index backend in Phase 0–3:</p>
+<ol>
+<li><code>ic mod publish</code> packages content into <code>.icpkg</code>, computes SHA-256</li>
+<li>Uploads <code>.icpkg</code> to GitHub Releases (via GitHub API, using a personal access token configured in <code>ic auth</code>)</li>
+<li>Generates the index manifest YAML from <code>mod.yaml</code> metadata</li>
+<li>Opens a PR to <code>workshop-index</code> with the manifest file</li>
+<li>Modder reviews the PR and confirms; GitHub Actions validates; maintainers merge</li>
+</ol>
+<p>The command is identical to Phase 5+ publishing (<code>ic mod publish</code>) — the only difference is the backend. When the Workshop server ships, <code>ic mod publish</code> targets the server instead. Modders don’t change their workflow.</p>
+<p><strong>Adding official storage servers later:</strong></p>
+<p>When official infrastructure is ready (Phase 5+), adding it is a one-line change to <code>sources.yaml</code> — no architecture change, no client update. The <code>sources.yaml</code> in the index repo is the single place that lists where packages can be downloaded from. Community mirrors and CDN endpoints are added the same way.</p>
+<p><strong>Phased progression:</strong></p>
+<ol>
+<li><strong>Phase 0–3 — Git-hosted index + GitHub Releases:</strong> The index repo is the Workshop. Players fetch <code>index.yaml</code> for discovery, download <code>.icpkg</code> files from GitHub Releases (2GB per file, free, CDN-backed). Community contributes via PR. Zero custom server code. Zero hosting cost.</li>
+<li><strong>Phase 3–4 — Add BitTorrent tracker:</strong> A minimal tracker binary goes live ($5-10/month VPS). Package manifests gain <code>torrent</code> source entries. P2P delivery begins for large packages. The index repo remains the discovery layer.</li>
+<li><strong>Phase 4–5 — Full Workshop server:</strong> Search, ratings, dependency resolution, FTS5, integrated P2P tracker. The Workshop server can either replace the git index or coexist alongside it (both are valid D030 sources). The git index remains available as a fallback and for community-hosted Workshop servers.</li>
+</ol>
+<p>The progression is smooth because the federated source model (D030) already supports multiple source types — <code>git-index</code>, <code>local</code>, <code>remote</code> (Workshop server), and <code>steam</code> all coexist in <code>settings.toml</code>.</p>
+<h3 id="freeware--legacy-cc-mirror-content-policy-gated-not-assumed"><a class="header" href="#freeware--legacy-cc-mirror-content-policy-gated-not-assumed">Freeware / Legacy C&amp;C Mirror Content (Policy-Gated, Not Assumed)</a></h3>
+<p>IC may choose to host <strong>official/community mirror packages</strong> for legacy/freeware C&amp;C content, but this is a <strong>policy-gated path</strong>, not a default assumption.</p>
+<p>Rules:</p>
+<ul>
+<li>Do <strong>not</strong> assume “freeware” automatically means “redistributable in IC Workshop mirrors.”</li>
+<li>The default onboarding path remains <strong>owned-install import</strong> via D069 (including out-of-the-box Remastered import when detected).</li>
+<li>Mirroring legacy/freeware C&amp;C assets in Workshop requires the D037 governance/legal policy gate:
+<ul>
+<li>documented rights basis / scope</li>
+<li>provenance labeling</li>
+<li>update/takedown process</li>
+<li>mirror operator responsibilities</li>
+</ul>
+</li>
+<li>If approved, mirrored packs must be clearly labeled (e.g., <code>official-mirror</code> / verified publisher/community mirror provenance) and remain optional content sources under D068/D069.</li>
+</ul>
+<p>This preserves legal clarity without blocking player onboarding or selective-install workflows.</p>
+<p>Rendered cutscene sequence bundles (D038 <code>Cinematic Sequence</code> content plus dialogue/portrait/audio/visual dependencies) are normal Workshop resources under the same D030/D049 rules. They should declare optional visual dependencies explicitly (for example HD/3D render-mode packs) and provide fallback-safe behavior so a scenario/campaign can still proceed when optional presentation packs are missing.</p>
+<h3 id="media-language-capability-metadata-cutscenes--voice--subtitles--cc"><a class="header" href="#media-language-capability-metadata-cutscenes--voice--subtitles--cc">Media Language Capability Metadata (Cutscenes / Voice / Subtitles / CC)</a></h3>
+<p>Workshop media packages that contain cutscenes, dubbed dialogue, subtitles, or closed captions should declare a <strong>language capability matrix</strong> so clients can make correct fallback decisions before playback.</p>
+<p>Examples of package-level metadata (exact field names can evolve, semantics are fixed):</p>
+<ul>
+<li><code>audio_languages[]</code> (dubbed/spoken audio languages available in this package)</li>
+<li><code>subtitle_languages[]</code> (subtitle text languages available)</li>
+<li><code>cc_languages[]</code> (closed-caption languages available)</li>
+<li><code>translation_source</code> (<code>human</code>, <code>machine</code>, <code>hybrid</code>)</li>
+<li><code>translation_quality_label</code> / trust label (e.g., <code>creator-verified</code>, <code>community-reviewed</code>, <code>machine-translated</code>)</li>
+<li><code>coverage</code> (<code>full</code>, <code>partial</code>, or percentage by track/group)</li>
+<li><code>requires_original_audio_pack</code> (for subtitle/CC-only translation packs)</li>
+</ul>
+<p>Rules:</p>
+<ul>
+<li>Language capability metadata must be <strong>accurate enough for fallback selection</strong> (D068/D069) and player trust.</li>
+<li>Machine-translated subtitle/CC resources must be <strong>clearly labeled</strong> in Workshop listings, Installed Content Manager, and playback fallback notices.</li>
+<li>Missing language support must never block campaign progression; D068 fallback-safe behavior remains the rule.</li>
+<li>Media language metadata is <strong>presentation scope</strong> and does not affect gameplay compatibility fingerprints.</li>
+</ul>
+<p>Workshop UX implications:</p>
+<ul>
+<li>Browse/search filters may include language availability badges (e.g., <code>Audio: EN</code>, <code>Subs: EN/HE</code>, <code>CC: EN/AR</code>).</li>
+<li>Package details should show translation source/trust labels and coverage.</li>
+<li>Install/enable flows should warn when a selected package does not satisfy the player’s preferred cutscene voice/subtitle/CC preferences.</li>
+</ul>
+<p>Operator/admin implications:</p>
+<ul>
+<li>The Workshop admin panel (M9) should surface language metadata and translation-source labels in package review/provenance screens so mislabeled machine translations or incomplete language claims can be corrected/quarantined.</li>
+</ul>
+<h3 id="workshop-operator--admin-panel-phased"><a class="header" href="#workshop-operator--admin-panel-phased">Workshop Operator / Admin Panel (Phased)</a></h3>
+<p>A full Workshop platform needs a dedicated <strong>operator/admin panel</strong> (web UI or equivalent admin surface), with CLI parity for automation.</p>
+<h4 id="phase-45--m8--minimal-operator-panel-p-scale"><a class="header" href="#phase-45--m8--minimal-operator-panel-p-scale">Phase 4–5 / <code>M8</code> — Minimal Operator Panel (<code>P-Scale</code>)</a></h4>
+<p>Purpose: keep the Workshop running and recoverable before the full creator ecosystem matures.</p>
+<p>Minimum operator capabilities:</p>
+<ul>
+<li>ingest/publish job queue status (pending / failed / retry)</li>
+<li>package hash verification status and retry actions</li>
+<li>source/index health (git-index sync, HTTP origins, tracker health)</li>
+<li>metadata/index rebuild and cache maintenance actions</li>
+<li>storage/CAS usage summary + GC triggers</li>
+<li>basic audit log of operator actions</li>
+</ul>
+<h4 id="phase-6a--m9--full-workshop-admin-panel-p-scale"><a class="header" href="#phase-6a--m9--full-workshop-admin-panel-p-scale">Phase 6a / <code>M9</code> — Full Workshop Admin Panel (<code>P-Scale</code>)</a></h4>
+<p>Purpose: support moderation, provenance, release-channel controls, and ecosystem governance at scale.</p>
+<p>Required admin capabilities:</p>
+<ul>
+<li>moderation queue (reports, quarantines, takedowns, reinstatements)</li>
+<li>provenance/license review queue and publish-readiness blockers</li>
+<li>signature/verification status dashboards (manifest/index/release metadata authenticity)</li>
+<li>dependency impact view (“what breaks if this package is quarantined/yanked?”)</li>
+<li>release channel controls (<code>private</code> / <code>beta</code> / <code>release</code>)</li>
+<li>rollback/quarantine tools and incident notes</li>
+<li>role-based access control (operators/moderators/admins)</li>
+<li>append-only audit trail / action history</li>
+</ul>
+<h4 id="phase-7--m11--governance--policy-analytics"><a class="header" href="#phase-7--m11--governance--policy-analytics">Phase 7 / <code>M11</code> — Governance &amp; Policy Analytics</a></h4>
+<ul>
+<li>moderation workload metrics and SLA views</li>
+<li>abuse/fraud trend dashboards (feedback reward farming, report brigading, publisher abuse)</li>
+<li>policy reporting exports for D037 governance transparency commitments</li>
+</ul>
+<p>This is a platform-operations requirement, not optional UI polish.</p>
+<p><strong>Industry precedent:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Project</th><th>Index Mechanism</th><th>Scale</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Homebrew</strong> (<code>homebrew-core</code>)</td><td>Git repo of Ruby formulae; <code>brew update</code> = <code>git pull</code></td><td>~7K packages</td></tr>
+<tr><td><strong>Rust crates.io</strong> (<code>crates.io-index</code>)</td><td>Git repo of JSON metadata; sparse HTTP fetch added later</td><td>~150K crates</td></tr>
+<tr><td><strong>Winget</strong> (<code>winget-pkgs</code>)</td><td>Git repo of YAML manifests; community PRs</td><td>~5K packages</td></tr>
+<tr><td><strong>Nixpkgs</strong></td><td>Git repo of Nix expressions</td><td>~100K packages</td></tr>
+<tr><td><strong>Scoop</strong> (Windows)</td><td>Git repo (“buckets”) of JSON manifests</td><td>~5K packages</td></tr>
+</tbody>
+</table>
+</div>
+<p>All of these started with git-as-index and some (crates.io) later augmented with sparse HTTP fetching for performance at scale. The same progression applies here — git index works perfectly for a community of hundreds to low thousands, and can be complemented (not replaced) by a Workshop API when scale demands it.</p>
+<p><strong>Workshop server architecture with P2P:</strong></p>
+<pre><code>┌─────────────────────────────────────────────────────┐
+│                  Workshop Server                     │
+│  ┌─────────────┐  ┌──────────┐  ┌────────────────┐ │
+│  │  Metadata    │  │ Tracker  │  │  HTTP Fallback │ │
+│  │  (SQLite +   │  │ (BT/WT   │  │  (S3/R2 or     │ │
+│  │   FTS5)      │  │  peer     │  │   local disk)  │ │
+│  │             │  │  coord)   │  │               │ │
+│  └─────────────┘  └──────────┘  └────────────────┘ │
+│        ▲               ▲               ▲            │
+│        │ search/browse │ announce/     │ GET .icpkg  │
+│        │ deps/ratings  │ scrape        │ (fallback)  │
+└────────┼───────────────┼───────────────┼────────────┘
+         │               │               │
+    ┌────┴────┐    ┌─────┴─────┐   ┌─────┴─────┐
+    │ ic CLI  │    │  Players  │   │ Seed Box  │
+    │ Browser │    │  (seeds)  │   │ (always   │
+    └─────────┘    └───────────┘   │  seeds)   │
+                                   └───────────┘
+</code></pre>
+<p>All three components (metadata, tracker, HTTP fallback) run in the same binary — “just a Rust binary” deployment philosophy. Community self-hosters get the full stack with one executable.</p>
+<h3 id="rust-implementation"><a class="header" href="#rust-implementation">Rust Implementation</a></h3>
+<p><strong>BitTorrent client library:</strong> The <code>ic</code> CLI and game client embed a BitTorrent client. Rust options:</p>
+<ul>
+<li><a href="https://github.com/ikatson/rqbit"><code>librqbit</code></a> — pure Rust, async (tokio), actively maintained, supports WebTorrent</li>
+<li><a href="https://github.com/mandreyel/cratetorrent"><code>cratetorrent</code></a> — pure Rust, educational focus</li>
+<li>Custom minimal client — only needs download + seed + tracker announce; no DHT, no PEX needed for a controlled Workshop ecosystem</li>
+</ul>
+<p><strong>BitTorrent tracker:</strong> Embeddable in the Workshop server binary. Rust options:</p>
+<ul>
+<li><a href="https://github.com/greatest-ape/aquatic"><code>aquatic</code></a> — high-performance Rust tracker</li>
+<li>Custom minimal tracker — HTTP announce/scrape endpoints, peer list management. The Workshop server already has SQLite; peer lists are another table.</li>
+</ul>
+<p><strong>WebTorrent:</strong> <code>librqbit</code> has WebTorrent support. The WASM build would use the WebRTC transport.</p>
+<h3 id="rationale"><a class="header" href="#rationale">Rationale</a></h3>
+<ul>
+<li><strong>Cost sustainability:</strong> P2P reduces Workshop hosting costs by 90%+. A community project cannot afford CDN bills that scale with popularity. A tracker + seed box for $30-50/month serves unlimited download volume.</li>
+<li><strong>Fits federation (D030):</strong> P2P is another source in the federated model. The virtual repository queries metadata from remote servers, then downloads content from the swarm — same user experience, different transport.</li>
+<li><strong>Fits “no single point of failure” (D037):</strong> P2P is inherently resilient. If the Workshop server goes down, peers keep sharing. Content already downloaded is always available.</li>
+<li><strong>Fits SHA-256 integrity (D030):</strong> P2P needs exactly the integrity verification already designed. Same <code>manifest.yaml</code> checksums, same <code>ic.lock</code> pinning, same verification on install.</li>
+<li><strong>Fits WASM target (invariant #10):</strong> WebTorrent enables browser-to-browser P2P. Desktop and browser clients interoperate. No second-class platform.</li>
+<li><strong>Popular resources get faster:</strong> More downloads → more seeders → faster downloads for everyone. The opposite of CDN economics where popularity increases cost.</li>
+<li><strong>Self-hosting scales:</strong> Community Workshop servers (D030 federation) benefit from the same P2P economics. A small community server needs only a $5 VPS — the community’s players provide the bandwidth.</li>
+<li><strong>Privacy-responsible:</strong> IP exposure is equivalent to any multiplayer game. HTTP-only mode available for privacy-sensitive users. No additional surveillance beyond standard BitTorrent protocol.</li>
+<li><strong>Proven technology:</strong> BitTorrent has been distributing large files reliably for 20+ years. Blizzard used it for WoW patches. The protocol is well-understood, well-documented, and well-implemented.</li>
+</ul>
+<h3 id="alternatives-considered"><a class="header" href="#alternatives-considered">Alternatives Considered</a></h3>
+<ul>
+<li><strong>Centralized CDN only</strong> (rejected — financially unsustainable for a donation-funded community project. A popular 500MB mod downloaded 10K times = 5TB = $50-450/month. P2P reduces this to near-zero marginal cost)</li>
+<li><strong>IPFS</strong> (rejected as primary distribution protocol — slow cold-content discovery, complex setup, ecosystem declining, content pinning is expensive, poor game-quality UX. However, multiple Bitswap protocol design patterns adopted: EWMA peer scoring, per-peer fairness caps, want-have/want-block two-phase discovery, broadcast control, dual WAN/LAN discovery, delegated HTTP routing, batch provider announcements. See competitive landscape table above and research deep dive)</li>
+<li><strong>Custom P2P protocol</strong> (rejected — massive engineering effort with no advantage over BitTorrent’s 20-year-proven protocol)</li>
+<li><strong>Git LFS</strong> (rejected — 1GB free then paid; designed for source code, not binary asset distribution; no P2P)</li>
+<li><strong>Steam Workshop only</strong> (rejected — platform lock-in, Steam subsidizes hosting from game sales revenue we don’t have, excludes non-Steam/WASM builds)</li>
+<li><strong>GitHub Releases only</strong> (rejected — works for bootstrap but no search, ratings, dependency resolution, P2P, or lobby auto-download. Adequate interim solution, not long-term architecture)</li>
+<li><strong>HTTP-only with community mirrors</strong> (rejected — still fragile. Mirrors are one operator away from going offline. P2P is inherently more resilient than any number of mirrors)</li>
+<li><strong>No git index / custom server from day one</strong> (rejected — premature complexity. A git-hosted index costs $0 and ships with the first playable build. Custom server code can wait until Phase 4-5 when the community is large enough to need search/ratings)</li>
+</ul>
+<h3 id="phase"><a class="header" href="#phase">Phase</a></h3>
+<ul>
+<li><strong>Phase 0–3:</strong> Git-hosted package index (<code>workshop-index</code> repo) + GitHub Releases for <code>.icpkg</code> storage. Zero infrastructure cost. Community contributes via PR. Game client fetches <code>index.yaml</code> for discovery.</li>
+<li><strong>Phase 3–4:</strong> Add BitTorrent tracker ($5-10/month VPS). Package manifests gain <code>torrent</code> source entries. P2P delivery begins for large packages. Git index remains the discovery layer.</li>
+<li><strong>Phase 4–5:</strong> Full Workshop server with integrated BitTorrent/WebTorrent tracker, search, ratings, dependency resolution, P2P delivery, HTTP fallback via S3-compatible storage. Git index can coexist or be subsumed.</li>
+<li><strong>Phase 6a:</strong> Federation (community servers join the P2P swarm), Steam Workshop as additional source, Publisher workflows, and full admin/operator panel + signature/provenance hardening</li>
+<li><strong>Format recommendations</strong> apply from Phase 0 — all first-party content uses the recommended canonical formats</li>
+</ul>
+<hr>
+<hr>
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../../decisions/09e/D046-community-platform.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../../decisions/09e/D053-player-profile.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../../decisions/09e/D046-community-platform.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../../decisions/09e/D053-player-profile.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../../mark-09e88c2c.min.js"></script>
+        <script src="../../searcher-c2a407aa.js"></script>
+
+        <script src="../../clipboard-1626706a.min.js"></script>
+        <script src="../../highlight-abc7f01d.js"></script>
+        <script src="../../book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

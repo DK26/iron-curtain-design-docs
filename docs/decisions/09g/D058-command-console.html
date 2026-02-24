@@ -1,0 +1,1559 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>D058 — Command Console - Iron Curtain — Design Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Design docs for a Rust-native Red Alert RTS engine">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../../css/general-2459343d.css">
+        <link rel="stylesheet" href="../../css/chrome-ae938929.css">
+        <link rel="stylesheet" href="../../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../../searchindex-61d2369b.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../../toc-1553b04b.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Iron Curtain — Design Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs/edit/main/src/decisions/09g/D058-command-console.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h2 id="d058-in-game-command-console--unified-chat-and-command-system"><a class="header" href="#d058-in-game-command-console--unified-chat-and-command-system">D058: In-Game Command Console — Unified Chat and Command System</a></h2>
+<p><strong>Status:</strong> Settled
+<strong>Scope:</strong> <code>ic-ui</code> (chat input, dev console UI), <code>ic-game</code> (CommandDispatcher, wiring), <code>ic-sim</code> (order pipeline), <code>ic-script</code> (Lua execution)
+<strong>Phase:</strong> Phase 3 (Game Chrome — chat + basic commands), Phase 4 (Lua console), Phase 6a (mod-registered commands)
+<strong>Depends on:</strong> D004 (Lua Scripting), D006 (Pluggable Networking — commands produce PlayerOrders that flow through NetworkModel), D007 (Relay Server — server-enforced rate limits), D012 (Order Validation), D033 (QoL Toggles), D036 (Achievements), D055 (Ranked Matchmaking — competitive integrity)</p>
+<p><strong>Crate ownership:</strong> The <code>CommandDispatcher</code> lives in <code>ic-game</code> — it cannot live in <code>ic-sim</code> (would violate Invariant #1: no I/O in the simulation) and is too cross-cutting for <code>ic-ui</code> (CLI and scripts also use it). <code>ic-game</code> is the wiring crate that depends on all library crates, making it the natural home for the dispatcher.
+<strong>Inspired by:</strong> Mojang’s Brigadier (command tree architecture), Factorio (unified chat+command UX), Source Engine (developer console + cvars)</p>
+<p><strong>Revision note (2026-02-22):</strong> Revised to formalize camera bookmarks (<code>/bookmark_set</code>, <code>/bookmark</code>) as a first-class cross-platform navigation feature with explicit desktop/touch UI affordances, and to clarify that mobile tempo comfort guidance around <code>/speed</code> is advisory UI only (no new simulation/network authority path). This revision was driven by mobile/touch UX design work and cross-device tutorial integration (see D065 and <code>research/mobile-rts-ux-onboarding-community-platform-analysis.md</code>).</p>
+<h3 id="decision-capsule-llmrag-summary"><a class="header" href="#decision-capsule-llmrag-summary">Decision Capsule (LLM/RAG Summary)</a></h3>
+<ul>
+<li><strong>Status:</strong> Settled (Revised 2026-02-22)</li>
+<li><strong>Phase:</strong> Phase 3 (chat + basic commands), Phase 4 (Lua console), Phase 6a (mod-registered commands)</li>
+<li><strong>Canonical for:</strong> Unified chat/command console design, command dispatch model, cvar/command UX, and competitive-integrity command policy</li>
+<li><strong>Scope:</strong> <code>ic-ui</code> text input/dev console UI, <code>ic-game</code> command dispatcher, command→order routing, Lua console integration, mod command registration</li>
+<li><strong>Decision:</strong> IC uses a <strong>unified chat/command input</strong> (Brigadier-style command tree) as the primary interface, plus an optional developer console overlay for power users; both share the same dispatcher and permission/rule system.</li>
+<li><strong>Why:</strong> Unified input is more discoverable and portable, while a separate power-user console still serves advanced workflows (multi-line input, cvars, debugging, admin tasks).</li>
+<li><strong>Non-goals:</strong> Chat-only magic-string commands with no structured parser; a desktop-only tilde-console model that excludes touch/console platforms.</li>
+<li><strong>Invariants preserved:</strong> <code>CommandDispatcher</code> lives outside <code>ic-sim</code>; commands affecting gameplay flow through normal validated order/network paths; competitive integrity is enforced by permissions/rules, not hidden UI.</li>
+<li><strong>Defaults / UX behavior:</strong> Enter opens the primary text field; <code>/</code> routes to commands; command/help/autocomplete behavior is shared across unified input and console overlay.</li>
+<li><strong>Mobile / accessibility impact:</strong> Command access has GUI/touch-friendly paths; camera bookmarks are first-class across desktop and touch; mobile tempo guidance around <code>/speed</code> is advisory UI only.</li>
+<li><strong>Security / Trust impact:</strong> Rate limits, permissions, anti-trolling measures, and ranked restrictions are part of the command system design.</li>
+<li><strong>Public interfaces / types / commands:</strong> Brigadier-style command tree, cvars, <code>/bookmark_set</code>, <code>/bookmark</code>, <code>/speed</code>, mod-registered commands (<code>.iccmd</code>, Lua registration as defined in body)</li>
+<li><strong>Affected docs:</strong> <code>src/03-NETCODE.md</code>, <code>src/06-SECURITY.md</code>, <code>src/17-PLAYER-FLOW.md</code>, <code>src/decisions/09g-interaction.md</code> (D059/D065)</li>
+<li><strong>Revision note summary:</strong> Added formal camera bookmark command/UI semantics and clarified mobile tempo guidance is advisory-only with no new authority path.</li>
+<li><strong>Keywords:</strong> command console, unified chat commands, brigadier, cvars, bookmarks, speed command, mod commands, competitive integrity, mobile command UX, diagnostic overlay, net_graph, /diag, real-time observability</li>
+</ul>
+<h3 id="problem"><a class="header" href="#problem">Problem</a></h3>
+<p>IC needs two text-input capabilities during gameplay:</p>
+<ol>
+<li><strong>Player chat</strong> — team messages, all-chat, whispers in multiplayer</li>
+<li><strong>Commands</strong> — developer cheats, server administration, configuration tweaks, Lua scripting, mod-injected commands</li>
+</ol>
+<p>These could be separate systems (Source Engine’s tilde console vs. in-game chat) or unified (Factorio’s <code>/</code> prefix in chat, Minecraft’s Brigadier-powered <code>/</code> system). The choice affects UX, security, trolling surface, modding ergonomics, and platform portability.</p>
+<h3 id="how-other-games-handle-this"><a class="header" href="#how-other-games-handle-this">How Other Games Handle This</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Game/Engine</th><th>Architecture</th><th>Console Type</th><th>Cheat Consequence</th><th>Mod Commands</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Factorio</strong></td><td>Unified: chat + <code>/command</code> + <code>/c lua</code></td><td>Same input field, <code>/</code> prefix routes to commands</td><td><code>/c</code> permanently disables achievements for the save</td><td>Mods register Lua commands via <code>commands.add_command()</code></td></tr>
+<tr><td><strong>Minecraft</strong></td><td>Unified: chat + Brigadier <code>/command</code></td><td>Same input field, Brigadier tree parser</td><td>Commands in survival may disable advancements</td><td>Mods inject nodes into the Brigadier command tree</td></tr>
+<tr><td><strong>Source Engine (CS2, HL2)</strong></td><td>Separate: <code>~</code> developer console + team chat</td><td>Dedicated half-screen overlay (tilde key)</td><td><code>sv_cheats 1</code> flags match</td><td>Server plugins register ConCommands</td></tr>
+<tr><td><strong>StarCraft 2</strong></td><td>No text console; debug tools = GUI</td><td>Chat only; no command input</td><td>N/A (no player-accessible console)</td><td>Limited custom UI via Galaxy editor</td></tr>
+<tr><td><strong>OpenRA</strong></td><td>GUI-only: DevMode checkbox menu</td><td>No text console; toggle flags in GUI panel</td><td>Flags replay as cheated</td><td>No mod-injected commands</td></tr>
+<tr><td><strong>Age of Empires 2/4</strong></td><td>Chat-embedded: type codes in chat box</td><td>Same input field, magic strings</td><td>Flags game; disables achievements</td><td>No mod commands</td></tr>
+<tr><td><strong>Arma 3 / OFP</strong></td><td>Separate: debug console (editor) + chat</td><td>Dedicated windowed Lua/SQF console</td><td>Editor-only; not in normal gameplay</td><td>Full SQF/Lua API access</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Key patterns observed:</strong></p>
+<ol>
+<li>
+<p><strong>Unified wins for UX.</strong> Factorio and Minecraft prove that a single input field with prefix routing (<code>/</code> = command, no prefix = chat) is more discoverable and less jarring than a separate overlay. Players don’t need to remember two different keybindings. Tab completion works everywhere.</p>
+</li>
+<li>
+<p><strong>Separate console wins for power users.</strong> Source Engine’s tilde console supports multi-line input, scrollback history, cvar browsing, and autocomplete — features that are awkward in a single-line chat field. Power users (modders, server admins, developers) need this.</p>
+</li>
+<li>
+<p><strong>Achievement/ranking consequences are universal.</strong> Every game that supports both commands and competitive play permanently marks saves/matches when cheats are used. No exceptions.</p>
+</li>
+<li>
+<p><strong>Trolling via chat is a solved problem.</strong> Muting, ignoring, rate limiting, and admin tools handle chat abuse. The command system introduces a new trolling surface only if commands can affect other players — which is controlled by permissions, not by hiding the console.</p>
+</li>
+<li>
+<p><strong>Platform portability matters.</strong> A tilde console assumes a physical keyboard. Mobile and console platforms need command access through a GUI or touch-friendly interface.</p>
+</li>
+</ol>
+<h3 id="decision"><a class="header" href="#decision">Decision</a></h3>
+<p>IC uses a <strong>unified chat/command system</strong> with a <strong>Brigadier-style command tree</strong>, plus an optional <strong>developer console overlay</strong> for power users. The two interfaces share the same command dispatcher — they differ only in presentation.</p>
+<h4 id="the-unified-input-primary"><a class="header" href="#the-unified-input-primary">The Unified Input (Primary)</a></h4>
+<p>A single text input field, opened by pressing Enter (configurable). Prefix routing:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Input</th><th>Behavior</th></tr>
+</thead>
+<tbody>
+<tr><td><code>hello team</code></td><td>Team chat message (default)</td></tr>
+<tr><td><code>/help</code></td><td>Execute command</td></tr>
+<tr><td><code>/give 5000</code></td><td>Execute command with arguments</td></tr>
+<tr><td><code>/s hello everyone</code></td><td>Shout to all players (all-chat)</td></tr>
+<tr><td><code>/w PlayerName msg</code></td><td>Whisper to specific player</td></tr>
+<tr><td><code>/c game.player.print(42)</code></td><td>Execute Lua (if permitted)</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong><code>/s</code> vs <code>/all</code> distinction:</strong> <code>/s &lt;message&gt;</code> is a <strong>one-shot</strong> all-chat message — it sends the rest of the line to all players without changing your active channel. <code>/all</code> (D059 § Channel Switching) is a <strong>sticky</strong> channel switch — it changes your default channel to All so subsequent messages go to all-chat until you switch back. Same distinction as IRC’s <code>/say</code> vs <code>/join</code>.</p>
+<p>This matches Factorio’s model exactly — proven UX with millions of users. The <code>/</code> prefix is universal (Minecraft, Factorio, Discord, IRC, MMOs). No learning curve.</p>
+<p><strong>Tab completion</strong> powered by the command tree. Typing <code>/he</code> and pressing Tab suggests <code>/help</code>. Typing <code>/give </code> suggests valid argument types. The Brigadier-style tree generates completions automatically — mods that register commands get tab completion for free.</p>
+<p><strong>Command visibility.</strong> Following Factorio’s principle: by default, all commands executed by any player are visible to all players in the chat log. This prevents covert cheating in multiplayer. Players see <code>[Admin] /give 5000</code> or <code>[Player] /reveal_map</code>. Lua commands (<code>/c</code>) can optionally use <code>/sc</code> (silent command) — but only for the host/admin, and the fact that a silent command was executed is still logged (the output is hidden, not the execution).</p>
+<h4 id="the-developer-console-secondary-power-users"><a class="header" href="#the-developer-console-secondary-power-users">The Developer Console (Secondary, Power Users)</a></h4>
+<p>Toggled by <code>~</code> (tilde/grave, configurable). A half-screen overlay rendered via <code>bevy_egui</code>, inspired by Source Engine:</p>
+<ul>
+<li><strong>Multi-line input</strong> with syntax highlighting for Lua</li>
+<li><strong>Scrollable output history</strong> with filtering (errors, warnings, info, chat)</li>
+<li><strong>Cvar browser</strong> — searchable list of all configuration variables with current values, types, and descriptions</li>
+<li><strong>Autocomplete</strong> — same Brigadier tree, but with richer display (argument types, descriptions, permission requirements)</li>
+<li><strong>Command history</strong> — up/down arrow scrolls through previous commands, persisted across sessions in SQLite (D034)</li>
+</ul>
+<p>The developer console dispatches commands through the <strong>same <code>CommandDispatcher</code></strong> as the chat input. It provides a better interface for the same underlying system — not a separate system with different commands.</p>
+<p><strong>Compile-gated sections:</strong> The Lua console (<code>/c</code>, <code>/sc</code>, <code>/mc</code>) and debug commands are behind <code>#[cfg(feature = "dev-tools")]</code> in release builds. Regular players see only the chat/command interface. The tilde console is always available but shows only non-dev commands unless dev-tools is enabled.</p>
+<h4 id="command-tree-architecture-brigadier-style"><a class="header" href="#command-tree-architecture-brigadier-style">Command Tree Architecture (Brigadier-Style)</a></h4>
+<p>Already identified in <code>04-MODDING.md</code> as the design target. Formalized here:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// The source of a command — who is executing it and in what context.
+pub struct CommandSource {
+    pub origin: CommandOrigin,
+    pub permissions: PermissionLevel,
+    pub player_id: Option&lt;PlayerId&gt;,
+}
+
+pub enum CommandOrigin {
+    /// Typed in the in-game chat/command input
+    ChatInput,
+    /// Typed in the developer console overlay
+    DevConsole,
+    /// Executed from the CLI tool (`ic` binary)
+    Cli,
+    /// Executed from a Lua script (mission/mod)
+    LuaScript { script_id: String },
+    /// Executed from a WASM module
+    WasmModule { module_id: String },
+    /// Executed from a configuration file
+    ConfigFile { path: String },
+}
+
+/// How the player physically invoked the action — the hardware/UI input method.
+/// Attached to PlayerOrder (not CommandSource) for replay analysis and APM tracking.
+/// This is a SEPARATE concept from CommandOrigin: CommandOrigin tracks WHERE the
+/// command was dispatched (chat input, dev console, Lua script); InputSource tracks
+/// HOW the player physically triggered it (keyboard shortcut, mouse click, etc.).
+///
+/// NOTE: InputSource is client-reported and advisory only. A modified open-source
+/// client can fake any InputSource value. Replay analysis tools should treat it as
+/// a hint, not proof. The relay server can verify ORDER VOLUME (spoofing-proof)
+/// but not input source (client-reported). See "Competitive Integrity Principles"
+/// § CI-3 below.
+pub enum InputSource {
+    /// Triggered via a keyboard shortcut / hotkey
+    Keybinding,
+    /// Triggered via mouse click on the game world or GUI button
+    MouseClick,
+    /// Typed as a chat/console command (e.g., `/move 120,80`)
+    ChatCommand,
+    /// Loaded from a config file or .iccmd script on startup
+    ConfigFile,
+    /// Issued by a Lua or WASM script (mission/mod automation)
+    Script,
+    /// Touchscreen input (mobile/tablet)
+    Touch,
+    /// Controller input (Steam Deck, console)
+    Controller,
+}
+
+pub enum PermissionLevel {
+    /// Regular player — chat, help, basic status commands
+    Player,
+    /// Game host — server config, kick/ban, dev mode toggle
+    Host,
+    /// Server administrator — full server management
+    Admin,
+    /// Developer — debug commands, Lua console, fault injection
+    Developer,
+}
+
+/// A typed argument parser — Brigadier's `ArgumentType&lt;T&gt;` in Rust.
+pub trait ArgumentType: Send + Sync {
+    type Output;
+    fn parse(&amp;self, reader: &amp;mut StringReader) -&gt; Result&lt;Self::Output, CommandError&gt;;
+    fn suggest(&amp;self, context: &amp;CommandContext, builder: &amp;mut SuggestionBuilder);
+    fn examples(&amp;self) -&gt; &amp;[&amp;str];
+}
+
+/// Built-in argument types.
+pub struct IntegerArg { pub min: Option&lt;i64&gt;, pub max: Option&lt;i64&gt; }
+pub struct FloatArg { pub min: Option&lt;f64&gt;, pub max: Option&lt;f64&gt; }
+pub struct StringArg { pub kind: StringKind }  // Word, Quoted, Greedy
+pub struct BoolArg;
+pub struct PlayerArg;           // autocompletes to connected player names
+pub struct UnitTypeArg;         // autocompletes to valid unit type names from YAML rules
+pub struct PositionArg;         // parses "x,y" or "x,y,z" coordinates
+pub struct ColorArg;            // named color or R,G,B
+
+/// The command dispatcher — shared by chat input, dev console, CLI, and scripts.
+pub struct CommandDispatcher {
+    root: CommandNode,
+}
+
+impl CommandDispatcher {
+    /// Register a command. Mods call this via Lua/WASM API.
+    pub fn register(&amp;mut self, node: CommandNode);
+
+    /// Parse input into a command + arguments. Does NOT execute.
+    pub fn parse(&amp;self, input: &amp;str, source: &amp;CommandSource) -&gt; ParseResult;
+
+    /// Execute a previously parsed command.
+    pub fn execute(&amp;self, parsed: &amp;ParseResult) -&gt; CommandResult;
+
+    /// Generate tab-completion suggestions at cursor position.
+    pub fn suggest(&amp;self, input: &amp;str, cursor: usize, source: &amp;CommandSource) -&gt; Vec&lt;Suggestion&gt;;
+
+    /// Generate human-readable usage string for a command.
+    pub fn usage(&amp;self, command: &amp;str, source: &amp;CommandSource) -&gt; String;
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Permission filtering:</strong> Commands whose root node’s permission requirement exceeds the source’s level are invisible — not shown in <code>/help</code>, not tab-completed, not executable. A regular player never sees <code>/kick</code> or <code>/c</code>. This is Brigadier’s <code>requirement</code> predicate.</p>
+<p><strong>Append-only registration:</strong> Mods register commands by adding children to the root node. A mod can also extend existing commands by adding new sub-nodes. Two mods adding <code>/spawn</code> would conflict — the second registration merges into the first’s node, following Brigadier’s merge semantics.</p>
+<h4 id="configuration-variables-cvars"><a class="header" href="#configuration-variables-cvars">Configuration Variables (Cvars)</a></h4>
+<p>Runtime-configurable values, inspired by Source Engine’s ConVar system but adapted for IC’s YAML-first philosophy:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// A runtime-configurable variable with type, default, bounds, and metadata.
+pub struct Cvar {
+    pub name: String,                    // dot-separated: "render.shadows", "sim.fog_enabled"
+    pub description: String,
+    pub value: CvarValue,
+    pub default: CvarValue,
+    pub flags: CvarFlags,
+    pub category: String,                // for grouping in the cvar browser
+}
+
+pub enum CvarValue {
+    Bool(bool),
+    Int(i64),
+    Float(f64),
+    String(String),
+}
+
+bitflags! {
+    pub struct CvarFlags: u32 {
+        /// Persisted to config file on change
+        const PERSISTENT = 0b0001;
+        /// Requires dev mode to modify (gameplay-affecting)
+        const DEV_ONLY   = 0b0010;
+        /// Server-authoritative in multiplayer (clients can't override)
+        const SERVER     = 0b0100;
+        /// Read-only — informational, cannot be set by commands
+        const READ_ONLY  = 0b1000;
+    }
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Loading from config file:</strong></p>
+<pre><code class="language-toml"># config.toml (user configuration — loaded at startup, saved on change)
+[render]
+shadows = true
+shadow_quality = 2          # 0=off, 1=low, 2=medium, 3=high
+vsync = true
+max_fps = 144
+
+[audio]
+master_volume = 80
+music_volume = 60
+eva_volume = 100
+
+[gameplay]
+scroll_speed = 5
+control_group_steal = false
+auto_rally_harvesters = true
+
+[net]
+show_diagnostics = false        # toggle network overlay (latency, jitter, tick timing)
+sync_frequency = 120            # ticks between full state hash checks (SERVER)
+# DEV_ONLY parameters — debug builds only:
+# desync_debug_level = 0        # 0-3, see 03-NETCODE.md § Debug Levels
+# visual_prediction = true       # cosmetic prediction; disable for latency testing
+# simulate_latency = 0           # artificial one-way latency (ms)
+# simulate_loss = 0.0            # artificial packet loss (%)
+# simulate_jitter = 0            # artificial jitter (ms)
+
+[debug]
+show_fps = true
+show_network_stats = false
+diag_level = 0            # 0-3, diagnostic overlay level (see 10-PERFORMANCE.md)
+diag_position = "tr"      # tl, tr, bl, br — overlay corner position
+diag_scale = 1.0          # overlay text scale factor (0.5-2.0)
+diag_opacity = 0.8        # overlay background opacity (0.0-1.0)
+diag_history_seconds = 30  # graph history duration in seconds
+diag_batch_interval_ms = 500  # collection interval for expensive L2 metrics (ms)
+</code></pre>
+<p>Cvars are the runtime mirror of <code>config.toml</code>. Changing a cvar with <code>PERSISTENT</code> flag writes back to <code>config.toml</code>. Cvars map to the same keys as the TOML config — <code>render.shadows</code> in the cvar system corresponds to <code>[render] shadows</code> in the file. This means <code>config.toml</code> is both the startup configuration file and the serialized cvar state.</p>
+<p><strong>Cvar commands:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Command</th><th>Description</th><th>Example</th></tr>
+</thead>
+<tbody>
+<tr><td><code>/set &lt;cvar&gt; &lt;value&gt;</code></td><td>Set a cvar</td><td><code>/set render.shadows false</code></td></tr>
+<tr><td><code>/get &lt;cvar&gt;</code></td><td>Display current value</td><td><code>/get render.max_fps</code></td></tr>
+<tr><td><code>/reset &lt;cvar&gt;</code></td><td>Reset to default</td><td><code>/reset render.shadows</code></td></tr>
+<tr><td><code>/find &lt;pattern&gt;</code></td><td>Search cvars by name/description</td><td><code>/find shadow</code></td></tr>
+<tr><td><code>/cvars [category]</code></td><td>List all cvars (optionally filtered)</td><td><code>/cvars audio</code></td></tr>
+<tr><td><code>/toggle &lt;cvar&gt;</code></td><td>Toggle boolean cvar</td><td><code>/toggle render.vsync</code></td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Sim-affecting cvars</strong> (like fog of war, game speed) use the <code>DEV_ONLY</code> flag and flow through the order pipeline as <code>PlayerOrder::SetCvar(name, value)</code> — deterministic, validated, visible to all clients. Client-only cvars (render settings, audio) take effect immediately without going through the sim.</p>
+<h4 id="built-in-commands"><a class="header" href="#built-in-commands">Built-In Commands</a></h4>
+<p><strong>Always available (all players):</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Command</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>/help [command]</code></td><td>List commands or show detailed usage for one command</td></tr>
+<tr><td><code>/set</code>, <code>/get</code>, <code>/reset</code>, <code>/find</code>, <code>/toggle</code>, <code>/cvars</code></td><td>Cvar manipulation (non-dev cvars only)</td></tr>
+<tr><td><code>/version</code></td><td>Display engine version, game module, build info</td></tr>
+<tr><td><code>/ping</code></td><td>Show current latency to server</td></tr>
+<tr><td><code>/fps</code></td><td>Toggle FPS counter overlay</td></tr>
+<tr><td><code>/stats</code></td><td>Show current game statistics (score, resources, etc.)</td></tr>
+<tr><td><code>/time</code></td><td>Display current game time (sim tick + wall clock)</td></tr>
+<tr><td><code>/clear</code></td><td>Clear chat/console history</td></tr>
+<tr><td><code>/players</code></td><td>List connected players</td></tr>
+<tr><td><code>/mods</code></td><td>List active mods with versions</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Chat commands (multiplayer):</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Command</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td>(no prefix)</td><td>Team chat (default)</td></tr>
+<tr><td><code>/s &lt;message&gt;</code></td><td>Shout — all-chat visible to all players and observers</td></tr>
+<tr><td><code>/w &lt;player&gt; &lt;message&gt;</code></td><td>Whisper — private message to specific player</td></tr>
+<tr><td><code>/r &lt;message&gt;</code></td><td>Reply to last whisper sender</td></tr>
+<tr><td><code>/ignore &lt;player&gt;</code></td><td>Hide messages from a player (client-side)</td></tr>
+<tr><td><code>/unignore &lt;player&gt;</code></td><td>Restore messages from a player</td></tr>
+<tr><td><code>/mute &lt;player&gt;</code></td><td>Admin: prevent player from chatting</td></tr>
+<tr><td><code>/unmute &lt;player&gt;</code></td><td>Admin: restore player chat</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Host/Admin commands (multiplayer):</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Command</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>/kick &lt;player&gt; [reason]</code></td><td>Remove player from game</td></tr>
+<tr><td><code>/ban &lt;player&gt; [reason]</code></td><td>Ban player from rejoining</td></tr>
+<tr><td><code>/unban &lt;player&gt;</code></td><td>Remove ban</td></tr>
+<tr><td><code>/pause</code></td><td>Pause game (requires consent in ranked)</td></tr>
+<tr><td><code>/speed &lt;multiplier&gt;</code></td><td>Set game speed (non-ranked only)</td></tr>
+<tr><td><code>/config &lt;key&gt; &lt;value&gt;</code></td><td>Change server settings at runtime</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Developer commands (dev-tools feature flag + DeveloperMode active):</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Command</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>/c &lt;lua&gt;</code></td><td>Execute Lua code (Factorio-style)</td></tr>
+<tr><td><code>/sc &lt;lua&gt;</code></td><td>Silent Lua execution (output hidden from other players)</td></tr>
+<tr><td><code>/mc &lt;lua&gt;</code></td><td>Measured Lua execution (prints execution time)</td></tr>
+<tr><td><code>/give &lt;amount&gt;</code></td><td>Grant credits to your player</td></tr>
+<tr><td><code>/spawn &lt;unit_type&gt; [count] [player]</code></td><td>Create units at cursor position</td></tr>
+<tr><td><code>/kill</code></td><td>Destroy selected entities</td></tr>
+<tr><td><code>/reveal</code></td><td>Remove fog of war</td></tr>
+<tr><td><code>/instant_build</code></td><td>Toggle instant construction</td></tr>
+<tr><td><code>/invincible</code></td><td>Toggle invincibility for selected units</td></tr>
+<tr><td><code>/tp &lt;x,y&gt;</code></td><td>Teleport camera to coordinates</td></tr>
+<tr><td><code>/weather &lt;type&gt;</code></td><td>Force weather state (D022). Valid types defined by D022’s weather state machine — e.g., <code>clear</code>, <code>rain</code>, <code>snow</code>, <code>storm</code>, <code>sandstorm</code>; exact set is game-module-specific.</td></tr>
+<tr><td><code>/desync_check</code></td><td>Force full-state hash comparison across all clients</td></tr>
+<tr><td><code>/save_snapshot</code></td><td>Write sim state snapshot to disk</td></tr>
+<tr><td><code>/step [N]</code></td><td>Advance N sim ticks while paused (default: 1). Requires <code>/pause</code> first. Essential for determinism debugging — inspired by SAGE engine’s script debugger frame-stepping</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Diagnostic overlay commands (client-local, no network traffic):</strong></p>
+<p>These commands control the real-time diagnostic overlay described in <code>10-PERFORMANCE.md</code> § Diagnostic Overlay &amp; Real-Time Observability. They are <strong>client-local</strong> — they read telemetry data already being collected (D031) and do not produce <code>PlayerOrder</code>s. Level 1–2 commands are available to all players; Level 3 panels require <code>dev-tools</code>.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Command</th><th>Description</th><th>Permission</th></tr>
+</thead>
+<tbody>
+<tr><td><code>/diag</code> or <code>/diag 1</code></td><td>Toggle basic diagnostic overlay (FPS, tick time, RTT, entity count)</td><td>Player</td></tr>
+<tr><td><code>/diag 0</code></td><td>Turn off diagnostic overlay</td><td>Player</td></tr>
+<tr><td><code>/diag 2</code></td><td>Detailed overlay (per-system breakdown, pathfinding, memory, network)</td><td>Player</td></tr>
+<tr><td><code>/diag 3</code></td><td>Full developer overlay (ECS inspector, AI viewer, desync debugger)</td><td>Developer</td></tr>
+<tr><td><code>/diag net</code></td><td>Show only the network diagnostic panel</td><td>Player</td></tr>
+<tr><td><code>/diag sim</code></td><td>Show only the sim tick breakdown panel</td><td>Player</td></tr>
+<tr><td><code>/diag path</code></td><td>Show only the pathfinding statistics panel</td><td>Player</td></tr>
+<tr><td><code>/diag mem</code></td><td>Show only the memory usage panel</td><td>Player</td></tr>
+<tr><td><code>/diag ai</code></td><td>Show AI state viewer for selected unit(s)</td><td>Developer</td></tr>
+<tr><td><code>/diag orders</code></td><td>Show order queue inspector</td><td>Developer</td></tr>
+<tr><td><code>/diag fog</code></td><td>Toggle fog-of-war debug visualization on game world</td><td>Developer</td></tr>
+<tr><td><code>/diag desync</code></td><td>Show desync debugger panel</td><td>Developer</td></tr>
+<tr><td><code>/diag history</code></td><td>Toggle graph history mode (scrolling line graphs for key metrics)</td><td>Player</td></tr>
+<tr><td><code>/diag pos &lt;corner&gt;</code></td><td>Move overlay position: <code>tl</code>, <code>tr</code>, <code>bl</code>, <code>br</code> (default: <code>tr</code>)</td><td>Player</td></tr>
+<tr><td><code>/diag scale &lt;factor&gt;</code></td><td>Scale overlay text size, 0.5–2.0 (accessibility)</td><td>Player</td></tr>
+<tr><td><code>/diag export</code></td><td>Dump current overlay snapshot to timestamped JSON file</td><td>Player</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Note on DeveloperMode interaction:</strong> Dev commands check <code>DeveloperMode</code> sim state (V44). In multiplayer, dev mode must be unanimously enabled in the lobby before game start. Dev commands issued without active dev mode are rejected by the sim with an error message. This is enforced at the order validation layer (D012), not the UI layer.</p>
+<h4 id="comprehensive-command-catalog"><a class="header" href="#comprehensive-command-catalog">Comprehensive Command Catalog</a></h4>
+<p>The design principle: <strong>anything the GUI can do, the console can do.</strong> Every button, menu, slider, and toggle in the game UI has a console command equivalent. This enables scripting via <code>autoexec.cfg</code>, accessibility for players who prefer keyboard-driven interfaces, and full remote control for tournament administration. Commands are organized by functional domain — matching the system categories in <code>02-ARCHITECTURE.md</code>.</p>
+<p><strong>Engine-core vs. game-module commands:</strong> Per Invariant #9, the engine core is game-agnostic. Commands are split into two registration layers:</p>
+<ul>
+<li><strong>Engine commands</strong> (registered by the engine, available to all game modules): <code>/help</code>, <code>/set</code>, <code>/get</code>, <code>/version</code>, <code>/fps</code>, <code>/volume</code>, <code>/screenshot</code>, <code>/camera</code>, <code>/zoom</code>, <code>/ui_scale</code>, <code>/ui_theme</code>, <code>/locale</code>, <code>/save_game</code>, <code>/load_game</code>, <code>/clear</code>, <code>/players</code>, etc. These operate on engine-level concepts (rendering, audio, camera, files, cvars) and exist regardless of game module.</li>
+<li><strong>Game-module commands</strong> (registered by the RA1 module via <code>GameModule::register_commands()</code>): <code>/build</code>, <code>/sell</code>, <code>/deploy</code>, <code>/rally</code>, <code>/stance</code>, <code>/guard</code>, <code>/patrol</code>, <code>/power</code>, <code>/credits</code>, <code>/surrender</code>, <code>/power_activate</code>, etc. These operate on RA1-specific gameplay systems — a Dune II module or tower defense total conversion would register different commands. The tables below include both layers; game-module commands are marked with <strong>(RA1)</strong> where the command is game-module-specific rather than engine-generic.</li>
+</ul>
+<p><strong>Implementation phasing:</strong> This catalog is a <strong>reference target</strong>, not a Phase 3 deliverable. Commands are added incrementally as the systems they control are built — unit commands arrive with Phase 2 (simulation), production/building UI commands with Phase 3 (game chrome), observer commands with Phase 5 (multiplayer), etc. The Brigadier <code>CommandDispatcher</code> and cvar system are Phase 3; the full catalog grows across Phases 3–6.</p>
+<p><strong>Unit commands (require selection unless noted) (RA1):</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Command</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>/move &lt;x,y&gt;</code></td><td>Move selected units to world position</td></tr>
+<tr><td><code>/attack &lt;x,y&gt;</code></td><td>Attack-move to position</td></tr>
+<tr><td><code>/attack_unit &lt;unit_id&gt;</code></td><td>Attack specific target</td></tr>
+<tr><td><code>/force_fire &lt;x,y&gt;</code></td><td>Force-fire at ground position (Ctrl+click equivalent)</td></tr>
+<tr><td><code>/force_move &lt;x,y&gt;</code></td><td>Force-move, crushing obstacles in path (Alt+click equivalent)</td></tr>
+<tr><td><code>/stop</code></td><td>Stop all selected units</td></tr>
+<tr><td><code>/guard [unit_id]</code></td><td>Guard selected unit or target unit</td></tr>
+<tr><td><code>/patrol &lt;x1,y1&gt; [x2,y2] ...</code></td><td>Set patrol route through waypoints</td></tr>
+<tr><td><code>/scatter</code></td><td>Scatter selected units from current position</td></tr>
+<tr><td><code>/deploy</code></td><td>Deploy/undeploy selected units (MCV, siege units)</td></tr>
+<tr><td><code>/stance &lt;hold_fire|return_fire|defend|attack_anything&gt;</code></td><td>Set engagement stance</td></tr>
+<tr><td><code>/load</code></td><td>Load selected infantry into selected transport</td></tr>
+<tr><td><code>/unload</code></td><td>Unload all passengers from selected transport</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Selection commands:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Command</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>/select &lt;filter&gt;</code></td><td>Select units by filter: <code>all</code>, <code>idle</code>, <code>military</code>, <code>harvesters</code>, <code>damaged</code>, <code>type:&lt;actor_type&gt;</code></td></tr>
+<tr><td><code>/deselect</code></td><td>Clear selection</td></tr>
+<tr><td><code>/select_all_type</code></td><td>Select all on-screen units matching the currently selected type (double-click equivalent)</td></tr>
+<tr><td><code>/group &lt;0-9&gt;</code></td><td>Select control group</td></tr>
+<tr><td><code>/group_set &lt;0-9&gt;</code></td><td>Assign current selection to control group (Ctrl+number equivalent)</td></tr>
+<tr><td><code>/group_add &lt;0-9&gt;</code></td><td>Add current selection to existing control group (Shift+Ctrl+number)</td></tr>
+<tr><td><code>/tab</code></td><td>Cycle through unit types within current selection</td></tr>
+<tr><td><code>/find_unit &lt;actor_type&gt;</code></td><td>Center camera on next unit of type (cycles through matches)</td></tr>
+<tr><td><code>/find_idle</code></td><td>Center on next idle unit (factory, harvester)</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Production commands (RA1):</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Command</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>/build &lt;actor_type&gt; [count]</code></td><td>Queue production (default count: 1, or <code>inf</code> for infinite)</td></tr>
+<tr><td><code>/cancel &lt;actor_type|all&gt;</code></td><td>Cancel queued production</td></tr>
+<tr><td><code>/place &lt;actor_type&gt; &lt;x,y&gt;</code></td><td>Place completed building at position</td></tr>
+<tr><td><code>/set_primary [building_id]</code></td><td>Set selected or specified building as primary factory</td></tr>
+<tr><td><code>/rally &lt;x,y&gt;</code></td><td>Set rally point for selected production building</td></tr>
+<tr><td><code>/pause_production</code></td><td>Pause production queue on selected building</td></tr>
+<tr><td><code>/resume_production</code></td><td>Resume paused production queue</td></tr>
+<tr><td><code>/queue</code></td><td>Display current production queue contents</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Building commands (RA1):</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Command</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>/sell</code></td><td>Sell selected building</td></tr>
+<tr><td><code>/sell_mode</code></td><td>Toggle sell cursor mode (click buildings to sell)</td></tr>
+<tr><td><code>/repair_mode</code></td><td>Toggle repair cursor mode (click buildings to repair)</td></tr>
+<tr><td><code>/repair</code></td><td>Toggle auto-repair on selected building</td></tr>
+<tr><td><code>/power_down</code></td><td>Toggle power on selected building (disable to save power)</td></tr>
+<tr><td><code>/gate_open</code></td><td>Force gate open/closed</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Economy / resource commands (RA1):</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Command</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>/credits</code></td><td>Display current credits and storage capacity</td></tr>
+<tr><td><code>/income</code></td><td>Display income rate, expenditure rate, net flow</td></tr>
+<tr><td><code>/power</code></td><td>Display power capacity, drain, and status</td></tr>
+<tr><td><code>/silos</code></td><td>Display storage utilization and warn if near capacity</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Support power commands (RA1):</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Command</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>/power_activate &lt;power_name&gt; &lt;x,y&gt; [target_x,target_y]</code></td><td>Activate support power at position (second position for Chronoshift origin)</td></tr>
+<tr><td><code>/paradrop &lt;x,y&gt;</code></td><td>Activate Airfield paradrop at position (plane flies over, drops paratroopers)</td></tr>
+<tr><td><code>/powers</code></td><td>List all available support powers with charge status</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Camera and navigation commands:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Command</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>/camera &lt;x,y&gt;</code></td><td>Move camera to world position</td></tr>
+<tr><td><code>/camera_follow [unit_id]</code></td><td>Follow selected or specified unit</td></tr>
+<tr><td><code>/camera_follow_stop</code></td><td>Stop following</td></tr>
+<tr><td><code>/bookmark_set &lt;1-9&gt;</code></td><td>Save current camera position to bookmark slot</td></tr>
+<tr><td><code>/bookmark &lt;1-9&gt;</code></td><td>Jump to bookmarked camera position</td></tr>
+<tr><td><code>/zoom &lt;in|out|level&gt;</code></td><td>Adjust zoom (level: 0.5–4.0, default 1.0; see <code>02-ARCHITECTURE.md</code> § Camera). In ranked/tournament, clamped to the competitive zoom range (default: 0.75–2.0). Zoom-toward-cursor when used with mouse wheel; zoom-toward-center when used via command</td></tr>
+<tr><td><code>/center</code></td><td>Center camera on current selection</td></tr>
+<tr><td><code>/base</code></td><td>Center camera on construction yard</td></tr>
+<tr><td><code>/alert</code></td><td>Jump to last alert position (base under attack, etc.)</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Camera bookmarks (Generals-style navigation, client-local):</strong> IC formalizes camera bookmarks as a first-class navigation feature on all platforms. Slots <code>1-9</code> are <strong>local UI state only</strong> (not synced, not part of replay determinism, no simulation effect). Desktop exposes quick slots through hotkeys (see <code>17-PLAYER-FLOW.md</code>), while touch layouts expose a minimap-adjacent bookmark dock (tap = jump, long-press = save). The <code>/bookmark_set</code> and <code>/bookmark</code> commands remain the canonical full-slot interface and work consistently across desktop, touch, observer, replay, and editor playtest contexts. Local-only D031 telemetry events (<code>camera_bookmark.set</code>, <code>camera_bookmark.jump</code>) support UX tuning and tutorial hint validation.</p>
+<p><strong>Game state commands:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Command</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>/save_game [name]</code></td><td>Save game (default: auto-named with timestamp)</td></tr>
+<tr><td><code>/load_game &lt;name&gt;</code></td><td>Load saved game</td></tr>
+<tr><td><code>/restart</code></td><td>Restart current mission/skirmish</td></tr>
+<tr><td><code>/surrender</code></td><td>Forfeit current match (alias for <code>/callvote surrender</code> in team games, immediate in 1v1)</td></tr>
+<tr><td><code>/gg</code></td><td>Alias for <code>/surrender</code></td></tr>
+<tr><td><code>/ff</code></td><td>Alias for <code>/surrender</code> (LoL/Valorant convention)</td></tr>
+<tr><td><code>/speed &lt;slowest|slower|normal|faster|fastest&gt;</code></td><td>Set game speed (single-player or host-only)</td></tr>
+<tr><td><code>/pause</code></td><td>Toggle pause (single-player instant; multiplayer requires consent)</td></tr>
+<tr><td><code>/score</code></td><td>Display current match score (units killed, resources, etc.)</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Game speed and mobile tempo guidance:</strong> <code>/speed</code> remains the authoritative gameplay command surface for single-player and host-controlled matches. Any mobile “Tempo Advisor” or comfort warning UI is <strong>advisory only</strong> — it may recommend a range (for touch usability) but never changes or blocks the requested speed by itself. Ranked multiplayer continues to use server-enforced speed (see D055/D064 and <code>09b-networking.md</code>).</p>
+<p><strong>Vote commands (multiplayer — see <code>03-NETCODE.md</code> § “In-Match Vote Framework”):</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Command</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>/callvote surrender</code></td><td>Propose a surrender vote (team games) or surrender immediately (1v1)</td></tr>
+<tr><td><code>/callvote kick &lt;player&gt; &lt;reason&gt;</code></td><td>Propose to kick a teammate (team games only)</td></tr>
+<tr><td><code>/callvote remake</code></td><td>Propose to void the match (early game only)</td></tr>
+<tr><td><code>/callvote draw</code></td><td>Propose a mutual draw (requires cross-team unanimous agreement)</td></tr>
+<tr><td><code>/vote yes</code> (or <code>/vote y</code>)</td><td>Vote yes on the active vote (equivalent to F1)</td></tr>
+<tr><td><code>/vote no</code> (or <code>/vote n</code>)</td><td>Vote no on the active vote (equivalent to F2)</td></tr>
+<tr><td><code>/vote cancel</code></td><td>Cancel a vote you proposed</td></tr>
+<tr><td><code>/vote status</code></td><td>Display the current active vote (if any)</td></tr>
+<tr><td><code>/poll &lt;phrase_id|phrase_text&gt;</code></td><td>Propose a tactical poll (non-binding team coordination)</td></tr>
+<tr><td><code>/poll agree</code> (or <code>/poll yes</code>)</td><td>Agree with the active tactical poll</td></tr>
+<tr><td><code>/poll disagree</code> (or <code>/poll no</code>)</td><td>Disagree with the active tactical poll</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Audio commands:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Command</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>/volume &lt;master|music|sfx|voice&gt; &lt;0-100&gt;</code></td><td>Set volume level</td></tr>
+<tr><td><code>/mute [master|music|sfx|voice]</code></td><td>Toggle mute (no argument = master)</td></tr>
+<tr><td><code>/music_next</code></td><td>Skip to next music track</td></tr>
+<tr><td><code>/music_prev</code></td><td>Skip to previous music track</td></tr>
+<tr><td><code>/music_stop</code></td><td>Stop music playback</td></tr>
+<tr><td><code>/music_play [track_name]</code></td><td>Play specific track (no argument = resume)</td></tr>
+<tr><td><code>/eva &lt;on|off&gt;</code></td><td>Toggle EVA voice notifications</td></tr>
+<tr><td><code>/music_list</code></td><td>List available music tracks</td></tr>
+<tr><td><code>/voice effect list</code></td><td>List available voice effect presets</td></tr>
+<tr><td><code>/voice effect set &lt;name&gt;</code></td><td>Apply voice effect preset</td></tr>
+<tr><td><code>/voice effect off</code></td><td>Disable voice effects</td></tr>
+<tr><td><code>/voice effect preview &lt;name&gt;</code></td><td>Play sample clip with effect applied</td></tr>
+<tr><td><code>/voice effect info &lt;name&gt;</code></td><td>Show DSP stages and parameters for preset</td></tr>
+<tr><td><code>/voice volume &lt;0-100&gt;</code></td><td>Set incoming voice volume</td></tr>
+<tr><td><code>/voice ptt &lt;key&gt;</code></td><td>Set push-to-talk keybind</td></tr>
+<tr><td><code>/voice toggle</code></td><td>Toggle voice on/off</td></tr>
+<tr><td><code>/voice diag</code></td><td>Open voice diagnostics overlay</td></tr>
+<tr><td><code>/voice isolation toggle</code></td><td>Toggle enhanced voice isolation</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Render and display commands:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Command</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>/render_mode &lt;classic|remastered|modern&gt;</code></td><td>Switch render mode (D048)</td></tr>
+<tr><td><code>/screenshot [filename]</code></td><td>Capture screenshot</td></tr>
+<tr><td><code>/shadows &lt;on|off&gt;</code></td><td>Toggle shadow rendering</td></tr>
+<tr><td><code>/healthbars &lt;always|selected|damaged|never&gt;</code></td><td>Health bar visibility mode</td></tr>
+<tr><td><code>/names &lt;on|off&gt;</code></td><td>Toggle unit name labels</td></tr>
+<tr><td><code>/grid &lt;on|off&gt;</code></td><td>Toggle terrain grid overlay</td></tr>
+<tr><td><code>/palette &lt;name&gt;</code></td><td>Switch color palette (for classic render mode)</td></tr>
+<tr><td><code>/camera_shake &lt;on|off&gt;</code></td><td>Toggle screen shake effects</td></tr>
+<tr><td><code>/weather_fx &lt;on|off&gt;</code></td><td>Toggle weather visual effects (rain, snow particles)</td></tr>
+<tr><td><code>/post_fx &lt;on|off&gt;</code></td><td>Toggle post-processing effects (bloom, color grading)</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Observer/spectator commands (observer mode only):</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Command</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>/observe [player_name]</code></td><td>Enter observer mode / follow specific player’s view</td></tr>
+<tr><td><code>/observe_free</code></td><td>Free camera (not following any player)</td></tr>
+<tr><td><code>/show army</code></td><td>Toggle army composition overlay</td></tr>
+<tr><td><code>/show production</code></td><td>Toggle production overlay (what each player is building)</td></tr>
+<tr><td><code>/show economy</code></td><td>Toggle economy overlay (income graph)</td></tr>
+<tr><td><code>/show powers</code></td><td>Toggle superweapon charge overlay</td></tr>
+<tr><td><code>/show score</code></td><td>Toggle score tracker</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>UI control commands:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Command</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>/minimap &lt;on|off&gt;</code></td><td>Toggle minimap visibility</td></tr>
+<tr><td><code>/sidebar &lt;on|off&gt;</code></td><td>Toggle sidebar visibility</td></tr>
+<tr><td><code>/tooltip &lt;on|off&gt;</code></td><td>Toggle unit/building tooltips</td></tr>
+<tr><td><code>/clock &lt;on|off&gt;</code></td><td>Toggle game clock display</td></tr>
+<tr><td><code>/ui_scale &lt;50-200&gt;</code></td><td>Set UI scale percentage</td></tr>
+<tr><td><code>/ui_theme &lt;classic|remastered|modern|name&gt;</code></td><td>Switch UI theme (D032)</td></tr>
+<tr><td><code>/encyclopedia [actor_type]</code></td><td>Open encyclopedia (optionally to a specific entry)</td></tr>
+<tr><td><code>/hotkeys [profile]</code></td><td>Switch hotkey profile (classic, openra, modern) or list current bindings</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Map interaction commands:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Command</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>/map_ping &lt;x,y&gt; [color]</code></td><td>Place a map ping visible to allies (with optional color)</td></tr>
+<tr><td><code>/map_draw &lt;on|off&gt;</code></td><td>Toggle minimap drawing mode for tactical markup</td></tr>
+<tr><td><code>/map_info</code></td><td>Display current map name, size, author, and game mode</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Localization commands:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Command</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>/locale &lt;code&gt;</code></td><td>Switch language (e.g., <code>en</code>, <code>de</code>, <code>zh-CN</code>)</td></tr>
+<tr><td><code>/locale_list</code></td><td>List available locales</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Note:</strong> Commands that affect simulation state (<code>/move</code>, <code>/attack</code>, <code>/build</code>, <code>/sell</code>, <code>/deploy</code>, <code>/stance</code>, <code>/surrender</code>, <code>/callvote</code>, <code>/vote</code>, <code>/poll</code>, etc.) produce <code>PlayerOrder</code> variants and flow through the deterministic order pipeline — they are functionally identical to clicking the GUI button. Commands that affect only the local client (<code>/volume</code>, <code>/shadows</code>, <code>/zoom</code>, <code>/ui_scale</code>, etc.) take effect immediately without touching the sim. This distinction mirrors the cvar split: sim-affecting cvars require <code>DEV_ONLY</code> or <code>SERVER</code> flags and use the order pipeline; client-only cvars are immediate. In multiplayer, sim-affecting commands also respect D033 QoL toggle state — if a toggle is disabled in the lobby, the corresponding console command is rejected. See “Competitive Integrity in Multiplayer” below for the full framework.</p>
+<p><strong>PlayerOrder variant taxonomy:</strong> Commands map to <code>PlayerOrder</code> variants as follows:</p>
+<ul>
+<li><strong>GUI-equivalent commands</strong> (<code>/move</code>, <code>/attack</code>, <code>/build</code>, <code>/sell</code>, <code>/deploy</code>, <code>/stance</code>, <code>/select</code>, <code>/place</code>, etc.) produce the <strong>same native <code>PlayerOrder</code> variant</strong> as their GUI counterpart — e.g., <code>/move 120,80</code> produces <code>PlayerOrder::Move { target: WorldPos(120,80) }</code>, identical to right-clicking the map.</li>
+<li><strong>Cvar mutations</strong> (<code>/set &lt;name&gt; &lt;value&gt;</code>) produce <code>PlayerOrder::SetCvar(name, value)</code> when the cvar has <code>DEV_ONLY</code> or <code>SERVER</code> flags — these flow through order validation.</li>
+<li><strong>Cheat codes</strong> (hidden phrases typed in chat) produce <code>PlayerOrder::CheatCode(CheatId)</code> — see “Hidden Cheat Codes” below.</li>
+<li><strong>Chat messages</strong> (<code>/s</code>, <code>/w</code>, unprefixed text) produce <code>PlayerOrder::ChatMessage { channel, text }</code> — see D059 § Text Chat.</li>
+<li><strong>Coordination actions</strong> (pings, chat wheel, minimap drawing) produce their respective <code>PlayerOrder</code> variants (<code>TacticalPing</code>, <code>ChatWheelPhrase</code>, <code>MinimapDraw</code>) — see D059 § Coordination.</li>
+<li><strong>Meta-commands</strong> (<code>/help</code>, <code>/locale</code>, <code>/hotkeys</code>, <code>/voice diag</code>, etc.) are <strong>local-only</strong> — they produce no <code>PlayerOrder</code> and never touch the sim.</li>
+<li><strong><code>PlayerOrder::ChatCommand(cmd, args)</code></strong> is used only for mod-registered commands that produce custom sim-side effects not covered by a native variant. Engine commands never use <code>ChatCommand</code>.</li>
+</ul>
+<p><strong>Game-module registration example (RA1):</strong> The RA1 game module registers all RA1-specific commands during <code>GameModule::register_commands()</code>. A Tiberian Dawn module would register similar but distinct commands (e.g., <code>/sell</code> exists in both, but <code>/power_activate</code> with different superweapon names). A total conversion could register entirely novel commands (<code>/mutate</code>, <code>/terraform</code>, etc.) using the same <code>CommandDispatcher</code> infrastructure. This follows the “game is a mod” principle (13-PHILOSOPHY.md § Principle 4) — the base game uses the same registration API available to external modules.</p>
+<h4 id="mod-registered-commands"><a class="header" href="#mod-registered-commands">Mod-Registered Commands</a></h4>
+<p>Mods register commands via the Lua API (D004) or WASM host functions (D005):</p>
+<pre><code class="language-lua">-- Lua mod registration example
+Commands.register("spawn_reinforcements", {
+    description = "Spawn reinforcements at a location",
+    permission = "host",       -- only host can use
+    arguments = {
+        { name = "faction", type = "string", suggestions = {"allies", "soviet"} },
+        { name = "count",   type = "integer", min = 1, max = 50 },
+        { name = "location", type = "position" },
+    },
+    execute = function(source, args)
+        -- Mod logic here
+        SpawnReinforcements(args.faction, args.count, args.location)
+        return "Spawned " .. args.count .. " " .. args.faction .. " reinforcements"
+    end
+})
+</code></pre>
+<p><strong>Sandboxing:</strong> Mod commands execute within the same Lua sandbox as mission scripts. A mod command cannot access the filesystem, network, or memory outside its sandbox. The <code>CommandSource</code> tracks which mod registered the command — if a mod command crashes or times out, the error is attributed to the mod, not the engine.</p>
+<p><strong>Namespace collision:</strong> Mod commands are prefixed with the mod name by default: a mod named <code>cool_units</code> registering <code>spawn</code> creates <code>/cool_units:spawn</code>. Mods can request unprefixed registration (<code>/spawn</code>) but collisions are resolved by load order — last mod wins, with a warning logged. The convention follows Minecraft’s <code>namespace:command</code> pattern.</p>
+<h4 id="anti-trolling-measures"><a class="header" href="#anti-trolling-measures">Anti-Trolling Measures</a></h4>
+<p>Chat and commands create trolling surfaces. IC addresses each:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Trolling Vector</th><th>Mitigation</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Chat spam</strong></td><td>Rate limit: max 5 messages per 3 seconds, relay-enforced (see D059 § Text Chat). Client applies the same limit locally to avoid round-trip rejection. Exceeding the limit queues messages with a cooldown warning. Configurable by server.</td></tr>
+<tr><td><strong>Chat harassment</strong></td><td><code>/ignore</code> is client-side and instant. <code>/mute</code> is admin-enforced and server-side. Ignored players can’t whisper you.</td></tr>
+<tr><td><strong>Unicode abuse</strong> (oversized chars, bidi-spoof controls, invisible chars, zalgo)</td><td>Chat input is sanitized <strong>before</strong> order injection: preserve legitimate letters/numbers/punctuation (including Arabic/Hebrew/RTL text), but strip disallowed control/invisible characters used for spoofing, normalize Unicode to NFC, cap display width, and clamp combining-character abuse. Normalization happens on the sending client before the text enters <code>PlayerOrder::ChatMessage</code> — ensuring all clients receive identical normalized bytes (determinism requirement). Homoglyph detection warns admins of impersonation attempts.</td></tr>
+<tr><td><strong>Command abuse</strong> (admin runs <code>/kill</code> on all players)</td><td>Admin commands that affect other players are logged as telemetry events (D031). Community server governance (D037) allows reputation consequences.</td></tr>
+<tr><td><strong>Lua injection</strong> via chat</td><td>Chat messages never touch the command parser unless they start with <code>/</code>. A message like <code>hello /c game.destroy()</code> is plain text, not a command. Only the first <code>/</code> at position 0 triggers command parsing.</td></tr>
+<tr><td><strong>Fake command output</strong></td><td>System messages (command results, join/leave notifications) use a distinct visual style (color, icon) that players cannot replicate through chat.</td></tr>
+<tr><td><strong>Command spam</strong></td><td>Commands have the same rate limit as chat. Dev commands additionally logged with timestamps for abuse review.</td></tr>
+<tr><td><strong>Programmable spam</strong> (Factorio’s speaker problem)</td><td>IC doesn’t have programmable speakers, but any future mod-driven notification system should respect the same per-player mute controls.</td></tr>
+</tbody>
+</table>
+</div>
+<h4 id="achievement-and-ranking-interaction"><a class="header" href="#achievement-and-ranking-interaction">Achievement and Ranking Interaction</a></h4>
+<p>Following the universal convention (Factorio, AoE, OpenRA):</p>
+<ul>
+<li><strong>Using any dev command permanently flags the match/save</strong> as using cheats. This is recorded in the replay metadata and sim state.</li>
+<li><strong>Flagged games cannot count toward ranked matchmaking (D055)</strong> or achievements (D036).</li>
+<li><strong>The flag is irreversible</strong> for that save/match — even if you toggle dev mode off.</li>
+<li><strong>Non-dev commands</strong> (<code>/help</code>, <code>/set render.shadows false</code>, chat, <code>/ping</code>) do NOT flag the game. Only commands that affect simulation state through <code>DevCommand</code> orders trigger the flag.</li>
+<li><strong>Saved game cheated flag:</strong> The snapshot (D010) includes <code>cheats_used: bool</code> and <code>cosmetic_cheats_used: bool</code> fields. Loading a save with <code>cheats_used = true</code> displays a permanent “cheats used” indicator and disables achievements. Loading a save with only <code>cosmetic_cheats_used = true</code> displays a subtle “cosmetic mods active” indicator but achievements remain enabled. Both flags are irreversible per save and recorded in replay metadata.</li>
+</ul>
+<p>This follows Factorio’s model — the Lua console is immensely useful for testing and debugging, but using it has clear consequences for competitive integrity — while refining it with a proportional response: gameplay cheats carry full consequences, cosmetic cheats are recorded but don’t punish the player for having fun.</p>
+<h4 id="competitive-integrity-in-multiplayer"><a class="header" href="#competitive-integrity-in-multiplayer">Competitive Integrity in Multiplayer</a></h4>
+<p>Dev commands and cheat codes are handled. But what about the ~120 <em>normal</em> commands available to every player in multiplayer — <code>/move</code>, <code>/attack</code>, <code>/build</code>, <code>/select</code>, <code>/place</code>? These produce the same <code>PlayerOrder</code> variants as clicking the GUI, but they make external automation trivially easy. A script that sends <code>/select idle</code> → <code>/build harvester</code> → <code>/rally 120,80</code> every 3 seconds is functionally a perfect macro player. Does this create an unfair advantage for scripters?</p>
+<h5 id="the-open-source-competitive-dilemma"><a class="header" href="#the-open-source-competitive-dilemma">The Open-Source Competitive Dilemma</a></h5>
+<p>This section documents a fundamental, irreconcilable tension that shapes every competitive integrity decision in IC. It is written as a permanent reference for future contributors, so the reasoning does not need to be re-derived.</p>
+<p><strong>The dilemma in one sentence:</strong> An open-source game engine cannot prevent client-side cheating, but a competitive community demands competitive integrity.</p>
+<p>In a closed-source game (StarCraft 2, CS2, Valorant), the developer controls the client binary. They can:</p>
+<ul>
+<li>Obfuscate the protocol and memory layout so reverse-engineering is expensive</li>
+<li>Deploy kernel-level anti-cheat (Warden, VAC, Vanguard) to detect modified clients</li>
+<li>Ban players whose clients fail integrity checks</li>
+<li>Update obfuscation faster than hackers can reverse-engineer</li>
+</ul>
+<p><strong>What commercial anti-cheat products actually do:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Product</th><th>Technique</th><th>How It Works</th><th>Why It Fails for Open-Source GPL</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>VAC</strong> (Valve Anti-Cheat)</td><td>Memory scanning + process hashing</td><td>Scans client RAM for known cheat signatures; hashes game binaries to detect tampering; delayed bans to obscure detection vectors</td><td>Source is public — cheaters know exactly what memory layouts to avoid. Binary hashing is meaningless when every user compiles from source. Delayed bans rely on secrecy of detection methods; GPL eliminates that secrecy.</td></tr>
+<tr><td><strong>PunkBuster</strong> (Even Balance)</td><td>Screenshot capture + hash checks + memory scanning</td><td>Takes periodic screenshots to detect overlays/wallhacks; hashes client files; scans process memory for known cheat DLLs</td><td>Screenshots assume a single canonical renderer — IC’s switchable render modes (D048) make “correct” screenshots undefined. Client file hashing fails when users compile their own binaries. GPL means the scanning logic itself is public, trivially bypassed.</td></tr>
+<tr><td><strong>EAC / BattlEye</strong></td><td>Kernel-mode driver (ring-0)</td><td>Loads a kernel driver at boot that monitors all system calls, blocks known cheat tools from loading, detects memory manipulation from outside the game process</td><td>Kernel drivers are incompatible with Linux (where they’d need custom kernel modules), impossible on WASM, antithetical to user trust in open-source software, and unenforceable when users can simply remove the driver from source and recompile. Ring-0 access also creates security liability — EAC and BattlEye vulnerabilities have been exploited as privilege escalation vectors.</td></tr>
+<tr><td><strong>Vanguard</strong> (Riot Games)</td><td>Always-on kernel driver + client integrity</td><td>Runs from system boot (not just during gameplay); deep system introspection; hardware fingerprinting; client binary attestation</td><td>The most invasive model — requires the developer to be more trusted than the user’s OS. Fundamentally incompatible with GPL’s guarantee that users control their own software. Also requires a dedicated security team maintaining driver compatibility across OS versions — organizations like Riot spend millions annually on this infrastructure.</td></tr>
+</tbody>
+</table>
+</div>
+<p>The common thread: every commercial anti-cheat product depends on <strong>information asymmetry</strong> (the developer knows things the cheater doesn’t) or <strong>privilege asymmetry</strong> (the anti-cheat has deeper system access than the cheat). GPL v3 eliminates both. The source code is public. The user controls the binary. These are features, not flaws — but they make client-side anti-cheat a solved impossibility.</p>
+<p>None of these are available to IC:</p>
+<ul>
+<li>The engine is GPL v3 (D051). The source code is public. There is nothing to reverse-engineer — anyone can read the protocol, the order format, and the sim logic directly.</li>
+<li>Kernel-level anti-cheat is antithetical to GPL, Linux support, user privacy, and community trust. It is also unenforceable when users can compile their own client.</li>
+<li>Client integrity checks are meaningless when the “legitimate” client is whatever the user compiled from source.</li>
+<li>Obfuscation is impossible — the source repository IS the documentation.</li>
+</ul>
+<p><strong>What a malicious player can do</strong> (and no client-side measure can prevent):</p>
+<ul>
+<li>Read the source to understand exactly what <code>PlayerOrder</code> variants exist and what the sim accepts</li>
+<li>Build a modified client that sends orders directly to the relay server, bypassing all GUI and console input</li>
+<li>Fake any <code>CommandOrigin</code> tag (<code>Keybinding</code>, <code>MouseClick</code>) to disguise scripted input as human</li>
+<li>Automate any action the game allows: perfect split micro, instant building placement, zero-delay production cycling</li>
+<li>Implement maphack if fog-of-war is client-side (which is why fog-authoritative mode via the relay is critical — see <code>06-SECURITY.md</code>)</li>
+</ul>
+<p><strong>What a malicious player cannot do</strong> (architectural defenses that work regardless of client modification):</p>
+<ul>
+<li>Send orders that fail validation (D012). The sim rejects invalid orders deterministically — every client agrees on the rejection. Modified clients can send orders faster, but they can’t send orders the sim wouldn’t accept from any client.</li>
+<li>Spoof their order volume at the relay server (D007). The relay counts orders per player per tick server-side. A modified client can lie about <code>CommandOrigin</code>, but it can’t hide the fact that it sent 500 orders in one tick.</li>
+<li>Avoid replay evidence. Every order, every tick, is recorded in the deterministic replay (D010). Post-match analysis can detect inhuman patterns regardless of what the client reported as its input source.</li>
+<li>Bypass server-side fog-authoritative mode. When enabled, the relay only forwards entity data within each player’s vision — the client physically doesn’t receive information about units it shouldn’t see.</li>
+</ul>
+<p><strong>The resolution — what IC chooses:</strong></p>
+<p>IC does not fight this arms race. Instead, it adopts a four-part strategy modeled on the most successful open-source competitive platforms (Lichess, FAF, DDNet):</p>
+<ol>
+<li><strong>Architectural defense.</strong> Make cheating impossible where we can (order validation, relay integrity, fog authority) rather than improbable (obfuscation, anti-tamper). These defenses work even against a fully modified client.</li>
+<li><strong>Equalization through features.</strong> When automation provides an advantage, build it into the game as a D033 QoL toggle available to everyone. The script advantage disappears when everyone has the feature.</li>
+<li><strong>Total transparency.</strong> Record everything. Expose everything. Every order, every input source, every APM metric, every active script — in the replay and in the lobby. Make scripting visible, not secret.</li>
+<li><strong>Community governance.</strong> Let communities enforce their own competitive norms (D037, D052). Engine-enforced rules are minimal and architectural. Social rules — what level of automation is acceptable, what APM patterns trigger investigation — belong to the community.</li>
+</ol>
+<p>This is the Lichess model applied to RTS. Lichess is fully open-source, cannot prevent engine-assisted play through client-side measures, and is the most successful competitive gaming platform in its genre. Its defense is behavioral analysis (Irwin + Kaladin AI systems), statistical pattern matching, community reporting, and permanent reputation consequences — not client-side policing. IC adapts this approach for real-time strategy: server-side order analysis replaces move-time analysis, APM patterns replace centipawn-loss metrics, and replay review replaces PGN review. See <code>research/minetest-lichess-analysis.md</code> § Lichess for detailed analysis of Lichess’s anti-cheat architecture.</p>
+<p><strong>Why documenting this matters:</strong> Without this explicit rationale, future contributors will periodically propose “just add anti-cheat” or “just disable the console in ranked” or “just detect scripts.” These proposals are not wrong because they’re technically difficult — they’re wrong because they’re architecturally impossible in an open-source engine and create a false sense of security that is worse than no protection at all. This dilemma is settled. The resolution is the six principles below.</p>
+<h5 id="what-other-games-teach-us"><a class="header" href="#what-other-games-teach-us">What Other Games Teach Us</a></h5>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Game</th><th>Console in MP</th><th>Automation Stance</th><th>Anti-Cheat Model</th><th>Key Lesson for IC</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>StarCraft 2</strong></td><td>No console</td><td>APM is competitive skill — manual micro required</td><td>Warden (kernel, closed-source)</td><td>Works for closed-source; impossible for GPL. SC2 treats mechanical speed as a competitive dimension. IC must decide if it does too</td></tr>
+<tr><td><strong>AoE2 DE</strong></td><td>No console</td><td>Added auto-reseed farms, auto-queue — initially controversial, now widely accepted</td><td>Server-side + reporting</td><td>Give automation AS a feature (QoL toggle), not as a script advantage. Community will accept it when everyone has it</td></tr>
+<tr><td><strong>SupCom / FAF</strong></td><td>UI mods, SimMods</td><td>Strategy &gt; APM — extensive automation accepted</td><td>Lobby-agreed mods, all visible</td><td>If mods automate, require lobby consent. FAF’s community embraces this because SupCom’s identity is strategic, not mechanical. <strong>All UI mods are listed in the lobby</strong> — every player sees what every other player is running</td></tr>
+<tr><td><strong>Factorio</strong></td><td><code>/c</code> Lua in MP — visible to all, flags game</td><td>Blueprints, logistics bots, and circuit networks ARE the automation</td><td>Peer transparency</td><td>Build automation INTO the game as first-class systems. When the game provides it, scripts are unnecessary</td></tr>
+<tr><td><strong>CS2</strong></td><td>Full console + autoexec.cfg</td><td>Config/preference commands fine; gameplay macros banned</td><td>VAC (kernel)</td><td>Distinguish <strong>personalization</strong> (sensitivity, crosshair) from <strong>automation</strong> (playing the game for you)</td></tr>
+<tr><td><strong>OpenRA</strong></td><td>No console beyond chat</td><td>No scripting API; community self-policing</td><td>Trust + reports</td><td>Works at small scale; doesn’t scale. IC aims larger</td></tr>
+<tr><td><strong>Minecraft</strong></td><td>Operator-only in MP</td><td>Redstone and command blocks ARE the automation</td><td>Permission system</td><td>Gate powerful commands behind roles/permissions</td></tr>
+<tr><td><strong>Lichess</strong></td><td>N/A (turn-based)</td><td>Cannot prevent engine use — fully open source</td><td>Dual AI analysis (Irwin + Kaladin) + statistical flags + community reports</td><td><strong>The gold standard for open-source competitive integrity.</strong> No client-side anti-cheat at all. Detection is entirely behavioral and server-side. 100M+ games played. Proves the model works at massive scale</td></tr>
+<tr><td><strong>DDNet</strong></td><td>No console</td><td>Cooperative game — no adversarial scripting problem</td><td>Optional antibot plugin (relay-side, swappable ABI)</td><td>Server-side behavioral hooks with a swappable plugin architecture. IC’s relay server should support similar pluggable analysis</td></tr>
+<tr><td><strong>Minetest</strong></td><td>Server-controlled</td><td>CSM (Client-Side Mod) restriction flags sent by server</td><td>LagPool time-budget + server-side validation</td><td>Server tells client which capabilities are allowed. IC’s WASM capability model is architecturally stronger (capabilities are enforced, not requested), but the flag-based transparency is a good UX pattern</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>The lesson across all of these:</strong> The most successful approach is the Factorio/FAF/Lichess model — build the automation people want INTO the game as features available to everyone, make all actions transparent and auditable, and let communities enforce their own competitive norms. The open-source projects (Lichess, FAF, DDNet, Minetest) all converge on the same insight: <strong>you cannot secure the client, so secure the server and empower the community.</strong></p>
+<h5 id="ics-competitive-integrity-principles"><a class="header" href="#ics-competitive-integrity-principles">IC’s Competitive Integrity Principles</a></h5>
+<p><strong>CI-1: Console = GUI parity, never superiority.</strong></p>
+<p>Every console command must produce exactly the same <code>PlayerOrder</code> as its GUI equivalent. No command may provide capability that the GUI doesn’t offer. This is already the design (noted at the end of the Command Catalog) — this principle makes it an explicit invariant.</p>
+<p>Specific implications:</p>
+<ul>
+<li><code>/select all</code> selects everything in the current <strong>screen viewport</strong>, matching box-select behavior — NOT all units globally, unless the player has them in a control group (which the GUI also supports via D033’s <code>control_group_limit</code>).</li>
+<li><code>/build &lt;type&gt; inf</code> (infinite queue) is only available when D033’s <code>multi_queue</code> toggle is enabled in the lobby. If the lobby uses the vanilla preset (<code>multi_queue: false</code>), infinite queuing is rejected.</li>
+<li><code>/attack &lt;x,y&gt;</code> (attack-move) is only available when D033’s <code>attack_move</code> toggle is enabled. A vanilla preset lobby rejects it.</li>
+<li>Every console command respects the D033 QoL toggle state. <strong>The console is an alternative input method, not a QoL override.</strong></li>
+</ul>
+<p><strong>CI-2: D033 QoL toggles govern console commands.</strong></p>
+<p>Console commands are bound by the same lobby-agreed QoL configuration as GUI actions. When a D033 toggle is disabled:</p>
+<ul>
+<li>The corresponding console command is rejected with: <code>"[feature] is disabled in this lobby's rule set."</code></li>
+<li>The command does not produce a <code>PlayerOrder</code>. It is rejected at the command dispatcher layer, before reaching the order pipeline.</li>
+<li>The help text for disabled commands shows their disabled status: <code>"/attack — Attack-move to position [DISABLED: attack_move toggle off]"</code>.</li>
+</ul>
+<p>This ensures the console cannot bypass lobby agreements. If the lobby chose the vanilla preset, console users get the vanilla feature set.</p>
+<p><strong>CI-3: Order rate monitoring, not blocking.</strong></p>
+<p>Hard-blocking input rates punishes legitimately fast players (competitive RTS players regularly exceed 300 APM). Instead, IC monitors and exposes:</p>
+<ul>
+<li><strong>Orders-per-tick tracking.</strong> The sim records orders-per-tick per player in replay metadata. This is always recorded, not opt-in.</li>
+<li><strong>Input source tagging.</strong> Each <code>PlayerOrder</code> in the replay includes an <code>InputSource</code> tag: <code>Keybinding</code>, <code>MouseClick</code>, <code>ChatCommand</code>, <code>ConfigFile</code>, <code>Script</code>, <code>Touch</code>, <code>Controller</code>. A player issuing 300 orders/minute via <code>Keybinding</code> and <code>MouseClick</code> is playing fast. A player issuing 300 orders/minute via <code>ChatCommand</code> or <code>Script</code> is scripting. Note: <code>InputSource</code> is client-reported and advisory only — see the <code>InputSource</code> enum definition above.</li>
+<li><strong>APM display.</strong> Observers and replay viewers see per-player APM, broken down by input source. This is standard competitive RTS practice (SC2, AoE2, OpenRA all display APM).</li>
+<li><strong>Community-configurable thresholds.</strong> Community servers (D052) can define APM alerts or investigation triggers for ranked play. The engine does not hard-enforce these — communities set their own competitive norms. A community that values APM skill sets no cap. A community that values strategy over speed sets a 200 APM soft cap with admin review.</li>
+</ul>
+<p><strong>Why not hard-block:</strong> In an open-source engine, a modified client can send orders with any <code>CommandOrigin</code> tag — faking <code>Keybinding</code> when actually scripted. Hard-blocking based on unverifiable client-reported data gives a false sense of security. The relay server (D007) can count order volume server-side (where it can’t be spoofed), but the input source tag is client-reported and advisory only.</p>
+<p><strong>Note on V17 transport-layer caps:</strong> The <code>ProtocolLimits</code> hard ceilings (256 orders/tick, 4 KB/order — see <code>06-SECURITY.md</code> § V17) still apply as anti-flooding protection at the relay layer. These are not APM caps — they’re DoS prevention. Normal RTS play peaks at 5–10 orders/tick even at professional APM levels, so the 256/tick ceiling is never reached by legitimate play. The distinction: V17 prevents network flooding (relay-enforced, spoofing-proof); Principle 3 here addresses <em>gameplay</em> APM policy (community-governed, not engine-enforced).</p>
+<p><strong>CI-4: Automate the thing, not the workaround.</strong></p>
+<p>When the community discovers that a script provides an advantage, the correct response is not to ban the script — it’s to build the scripted behavior into the game as a D033 QoL toggle, making it available to everyone with a single checkbox in the lobby settings. Not buried in a config file. Not requiring a Workshop download. Not needing technical knowledge. <strong>A toggle in the settings menu that any player can find and enable.</strong></p>
+<p>This is the most important competitive integrity principle for an open-source engine: <strong>if someone has to script it, the game’s UX has failed.</strong> Every popular script is evidence of a feature the game should have provided natively. The script author identified a need; the game should absorb the solution.</p>
+<p>The AoE2 DE lesson is the clearest example: auto-reseed farms were a popular mod/script for years. Players who knew about it had an economic advantage — their farms never went idle. Players who didn’t know the script existed fell behind. Forgotten Empires eventually built it into the game as a toggle. Controversy faded immediately. Everyone uses it now. The automation advantage disappeared because it stopped being an advantage — it became a baseline feature.</p>
+<p>This principle applies proactively, not just reactively:</p>
+<p><strong>Reactive (minimum):</strong> When a Workshop script becomes popular, evaluate it for D033 promotion. The criteria: (a) widely used by script authors, (b) not controversial when available to everyone, (c) reduces tedious repetition without removing strategic decision-making. D037’s governance process (community RFCs) is the mechanism.</p>
+<p><strong>Proactive (better):</strong> When designing any system, ask: “will players script this?” If the answer is yes — if there’s a repetitive task that rewards automation — build the automation in from the start. Don’t wait for the scripting community to solve it. Design the feature with a D033 toggle so lobbies can enable or disable it as they see fit.</p>
+<p>Examples of automation candidates for IC:</p>
+<ul>
+<li><strong>Auto-harvest:</strong> Idle harvesters automatically return to the nearest ore field → D033 toggle <code>auto_harvest</code>. Without this, scripts that re-dispatch idle harvesters provide a measurable economic advantage. With the toggle, every player gets perfect harvester management.</li>
+<li><strong>Auto-repair:</strong> Damaged buildings near repair facilities automatically start repairing → D033 toggle <code>auto_repair</code>. Eliminates the tedious click-each-damaged-building loop that scripts handle perfectly.</li>
+<li><strong>Production auto-repeat:</strong> Re-queue the last built unit type automatically → D033 toggle <code>production_repeat</code>. Prevents the “forgot to queue another tank” problem that scripts never have.</li>
+<li><strong>Idle unit alert:</strong> Notification when production buildings have been idle for N seconds → D033 toggle <code>idle_alert</code>. A script can monitor every building simultaneously; a player can’t. The alert makes the information accessible to everyone.</li>
+<li><strong>Smart rally:</strong> Rally points that automatically assign new units to the nearest control group → D033 toggle <code>smart_rally</code>. Avoids the need for scripts that intercept newly produced units.</li>
+</ul>
+<p>These are NOT currently in D033’s catalog — they are examples of both the reactive adoption process and the proactive design mindset. The game should be designed so that someone who has never heard of console scripts or the Workshop has the same access to automation as someone who writes custom <code>.iccmd</code> files.</p>
+<p><strong>The accessibility test:</strong> For any automation feature, ask: “Can a player who doesn’t know what a script is get this benefit?” If the answer is no — if the only path to the automation is technical knowledge — the game has created an unfair advantage that favors technical literacy over strategic skill. IC should always be moving toward yes.</p>
+<p><strong>CI-5: If you can’t beat them, host them.</strong></p>
+<p>Console scripts are shareable on the Workshop (D030) as a first-class resource category. Not reluctantly tolerated — actively supported with the same publishing, versioning, dependency, and discovery infrastructure as maps, mods, and music.</p>
+<p>The reasoning is simple: players WILL write automation scripts. In a closed-source engine, that happens underground — in forums, Discord servers, private AutoHotKey configs. The developers can’t see what’s being shared, can’t ensure quality or safety, can’t help users find good scripts, and can’t detect which automations are becoming standard practice. In an open-source engine, the underground is even more pointless — anyone can read the source and write a script trivially.</p>
+<p>So instead of pretending scripts don’t exist, IC makes them a Workshop resource:</p>
+<ul>
+<li><strong>Published scripts are visible.</strong> The development team (and community) can see which automations are popular — direct signal for which behaviors to promote to D033 QoL toggles.</li>
+<li><strong>Published scripts are versioned.</strong> When the engine updates, script authors can update their packages. Users get notified of compatibility issues.</li>
+<li><strong>Published scripts are sandboxed.</strong> Workshop console scripts are sequences of console commands (<code>.iccmd</code> files), not arbitrary executables. They run through the same <code>CommandDispatcher</code> — they can’t do anything the console can’t do. They’re macros, not programs.</li>
+<li><strong>Published scripts are rated and reviewed.</strong> Community quality filtering applies — same as maps, mods, and balance presets.</li>
+<li><strong>Published scripts carry lobby disclosure.</strong> In multiplayer, active Workshop scripts are listed in the lobby alongside active mods. All players see what automations each player is running. This is the FAF model — UI mods are visible to all players in the lobby.</li>
+<li><strong>Published scripts respect D033 toggles.</strong> A script that issues <code>/attack</code> commands is rejected in a vanilla-preset lobby where <code>attack_move</code> is disabled — just like typing the command manually.</li>
+</ul>
+<p><strong>Script format — <code>.iccmd</code> files:</strong></p>
+<pre><code># auto-harvest.iccmd — Auto-queue harvesters when income drops
+# Workshop: community/auto-harvest@1.0.0
+# Category: Script Libraries &gt; Economy Automation
+# Lobby visibility: shown as active script to all players
+
+@on income_below 500
+  /select type:war_factory idle
+  /build harvester 1
+@end
+
+@on building_idle war_factory 10s
+  /build harvester 1
+@end
+</code></pre>
+<p>The <code>.iccmd</code> format is deliberately limited — event triggers + console commands, not a programming language. Complex automation belongs in Lua mods (D004), not console scripts. <strong>Boundary with Lua:</strong> <code>.iccmd</code> triggers are pre-defined patterns (event name + threshold), not arbitrary conditionals. If a script needs <code>if/else</code>, loops, variables, or access to game state beyond trigger parameters, it should be a Lua mod. The triggers shown above (<code>@on income_below</code>, <code>@on building_idle</code>) are the <em>ceiling</em> of <code>.iccmd</code> expressiveness — they fire when a named condition crosses a threshold, nothing more. Event triggers must have a per-trigger cooldown (minimum interval between firings) to prevent rapid-fire order generation — without cooldowns, a trigger that fires every tick could consume the player’s entire order budget (V17: 256 orders/tick hard ceiling) and crowd out intentional commands. The format details are illustrative — final syntax is a Phase 5+ design task.</p>
+<p><strong>The promotion pipeline:</strong> Workshop script popularity directly feeds the D033 adoption process:</p>
+<ol>
+<li><strong>Community creates</strong> — someone publishes <code>auto-harvest.iccmd</code> on the Workshop</li>
+<li><strong>Community adopts</strong> — it becomes the most-downloaded script in its category</li>
+<li><strong>Community discusses</strong> — D037 RFC: “should auto-harvest be a built-in QoL toggle?”</li>
+<li><strong>Design team evaluates</strong> — does it reduce tedium without removing decisions?</li>
+<li><strong>Engine absorbs</strong> — if yes, it becomes <code>D033 toggle auto_harvest</code>, the Workshop script becomes redundant, and the community moves on to the next automation frontier</li>
+</ol>
+<p>This is how healthy open-source ecosystems work. npm packages become Node.js built-ins. Popular Vim plugins become Neovim defaults. Community Firefox extensions become browser features. The Workshop is IC’s proving ground for automation features.</p>
+<p><strong>CI-6: Transparency over restriction.</strong></p>
+<p>Every action a player takes is recorded in the replay — including the commands they used and their input source. The community can see exactly how each player played. This is the most powerful competitive integrity tool available to an open-source project:</p>
+<ul>
+<li>Post-match replays show full APM breakdown with input source tags</li>
+<li>Tournament casters can display “console commands used” alongside APM</li>
+<li>Community server admins can review flagged matches</li>
+<li>The community decides what level of automation is acceptable for their competitive scene</li>
+</ul>
+<p>This mirrors how chess handles engine cheating online: no client can be fully trusted, so the detection is behavioral/statistical, reviewed by humans or automated analysis, and enforced by the community.</p>
+<h5 id="player-transparency--what-players-see"><a class="header" href="#player-transparency--what-players-see">Player Transparency — What Players See</a></h5>
+<p>Principle 6 states transparency over restriction. This subsection specifies exactly what players see — the concrete UX that makes automation visible rather than hidden.</p>
+<p><strong>Lobby (pre-game):</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Element</th><th>Visibility</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Active mods</strong></td><td>All loaded mods listed per player (name + version). Mismatches highlighted. Same model as Factorio/FAF</td></tr>
+<tr><td><strong>Active <code>.iccmd</code> scripts</strong></td><td>Workshop scripts listed by name with link to Workshop page. Custom (non-Workshop) scripts show “Local script”</td></tr>
+<tr><td><strong>QoL preset</strong></td><td>Player’s active experience profile (D033) displayed — e.g., “OpenRA Purist,” “IC Standard,” or custom</td></tr>
+<tr><td><strong>D033 toggles summary</strong></td><td>Expandable panel: which automations are enabled (auto-harvest, auto-repair, production repeat, idle alerts, etc.)</td></tr>
+<tr><td><strong>Input devices</strong></td><td>Not shown — input hardware is private. Only the <em>commands issued</em> are tracked, not the device</td></tr>
+</tbody>
+</table>
+</div>
+<p>The lobby is the first line of defense against surprise: if your opponent has auto-repair and production repeat enabled, you see that <em>before</em> clicking Ready. This is the FAF model — every UI mod is listed in the lobby, and opponents can inspect the full list.</p>
+<p><strong>In-game HUD:</strong></p>
+<ul>
+<li><strong>No real-time script indicators for opponents.</strong> Showing “Player 2 is using a script” mid-game would be distracting, potentially misleading (is auto-harvest a “script” or a QoL toggle?), and would create incentive to game the indicator. The lobby disclosure is sufficient.</li>
+<li><strong>Own-player indicators:</strong> Your own enabled automations appear as small icons near the minimap (same UI surface as stance icons). You see what <em>you</em> have active, always.</li>
+<li><strong>Observer/caster mode:</strong> Observers and casters see a per-player APM counter with source breakdown (GUI clicks vs. console commands vs. script-issued orders). This is a spectating feature, not a player-facing one — competitive players don’t get distracted, but casters can narrate automation differences.</li>
+</ul>
+<p><strong>Post-match score screen:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Metric</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>APM (total)</strong></td><td>Raw actions per minute, standard RTS metric</td></tr>
+<tr><td><strong>APM by source</strong></td><td>Breakdown: GUI / console / <code>.iccmd</code> script / config file. Shows how each player issued orders</td></tr>
+<tr><td><strong>D033 toggles active</strong></td><td>Which automations were enabled during the match</td></tr>
+<tr><td><strong>Workshop scripts active</strong></td><td>Named list of <code>.iccmd</code> scripts used, with Workshop links</td></tr>
+<tr><td><strong>Order volume graph</strong></td><td>Timeline of orders-per-second, color-coded by source — spikes from scripts are visually obvious</td></tr>
+</tbody>
+</table>
+</div>
+<p>The post-match screen answers “how did they play?” without judgment. A player who used auto-repair and a build-order script can be distinguished from one who micro’d everything manually — but neither is labeled “cheater.” The community decides what level of automation they respect.</p>
+<p><strong>Replay viewer:</strong></p>
+<ul>
+<li>Full command log with <code>CommandOrigin</code> tags (GUI, Console, Script, ConfigFile)</li>
+<li>APM timeline graph with source-coded coloring</li>
+<li>Script execution markers on the timeline (when each <code>.iccmd</code> trigger fired)</li>
+<li>Exportable match data (JSON/CSV) for community statistical analysis tools</li>
+<li>Same observer APM overlay available during replay playback</li>
+</ul>
+<p><strong>Why no “script detected” warnings?</strong></p>
+<p>The user asked: “should we do something to let players know scripts are in use?” The answer is: yes — <em>before the game starts</em> (lobby) and <em>after it ends</em> (score screen, replay), but <em>not during the game</em>. Mid-game warnings create three problems:</p>
+<ol>
+<li><strong>Classification ambiguity.</strong> Where is the line between “D033 QoL toggle” and “script”? Auto-harvest is engine-native. A <code>.iccmd</code> that does the same thing is functionally identical. Warning about one but not the other is arbitrary.</li>
+<li><strong>False security.</strong> A warning that says “no scripts detected” when running an open-source client is meaningless — any modified client can suppress the flag. The lobby disclosure is opt-in honesty backed by replay verification, not a trust claim.</li>
+<li><strong>Distraction.</strong> Players should focus on playing, not monitoring opponent automation status. Post-match review is the right time for analysis.</li>
+</ol>
+<p><strong>Lessons from open-source games on client trust:</strong></p>
+<p>The comparison table above includes Lichess, DDNet, and Minetest. The cross-cutting lesson from all open-source competitive games:</p>
+<ul>
+<li><strong>You cannot secure the client.</strong> Any GPL codebase can be modified to lie about anything client-side. Lichess knows this — their entire anti-cheat (Irwin + Kaladin) is server-side behavioral analysis. DDNet’s antibot plugin runs server-side. Minetest’s CSM restriction flags are server-enforced.</li>
+<li><strong>Embrace the openness.</strong> Rather than fighting modifications, make the <em>legitimate</em> automation excellent so there’s no incentive to use shady external tools. Factorio’s mod system is so good that cheating is culturally irrelevant. FAF’s sim mod system is so transparent that the community self-polices.</li>
+<li><strong>The server is the only trust boundary.</strong> Order validation (D012), relay-side order counting (D007), and replay signing (D052) are the real anti-cheat. Client-side anything is theater.</li>
+</ul>
+<p>IC’s position: we don’t pretend the client is trustworthy. We make automation visible, accessible, and community-governed — then let the server and the replay be the source of truth.</p>
+<h5 id="ranked-mode-restrictions"><a class="header" href="#ranked-mode-restrictions">Ranked Mode Restrictions</a></h5>
+<p>Ranked matchmaking (D055) enforces additional constraints beyond casual play:</p>
+<ul>
+<li><strong>DeveloperMode is unavailable.</strong> The lobby option is hidden in ranked queue — dev commands cannot be enabled.</li>
+<li><strong>Mod commands require ranked certification.</strong> Community servers (D052) maintain a whitelist of mod commands approved for ranked play. Uncertified mod commands are rejected in ranked matches. The default: only engine-core commands are permitted; game-module commands (those registered by the built-in game module, e.g., RA1) are permitted; third-party mod commands require explicit whitelist entry.</li>
+<li><strong>Order volume is recorded server-side.</strong> The relay server counts orders per player per tick. This data is included in match certification (D055) and available for community review. It cannot be spoofed by modified clients.</li>
+<li><strong><code>autoexec.cfg</code> commands execute normally.</strong> Cvar-setting commands (<code>/set</code>, <code>/get</code>, <code>/toggle</code>) from autoexec execute as preferences. Gameplay commands (<code>/build</code>, <code>/move</code>, etc.) from autoexec are rejected in ranked — <code>CommandOrigin::ConfigFile</code> is not a valid origin for sim-affecting orders in ranked mode. You can set your sensitivity in autoexec; you can’t script your build order.</li>
+<li><strong>Zoom range is clamped.</strong> The competitive zoom range (default: 0.75–2.0) overrides the render mode’s <code>CameraConfig.zoom_min/zoom_max</code> (see <code>02-ARCHITECTURE.md</code> § “Camera System”) in ranked matches. This prevents extreme zoom-out from providing disproportionate map awareness. The default range is configured per ranked queue by the competitive committee (D037) and stored in the seasonal ranked configuration YAML. Tournament organizers can set their own zoom range via <code>TournamentConfig</code>. The <code>/zoom</code> command respects these bounds.</li>
+</ul>
+<h5 id="tournament-mode"><a class="header" href="#tournament-mode">Tournament Mode</a></h5>
+<p>Tournament organizers (via community server administration, D052) can enable a stricter <strong>tournament mode</strong> in the lobby:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Restriction</th><th>Effect</th><th>Rationale</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Command whitelist</strong></td><td>Only whitelisted commands accepted; all others rejected</td><td>Organizers control exactly which console commands are legal</td></tr>
+<tr><td><strong>ConfigFile gameplay rejection</strong></td><td><code>autoexec.cfg</code> sim-affecting commands rejected (same as ranked)</td><td>Level playing field — no pre-scripted build orders</td></tr>
+<tr><td><strong>Input source logging</strong></td><td>All <code>CommandOrigin</code> tags recorded in match data, visible to admins</td><td>Post-match review for scripting investigation</td></tr>
+<tr><td><strong>APM cap (optional)</strong></td><td>Configurable orders-per-minute soft cap; exceeding triggers admin alert, not hard block</td><td>Communities that value strategy over APM can set limits</td></tr>
+<tr><td><strong>Forced replay recording</strong></td><td>Match replay saved automatically; both players receive copies</td><td>Evidence for dispute resolution</td></tr>
+<tr><td><strong>No mod commands</strong></td><td>Third-party mod commands disabled entirely</td><td>Pure vanilla/IC experience for competition</td></tr>
+<tr><td><strong>Workshop scripts (configurable)</strong></td><td>Organizer chooses: allow all, whitelist specific scripts, or disable all <code>.iccmd</code> scripts</td><td>Some tournaments embrace automation (FAF-style); others require pure manual play. Organizer’s call</td></tr>
+</tbody>
+</table>
+</div>
+<p>Tournament mode is a superset of ranked restrictions — it’s ranked plus organizer-defined rules. The <code>CommandDispatcher</code> checks a <code>TournamentConfig</code> resource (if present) before executing any command.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Additional Tournament Option</th><th>Effect</th><th>Default</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Zoom range override</strong></td><td>Custom min/max zoom bounds</td><td>Same as ranked (0.75–2.0)</td></tr>
+<tr><td><strong>Resolution cap</strong></td><td>Maximum horizontal resolution for game viewport</td><td>Disabled (no cap)</td></tr>
+<tr><td><strong>Weather sim effects</strong></td><td>Force <code>sim_effects: false</code> on all maps</td><td>Off (use map’s setting)</td></tr>
+</tbody>
+</table>
+</div>
+<h5 id="visual-settings--competitive-fairness"><a class="header" href="#visual-settings--competitive-fairness">Visual Settings &amp; Competitive Fairness</a></h5>
+<p>Client-side visual settings — <code>/weather_fx</code>, <code>/shadows</code>, graphics quality presets, and render quality tiers — can affect battlefield visibility. A player who disables weather particles sees more clearly during a storm; a player on Low shadows has cleaner unit silhouettes.</p>
+<p>This is a <strong>conscious design choice, not an oversight.</strong> Nearly every competitive game exhibits this pattern: CS2 players play on low settings for visibility, SC2 players minimize effects for performance. The access is symmetric (every player can toggle the same settings), the tradeoff is aesthetics vs. clarity, and restricting visual preferences would be hostile to players on lower-end hardware who <em>need</em> reduced effects to maintain playable frame rates.</p>
+<p><strong>Resolution and aspect ratio</strong> follow the same principle. A 32:9 ultrawide player sees more horizontal area than a 16:9 player. In an isometric RTS, this advantage is modest — the sidebar and minimap consume significant screen space, and the critical information (unit positions, fog of war) is available to all players via the minimap regardless of viewport size. Restricting resolution would punish players for their hardware. Tournament organizers can set resolution caps via <code>TournamentConfig</code> if their ruleset demands hardware parity, but engine-level ranked play does not restrict this.</p>
+<p><strong>Principle:</strong> Visual settings that are universally accessible, symmetrically available, and involve a meaningful aesthetic tradeoff are not restricted. Settings that provide information not available to other players (hypothetical: a shader that reveals cloaked units) would be restricted. The line is <strong>information equivalence</strong>, not visual equivalence.</p>
+<h5 id="what-we-explicitly-do-not-do"><a class="header" href="#what-we-explicitly-do-not-do">What We Explicitly Do NOT Do</a></h5>
+<ul>
+<li><strong>No kernel anti-cheat.</strong> Warden, VAC, Vanguard, EasyAntiCheat — none of these are compatible with GPL, Linux, community trust, or open-source principles. We accept that the client cannot be trusted and design our competitive integrity around server-side verification and community governance instead.</li>
+<li><strong>No hard APM cap for all players.</strong> Fast players exist. Punishing speed punishes skill. APM is monitored and exposed, not limited (except in tournament mode where organizers opt in).</li>
+<li><strong>No “you used the console, achievements disabled” for non-dev commands.</strong> Typing <code>/move 100,200</code> instead of right-clicking is a UX preference, not cheating. Only dev commands trigger the cheat flag.</li>
+<li><strong>No script detection heuristics in the engine.</strong> Attempting to distinguish “human typing fast” from “script typing” is an arms race the open-source side always loses. Detection belongs to the community layer (replay review, statistical analysis), not the engine layer.</li>
+<li><strong>No removal of the console in multiplayer.</strong> The console is an accessibility and power-user feature. Removing it doesn’t prevent scripting (external tools exist); it just removes a legitimate interface. The answer to automation isn’t removing tools — it’s making the automation available to everyone (D033) and transparent to the community (replays).</li>
+</ul>
+<h5 id="cross-reference-summary"><a class="header" href="#cross-reference-summary">Cross-Reference Summary</a></h5>
+<ul>
+<li><strong>D012 (Order Validation):</strong> The architectural defense — every <code>PlayerOrder</code> is validated by the sim regardless of origin. Invalid orders are rejected deterministically.</li>
+<li><strong>D007 (Relay Server):</strong> Server-side order counting cannot be spoofed by modified clients. The relay sees the real order volume.</li>
+<li><strong>D030 (Workshop):</strong> Console scripts are a first-class Workshop resource category. Visibility, versioning, and community review make underground scripting unnecessary. Popular scripts feed the D033 promotion pipeline.</li>
+<li><strong>D033 (QoL Toggles):</strong> The great equalizer — when automation becomes standard community practice, promote it to a QoL toggle so everyone benefits equally. Workshop script popularity is the primary signal for which automations to promote.</li>
+<li><strong>D037 (Community Governance):</strong> Communities define their own competitive norms via RFCs. APM policies, script policies, and tournament rules are community decisions, not engine-enforced mandates.</li>
+<li><strong>D052 (Community Servers):</strong> Server operators configure ranked restrictions, tournament mode, and mod command whitelists.</li>
+<li><strong>D055 (Ranked Tiers):</strong> Ranked mode automatically applies the competitive integrity restrictions described above.</li>
+<li><strong>D048 (Render Modes):</strong> Information equivalence guarantee — all render modes display identical game-state information. See D048 § “Information Equivalence Across Render Modes.”</li>
+<li><strong>D022 (Weather):</strong> Weather sim effects on ranked maps are a map pool curation concern — see D055 § “Map pool curation guidelines.”</li>
+<li><strong>D018 (Experience Profiles):</strong> Profile locking table specifies which axes are fixed in ranked. See D018 § profile locking table.</li>
+</ul>
+<h4 id="classic-cheat-codes-single-player-easter-egg"><a class="header" href="#classic-cheat-codes-single-player-easter-egg">Classic Cheat Codes (Single-Player Easter Egg)</a></h4>
+<p><strong>Phase:</strong> Phase 3+ (requires command system; trivial to implement once <code>CheatCodeHandler</code> and <code>PlayerOrder::CheatCode</code> exist — each cheat reuses existing dev command effects).</p>
+<p>A hidden, undocumented homage to the golden age of cheat codes and trainers. In single-player, the player can type certain phrases into the chat input — no <code>/</code> prefix needed — and trigger hidden effects. These are never listed in <code>/help</code>, never mentioned in any in-game documentation, and never exposed through the UI. They exist for the community to discover, share, and enjoy — exactly like AoE2’s “how do you turn this on” or StarCraft’s “power overwhelming.”</p>
+<p><strong>Design principles:</strong></p>
+<ol>
+<li>
+<p><strong>Single-player only.</strong> Cheat phrases are ignored entirely in multiplayer — the <code>CheatCodeHandler</code> is not even registered as a system when <code>NetworkModel</code> is anything other than <code>LocalNetwork</code>. No server-side processing, no network traffic, no possibility of multiplayer exploitation.</p>
+</li>
+<li>
+<p><strong>Undocumented.</strong> Not in <code>/help</code>. Not in the encyclopedia. Not in any in-game tooltip or tutorial. The game’s official documentation does not acknowledge their existence. Community wikis and word-of-mouth are the discovery mechanism — just like the originals.</p>
+</li>
+<li>
+<p><strong>Hashed, not plaintext.</strong> Cheat phrase strings are stored as pre-computed hashes in the binary, not as plaintext string literals. Casual inspection of the binary or source code does not trivially reveal all cheats. This is a speed bump, not cryptographic security — determined data-miners will find them, and that’s fine. The goal is to preserve the discovery experience, not to make them impossible to find.</p>
+</li>
+<li>
+<p><strong>Two-tier achievement-flagging.</strong> Not all cheats are equal — disco palette cycling doesn’t affect competitive integrity the same way infinite credits does. IC uses a two-tier cheat classification:</p>
+<ul>
+<li><strong>Gameplay cheats</strong> (invincibility, instant build, free credits, reveal map, etc.) permanently set <code>cheats_used = true</code> on the save/match. Achievements (D036) are disabled. Same rules as dev commands.</li>
+<li><strong>Cosmetic cheats</strong> (palette effects, visual gags, camera tricks, audio swaps) set <code>cosmetic_cheats_used = true</code> but do NOT disable achievements or flag the save as “cheated.” They are recorded in replay metadata for transparency but carry no competitive consequence.</li>
+</ul>
+<p>The litmus test: <strong>does this cheat change the simulation state in a way that affects win/loss outcomes?</strong> If yes → gameplay cheat. If it only touches rendering, audio, or visual effects with zero sim impact → cosmetic cheat. Edge cases default to gameplay (conservative). The classification is per-cheat, defined in the game module’s cheat table (the <code>CheatFlags</code> field below).</p>
+<p>This is more honest than a blanket flag. Punishing a player for typing “kilroy was here” the same way you punish them for infinite credits is disproportionate — it discourages the fun, low-stakes cheats that are the whole point of the system.</p>
+</li>
+<li>
+<p><strong>Thematic.</strong> Phrases are Cold War themed, fitting the Red Alert setting, and extend to C&amp;C franchise cultural moments and cross-game nostalgia. Each cheat has a brief, in-character confirmation message displayed as an EVA notification — no generic “cheat activated” text. Naming follows the narrative identity principle: earnest commitment, never ironic distance (Principle #20, <a href="13-PHILOSOPHY.html">13-PHILOSOPHY.md</a>). Even hidden mechanisms carry the world’s flavor.</p>
+</li>
+<li>
+<p><strong>Fun first.</strong> Some cheats are practical (infinite credits, invincibility). Others are purely cosmetic silliness (visual effects, silly unit behavior). The two-tier flagging (principle 4 above) ensures cosmetic cheats don’t carry disproportionate consequences — players can enjoy visual gags without losing achievement progress.</p>
+</li>
+</ol>
+<p><strong>Implementation:</strong></p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Handles hidden cheat code activation in single-player.
+/// Registered ONLY when NetworkModel is LocalNetwork (single-player / skirmish vs AI).
+/// Checked BEFORE the CommandDispatcher — if input matches a known cheat hash,
+/// the cheat is activated and the input is consumed (never reaches chat or command parser).
+pub struct CheatCodeHandler {
+    /// Pre-computed FNV-1a hashes of cheat phrases (lowercased, trimmed).
+    /// Using hashes instead of plaintext prevents casual string extraction from the binary.
+    /// Map: hash → CheatEntry (id + flags).
+    known_hashes: HashMap&lt;u64, CheatEntry&gt;,
+    /// Currently active toggle cheats (invincibility, instant build, etc.).
+    active_toggles: HashSet&lt;CheatId&gt;,
+}
+
+pub struct CheatEntry {
+    pub id: CheatId,
+    pub flags: CheatFlags,
+}
+
+bitflags! {
+    /// Per-cheat classification. Determines achievement/ranking consequences.
+    pub struct CheatFlags: u8 {
+        /// Affects simulation state (credits, health, production, fog, victory).
+        /// Sets `cheats_used = true` — disables achievements and ranked submission.
+        const GAMEPLAY = 0b01;
+        /// Affects only rendering, audio, or camera — zero sim impact.
+        /// Sets `cosmetic_cheats_used = true` — recorded in replay but no competitive consequence.
+        const COSMETIC = 0b10;
+    }
+}
+
+impl CheatCodeHandler {
+    /// Called from InputSource processing pipeline, BEFORE command dispatch.
+    /// Returns true if input was consumed as a cheat code.
+    pub fn try_activate(&amp;mut self, input: &amp;str) -&gt; Option&lt;CheatActivation&gt; {
+        let normalized = input.trim().to_lowercase();
+        let hash = fnv1a_hash(normalized.as_bytes());
+        if let Some(&amp;cheat_id) = self.known_hashes.get(&amp;hash) {
+            Some(CheatActivation {
+                cheat_id,
+                // Produces a PlayerOrder::CheatCode(cheat_id) that flows through
+                // the sim's order pipeline — deterministic, snapshottable, replayable.
+                order: PlayerOrder::CheatCode(cheat_id),
+            })
+        } else {
+            None
+        }
+    }
+}
+
+/// Cheat activation produces a PlayerOrder — the sim handles it deterministically.
+/// This means cheats are: (a) snapshottable (D010), (b) replayable, (c) validated
+/// (the sim rejects CheatCode orders when not in single-player mode).
+pub enum PlayerOrder {
+    // ... existing variants ...
+    CheatCode(CheatId),
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Processing flow:</strong> Chat input → <code>CheatCodeHandler::try_activate()</code> → if match, produce <code>PlayerOrder::CheatCode</code> → order pipeline → sim validates (single-player only) → check <code>CheatFlags</code>: if <code>GAMEPLAY</code>, set <code>cheats_used = true</code>; if <code>COSMETIC</code>, set <code>cosmetic_cheats_used = true</code> → apply effect → EVA confirmation notification. If no match, input falls through to normal chat/command dispatch.</p>
+<p><strong>Note on chat swallowing:</strong> If a player types a cheat phrase (e.g., “iron curtain”) as normal chat, it is consumed as a cheat activation — the text is NOT sent as a chat message. This is <strong>intentional and by design</strong>: cheat codes only activate in single-player mode (multiplayer rejects <code>CheatCode</code> orders), and the hidden-phrase discovery mechanic requires that the input be consumed on match. Players in single-player who accidentally trigger a cheat receive an EVA confirmation that makes the activation obvious, and all cheats are toggleable (can be deactivated by typing the phrase again).</p>
+<p><strong>Cheat codes (RA1 game module examples):</strong></p>
+<p><em>Trainer-style cheats (gameplay-affecting — <code>GAMEPLAY</code> flag, disables achievements):</em></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Phrase</th><th>Effect</th><th>Type</th><th>Flags</th><th>Confirmation</th></tr>
+</thead>
+<tbody>
+<tr><td><code>perestroika</code></td><td>Reveal entire map permanently</td><td>One-shot</td><td><code>GAMEPLAY</code></td><td>“Transparency achieved.”</td></tr>
+<tr><td><code>glasnost</code></td><td>Remove fog of war permanently (live vision of all units)</td><td>One-shot</td><td><code>GAMEPLAY</code></td><td>“Nothing to hide, comrade.”</td></tr>
+<tr><td><code>iron curtain</code></td><td>Toggle invincibility for all your units</td><td>Toggle</td><td><code>GAMEPLAY</code></td><td>“Your forces are shielded.” / “Shield lowered.”</td></tr>
+<tr><td><code>five year plan</code></td><td>Toggle instant build (all production completes in 1 tick)</td><td>Toggle</td><td><code>GAMEPLAY</code></td><td>“Plan accelerated.” / “Plan normalized.”</td></tr>
+<tr><td><code>surplus</code></td><td>Grant 10,000 credits (repeatable)</td><td>Repeatable</td><td><code>GAMEPLAY</code></td><td>“Economic stimulus approved.”</td></tr>
+<tr><td><code>marshall plan</code></td><td>Max out credits + complete all queued production instantly</td><td>One-shot</td><td><code>GAMEPLAY</code></td><td>“Full economic mobilization.”</td></tr>
+<tr><td><code>mutual assured destruction</code></td><td>All superweapons fully charged</td><td>Repeatable</td><td><code>GAMEPLAY</code></td><td>“Launch readiness confirmed.”</td></tr>
+<tr><td><code>arms race</code></td><td>All current units gain elite veterancy</td><td>One-shot</td><td><code>GAMEPLAY</code></td><td>“Accelerated training complete.”</td></tr>
+<tr><td><code>not a step back</code></td><td>Toggle +100% fire rate and +50% damage for all your units</td><td>Toggle</td><td><code>GAMEPLAY</code></td><td>“Order 227 issued.” / “Order rescinded.”</td></tr>
+<tr><td><code>containment</code></td><td>All enemy units frozen in place for 30 seconds</td><td>Repeatable</td><td><code>GAMEPLAY</code></td><td>“Enemies contained.”</td></tr>
+<tr><td><code>scorched earth</code></td><td>Next click drops a nuke at cursor position (one-use per activation)</td><td>One-use</td><td><code>GAMEPLAY</code></td><td>“Strategic asset available. Select target.”</td></tr>
+<tr><td><code>red october</code></td><td>Spawn a submarine fleet at nearest water body</td><td>One-shot</td><td><code>GAMEPLAY</code></td><td>“The fleet has arrived.”</td></tr>
+<tr><td><code>from russia with love</code></td><td>Spawn a Tanya at cursor position</td><td>Repeatable</td><td><code>GAMEPLAY</code></td><td>“Special operative deployed.”</td></tr>
+<tr><td><code>new world order</code></td><td>Instant victory</td><td>One-shot</td><td><code>GAMEPLAY</code></td><td>“Strategic dominance achieved.”</td></tr>
+<tr><td><code>better dead than red</code></td><td>Instant defeat (you lose)</td><td>One-shot</td><td><code>GAMEPLAY</code></td><td>“Surrender accepted.”</td></tr>
+<tr><td><code>dead hand</code></td><td>Automated retaliation: when your last building dies, all enemy units on the map take massive damage</td><td>Persistent</td><td><code>GAMEPLAY</code></td><td>“Automated retaliation system armed. They cannot win without losing.”</td></tr>
+<tr><td><code>mr gorbachev</code></td><td>Destroys every wall segment on the map (yours and the enemy’s)</td><td>One-shot</td><td><code>GAMEPLAY</code></td><td>“Tear down this wall!”</td></tr>
+<tr><td><code>domino theory</code></td><td>When an enemy unit dies, adjacent enemies take 25% of the killed unit’s max HP. Chain reactions possible</td><td>Toggle</td><td><code>GAMEPLAY</code></td><td>“One falls, they all fall.” / “Containment restored.”</td></tr>
+<tr><td><code>wolverines</code></td><td>All infantry deal +50% damage (Red Dawn, 1984)</td><td>Toggle</td><td><code>GAMEPLAY</code></td><td>“WOLVERINES!” / “Stand down, guerrillas.”</td></tr>
+<tr><td><code>berlin airlift</code></td><td>A cargo plane drops 5 random crates across your base</td><td>Repeatable</td><td><code>GAMEPLAY</code></td><td>“Supply drop inbound.”</td></tr>
+<tr><td><code>how about a nice game of chess</code></td><td>AI difficulty drops to minimum (WarGames, 1983)</td><td>One-shot</td><td><code>GAMEPLAY</code></td><td>“A strange game. The only winning move is not to play. …But let’s play anyway.”</td></tr>
+<tr><td><code>trojan horse</code></td><td>Your next produced unit appears with enemy colors. Enemies ignore it until it fires</td><td>One-use</td><td><code>GAMEPLAY</code></td><td>“Infiltrator ready. They won’t see it coming.”</td></tr>
+</tbody>
+</table>
+</div>
+<p><em>Cosmetic / fun cheats (visual-only — <code>COSMETIC</code> flag, achievements remain enabled):</em></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Phrase</th><th>Effect</th><th>Type</th><th>Flags</th><th>Confirmation</th></tr>
+</thead>
+<tbody>
+<tr><td><code>party like its 1946</code></td><td>Disco palette cycling on all units</td><td>Toggle</td><td><code>COSMETIC</code></td><td>“♪ Boogie Woogie Bugle Boy ♪”</td></tr>
+<tr><td><code>space race</code></td><td>Unlock maximum camera zoom-out (full map view). Fog of war still renders at all zoom levels — unexplored/fogged terrain is hidden regardless of altitude. This is purely a camera unlock, not a vision cheat (compare <code>perestroika</code>/<code>glasnost</code> which ARE <code>GAMEPLAY</code>)</td><td>Toggle</td><td><code>COSMETIC</code></td><td>“Orbital altitude reached.” / “Returning to ground.”</td></tr>
+<tr><td><code>propaganda</code></td><td>EVA voice lines replaced with exaggerated patriotic variants</td><td>Toggle</td><td><code>COSMETIC</code></td><td>“For the motherland!” / “Standard communications restored.”</td></tr>
+<tr><td><code>kilroy was here</code></td><td>All infantry units display a tiny “Kilroy” graffiti sprite above their head</td><td>Toggle</td><td><code>COSMETIC</code></td><td>“He was here.” / “He left.”</td></tr>
+<tr><td><code>hell march</code></td><td>Force Hell March to play on infinite loop, overriding all other music. The definitive RA experience</td><td>Toggle</td><td><code>COSMETIC</code></td><td>“♪ Die Waffen, legt an! ♪” / “Standard playlist restored.”</td></tr>
+<tr><td><code>kirov reporting</code></td><td>A massive Kirov airship shadow slowly drifts across the map every few minutes. No actual unit — pure atmospheric dread</td><td>Toggle</td><td><code>COSMETIC</code></td><td>“Kirov reporting.” / “Airspace cleared.”</td></tr>
+<tr><td><code>conscript reporting</code></td><td>Every single unit — tanks, ships, planes, buildings — uses Conscript voice lines when selected or ordered</td><td>Toggle</td><td><code>COSMETIC</code></td><td>“Conscript reporting!” / “Specialized communications restored.”</td></tr>
+<tr><td><code>rubber shoes in motion</code></td><td>All units crackle with Tesla electricity visual effects when moving</td><td>Toggle</td><td><code>COSMETIC</code></td><td>“Charging up!” / “Discharge complete.”</td></tr>
+<tr><td><code>silos needed</code></td><td>EVA says “silos needed” every 5 seconds regardless of actual silo status. The classic annoyance, weaponized as nostalgia</td><td>Toggle</td><td><code>COSMETIC</code></td><td>“You asked for this.” / “Sanity restored.”</td></tr>
+<tr><td><code>big head mode</code></td><td>All unit sprites and turrets rendered at 200% head/turret size. Classic Goldeneye DK Mode homage</td><td>Toggle</td><td><code>COSMETIC</code></td><td>“Cranial expansion complete.” / “Normal proportions restored.”</td></tr>
+<tr><td><code>crab rave</code></td><td>All idle units slowly rotate in place in synchronized circles</td><td>Toggle</td><td><code>COSMETIC</code></td><td>“🦀” / “Units have regained their sense of purpose.”</td></tr>
+<tr><td><code>dr strangelove</code></td><td>Units occasionally shout “YEEEEHAW!” when attacking. Nuclear explosions display riding-the-bomb animation overlay</td><td>Toggle</td><td><code>COSMETIC</code></td><td>“Gentlemen, you can’t fight in here! This is the War Room!” / “Decorum restored.”</td></tr>
+<tr><td><code>sputnik</code></td><td>A tiny satellite sprite orbits your cursor wherever it goes</td><td>Toggle</td><td><code>COSMETIC</code></td><td>“Beep… beep… beep…” / “Satellite deorbited.”</td></tr>
+<tr><td><code>duck and cover</code></td><td>All infantry periodically go prone for 1 second at random, as if practicing civil defense drills (purely animation — no combat effect)</td><td>Toggle</td><td><code>COSMETIC</code></td><td>“This is a drill. This is only a drill.” / “All clear.”</td></tr>
+<tr><td><code>enigma</code></td><td>All AI chat/notification text is displayed as scrambled cipher characters</td><td>Toggle</td><td><code>COSMETIC</code></td><td>“XJFKQ ZPMWV ROTBG.” / “Decryption restored.”</td></tr>
+</tbody>
+</table>
+</div>
+<p><em>Cross-game easter eggs (meta-references — <code>COSMETIC</code> flag):</em></p>
+<p>These recognize cheat codes from other iconic games and respond with in-character humor. <strong>None of them do anything mechanically</strong> — the witty EVA response IS the entire easter egg. They reward gaming cultural knowledge with a knowing wink, not a gameplay advantage. They’re love letters to the genre.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Phrase</th><th>Recognized From</th><th>Type</th><th>Flags</th><th>Response</th></tr>
+</thead>
+<tbody>
+<tr><td><code>power overwhelming</code></td><td>StarCraft</td><td>One-shot</td><td><code>COSMETIC</code></td><td>“Protoss technologies are not available in this theater of operations.”</td></tr>
+<tr><td><code>show me the money</code></td><td>StarCraft</td><td>One-shot</td><td><code>COSMETIC</code></td><td>“This is a command economy, Commander. Fill out the proper requisition forms.”</td></tr>
+<tr><td><code>there is no cow level</code></td><td>Diablo / StarCraft</td><td>One-shot</td><td><code>COSMETIC</code></td><td>“Correct.”</td></tr>
+<tr><td><code>how do you turn this on</code></td><td>Age of Empires II</td><td>One-shot</td><td><code>COSMETIC</code></td><td>“Motorpool does not stock that vehicle. Try a Mammoth Tank.”</td></tr>
+<tr><td><code>rosebud</code></td><td>The Sims</td><td>One-shot</td><td><code>COSMETIC</code></td><td>“§;§;§;§;§;§;§;§;§;”</td></tr>
+<tr><td><code>iddqd</code></td><td>DOOM</td><td>One-shot</td><td><code>COSMETIC</code></td><td>“Wrong engine. This one uses Bevy.”</td></tr>
+<tr><td><code>impulse 101</code></td><td>Half-Life</td><td>One-shot</td><td><code>COSMETIC</code></td><td>“Requisition denied. This isn’t Black Mesa.”</td></tr>
+<tr><td><code>greedisgood</code></td><td>Warcraft III</td><td>One-shot</td><td><code>COSMETIC</code></td><td>“Wrong franchise. We use credits here, not gold.”</td></tr>
+<tr><td><code>up up down down</code></td><td>Konami Code</td><td>One-shot</td><td><code>COSMETIC</code></td><td>“30 extra lives. …But this isn’t that kind of game.”</td></tr>
+<tr><td><code>cheese steak jimmys</code></td><td>Age of Empires II</td><td>One-shot</td><td><code>COSMETIC</code></td><td>“The mess hall is closed, Commander.”</td></tr>
+<tr><td><code>black sheep wall</code></td><td>StarCraft</td><td>One-shot</td><td><code>COSMETIC</code></td><td>“Try ‘perestroika’ instead. We have our own words for that.”</td></tr>
+<tr><td><code>operation cwal</code></td><td>StarCraft</td><td>One-shot</td><td><code>COSMETIC</code></td><td>“Try ‘five year plan’. Same idea, different ideology.”</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Why meta-references are <code>COSMETIC</code>:</strong> They have zero game effect. The reconnaissance value of knowing “<code>black sheep wall</code> doesn’t work but <code>perestroika</code> does” is part of the discovery fun — the game is training you to find the real cheats. The last two entries deliberately point players toward IC’s actual cheat codes, rewarding cross-game knowledge with a hint.</p>
+<p><strong>Mod-defined cheats:</strong> Game modules register their own cheat code tables — the engine provides the <code>CheatCodeHandler</code> infrastructure, the game module supplies the phrase hashes and effect implementations. A Tiberian Dawn module would have different themed phrases than RA1. Total conversion mods can define entirely custom cheat tables via YAML:</p>
+<pre><code class="language-yaml"># Custom cheat codes (mod.yaml)
+cheat_codes:
+  - phrase_hash: 0x7a3f2e1d   # hash of the phrase — not the phrase itself
+    effect: give_credits
+    amount: 50000
+    flags: gameplay          # disables achievements
+    confirmation: "Tiberium dividend received."
+  - phrase_hash: 0x4b8c9d0e
+    effect: toggle_invincible
+    flags: gameplay
+    confirmation_on: "Blessed by Kane."
+    confirmation_off: "Mortality restored."
+  - phrase_hash: 0x9e2f1a3b
+    effect: toggle_visual
+    flags: cosmetic           # achievements unaffected
+    confirmation_on: "The world changes."
+    confirmation_off: "Reality restored."
+</code></pre>
+<p><strong>Relationship to dev commands:</strong> Cheat codes and dev commands are complementary, not redundant. Dev commands (<code>/give</code>, <code>/spawn</code>, <code>/reveal</code>, <code>/instant_build</code>) are the precise, documented, power-user interface — visible in <code>/help</code>, discoverable, parameterized. Cheat codes are the thematic, hidden, fun interface — no parameters, no documentation, themed phrases with in-character responses. Under the hood, many cheats produce the same <code>PlayerOrder</code> variants as their dev command counterparts. The difference is entirely in the surface: how the player discovers, invokes, and experiences them.</p>
+<p><strong>Why hashed phrases, not encrypted:</strong> We are preserving a nostalgic discovery experience, not implementing DRM. Hashing makes cheats non-obvious to casual inspection but deliberately yields to determined community effort. Within weeks of release, every cheat will be on a wiki — and that’s the intended outcome. The joy is in the initial community discovery process, not in permanent secrecy.</p>
+<h4 id="security-considerations"><a class="header" href="#security-considerations">Security Considerations</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Risk</th><th>Mitigation</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Arbitrary Lua execution</strong></td><td>Lua runs in the D004 sandbox — no filesystem, no network, no <code>os.*</code>. <code>loadstring()</code> disabled. Execution timeout (100ms default). Memory limit per invocation.</td></tr>
+<tr><td><strong>Cvar manipulation for cheating</strong></td><td>Sim-affecting cvars require <code>DEV_ONLY</code> flag and flow through order validation. Render/audio cvars cannot affect gameplay. A <code>/set</code> command for a <code>DEV_ONLY</code> cvar without dev mode active is rejected.</td></tr>
+<tr><td><strong>Chat message buffer overflow</strong></td><td>Chat messages are bounded (512 chars, same as <code>ProtocolLimits::max_chat_message_length</code> from <code>06-SECURITY.md</code> § V15). Command input bounded similarly. The <code>StringReader</code> parser rejects input exceeding the limit before parsing.</td></tr>
+<tr><td><strong>Command injection in multiplayer</strong></td><td>Commands execute locally on the issuing client. Sim-affecting commands go through the order pipeline as <code>PlayerOrder::ChatCommand(cmd, args)</code> — validated by the sim like any other order. A malicious client cannot execute commands on another client’s behalf.</td></tr>
+<tr><td><strong>Denial of service via expensive Lua</strong></td><td>Lua execution has a tick budget. <code>/c</code> commands that exceed the budget are interrupted with an error. The chat/console remains responsive because Lua runs in the script system’s time slice, not the UI thread.</td></tr>
+<tr><td><strong>Cvar persistence tampering</strong></td><td><code>config.toml</code> is local — tampering only affects the local client. Server-authoritative cvars (<code>SERVER</code> flag) cannot be overridden by client-side config.</td></tr>
+</tbody>
+</table>
+</div>
+<h4 id="platform-considerations"><a class="header" href="#platform-considerations">Platform Considerations</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Platform</th><th>Chat Input</th><th>Developer Console</th><th>Notes</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Desktop</strong></td><td>Enter opens input, <code>/</code> prefix for commands</td><td><code>~</code> toggles overlay</td><td>Full keyboard; best experience</td></tr>
+<tr><td><strong>Browser (WASM)</strong></td><td>Same</td><td>Same (tilde might conflict with browser shortcuts — configurable)</td><td>Virtual keyboard on mobile browsers</td></tr>
+<tr><td><strong>Steam Deck</strong></td><td>On-screen keyboard when input focused</td><td>Touchscreen or controller shortcut</td><td>Steam’s built-in OSK works</td></tr>
+<tr><td><strong>Mobile (future)</strong></td><td>Tap chat icon → OS keyboard</td><td>Not exposed (use GUI settings instead)</td><td>Commands via chat input; no tilde console</td></tr>
+<tr><td><strong>Console (future)</strong></td><td>D-pad/bumper to open, OS keyboard</td><td>Not exposed</td><td>Controller-friendly command browser as alternative</td></tr>
+</tbody>
+</table>
+</div>
+<p>For non-desktop platforms, the cvar browser in the developer console is replaced by the <strong>Settings UI</strong> — a GUI-based equivalent that exposes the same cvars through menus and sliders. The command system is accessible via chat input on all platforms; the developer console overlay is a desktop convenience, not a requirement.</p>
+<h3 id="config-file-on-startup"><a class="header" href="#config-file-on-startup">Config File on Startup</a></h3>
+<p>Cvars are loadable from <code>config.toml</code> on startup and optionally from a per-game-module override:</p>
+<pre><code>config.toml                   # global defaults
+config.ra1.toml               # RA1-specific overrides (optional)
+config.td.toml                # TD-specific overrides (optional)
+</code></pre>
+<p><strong>Load order:</strong> <code>config.toml</code> → <code>config.&lt;game_module&gt;.toml</code> → command-line arguments → in-game <code>/set</code> commands. Each layer overrides the previous. Changes made via <code>/set</code> on <code>PERSISTENT</code> cvars write back to the appropriate config file.</p>
+<p><strong>Autoexec:</strong> An optional <code>autoexec.cfg</code> file (Source Engine convention) runs commands on startup:</p>
+<pre><code># autoexec.cfg — runs on game startup
+/set render.max_fps 144
+/set audio.master_volume 80
+/set gameplay.scroll_speed 7
+</code></pre>
+<p>This is a convenience for power users who prefer text files over GUI settings. The format is one command per line, <code>#</code> for comments. Parsed by the same <code>CommandDispatcher</code> with <code>CommandOrigin::ConfigFile</code>.</p>
+<h3 id="what-this-is-not"><a class="header" href="#what-this-is-not">What This Is NOT</a></h3>
+<ul>
+<li><strong>NOT a replacement for the Settings UI.</strong> Most players change settings through the GUI. The command system and cvars are the power-user interface to the same underlying settings. Both read and write the same <code>config.toml</code>.</li>
+<li><strong>NOT a scripting environment.</strong> The <code>/c</code> Lua console is for quick testing and debugging, not for writing mods. Mods belong in proper <code>.lua</code> files loaded through the mod system (D004). The console is a REPL — one-liners and quick experiments.</li>
+<li><strong>NOT available in competitive/ranked play.</strong> Dev commands are gated behind DeveloperMode (V44). The chat system and non-dev commands work in ranked; the Lua console and dev commands do not. Normal console commands (<code>/move</code>, <code>/build</code>, etc.) are treated as GUI-equivalent inputs — they produce the same <code>PlayerOrder</code> and are governed by D033 QoL toggles. See “Competitive Integrity in Multiplayer” above for the full framework: order rate monitoring, input source tracking, ranked restrictions, and tournament mode.</li>
+<li><strong>NOT a server management panel.</strong> Server administration beyond kick/ban/config should use external tools (web panels, RCON protocol). The in-game commands cover in-match operations only.</li>
+</ul>
+<h3 id="alternatives-considered"><a class="header" href="#alternatives-considered">Alternatives Considered</a></h3>
+<ul>
+<li><strong>Separate console only, no chat integration</strong> (rejected — Source Engine’s model works for FPS games where chat is secondary, but RTS players use chat heavily during matches; forcing tilde-switch for commands is friction. Factorio and Minecraft prove unified is better for games where chat and commands coexist.)</li>
+<li><strong>Chat only, no developer console</strong> (rejected — power users need multi-line Lua input, scrollback, cvar browsing, and syntax highlighting. A single-line chat field can’t provide this. The developer console is a thin UI layer over the same dispatcher — minimal implementation cost.)</li>
+<li><strong>GUI-only commands like OpenRA</strong> (rejected — checkbox menus are fine for 7 dev mode flags but don’t scale to dozens of commands, mod-injected commands, or Lua execution. A text interface is necessary for extensibility.)</li>
+<li><strong>Custom command syntax instead of <code>/</code> prefix</strong> (rejected — <code>/</code> is the universal standard across Minecraft, Factorio, Discord, IRC, MMOs, and dozens of other games. Any other prefix would surprise users.)</li>
+<li><strong>RCON protocol for remote administration</strong> (deferred to <code>M7</code> / Phase 5 productization, <code>P-Scale</code> — useful for dedicated/community servers but out of scope for Phase 3. Planned implementation path: add <code>CommandOrigin::Rcon</code> with <code>Admin</code> permission level; the command dispatcher is origin-agnostic by design. Not part of Phase 3 exit criteria.)</li>
+<li><strong>Unrestricted Lua console without achievement consequences</strong> (rejected — every game that has tried this has created a split community where “did you use the console?” is a constant question. Factorio’s model — use it freely, but achievements are permanently disabled — is honest and universally understood.)</li>
+<li><strong>Disable console commands in multiplayer to prevent scripting</strong> (rejected — console commands produce the same <code>PlayerOrder</code> as GUI actions. Removing them doesn’t prevent scripting — external tools like AutoHotKey can automate mouse/keyboard input. Worse, a modified open-source client can send orders directly, bypassing all input methods. Removing the console punishes legitimate power users and accessibility needs while providing zero security benefit. The correct defense is D033 equalization, input source tracking, and community governance — see “Competitive Integrity in Multiplayer.”)</li>
+</ul>
+<h3 id="integration-with-existing-decisions"><a class="header" href="#integration-with-existing-decisions">Integration with Existing Decisions</a></h3>
+<ul>
+<li><strong>D004 (Lua Scripting):</strong> The <code>/c</code> command executes Lua in the same sandbox as mission scripts. The <code>CommandSource</code> passed to Lua commands provides the execution context (<code>CommandOrigin::ChatInput</code> vs <code>LuaScript</code> vs <code>ConfigFile</code>).</li>
+<li><strong>D005 (WASM):</strong> WASM modules register commands through the same <code>CommandDispatcher</code> host function API. WASM commands have the same permission model and sandboxing guarantees.</li>
+<li><strong>D012 (Order Validation):</strong> Sim-affecting commands produce <code>PlayerOrder</code> variants. The order validator rejects dev commands when dev mode is inactive, and logs repeated rejections for anti-cheat analysis.</li>
+<li><strong>D031 (Observability):</strong> Command execution events (who, what, when) are telemetry events. Admin actions, dev mode usage, and Lua console invocations are all observable.</li>
+<li><strong>D033 (QoL Toggles):</strong> Many QoL settings map directly to cvars. The QoL toggle UI and the cvar system read/write the same underlying values.</li>
+<li><strong>D034 (SQLite):</strong> Console command history is persisted in SQLite. The cvar browser’s search index uses the same FTS5 infrastructure.</li>
+<li><strong>D036 (Achievements):</strong> The <code>cheats_used</code> flag in sim state is set when any dev command or gameplay cheat executes. Achievement checks respect this flag. Cosmetic cheats (<code>cosmetic_cheats_used</code>) do not affect achievements — only <code>cheats_used</code> does.</li>
+<li><strong>D055 (Ranked Matchmaking):</strong> Games with <code>cheats_used = true</code> are excluded from ranked submission. The relay server verifies this flag in match certification. <code>cosmetic_cheats_used</code> alone does not affect ranked eligibility (cosmetic cheats are single-player only regardless).</li>
+<li><strong>03-NETCODE.md (In-Match Vote Framework):</strong> The <code>/callvote</code>, <code>/vote</code>, <code>/poll</code> commands are registered in the Brigadier command tree. <code>/gg</code> and <code>/ff</code> are aliases for <code>/callvote surrender</code>. Vote commands produce <code>PlayerOrder::Vote</code> variants — processed by the sim like any other order. Tactical polls extend the chat wheel phrase system.</li>
+<li><strong>V44 (06-SECURITY.md):</strong> <code>DeveloperMode</code> is sim state, toggled in lobby only, with unanimous consent in multiplayer. The command system enforces this — dev commands are rejected at the order validation layer, not the UI layer.</li>
+</ul>
+<hr>
+<hr>
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../../decisions/09g-interaction.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../../decisions/09g/D059-communication.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../../decisions/09g-interaction.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../../decisions/09g/D059-communication.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../../mark-09e88c2c.min.js"></script>
+        <script src="../../searcher-c2a407aa.js"></script>
+
+        <script src="../../clipboard-1626706a.min.js"></script>
+        <script src="../../highlight-abc7f01d.js"></script>
+        <script src="../../book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

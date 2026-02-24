@@ -1,0 +1,902 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>D031 — Observability &amp; Telemetry - Iron Curtain — Design Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Design docs for a Rust-native Red Alert RTS engine">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../../css/general-2459343d.css">
+        <link rel="stylesheet" href="../../css/chrome-ae938929.css">
+        <link rel="stylesheet" href="../../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../../searchindex-61d2369b.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../../toc-1553b04b.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Iron Curtain — Design Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs/edit/main/src/decisions/09e/D031-observability.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h2 id="d031-observability--telemetry--otel-across-engine-servers-and-ai-pipeline"><a class="header" href="#d031-observability--telemetry--otel-across-engine-servers-and-ai-pipeline">D031: Observability &amp; Telemetry — OTEL Across Engine, Servers, and AI Pipeline</a></h2>
+<h3 id="decision-capsule-llmrag-summary"><a class="header" href="#decision-capsule-llmrag-summary">Decision Capsule (LLM/RAG Summary)</a></h3>
+<ul>
+<li><strong>Status:</strong> Accepted</li>
+<li><strong>Phase:</strong> Multi-phase (instrumentation foundation + server ops + advanced analytics/AI training pipelines)</li>
+<li><strong>Canonical for:</strong> Unified telemetry/observability architecture, local-first telemetry storage, and optional OTEL export policy</li>
+<li><strong>Scope:</strong> game client, relay/tracking/workshop servers, telemetry schema/storage, tracing/export pipeline, debugging and analytics tooling</li>
+<li><strong>Decision:</strong> All components record structured telemetry to <strong>local SQLite</strong> as the primary sink using a shared schema; <strong>OpenTelemetry is optional</strong> export infrastructure for operators who want dashboards/traces.</li>
+<li><strong>Why:</strong> Works offline, supports both players and operators, enables cross-component debugging (including desync analysis), and unifies gameplay/debug/ops/AI data collection under one instrumentation model.</li>
+<li><strong>Non-goals:</strong> Requiring external collectors (Prometheus/OTEL backends) for normal operation; separate incompatible telemetry formats per component.</li>
+<li><strong>Invariants preserved:</strong> Local-first data philosophy (D034/D061), offline-capable components, and mod/game agnosticism at the schema level.</li>
+<li><strong>Defaults / UX behavior:</strong> Telemetry is recorded locally with retention/rotation; operators may optionally enable OTEL export for live dashboards.</li>
+<li><strong>Security / Trust impact:</strong> Structured telemetry is designed for analysis without making external infrastructure mandatory; privacy-sensitive usage depends on the telemetry policy and field discipline in event payloads.</li>
+<li><strong>Performance / Ops impact:</strong> Unified schema simplifies tooling and reduces operational complexity; tracing/puffin stack is chosen for low disabled overhead and production viability.</li>
+<li><strong>Public interfaces / types / commands:</strong> shared <code>telemetry.db</code> schema, <code>tracing</code> instrumentation, optional OTEL exporters, analytics export/query tooling (see body)</li>
+<li><strong>Affected docs:</strong> <code>src/06-SECURITY.md</code>, <code>src/03-NETCODE.md</code>, <code>src/decisions/09e-community.md</code> (D034/D061), <code>src/15-SERVER-GUIDE.md</code></li>
+<li><strong>Revision note summary:</strong> None</li>
+<li><strong>Keywords:</strong> telemetry, observability, OTEL, OpenTelemetry, SQLite telemetry.db, tracing, puffin, local-first analytics, desync debugging</li>
+</ul>
+<p><strong>Decision:</strong> All components — game client, relay server, tracking server, workshop server — record structured telemetry to local SQLite as the primary sink. Every component runs fully offline; no telemetry depends on external infrastructure. OTEL (OpenTelemetry) is an optional export layer for server operators who want Grafana dashboards — it is never a requirement. The instrumentation layer is unified across all components, enabling operational monitoring, gameplay debugging, GUI usage analysis, pattern discovery, and AI/LLM training data collection.</p>
+<p><strong>Rationale:</strong></p>
+<ul>
+<li>Backend servers (relay, tracking, workshop) are production infrastructure — they need health metrics, latency histograms, error rates, and distributed traces, just like any microservice</li>
+<li>The game engine already has rich internal state (per-tick <code>state_hash()</code>, snapshots, system execution times) but no structured way to export it for analysis</li>
+<li>Replay files capture <em>what happened</em> but not <em>why</em> — telemetry captures the engine’s decision-making process (pathfinding time, order validation outcomes, combat resolution details) that replays miss</li>
+<li>Behavioral analysis (V12 anti-cheat) already collects APM, reaction times, and input entropy on the relay — OTEL is the natural export format for this data</li>
+<li>AI/LLM development needs training data: game telemetry (unit movements, build orders, engagement outcomes) is exactly the training corpus for <code>ic-ai</code> and <code>ic-llm</code></li>
+<li>Bevy already integrates with Rust’s <code>tracing</code> crate — OTEL export is a natural extension, not a foreign addition</li>
+<li><strong>Stack validated by production Rust game infrastructure:</strong> Embark Studios’ Quilkin (production game relay) uses the exact <code>tracing</code> + <code>prometheus</code> + OTEL stack IC targets, confirming it handles real game traffic at scale. Puffin (Embark’s frame-based profiler) complements OTEL for per-tick instrumentation with ~1ns disabled overhead. IC’s “zero cost when disabled” requirement is satisfied by puffin’s <code>AtomicBool</code> guard and tracing’s compile-time level filtering. See <code>research/embark-studios-rust-gamedev-analysis.md</code></li>
+<li>Desync debugging needs cross-client correlation — distributed tracing (trace IDs) lets you follow an order from input → network → sim → render across multiple clients and the relay server</li>
+<li>A single instrumentation approach (OTEL) avoids the mess of ad-hoc logging, custom metrics files, separate debug protocols, and incompatible formats</li>
+</ul>
+<p><strong>Key Design Elements:</strong></p>
+<h3 id="unified-local-first-storage"><a class="header" href="#unified-local-first-storage">Unified Local-First Storage</a></h3>
+<p><strong>Every component records telemetry to a local SQLite file. No exceptions.</strong> This is the same principle as D034 (SQLite as embedded storage) and D061 (local-first data) applied to telemetry. The game client, relay server, tracking server, and workshop server all write to their own <code>telemetry.db</code> using an identical schema. No component depends on an external collector, dashboard, or aggregation service to function.</p>
+<pre><code class="language-sql">-- Identical schema on every component (client, relay, tracking, workshop)
+CREATE TABLE telemetry_events (
+    id            INTEGER PRIMARY KEY,
+    timestamp     TEXT    NOT NULL,        -- ISO 8601 with microsecond precision
+    session_id    TEXT    NOT NULL,        -- random per-process-lifetime
+    component     TEXT    NOT NULL,        -- 'client', 'relay', 'tracking', 'workshop'
+    game_module   TEXT,                    -- 'ra1', 'td', 'ra2', custom — set once per session (NULL on servers)
+    mod_fingerprint TEXT,                  -- D062 SHA-256 mod profile fingerprint — updated on profile switch
+    category      TEXT    NOT NULL,        -- event domain (see taxonomy below)
+    event         TEXT    NOT NULL,        -- specific event name
+    severity      TEXT    NOT NULL DEFAULT 'info',  -- 'trace','debug','info','warn','error'
+    data          TEXT,                    -- JSON payload (structured, no PII)
+    duration_us   INTEGER,                -- for events with measurable duration
+    tick          INTEGER,                -- sim tick (gameplay/sim events only)
+    correlation   TEXT                     -- trace ID for cross-component correlation
+);
+
+CREATE INDEX idx_telemetry_ts          ON telemetry_events(timestamp);
+CREATE INDEX idx_telemetry_cat_event   ON telemetry_events(category, event);
+CREATE INDEX idx_telemetry_session     ON telemetry_events(session_id);
+CREATE INDEX idx_telemetry_game_module ON telemetry_events(game_module) WHERE game_module IS NOT NULL;
+CREATE INDEX idx_telemetry_mod_fp      ON telemetry_events(mod_fingerprint) WHERE mod_fingerprint IS NOT NULL;
+CREATE INDEX idx_telemetry_severity    ON telemetry_events(severity) WHERE severity IN ('warn', 'error');
+CREATE INDEX idx_telemetry_correlation ON telemetry_events(correlation) WHERE correlation IS NOT NULL;
+</code></pre>
+<p><strong>Why one schema everywhere?</strong> Aggregation scripts, debugging tools, and community analysis all work identically regardless of source. A relay operator can run the same <code>/analytics export</code> command as a player. Exported files from different components can be imported into a single SQLite database for cross-component analysis (desync debugging across client + relay). The aggregation tooling is a handful of SQL queries, not a specialized backend.</p>
+<p><strong>Mod-agnostic by design, mod-aware by context.</strong> The telemetry schema contains zero game-specific or mod-specific columns. Unit types, weapon names, building names, and resource types flow through as opaque strings — whatever the active mod’s YAML defines. A total conversion mod’s custom vocabulary (e.g., <code>unit_type: "Mammoth Mk.III"</code>) passes through unchanged without schema modification. The two denormalized context columns — <code>game_module</code> and <code>mod_fingerprint</code> — are set once per session on the client (updated on <code>ic profile activate</code> if the player switches mod profiles mid-session). On servers, these columns are populated per-game from lobby metadata. This means <strong>every analytical query can be trivially filtered by game module or mod combination</strong> without JOINing through <code>session.start</code>’s JSON payload:</p>
+<pre><code class="language-sql">-- Direct mod filtering — no JOINs needed
+SELECT event, COUNT(*) FROM telemetry_events
+WHERE game_module = 'ra1' AND category = 'input'
+GROUP BY event ORDER BY COUNT(*) DESC;
+
+-- Compare behavior across mod profiles
+SELECT mod_fingerprint, AVG(json_extract(data, '$.apm')) AS avg_apm
+FROM telemetry_events WHERE event = 'match.pace'
+GROUP BY mod_fingerprint;
+</code></pre>
+<p><strong>Relay servers</strong> set <code>game_module</code> and <code>mod_fingerprint</code> per-game from the lobby’s negotiated settings — all events for that game inherit the context. When the relay hosts multiple concurrent games with different mods, each game’s events carry the correct mod context independently.</p>
+<p><strong>OTEL is an optional export layer, not the primary sink.</strong> Server operators who want real-time dashboards (Grafana, Prometheus, Jaeger) can enable OTEL export — but this is a planned optional operations enhancement (<code>M7</code> operator usability baseline with deeper <code>M11</code> scale hardening), not a deployment dependency. A community member running a relay server on a spare machine doesn’t need to set up Prometheus. They get full telemetry in a SQLite file they can query with any SQL tool.</p>
+<p><strong>Retention and rotation:</strong> Each component’s <code>telemetry.db</code> has a configurable max size (default: 100 MB for client, 500 MB for servers). When the limit is reached, the oldest events are pruned. <code>/analytics export</code> exports a date range to a separate file before pruning. Servers can also configure time-based retention (e.g., <code>telemetry.retention_days = 30</code>).</p>
+<h3 id="three-telemetry-signals-otel-standard"><a class="header" href="#three-telemetry-signals-otel-standard">Three Telemetry Signals (OTEL Standard)</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Signal</th><th>What It Captures</th><th>Export Format</th></tr>
+</thead>
+<tbody>
+<tr><td>Metrics</td><td>Counters, histograms, gauges — numeric time series</td><td>OTLP → Prometheus</td></tr>
+<tr><td>Traces</td><td>Distributed request flows — an order’s journey through the system</td><td>OTLP → Jaeger/Zipkin</td></tr>
+<tr><td>Logs</td><td>Structured events with severity, context, correlation IDs</td><td>OTLP → Loki/stdout</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="backend-server-telemetry-relay-tracking-workshop"><a class="header" href="#backend-server-telemetry-relay-tracking-workshop">Backend Server Telemetry (Relay, Tracking, Workshop)</a></h3>
+<p>Standard operational observability — same patterns used by any production Rust service. <strong>All servers record to local SQLite</strong> (<code>telemetry.db</code>) using the unified schema above. The OTEL metric names below double as the <code>event</code> field in the SQLite table — operators can query locally via SQL or optionally export to Prometheus/Grafana.</p>
+<p><strong>Relay server metrics:</strong></p>
+<pre><code>relay.games.active                    # gauge: concurrent games
+relay.games.total                     # counter: total games hosted
+relay.orders.received                 # counter: orders received per tick
+relay.orders.forwarded                # counter: orders broadcast
+relay.orders.dropped                  # counter: orders missed (lag switch)
+relay.tick.latency_ms                 # histogram: tick processing time
+relay.player.rtt_ms                   # histogram: per-player round-trip time
+relay.player.suspicion_score          # gauge: behavioral analysis score (V12)
+relay.desync.detected                 # counter: desync events
+relay.match.completed                 # counter: matches finished
+relay.match.duration_s                # histogram: match duration
+</code></pre>
+<p><strong>Tracking server metrics:</strong></p>
+<pre><code>tracking.listings.active              # gauge: current game listings
+tracking.heartbeats.received          # counter: heartbeats processed
+tracking.heartbeats.expired           # counter: listings expired (TTL)
+tracking.queries.total                # counter: browse/search requests
+tracking.queries.latency_ms           # histogram: query latency
+</code></pre>
+<p><strong>Workshop server metrics:</strong></p>
+<pre><code>workshop.resources.total              # gauge: total published resources
+workshop.resources.downloads          # counter: download events
+workshop.resources.publishes          # counter: publish events
+workshop.resolve.latency_ms           # histogram: dependency resolution time
+workshop.resolve.conflicts            # counter: version conflicts detected
+workshop.search.latency_ms            # histogram: search query time
+</code></pre>
+<h4 id="server-side-structured-events-sqlite"><a class="header" href="#server-side-structured-events-sqlite">Server-Side Structured Events (SQLite)</a></h4>
+<p>Beyond counters and gauges, each server records detailed structured events to <code>telemetry.db</code>. These are the events that actually enable troubleshooting and pattern analysis:</p>
+<p><strong>Relay server events:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Event</th><th>JSON <code>data</code> Fields</th><th>Troubleshooting Value</th></tr>
+</thead>
+<tbody>
+<tr><td><code>relay.game.start</code></td><td><code>game_id</code>, <code>map</code>, <code>player_count</code>, <code>settings_hash</code>, <code>balance_preset</code>, <code>game_module</code>, <code>mod_profile_fingerprint</code></td><td>Which maps/settings/mods are popular?</td></tr>
+<tr><td><code>relay.game.end</code></td><td><code>game_id</code>, <code>duration_s</code>, <code>ticks</code>, <code>outcome</code>, <code>player_count</code></td><td>Match length distribution, completion vs. abandonment rates</td></tr>
+<tr><td><code>relay.player.join</code></td><td><code>game_id</code>, <code>slot</code>, <code>rtt_ms</code>, <code>mod_profile_fingerprint</code></td><td>Connection quality at join time, mod compatibility</td></tr>
+<tr><td><code>relay.player.leave</code></td><td><code>game_id</code>, <code>slot</code>, <code>reason</code> (quit/disconnect/kicked/timeout), <code>match_time_s</code></td><td>Why and when players leave — early ragequit vs. end-of-game</td></tr>
+<tr><td><code>relay.tick.process</code></td><td><code>game_id</code>, <code>tick</code>, <code>order_count</code>, <code>process_us</code>, <code>stall_detected</code></td><td>Per-tick performance, stall diagnosis</td></tr>
+<tr><td><code>relay.order.forward</code></td><td><code>game_id</code>, <code>player</code>, <code>tick</code>, <code>order_type</code>, <code>sub_tick_us</code>, <code>size_bytes</code></td><td>Order volume, sub-tick fairness verification</td></tr>
+<tr><td><code>relay.desync</code></td><td><code>game_id</code>, <code>tick</code>, <code>diverged_players[]</code>, <code>hash_expected</code>, <code>hash_actual</code></td><td>Desync diagnosis — which tick, which players</td></tr>
+<tr><td><code>relay.lag_switch</code></td><td><code>game_id</code>, <code>player</code>, <code>gap_ms</code>, <code>orders_during_gap</code></td><td>Cheating detection audit trail</td></tr>
+<tr><td><code>relay.suspicion</code></td><td><code>game_id</code>, <code>player</code>, <code>score</code>, <code>contributing_factors{}</code></td><td>Behavioral analysis transparency</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Tracking server events:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Event</th><th>JSON <code>data</code> Fields</th><th>Troubleshooting Value</th></tr>
+</thead>
+<tbody>
+<tr><td><code>tracking.listing.create</code></td><td><code>game_id</code>, <code>map</code>, <code>host_hash</code>, <code>settings_summary</code></td><td>Game creation patterns</td></tr>
+<tr><td><code>tracking.listing.expire</code></td><td><code>game_id</code>, <code>age_s</code>, <code>reason</code> (TTL/host_departed)</td><td>Why games disappear from the browser</td></tr>
+<tr><td><code>tracking.query</code></td><td><code>query_type</code> (browse/search/filter), <code>params</code>, <code>results_count</code>, <code>latency_ms</code></td><td>Search effectiveness, popular filters</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Workshop server events:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Event</th><th>JSON <code>data</code> Fields</th><th>Troubleshooting Value</th></tr>
+</thead>
+<tbody>
+<tr><td><code>workshop.publish</code></td><td><code>resource_id</code>, <code>type</code>, <code>version</code>, <code>size_bytes</code>, <code>dep_count</code></td><td>Publishing patterns, resource sizes</td></tr>
+<tr><td><code>workshop.download</code></td><td><code>resource_id</code>, <code>version</code>, <code>requester_hash</code>, <code>latency_ms</code></td><td>Download volume, popular resources</td></tr>
+<tr><td><code>workshop.resolve</code></td><td><code>root_resource</code>, <code>dep_count</code>, <code>conflicts</code>, <code>latency_ms</code></td><td>Dependency hell frequency, resolution performance</td></tr>
+<tr><td><code>workshop.search</code></td><td><code>query</code>, <code>filters</code>, <code>results_count</code>, <code>latency_ms</code></td><td>What people are looking for, search quality</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Server export and analysis:</strong> Every server supports the same commands as the client — <code>ic-server analytics export</code>, <code>ic-server analytics inspect</code>, <code>ic-server analytics clear</code>. A relay operator troubleshooting laggy matches runs a SQL query against their local <code>telemetry.db</code> — no Grafana required. The exported SQLite file can be attached to a bug report or shared with the project team, identical workflow to the client.</p>
+<p><strong>Distributed traces:</strong> A multiplayer game session gets a trace ID (the <code>correlation</code> field). Every order, tick, and desync event references this trace ID. Debug a desync by searching for the game’s trace ID across the relay’s <code>telemetry.db</code> and the affected clients’ exported <code>telemetry.db</code> files — correlate events that crossed component boundaries. For operators with OTEL enabled, the same trace ID routes to Jaeger for visual timeline inspection.</p>
+<p><strong>Health endpoints:</strong> Every server exposes <code>/healthz</code> (already designed) and <code>/readyz</code>. Prometheus scrape endpoint at <code>/metrics</code> (when OTEL export is enabled). These are standard and compose with existing k8s deployment (Helm charts already designed in <code>03-NETCODE.md</code>).</p>
+<h3 id="game-engine-telemetry-client-side"><a class="header" href="#game-engine-telemetry-client-side">Game Engine Telemetry (Client-Side)</a></h3>
+<p>The engine emits structured telemetry for debugging, profiling, and AI training — but only when enabled. <strong>Hot paths remain zero-cost when telemetry is disabled</strong> (compile-time feature flag <code>telemetry</code>).</p>
+<h4 id="performance-instrumentation"><a class="header" href="#performance-instrumentation">Performance Instrumentation</a></h4>
+<p>Per-tick system timing, already needed for the benchmark suite (<code>10-PERFORMANCE.md</code>), exported as OTEL metrics when enabled:</p>
+<pre><code>sim.tick.duration_us                  # histogram: total tick time
+sim.system.apply_orders_us            # histogram: per-system time
+sim.system.production_us
+sim.system.harvesting_us
+sim.system.movement_us
+sim.system.combat_us
+sim.system.death_us
+sim.system.triggers_us
+sim.system.fog_us
+sim.entities.total                    # gauge: entity count
+sim.entities.by_type                  # gauge: per-component-type count
+sim.memory.scratch_bytes              # gauge: TickScratch buffer usage
+sim.pathfinding.requests              # counter: pathfinding queries per tick
+sim.pathfinding.cache_hits            # counter: flowfield cache reuse
+sim.pathfinding.duration_us           # histogram: pathfinding computation time
+</code></pre>
+<h4 id="gameplay-event-stream"><a class="header" href="#gameplay-event-stream">Gameplay Event Stream</a></h4>
+<p>Structured events emitted during simulation — the raw material for AI training and replay enrichment:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Gameplay events emitted by the sim when telemetry is enabled.
+/// These are structured, not printf-style — each field is queryable.
+pub enum GameplayEvent {
+    UnitCreated { tick: u64, entity: EntityId, unit_type: String, owner: PlayerId },
+    UnitDestroyed { tick: u64, entity: EntityId, killer: Option&lt;EntityId&gt;, cause: DeathCause },
+    CombatEngagement { tick: u64, attacker: EntityId, target: EntityId, weapon: String, damage: i32, remaining_hp: i32 },
+    BuildingPlaced { tick: u64, entity: EntityId, structure_type: String, owner: PlayerId, position: WorldPos },
+    HarvestDelivered { tick: u64, harvester: EntityId, resource_type: String, amount: i32, total_credits: i32 },
+    OrderIssued { tick: u64, player: PlayerId, order: PlayerOrder, validated: bool, rejection_reason: Option&lt;String&gt; },
+    PathfindingCompleted { tick: u64, entity: EntityId, from: WorldPos, to: WorldPos, path_length: u32, compute_time_us: u32 },
+    DesyncDetected { tick: u64, expected_hash: u64, actual_hash: u64, player: PlayerId },
+    StateSnapshot { tick: u64, state_hash: u64, entity_count: u32 },
+}
+<span class="boring">}</span></code></pre>
+<p>These events are:</p>
+<ul>
+<li><strong>Emitted as OTEL log records</strong> with structured attributes (not free-text — every field is filterable)</li>
+<li><strong>Collected locally</strong> into a SQLite gameplay event log alongside replays (D034) — queryable with ad-hoc SQL without an OTEL stack</li>
+<li><strong>Optionally exported</strong> to a collector for batch analysis (tournament servers, AI training pipelines)</li>
+</ul>
+<h4 id="state-inspection-development--debugging"><a class="header" href="#state-inspection-development--debugging">State Inspection (Development &amp; Debugging)</a></h4>
+<p>A debug overlay (via <code>bevy_egui</code>, already in the architecture) that reads live telemetry:</p>
+<ul>
+<li>Per-system tick time breakdown (bar chart)</li>
+<li>Entity count by type</li>
+<li>Network: RTT, order latency, jitter</li>
+<li>Memory: scratch buffer usage, component storage</li>
+<li>Pathfinding: active flowfields, cache hit rate</li>
+<li>Fog: cells updated this tick, stagger bucket</li>
+<li>Sim state hash (for manual desync comparison)</li>
+</ul>
+<p>This is the “game engine equivalent of a Kubernetes dashboard” — operators of tournament servers or mod developers can inspect the engine’s internal state in real-time.</p>
+<h3 id="ai--llm-training-data-pipeline"><a class="header" href="#ai--llm-training-data-pipeline">AI / LLM Training Data Pipeline</a></h3>
+<p>The gameplay event stream is the foundation for AI development:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Consumer</th><th>Data Source</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>ic-ai</code> (skirmish AI)</td><td>Gameplay events from human games</td><td>Learn build orders, engagement timing, micro patterns</td></tr>
+<tr><td><code>ic-llm</code> (missions)</td><td>Gameplay events + enriched replays</td><td>Learn what makes missions fun (engagement density, pacing, flow)</td></tr>
+<tr><td><code>ic-editor</code> (replay→scenario)</td><td>Replay event log (SQLite)</td><td>Direct extraction of waypoints, combat zones, build timelines into editor</td></tr>
+<tr><td><code>ic-llm</code> (replay→scenario)</td><td>Replay event log + context</td><td>Generate narrative, briefings, dialogue for replay-to-scenario pipeline</td></tr>
+<tr><td>Behavioral analysis</td><td>Relay-side player profiles</td><td>APM, reaction time, input entropy → suspicion scoring (V12)</td></tr>
+<tr><td>Balance analysis</td><td>Aggregated match outcomes</td><td>Win rates by faction/map/preset → balance tuning</td></tr>
+<tr><td>Adaptive difficulty</td><td>Per-player gameplay patterns</td><td>Build speed, APM, unit composition → difficulty calibration</td></tr>
+<tr><td>Community analytics</td><td>Workshop + match metadata</td><td>Popular resources, play patterns, mod adoption → recommendations</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Privacy:</strong> Gameplay events are associated with anonymized player IDs (hashed). No PII in telemetry. Players opt in to telemetry export (default: local-only for debugging). Tournament/ranked play may require telemetry for anti-cheat and certified results. See <code>06-SECURITY.md</code>.</p>
+<p><strong>Data format:</strong> Gameplay events export as structured OTEL log records → can be collected into Parquet/Arrow columnar format for batch ML training. The LLM training pipeline reads events, not raw replay bytes.</p>
+<h3 id="product-analytics--comprehensive-client-event-taxonomy"><a class="header" href="#product-analytics--comprehensive-client-event-taxonomy">Product Analytics — Comprehensive Client Event Taxonomy</a></h3>
+<p>The telemetry categories above capture what happens <em>in the simulation</em> (gameplay events, system timing) and on the <em>servers</em> (relay metrics, game lifecycle). A third domain is equally critical: <strong>how players interact with the game itself</strong> — which features are used, which are ignored, how people navigate the UI, how they play matches, and where they get confused or drop off.</p>
+<p>This is the data that turns guessing into knowing: “42% of players never opened the career stats page,” “players who use control groups average 60% higher APM,” “the recovery phrase screen has a 60% skip rate — we should redesign the prompt,” “right-click ordering outnumbers sidebar ordering 8:1 — invest in right-click UX, not sidebar polish.”</p>
+<p><strong>Core principle: the game client never phones home.</strong> IC is an independent project — the client has zero dependency on any IC-hosted backend, analytics service, or telemetry endpoint. Product analytics are recorded to the local <code>telemetry.db</code> (same unified schema as every other component), stored locally, and stay local unless the player deliberately exports them. This matches the project’s local-first philosophy (D034, D061) and ensures IC remains fully functional with no internet connectivity whatsoever.</p>
+<p><strong>Design principles:</strong></p>
+<ol>
+<li><strong>Offline-only by design.</strong> The client contains no transmission code, no HTTP endpoints, no phone-home logic. There is no analytics backend to depend on, no infrastructure to maintain, no service to go offline.</li>
+<li><strong>Player-owned data.</strong> The <code>telemetry.db</code> file lives on the player’s machine — the same open SQLite format they can query themselves (D034). It’s their data. They can inspect it, export it, or delete it anytime.</li>
+<li><strong>Voluntary export for bug reports.</strong> <code>/analytics export</code> produces a self-contained file (JSON or SQLite extract) the player can review and attach to bug reports, forum posts, GitHub issues, or community surveys. The player decides when, where, and to whom they send it.</li>
+<li><strong>Transparent and inspectable.</strong> <code>/analytics inspect</code> shows exactly what’s recorded. No hidden fields, no device fingerprinting. Players can query the SQLite table directly.</li>
+<li><strong>Zero impact.</strong> The game is fully functional with analytics recording on or off. No nag screens. Recording can be disabled via <code>telemetry.product_analytics</code> cvar (default: on for local recording).</li>
+</ol>
+<p><strong>What product analytics explicitly does NOT capture:</strong></p>
+<ul>
+<li>Chat messages, player names, opponent names (no PII)</li>
+<li>Keystroke logging, raw mouse coordinates, screen captures</li>
+<li>Hardware identifiers, MAC addresses, IP addresses</li>
+<li>Filesystem contents, installed software, browser history</li>
+</ul>
+<h4 id="gui-interaction-events"><a class="header" href="#gui-interaction-events">GUI Interaction Events</a></h4>
+<p>These events capture how the player navigates the interface — which screens they visit, which buttons they click, which features they discover, and where they spend their time. This is the primary source for UX insights.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Event</th><th>JSON <code>data</code> Fields</th><th>What It Reveals</th></tr>
+</thead>
+<tbody>
+<tr><td><code>gui.screen.open</code></td><td><code>screen_id</code>, <code>from_screen</code>, <code>method</code> (button/hotkey/back/auto)</td><td>Navigation patterns — which screens do players visit? In what order?</td></tr>
+<tr><td><code>gui.screen.close</code></td><td><code>screen_id</code>, <code>duration_ms</code>, <code>next_screen</code></td><td>Time on screen — do players read the settings page for 2 seconds or 30?</td></tr>
+<tr><td><code>gui.click</code></td><td><code>widget_id</code>, <code>widget_type</code> (button/tab/toggle/slider/list_item), <code>screen</code></td><td>Which widgets get used? Which are dead space?</td></tr>
+<tr><td><code>gui.hotkey</code></td><td><code>key_combo</code>, <code>action</code>, <code>context_screen</code></td><td>Hotkey adoption — are players discovering keyboard shortcuts?</td></tr>
+<tr><td><code>gui.tooltip.shown</code></td><td><code>widget_id</code>, <code>duration_ms</code></td><td>Which UI elements confuse players enough to hover for a tooltip?</td></tr>
+<tr><td><code>gui.sidebar.interact</code></td><td><code>tab</code>, <code>item_id</code>, <code>action</code> (select/scroll/queue/cancel), <code>method</code> (click/hotkey)</td><td>Sidebar usage patterns — build queue behavior, tab switching</td></tr>
+<tr><td><code>gui.minimap.interact</code></td><td><code>action</code> (camera_move/ping/attack_move/rally_point), <code>position_normalized</code></td><td>Minimap as input device — how often, for what?</td></tr>
+<tr><td><code>gui.build_placement</code></td><td><code>structure_type</code>, <code>outcome</code> (placed/cancelled/invalid_position), <code>time_to_place_ms</code></td><td>Build placement UX — how long does it take? How often do players cancel?</td></tr>
+<tr><td><code>gui.context_menu</code></td><td><code>items_shown</code>, <code>item_selected</code>, <code>screen</code></td><td>Right-click menu usage and discoverability</td></tr>
+<tr><td><code>gui.scroll</code></td><td><code>container_id</code>, <code>direction</code>, <code>distance</code>, <code>screen</code></td><td>Scroll depth — do players scroll through long lists?</td></tr>
+<tr><td><code>gui.panel.resize</code></td><td><code>panel_id</code>, <code>old_size</code>, <code>new_size</code></td><td>UI layout preferences</td></tr>
+<tr><td><code>gui.search</code></td><td><code>context</code> (workshop/map_browser/settings/console), <code>query_length</code>, <code>results_count</code></td><td>Search usage patterns — what are players looking for?</td></tr>
+</tbody>
+</table>
+</div>
+<h4 id="rts-input-events"><a class="header" href="#rts-input-events">RTS Input Events</a></h4>
+<p>These events capture how the player actually plays the game — selection patterns, ordering habits, control group usage, camera behavior. This is the primary source for gameplay pattern analysis and understanding how players interact with the core RTS mechanics.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Event</th><th>JSON <code>data</code> Fields</th><th>What It Reveals</th></tr>
+</thead>
+<tbody>
+<tr><td><code>input.select</code></td><td><code>unit_count</code>, <code>method</code> (box_drag/click/ctrl_group/double_click/tab_cycle/select_all), <code>unit_types[]</code></td><td>Selection habits — do players use box select or control groups?</td></tr>
+<tr><td><code>input.ctrl_group</code></td><td><code>group_number</code>, <code>action</code> (assign/recall/append/steal), <code>unit_count</code>, <code>unit_types[]</code></td><td>Control group adoption — which groups, how many units, reassignment frequency</td></tr>
+<tr><td><code>input.order</code></td><td><code>order_type</code> (move/attack/attack_move/guard/patrol/stop/force_fire/deploy), <code>target_type</code> (ground/unit/building/none), <code>unit_count</code>, <code>method</code> (right_click/hotkey/minimap/sidebar)</td><td>How players issue orders — right-click vs. hotkey vs. sidebar? What order types dominate?</td></tr>
+<tr><td><code>input.build_queue</code></td><td><code>item_type</code>, <code>action</code> (queue/cancel/hold/repeat), <code>method</code> (click/hotkey), <code>queue_depth</code>, <code>queue_position</code></td><td>Build queue management — do players queue in advance or build-on-demand?</td></tr>
+<tr><td><code>input.camera</code></td><td><code>method</code> (edge_scroll/keyboard/minimap_click/ctrl_group_recall/base_hotkey/zoom_scroll/zoom_keyboard/zoom_pinch), <code>distance</code>, <code>duration_ms</code>, <code>zoom_level</code></td><td>Camera control habits — which method dominates? How far do players scroll? What zoom levels are preferred?</td></tr>
+<tr><td><code>input.rally_point</code></td><td><code>building_type</code>, <code>position_type</code> (ground/unit/building), <code>distance_from_building</code></td><td>Rally point usage and placement patterns</td></tr>
+<tr><td><code>input.waypoint</code></td><td><code>waypoint_count</code>, <code>order_type</code>, <code>total_distance</code></td><td>Shift-queue / waypoint usage frequency and complexity</td></tr>
+</tbody>
+</table>
+</div>
+<h4 id="match-flow-events"><a class="header" href="#match-flow-events">Match Flow Events</a></h4>
+<p>These capture the lifecycle and pacing of matches — when they start, how they progress, why they end. The <code>match.pace</code> snapshot emitted periodically is particularly powerful: it creates a time-series of the player’s economic and military state, enabling pace analysis, build order reconstruction, and difficulty curve assessment.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Event</th><th>JSON <code>data</code> Fields</th><th>What It Reveals</th></tr>
+</thead>
+<tbody>
+<tr><td><code>match.start</code></td><td><code>mode</code>, <code>map</code>, <code>player_count</code>, <code>ai_count</code>, <code>ai_difficulty</code>, <code>balance_preset</code>, <code>render_mode</code>, <code>game_module</code>, <code>mod_profile_fingerprint</code></td><td>What people play — which modes, maps, mods, settings</td></tr>
+<tr><td><code>match.pace</code></td><td>Emitted every 60s: <code>tick</code>, <code>apm</code>, <code>credits</code>, <code>power_balance</code>, <code>unit_count</code>, <code>army_value</code>, <code>tech_tier</code>, <code>buildings_count</code>, <code>harvesters_active</code></td><td>Economic/military time-series — pacing, build order tendencies, when players peak</td></tr>
+<tr><td><code>match.end</code></td><td><code>duration_s</code>, <code>outcome</code> (win/loss/draw/disconnect/surrender), <code>units_built</code>, <code>units_lost</code>, <code>credits_harvested</code>, <code>credits_spent</code>, <code>peak_army_value</code>, <code>peak_unit_count</code></td><td>Win/loss context, game length, economic efficiency</td></tr>
+<tr><td><code>match.first_build</code></td><td><code>structure_type</code>, <code>time_s</code></td><td>Build order opening — first building timing (balance indicator)</td></tr>
+<tr><td><code>match.first_combat</code></td><td><code>time_s</code>, <code>attacker_units</code>, <code>defender_units</code>, <code>outcome</code></td><td>When does first blood happen? (game pacing metric)</td></tr>
+<tr><td><code>match.surrender_point</code></td><td><code>time_s</code>, <code>army_value_ratio</code>, <code>tech_tier_diff</code>, <code>credits_diff</code></td><td>At what resource/army deficit do players give up?</td></tr>
+<tr><td><code>match.pause</code></td><td><code>reason</code> (player/desync/lag_stall), <code>duration_s</code></td><td>Pause frequency — desync vs. deliberate pauses</td></tr>
+</tbody>
+</table>
+</div>
+<h4 id="post-play-feedback--content-evaluation-events-workshop--modes--campaigns"><a class="header" href="#post-play-feedback--content-evaluation-events-workshop--modes--campaigns">Post-Play Feedback &amp; Content Evaluation Events (Workshop / Modes / Campaigns)</a></h4>
+<p>These events measure whether IC’s post-game / post-session feedback prompts are useful without becoming spam. They support UX tuning and creator-tooling iteration, but they are <strong>not</strong> moderation verdicts and they do <strong>not</strong> carry gameplay rewards.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Event</th><th>JSON <code>data</code> Fields</th><th>What It Reveals</th></tr>
+</thead>
+<tbody>
+<tr><td><code>feedback.prompt.shown</code></td><td><code>surface</code> (post_game/campaign_end/workshop_detail), <code>target_kind</code> (match_mode/workshop_resource/campaign), <code>target_id</code> (optional), <code>session_number</code>, <code>sampling_reason</code></td><td>Prompt frequency and where feedback is requested</td></tr>
+<tr><td><code>feedback.prompt.action</code></td><td><code>surface</code>, <code>target_kind</code>, <code>action</code> (submitted/skipped/snoozed/disabled_for_target/disabled_global), <code>time_on_prompt_ms</code></td><td>Whether the prompt is helpful or intrusive</td></tr>
+<tr><td><code>feedback.review.submit</code></td><td><code>target_kind</code>, <code>target_id</code>, <code>rating</code> (optional 1-5), <code>text_length</code>, <code>playtime_s</code>, <code>community_submit</code> (bool), <code>contains_spoiler_opt_in</code> (bool)</td><td>Review quality and submission patterns across modes/mods/campaigns</td></tr>
+<tr><td><code>feedback.review.helpful_mark</code></td><td><code>resource_id</code>, <code>review_id</code>, <code>actor_role</code> (author/moderator), <code>outcome</code> (marked/unmarked/rejected), <code>reward_granted</code> (bool), <code>reward_type</code> (badge/title/acknowledgement/reputation/points/none)</td><td>Creator triage behavior and helpful-review recognition usage</td></tr>
+<tr><td><code>feedback.review.reward_grant</code></td><td><code>review_id</code>, <code>resource_id</code>, <code>reward_type</code>, <code>recipient_scope</code> (local_profile/community_profile), <code>revocable</code> (bool), <code>points_amount</code> (optional)</td><td>How often profile-only rewards are granted and what types are used</td></tr>
+<tr><td><code>feedback.review.reward_redeem</code></td><td><code>reward_catalog_id</code>, <code>cost_points</code>, <code>recipient_scope</code>, <code>outcome</code> (success/rejected/revoked/refunded), <code>reason</code></td><td>Cosmetic/profile reward redemption usage and abuse/policy tuning (if enabled)</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Privacy / reward boundary (normative):</strong></p>
+<ul>
+<li>These are <strong>product/community UX analytics</strong> events, not ranked, matchmaking, or anti-cheat signals.</li>
+<li><code>helpful_mark</code> and reward events must never imply gameplay advantages (no credits, ranking bonuses, unlock power, or competitive matchmaking weight).</li>
+<li>Review text itself remains under Workshop/community review storage rules (D049/D037). D031 records event metadata for UX/ops tuning, not a second copy of user text by default.</li>
+</ul>
+<h4 id="campaign-progress-events-d021-local-first"><a class="header" href="#campaign-progress-events-d021-local-first">Campaign Progress Events (D021, Local-First)</a></h4>
+<p>Campaign telemetry supports local campaign dashboards, branching progress summaries, and (if the player opts in) community benchmark aggregates. These events are <strong>social/analytics-facing</strong>, not ranked or anti-cheat signals.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Event</th><th>JSON <code>data</code> Fields</th><th>What It Reveals</th></tr>
+</thead>
+<tbody>
+<tr><td><code>campaign.run.start</code></td><td><code>campaign_id</code>, <code>campaign_version</code>, <code>game_module</code>, <code>difficulty</code>, <code>balance_preset</code>, <code>save_slot</code>, <code>continued</code></td><td>Which campaigns are being played and under what ruleset</td></tr>
+<tr><td><code>campaign.node.complete</code></td><td><code>campaign_id</code>, <code>mission_id</code>, <code>outcome</code>, <code>path_depth</code>, <code>time_s</code>, <code>units_lost</code>, <code>score</code>, <code>branch_revealed_count</code></td><td>Mission outcomes, pacing, branching progress, friction points</td></tr>
+<tr><td><code>campaign.progress_snapshot</code></td><td><code>campaign_id</code>, <code>campaign_version</code>, <code>unique_completed</code>, <code>total_missions</code>, <code>current_path_depth</code>, <code>best_path_depth</code>, <code>endings_unlocked</code>, <code>time_played_s</code></td><td>Branching-safe progress metrics for campaign browser/profile/dashboard UIs</td></tr>
+<tr><td><code>campaign.run.end</code></td><td><code>campaign_id</code>, <code>reason</code> (completed/abandoned/defeat_branch/pause_for_later), <code>best_path_depth</code>, <code>unique_completed</code>, <code>ending_id</code> (optional), <code>session_time_s</code></td><td>Campaign completion/abandonment rates and session outcomes</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Privacy / sharing boundary (normative):</strong></p>
+<ul>
+<li>These events are always available for <strong>local dashboards</strong> (campaign browser, profile campaign card, career stats).</li>
+<li>Upload/export for <strong>community benchmark comparisons</strong> is opt-in and should default to aggregated summaries (<code>campaign.progress_snapshot</code>) rather than full mission-by-mission histories.</li>
+<li>Community comparisons must be normalized by campaign version + difficulty + balance preset and presented with spoiler-safe UI defaults (D021/D053).</li>
+</ul>
+<h4 id="session--lifecycle-events"><a class="header" href="#session--lifecycle-events">Session &amp; Lifecycle Events</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Event</th><th>JSON <code>data</code> Fields</th><th>What It Reveals</th></tr>
+</thead>
+<tbody>
+<tr><td><code>session.start</code></td><td><code>engine_version</code>, <code>os</code>, <code>display_resolution</code>, <code>game_module</code>, <code>mod_profile_fingerprint</code>, <code>session_number</code> (incrementing per install)</td><td>Environment context — OS distribution, screen sizes, how many times they’ve launched</td></tr>
+<tr><td><code>session.mod_manifest</code></td><td><code>game_module</code>, <code>mod_profile_fingerprint</code>, <code>unit_types[]</code>, <code>building_types[]</code>, <code>weapon_types[]</code>, <code>resource_types[]</code>, <code>faction_names[]</code>, <code>mod_sources[]</code></td><td>Self-describing type vocabulary — makes exported telemetry interpretable without the mod’s YAML files</td></tr>
+<tr><td><code>session.profile_switch</code></td><td><code>old_fingerprint</code>, <code>new_fingerprint</code>, <code>old_game_module</code>, <code>new_game_module</code>, <code>profile_name</code></td><td>Mid-session mod profile changes — boundary marker for analytics segmentation</td></tr>
+<tr><td><code>session.end</code></td><td><code>duration_s</code>, <code>reason</code> (quit/crash/update/system_sleep), <code>screens_visited[]</code>, <code>matches_played</code>, <code>features_used[]</code></td><td>Session shape — how long, what did they do, clean exit or crash?</td></tr>
+<tr><td><code>session.idle</code></td><td><code>screen_id</code>, <code>duration_s</code></td><td>Idle detection — was the player AFK on the main menu for 20 minutes?</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong><code>session.mod_manifest</code> rationale:</strong> When telemetry records <code>unit_type: "HARV"</code> or <code>weapon: "Vulcan"</code>, these strings are meaningful only if you know the mod’s type catalog. Without context, exported <code>telemetry.db</code> files require the original mod’s YAML files to interpret event payloads. The <code>session.mod_manifest</code> event, emitted once per session (and again on <code>session.profile_switch</code>), captures the active mod’s full type vocabulary — every unit, building, weapon, resource, and faction name defined in the loaded YAML rules. This makes exported telemetry <strong>self-describing</strong>: an analyst receiving a community-submitted <code>telemetry.db</code> can identify what <code>"HARV"</code> means without installing the mod. The manifest is typically 2–10 KB of JSON — negligible overhead for one event per session.</p>
+<h4 id="settings--configuration-events"><a class="header" href="#settings--configuration-events">Settings &amp; Configuration Events</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Event</th><th>JSON <code>data</code> Fields</th><th>What It Reveals</th></tr>
+</thead>
+<tbody>
+<tr><td><code>settings.changed</code></td><td><code>setting_path</code>, <code>old_value</code>, <code>new_value</code>, <code>screen</code></td><td>Which defaults are wrong? What do players immediately change?</td></tr>
+<tr><td><code>settings.preset</code></td><td><code>preset_type</code> (balance/theme/qol/render/experience), <code>preset_name</code></td><td>Preset popularity — Classic vs. Remastered vs. Modern</td></tr>
+<tr><td><code>settings.mod_profile</code></td><td><code>action</code> (activate/create/delete/import/export), <code>profile_name</code>, <code>mod_count</code></td><td>Mod profile adoption and management patterns</td></tr>
+<tr><td><code>settings.keybind</code></td><td><code>action</code>, <code>old_key</code>, <code>new_key</code></td><td>Which keybinds do players remap? (ergonomics insight)</td></tr>
+</tbody>
+</table>
+</div>
+<h4 id="onboarding-events"><a class="header" href="#onboarding-events">Onboarding Events</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Event</th><th>JSON <code>data</code> Fields</th><th>What It Reveals</th></tr>
+</thead>
+<tbody>
+<tr><td><code>onboarding.step</code></td><td><code>step_id</code>, <code>step_name</code>, <code>action</code> (completed/skipped/abandoned), <code>time_on_step_s</code></td><td>Where do new players drop off? Is the flow too long?</td></tr>
+<tr><td><code>onboarding.tutorial</code></td><td><code>tutorial_id</code>, <code>progress_pct</code>, <code>completed</code>, <code>time_spent_s</code>, <code>deaths</code></td><td>Tutorial completion and difficulty</td></tr>
+<tr><td><code>onboarding.first_use</code></td><td><code>feature_id</code>, <code>session_number</code>, <code>time_since_install_s</code></td><td>Feature discovery timeline — when do players first find the console? Career stats? Workshop?</td></tr>
+<tr><td><code>onboarding.recovery_phrase</code></td><td><code>action</code> (shown/written_confirmed/skipped), <code>time_on_screen_s</code></td><td>Recovery phrase adoption — critical for D061 backup design</td></tr>
+</tbody>
+</table>
+</div>
+<h4 id="error--diagnostic-events"><a class="header" href="#error--diagnostic-events">Error &amp; Diagnostic Events</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Event</th><th>JSON <code>data</code> Fields</th><th>What It Reveals</th></tr>
+</thead>
+<tbody>
+<tr><td><code>error.crash</code></td><td><code>panic_message_hash</code>, <code>backtrace_hash</code>, <code>context</code> (screen/system/tick)</td><td>Crash frequency, clustering by context</td></tr>
+<tr><td><code>error.mod_load</code></td><td><code>mod_id</code>, <code>error_type</code>, <code>file_path_hash</code></td><td>Which mods break? Which errors?</td></tr>
+<tr><td><code>error.asset</code></td><td><code>asset_path_hash</code>, <code>format</code>, <code>error_type</code></td><td>Asset loading failures in the wild</td></tr>
+<tr><td><code>error.desync</code></td><td><code>tick</code>, <code>expected_hash</code>, <code>actual_hash</code>, <code>divergent_system_hint</code></td><td>Client-side desync evidence (correlates with relay <code>relay.desync</code>)</td></tr>
+<tr><td><code>error.network</code></td><td><code>error_type</code>, <code>context</code> (connect/relay/workshop/tracking)</td><td>Network failures by category</td></tr>
+<tr><td><code>error.ui</code></td><td><code>widget_id</code>, <code>error_type</code>, <code>screen</code></td><td>UI rendering/interaction bugs</td></tr>
+</tbody>
+</table>
+</div>
+<h4 id="performance-sampling-events"><a class="header" href="#performance-sampling-events">Performance Sampling Events</a></h4>
+<p>Emitted periodically (not every frame — sampled to avoid overhead). These answer: “Are players hitting performance problems we don’t see in development?”</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Event</th><th>JSON <code>data</code> Fields</th><th>Sampling Rate</th><th>What It Reveals</th></tr>
+</thead>
+<tbody>
+<tr><td><code>perf.frame</code></td><td><code>p50_ms</code>, <code>p95_ms</code>, <code>p99_ms</code>, <code>max_ms</code>, <code>entity_count</code>, <code>draw_calls</code>, <code>gpu_time_ms</code></td><td>Every 10s</td><td>Frame time distribution — who’s struggling?</td></tr>
+<tr><td><code>perf.sim</code></td><td><code>p50_us</code>, <code>p95_us</code>, <code>p99_us</code>, per-system <code>{system: us}</code> breakdown</td><td>Every 30s</td><td>Sim tick budget — which systems are expensive for which players?</td></tr>
+<tr><td><code>perf.load</code></td><td><code>what</code> (map/mod/assets/game_launch/screen), <code>duration_ms</code>, <code>size_bytes</code></td><td>On event</td><td>Load times — how long does game startup take on real hardware?</td></tr>
+<tr><td><code>perf.memory</code></td><td><code>heap_bytes</code>, <code>component_storage_bytes</code>, <code>scratch_buffer_bytes</code>, <code>asset_cache_bytes</code></td><td>Every 60s</td><td>Memory pressure on real machines</td></tr>
+<tr><td><code>perf.pathfinding</code></td><td><code>requests</code>, <code>cache_hits</code>, <code>cache_hit_rate</code>, <code>p95_compute_us</code></td><td>Every 30s</td><td>Pathfinding load in real matches</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="analytical-power-what-questions-the-data-answers"><a class="header" href="#analytical-power-what-questions-the-data-answers">Analytical Power: What Questions the Data Answers</a></h3>
+<p>The telemetry design above is intentionally structured for SQL queryability. Here are representative queries against the unified <code>telemetry_events</code> table that demonstrate the kind of insights this data enables — these queries work identically on client exports, server <code>telemetry.db</code> files, or aggregated community datasets:</p>
+<p><strong>GUI &amp; UX Insights:</strong></p>
+<pre><code class="language-sql">-- Which screens do players never visit?
+SELECT json_extract(data, '$.screen_id') AS screen, COUNT(*) AS visits
+FROM telemetry_events WHERE event = 'gui.screen.open'
+GROUP BY screen ORDER BY visits ASC LIMIT 20;
+
+-- How do players issue orders: right-click, hotkey, or sidebar?
+SELECT json_extract(data, '$.method') AS method, COUNT(*) AS orders
+FROM telemetry_events WHERE event = 'input.order'
+GROUP BY method ORDER BY orders DESC;
+
+-- Which settings do players change within the first session?
+SELECT json_extract(data, '$.setting_path') AS setting,
+       json_extract(data, '$.old_value') AS default_val,
+       json_extract(data, '$.new_value') AS changed_to,
+       COUNT(*) AS changes
+FROM telemetry_events e
+JOIN (SELECT DISTINCT session_id FROM telemetry_events
+      WHERE event = 'session.start'
+      AND json_extract(data, '$.session_number') = 1) first
+  ON e.session_id = first.session_id
+WHERE e.event = 'settings.changed'
+GROUP BY setting ORDER BY changes DESC;
+
+-- Control group adoption: what percentage of matches use ctrl groups?
+SELECT
+  COUNT(DISTINCT CASE WHEN event = 'input.ctrl_group' THEN session_id END) * 100.0 /
+  COUNT(DISTINCT CASE WHEN event = 'match.start' THEN session_id END) AS pct_matches_with_ctrl_groups
+FROM telemetry_events WHERE event IN ('input.ctrl_group', 'match.start');
+</code></pre>
+<p><strong>Gameplay Pattern Insights:</strong></p>
+<pre><code class="language-sql">-- Average match duration by mode and map
+SELECT json_extract(data, '$.mode') AS mode,
+       json_extract(data, '$.map') AS map,
+       AVG(json_extract(data, '$.duration_s')) AS avg_duration_s,
+       COUNT(*) AS matches
+FROM telemetry_events WHERE event = 'match.end'
+GROUP BY mode, map ORDER BY matches DESC;
+
+-- Build order openings: what do players build first?
+SELECT json_extract(data, '$.structure_type') AS first_building,
+       COUNT(*) AS frequency,
+       AVG(json_extract(data, '$.time_s')) AS avg_time_s
+FROM telemetry_events WHERE event = 'match.first_build'
+GROUP BY first_building ORDER BY frequency DESC;
+
+-- APM distribution across the player base
+SELECT
+  CASE WHEN apm &lt; 30 THEN 'casual (&lt;30)'
+       WHEN apm &lt; 80 THEN 'intermediate (30-80)'
+       WHEN apm &lt; 150 THEN 'advanced (80-150)'
+       ELSE 'expert (150+)' END AS skill_bucket,
+  COUNT(*) AS snapshots
+FROM (SELECT CAST(json_extract(data, '$.apm') AS INTEGER) AS apm
+      FROM telemetry_events WHERE event = 'match.pace')
+GROUP BY skill_bucket;
+
+-- At what deficit do players surrender?
+SELECT AVG(json_extract(data, '$.army_value_ratio')) AS avg_army_ratio,
+       AVG(json_extract(data, '$.credits_diff')) AS avg_credit_diff,
+       COUNT(*) AS surrenders
+FROM telemetry_events WHERE event = 'match.surrender_point';
+</code></pre>
+<p><strong>Troubleshooting Insights:</strong></p>
+<pre><code class="language-sql">-- Crash frequency by context (which screen/system crashes most?)
+SELECT json_extract(data, '$.context') AS context,
+       json_extract(data, '$.backtrace_hash') AS stack,
+       COUNT(*) AS occurrences
+FROM telemetry_events WHERE event = 'error.crash'
+GROUP BY context, stack ORDER BY occurrences DESC LIMIT 20;
+
+-- Desync correlation: which maps/mods trigger desyncs?
+-- (run across aggregated relay + client exports)
+SELECT json_extract(data, '$.map') AS map,
+       COUNT(CASE WHEN event = 'relay.desync' THEN 1 END) AS desyncs,
+       COUNT(CASE WHEN event = 'relay.game.end' THEN 1 END) AS total_games,
+       ROUND(COUNT(CASE WHEN event = 'relay.desync' THEN 1 END) * 100.0 /
+             NULLIF(COUNT(CASE WHEN event = 'relay.game.end' THEN 1 END), 0), 1) AS desync_pct
+FROM telemetry_events
+WHERE event IN ('relay.desync', 'relay.game.end')
+GROUP BY map ORDER BY desync_pct DESC;
+
+-- Performance: which players have sustained frame drops?
+SELECT session_id,
+       AVG(json_extract(data, '$.p95_ms')) AS avg_p95_frame_ms,
+       MAX(json_extract(data, '$.entity_count')) AS peak_entities
+FROM telemetry_events WHERE event = 'perf.frame'
+GROUP BY session_id
+HAVING avg_p95_frame_ms &gt; 33.3  -- below 30 FPS sustained
+ORDER BY avg_p95_frame_ms DESC;
+</code></pre>
+<p><strong>Aggregation happens in the open, not in a backend.</strong> If the project team wants to analyze telemetry across many players (e.g., for a usability study, balance patch, or release retrospective), they ask the community to voluntarily submit exports — the same model as open-source projects collecting crash dumps on GitHub. Community members run <code>/analytics export</code>, review the file, and attach it. Aggregation scripts live in the repository and run locally — anyone can reproduce the analysis.</p>
+<p><strong>Console commands (D058) — identical on client and server:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Command</th><th>Action</th></tr>
+</thead>
+<tbody>
+<tr><td><code>/analytics status</code></td><td>Show recording status, event count, <code>telemetry.db</code> size, retention settings</td></tr>
+<tr><td><code>/analytics inspect [category] [--last N]</code></td><td>Display recent events, optionally filtered by category</td></tr>
+<tr><td><code>/analytics export [--from DATE] [--to DATE] [--category CAT]</code></td><td>Export to JSON/SQLite in <code>&lt;data_dir&gt;/exports/</code> with optional date/category filter</td></tr>
+<tr><td><code>/analytics clear [--before DATE]</code></td><td>Delete events, optionally only before a date</td></tr>
+<tr><td><code>/analytics on/off</code></td><td>Toggle local recording (<code>telemetry.product_analytics</code> cvar)</td></tr>
+<tr><td><code>/analytics query SQL</code></td><td>Run ad-hoc SQL against <code>telemetry.db</code> (dev console only, <code>DEV_ONLY</code> flag)</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="architecture-where-telemetry-lives"><a class="header" href="#architecture-where-telemetry-lives">Architecture: Where Telemetry Lives</a></h3>
+<p><strong>Primary path (always-on): local SQLite.</strong> Every component writes to its own <code>telemetry.db</code>. This is the ground truth. No network, no infrastructure, no dependencies.</p>
+<pre><code>  ┌─────────────────────────────────────────────────────────────────┐
+  │ Every component (client, relay, tracking, workshop)             │
+  │                                                                 │
+  │  Instrumentation    ──►  telemetry.db (local SQLite)            │
+  │  (tracing + events)      ├── always written                     │
+  │                          ├── /analytics inspect                 │
+  │                          ├── /analytics export ──► .json file   │
+  │                          │   (voluntary: bug report, feedback)  │
+  │                          └── retention: max size / max age      │
+  └─────────────────────────────────────────────────────────────────┘
+</code></pre>
+<p><strong>Optional path (server operators only): OTEL export.</strong> Server operators who want real-time dashboards can enable OTEL export alongside the SQLite sink. This is a deployment choice for sophisticated operators — never a requirement.</p>
+<pre><code>  Servers with OTEL enabled:
+
+  telemetry.db ◄── Instrumentation ──► OTEL Collector (optional)
+  (always)         (tracing + events)       │
+                                     ┌──────┴──────────────────┐
+                                     │          │              │
+                              ┌──────▼──┐ ┌────▼────┐ ┌───────▼───┐
+                              │Prometheus│ │ Jaeger  │ │   Loki    │
+                              │(metrics) │ │(traces) │ │(logs)     │
+                              └──────────┘ └─────────┘ └─────┬─────┘
+                                                             │
+                                                      ┌──────▼──────┐
+                                                      │ AI Training  │
+                                                      │ (Parquet→ML) │
+                                                      └─────────────┘
+</code></pre>
+<p>The dual-write approach means:</p>
+<ul>
+<li><strong>Every deployment</strong> gets full telemetry in SQLite — zero setup required</li>
+<li><strong>Sophisticated deployments</strong> can additionally route to Grafana/Prometheus/Jaeger for real-time dashboards</li>
+<li>Self-hosters can route OTEL to whatever they want (Grafana Cloud, Datadog, or just stdout)</li>
+<li>If the OTEL collector goes down, telemetry continues in SQLite uninterrupted — no data loss</li>
+</ul>
+<h3 id="implementation-approach"><a class="header" href="#implementation-approach">Implementation Approach</a></h3>
+<p><strong>Rust ecosystem:</strong></p>
+<ul>
+<li><code>tracing</code> crate — Bevy already uses this; add structured fields and span instrumentation</li>
+<li><code>opentelemetry</code> + <code>opentelemetry-otlp</code> crates — OTEL SDK for Rust</li>
+<li><code>tracing-opentelemetry</code> — bridges <code>tracing</code> spans to OTEL traces</li>
+<li><code>metrics</code> crate — lightweight counters/histograms, exported via OTEL</li>
+</ul>
+<p><strong>Zero-cost engine instrumentation when disabled:</strong> The <code>telemetry</code> feature flag gates <strong>engine-level</strong> instrumentation (per-system tick timing, <code>GameplayEvent</code> stream, OTEL export) behind <code>#[cfg(feature = "telemetry")]</code>. When disabled, all engine telemetry calls compile to no-ops. No runtime cost, no allocations, no branches. This respects invariant #5 (efficiency-first performance).</p>
+<p><strong>Product analytics (GUI interaction, session, settings, onboarding, errors, perf sampling) always record to SQLite</strong> — they are lightweight structured event inserts, not per-tick instrumentation. The overhead is negligible (one SQLite INSERT per user action, batched in WAL mode). Players who want to disable even this can set <code>telemetry.product_analytics false</code>.</p>
+<p><strong>Transaction batching:</strong> All SQLite INSERTs — both telemetry events and gameplay events — are explicitly batched in transactions to avoid per-INSERT fsync overhead:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Event source</th><th>Batch strategy</th></tr>
+</thead>
+<tbody>
+<tr><td>Product analytics</td><td>Buffered in memory; flushed in a single <code>BEGIN</code>/<code>COMMIT</code> every 1 second or 50 events, whichever first</td></tr>
+<tr><td>Gameplay events</td><td>Buffered per tick; flushed in a single <code>BEGIN</code>/<code>COMMIT</code> at end of tick (typically 1-20 events per tick)</td></tr>
+<tr><td>Server telemetry</td><td>Ring buffer; flushed in a single <code>BEGIN</code>/<code>COMMIT</code> every 100 ms or 200 events, whichever first</td></tr>
+</tbody>
+</table>
+</div>
+<p>All writes happen on a dedicated I/O thread (or <code>spawn_blocking</code> task) — never on the game loop thread. The game loop thread only appends to a lock-free ring buffer; the I/O thread drains and commits. This guarantees that SQLite contention (including <code>busy_timeout</code> waits and WAL checkpoints) cannot cause frame drops.</p>
+<p><strong>Ring buffer sizing:</strong> The ring buffer must absorb all events generated during the worst-case I/O thread stall (WAL checkpoint on HDD: 200–500 ms). At peak event rates (~600 events/s during intense combat — gameplay events + telemetry + product analytics combined), a 500 ms stall generates ~300 events. <strong>Minimum ring buffer capacity: 1024 entries</strong> (3.4× headroom over worst-case). Each entry is a lightweight enum (~64–128 bytes), so the buffer occupies ~64–128 KB — negligible. If the buffer fills despite this sizing, events are dropped with a counter increment (same pattern as the replay writer’s <code>frames_lost</code> tracking in V45). The I/O thread logs a warning on drain if drops occurred. This is a last-resort safety net, not an expected operating condition.</p>
+<p><strong>Build configurations:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Build</th><th>Engine Telemetry</th><th>Product Analytics (SQLite)</th><th>OTEL Export</th><th>Use case</th></tr>
+</thead>
+<tbody>
+<tr><td><code>release</code></td><td>Off</td><td>On (local SQLite)</td><td>Off</td><td>Player-facing builds — minimal overhead</td></tr>
+<tr><td><code>release-telemetry</code></td><td>On</td><td>On (local SQLite)</td><td>Optional</td><td>Tournament servers, AI training, debugging</td></tr>
+<tr><td><code>debug</code></td><td>On</td><td>On (local SQLite)</td><td>Optional</td><td>Development — full instrumentation</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="self-hosting-observability"><a class="header" href="#self-hosting-observability">Self-Hosting Observability</a></h3>
+<p>Community server operators get observability for free. The docker-compose.yaml (already designed in <code>03-NETCODE.md</code>) can optionally include a Grafana + Prometheus + Loki stack:</p>
+<pre><code class="language-yaml"># docker-compose.observability.yaml (optional overlay)
+services:
+  otel-collector:
+    image: otel/opentelemetry-collector:latest
+    ports:
+      - "4317:4317"    # OTLP gRPC
+  prometheus:
+    image: prom/prometheus:latest
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"    # dashboards
+  loki:
+    image: grafana/loki:latest
+</code></pre>
+<p>Pre-built Grafana dashboards ship with the project:</p>
+<ul>
+<li><strong>Relay Dashboard:</strong> active games, player RTT, orders/sec, desync events, suspicion scores</li>
+<li><strong>Tracking Dashboard:</strong> listings, heartbeats, query rates</li>
+<li><strong>Workshop Dashboard:</strong> downloads, publishes, dependency resolution times</li>
+<li><strong>Engine Dashboard:</strong> tick times, entity counts, system breakdown, pathfinding stats</li>
+</ul>
+<p><strong>Alternatives considered:</strong></p>
+<ul>
+<li>Custom metrics format (less work initially, but no ecosystem — no Grafana, no alerting, no community tooling)</li>
+<li>StatsD (simpler but metrics-only — no traces, no structured logs, no distributed correlation)</li>
+<li>No telemetry (leaves operators blind and AI training without data)</li>
+<li>Always-on telemetry (violates performance invariant — must be zero-cost when disabled)</li>
+</ul>
+<p><strong>Phase:</strong> Unified <code>telemetry_events</code> SQLite schema + <code>/analytics</code> console commands in Phase 2 (shared across all components from day one). Engine telemetry (per-system timing, <code>GameplayEvent</code> stream) in Phase 2 (sim). Product analytics (GUI interaction, session, settings, onboarding, errors, performance sampling) in Phase 3 (alongside UI chrome). Server-side SQLite telemetry recording (relay, tracking, workshop) in Phase 5 (multiplayer). Optional OTEL export layer for server operators in Phase 5. Pre-built Grafana dashboards in Phase 5. AI training pipeline in Phase 7 (LLM).</p>
+<hr>
+<hr>
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../../decisions/09e/D030-workshop-registry.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../../decisions/09e/D034-sqlite.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../../decisions/09e/D030-workshop-registry.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../../decisions/09e/D034-sqlite.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../../mark-09e88c2c.min.js"></script>
+        <script src="../../searcher-c2a407aa.js"></script>
+
+        <script src="../../clipboard-1626706a.min.js"></script>
+        <script src="../../highlight-abc7f01d.js"></script>
+        <script src="../../book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

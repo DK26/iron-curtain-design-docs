@@ -1,0 +1,695 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>D041 — Trait Abstraction - Iron Curtain — Design Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Design docs for a Rust-native Red Alert RTS engine">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../../css/general-2459343d.css">
+        <link rel="stylesheet" href="../../css/chrome-ae938929.css">
+        <link rel="stylesheet" href="../../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../../searchindex-61d2369b.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../../toc-1553b04b.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Iron Curtain — Design Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs/edit/main/src/decisions/09d/D041-trait-abstraction.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h2 id="d041-trait-abstracted-subsystem-strategy--beyond-networking-and-pathfinding"><a class="header" href="#d041-trait-abstracted-subsystem-strategy--beyond-networking-and-pathfinding">D041: Trait-Abstracted Subsystem Strategy — Beyond Networking and Pathfinding</a></h2>
+<p><strong>Decision:</strong> Extend the <code>NetworkModel</code>/<code>Pathfinder</code>/<code>SpatialIndex</code> trait-abstraction pattern to five additional engine subsystems that carry meaningful risk of regret if hardcoded: <strong>AI strategy, fog of war, damage resolution, ranking/matchmaking, and order validation</strong>. Each gets a formal trait in the engine, a default implementation in the RA1 game module, and the same “costs near-zero now, prevents rewrites later” guarantee.</p>
+<p><strong>Context:</strong> The engine already trait-abstracts 14 subsystems (see inventory below, including Transport added by D054). These were designed individually — some as architectural invariants (D006 networking, D013 pathfinding), others as consequences of multi-game extensibility (D018 <code>GameModule</code>, <code>Renderable</code>, <code>FormatRegistry</code>). But several critical <em>algorithm-level</em> concerns remain hardcoded in RA1’s system implementations. For data-driven concerns (weather, campaigns, achievements, themes), YAML+Lua modding provides sufficient flexibility — no trait needed. For <em>algorithmic</em> concerns, the resolution logic itself is what varies between game types and modding ambitions.</p>
+<p><strong>The principle:</strong> Abstract the <em>algorithm</em>, not the <em>data</em>. If a modder can change behavior through YAML values or Lua scripts, a trait is unnecessary overhead. If changing behavior requires replacing the <em>logic</em> — the decision-making process, the computation pipeline, the scoring formula — that’s where a trait prevents a future rewrite.</p>
+<h3 id="inventory-already-trait-abstracted-14"><a class="header" href="#inventory-already-trait-abstracted-14">Inventory: Already Trait-Abstracted (14)</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Trait</th><th>Crate</th><th>Decision</th><th>Phase</th></tr>
+</thead>
+<tbody>
+<tr><td><code>NetworkModel</code></td><td>ic-net</td><td>D006</td><td>2</td></tr>
+<tr><td><code>Pathfinder</code></td><td>ic-sim (trait), game module (impl)</td><td>D013</td><td>2</td></tr>
+<tr><td><code>SpatialIndex</code></td><td>ic-sim (trait), game module (impl)</td><td>D013</td><td>2</td></tr>
+<tr><td><code>InputSource</code></td><td>ic-game</td><td>D018</td><td>2</td></tr>
+<tr><td><code>ScreenToWorld</code></td><td>ic-render</td><td>D018</td><td>1</td></tr>
+<tr><td><code>Renderable</code> / <code>RenderPlugin</code></td><td>ic-render</td><td>D017/D018</td><td>1</td></tr>
+<tr><td><code>GameModule</code></td><td>ic-game</td><td>D018</td><td>2</td></tr>
+<tr><td><code>OrderCodec</code></td><td>ic-protocol</td><td>D007</td><td>5</td></tr>
+<tr><td><code>TrackingServer</code></td><td>ic-net</td><td>D007</td><td>5</td></tr>
+<tr><td><code>LlmProvider</code></td><td>ic-llm</td><td>D016</td><td>7</td></tr>
+<tr><td><code>FormatRegistry</code> / <code>FormatLoader</code></td><td>ra-formats</td><td>D018</td><td>0</td></tr>
+<tr><td><code>SimReconciler</code></td><td>ic-net</td><td>D011</td><td>Future</td></tr>
+<tr><td><code>CommunityBridge</code></td><td>ic-net</td><td>D011</td><td>Future</td></tr>
+<tr><td><code>Transport</code></td><td>ic-net</td><td>D054</td><td>5</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="new-trait-abstractions-5"><a class="header" href="#new-trait-abstractions-5">New Trait Abstractions (5)</a></h3>
+<h4 id="1-aistrategy--pluggable-ai-decision-making"><a class="header" href="#1-aistrategy--pluggable-ai-decision-making">1. <code>AiStrategy</code> — Pluggable AI Decision-Making</a></h4>
+<p><strong>Problem:</strong> <code>ic-ai</code> defines <code>AiPersonality</code> as a YAML-configurable parameter struct (aggression, tech preference, micro level) that tunes behavior within a fixed decision algorithm. This is great for balance knobs — but a modder who wants a fundamentally different AI approach (GOAP planner, Monte Carlo tree search, neural network, scripted state machine, or a tournament-specific meta-counter AI) cannot plug one in. They’d have to fork <code>ic-ai</code> or write a WASM mod that reimplements the entire AI from scratch.</p>
+<p><strong>Solution:</strong></p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Game modules and mods implement this to provide AI opponents.
+/// The default RA1 implementation uses AiPersonality-driven behavior trees.
+/// Mods can provide alternatives: planning-based, neural, procedural, etc.
+pub trait AiStrategy: Send + Sync {
+    /// Called once per AI player per tick. Reads visible game state, emits orders.
+    fn decide(
+        &amp;mut self,
+        player: PlayerId,
+        view: &amp;FogFilteredView,  // only what this player can see
+        tick: u64,
+    ) -&gt; Vec&lt;PlayerOrder&gt;;
+
+    /// Human-readable name for lobby display.
+    fn name(&amp;self) -&gt; &amp;str;
+
+    /// Difficulty tier for matchmaking/UI categorization.
+    fn difficulty(&amp;self) -&gt; AiDifficulty;
+
+    /// Optional: per-tick compute budget hint (microseconds).
+    fn tick_budget_hint(&amp;self) -&gt; Option&lt;u64&gt;;
+
+    // --- Event callbacks (inspired by Spring Engine + BWAPI research) ---
+    // Default implementations are no-ops. AIs override what they care about.
+    // Events are pushed by the engine at the same pipeline point as decide(),
+    // before the decide() call — so the AI can react within the same tick.
+
+    /// Own unit finished construction/training.
+    fn on_unit_created(&amp;mut self, _unit: EntityId, _unit_type: &amp;str) {}
+    /// Own unit destroyed.
+    fn on_unit_destroyed(&amp;mut self, _unit: EntityId, _attacker: Option&lt;EntityId&gt;) {}
+    /// Own unit has no orders (idle).
+    fn on_unit_idle(&amp;mut self, _unit: EntityId) {}
+    /// Enemy unit enters line of sight.
+    fn on_enemy_spotted(&amp;mut self, _unit: EntityId, _unit_type: &amp;str) {}
+    /// Known enemy unit destroyed.
+    fn on_enemy_destroyed(&amp;mut self, _unit: EntityId) {}
+    /// Own unit taking damage.
+    fn on_under_attack(&amp;mut self, _unit: EntityId, _attacker: EntityId) {}
+    /// Own building completed.
+    fn on_building_complete(&amp;mut self, _building: EntityId) {}
+    /// Research/upgrade completed.
+    fn on_research_complete(&amp;mut self, _tech: &amp;str) {}
+
+    // --- Parameter introspection (inspired by MicroRTS research) ---
+    // Enables: automated parameter tuning, UI-driven difficulty sliders,
+    // tournament parameter search, AI vs AI evaluation.
+
+    /// Expose tunable parameters for external configuration.
+    fn get_parameters(&amp;self) -&gt; Vec&lt;ParameterSpec&gt; { vec![] }
+    /// Set a parameter value (called by engine from YAML config or UI).
+    fn set_parameter(&amp;mut self, _name: &amp;str, _value: i32) {}
+
+    // --- Engine difficulty scaling (inspired by 0 A.D. + AoE2 research) ---
+
+    /// Whether this AI uses engine-level difficulty scaling (resource bonuses,
+    /// reaction delays, etc.). Default: true. Sophisticated AIs that handle
+    /// difficulty internally can return false to opt out.
+    fn uses_engine_difficulty_scaling(&amp;self) -&gt; bool { true }
+}
+
+pub enum AiDifficulty { Sandbox, Easy, Normal, Hard, Brutal, Custom(String) }
+
+pub struct ParameterSpec {
+    pub name: String,
+    pub description: String,
+    pub min_value: i32,
+    pub max_value: i32,
+    pub default_value: i32,
+    pub current_value: i32,
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Key design points:</strong></p>
+<ul>
+<li><code>FogFilteredView</code> ensures AI honesty — no maphack by default. Campaign scripts can provide an omniscient view for specific AI players via conditions.</li>
+<li><code>AiPersonality</code> becomes the configuration for the <em>default</em> <code>AiStrategy</code> implementation (<code>PersonalityDrivenAi</code>), not the only way to configure AI.</li>
+<li><strong>Event callbacks</strong> (from Spring Engine/BWAPI research, see <code>research/rts-ai-extensibility-survey.md</code>) enable reactive AI without polling. Pure <code>decide()</code>-only AI works fine (events are optional), but event-aware AI can respond immediately to threats, idle units, and scouting information. Events fire before <code>decide()</code> in the same tick, so the AI can incorporate event data into its tick decision.</li>
+<li><strong>Parameter introspection</strong> (from MicroRTS research) enables automated parameter tuning and UI-driven difficulty sliders. Every <code>AiStrategy</code> can expose its knobs — tournament systems use this for automated parameter search, the lobby UI uses it for “Advanced AI Settings” sliders.</li>
+<li><strong>Engine difficulty scaling opt-out</strong> (from 0 A.D. + AoE2 research) lets sophisticated AIs handle difficulty internally. Simple AIs get engine-provided resource bonuses and reaction time delays; advanced AIs that model difficulty as behavioral parameters can opt out.</li>
+<li>AI strategies are selectable in the lobby: “IC Default (Normal)”, “IC Default (Brutal)”, “Workshop: Neural Net v2.1”, etc.</li>
+<li>WASM Tier 3 mods can provide <code>AiStrategy</code> implementations — the trait is part of the stable mod API surface.</li>
+<li>Lua Tier 2 mods can script lightweight AI via the existing Lua API (trigger-based). <code>AiStrategy</code> trait is for full-replacement AI, not scripted behaviors.</li>
+<li>Adaptive difficulty (D034 integration) is implemented inside the default strategy, not in the trait — it’s an implementation detail of <code>PersonalityDrivenAi</code>.</li>
+<li>Determinism: <code>decide()</code> and all event callbacks are called at a fixed point in the system pipeline. All clients run the same AI with the same state → same orders. Mod-provided AI is subject to the same determinism requirements as any sim code.</li>
+</ul>
+<p><strong>Event accumulation — <code>AiEventLog</code>:</strong></p>
+<p>The engine provides an <code>AiEventLog</code> utility struct to every <code>AiStrategy</code> instance. It accumulates fog-filtered events from the callbacks above into a structured, queryable log — the “inner game event log” that D044 (LLM-enhanced AI) consumes as its primary context source. Non-LLM AI can ignore the log entirely (zero cost if <code>to_narrative()</code> is never called); LLM-based AI uses it as the bridge between simulation events and natural-language prompts.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Accumulates fog-filtered game events into a structured log.
+/// Provided by the engine to every AiStrategy instance. Events are pushed
+/// into the log when callbacks fire — the AI gets both the callback
+/// AND a persistent log entry.
+pub struct AiEventLog {
+    entries: CircularBuffer&lt;AiEventEntry&gt;,  // bounded, oldest entries evicted
+    capacity: usize,                        // default: 1000 entries
+}
+
+pub struct AiEventEntry {
+    pub tick: u64,
+    pub event_type: AiEventType,
+    pub description: String,  // human/LLM-readable summary
+    pub entity: Option&lt;EntityId&gt;,
+    pub related_entity: Option&lt;EntityId&gt;,
+}
+
+pub enum AiEventType {
+    UnitCreated, UnitDestroyed, UnitIdle,
+    EnemySpotted, EnemyDestroyed,
+    UnderAttack, BuildingComplete, ResearchComplete,
+    StrategicUpdate,  // injected by orchestrator AI when plan changes (D044)
+}
+
+impl AiEventLog {
+    /// All events since a given tick (for periodic LLM consultations).
+    pub fn since(&amp;self, tick: u64) -&gt; &amp;[AiEventEntry] { /* ... */ }
+
+    /// Natural-language narrative summary — suitable for LLM prompts.
+    /// Produces chronological text: "Tick 450: Enemy tank spotted near our
+    /// expansion. Tick 460: Our refinery under attack by 3 enemy units."
+    pub fn to_narrative(&amp;self, since_tick: u64) -&gt; String { /* ... */ }
+
+    /// Structured summary — counts by event type, key entities, threat level.
+    pub fn summary(&amp;self) -&gt; EventSummary { /* ... */ }
+}
+<span class="boring">}</span></code></pre>
+<p>Key properties of the event log:</p>
+<ul>
+<li><strong>Fog-filtered by construction.</strong> All entries originate from the same callback pipeline that respects <code>FogFilteredView</code> — no event reveals information the AI shouldn’t have. This is the architectural guarantee the user asked for: the “action story / context” the LLM reads is honest.</li>
+<li><strong>Bounded.</strong> Circular buffer with configurable capacity (default 1000 entries). Oldest entries are evicted. No unbounded memory growth.</li>
+<li><strong><code>to_narrative(since_tick)</code></strong> generates a chronological natural-language account of events since a given tick — this is the “inner game event log / action story / context” that D044’s <code>LlmOrchestratorAi</code> sends to the LLM for strategic guidance.</li>
+<li><strong><code>StrategicUpdate</code> event type.</strong> D044’s LLM orchestrator records its own plan changes into the log, creating a complete narrative that includes both game events and AI strategic decisions.</li>
+<li><strong>Useful beyond LLM.</strong> Debug/spectator overlays for any AI (“what does this AI know?”), D042’s behavioral profile building, and replay analysis all benefit from a structured event log.</li>
+<li><strong>Zero cost if unused.</strong> The engine pushes entries regardless (they’re cheap structs), but <code>to_narrative()</code> — the expensive serialization — is only called by consumers that need it.</li>
+</ul>
+<p><strong>Modder-selectable and modder-provided:</strong> The <code>AiStrategy</code> trait is open — not locked to first-party implementations. This follows the same pattern as <code>Pathfinder</code> (D013/D045) and render modes (D048):</p>
+<ol>
+<li><strong>Select</strong> any registered <code>AiStrategy</code> for a mod (e.g., a Generals total conversion uses a GOAP planner instead of behavior trees)</li>
+<li><strong>Provide</strong> a custom <code>AiStrategy</code> via a Tier 3 WASM module and distribute it through the Workshop (D030)</li>
+<li><strong>Use someone else’s</strong> community-created AI — declare it as a dependency in the mod manifest</li>
+</ol>
+<p>Unlike pathfinders (one axis: algorithm), AI has <strong>two orthogonal axes</strong>: which algorithm (<code>AiStrategy</code> impl) and how hard it plays (difficulty level). See D043 for the full two-axis difficulty system.</p>
+<p><strong>What we build now:</strong> Only <code>PersonalityDrivenAi</code> (the existing YAML-configurable behavior). The trait exists from Phase 4 (when AI ships); alternative implementations are future work by us or the community.</p>
+<p><strong>Phase:</strong> Phase 4 (AI &amp; Single Player).</p>
+<h4 id="2-fogprovider--pluggable-fog-of-war-computation"><a class="header" href="#2-fogprovider--pluggable-fog-of-war-computation">2. <code>FogProvider</code> — Pluggable Fog of War Computation</a></h4>
+<p><strong>Problem:</strong> <code>fog_system()</code> is system #21 in the RA1 pipeline. It computes visibility based on unit sight ranges — but the computation algorithm is baked into the system implementation. Different game modules need different fog models: radius-based (RA1), line-of-sight with elevation raycast (RA2/TS), hex-grid fog (non-C&amp;C mods), or even no fog at all (sandbox modes). The future fog-authoritative <code>NetworkModel</code> needs server-side fog computation that fundamentally differs from client-side — the same <code>FogProvider</code> trait would serve both.</p>
+<p><strong>Solution:</strong></p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Game modules implement this to define how visibility is computed.
+/// The engine calls this from fog_system() — the system schedules the work,
+/// the provider computes the result.
+pub trait FogProvider: Send + Sync {
+    /// Recompute visibility for a player. Called by fog_system() each tick
+    /// (or staggered per 10-PERFORMANCE.md amortization rules).
+    fn update_visibility(
+        &amp;mut self,
+        player: PlayerId,
+        sight_sources: &amp;[(WorldPos, SimCoord)],  // (position, sight_range) pairs
+        terrain: &amp;TerrainData,
+    );
+
+    /// Is this position visible to this player right now?
+    fn is_visible(&amp;self, player: PlayerId, pos: WorldPos) -&gt; bool;
+
+    /// Is this position explored (ever seen) by this player?
+    fn is_explored(&amp;self, player: PlayerId, pos: WorldPos) -&gt; bool;
+
+    /// Bulk query: all entity IDs visible to this player (for AI, render culling).
+    fn visible_entities(&amp;self, player: PlayerId) -&gt; &amp;[EntityId];
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Key design points:</strong></p>
+<ul>
+<li>RA1 module registers <code>RadiusFogProvider</code> — simple circle-based visibility. Fast, cache-friendly, matches original RA behavior.</li>
+<li>RA2/TS module would register <code>ElevationFogProvider</code> — raycasts against terrain heightmap for line-of-sight.</li>
+<li>Non-C&amp;C mods could implement hex fog, cone-of-vision, or always-visible. Sandbox/debug modes: <code>NoFogProvider</code> (everything visible).</li>
+<li>Fog-authoritative server (<code>FogAuthoritativeNetwork</code> from D006 future architectures) reuses the same <code>FogProvider</code> on the server side to determine which entities to send to each client.</li>
+<li>Performance: <code>fog_system()</code> drives the amortization schedule (stagger updates per <code>10-PERFORMANCE.md</code>). The provider does the math; the system decides when to call it.</li>
+<li>Shroud (unexplored terrain) vs. fog (explored but not currently visible) distinction is preserved in the trait via <code>is_visible()</code> vs. <code>is_explored()</code>.</li>
+</ul>
+<p><strong>What we build now:</strong> Only <code>RadiusFogProvider</code>. The trait exists from Phase 2; <code>ElevationFogProvider</code> ships when RA2/TS module development begins.</p>
+<p><strong>Phase:</strong> Phase 2 (built alongside <code>fog_system()</code> in the sim).</p>
+<h4 id="3-damageresolver--pluggable-damage-pipeline-resolution"><a class="header" href="#3-damageresolver--pluggable-damage-pipeline-resolution">3. <code>DamageResolver</code> — Pluggable Damage Pipeline Resolution</a></h4>
+<p><strong>Problem:</strong> D028 defines the full damage pipeline: Armament → Projectile → Warhead → Versus table → multiplier stack → Health reduction. The <em>data</em> flowing through this pipeline is deeply moddable — warheads, versus tables, modifier stacks are all YAML-configurable. But the <em>resolution algorithm</em> — the order in which shields, armor, conditions, and multipliers are applied — is hardcoded in <code>projectile_system()</code>. A game module where shields absorb before armor checks, or where sub-object targeting distributes damage across components (Generals-style), or where damage types bypass armor entirely (TS ion storms) needs a different resolution order. These aren’t data changes — they’re algorithmic.</p>
+<p><strong>Solution:</strong></p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Game modules implement this to define how damage is resolved after
+/// a warhead makes contact. The default RA1 implementation applies the
+/// standard Versus table + modifier stack pipeline.
+pub trait DamageResolver: Send + Sync {
+    /// Resolve final damage from a warhead impact on a target.
+    /// Called by projectile_system() after hit detection.
+    fn resolve_damage(
+        &amp;self,
+        warhead: &amp;WarheadDef,
+        target: &amp;DamageTarget,
+        modifiers: &amp;StatModifiers,
+        distance_from_impact: SimCoord,
+    ) -&gt; DamageResult;
+}
+
+pub struct DamageTarget {
+    pub entity: EntityId,
+    pub armor_type: ArmorType,
+    pub current_health: i32,
+    pub shield: Option&lt;ShieldState&gt;,  // D029 shield system
+    pub conditions: Conditions,
+}
+
+pub struct DamageResult {
+    pub health_damage: i32,
+    pub shield_damage: i32,
+    pub conditions_applied: Vec&lt;(ConditionId, u32)&gt;,  // condition grants from warhead
+    pub overkill: i32,  // excess damage (for death effects)
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Key design points:</strong></p>
+<ul>
+<li>The default <code>StandardDamageResolver</code> implements the RA1 pipeline from D028: Versus table lookup → distance falloff → multiplier stack → health reduction. This handles 95% of C&amp;C damage scenarios.</li>
+<li>RA2 registers <code>ShieldFirstDamageResolver</code>: absorb shield → then armor → then health. Same trait, different algorithm.</li>
+<li>Generals-class modules could register <code>SubObjectDamageResolver</code>: distributes damage across multiple hit zones per unit.</li>
+<li>The trait boundary is <em>after hit detection</em> and <em>before health reduction</em>. Projectile flight, homing, and area-of-effect detection are shared infrastructure. Only the final damage-number calculation varies.</li>
+<li>Warhead-applied conditions (e.g., “irradiated” from D028’s composable warhead design) flow through <code>DamageResult.conditions_applied</code> — the resolver decides which conditions apply based on its game’s rules.</li>
+<li>WASM Tier 3 mods can provide custom resolvers for total conversions.</li>
+</ul>
+<p><strong>What we build now:</strong> Only <code>StandardDamageResolver</code>. The trait exists from Phase 2 (ships with D028). Shield-aware resolver ships when the D029 shield system lands.</p>
+<p><strong>Phase:</strong> Phase 2 (ships with D028 damage pipeline).</p>
+<h4 id="4-rankingprovider--pluggable-rating-and-matchmaking"><a class="header" href="#4-rankingprovider--pluggable-rating-and-matchmaking">4. <code>RankingProvider</code> — Pluggable Rating and Matchmaking</a></h4>
+<p><strong>Problem:</strong> The competitive infrastructure (AGENTS.md) specifies Glicko-2 ratings, but the ranking algorithm is implemented directly in the relay/tracking server with no abstraction boundary. Tournament organizers and community servers may want Elo (simpler, well-understood), TrueSkill (better for team games), or custom rating systems (handicap-adjusted, seasonal decay variants, faction-specific ratings). Since tracking servers are community-hostable and federated (D030/D037), locking the rating algorithm to Glicko-2 limits what community operators can offer.</p>
+<p><strong>Solution:</strong></p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Tracking servers implement this to provide rating calculations.
+/// The default implementation uses Glicko-2.
+pub trait RankingProvider: Send + Sync {
+    /// Calculate updated ratings after a match result.
+    fn update_ratings(
+        &amp;mut self,
+        result: &amp;CertifiedMatchResult,
+        current_ratings: &amp;[PlayerRating],
+    ) -&gt; Vec&lt;PlayerRating&gt;;
+
+    /// Estimate match quality / fairness for proposed matchmaking.
+    fn match_quality(&amp;self, team_a: &amp;[PlayerRating], team_b: &amp;[PlayerRating]) -&gt; MatchQuality;
+
+    /// Rating display for UI (e.g., "1500 ± 200" for Glicko, "Silver II" for league).
+    fn display_rating(&amp;self, rating: &amp;PlayerRating) -&gt; String;
+
+    /// Algorithm identifier for interop (ratings from different algorithms aren't comparable).
+    fn algorithm_id(&amp;self) -&gt; &amp;str;
+}
+
+pub struct PlayerRating {
+    pub player_id: PlayerId,
+    pub rating: i64,        // fixed-point, algorithm-specific
+    pub deviation: i64,     // uncertainty (Glicko RD, TrueSkill σ)
+    pub volatility: i64,    // Glicko-2 specific; other algorithms may ignore
+    pub games_played: u32,
+}
+
+pub struct MatchQuality {
+    pub fairness: i32,      // 0-1000 (fixed-point), higher = more balanced
+    pub estimated_draw_probability: i32,  // 0-1000 (fixed-point)
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Key design points:</strong></p>
+<ul>
+<li>Default: <code>Glicko2Provider</code> — well-suited for 1v1 and small teams, proven in chess and competitive gaming. Validated by Valve’s CS Regional Standings (see <code>research/valve-github-analysis.md</code> § Part 4), which uses Glicko with RD fixed at 75 for team competitive play.</li>
+<li>Community operators provide alternatives: <code>EloProvider</code> (simpler), <code>TrueSkillProvider</code> (better team rating), or custom implementations.</li>
+<li><code>algorithm_id()</code> prevents mixing ratings from different algorithms — a Glicko-2 “1800” is not an Elo “1800”.</li>
+<li><code>CertifiedMatchResult</code> (from relay server, D007) is the input — no self-reported results.</li>
+<li>Ratings stored in SQLite (D034) on the tracking server.</li>
+<li>The official tracking server uses Glicko-2. Community tracking servers choose their own.</li>
+<li>Fixed-point ratings (matching sim math conventions) — no floating-point in the ranking pipeline.</li>
+</ul>
+<p><strong>Information content weighting (from Valve CS Regional Standings):</strong> The <code>match_quality()</code> method returns a <code>MatchQuality</code> struct that includes an <code>information_content</code> field (0–1000, fixed-point). This parameter scales how much a match affects rating changes — low-information matches (casual, heavily mismatched, very short duration) contribute less to rating updates, while high-information matches (ranked, well-matched, full-length) contribute more. This prevents rating inflation/deflation from low-quality matches. For IC, information content is derived from: (1) game mode (ranked vs. casual), (2) player count balance (1v1 is higher information than 3v1), (3) game duration (very short games may indicate disconnection, not skill), (4) map symmetry rating (if available). See <code>research/valve-github-analysis.md</code> § 4.2.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct MatchQuality {
+    pub fairness: i32,                // 0-1000 (fixed-point), higher = more balanced
+    pub estimated_draw_probability: i32,  // 0-1000 (fixed-point)
+    pub information_content: i32,     // 0-1000 (fixed-point), scales rating impact
+}
+<span class="boring">}</span></code></pre>
+<p><strong>New player seeding (from Valve CS Regional Standings):</strong> New players entering ranked play are seeded using a weighted combination of calibration performance and opponent quality — not placed at a flat default rating:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Seeding formula for new players completing calibration.
+/// Inspired by Valve's CS seeding (bounty, opponent network, LAN factor).
+/// IC adapts: no prize money, but the weighted-combination approach is sound.
+pub struct SeedingResult {
+    pub initial_rating: i64,       // Fixed-point, mapped into rating range
+    pub initial_deviation: i64,    // Higher than settled players (fast convergence)
+}
+
+/// Inputs to the seeding formula:
+/// - calibration_performance: win rate across calibration matches (0-1000)
+/// - opponent_quality: average rating of calibration opponents (fixed-point)
+/// - match_count: number of calibration matches played
+/// The seed is mapped into the rating range (e.g., 800–1800 for Glicko-2).
+<span class="boring">}</span></code></pre>
+<p>This prevents the cold-start problem where a skilled player placed at 1500 stomps their way through dozens of mismatched games before reaching their true rating. Valve’s system proved that even ~5–10 calibration matches with quality weighting produce a dramatically better initial placement.</p>
+<p><strong>Ranking visibility thresholds (from Valve CS Regional Standings):</strong></p>
+<ul>
+<li><strong>Minimum 5 matches</strong> to appear on leaderboards — prevents noise from one-game players.</li>
+<li><strong>Must have defeated at least 1 distinct opponent</strong> — prevents collusion (two friends repeatedly playing each other to inflate ratings).</li>
+<li><strong>RD decay for inactivity:</strong> <code>sqrt(rd² + C²*t)</code> where C=34.6, t=rating periods since last match. Inactive players’ ratings become less certain, naturally widening their matchmaking range until they play again.</li>
+</ul>
+<p><strong>Ranking model validation (from Valve CS Regional Standings):</strong> The <code>Glicko2Provider</code> implementation logs <strong>expected win probabilities alongside match results</strong> from day one. This enables post-hoc model validation using the methodology Valve describes: (1) bin expected win rates into 5% buckets, (2) compare expected vs. observed win rates within each bucket, (3) compute Spearman’s rank correlation (ρ). Valve achieved ρ = 0.98 — excellent. IC targets ρ ≥ 0.95 as a health threshold; below that triggers investigation of the rating model parameters. This data feeds into the OTEL telemetry pipeline (D031) and is visible on the Grafana dashboard for community server operators. See <code>research/valve-github-analysis.md</code> § 4.5.</p>
+<p><strong>What we build now:</strong> Only <code>Glicko2Provider</code>. The trait exists from Phase 5 (when competitive infrastructure ships). Alternative providers are community work.</p>
+<p><strong>Phase:</strong> Phase 5 (Multiplayer &amp; Competitive).</p>
+<h4 id="5-ordervalidator--explicit-per-module-order-validation"><a class="header" href="#5-ordervalidator--explicit-per-module-order-validation">5. <code>OrderValidator</code> — Explicit Per-Module Order Validation</a></h4>
+<p><strong>Problem:</strong> D012 mandates that every order is validated inside the sim before execution, deterministically. Currently, validation is implicit — it happens inside <code>apply_orders()</code>, which is part of the game module’s system pipeline. This works because <code>GameModule::system_pipeline()</code> lets each module define its own <code>apply_orders()</code> implementation. But the validation contract is informal: nothing in the architecture <em>requires</em> a game module to validate orders, or specifies what validation means. A game module that forgets validation breaks the anti-cheat guarantee (D012) silently.</p>
+<p><strong>Solution:</strong> Add <code>order_validator()</code> to the <code>GameModule</code> trait, making validation an explicit, required contract:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Added to GameModule trait (D018):
+pub trait GameModule: Send + Sync + 'static {
+    // ... existing methods ...
+
+    /// Provide the module's order validation logic.
+    /// Called by the engine before apply_orders() — not by the module's own systems.
+    /// The engine enforces that ALL orders pass validation before execution.
+    fn order_validator(&amp;self) -&gt; Box&lt;dyn OrderValidator&gt;;
+}
+
+/// Game modules implement this to define legal orders.
+/// The engine calls this for EVERY order, EVERY tick — the game module
+/// cannot accidentally skip validation.
+pub trait OrderValidator: Send + Sync {
+    /// Validate an order against current game state.
+    /// Returns Valid or Rejected with a reason for logging/anti-cheat.
+    fn validate(
+        &amp;self,
+        player: PlayerId,
+        order: &amp;PlayerOrder,
+        state: &amp;SimReadView,
+    ) -&gt; OrderValidity;
+}
+
+pub enum OrderValidity {
+    Valid,
+    Rejected(RejectionReason),
+}
+
+pub enum RejectionReason {
+    NotOwner,
+    InsufficientFunds,
+    MissingPrerequisite,
+    InvalidPlacement,
+    CooldownActive,
+    InvalidTarget,
+    RateLimited,       // OrderBudget exceeded (D006 security)
+    Custom(String),    // game-module-specific reasons
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Key design points:</strong></p>
+<ul>
+<li>The engine (not the game module) calls <code>validate()</code> before <code>apply_orders()</code>. This means a game module <em>cannot</em> skip validation — the architecture enforces D012’s anti-cheat guarantee.</li>
+<li><code>SimReadView</code> is a read-only view of sim state — the validator cannot mutate game state.</li>
+<li><code>RejectionReason</code> includes standard reasons (shared across all game modules) plus <code>Custom</code> for game-specific rules.</li>
+<li>Repeated rejections from the same player are logged for anti-cheat pattern detection (existing D012 design, now formalized).</li>
+<li>The default RA1 implementation validates ownership, affordability, prerequisites, placement rules, and rate limits. RA2 would add superweapon authorization, garrison capacity checks, etc.</li>
+<li>This is the lowest-risk trait in the set — it formalizes what <code>apply_orders()</code> already does informally. The cost is moving validation from “inside the first system” to “explicit engine-level contract.”</li>
+</ul>
+<p><strong>What we build now:</strong> RA1 <code>StandardOrderValidator</code>. The trait exists from Phase 2.</p>
+<p><strong>Phase:</strong> Phase 2 (ships with <code>apply_orders()</code>).</p>
+<h3 id="costbenefit-analysis"><a class="header" href="#costbenefit-analysis">Cost/Benefit Analysis</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Trait</th><th>Cost Now</th><th>Prevents Later</th></tr>
+</thead>
+<tbody>
+<tr><td><code>AiStrategy</code></td><td>One trait + <code>PersonalityDrivenAi</code> wrapper</td><td>Community AI cannot plug in without forking ic-ai</td></tr>
+<tr><td><code>FogProvider</code></td><td>One trait + <code>RadiusFogProvider</code></td><td>RA2 elevation fog requires rewriting fog_system(); fog-authoritative server requires separate fog codebase</td></tr>
+<tr><td><code>DamageResolver</code></td><td>One trait + <code>StandardDamageResolver</code></td><td>Shield/sub-object games require rewriting projectile_system()</td></tr>
+<tr><td><code>RankingProvider</code></td><td>One trait + <code>Glicko2Provider</code></td><td>Community tracking servers stuck with one rating algorithm</td></tr>
+<tr><td><code>OrderValidator</code></td><td>One trait + explicit validate() call</td><td>Game modules can silently skip validation; anti-cheat guarantee is informal</td></tr>
+</tbody>
+</table>
+</div>
+<p>All five follow the established pattern: <strong>one trait definition + one default implementation with near-zero architectural cost</strong>. Dispatch strategy is subsystem-dependent (profiling decides, not dogma). The architectural cost is 5 trait definitions (~50 lines total) and 5 wrapper implementations (~200 lines total). The benefit is that none of these subsystems becomes a rewrite-required bottleneck when game modules, mods, or community servers need different behavior.</p>
+<h3 id="what-does-not-need-a-trait"><a class="header" href="#what-does-not-need-a-trait">What Does NOT Need a Trait</a></h3>
+<p>These subsystems are already sufficiently modular through data-driven design (YAML/Lua/WASM):</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Subsystem</th><th>Why No Trait Needed</th></tr>
+</thead>
+<tbody>
+<tr><td>Weather (D022)</td><td>State machine defined in YAML, transitions driven by Lua. Algorithm is trivial; data is everything.</td></tr>
+<tr><td>Campaign (D021)</td><td>Graph structure in YAML, logic in Lua. The campaign engine runs any graph; no algorithmic variation needed.</td></tr>
+<tr><td>Achievements (D036)</td><td>Definitions in YAML, triggers in Lua. Storage in SQLite. No algorithm to swap.</td></tr>
+<tr><td>UI Themes (D032)</td><td>Pure YAML + sprite sheets. No computation to abstract.</td></tr>
+<tr><td>QoL Toggles (D033)</td><td>YAML config flags. Each toggle is a sim-affecting or client-only boolean.</td></tr>
+<tr><td>Audio (P003)</td><td>Bevy abstracts the audio backend. <code>ic-audio</code> is a Bevy plugin, not an algorithm.</td></tr>
+<tr><td>Balance Presets (D019)</td><td>YAML rule sets. Switching preset = loading different YAML.</td></tr>
+</tbody>
+</table>
+</div>
+<p>The distinction: <strong>traits abstract algorithms; YAML/Lua abstracts data and behavior parameters.</strong> A damage <em>formula</em> is an algorithm (trait). A damage <em>value</em> is data (YAML). An AI <em>decision process</em> is an algorithm (trait). An AI <em>aggression level</em> is a parameter (YAML).</p>
+<p><strong>Alternatives considered:</strong></p>
+<ul>
+<li>Trait-abstract everything (rejected — unnecessary overhead for data-driven systems; violates D015’s “no speculative abstractions” principle from D018)</li>
+<li>Trait-abstract nothing new (rejected — the 5 identified systems carry real risk of regret; the <code>NetworkModel</code> pattern has proven its value; the cost is near-zero)</li>
+<li>Abstract only AI and fog (rejected — damage resolution and ranking carry comparable risk, and <code>OrderValidator</code> formalizes an existing implicit contract)</li>
+</ul>
+<p><strong>Relationship to existing decisions:</strong></p>
+<ul>
+<li>Extends D006’s philosophy (“pluggable via trait”) to 5 new subsystems</li>
+<li>Extends D013’s pattern (“trait-abstracted, default impl first”) identically</li>
+<li>Extends D018’s <code>GameModule</code> trait with <code>order_validator()</code></li>
+<li>Supports D028 (damage pipeline) by abstracting the resolution step</li>
+<li>Supports D029 (shield system) by allowing shield-first damage resolution</li>
+<li>Supports future fog-authoritative server (D006 future architecture)</li>
+<li>Extended by D054 (Transport trait, SignatureScheme enum, SnapshotCodec version dispatch) — one additional trait and two version-dispatched mechanisms identified by architecture switchability audit</li>
+</ul>
+<p><strong>Phase:</strong> Trait definitions exist from the phase each subsystem ships (Phase 2–5). Alternative implementations are future work.</p>
+<hr>
+<hr>
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../../decisions/09d/D033-qol-presets.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../../decisions/09d/D042-behavioral-profiles.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../../decisions/09d/D033-qol-presets.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../../decisions/09d/D042-behavioral-profiles.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../../mark-09e88c2c.min.js"></script>
+        <script src="../../searcher-c2a407aa.js"></script>
+
+        <script src="../../clipboard-1626706a.min.js"></script>
+        <script src="../../highlight-abc7f01d.js"></script>
+        <script src="../../book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

@@ -1,0 +1,437 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Multi-Game Extensibility (Game Modules) - Iron Curtain — Design Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Design docs for a Rust-native Red Alert RTS engine">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../css/general-2459343d.css">
+        <link rel="stylesheet" href="../css/chrome-ae938929.css">
+        <link rel="stylesheet" href="../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../searchindex-61d2369b.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc-1553b04b.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Iron Curtain — Design Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs/edit/main/src/architecture/multi-game.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h2 id="multi-game-extensibility-game-modules"><a class="header" href="#multi-game-extensibility-game-modules">Multi-Game Extensibility (Game Modules)</a></h2>
+<p>The engine is designed as a <strong>game-agnostic RTS framework</strong> (D039) that ships with Red Alert (default) and Tiberian Dawn as built-in game modules. The same engine can run RA2, Dune 2000, or an original game as additional game modules — like OpenRA runs TD, RA, and D2K on one engine.</p>
+<h3 id="game-module-concept"><a class="header" href="#game-module-concept">Game Module Concept</a></h3>
+<p>A game module is a bundle of:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Each supported game implements this trait.
+pub trait GameModule {
+    /// Register ECS components (unit types, mechanics) into the world.
+    fn register_components(&amp;self, world: &amp;mut World);
+
+    /// Return the ordered system pipeline for this game's simulation tick.
+    fn system_pipeline(&amp;self) -&gt; Vec&lt;Box&lt;dyn System&gt;&gt;;
+
+    /// Provide the pathfinding implementation (selected by lobby/experience profile, D045).
+    fn pathfinder(&amp;self) -&gt; Box&lt;dyn Pathfinder&gt;;
+
+    /// Provide the spatial index implementation (spatial hash, BVH, etc.).
+    fn spatial_index(&amp;self) -&gt; Box&lt;dyn SpatialIndex&gt;;
+
+    /// Provide the fog of war implementation (radius, elevation LOS, etc.).
+    fn fog_provider(&amp;self) -&gt; Box&lt;dyn FogProvider&gt;;
+
+    /// Provide the damage resolution algorithm (standard, shield-first, etc.).
+    fn damage_resolver(&amp;self) -&gt; Box&lt;dyn DamageResolver&gt;;
+
+    /// Provide order validation logic (D041 — engine enforces this before apply_orders).
+    fn order_validator(&amp;self) -&gt; Box&lt;dyn OrderValidator&gt;;
+
+    /// Register format loaders (e.g., .vxl for RA2, .shp for RA1).
+    fn register_format_loaders(&amp;self, registry: &amp;mut FormatRegistry);
+
+    /// Register render backends (sprite renderer, voxel renderer, etc.).
+    fn register_renderers(&amp;self, registry: &amp;mut RenderRegistry);
+
+    /// List available render modes — Classic, HD, 3D, etc. (D048).
+    fn render_modes(&amp;self) -&gt; Vec&lt;RenderMode&gt;;
+
+    /// Register game-module-specific commands into the Brigadier command tree (D058).
+    /// RA1 registers `/sell`, `/deploy`, `/stance`, etc. A total conversion registers
+    /// its own novel commands. The engine's built-in commands (chat, help, cvars) are
+    /// pre-registered before this method is called.
+    fn register_commands(&amp;self, dispatcher: &amp;mut CommandDispatcher);
+
+    /// YAML rule schema for this game's unit definitions.
+    fn rule_schema(&amp;self) -&gt; RuleSchema;
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Validation from OpenRA mod ecosystem:</strong> Analysis of six major OpenRA community mods (see <code>research/openra-mod-architecture-analysis.md</code>) confirms that every <code>GameModule</code> trait method addresses a real extension need:</p>
+<ul>
+<li><strong><code>register_format_loaders()</code></strong> — OpenKrush (KKnD on OpenRA) required 15+ custom binary format decoders (<code>.blit</code>, <code>.mobd</code>, <code>.mapd</code>, <code>.lvl</code>, <code>.son</code>, <code>.vbc</code>) that bear no resemblance to C&amp;C formats. TiberianDawnHD needed <code>RemasterSpriteSequence</code> for 128×128 HD tiles. Format extensibility is not optional for non-C&amp;C games.</li>
+<li><strong><code>system_pipeline()</code></strong> — OpenKrush replaced 16 complete mechanic modules (construction, production, oil economy, researching, bunkers, saboteurs, veterancy). OpenSA (Swarm Assault) added living-world systems (plant growth, creep spawners, colony capture). The pipeline cannot be fixed.</li>
+<li><strong><code>render_modes()</code></strong> — TiberianDawnHD is a pure render-only mod (zero gameplay changes) that adds HD sprite rendering with content source detection (Steam AppId, Origin registry, GOG paths). Render mode extensibility enables this cleanly.</li>
+<li><strong><code>pathfinder()</code></strong> — OpenSA needed <code>WaspLocomotor</code> (flying insect pathfinding); OpenRA/ra2 defines 8 locomotor types (Hover, Mech, Jumpjet, Teleport, etc). RA1’s JPS + flowfield is not universal.</li>
+<li><strong><code>fog_provider()</code> / <code>damage_resolver()</code></strong> — RA2 needs elevation-based LOS and shield-first damage; OpenHV needs a completely different resource flow model (Collector → Transporter → Receiver pipeline). Game-specific logic belongs in the module.</li>
+<li><strong><code>register_commands()</code></strong> — RA1 registers <code>/sell</code>, <code>/deploy</code>, <code>/stance</code>, superweapon commands. A Tiberian Dawn module registers different superweapon commands. A total conversion registers entirely novel commands. The engine cannot predefine game-specific commands (D058).</li>
+</ul>
+<h3 id="what-the-engine-provides-game-agnostic"><a class="header" href="#what-the-engine-provides-game-agnostic">What the engine provides (game-agnostic)</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Layer</th><th>Game-Agnostic</th><th>Game-Module-Specific</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Sim core</strong></td><td><code>Simulation</code>, <code>apply_tick()</code>, <code>snapshot()</code>, state hashing, order validation pipeline</td><td>Components, systems, rules, resource types</td></tr>
+<tr><td><strong>Positions</strong></td><td><code>WorldPos { x, y, z }</code></td><td><code>CellPos</code> (grid-based modules), coordinate mapping, z usage</td></tr>
+<tr><td><strong>Pathfinding</strong></td><td><code>Pathfinder</code> trait, <code>SpatialIndex</code> trait</td><td>Remastered/OpenRA/IC flowfield (RA1, D045), navmesh (future), spatial hash vs BVH</td></tr>
+<tr><td><strong>Fog of war</strong></td><td><code>FogProvider</code> trait</td><td>Radius fog (RA1), elevation LOS (RA2/TS), no fog (sandbox)</td></tr>
+<tr><td><strong>Damage</strong></td><td><code>DamageResolver</code> trait</td><td>Standard pipeline (RA1), shield-first (RA2), sub-object (Generals)</td></tr>
+<tr><td><strong>Validation</strong></td><td><code>OrderValidator</code> trait (engine-enforced)</td><td>Per-module validation rules (ownership, affordability, placement, etc.)</td></tr>
+<tr><td><strong>Networking</strong></td><td><code>NetworkModel</code> trait, <code>RelayCore</code> library, relay server binary, lockstep, replays</td><td><code>PlayerOrder</code> variants (game-specific commands)</td></tr>
+<tr><td><strong>Rendering</strong></td><td>Camera, sprite batching, UI framework; post-FX pipeline available to modders</td><td>Sprite renderer (RA1), voxel renderer (RA2), mesh renderer (3D mod/future)</td></tr>
+<tr><td><strong>Modding</strong></td><td>YAML loader, Lua runtime, WASM sandbox, workshop</td><td>Rule schemas, API surface exposed to scripts</td></tr>
+<tr><td><strong>Formats</strong></td><td>Archive loading, format registry</td><td><code>.mix</code>/<code>.shp</code> (RA1), <code>.vxl</code>/<code>.hva</code> (RA2), <code>.big</code>/<code>.w3d</code> (future), map format</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="ra2-extension-points"><a class="header" href="#ra2-extension-points">RA2 Extension Points</a></h3>
+<p>RA2 / Tiberian Sun would add these to the existing engine without modifying the core:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Extension</th><th>What It Adds</th><th>Engine Change Required</th></tr>
+</thead>
+<tbody>
+<tr><td>Voxel models (<code>.vxl</code>, <code>.hva</code>)</td><td>New format parsers</td><td>None — additive to <code>ra-formats</code></td></tr>
+<tr><td>Terrain elevation</td><td>Z-axis in pathfinding, ramps, cliffs</td><td>None — <code>WorldPos.z</code> and <code>CellPos.z</code> are already there</td></tr>
+<tr><td>Voxel rendering</td><td>GPU voxel-to-sprite at runtime</td><td>New render backend in <code>RenderRegistry</code></td></tr>
+<tr><td>Garrison mechanic</td><td><code>Garrisonable</code>, <code>Garrisoned</code> components + system</td><td>New components + system in pipeline</td></tr>
+<tr><td>Mind control</td><td><code>MindController</code>, <code>MindControlled</code> components + system</td><td>New components + system in pipeline</td></tr>
+<tr><td>IFV weapon swap</td><td><code>WeaponOverride</code> component</td><td>New component</td></tr>
+<tr><td>Prism forwarding</td><td><code>PrismForwarder</code> component + chain calculation system</td><td>New component + system</td></tr>
+<tr><td>Bridges / tunnels</td><td>Layered pathing with Z transitions</td><td>Uses existing <code>CellPos.z</code></td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="current-target-the-isometric-cc-family"><a class="header" href="#current-target-the-isometric-cc-family">Current Target: The Isometric C&amp;C Family</a></h3>
+<p>The <strong>first-party game modules</strong> target the <strong>isometric C&amp;C family</strong>: Red Alert, Red Alert 2, Tiberian Sun, Tiberian Dawn, and Dune 2000 (plus expansions and total conversions in the same visual paradigm). These games share:</p>
+<ul>
+<li>Fixed isometric camera</li>
+<li>Grid-based terrain (with optional elevation for TS/RA2)</li>
+<li>Sprite and/or voxel-to-sprite rendering</li>
+<li><code>.mix</code> archives and related format lineage</li>
+<li>Discrete cell-based pathfinding (flowfields, hierarchical A*)</li>
+</ul>
+<h3 id="architectural-openness-beyond-isometric"><a class="header" href="#architectural-openness-beyond-isometric">Architectural Openness: Beyond Isometric</a></h3>
+<p>C&amp;C Generals and later 3D titles (C&amp;C3, RA3) are <strong>not current targets</strong> — we build only grid-based pathfinding and isometric rendering today. But the architecture deliberately avoids closing doors:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Engine Concern</th><th>Grid Assumption?</th><th>Trait-Abstracted?</th><th>3D/Continuous Game Needs…</th></tr>
+</thead>
+<tbody>
+<tr><td>Coordinates</td><td>No (<code>WorldPos</code>)</td><td>N/A — universal</td><td>Nothing. <code>WorldPos</code> works for any spatial model.</td></tr>
+<tr><td>Pathfinding</td><td>Implementation</td><td>Yes (<code>Pathfinder</code> trait)</td><td>A <code>NavmeshPathfinder</code> impl. Zero sim changes.</td></tr>
+<tr><td>Spatial queries</td><td>Implementation</td><td>Yes (<code>SpatialIndex</code> trait)</td><td>A <code>BvhSpatialIndex</code> impl. Zero combat/targeting changes.</td></tr>
+<tr><td>Fog of war</td><td>Implementation</td><td>Yes (<code>FogProvider</code> trait)</td><td>An <code>ElevationFogProvider</code> impl. Zero sim changes.</td></tr>
+<tr><td>Damage resolution</td><td>Implementation</td><td>Yes (<code>DamageResolver</code> trait)</td><td>A <code>SubObjectDamageResolver</code> impl. Zero projectile changes.</td></tr>
+<tr><td>Order validation</td><td>Implementation</td><td>Yes (<code>OrderValidator</code> trait)</td><td>Module-specific rules. Engine still enforces the contract.</td></tr>
+<tr><td>AI strategy</td><td>Implementation</td><td>Yes (<code>AiStrategy</code> trait)</td><td>Module-specific AI. Same lobby selection UI.</td></tr>
+<tr><td>Rendering</td><td>Implementation</td><td>Yes (<code>Renderable</code> trait)</td><td>A mesh renderer impl. Already documented (“3D Rendering as a Mod”).</td></tr>
+<tr><td>Camera</td><td>Implementation</td><td>Yes (<code>ScreenToWorld</code> trait)</td><td>A perspective camera impl. Already documented.</td></tr>
+<tr><td>Input</td><td>No (<code>InputSource</code>)</td><td>Yes</td><td>Nothing. Orders are orders.</td></tr>
+<tr><td>Networking</td><td>No</td><td>Yes (<code>NetworkModel</code> trait)</td><td>Nothing. Lockstep works regardless of spatial model.</td></tr>
+<tr><td>Format loaders</td><td>Implementation</td><td>Yes (<code>FormatRegistry</code>)</td><td>New parsers for <code>.big</code>, <code>.w3d</code>, etc. Additive.</td></tr>
+<tr><td>Building placement</td><td>Data-driven</td><td>N/A — YAML rules + components</td><td>Different components (no <code>RequiresBuildableArea</code>). YAML change.</td></tr>
+</tbody>
+</table>
+</div>
+<p>The key insight: the engine core (<code>Simulation</code>, <code>apply_tick()</code>, <code>GameLoop</code>, <code>NetworkModel</code>, <code>Pathfinder</code>, <code>SpatialIndex</code>, <code>FogProvider</code>, <code>DamageResolver</code>, <code>OrderValidator</code>) is spatial-model-agnostic. Grid-based pathfinding is a <em>game module implementation</em>, not an engine assumption — the same way <code>LocalNetwork</code> is a network implementation, not the only possible one.</p>
+<p>A Generals-class game module would provide its own <code>Pathfinder</code> (navmesh), <code>SpatialIndex</code> (BVH), <code>FogProvider</code> (elevation LOS), <code>DamageResolver</code> (sub-object targeting), <code>AiStrategy</code> (custom AI), <code>Renderable</code> (mesh), and format loaders — while reusing the sim core, networking, modding infrastructure, workshop, competitive infrastructure, and all shared systems (production, veterancy, replays, save games). See D041 in <code>decisions/09d-gameplay.md</code> for the full trait-abstraction strategy.</p>
+<p>This is not a current development target. We build only the grid implementations. But the trait seams exist from day one, so the door stays open — for us or for the community.</p>
+<h3 id="3d-rendering-as-a-mod-not-a-game-module"><a class="header" href="#3d-rendering-as-a-mod-not-a-game-module">3D Rendering as a Mod (Not a Game Module)</a></h3>
+<p>While 3D C&amp;C titles are not current development targets, the architecture explicitly supports <strong>3D rendering mods</strong> for any game module. A “3D Red Alert” mod replaces the visual presentation while the simulation, networking, pathfinding, and rules are completely unchanged.</p>
+<p>This works because the sim/render split is absolute — the sim has no concept of camera, sprites, or visual style. Bevy already ships a full 3D pipeline (PBR materials, GLTF loading, skeletal animation, dynamic lighting, shadows), so a 3D render mod leverages existing infrastructure.</p>
+<p><strong>What changes vs. what doesn’t:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Layer</th><th>3D Mod Changes?</th><th>Details</th></tr>
+</thead>
+<tbody>
+<tr><td>Simulation</td><td>No</td><td>Same tick, same rules, same grid</td></tr>
+<tr><td>Pathfinding</td><td>No</td><td>Grid-based flowfields still work (SC2 is 3D but uses grid pathing). A future game module could provide a <code>NavmeshPathfinder</code> instead — independent of the render mod.</td></tr>
+<tr><td>Networking</td><td>No</td><td>Orders are orders</td></tr>
+<tr><td>Rules / YAML</td><td>No</td><td>Tank still costs 800, has 400 HP</td></tr>
+<tr><td>Rendering</td><td>Yes</td><td>Sprites → GLTF meshes, isometric camera → free 3D camera</td></tr>
+<tr><td>Input mapping</td><td>Yes</td><td>Click-to-world changes from isometric transform to 3D raycast</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Architectural requirements to enable this:</strong></p>
+<ol>
+<li><strong><code>Renderable</code> trait is mod-swappable.</strong> A WASM Tier 3 mod can register a 3D render backend that replaces the default sprite renderer.</li>
+<li><strong>Camera system is configurable.</strong> Default is fixed isometric; a 3D mod substitutes a free-rotating perspective camera. The camera is purely a render concern — the sim has no camera concept.</li>
+<li><strong>Asset pipeline accepts 3D models.</strong> Bevy natively loads GLTF/GLB. The mod maps unit IDs to 3D model paths in YAML:</li>
+</ol>
+<pre><code class="language-yaml"># Classic 2D (default)
+rifle_infantry:
+  render:
+    type: sprite
+    sequences: e1
+
+# 3D mod override
+rifle_infantry:
+  render:
+    type: mesh
+    model: models/infantry/rifle.glb
+    animations:
+      idle: Idle
+      move: Run
+      attack: Shoot
+</code></pre>
+<ol start="4">
+<li><strong>Click-to-world abstracted behind trait.</strong> Isometric screen→world is a linear transform. 3D perspective screen→world is a raycast. Both produce a <code>WorldPos</code>. Grid-based game modules convert to <code>CellPos</code> as needed.</li>
+<li><strong>Terrain rendering decoupled from terrain data.</strong> The sim’s spatial representation is authoritative. A 3D mod provides visual terrain geometry that matches it.</li>
+</ol>
+<p><strong>Key benefits:</strong></p>
+<ul>
+<li><strong>Cross-view multiplayer.</strong> A player running 3D can play against a player running classic isometric — the sim is identical. Like StarCraft Remastered’s graphics toggle, but more radical.</li>
+<li><strong>Cross-view replays.</strong> Watch any replay in 2D or 3D.</li>
+<li><strong>Orthogonal to gameplay mods.</strong> A balance mod works in both views. A 3D graphics mod stacks with a gameplay mod.</li>
+<li><strong>Toggleable, not permanent.</strong> D048 (Switchable Render Modes) formalizes this: a 3D render mod adds a render mode alongside the default 2D modes. F1 cycles between classic, HD, and 3D — the player isn’t locked into one view. See <code>decisions/09d/D048-render-modes.md</code>.</li>
+</ul>
+<p>This is a <strong>Tier 3 (WASM) mod</strong> — it replaces a rendering backend, which is too deep for YAML or Lua. See <code>04-MODDING.md</code> for details.</p>
+<h3 id="design-rules-for-multi-game-safety"><a class="header" href="#design-rules-for-multi-game-safety">Design Rules for Multi-Game Safety</a></h3>
+<ol>
+<li><strong>No game-specific enums in engine core.</strong> Don’t put <code>enum ResourceType { Ore, Gems }</code> in <code>ic-sim</code>. Resource types come from YAML rules / game module registration.</li>
+<li><strong>Position is always 3D.</strong> <code>WorldPos</code> carries Z. RA1 sets it to 0. The cost is one extra <code>i32</code> per position — negligible. <code>CellPos</code> is a grid-game-module convenience type, not an engine-core requirement.</li>
+<li><strong>Pathfinding and spatial queries are behind traits.</strong> <code>Pathfinder</code> and <code>SpatialIndex</code> — like <code>NetworkModel</code>. Grid implementations are the default; the engine core never calls grid-specific functions directly.</li>
+<li><strong>System pipeline is data, not code.</strong> The game module returns its system list; the engine executes it. No hardcoded <code>harvester_system()</code> call in engine core.</li>
+<li><strong>Render through <code>Renderable</code> trait.</strong> Sprites and voxels implement the same trait. The renderer doesn’t know what it’s drawing.</li>
+<li><strong>Format loaders are pluggable.</strong> <code>ra-formats</code> provides parsers; the game module tells the asset pipeline which ones to use.</li>
+<li><strong><code>PlayerOrder</code> is extensible.</strong> Use an enum with a <code>Custom(GameSpecificOrder)</code> variant, or make orders generic over the game module.</li>
+<li><strong>Fog, damage, and validation are behind traits (D041).</strong> <code>FogProvider</code>, <code>DamageResolver</code>, and <code>OrderValidator</code> — each game module supplies its own implementation. The engine core calls trait methods, never game-specific fog/damage/validation logic directly.</li>
+<li><strong>AI strategy is behind a trait (D041).</strong> <code>AiStrategy</code> lets each game module (or difficulty preset) supply different decision-making logic. The engine schedules AI ticks; the strategy decides what to do.</li>
+</ol>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../architecture/sdk-editor.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../architecture/type-safety.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../architecture/sdk-editor.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../architecture/type-safety.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../mark-09e88c2c.min.js"></script>
+        <script src="../searcher-c2a407aa.js"></script>
+
+        <script src="../clipboard-1626706a.min.js"></script>
+        <script src="../highlight-abc7f01d.js"></script>
+        <script src="../book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

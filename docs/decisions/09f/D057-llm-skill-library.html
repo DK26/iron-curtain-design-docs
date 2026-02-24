@@ -1,0 +1,638 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>D057 — LLM Skill Library - Iron Curtain — Design Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Design docs for a Rust-native Red Alert RTS engine">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../../css/general-2459343d.css">
+        <link rel="stylesheet" href="../../css/chrome-ae938929.css">
+        <link rel="stylesheet" href="../../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../../searchindex-61d2369b.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../../toc-1553b04b.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Iron Curtain — Design Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs/edit/main/src/decisions/09f/D057-llm-skill-library.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h2 id="d057-llm-skill-library--lifelong-learning-for-ai-and-content-generation"><a class="header" href="#d057-llm-skill-library--lifelong-learning-for-ai-and-content-generation">D057: LLM Skill Library — Lifelong Learning for AI and Content Generation</a></h2>
+<p><strong>Status:</strong> Settled
+<strong>Scope:</strong> <code>ic-llm</code>, <code>ic-ai</code>, <code>ic-sim</code> (read-only via <code>FogFilteredView</code>)
+<strong>Phase:</strong> Phase 7 (LLM Missions + Ecosystem), with AI skill accumulation feasible as soon as D044 ships
+<strong>Depends on:</strong> D016 (LLM-Generated Missions), D034 (SQLite Storage), D041 (AiStrategy), D044 (LLM-Enhanced AI), D030 (Workshop)
+<strong>Inspired by:</strong> Voyager (NVIDIA/MineDojo, 2023) — LLM-powered lifelong learning agent for Minecraft with an ever-growing skill library of verified, composable, semantically-indexed executable behaviors</p>
+<h3 id="problem"><a class="header" href="#problem">Problem</a></h3>
+<p>IC’s LLM features are currently <strong>stateless between sessions</strong>:</p>
+<ul>
+<li><strong>D044 (<code>LlmOrchestratorAi</code>):</strong> Every strategic consultation starts from scratch. The LLM receives game state + <code>AiEventLog</code> narrative and produces a <code>StrategicPlan</code> with no memory of what strategies worked in previous games. A 100-game-old AI is no smarter than a first-game AI.</li>
+<li><strong>D016 (mission generation):</strong> Every mission is generated from raw prompts or template-filling. The LLM has no knowledge of which encounter compositions produced missions that players rated highly, completed at target difficulty, or found genuinely fun.</li>
+<li><strong>D044 (<code>LlmPlayerAi</code>):</strong> The experimental full-LLM player repeats the same reasoning mistakes across games because it has no accumulated knowledge of what works in Red Alert.</li>
+</ul>
+<p>The scene template library (<code>04-MODDING.md</code> § Scene Templates) is a <strong>hand-authored</strong> skill library — pre-built, verified building blocks (ambush, patrol, convoy escort, defend position). But there’s no mechanism for the LLM to <strong>discover, verify, and accumulate</strong> its own proven patterns over time.</p>
+<p>Voyager (Wang et al., 2023) demonstrated that an LLM agent with a <strong>skill library</strong> — verified executable behaviors indexed by semantic embedding, retrieved by similarity, and composed for new tasks — dramatically outperforms a stateless LLM agent. Voyager obtained 3.3x more unique items and unlocked tech tree milestones 15.3x faster than agents without skill accumulation. The key insight: storing verified skills eliminates catastrophic forgetting and compounds the agent’s capabilities over time.</p>
+<p>IC already has almost every infrastructure piece needed for this pattern. The missing component is the <strong>verification → storage → retrieval → composition</strong> loop that turns individual LLM outputs into a growing library of proven capabilities.</p>
+<h3 id="decision"><a class="header" href="#decision">Decision</a></h3>
+<p>Add a <strong>Skill Library</strong> system to <code>ic-llm</code> — a persistent, semantically-indexed store of verified LLM outputs that accumulates knowledge across sessions. The library serves two domains with shared infrastructure:</p>
+<ol>
+<li><strong>AI Skills</strong> — strategic patterns verified through gameplay outcomes (D044)</li>
+<li><strong>Generation Skills</strong> — mission/encounter patterns verified through player ratings and validation (D016)</li>
+</ol>
+<p>Both domains use the same storage format, retrieval mechanism, verification pipeline, and sharing infrastructure. They differ only in what constitutes a “skill” and how verification works.</p>
+<h3 id="architecture"><a class="header" href="#architecture">Architecture</a></h3>
+<h4 id="the-skill"><a class="header" href="#the-skill">The Skill</a></h4>
+<p>A skill is a verified, reusable LLM output with provenance and quality metadata:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// A verified, reusable LLM output stored in the skill library.
+/// Applicable to both AI strategy skills and content generation skills.
+pub struct Skill {
+    pub id: SkillId,                        // UUID
+    pub domain: SkillDomain,
+    pub name: String,                       // human-readable, LLM-generated
+    pub description: String,                // semantic description for retrieval
+    pub description_embedding: Vec&lt;f32&gt;,    // embedding vector for similarity search
+    pub body: SkillBody,                    // the actual executable content
+    pub provenance: SkillProvenance,
+    pub quality: SkillQuality,
+    pub tags: Vec&lt;String&gt;,                  // searchable tags (e.g., "anti-air", "early-game", "naval")
+    pub composable_with: Vec&lt;SkillId&gt;,      // skills this has been successfully composed with
+    pub created_at: String,                 // ISO 8601
+    pub last_used: String,
+    pub use_count: u32,
+}
+
+pub enum SkillDomain {
+    /// Strategic AI patterns (D044) — "how to play"
+    AiStrategy,
+    /// Mission/encounter generation patterns (D016) — "how to build content"
+    ContentGeneration,
+}
+
+pub enum SkillBody {
+    /// A strategic plan template with parameter bindings.
+    /// Used by LlmOrchestratorAi to guide inner AI behavior.
+    StrategicPattern {
+        /// The situation this pattern addresses (serialized game state features).
+        situation: SituationSignature,
+        /// The StrategicPlan that worked in this situation.
+        plan: StrategicPlan,
+        /// Parameter adjustments applied to the inner AI.
+        parameter_bindings: Vec&lt;(String, i32)&gt;,
+    },
+    /// A mission encounter composition — scene templates + parameter values.
+    /// Used by D016 mission generation to compose proven building blocks.
+    EncounterPattern {
+        /// Scene template IDs and their parameter values.
+        scene_composition: Vec&lt;SceneInstance&gt;,
+        /// Overall mission structure metadata.
+        mission_structure: MissionStructureHints,
+    },
+    /// A raw prompt+response pair that produced a verified good result.
+    /// Injected as few-shot examples in future LLM consultations.
+    VerifiedExample {
+        prompt_context: String,
+        response: String,
+    },
+}
+
+pub struct SkillProvenance {
+    pub source: SkillSource,
+    pub model_id: Option&lt;String&gt;,           // which LLM model generated it
+    pub game_module: String,                // "ra1", "td", etc.
+    pub engine_version: String,
+}
+
+pub enum SkillSource {
+    /// Discovered by the LLM during gameplay or generation, then verified.
+    LlmDiscovered,
+    /// Hand-authored by a human (e.g., built-in scene templates promoted to skills).
+    HandAuthored,
+    /// Imported from Workshop.
+    Workshop { source_id: String, author: String },
+    /// Refined from an LLM-discovered skill by a human editor.
+    HumanRefined { original_id: SkillId },
+}
+
+pub struct SkillQuality {
+    pub verification_count: u32,            // how many times verified
+    pub success_rate: f64,                  // wins / uses for AI; completion rate for missions
+    pub average_rating: Option&lt;f64&gt;,        // player rating (1-5) for generation skills
+    pub confidence: SkillConfidence,
+    pub last_verified: String,              // ISO 8601
+}
+
+pub enum SkillConfidence {
+    /// Passed initial validation but low sample size (&lt; 3 verifications).
+    Tentative,
+    /// Consistently successful across multiple verifications (3-10).
+    Established,
+    /// Extensively verified with high success rate (10+).
+    Proven,
+}
+<span class="boring">}</span></code></pre>
+<h4 id="storage-sqlite-d034"><a class="header" href="#storage-sqlite-d034">Storage: SQLite (D034)</a></h4>
+<p>Skills are stored in SQLite — same embedded database as all other IC persistent state. No external vector database required.</p>
+<pre><code class="language-sql">CREATE TABLE skills (
+    id              TEXT PRIMARY KEY,
+    domain          TEXT NOT NULL,       -- 'ai_strategy' | 'content_generation'
+    name            TEXT NOT NULL,
+    description     TEXT NOT NULL,
+    body_json       TEXT NOT NULL,       -- JSON-serialized SkillBody
+    tags            TEXT NOT NULL,       -- JSON array of tags
+    game_module     TEXT NOT NULL,
+    source          TEXT NOT NULL,       -- 'llm_discovered' | 'hand_authored' | 'workshop' | 'human_refined'
+    model_id        TEXT,
+    verification_count  INTEGER DEFAULT 0,
+    success_rate    REAL DEFAULT 0.0,
+    average_rating  REAL,
+    confidence      TEXT DEFAULT 'tentative',
+    use_count       INTEGER DEFAULT 0,
+    created_at      TEXT NOT NULL,
+    last_used       TEXT,
+    last_verified   TEXT
+);
+
+-- FTS5 for text-based skill retrieval (fast, no external dependencies)
+CREATE VIRTUAL TABLE skills_fts USING fts5(
+    name, description, tags,
+    content=skills, content_rowid=rowid
+);
+
+-- Embedding vectors stored as BLOBs for similarity search
+CREATE TABLE skill_embeddings (
+    skill_id        TEXT PRIMARY KEY REFERENCES skills(id),
+    embedding       BLOB NOT NULL,       -- f32 array, serialized
+    model_id        TEXT NOT NULL         -- which embedding model produced this
+);
+
+-- Composition history: which skills have been successfully used together
+CREATE TABLE skill_compositions (
+    skill_a         TEXT REFERENCES skills(id),
+    skill_b         TEXT REFERENCES skills(id),
+    success_count   INTEGER DEFAULT 0,
+    PRIMARY KEY (skill_a, skill_b)
+);
+</code></pre>
+<p><strong>Retrieval strategy (two-tier):</strong></p>
+<ol>
+<li><strong>FTS5 keyword search</strong> — fast, zero-dependency, works offline. Query: <code>"anti-air defense early-game"</code> matches skills with those terms in name/description/tags. This is the primary retrieval path and works without an embedding model.</li>
+<li><strong>Embedding similarity</strong> — optional, higher quality. If the user’s <code>LlmProvider</code> (D016) supports embeddings (most do), skill descriptions are embedded at storage time. Retrieval computes cosine similarity between the query embedding and stored embeddings. This is a SQLite scan with in-process vector math — no external vector database.</li>
+</ol>
+<p>FTS5 is always available. Embedding similarity is used when an embedding model is configured and falls back to FTS5 otherwise. Both paths return ranked results; the top-K skills are injected into the LLM prompt as few-shot context.</p>
+<h4 id="verification-pipeline"><a class="header" href="#verification-pipeline">Verification Pipeline</a></h4>
+<p>The critical difference between a skill library and a prompt cache: <strong>skills are verified</strong>. An unverified LLM output is a candidate; a verified output is a skill.</p>
+<p><strong>AI Strategy verification (D044):</strong></p>
+<pre><code>LlmOrchestratorAi generates StrategicPlan
+  → Inner AI executes the plan over the next consultation interval
+  → Match outcome observed (win/loss, resource delta, army value delta, territory change)
+  → If favorable outcome: candidate skill created
+  → Candidate includes: SituationSignature (game state features at plan time)
+                        + StrategicPlan + parameter bindings + outcome metrics
+  → Same pattern used in 3+ games with &gt;60% success → promoted to Established skill
+  → 10+ uses with &gt;70% success → promoted to Proven skill
+</code></pre>
+<p><code>SituationSignature</code> captures the game state features that made this plan applicable — not the entire state, but the strategically relevant dimensions:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// A compressed representation of the game situation when a skill was applied.
+/// Used to match current situations against stored skills.
+pub struct SituationSignature {
+    pub game_phase: GamePhase,              // early / mid / late (derived from tick + tech level)
+    pub economy_state: EconomyState,        // ahead / even / behind (relative resource flow)
+    pub army_composition: Vec&lt;(String, u8)&gt;, // top unit types by proportion
+    pub enemy_composition_estimate: Vec&lt;(String, u8)&gt;,
+    pub map_control: f32,                   // 0.0-1.0 estimated map control
+    pub threat_level: ThreatLevel,          // none / low / medium / high / critical
+    pub active_tech: Vec&lt;String&gt;,           // available tech tiers
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Content Generation verification (D016):</strong></p>
+<pre><code>LLM generates mission (from template or raw)
+  → Schema validation passes (valid unit types, reachable objectives, balanced resources)
+  → Player plays the mission
+  → Outcome observed: completion (yes/no), time-to-complete, player rating (if provided)
+  → If completed + rated ≥ 3 stars: candidate encounter skill created
+  → Candidate includes: scene composition + parameter values + mission structure + rating
+  → Aggregated across 3+ players/plays with avg rating ≥ 3.5 → Established
+  → Workshop rating data (if published) feeds back into quality scores
+</code></pre>
+<p><strong>Automated pre-verification (no player required):</strong></p>
+<p>For AI skills, headless simulation provides automated verification:</p>
+<pre><code>ic skill verify --domain ai --games 20 --opponent "IC Default Hard"
+</code></pre>
+<p>This runs the AI with each candidate skill against a reference opponent headlessly, measuring win rate. Skills that pass automated verification at a lower threshold (&gt;40% win rate against Hard AI) are promoted to <code>Tentative</code>. Human play promotes them further.</p>
+<h4 id="prompt-augmentation--how-skills-reach-the-llm"><a class="header" href="#prompt-augmentation--how-skills-reach-the-llm">Prompt Augmentation — How Skills Reach the LLM</a></h4>
+<p>When the <code>LlmOrchestratorAi</code> or mission generator prepares a prompt, the skill library injects relevant context:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Retrieves relevant skills and augments the LLM prompt.
+pub struct SkillRetriever {
+    db: SqliteConnection,
+    embedding_provider: Option&lt;Box&lt;dyn EmbeddingProvider&gt;&gt;,
+}
+
+impl SkillRetriever {
+    /// Find skills relevant to the current context.
+    /// Returns top-K skills ranked by relevance, filtered by domain and game module.
+    pub fn retrieve(
+        &amp;self,
+        query: &amp;str,
+        domain: SkillDomain,
+        game_module: &amp;str,
+        max_results: usize,
+    ) -&gt; Vec&lt;Skill&gt; {
+        // 1. Try embedding similarity if available
+        // 2. Fall back to FTS5 keyword search
+        // 3. Filter by confidence &gt;= Tentative
+        // 4. Rank by (relevance_score * quality.success_rate)
+        // 5. Return top-K
+        ...
+    }
+
+    /// Format retrieved skills as few-shot context for the LLM prompt.
+    pub fn format_as_context(&amp;self, skills: &amp;[Skill]) -&gt; String {
+        // Each skill becomes a "Previously successful approach:" block
+        // in the prompt, with situation → plan → outcome
+        ...
+    }
+}
+<span class="boring">}</span></code></pre>
+<p><strong>In the orchestrator prompt flow (D044):</strong></p>
+<pre><code>System prompt (from llm/prompts/orchestrator.yaml)
+  + "Previously successful strategies in similar situations:"
+  + [top 3-5 retrieved AI skills, formatted as situation/plan/outcome examples]
+  + "Current game state:"
+  + [serialized FogFilteredView]
+  + "Recent events:"
+  + [event_log.to_narrative(since_tick)]
+  → LLM produces StrategicPlan
+    (informed by proven patterns, but free to adapt or deviate)
+</code></pre>
+<p><strong>In the mission generation prompt flow (D016):</strong></p>
+<pre><code>System prompt (from llm/prompts/mission_generator.yaml)
+  + "Encounter patterns that players enjoyed:"
+  + [top 3-5 retrieved generation skills, formatted as composition/rating examples]
+  + Campaign context (skeleton, current act, character states)
+  + Player preferences
+  → LLM produces mission YAML
+    (informed by proven encounter patterns, but free to create new ones)
+</code></pre>
+<p>The LLM is never forced to use retrieved skills — they’re few-shot examples that bias toward proven patterns while preserving creative freedom. If the current situation is genuinely novel (no similar skills found), the retrieval returns nothing and the LLM operates as it does today — statelessly.</p>
+<h4 id="skill-composition"><a class="header" href="#skill-composition">Skill Composition</a></h4>
+<p>Complex gameplay requires combining multiple skills. Voyager’s key insight: skills compose — “mine iron” + “craft furnace” + “smelt iron ore” compose into “make iron ingots.” IC skills compose similarly:</p>
+<p><strong>AI skill composition:</strong></p>
+<ul>
+<li>“Rush with light vehicles at 5:00” + “transition to heavy armor at 12:00” = an early-aggression-into-late-game strategic arc</li>
+<li>The <code>composable_with</code> field and <code>skill_compositions</code> table track which skills have been successfully used in sequence</li>
+<li>The orchestrator can retrieve a <em>sequence</em> of skills for different game phases, not just a single skill for the current moment</li>
+</ul>
+<p><strong>Generation skill composition:</strong></p>
+<ul>
+<li>“bridge_ambush” + “timed_extraction” + “weather_escalation” = a specific mission pattern</li>
+<li>This is exactly the existing scene template hierarchy (<code>04-MODDING.md</code> § Template Hierarchy), but with LLM-discovered compositions alongside hand-authored ones</li>
+<li>The <code>EncounterPattern</code> skill body stores the full composition — which scene templates, in what order, with what parameter values</li>
+</ul>
+<h4 id="workshop-distribution-d030"><a class="header" href="#workshop-distribution-d030">Workshop Distribution (D030)</a></h4>
+<p>Skill libraries are Workshop-shareable resources:</p>
+<pre><code class="language-yaml"># workshop/my-ai-skill-library/resource.yaml
+type: skill_library
+display_name: "Competitive RA1 AI Strategies"
+description: "150 verified strategic patterns learned over 500 games against Hard AI"
+game_module: ra1
+domain: ai_strategy
+skill_count: 150
+average_confidence: proven
+license: CC-BY-SA-4.0
+ai_usage: Allow
+</code></pre>
+<p><strong>Sharing model:</strong></p>
+<ul>
+<li>Players export their skill library (or a curated subset) as a Workshop package</li>
+<li>Other players subscribe and merge into their local library</li>
+<li>Skill provenance tracks origin — <code>Workshop { source_id, author }</code></li>
+<li>Community curation: Workshop ratings on skill libraries indicate quality</li>
+<li>AI tournament leaderboards (D043) can require contestants to publish their skill libraries, creating a knowledge commons</li>
+</ul>
+<p><strong>Privacy:</strong></p>
+<ul>
+<li>Skill libraries contain <strong>no player data</strong> — only LLM outputs, game state features, and outcome metrics</li>
+<li>No replays, no player names, no match IDs in the exported skill data</li>
+<li>A skill that says “rush at 5:00 with 3 light tanks against enemy who expanded early” reveals a strategy, not a person</li>
+</ul>
+<h4 id="skill-lifecycle"><a class="header" href="#skill-lifecycle">Skill Lifecycle</a></h4>
+<pre><code>1. DISCOVERY      LLM generates an output (StrategicPlan or mission content)
+        ↓
+2. EXECUTION      Output is used in gameplay or mission play
+        ↓
+3. EVALUATION     Outcome measured (win/loss, rating, completion)
+        ↓
+4. CANDIDACY      If outcome meets threshold → candidate skill created
+        ↓
+5. VERIFICATION   Same pattern reused 3+ times with consistent success → Established
+        ↓
+6. PROMOTION      10+ verifications with high success → Proven
+        ↓
+7. RETRIEVAL      Proven skills injected as few-shot context in future LLM consultations
+        ↓
+8. COMPOSITION    Skills used together successfully → composition recorded
+        ↓
+9. SHARING        Player exports library to Workshop; community benefits
+</code></pre>
+<p><strong>Skill decay:</strong> Skills verified against older engine versions may become less relevant as game balance changes. Skills include <code>engine_version</code> in provenance. A periodic maintenance pass (triggered by engine update) re-validates <code>Proven</code> skills by running them through headless simulation. Skills that fall below threshold are downgraded to <code>Tentative</code> rather than deleted — balance might revert, or the pattern might work in a different context.</p>
+<p><strong>Skill pruning:</strong> Libraries grow unboundedly without curation. Automatic pruning removes skills that are: (a) <code>Tentative</code> for &gt;30 days with no additional verifications, (b) <code>use_count == 0</code> for &gt;90 days, or (c) superseded by a strictly-better skill (same situation, higher success rate). Manual pruning via <code>ic skill prune</code> CLI. Users set a max library size; pruning prioritizes keeping <code>Proven</code> skills and removing <code>Tentative</code> duplicates.</p>
+<h3 id="embedding-provider"><a class="header" href="#embedding-provider">Embedding Provider</a></h3>
+<p>Embeddings require a model. IC does not ship one — same BYOLLM principle as D016:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Produces embedding vectors from text descriptions.
+/// Optional — FTS5 provides retrieval without embeddings.
+pub trait EmbeddingProvider: Send + Sync {
+    fn embed(&amp;self, text: &amp;str) -&gt; Result&lt;Vec&lt;f32&gt;&gt;;
+    fn embedding_dimensions(&amp;self) -&gt; usize;
+    fn model_id(&amp;self) -&gt; &amp;str;
+}
+<span class="boring">}</span></code></pre>
+<p>Built-in implementations:</p>
+<ul>
+<li><code>OpenAIEmbeddings</code> — uses OpenAI’s <code>text-embedding-3-small</code> (or compatible API)</li>
+<li><code>OllamaEmbeddings</code> — uses any Ollama model with embedding support (local, free)</li>
+<li><code>NoEmbeddings</code> — disables embedding similarity; FTS5 keyword search only</li>
+</ul>
+<p>The embedding model is configured alongside the <code>LlmProvider</code> in D047’s task routing table. If no embedding provider is configured, the skill library works with FTS5 only — slightly lower retrieval quality, but fully functional offline with zero external dependencies.</p>
+<h3 id="cli"><a class="header" href="#cli">CLI</a></h3>
+<pre><code>ic skill list [--domain ai|content] [--confidence proven|established|tentative] [--game-module ra1]
+ic skill show &lt;skill-id&gt;
+ic skill verify --domain ai --games 20 --opponent "IC Default Hard"
+ic skill export [--domain ai] [--confidence established+] -o skills.icpkg
+ic skill import skills.icpkg [--merge|--replace]
+ic skill prune [--max-size 500] [--dry-run]
+ic skill stats     # library overview: counts by domain/confidence/game module
+</code></pre>
+<h3 id="what-this-is-not"><a class="header" href="#what-this-is-not">What This Is NOT</a></h3>
+<ul>
+<li><strong>NOT fine-tuning.</strong> The LLM model parameters are never modified. Skills are retrieved context (few-shot examples), not gradient updates. Users never need GPU training infrastructure.</li>
+<li><strong>NOT a replay database.</strong> Skills store compressed patterns (situation signature + plan + outcome), not full game replays. A skill is ~1-5 KB; a replay is ~2-5 MB.</li>
+<li><strong>NOT required for any LLM feature to work.</strong> All LLM features (D016, D044) work without a skill library — they just don’t improve over time. The library is an additive enhancement, not a prerequisite.</li>
+<li><strong>NOT a replacement for hand-authored content.</strong> The built-in scene templates, AI behavior presets (D043), and campaign content (D021) are hand-crafted and don’t depend on the skill library. The library augments LLM capabilities; it doesn’t replace authored content.</li>
+</ul>
+<h3 id="alternatives-considered"><a class="header" href="#alternatives-considered">Alternatives Considered</a></h3>
+<ul>
+<li><strong>Full model fine-tuning per user</strong> (rejected — requires GPU infrastructure, violates BYOLLM portability, incompatible with API-based providers, and risks catastrophic forgetting of general capabilities)</li>
+<li><strong>Replay-as-skill (store full replays as skills)</strong> (rejected — replays are too large and unstructured for retrieval; skills must be compressed to situation+plan patterns that fit in a prompt context window)</li>
+<li><strong>External vector database (Pinecone, Qdrant, Chroma)</strong> (rejected — violates D034’s “no external DB” principle; SQLite + FTS5 + in-process vector math is sufficient for a skill library measured in hundreds-to-thousands of entries, not millions)</li>
+<li><strong>Skills stored in the LLM’s context window only (no persistence)</strong> (rejected — context windows are bounded and ephemeral; the whole point is cross-session accumulation)</li>
+<li><strong>Shared global skill library</strong> (rejected — violates local-first privacy principle; players opt in to sharing via Workshop, never forced; global aggregation risks homogenizing strategies)</li>
+<li><strong>AI training via reinforcement learning instead of skill accumulation</strong> (rejected — RL requires model parameter access, massive compute, and is incompatible with BYOLLM API models; skill retrieval works with any LLM including cloud APIs)</li>
+</ul>
+<h3 id="integration-with-existing-decisions"><a class="header" href="#integration-with-existing-decisions">Integration with Existing Decisions</a></h3>
+<ul>
+<li><strong>D016 (LLM Missions):</strong> Generation skills are accumulated from D016’s mission generation pipeline. The template-first approach (<code>04-MODDING.md</code> § LLM + Templates) benefits most — proven template parameter combinations become generation skills, dramatically improving template-filling reliability.</li>
+<li><strong>D034 (SQLite):</strong> Skill storage uses the same embedded SQLite database as replay catalogs, match history, and gameplay events. New tables, same infrastructure. FTS5 is already available for search.</li>
+<li><strong>D041 (AiStrategy):</strong> The <code>AiEventLog</code>, <code>FogFilteredView</code>, and <code>set_parameter()</code> infrastructure provide the verification feedback loop. Skill outcomes are measured through the same event pipeline that informs the orchestrator.</li>
+<li><strong>D043 (AI Presets):</strong> Built-in AI behavior presets can be promoted to hand-authored skills in the library, giving the retrieval system access to the same proven patterns that the preset system encodes — but indexed for semantic search rather than manual selection.</li>
+<li><strong>D044 (LLM AI):</strong> AI strategy skills directly augment the orchestrator’s consultation prompts. The <code>LlmOrchestratorAi</code> becomes the primary skill producer and consumer. The <code>LlmPlayerAi</code> also benefits — its reasoning improves with proven examples in context.</li>
+<li><strong>D047 (LLM Configuration Manager):</strong> The embedding provider is configured alongside other LLM providers in D047’s task routing table. Task: <code>embedding</code> → Provider: Ollama/OpenAI.</li>
+<li><strong>D030 (Workshop):</strong> Skill libraries are Workshop resources — shareable, versionable, ratable. AI tournament communities can maintain curated skill libraries.</li>
+<li><strong>D031 (Observability):</strong> Skill retrieval, verification, and promotion events are logged as telemetry events — observable in Grafana dashboards for debugging skill library behavior.</li>
+</ul>
+<h3 id="relationship-to-voyager"><a class="header" href="#relationship-to-voyager">Relationship to Voyager</a></h3>
+<p>IC’s skill library adapts Voyager’s three core insights to the RTS domain:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Voyager Concept</th><th>IC Adaptation</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Skill = executable JavaScript function</strong></td><td>Skill = <code>StrategicPlan</code> (AI) or <code>EncounterPattern</code> (generation) — domain-specific executable content</td></tr>
+<tr><td><strong>Skill verification via environment feedback</strong></td><td>Verification via match outcome (AI) or player rating + schema validation (generation)</td></tr>
+<tr><td><strong>Embedding-indexed retrieval</strong></td><td>Two-tier: FTS5 keyword (always available) + optional embedding similarity</td></tr>
+<tr><td><strong>Compositional skills</strong></td><td><code>composable_with</code> + <code>skill_compositions</code> table; scene template hierarchy for generation</td></tr>
+<tr><td><strong>Automatic curriculum</strong></td><td>Not directly adopted — IC’s curriculum is human-driven (player picks missions, matchmaking picks opponents). The skill library accumulates passively during normal play.</td></tr>
+<tr><td><strong>Iterative prompting with self-verification</strong></td><td>Schema validation + headless sim verification (<code>ic skill verify</code>) replaces Voyager’s in-environment code testing</td></tr>
+</tbody>
+</table>
+</div>
+<p>The key architectural difference: Voyager’s agent runs in a single-player sandbox with fast iteration loops (try code → observe → refine → store). IC’s skills accumulate more slowly — each verification requires a full game or mission play. This means IC’s library grows over days/weeks rather than hours, but the skills are verified against real gameplay rather than sandbox experiments, producing higher-quality patterns.</p>
+<hr>
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../../decisions/09f/D056-replay-import.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../../decisions/09g-interaction.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../../decisions/09f/D056-replay-import.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../../decisions/09g-interaction.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../../mark-09e88c2c.min.js"></script>
+        <script src="../../searcher-c2a407aa.js"></script>
+
+        <script src="../../clipboard-1626706a.min.js"></script>
+        <script src="../../highlight-abc7f01d.js"></script>
+        <script src="../../book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

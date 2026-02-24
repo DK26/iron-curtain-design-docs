@@ -1,0 +1,819 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>D019 — Balance Presets - Iron Curtain — Design Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Design docs for a Rust-native Red Alert RTS engine">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../../css/general-2459343d.css">
+        <link rel="stylesheet" href="../../css/chrome-ae938929.css">
+        <link rel="stylesheet" href="../../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../../searchindex-61d2369b.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../../toc-1553b04b.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Iron Curtain — Design Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs/edit/main/src/decisions/09d/D019-balance-presets.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h2 id="d019-switchable-balance-presets-classic-ra-vs-openra"><a class="header" href="#d019-switchable-balance-presets-classic-ra-vs-openra">D019: Switchable Balance Presets (Classic RA vs OpenRA)</a></h2>
+<p><strong>Decision:</strong> Ship multiple balance presets as first-class YAML rule sets. Default to classic Red Alert values from the EA source code. OpenRA balance available as an alternative preset. Selectable per-game in lobby.</p>
+<p><strong>Rationale:</strong></p>
+<ul>
+<li>Original Red Alert’s balance makes units feel <strong>powerful and iconic</strong> — Tanya, MiGs, Tesla Coils, V2 rockets are devastating. This is what made the game memorable.</li>
+<li>OpenRA rebalances toward competitive fairness, which can dilute the personality of iconic units. Valid for tournaments, wrong as a default.</li>
+<li>The community is split on this. Rather than picking a side, expose it as a choice.</li>
+<li>Presets are just alternate YAML files loaded at game start — zero engine complexity. The modding system already supports this via inheritance and overrides.</li>
+<li>The Remastered Collection made its own subtle balance tweaks — worth capturing as a third preset.</li>
+</ul>
+<p><strong>Implementation:</strong></p>
+<ul>
+<li><code>rules/presets/classic/</code> — unit/weapon/structure values from EA source code (default)</li>
+<li><code>rules/presets/openra/</code> — values matching OpenRA’s current balance</li>
+<li><code>rules/presets/remastered/</code> — values matching the Remastered Collection</li>
+<li>Preset selection exposed in lobby UI and stored in game settings</li>
+<li>Presets use YAML inheritance: only override fields that differ from <code>classic</code></li>
+<li>Multiplayer: all players must use the same preset (enforced by lobby, validated by sim)</li>
+<li>Custom presets: modders can create new presets as additional YAML directories</li>
+</ul>
+<p><strong>What this is NOT:</strong></p>
+<ul>
+<li>Not a “difficulty setting” — both presets play at normal difficulty</li>
+<li>Not a mod — it’s a first-class game option, no workshop download required</li>
+<li>Not just multiplayer — applies to skirmish and campaign too</li>
+</ul>
+<p><strong>Alternatives considered:</strong></p>
+<ul>
+<li>Only ship classic values (rejected — alienates OpenRA competitive community)</li>
+<li>Only ship OpenRA values (rejected — loses the original game’s personality)</li>
+<li>Let mods handle it (rejected — too important to bury in the modding system; should be one click in settings)</li>
+</ul>
+<p><strong>Phase:</strong> Phase 2 (balance values extracted during simulation implementation).</p>
+<h3 id="balance-philosophy--lessons-from-the-most-balanced-and-fun-rts-games"><a class="header" href="#balance-philosophy--lessons-from-the-most-balanced-and-fun-rts-games">Balance Philosophy — Lessons from the Most Balanced and Fun RTS Games</a></h3>
+<p>D019 defines the <em>mechanism</em> (switchable YAML presets). This section defines the <em>philosophy</em> — what makes faction balance good, drawn from studying the games that got it right over decades of competitive play. These principles guide the creation of the “IC Default” balance preset and inform modders creating their own.</p>
+<p><strong>Source games studied:</strong> StarCraft: Brood War (25+ years competitive, 3 radically asymmetric races), StarCraft II (Blizzard’s most systematically balanced RTS), Age of Empires II (40+ civilizations remarkably balanced over 25 years), Warcraft III (4 factions with hero mechanics), Company of Heroes (asymmetric doctrines), original Red Alert, and the Red Alert Remastered Collection. Where claims are specific, they reflect publicly documented game design decisions, developer commentary, or decade-scale competitive data.</p>
+<h4 id="principle-1-asymmetry-creates-identity"><a class="header" href="#principle-1-asymmetry-creates-identity">Principle 1: Asymmetry Creates Identity</a></h4>
+<p>The most beloved RTS factions — SC:BW’s Zerg/Protoss/Terran, AoE2’s diverse civilizations, RA’s Allies/Soviet — are memorable because they <em>feel different to play</em>, not because they have slightly different stat numbers. Asymmetry is the source of faction identity. Homogenizing factions for balance kills the reason factions exist.</p>
+<p><strong>Red Alert’s original asymmetry:</strong> Allies favor technology, range, precision, and flexibility (GPS, Cruisers, longbow helicopters, Tanya as surgical strike). Soviets favor mass, raw power, armor, and area destruction (Mammoth tanks, V2 rockets, Tesla coils, Iron Curtain). Both factions can win — but they win differently. An Allied player who tries to play like a Soviet player (massing heavy armor) will lose. The asymmetry forces different strategies and creates varied, interesting matches.</p>
+<p><strong>The lesson IC applies:</strong> Balance presets may adjust unit costs, health, and damage — but they must never collapse faction asymmetry. A “balanced” Tanya is still a fragile commando who kills infantry instantly and demolishes buildings, not a generic elite unit. A “balanced” Mammoth Tank is still the most expensive, slowest, toughest unit on the field, not a slightly upgunned medium tank. If a balance change makes a unit feel generic, the change is wrong.</p>
+<h4 id="principle-2-counter-triangles-not-raw-power"><a class="header" href="#principle-2-counter-triangles-not-raw-power">Principle 2: Counter Triangles, Not Raw Power</a></h4>
+<p>Good balance comes from every unit having a purpose and a vulnerability — not from every unit being equally strong. SC:BW’s Zergling → Marine → Lurker → Zealot chains, AoE2’s cavalry → archers → spearmen → cavalry triangle, and RA’s own infantry → tank → rocket soldier → infantry loops create dynamic gameplay where army composition matters more than total resource investment.</p>
+<p><strong>The lesson IC applies:</strong> When defining units for any balance preset, maintain clear counter relationships. Every unit must have:</p>
+<ul>
+<li>At least one unit type it is <strong>strong against</strong> (justifies building it)</li>
+<li>At least one unit type it is <strong>weak against</strong> (prevents it from being the only answer)</li>
+<li>A <strong>role</strong> that can’t be fully replaced by another unit of the same faction</li>
+</ul>
+<p>The <code>llm:</code> metadata block in YAML unit definitions (see <code>04-MODDING.md</code>) already enforces this: <code>counters</code>, <code>countered_by</code>, and <code>role</code> fields are required for every unit. Balance presets adjust <em>how strong</em> these relationships are, not <em>whether they exist</em>.</p>
+<h4 id="principle-3-spectacle-over-spreadsheet"><a class="header" href="#principle-3-spectacle-over-spreadsheet">Principle 3: Spectacle Over Spreadsheet</a></h4>
+<p>Red Alert’s original balance is “unfair” by competitive standards — Tesla Coils delete infantry, Tanya solo-kills buildings, a pack of MiGs erases a Mammoth Tank. But this is what makes the game <em>fun</em>. Units feel powerful and dramatic. SC:BW has the same quality — a full Reaver drop annihilates a mineral line, Storm kills an entire Zergling army, a Nuke ends a stalemate. These moments create stories.</p>
+<p><strong>The lesson IC applies:</strong> The “Classic” preset preserves these high-damage, high-spectacle interactions — units feel as powerful as players remember. The “OpenRA” preset tones them down for competitive fairness. The “IC Default” preset aims for a middle ground: powerful enough to create memorable moments, constrained enough that counter-play is viable. Whether the Cruiser’s shells one-shot a barracks or two-shot it is a balance value; whether the Cruiser <em>feels devastating to deploy</em> is a design requirement that no preset should violate.</p>
+<h4 id="principle-4-maps-are-part-of-balance"><a class="header" href="#principle-4-maps-are-part-of-balance">Principle 4: Maps Are Part of Balance</a></h4>
+<p>SC:BW’s competitive scene discovered this over 25 years: faction balance is inseparable from map design. A map with wide open spaces favors ranged factions; a map with tight choke points favors splash damage; a map with multiple expansions favors economic factions. AoE2’s tournament map pool is curated as carefully as the balance patches.</p>
+<p><strong>The lesson IC applies:</strong> Balance presets should be designed and tested against a representative map pool, not a single map. The competitive committee (D037) curates both the balance preset and the ranked map pool together — because changing one without considering the other produces false conclusions about faction strength. Replay data (faction win rates per map) informs both map rotation and balance adjustments.</p>
+<h4 id="principle-5-balance-through-addition-not-subtraction"><a class="header" href="#principle-5-balance-through-addition-not-subtraction">Principle 5: Balance Through Addition, Not Subtraction</a></h4>
+<p>AoE2’s approach to 40+ civilizations is instructive: every civilization has the same shared tech tree, with specific technologies <em>removed</em> and one unique unit <em>added</em>. The Britons lose key cavalry upgrades but get Longbowmen with exceptional range. The Goths lose stone wall technology but get cheap, fast-training infantry. Identity comes from what you’re missing and what you uniquely possess — not from having a completely different tech tree.</p>
+<p><strong>The lesson IC applies for modders:</strong> When creating new factions or subfactions (RA2’s country bonuses, community mods), the recommended pattern is:</p>
+<ol>
+<li>Start from the base faction tech tree (Allied or Soviet)</li>
+<li>Remove a small number of specific capabilities (units, upgrades, or technologies)</li>
+<li>Add one or two unique capabilities that create a distinctive playstyle</li>
+<li>The unique capabilities should address a gap created by the removals, but not perfectly — the faction should have a real weakness</li>
+</ol>
+<p>This pattern is achievable purely in YAML (Tier 1 modding) through inheritance: the subfaction definition inherits the faction base and overrides <code>prerequisites</code> to gate or remove units, then defines new units.</p>
+<h4 id="principle-6-patch-sparingly-observe-patiently"><a class="header" href="#principle-6-patch-sparingly-observe-patiently">Principle 6: Patch Sparingly, Observe Patiently</a></h4>
+<p>SC:BW received minimal balance patches after 1999 — and it’s the most balanced RTS ever made. The meta evolved through player innovation, not developer intervention. AoE2: Definitive Edition patches more frequently but exercises restraint — small numerical changes (±5%), never removing or redesigning units. In contrast, games that patch aggressively based on short-term win rate data (the “nerf/buff treadmill”) chase balance without ever achieving it, and players never develop deep mastery because the ground keeps shifting.</p>
+<p><strong>The lesson IC applies:</strong> The “Classic” preset is conservative — values come from the EA source code and don’t change. The “OpenRA” preset tracks OpenRA’s competitive balance decisions. The “IC Default” preset follows its own balance philosophy:</p>
+<ul>
+<li><strong>Observe before acting.</strong> Collect ranked replay data for a full season (D055, 3 months) before making balance changes. Short-term spikes in a faction’s win rate may self-correct as players adapt.</li>
+<li><strong>Adjust values, not mechanics.</strong> A balance pass changes numbers (cost, health, damage, build time, range) — never adds or removes units, never changes core mechanics. Mechanical changes are saved for major version releases.</li>
+<li><strong>Absolute changes, small increments.</strong> ±5-10% per pass, never doubling or halving a value. Multiple small passes converge on balance better than dramatic swings.</li>
+<li><strong>Separate pools by rating.</strong> A faction that dominates at beginner level may be fine at expert level (and vice versa). Faction win rates should be analyzed per rating bracket before making changes.</li>
+</ul>
+<h4 id="principle-7-fun-is-not-win-rate"><a class="header" href="#principle-7-fun-is-not-win-rate">Principle 7: Fun Is Not Win Rate</a></h4>
+<p>A 50% win rate doesn’t mean a faction is fun. A faction can have a perfect statistical balance while being miserable to play — if its optimal strategy is boring, if its units don’t feel impactful, or if its matchups produce repetitive games. Conversely, a faction can have a slight statistical disadvantage and still be the community’s favorite (SC:BW Zerg for years; AoE2 Celts; RA2 Korea).</p>
+<p><strong>The lesson IC applies:</strong> Balance telemetry (D031) tracks not just win rates but also:</p>
+<ul>
+<li><strong>Pick rates</strong> — are players choosing to play this faction? Low pick rate with high win rate suggests the faction is strong but unpleasant.</li>
+<li><strong>Game length distribution</strong> — factions that consistently produce very short or very long games may indicate degenerate strategies.</li>
+<li><strong>Unit production diversity</strong> — if a faction’s optimal strategy only uses 3 of its 15 units, the other 12 are effectively dead content.</li>
+<li><strong>Comeback frequency</strong> — healthy balance allows comebacks; if a faction that falls behind never recovers, the matchup may need attention.</li>
+</ul>
+<p>These metrics feed into balance discussions (D037 competitive committee) alongside pure win rate data.</p>
+<h4 id="summary-ics-balance-stance"><a class="header" href="#summary-ics-balance-stance">Summary: IC’s Balance Stance</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Preset</th><th>Philosophy</th><th>Stability</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Classic</strong></td><td>Faithful RA values from EA source code. Spectacle over fairness. The game as Westwood made it.</td><td>Frozen — never changes.</td></tr>
+<tr><td><strong>OpenRA</strong></td><td>Community-driven competitive balance. Tracks OpenRA’s active balance decisions.</td><td>Updated when OpenRA ships balance patches.</td></tr>
+<tr><td><strong>Remastered</strong></td><td>Petroglyph’s subtle tweaks for the 2020 release.</td><td>Frozen — captures the Remastered Collection as shipped.</td></tr>
+<tr><td><strong>IC Default</strong></td><td>Spectacle + competitive viability. Asymmetry preserved. Counter triangles enforced. Patched sparingly based on seasonal data.</td><td>Updated once per season (D055), small increments only.</td></tr>
+<tr><td><strong>Custom</strong></td><td>Modder-created presets via Workshop. Community experiments, tournament rules, “what if” scenarios.</td><td>Modder-controlled.</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h3 id="d020--mod-sdk--creative-toolchain"><a class="header" href="#d020--mod-sdk--creative-toolchain">D020 — Mod SDK &amp; Creative Toolchain</a></h3>
+<p><strong>Decision:</strong> Ship a Mod SDK comprising two components: (1) the <code>ic</code> CLI tool for headless mod workflow (init, check, test, build, publish), and (2) the <strong>IC SDK application</strong> — a visual creative toolchain with the scenario editor (D038), asset studio (D040), campaign editor, and Game Master mode. The SDK is a separate application from the game — players never see it (see D040 § SDK Architecture).</p>
+<p><strong>Context:</strong> The OpenRA Mod SDK is a template repository modders fork. It bundles shell scripts (<code>fetch-engine.sh</code>, <code>launch-game.sh</code>, <code>utility.sh</code>), a <code>Makefile</code>/<code>make.cmd</code> build system, and a <code>packaging/</code> directory with per-platform installer scripts. The approach works — it’s the standard way to create OpenRA mods. But it has significant friction: requires .NET SDK, custom C# DLLs for anything beyond data changes, MiniYAML with no validation tooling, GPL contamination on mod code, and no distribution system beyond manual file sharing.</p>
+<p><strong>What we adapt:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Concept</th><th>OpenRA SDK</th><th>Iron Curtain</th></tr>
+</thead>
+<tbody>
+<tr><td>Starting point</td><td>Fork a template repo</td><td><code>ic mod init [template]</code> via <code>cargo-generate</code></td></tr>
+<tr><td>Engine version pin</td><td><code>ENGINE_VERSION</code> in <code>mod.config</code></td><td><code>engine.version</code> in <code>mod.yaml</code> with semver</td></tr>
+<tr><td>Engine management</td><td><code>fetch-engine.sh</code> downloads + compiles from source</td><td>Engine ships as binary crate, auto-resolved</td></tr>
+<tr><td>Build/run</td><td><code>Makefile</code> + shell scripts (requires Python, .NET)</td><td><code>ic</code> CLI — single Rust binary, zero dependencies</td></tr>
+<tr><td>Mod manifest</td><td><code>mod.yaml</code> in MiniYAML</td><td><code>mod.yaml</code> in real YAML with typed serde schema</td></tr>
+<tr><td>Validation</td><td><code>utility.sh --check-yaml</code></td><td><code>ic mod check</code> — YAML + Lua + WASM validation</td></tr>
+<tr><td>Packaging</td><td><code>packaging/</code> shell scripts → .exe/.app/.AppImage</td><td><code>ic mod package</code> + workshop publish</td></tr>
+<tr><td>Dedicated server</td><td><code>launch-dedicated.sh</code></td><td><code>ic mod server</code></td></tr>
+<tr><td>Directory layout</td><td>Convention-based (chrome/, rules/, maps/, etc.)</td><td>Adapted for three-tier model</td></tr>
+<tr><td>IDE support</td><td><code>.vscode/</code> in repo</td><td>VS Code extension with YAML schema + Lua LSP</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>What we don’t adapt (pain points we solve differently):</strong></p>
+<ul>
+<li>C# DLLs for custom traits → our Lua + WASM tiers are strictly better (no compilation, sandboxed, polyglot)</li>
+<li>GPL license contamination → WASM sandbox means mod code is isolated; engine license doesn’t infect mods</li>
+<li>MiniYAML → real YAML with <code>serde_yaml</code>, JSON Schema, standard linters</li>
+<li>No hot-reload → Lua and YAML hot-reload during <code>ic mod watch</code></li>
+<li>No workshop → built-in workshop with <code>ic mod publish</code></li>
+</ul>
+<p><strong>The <code>ic</code> CLI tool:</strong>
+A single Rust binary replacing OpenRA’s shell scripts + Makefile + Python dependencies:</p>
+<pre><code>ic mod init [template]     # scaffold from template
+ic mod check               # validate all mod content
+ic mod test                # headless smoke test
+ic mod run                 # launch game with mod
+ic mod server              # dedicated server
+ic mod package             # build distributables
+ic mod publish             # workshop upload
+ic mod watch               # hot-reload dev mode
+ic mod lint                # convention + llm: metadata checks
+ic mod update-engine       # bump engine version
+ic sdk                     # launch the visual SDK application (scenario editor, asset studio, campaign editor)
+ic sdk open [project]      # launch SDK with a specific mod/scenario
+ic replay parse [file]     # extract replay data to structured output (JSON/CSV) — enables community stats sites,
+                           #   tournament analysis, anti-cheat review (inspired by Valve's csgo-demoinfo)
+ic replay inspect [file]   # summary view: players, map, duration, outcome, desync status
+ic replay verify [file]    # verify relay signature chain + integrity (see 06-SECURITY.md)
+</code></pre>
+<blockquote>
+<p><strong>CLI design principle (from Fossilize):</strong> Each subcommand does one focused thing well — validate, convert, inspect, verify. Valve’s Fossilize toolchain (<code>fossilize-replay</code>, <code>fossilize-merge</code>, <code>fossilize-convert</code>, <code>fossilize-list</code>) demonstrates that a family of small, composable CLI tools is more useful than a monolithic Swiss Army knife. The <code>ic</code> CLI follows this pattern: <code>ic mod check</code> validates, <code>ic mod convert</code> converts formats, <code>ic replay parse</code> extracts data, <code>ic replay inspect</code> summarizes. Each subcommand is independently useful and composable via shell pipelines. See <code>research/valve-github-analysis.md</code> § 3.3 and § 6.2.</p>
+</blockquote>
+<p><strong>Mod templates (built-in):</strong></p>
+<ul>
+<li><code>data-mod</code> — YAML-only balance/cosmetic mods</li>
+<li><code>scripted-mod</code> — missions and custom game modes (YAML + Lua)</li>
+<li><code>total-conversion</code> — full layout with WASM scaffolding</li>
+<li><code>map-pack</code> — map collections</li>
+<li><code>asset-pack</code> — sprites, sounds, video packs</li>
+</ul>
+<p><strong>Rationale:</strong></p>
+<ul>
+<li>OpenRA’s SDK validates the template-project approach — modders want a turnkey starting point</li>
+<li>Engine version pinning is essential — mods break when engine updates; semver solves this cleanly</li>
+<li>A CLI tool is more portable, discoverable, and maintainable than shell scripts + Makefiles</li>
+<li>Workshop integration from the CLI closes the “last mile” — OpenRA modders must manually distribute their work</li>
+<li>The three-tier modding system means most modders never compile anything — <code>ic mod init data-mod</code> gives you a working mod instantly</li>
+</ul>
+<p><strong>Alternatives considered:</strong></p>
+<ul>
+<li>Shell scripts like OpenRA (rejected — cross-platform pain, Python/shell dependencies, fragile)</li>
+<li>Cargo workspace (rejected — mods aren’t Rust crates; YAML/Lua mods have nothing to compile)</li>
+<li>In-engine mod editor only (rejected — power users want filesystem access and version control)</li>
+<li>No SDK, just documentation (rejected — OpenRA proves that a template project dramatically lowers the barrier)</li>
+</ul>
+<p><strong>Phase:</strong> Phase 6a (Core Modding + Scenario Editor). CLI prototype in Phase 4 (for Lua scripting development).</p>
+<hr>
+<h3 id="d021--branching-campaign-system-with-persistent-state"><a class="header" href="#d021--branching-campaign-system-with-persistent-state">D021 — Branching Campaign System with Persistent State</a></h3>
+<p><strong>Decision:</strong> Campaigns are directed graphs of missions with named outcomes, branching paths, persistent unit rosters, and continuous flow — not linear sequences with binary win/lose. Failure doesn’t end the campaign; it branches to a different path. Unit state, equipment, and story flags persist across missions.</p>
+<p><strong>Context:</strong> OpenRA’s campaigns are disconnected — each mission is standalone, you exit to menu after completion, there’s no sense of flow or consequence. The original Red Alert had linear progression with FMV briefings but no branching or state persistence. Games like Operation Flashpoint: Cold War Crisis showed that branching outcomes create dramatically more engaging campaigns, and OFP: Resistance proved that persistent unit rosters (surviving soldiers, captured equipment, accumulated experience) create deep emotional investment.</p>
+<p><strong>Key design points:</strong></p>
+<ol>
+<li>
+<p><strong>Campaign graph:</strong> Missions are nodes in a directed graph. Each mission has named outcomes (not just win/lose). Each outcome maps to a next-mission node, forming branches and convergences. The graph is defined in YAML and validated at load time.</p>
+</li>
+<li>
+<p><strong>Named outcomes:</strong> Lua scripts signal completion with a named key: <code>Campaign.complete("victory_bridge_intact")</code>. The campaign YAML maps each outcome to the next mission. This enables rich branching: “Won cleanly” → easy path, “Won with heavy losses” → harder path, “Failed” → fallback mission.</p>
+</li>
+<li>
+<p><strong>Failure continues the game:</strong> A <code>defeat</code> outcome is just another edge in the graph. The campaign designer decides what happens: retry with fewer resources, branch to a retreating mission, skip ahead with consequences, or even “no game over” campaigns where the story always continues.</p>
+</li>
+<li>
+<p><strong>Persistent unit roster (OFP: Resistance model):</strong></p>
+<ul>
+<li>Surviving units carry forward between missions (configurable per transition)</li>
+<li>Units accumulate veterancy across missions — a veteran tank from mission 1 stays veteran in mission 5</li>
+<li>Dead units are gone permanently — losing veterans hurts</li>
+<li>Captured enemy equipment joins a persistent equipment pool</li>
+<li>Five carryover modes: <code>none</code>, <code>surviving</code>, <code>extracted</code> (only units in evac zone), <code>selected</code> (Lua picks), <code>custom</code> (full Lua control)</li>
+</ul>
+</li>
+<li>
+<p><strong>Story flags:</strong> Arbitrary key-value state writable from Lua, readable in subsequent missions. Enables conditional content: “If the radar was captured in mission 2, it provides intel in mission 4.”</p>
+</li>
+<li>
+<p><strong>Campaign state is serializable:</strong> Fits D010 (snapshottable sim state). Save games capture full campaign progress including roster, flags, and path taken. Replays can replay entire campaign runs.</p>
+</li>
+<li>
+<p><strong>Continuous flow:</strong> Briefing → mission → debrief → next mission. No exit to menu between levels unless the player explicitly quits.</p>
+</li>
+<li>
+<p><strong>Campaign mission transitions:</strong> When the sim ends and the next mission’s assets need to load, the player never sees a blank screen or a generic loading bar. The transition sequence is: sim ends → debrief intermission displays (already loaded, zero wait) → background asset loading begins for the next mission → briefing intermission displays (runs concurrently with loading) → when loading completes and the player clicks “Begin Mission,” gameplay starts instantly. If the player clicks before loading finishes, a non-intrusive progress indicator appears at the bottom of the briefing screen (“Preparing battlefield… 87%”) — the briefing remains interactive, the player can re-read text or review the roster while waiting. For missions with cinematic intros (Video Playback module), the video plays while assets load in the background — by the time the cutscene ends, the mission is ready. This means campaign transitions feel like <em>narrative beats</em>, not technical interruptions. The only time a traditional loading screen appears is on first mission launch (cold start) or when asset size vastly exceeds available memory — and even then, the loading screen is themed to the campaign (campaign-defined background image, faction logo, loading tip text from <code>loading_tips.yaml</code>).</p>
+</li>
+<li>
+<p><strong>Credits sequence:</strong> The final campaign node can chain to a Credits intermission (see D038 § Intermission Screens). A credits sequence is defined per campaign — the RA1 game module ships with credits matching the original game’s style (scrolling text over a background, Hell March playing). Modders define their own credits via the Credits intermission template or a <code>credits.yaml</code> file. Credits are skippable (press Escape or click) but play by default — respecting the work of everyone who contributed to the campaign.</p>
+</li>
+<li>
+<p><strong>Narrative identity (Principle #20).</strong> Briefings, debriefs, character dialogue, and mission framing follow the C&amp;C narrative pillars: earnest commitment to the world, larger-than-life characters, quotable lines, and escalating stakes. Even procedurally generated campaigns (D016) are governed by the “C&amp;C Classic” narrative DNA rules. See <a href="13-PHILOSOPHY.html">13-PHILOSOPHY.md</a> § Principle 20 and D016 § “C&amp;C Classic — Narrative DNA.”</p>
+</li>
+</ol>
+<p><strong>Rationale:</strong></p>
+<ul>
+<li>OpenRA’s disconnected missions are its single biggest single-player UX failure — universally cited in community feedback</li>
+<li>OFP proved persistent rosters create investment: players restart missions to save a veteran soldier</li>
+<li>Branching eliminates the frustration of replaying the same mission on failure — the campaign adapts</li>
+<li>YAML graph definition is accessible to modders (Tier 1) and LLM-generable</li>
+<li>Lua campaign API enables complex state logic while staying sandboxed</li>
+<li>The same system works for hand-crafted campaigns, modded campaigns, and LLM-generated campaigns</li>
+</ul>
+<p><strong>Alternatives considered:</strong></p>
+<ul>
+<li>Linear mission sequence like RA1 (rejected — primitive, no replayability, failure is frustrating)</li>
+<li>Disconnected missions like OpenRA (rejected — the specific problem we’re solving)</li>
+<li>Full open-world (rejected — scope too large, not appropriate for RTS)</li>
+<li>Only branching on win/lose (rejected — named outcomes are trivially more expressive with no added complexity)</li>
+<li>No unit persistence (rejected — OFP: Resistance proves this is the feature that creates campaign investment)</li>
+</ul>
+<p><strong>Phase:</strong> Phase 4 (AI &amp; Single Player). Campaign graph engine and Lua Campaign API are core Phase 4 deliverables. The visual Campaign Editor in D038 (Phase 6b) builds on this system — D021 provides the sim-side engine, D038 provides the visual authoring tools.</p>
+<hr>
+<h3 id="d022--dynamic-weather-with-terrain-surface-effects"><a class="header" href="#d022--dynamic-weather-with-terrain-surface-effects">D022 — Dynamic Weather with Terrain Surface Effects</a></h3>
+<p><strong>Decision:</strong> Weather transitions dynamically during gameplay via a deterministic state machine, and terrain textures visually respond to weather — snow accumulates on the ground, rain darkens/wets surfaces, sunshine dries them out. Terrain surface state optionally affects gameplay (movement penalties on snow/ice/mud).</p>
+<p><strong>Context:</strong> The base weather system (static per-mission, GPU particles + sim modifiers) provides atmosphere but doesn’t evolve. Real-world weather changes. A mission that starts sunny and ends in a blizzard is vastly more dramatic — and strategically different — than one where weather is set-and-forget.</p>
+<p><strong>Key design points:</strong></p>
+<ol>
+<li>
+<p><strong>Weather state machine (sim-side):</strong> <code>WeatherState</code> resource tracks current type, intensity (fixed-point <code>0..1024</code>), and transition progress. Three schedule modes: <code>cycle</code> (deterministic round-robin), <code>random</code> (seeded from match, deterministic), <code>scripted</code> (Lua-driven only). State machine graph and transition weights defined in map YAML.</p>
+</li>
+<li>
+<p><strong>Terrain surface state (sim-side):</strong> <code>TerrainSurfaceGrid</code> — a per-cell grid of <code>SurfaceCondition { snow_depth, wetness }</code>. Updated every tick by <code>weather_surface_system</code>. Fully deterministic, derives <code>Serialize, Deserialize</code> for snapshots. When <code>sim_effects: true</code>, surface state modifies movement: deep snow slows infantry/vehicles, ice makes water passable, mud bogs wheeled units.</p>
+</li>
+<li>
+<p><strong>Terrain texture effects (render-side):</strong> Three quality tiers — palette tinting (free, no assets needed), overlay sprites (moderate, one extra pass), shader blending (GPU blend between base + weather variant textures). Selectable via <code>RenderSettings</code>. Accumulation is gradual and spatially non-uniform (snow appears on edges/roofs first, puddles in low cells first).</p>
+</li>
+<li>
+<p><strong>Composes with day/night and seasons:</strong> Overcast days are darker, rain at night is near-black with lightning flashes. Map <code>temperature.base</code> controls whether precipitation is rain or snow. Arctic/desert/tropical maps set different defaults.</p>
+</li>
+<li>
+<p><strong>Fully moddable:</strong> YAML defines schedules and surface rates (Tier 1). Lua triggers transitions and queries surface state (Tier 2). WASM adds custom weather types like ion storms (Tier 3).</p>
+</li>
+</ol>
+<p><strong>Rationale:</strong></p>
+<ul>
+<li>No other C&amp;C engine has dynamic weather that affects terrain visuals — unique differentiator</li>
+<li>Deterministic state machine preserves lockstep (same seed = same weather progression on all clients)</li>
+<li>Sim/render split respected: surface state is sim (deterministic), visual blending is render (cosmetic)</li>
+<li>Palette tinting tier ensures even low-end devices and WASM can show weather effects</li>
+<li>Gameplay effects are optional per-map — purely cosmetic weather is valid</li>
+<li>Surface state fits the snapshot system (D010) for save games and replays</li>
+<li>Weather schedules are LLM-generable — “generate a mission where weather gets progressively worse”</li>
+</ul>
+<p><strong>Performance:</strong></p>
+<ul>
+<li>Palette tinting: zero extra draw calls, negligible GPU cost</li>
+<li>Surface state grid: ~2 bytes per cell (compact fixed-point) — a 128×128 map is 32KB</li>
+<li><code>weather_surface_system</code> is O(cells) but amortized via spatial quadrant rotation: the map is partitioned into 4 quadrants and one quadrant is updated per tick, achieving 4× throughput with constant 1-tick latency. This is a sim-only strategy — it does not depend on camera position (the sim has no camera awareness).</li>
+<li>Follows efficiency pyramid: algorithmic (grid lookup) → cache-friendly (contiguous array) → amortized</li>
+</ul>
+<p><strong>Alternatives considered:</strong></p>
+<ul>
+<li>Static weather only (rejected — misses dramatic potential, no terrain response)</li>
+<li>Client-side random weather (rejected — breaks deterministic sim, desync risk)</li>
+<li>Full volumetric weather simulation (rejected — overkill, performance cost, not needed for isometric RTS)</li>
+<li>Always-on sim effects (rejected — weather-as-decoration is valid for casual/modded games)</li>
+</ul>
+<p><strong>Phase:</strong> Phase 3 (visual effects) for render-side; Phase 2 (sim implementation) for weather state machine and surface grid.</p>
+<hr>
+<h3 id="d023--openra-vocabulary-compatibility-layer"><a class="header" href="#d023--openra-vocabulary-compatibility-layer">D023 — OpenRA Vocabulary Compatibility Layer</a></h3>
+<p><strong>Decision:</strong> Accept OpenRA trait names and YAML keys as aliases in our YAML parser. Both OpenRA-style names (e.g., <code>Armament</code>, <code>Valued</code>, <code>Buildable</code>) and IC-native names (e.g., <code>combat</code>, <code>buildable.cost</code>) resolve to the same ECS components. Unconverted OpenRA YAML loads with a deprecation warning.</p>
+<p><strong>Context:</strong> The biggest migration barrier for the 80% YAML tier isn’t missing features — it’s naming divergence. Every renamed concept multiplies across thousands of mod files. OpenRA modders have years of muscle memory with trait names and YAML keys. Forcing renames creates friction that discourages adoption.</p>
+<p><strong>Key design points:</strong></p>
+<ol>
+<li><strong>Alias registry:</strong> <code>ra-formats</code> maintains a compile-time map of OpenRA trait names to IC component names. <code>Armament</code> → <code>combat</code>, <code>Valued</code> → <code>buildable.cost</code>, <code>AttackOmni</code> → <code>combat.mode: omni</code>, etc.</li>
+<li><strong>Bi-directional:</strong> The alias registry is used during YAML parsing (OpenRA names accepted) and by the <code>miniyaml2yaml</code> converter (produces IC-native names). Both representations are valid.</li>
+<li><strong>Deprecation warnings:</strong> When an OpenRA alias is used, the parser emits a warning: <code>"Armament" is accepted but deprecated; prefer "combat"</code>. Warnings can be suppressed per-mod via <code>mod.yaml</code> setting.</li>
+<li><strong>No runtime cost:</strong> Aliases resolve during YAML deserialization (load time only). The ECS never sees alias names — only canonical IC component types.</li>
+</ol>
+<p><strong>Rationale:</strong></p>
+<ul>
+<li>Reduces the YAML migration from “convert everything” to “drop in and play, clean up later”</li>
+<li>Respects invariant #8 (“the community’s existing work is sacred”) at the data vocabulary layer, not just binary formats</li>
+<li>Zero runtime cost — purely a deserialization convenience</li>
+<li>Makes <code>miniyaml2yaml</code> output immediately usable even without manual cleanup</li>
+<li>Modders can learn IC-native names gradually as they edit files</li>
+</ul>
+<p><strong>Alternatives considered:</strong></p>
+<ul>
+<li>IC-native names only (rejected — unnecessary migration barrier for thousands of existing mod files)</li>
+<li>Adopt OpenRA’s names wholesale (rejected — some OpenRA names are poorly chosen or C#-specific; IC benefits from cleaner naming)</li>
+<li>Converter handles everything (rejected — modders still need to re-learn names for new content; aliases let them use familiar names forever)</li>
+</ul>
+<p><strong>Phase:</strong> Phase 0 (alias registry built alongside <code>ra-formats</code> YAML parser). Phase 6a (deprecation warnings configurable in <code>mod.yaml</code>).</p>
+<hr>
+<h3 id="d024--lua-api-superset-of-openra"><a class="header" href="#d024--lua-api-superset-of-openra">D024 — Lua API Superset of OpenRA</a></h3>
+<p><strong>Decision:</strong> Iron Curtain’s Lua scripting API is a strict superset of OpenRA’s 16 global objects. Same function names, same parameter signatures, same return types. OpenRA Lua missions run unmodified. IC then extends with additional functionality.</p>
+<p><strong>Context:</strong> OpenRA has a mature Lua API used in hundreds of campaign missions across all C&amp;C game mods. Combined Arms alone has 34 Lua-scripted missions. The mod migration doc (12-MOD-MIGRATION.md) identified “API compatibility shim” as a migration requirement — this decision elevates it from “nice to have” to “hard requirement.”</p>
+<p><strong>OpenRA’s 16 globals (all must work identically in IC):</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Global</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>Actor</code></td><td>Create, query, manipulate actors</td></tr>
+<tr><td><code>Map</code></td><td>Terrain, bounds, spatial queries</td></tr>
+<tr><td><code>Trigger</code></td><td>Event hooks (OnKilled, AfterDelay)</td></tr>
+<tr><td><code>Media</code></td><td>Audio, video, text display</td></tr>
+<tr><td><code>Player</code></td><td>Player state, resources, diplomacy</td></tr>
+<tr><td><code>Reinforcements</code></td><td>Spawn units at edges/drops</td></tr>
+<tr><td><code>Camera</code></td><td>Pan, position, shake</td></tr>
+<tr><td><code>DateTime</code></td><td>Game time queries</td></tr>
+<tr><td><code>Objectives</code></td><td>Mission objective management</td></tr>
+<tr><td><code>Lighting</code></td><td>Global lighting control</td></tr>
+<tr><td><code>UserInterface</code></td><td>UI text, notifications</td></tr>
+<tr><td><code>Utils</code></td><td>Math, random, table utilities</td></tr>
+<tr><td><code>Beacon</code></td><td>Map beacon management</td></tr>
+<tr><td><code>Radar</code></td><td>Radar ping control</td></tr>
+<tr><td><code>HSLColor</code></td><td>Color construction</td></tr>
+<tr><td><code>WDist</code></td><td>Distance unit conversion</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>IC extensions (additions, not replacements):</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Global</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>Campaign</code></td><td>Branching campaign state (D021)</td></tr>
+<tr><td><code>Weather</code></td><td>Dynamic weather control (D022)</td></tr>
+<tr><td><code>Layer</code></td><td>Runtime layer activation/deaction</td></tr>
+<tr><td><code>Region</code></td><td>Named region queries</td></tr>
+<tr><td><code>Var</code></td><td>Mission/campaign variable access</td></tr>
+<tr><td><code>Workshop</code></td><td>Mod metadata queries</td></tr>
+<tr><td><code>LLM</code></td><td>LLM integration hooks (Phase 7)</td></tr>
+<tr><td><code>Commands</code></td><td>Command registration for mods (D058)</td></tr>
+<tr><td><code>Ping</code></td><td>Typed tactical pings (D059)</td></tr>
+<tr><td><code>ChatWheel</code></td><td>Auto-translated phrase system (D059)</td></tr>
+<tr><td><code>Marker</code></td><td>Persistent tactical markers (D059)</td></tr>
+<tr><td><code>Chat</code></td><td>Programmatic chat messages (D059)</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Actor properties also match:</strong> Each actor reference exposes properties matching OpenRA’s property groups (<code>.Health</code>, <code>.Location</code>, <code>.Owner</code>, <code>.Move()</code>, <code>.Attack()</code>, <code>.Stop()</code>, <code>.Guard()</code>, <code>.Deploy()</code>, etc.) with identical semantics.</p>
+<p><strong>Rationale:</strong></p>
+<ul>
+<li>CA’s 34 missions + hundreds of community missions work on day one — no porting effort</li>
+<li>Reduces Lua migration from “moderate effort” to “zero effort” for standard missions</li>
+<li>IC’s extensions are additive — no conflicts, no breaking changes</li>
+<li>Modders who know OpenRA Lua immediately know IC Lua</li>
+<li>Future OpenRA missions created by the community are automatically IC-compatible</li>
+</ul>
+<p><strong>Alternatives considered:</strong></p>
+<ul>
+<li>Design our own API, provide shim (rejected — shim is always leaky, creates two mental models)</li>
+<li>Partial compatibility (rejected — partial breaks are worse than full breaks; either missions work or they don’t)</li>
+<li>No Lua compatibility (rejected — throws away hundreds of community missions for no gain)</li>
+</ul>
+<p><strong>Phase:</strong> Phase 4 (Lua scripting implementation). API surface documented during Phase 2 planning.</p>
+<hr>
+<h3 id="d025--runtime-miniyaml-loading"><a class="header" href="#d025--runtime-miniyaml-loading">D025 — Runtime MiniYAML Loading</a></h3>
+<p><strong>Decision:</strong> Support loading MiniYAML directly at runtime as a fallback format in <code>ra-formats</code>. When the engine encounters tab-indented files with <code>^</code> inheritance or <code>@</code> suffixes, it auto-converts in memory. The <code>miniyaml2yaml</code> CLI converter still exists for permanent migration, but is no longer a prerequisite for loading mods.</p>
+<p><strong>Revision of D003:</strong> D003 (“Real YAML, not MiniYAML”) remains the canonical format. All IC-native content uses standard YAML. D025 adds a compatibility loader — it does not change what IC produces, only what it accepts.</p>
+<p><strong>Key design points:</strong></p>
+<ol>
+<li><strong>Format detection:</strong> <code>ra-formats</code> checks the first few lines of each file. Tab-indented content with no YAML indicators triggers the MiniYAML parser path.</li>
+<li><strong>In-memory conversion:</strong> MiniYAML is parsed to an intermediate tree, then resolved to standard YAML structs. The result is identical to what <code>miniyaml2yaml</code> would produce.</li>
+<li><strong>Combined with D023:</strong> OpenRA trait name aliases (D023) apply after MiniYAML parsing — so the full chain is: MiniYAML → intermediate tree → alias resolution → typed Rust structs.</li>
+<li><strong>Performance:</strong> Conversion adds ~10-50ms per mod at load time (one-time cost). Cached after first load.</li>
+<li><strong>Warning output:</strong> Console logs <code>"Loaded MiniYAML file rules.yaml — consider converting to standard YAML with 'ic mod convert'"</code>.</li>
+</ol>
+<p><strong>Rationale:</strong></p>
+<ul>
+<li>Turns “migrate then play” into “play immediately, migrate when ready”</li>
+<li>Existing OpenRA mods become testable on IC within minutes, not hours</li>
+<li>Respects invariant #8 — the community’s existing work is sacred, including their file formats</li>
+<li>The converter CLI still exists for modders who want clean IC-native files</li>
+<li>No performance impact after initial load (conversion result is cached)</li>
+</ul>
+<p><strong>Alternatives considered:</strong></p>
+<ul>
+<li>Require pre-conversion (original plan — rejected as unnecessary friction; the converter runs in memory just as well as on disk)</li>
+<li>Support MiniYAML as a first-class format permanently (rejected — standard YAML is strictly better for tooling, validation, and editor support)</li>
+<li>Only support converted files (rejected — blocks quick experimentation and casual mod testing)</li>
+</ul>
+<p><strong>Phase:</strong> Phase 0 (MiniYAML parser already needed for <code>miniyaml2yaml</code>; making it a runtime loader is minimal additional work).</p>
+<hr>
+<h3 id="d026--openra-mod-manifest-compatibility"><a class="header" href="#d026--openra-mod-manifest-compatibility">D026 — OpenRA Mod Manifest Compatibility</a></h3>
+<p><strong>Decision:</strong> <code>ra-formats</code> can parse OpenRA’s <code>mod.yaml</code> manifest format and auto-map it to IC’s mod structure at load time. Combined with D023 (aliases), D024 (Lua API), and D025 (MiniYAML loading), this means a modder can point IC at an existing OpenRA mod directory and it loads — no restructuring needed.</p>
+<p><strong>Key design points:</strong></p>
+<ol>
+<li><strong>Manifest parsing:</strong> OpenRA’s <code>mod.yaml</code> declares <code>Packages</code>, <code>Rules</code>, <code>Sequences</code>, <code>Cursors</code>, <code>Chrome</code>, <code>Assemblies</code>, <code>ChromeLayout</code>, <code>Weapons</code>, <code>Voices</code>, <code>Notifications</code>, <code>Music</code>, <code>Translations</code>, <code>MapFolders</code>, <code>SoundFormats</code>, <code>SpriteFormats</code>. IC maps each section to its equivalent concept.</li>
+<li><strong>Directory convention mapping:</strong> OpenRA mods use <code>rules/</code>, <code>maps/</code>, <code>sequences/</code> etc. IC maps these to its own layout at load time without copying files.</li>
+<li><strong>Unsupported sections flagged:</strong> <code>Assemblies</code> (C# DLLs) cannot load — these are flagged as warnings listing which custom traits are unavailable and what WASM alternatives exist.</li>
+<li><strong>Partial loading:</strong> A mod with unsupported C# traits still loads — units using those traits get a visual placeholder and a “missing trait” debug overlay. The mod is playable with reduced functionality.</li>
+<li><strong><code>ic mod import</code>:</strong> CLI command that reads an OpenRA mod directory and generates an IC-native <code>mod.yaml</code> with proper structure, converting files to standard YAML and flagging C# dependencies for WASM migration.</li>
+</ol>
+<p><strong>Rationale:</strong></p>
+<ul>
+<li>Combined with D023/D024/D025, this completes the “zero-friction import” pipeline</li>
+<li>Modders can evaluate IC as a target without committing to migration</li>
+<li>Partial loading means even mods with C# dependencies are partially testable</li>
+<li>The <code>ic mod import</code> command provides a clean migration path when the modder is ready</li>
+<li>Validates our claim that “the community’s existing work is sacred”</li>
+</ul>
+<p><strong>Alternatives considered:</strong></p>
+<ul>
+<li>Require manual mod restructuring (rejected — unnecessary friction, blocks adoption)</li>
+<li>Only support IC mod format (rejected — makes evaluation impossible without migration effort)</li>
+<li>Full C# trait loading via .NET interop (rejected — violates D001/D002, reintroduces the problems Rust solves)</li>
+</ul>
+<p><strong>Phase:</strong> Phase 0 (manifest parsing) + Phase 6a (full <code>ic mod import</code> workflow).</p>
+<hr>
+<h3 id="d027--canonical-enum-compatibility-with-openra"><a class="header" href="#d027--canonical-enum-compatibility-with-openra">D027 — Canonical Enum Compatibility with OpenRA</a></h3>
+<p><strong>Decision:</strong> Use OpenRA’s canonical enum names for locomotor types, armor types, target types, damage states, and other enumerated values — or accept both OpenRA and IC-native names via the alias system (D023).</p>
+<p><strong>Specific enums aligned:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Enum Type</th><th>OpenRA Names</th><th>IC Accepts</th></tr>
+</thead>
+<tbody>
+<tr><td>Locomotor</td><td><code>Foot</code>, <code>Wheeled</code>, <code>Tracked</code>, <code>Float</code>, <code>Fly</code></td><td>Same (canonical)</td></tr>
+<tr><td>Armor</td><td><code>None</code>, <code>Light</code>, <code>Medium</code>, <code>Heavy</code>, <code>Wood</code>, <code>Concrete</code></td><td>Same (canonical)</td></tr>
+<tr><td>Target Type</td><td><code>Ground</code>, <code>Air</code>, <code>Water</code>, <code>Underground</code></td><td>Same (canonical)</td></tr>
+<tr><td>Damage State</td><td><code>Undamaged</code>, <code>Light</code>, <code>Medium</code>, <code>Heavy</code>, <code>Critical</code>, <code>Dead</code></td><td>Same (canonical)</td></tr>
+<tr><td>Stance</td><td><code>AttackAnything</code>, <code>Defend</code>, <code>ReturnFire</code>, <code>HoldFire</code></td><td>Same (canonical)</td></tr>
+<tr><td>UnitType</td><td><code>Building</code>, <code>Infantry</code>, <code>Vehicle</code>, <code>Aircraft</code>, <code>Ship</code></td><td>Same (canonical)</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Why this matters:</strong> The <code>Versus</code> damage table — which modders spend 80% of their balance time tuning — uses armor type names as keys. Locomotor types determine pathfinding behavior. Target types control weapon targeting. If these don’t match, every single weapon definition, armor table, and locomotor reference needs translation. By matching names, these definitions copy-paste directly.</p>
+<p><strong>Rationale:</strong></p>
+<ul>
+<li>Eliminates an entire category of conversion mapping</li>
+<li>Versus tables, weapon definitions, locomotor configs — all transfer without renaming</li>
+<li>OpenRA’s names are reasonable and well-known in the community</li>
+<li>No technical reason to rename these — they describe the same concepts</li>
+<li>Where IC needs additional values (e.g., <code>Hover</code>, <code>Amphibious</code>), they extend the enum without conflicting</li>
+</ul>
+<p><strong>Phase:</strong> Phase 2 (when enum types are formally defined in <code>ic-sim</code>).</p>
+<hr>
+<h3 id="d028--condition-and-multiplier-systems-as-phase-2-requirements"><a class="header" href="#d028--condition-and-multiplier-systems-as-phase-2-requirements">D028 — Condition and Multiplier Systems as Phase 2 Requirements</a></h3>
+<p><strong>Decision:</strong> The condition system and multiplier system identified as P0 critical gaps in <code>11-OPENRA-FEATURES.md</code> are promoted to hard Phase 2 exit criteria. Phase 2 cannot ship without both systems implemented and tested.</p>
+<p><strong>What this adds to Phase 2:</strong></p>
+<ol>
+<li>
+<p><strong>Condition system:</strong></p>
+<ul>
+<li><code>Conditions</code> component: <code>HashMap&lt;ConditionId, u32&gt;</code> (ref-counted named conditions per entity)</li>
+<li>Condition sources: <code>GrantConditionOnMovement</code>, <code>GrantConditionOnDamageState</code>, <code>GrantConditionOnDeploy</code>, <code>GrantConditionOnAttack</code>, <code>GrantConditionOnTerrain</code>, <code>GrantConditionOnVeterancy</code> — exposed in YAML</li>
+<li>Condition consumers: any component field can declare <code>requires:</code> or <code>disabled_by:</code> conditions</li>
+<li>Runtime: systems check <code>conditions.is_active("deployed")</code> via fast bitset or hash lookup</li>
+</ul>
+</li>
+<li>
+<p><strong>Multiplier system:</strong></p>
+<ul>
+<li><code>StatModifiers</code> component: per-entity stack of <code>(source, stat, modifier_value, condition)</code></li>
+<li>Every numeric stat (speed, damage, range, reload, build time, build cost, sight range, etc.) resolves through the modifier stack</li>
+<li>Modifiers from: veterancy, terrain, crates, conditions, player handicaps</li>
+<li>Fixed-point multiplication (no floats)</li>
+<li>YAML-configurable: modders add multipliers without code</li>
+</ul>
+</li>
+<li>
+<p><strong>Full damage pipeline:</strong></p>
+<ul>
+<li>Armament → Projectile entity → travel → impact → Warhead(s) → armor-versus-weapon table → DamageMultiplier resolution → Health reduction</li>
+<li>Composable warheads: each weapon can trigger multiple warheads (damage + condition + terrain effect)</li>
+</ul>
+</li>
+</ol>
+<p><strong>Rationale:</strong></p>
+<ul>
+<li>Without conditions, 80% of OpenRA YAML mods cannot express their behavior at all — conditions are the fundamental modding primitive</li>
+<li>Without multipliers, veterancy/crates/terrain bonuses don’t work — critical gameplay systems are broken</li>
+<li>Without the full damage pipeline, weapons are simplistic and balance modding is impossible</li>
+<li>These three systems are the foundation that P1–P3 features build on (stealth, veterancy, transport, support powers all use conditions and multipliers)</li>
+<li>Promoting from “identified gap” to “exit criteria” ensures they’re not deferred</li>
+</ul>
+<p><strong>Prior art — Unciv’s “Uniques” system:</strong> The open-source Civilization V reimplementation <a href="https://github.com/yairm210/Unciv">Unciv</a> independently arrived at a declarative conditional modifier DSL called <strong>Uniques</strong>. Every game effect — stat bonuses, abilities, terrain modifiers, era scaling — is expressed as a structured text string with <code>[parameters]</code> and <code>&lt;conditions&gt;</code>:</p>
+<pre><code>"[+15]% Strength &lt;when attacking&gt; &lt;vs [Armored] units&gt;"
+"[+1] Movement &lt;for [Mounted] units&gt;"
+"[+20]% Production &lt;when constructing [Military] units&gt; &lt;during [Golden Age]&gt;"
+</code></pre>
+<p>Key lessons for IC:</p>
+<ul>
+<li><strong>Declarative composition eliminates code.</strong> Unciv’s ~600 unique types cover virtually all Civ V mechanics without per-mechanic code. Modders combine parameters and conditions freely — the engine resolves the modifier stack.</li>
+<li><strong>Typed filters replace magic strings.</strong> Unciv defines filter types (unit type, terrain, building, tech, era, resource) with formal matching rules. IC’s attribute tags and condition system should adopt similarly typed filter categories.</li>
+<li><strong>Conditional stacking is the modding primitive.</strong> The pattern <code>effect [magnitude] &lt;condition₁&gt; &lt;condition₂&gt;</code> maps directly to IC’s <code>StatModifiers</code> component — each unique becomes a <code>(source, stat, modifier_value, condition)</code> tuple. D028’s condition system is the right foundation; the Unciv pattern validates extending it with a YAML surface syntax (see <code>04-MODDING.md</code> § “Conditional Modifiers”).</li>
+<li><strong>GitHub-as-Workshop works at scale.</strong> Unciv’s mod ecosystem (~400 mods) runs on plain GitHub repos with JSON rulesets. This validates IC’s Workshop design (federated registry with Git-compatible distribution) and suggests that low-friction plain-data mods drive adoption more than scripting power.</li>
+</ul>
+<p><strong>Phase:</strong> Phase 2 (hard exit criteria — no Phase 3 starts without these).</p>
+<hr>
+<h3 id="d029--cross-game-component-library-phase-2-targets"><a class="header" href="#d029--cross-game-component-library-phase-2-targets">D029 — Cross-Game Component Library (Phase 2 Targets)</a></h3>
+<p><strong>Decision:</strong> The seven first-party component systems identified in <code>12-MOD-MIGRATION.md</code> (from Combined Arms and Remastered case studies) are Phase 2 targets. They are high priority and independently scoped — any that don’t land by Phase 2 exit are early Phase 3 work, not deferred indefinitely. (The D028 systems — conditions, multipliers, damage pipeline — are the hard Phase 2 gate; see <code>08-ROADMAP.md</code> § Phase 2 exit criteria.)</p>
+<p><strong>The seven systems:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>System</th><th>Needed For</th><th>Phase 2 Scope</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Mind Control</strong></td><td>CA (Yuri), RA2 game module, Scrin</td><td>Controller/controllable components, capacity limits, override</td></tr>
+<tr><td><strong>Carrier/Spawner</strong></td><td>CA, RA2 (Aircraft Carrier, Kirov drones)</td><td>Master/slave with respawn, recall, autonomous attack</td></tr>
+<tr><td><strong>Teleport Networks</strong></td><td>CA, Nod tunnels (TD/TS), Chronosphere</td><td>Multi-node network with primary exit designation</td></tr>
+<tr><td><strong>Shield System</strong></td><td>CA, RA2 force shields, Scrin</td><td>Absorb-before-health, recharge timer, depletion</td></tr>
+<tr><td><strong>Upgrade System</strong></td><td>CA, C&amp;C3 game module</td><td>Per-unit tech research via building, condition grants</td></tr>
+<tr><td><strong>Delayed Weapons</strong></td><td>CA (radiation, poison), RA2 (terror drones)</td><td>Timer-attached effects on targets</td></tr>
+<tr><td><strong>Dual Asset Rendering</strong></td><td>Remastered recreation, HD mod packs</td><td>Superseded by the Resource Pack system (<code>04-MODDING.md</code> § “Resource Packs”) which generalizes this to N asset tiers, not just two. Phase 2 scope: <code>ic-render</code> supports runtime-switchable asset source per entity; Resource Pack manifests resolve at load time.</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Evidence from OpenRA mod ecosystem:</strong> Analysis of six major OpenRA community mods (see <code>research/openra-mod-architecture-analysis.md</code> and <code>research/openra-ra2-mod-architecture.md</code>) validates and extends this list. Cross-game component reuse is the most consistent pattern across mods — the same mechanics appear independently in 3–5 mods each:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Component</th><th>Mods Using It</th><th>Notes</th></tr>
+</thead>
+<tbody>
+<tr><td>Mind Control</td><td>RA2, Romanovs-Vengeance</td><td>MindController/MindControllable with capacity limits, DiscardOldest policy, ArcLaserZap visual</td></tr>
+<tr><td>Carrier/Spawner</td><td>RA2, OpenHV, OpenSA</td><td>BaseSpawnerParent→CarrierParent hierarchy; OpenHV uses for drone carriers; OpenSA for colony spawning</td></tr>
+<tr><td>Infection</td><td>RA2, Romanovs-Vengeance</td><td>InfectableInfo with damage/kill triggers</td></tr>
+<tr><td>Disguise/Mirage</td><td>RA2, Romanovs-Vengeance</td><td>MirageInfo with configurable reveal triggers (attack, damage, deploy, unload, infiltrate, heal)</td></tr>
+<tr><td>Temporal Weapons</td><td>RA2, Romanovs-Vengeance</td><td>ChronoVortexInfo with return-to-start mechanics</td></tr>
+<tr><td>Radiation</td><td>RA2</td><td>World-level TintedCellsLayer with sparse storage and logarithmic decay</td></tr>
+<tr><td>Hacking</td><td>OpenHV</td><td>HackerInfo with delay, condition grant on target</td></tr>
+<tr><td>Periodic Discharge</td><td>OpenHV</td><td>PeriodicDischargeInfo with damage/effects on timer</td></tr>
+<tr><td>Colony Capture</td><td>OpenSA</td><td>ColonyBit with conversion mechanics</td></tr>
+</tbody>
+</table>
+</div>
+<p>This validates that IC’s seven systems are necessary but reveals two additional patterns that appear cross-game: <strong>infection</strong> (delayed damage/conversion — distinct from “delayed weapons” in that the infected unit carries the effect) and <strong>disguise/mirage</strong> (appearance substitution with configurable reveal triggers). These are candidates for promotion from WASM-only to first-party components.</p>
+<p><strong>Rationale:</strong></p>
+<ul>
+<li>These aren’t CA-specific — they’re needed for RA2 (the likely second game module). Building them in Phase 2 means they’re available when RA2 development starts.</li>
+<li>CA can migrate to IC the moment the engine is playable, rather than waiting for Phase 6a</li>
+<li>Without these as built-in components, CA modders would need to write WASM for basic mechanics like mind control — unacceptable for adoption</li>
+<li>The seven systems cover ~60% of CA’s custom C# code — collapsing the WASM tier from ~15% to ~5% of migration effort</li>
+<li>Each system is independently useful and well-scoped (2-5 days engineering each)</li>
+</ul>
+<p><strong>Impact on migration estimates:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Migration Tier</th><th>Before D029</th><th>After D029</th></tr>
+</thead>
+<tbody>
+<tr><td>Tier 1 (YAML)</td><td>~40%</td><td>~45%</td></tr>
+<tr><td>Built-in</td><td>~30%</td><td>~40%</td></tr>
+<tr><td>Tier 2 (Lua)</td><td>~15%</td><td>~10%</td></tr>
+<tr><td>Tier 3 (WASM)</td><td>~15%</td><td>~5%</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Phase:</strong> Phase 2 (sim-side components and dual asset rendering in <code>ic-render</code>).</p>
+<hr>
+<hr>
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../../decisions/09d/D013-pathfinding.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../../decisions/09d/D021-branching-campaigns.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../../decisions/09d/D013-pathfinding.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../../decisions/09d/D021-branching-campaigns.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../../mark-09e88c2c.min.js"></script>
+        <script src="../../searcher-c2a407aa.js"></script>
+
+        <script src="../../clipboard-1626706a.min.js"></script>
+        <script src="../../highlight-abc7f01d.js"></script>
+        <script src="../../book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

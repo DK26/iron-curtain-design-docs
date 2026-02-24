@@ -1,0 +1,371 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>D060 — Netcode Parameters - Iron Curtain — Design Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Design docs for a Rust-native Red Alert RTS engine">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../../css/general-2459343d.css">
+        <link rel="stylesheet" href="../../css/chrome-ae938929.css">
+        <link rel="stylesheet" href="../../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../../searchindex-61d2369b.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../../toc-1553b04b.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Iron Curtain — Design Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs/edit/main/src/decisions/09b/D060-netcode-params.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h2 id="d060-netcode-parameter-philosophy--automate-everything-expose-almost-nothing"><a class="header" href="#d060-netcode-parameter-philosophy--automate-everything-expose-almost-nothing">D060: Netcode Parameter Philosophy — Automate Everything, Expose Almost Nothing</a></h2>
+<p><strong>Status:</strong> Settled
+<strong>Decided:</strong> 2026-02
+<strong>Scope:</strong> <code>ic-net</code>, <code>ic-game</code> (lobby), D058 (console)
+<strong>Phase:</strong> Phase 5 (Multiplayer)</p>
+<h3 id="decision-capsule-llmrag-summary"><a class="header" href="#decision-capsule-llmrag-summary">Decision Capsule (LLM/RAG Summary)</a></h3>
+<ul>
+<li><strong>Status:</strong> Settled</li>
+<li><strong>Phase:</strong> Phase 5 (Multiplayer)</li>
+<li><strong>Canonical for:</strong> Netcode parameter exposure policy (what is automated vs player/admin-visible) and multiplayer UX philosophy for netcode tuning</li>
+<li><strong>Scope:</strong> <code>ic-net</code>, lobby/settings UI in <code>ic-game</code>, D058 command/cvar exposure policy</li>
+<li><strong>Decision:</strong> IC automates nearly all netcode parameters and exposes only a minimal, player-comprehensible surface, with adaptive systems handling most tuning internally.</li>
+<li><strong>Why:</strong> Manual netcode tuning hurts usability and fairness, successful games hide this complexity, and IC’s sub-tick/adaptive systems are designed to self-tune.</li>
+<li><strong>Non-goals:</strong> A comprehensive player-facing “advanced netcode settings” panel; exposing internal transport/latency/debug knobs as normal gameplay UX.</li>
+<li><strong>Invariants preserved:</strong> D006 pluggable netcode architecture remains intact; automation policy does not prevent internal default changes or future netcode replacement.</li>
+<li><strong>Defaults / UX behavior:</strong> Players see only understandable controls (e.g., game speed where applicable); admin/operator controls remain narrowly scoped; developer/debug knobs stay non-player-facing.</li>
+<li><strong>Security / Trust impact:</strong> Fewer exposed knobs reduces misconfiguration and exploit/abuse surface in competitive play.</li>
+<li><strong>Performance / Ops impact:</strong> Adaptive tuning lowers support burden and avoids brittle hand-tuned presets across diverse network conditions.</li>
+<li><strong>Public interfaces / types / commands:</strong> D058 cvar/command exposure policy, lobby parameter surfaces, internal adaptive tuning systems (see body for exact parameters)</li>
+<li><strong>Affected docs:</strong> <code>src/03-NETCODE.md</code>, <code>src/17-PLAYER-FLOW.md</code>, <code>src/06-SECURITY.md</code>, <code>src/decisions/09g-interaction.md</code></li>
+<li><strong>Revision note summary:</strong> None</li>
+<li><strong>Keywords:</strong> netcode parameters, automate everything, expose almost nothing, run-ahead, command delay, tick rate, cvars, multiplayer settings</li>
+</ul>
+<h3 id="context"><a class="header" href="#context">Context</a></h3>
+<p>Every lockstep RTS has tunable netcode parameters: tick rate, command delay (run-ahead), game speed, sync check frequency, stall policy, and more. The question is which parameters to expose to players, which to expose to server admins, and which to keep as fixed engine constants.</p>
+<p>This decision was informed by a cross-game survey of configurable netcode parameters — covering both RTS (C&amp;C Generals, StarCraft/Brood War, Spring Engine, 0 A.D., OpenTTD, Factorio, Age of Empires II, original Red Alert) and FPS (Counter-Strike 2) — plus analysis of IC’s own sub-tick and adaptive run-ahead systems.</p>
+<h3 id="the-pattern-successful-games-automate"><a class="header" href="#the-pattern-successful-games-automate">The Pattern: Successful Games Automate</a></h3>
+<p>Every commercially successful game in the survey converged on the same answer: <strong>automate netcode parameters, expose almost nothing to players.</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Game / Engine</th><th>Player-Facing Netcode Controls</th><th>Automatic Systems</th><th>Outcome</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>C&amp;C Generals/ZH</strong></td><td>Game speed only</td><td>Adaptive run-ahead (200-sample rolling RTT + FPS), synchronized <code>RUNAHEAD</code> command</td><td>Players never touch latency settings; game adapts silently</td></tr>
+<tr><td><strong>Factorio</strong></td><td>None (game speed implicit)</td><td>Latency hiding (always-on since 0.14.0, toggle removed), server never waits for slow clients</td><td>Removed the only toggle because “always on” was always better</td></tr>
+<tr><td><strong>Counter-Strike 2</strong></td><td>None</td><td>Sub-tick always-on; fixed 64 Hz tick (removed 64/128 choice from CS:GO)</td><td>Removed tick rate choice because sub-tick made it irrelevant</td></tr>
+<tr><td><strong>AoE II: DE</strong></td><td>Game speed only</td><td>Auto-adapts command delay based on connection quality</td><td>No exposed latency controls in ranked</td></tr>
+<tr><td><strong>Original Red Alert</strong></td><td>Game speed only</td><td>MaxAhead adapts automatically every 128 frames via host <code>TIMING</code> events</td><td>Players never interact with MaxAhead; formula-driven</td></tr>
+<tr><td><strong>StarCraft: Brood War</strong></td><td>Game speed + latency setting (Low/High/Extra High)</td><td>None (static command delay per setting)</td><td>Latency setting confuses new players; competitive play mandates “Low Latency”</td></tr>
+<tr><td><strong>Spring Engine</strong></td><td>Game speed (host) + LagProtection mode (server admin)</td><td>Dynamic speed adjustment based on CPU reporting; two speed control modes</td><td>More controls → more community complaints about netcode</td></tr>
+<tr><td><strong>0 A.D.</strong></td><td>None</td><td>None (hardcoded 200ms turns, no adaptive run-ahead, stalls for everyone)</td><td>Least adaptive → most stalling complaints</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>The correlation is clear:</strong> games that expose fewer netcode controls and invest in automatic adaptation have fewer player complaints and better perceived netcode quality. Games that expose latency settings (BW) or lack automatic adaptation (0 A.D.) have worse player experiences.</p>
+<h3 id="decision"><a class="header" href="#decision">Decision</a></h3>
+<p>IC adopts a <strong>three-tier exposure model</strong> for netcode parameters:</p>
+<h4 id="tier-1-player-facing-lobby-gui"><a class="header" href="#tier-1-player-facing-lobby-gui">Tier 1: Player-Facing (Lobby GUI)</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Setting</th><th>Values</th><th>Default</th><th>Who Sets</th><th>Scope</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Game Speed</strong></td><td>Slowest / Slower / Normal / Faster / Fastest</td><td>Slower (~15 tps)</td><td>Host (lobby)</td><td>Synced — all clients</td></tr>
+</tbody>
+</table>
+</div>
+<p>One setting. Game speed is the only parameter where player preference is legitimate (“I like slower, more strategic games” vs. “I prefer fast-paced gameplay”). In ranked play, game speed is server-enforced and not configurable.</p>
+<p>Game speed affects only the interval between sim ticks — system behavior is tick-count-based, so all game logic works identically at any speed. Single-player can change speed mid-game; multiplayer sets it in lobby. This matches how every C&amp;C game handled speed (see <code>02-ARCHITECTURE.md</code> § Game Speed).</p>
+<p><strong>Mobile tempo advisor compatibility (D065):</strong> Touch-specific “tempo comfort” recommendations are <strong>client/UI advisory only</strong>. They may highlight a recommended band (<code>slower</code>-<code>normal</code>, etc.) or warn a host that touch players may be overloaded, but they do not create a new authority path for speed selection. The host/queue-selected game speed remains the only synced value, and ranked speed remains server-enforced.</p>
+<h4 id="tier-2-advanced--console-power-users-d058"><a class="header" href="#tier-2-advanced--console-power-users-d058">Tier 2: Advanced / Console (Power Users, D058)</a></h4>
+<p>Available via console commands or <code>config.toml</code>. Not in the main GUI. Flagged with appropriate cvar flags:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Cvar</th><th>Type</th><th>Default</th><th>Flags</th><th>What It Does</th></tr>
+</thead>
+<tbody>
+<tr><td><code>net.sync_frequency</code></td><td>int</td><td>120</td><td><code>SERVER</code></td><td>Ticks between full state hash checks</td></tr>
+<tr><td><code>net.desync_debug_level</code></td><td>int</td><td>0</td><td><code>DEV_ONLY</code></td><td>0-3, controls desync diagnosis overhead (see <code>03-NETCODE.md</code> § Debug Levels)</td></tr>
+<tr><td><code>net.show_diagnostics</code></td><td>bool</td><td>false</td><td><code>PERSISTENT</code></td><td>Toggle network overlay (latency, jitter, packet loss, tick timing)</td></tr>
+<tr><td><code>net.visual_prediction</code></td><td>bool</td><td>true</td><td><code>DEV_ONLY</code></td><td>Client-side visual prediction; disabling useful only for testing perceived latency</td></tr>
+<tr><td><code>net.simulate_latency</code></td><td>int</td><td>0</td><td><code>DEV_ONLY</code></td><td>Artificial one-way latency in ms (debug builds only)</td></tr>
+<tr><td><code>net.simulate_loss</code></td><td>float</td><td>0.0</td><td><code>DEV_ONLY</code></td><td>Artificial packet loss percentage (debug builds only)</td></tr>
+<tr><td><code>net.simulate_jitter</code></td><td>int</td><td>0</td><td><code>DEV_ONLY</code></td><td>Artificial jitter in ms (debug builds only)</td></tr>
+</tbody>
+</table>
+</div>
+<p>These are diagnostic and testing tools, not gameplay knobs. The <code>DEV_ONLY</code> flag prevents them from affecting ranked play. The <code>SERVER</code> flag on <code>sync_frequency</code> ensures all clients use the same value.</p>
+<h4 id="tier-3-engine-constants-not-configurable-at-runtime"><a class="header" href="#tier-3-engine-constants-not-configurable-at-runtime">Tier 3: Engine Constants (Not Configurable at Runtime)</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Parameter</th><th>Value</th><th>Why Fixed</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Sim tick rate</strong></td><td>30 tps (33ms/tick)</td><td>In lockstep, ticks are synchronization barriers (collect orders → process → advance sim → exchange hashes), not just simulation steps. Higher rates multiply CPU cost (full ECS update per tick for 500+ units), network overhead (more sync barriers, larger run-ahead in ticks), and late-arrival risk — with no gameplay benefit. RTS units move cell-to-cell, not sub-millimeter. Visual interpolation makes 30 tps smooth at 60+ FPS render. Game speed multiplies the tick <em>interval</em>, not the tick <em>rate</em>. See <code>03-NETCODE.md</code> § “Why Sub-Tick Instead of a Higher Tick Rate”</td></tr>
+<tr><td><strong>Sub-tick ordering</strong></td><td>Always on</td><td>Zero cost (~4 bytes/order + one sort of ≤5 items); produces visibly fairer outcomes in simultaneous-action edge cases; CS2 proved universal acceptance; no reason to toggle</td></tr>
+<tr><td><strong>Adaptive run-ahead</strong></td><td>Always on</td><td>Generals proved this works over 20 years; adapts to both RTT and FPS; synchronized via network command</td></tr>
+<tr><td><strong>Timing feedback</strong></td><td>Always on</td><td>Client self-calibrates order submission timing based on relay feedback; DDNet-proven pattern</td></tr>
+<tr><td><strong>Stall policy</strong></td><td>Never stall (relay drops late orders)</td><td>Core architectural decision; stalling punishes honest players for one player’s bad connection</td></tr>
+<tr><td><strong>Anti-lag-switch</strong></td><td>Always on</td><td>Relay owns the clock; non-negotiable for competitive integrity</td></tr>
+<tr><td><strong>Visual prediction</strong></td><td>Always on</td><td>Factorio lesson — removed the toggle in 0.14.0 because always-on was always better; cosmetic only (sim unchanged)</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="sub-tick-is-not-optional"><a class="header" href="#sub-tick-is-not-optional">Sub-Tick Is Not Optional</a></h3>
+<p>Sub-tick order fairness (D008) is <strong>always-on</strong> — not a configurable feature:</p>
+<ul>
+<li><strong>Cost:</strong> ~4 bytes per order (<code>sub_tick_time: u32</code>) + one stable sort per tick of the orders array (typically 0-5 orders — negligible).</li>
+<li><strong>Benefit:</strong> Fairer resolution of simultaneous events (engineer races, crate grabs, simultaneous attacks). “I clicked first, I won” matches player intuition.</li>
+<li><strong>Player experience:</strong> The mechanism is automatic (players don’t configure timestamps), but the outcome is <strong>very visible</strong> — who wins the engineer race, who grabs the contested crate, whose attack order resolves first. These moments define close games. Without sub-tick, ties are broken by player ID (always unfair to higher-numbered players) or packet arrival order (network-dependent randomness). With sub-tick, the player who acted first wins. That’s a gameplay experience players notice and care about.</li>
+<li><strong>If made optional:</strong> Would require two code paths in the sim (sorted vs. unsorted order processing), a deterministic fallback that’s always unfair to higher-numbered players (player ID tiebreak), and a lobby setting nobody understands. Ranked would mandate one mode anyway. CS2 faced zero community backlash — no one asked for “the old random tie-breaking.”</li>
+</ul>
+<h3 id="rationale"><a class="header" href="#rationale">Rationale</a></h3>
+<p><strong>Netcode parameters are not like graphics settings.</strong> Graphics preferences are subjective (some players prefer performance over visual quality). Netcode parameters have objectively correct values — or correct adaptive algorithms. Exposing the knob creates confusion:</p>
+<ol>
+<li><strong>Support burden:</strong> “My game feels laggy” → “What’s your tick rate set to?” → “I changed some settings and now I don’t know which one broke it.”</li>
+<li><strong>False blame:</strong> Players blame netcode settings when the real issue is their WiFi or ISP. Exposing knobs gives them something to fiddle with instead of addressing the root cause.</li>
+<li><strong>Competitive fragmentation:</strong> If netcode parameters are configurable, tournaments must mandate specific values. Different communities pick different values. Replays from one community don’t feel the same on another’s settings.</li>
+<li><strong>Testing matrix explosion:</strong> Every configurable parameter multiplies the QA matrix. Sub-tick on/off × 5 sync frequencies × 3 debug levels = 30 configurations to test.</li>
+</ol>
+<p>The games that got this right — Generals, Factorio, CS2 — all converged on the same philosophy: <strong>invest in adaptive algorithms, not exposed knobs.</strong></p>
+<h3 id="alternatives-considered"><a class="header" href="#alternatives-considered">Alternatives Considered</a></h3>
+<ul>
+<li><strong>Expose tick rate as a lobby setting</strong> (rejected — unlike game speed, tick rate affects CPU cost, bandwidth, and netcode timing in ways players can’t reason about. If 30 tps causes issues on low-end hardware, that’s a game speed problem (lower speed = lower effective tps), not a tick rate problem.)</li>
+<li><strong>Expose latency setting like StarCraft BW</strong> (rejected — BW’s Low/High/Extra High was necessary because the game had no adaptive run-ahead. IC has adaptive run-ahead from Generals. The manual setting is replaced by a better automatic system.)</li>
+<li><strong>Expose sub-tick as a toggle</strong> (rejected — see analysis above. Zero-cost, always-fairer, produces visibly better outcomes in contested actions, CS2 precedent.)</li>
+<li><strong>Expose everything in “Advanced Network Settings” panel</strong> (rejected — the Spring Engine approach. More controls correlate with more complaints, not fewer.)</li>
+</ul>
+<h3 id="integration-with-existing-decisions"><a class="header" href="#integration-with-existing-decisions">Integration with Existing Decisions</a></h3>
+<ul>
+<li><strong>D006 (Pluggable Networking):</strong> The <code>NetworkModel</code> trait encapsulates all netcode behavior. Parameters are internal to each implementation, not exposed through the trait interface. <code>LocalNetwork</code> ignores network parameters entirely (zero delay, no adaptation needed). <code>RelayLockstepNetwork</code> manages run-ahead, timing feedback, and anti-lag-switch internally.</li>
+<li><strong>D007 (Relay Server):</strong> The relay’s tick deadline, strike thresholds, and session limits are server admin configuration, not player settings. These map to relay config files, not lobby GUI.</li>
+<li><strong>D008 (Sub-Tick Timestamps):</strong> Explicitly non-optional per this decision.</li>
+<li><strong>D015 (Efficiency-First Performance):</strong> Adaptive algorithms (run-ahead, timing feedback) are the “better algorithms” tier of the efficiency pyramid — they solve the problem before reaching for brute-force approaches.</li>
+<li><strong>D033 (Toggleable QoL):</strong> Game speed is the one netcode-adjacent setting that fits D033’s toggle model. All other netcode parameters are engineering constants, not user preferences.</li>
+<li><strong>D058 (Console):</strong> The <code>net.*</code> cvars defined above follow D058’s cvar system with appropriate flags. The diagnostic overlay (<code>net_diag</code>) is a console command, not a GUI setting.</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../../decisions/09b/D055-ranked-matchmaking.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../../decisions/09c-modding.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../../decisions/09b/D055-ranked-matchmaking.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../../decisions/09c-modding.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../../mark-09e88c2c.min.js"></script>
+        <script src="../../searcher-c2a407aa.js"></script>
+
+        <script src="../../clipboard-1626706a.min.js"></script>
+        <script src="../../highlight-abc7f01d.js"></script>
+        <script src="../../book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

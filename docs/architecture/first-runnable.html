@@ -1,0 +1,417 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>First Runnable — Bevy Loading RA Resources - Iron Curtain — Design Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Design docs for a Rust-native Red Alert RTS engine">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../css/general-2459343d.css">
+        <link rel="stylesheet" href="../css/chrome-ae938929.css">
+        <link rel="stylesheet" href="../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../searchindex-61d2369b.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc-1553b04b.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Iron Curtain — Design Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs/edit/main/src/architecture/first-runnable.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h2 id="first-runnable--bevy-loading-red-alert-resources"><a class="header" href="#first-runnable--bevy-loading-red-alert-resources">First Runnable — Bevy Loading Red Alert Resources</a></h2>
+<p>This section defines the concrete implementation path from “no code” to “a Bevy window rendering a Red Alert map with sprites on it.” It spans Phase 0 (format literacy) through Phase 1 (rendering slice) and produces the project’s first visible output — the milestone that proves the architecture works.</p>
+<h3 id="why-this-matters"><a class="header" href="#why-this-matters">Why This Matters</a></h3>
+<p>The first runnable is the “Hello World” of the engine. Until a Bevy window opens and renders actual Red Alert assets, everything is theory. This milestone:</p>
+<ul>
+<li><strong>Validates <code>ra-formats</code>.</strong> Can we actually parse <code>.mix</code>, <code>.shp</code>, <code>.pal</code>, <code>.tmp</code> into usable data?</li>
+<li><strong>Validates the Bevy integration.</strong> Can we get RA sprites into Bevy’s rendering pipeline?</li>
+<li><strong>Validates the isometric math.</strong> Can we convert grid coordinates to screen coordinates correctly?</li>
+<li><strong>Generates community interest.</strong> “Red Alert map rendered faithfully in Rust at 4K 144fps” is the first public proof that IC is real.</li>
+</ul>
+<h3 id="what-we-can-reference-from-existing-projects"><a class="header" href="#what-we-can-reference-from-existing-projects">What We CAN Reference From Existing Projects</a></h3>
+<p>We cannot copy code from OpenRA (C#) or the Remastered Collection (proprietary C# layer), but we can study their design decisions:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Source</th><th>What We Take</th><th>What We Don’t</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>EA Original RA (GPL)</strong></td><td>Format struct layouts (MIX header, SHP frame offsets, PAL 6-bit values), LCW/RLE decompression algorithms, integer math</td><td>Don’t copy the rendering code (VGA/DirectDraw). Don’t adopt the global-state architecture</td></tr>
+<tr><td><strong>Remastered (GPL C++ DLLs)</strong></td><td>HD asset pipeline concepts (how classic sprites map to HD equivalents), modernization approach</td><td>Don’t reference the proprietary C# layer or HD art assets. No GUI code — it’s Petroglyph’s C#</td></tr>
+<tr><td><strong>OpenRA (GPL)</strong></td><td>Map format, YAML rule structure, palette handling, sprite animation sequences, coordinate system conventions, cursor logic</td><td>Don’t copy C# rendering code verbatim. Don’t duplicate OpenRA’s Chrome UI system — build native Bevy UI</td></tr>
+<tr><td><strong>Bevy (MIT)</strong></td><td>Sprite batching, <code>TextureAtlas</code>, asset loading, camera transforms, <code>wgpu</code> render graph, ECS patterns</td><td>Bevy tells us <em>how</em> to render, not <em>what</em> — gameplay feel comes from RA source code, not Bevy docs</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="implementation-steps"><a class="header" href="#implementation-steps">Implementation Steps</a></h3>
+<h4 id="step-1-ra-formats--parse-everything-weeks-12"><a class="header" href="#step-1-ra-formats--parse-everything-weeks-12">Step 1: <code>ra-formats</code> — Parse Everything (Weeks 1–2)</a></h4>
+<p>Build the <code>ra-formats</code> crate to read all Red Alert binary formats. This is pure Rust with zero Bevy dependency — a standalone library that other tools could use.</p>
+<p><strong>Deliverables:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Parser</th><th>Input</th><th>Output</th><th>Reference</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>MIX archive</strong></td><td><code>.mix</code> file bytes</td><td>File index (CRC hash → offset/size pairs), extract any file by name</td><td>EA source <code>MIXFILE.CPP</code>: CRC hash table, two-tier (body/footer)</td></tr>
+<tr><td><strong>PAL palette</strong></td><td>256 × 3 bytes</td><td><code>[u8; 768]</code> with 6-bit→8-bit conversion (<code>value &lt;&lt; 2</code>)</td><td>EA source <code>PAL</code> format, <code>05-FORMATS.md</code> § PAL</td></tr>
+<tr><td><strong>SHP sprites</strong></td><td><code>.shp</code> file bytes</td><td><code>Vec&lt;Frame&gt;</code> with pixel data, width, height per frame. LCW/RLE decode</td><td>EA source <code>SHAPE.H</code>/<code>SHAPE.CPP</code>: <code>ShapeBlock_Type</code>, draw flags</td></tr>
+<tr><td><strong>TMP tiles</strong></td><td><code>.tmp</code> file bytes</td><td>Terrain tile images per theater (Temperate, Snow, Interior)</td><td>OpenRA’s template definitions + EA source</td></tr>
+<tr><td><strong>AUD audio</strong></td><td><code>.aud</code> file bytes</td><td>PCM samples. IMA ADPCM decompression via <code>IndexTable</code>/<code>DiffTable</code></td><td>EA source <code>AUDIO.CPP</code>, <code>05-FORMATS.md</code> § AUD</td></tr>
+<tr><td><strong>CLI inspector</strong></td><td>Any RA file or <code>.mix</code></td><td>Human-readable dump: file list, sprite frame count, palette preview</td><td><code>ic</code> CLI prototype: <code>ic dump &lt;file&gt;</code></td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Key implementation detail:</strong> MIX archives use a CRC32 hash of the filename (uppercased) as the lookup key — there’s no filename stored in the archive. <code>ra-formats</code> must include the hash function and a known-filename dictionary (from OpenRA’s <code>global.mix</code> filenames list) to resolve entries by name.</p>
+<p><strong>Test strategy:</strong> Parse every <code>.mix</code> from a stock Red Alert installation. Extract every <code>.shp</code> and verify frame counts match OpenRA’s <code>sequences/*.yaml</code>. Render every <code>.pal</code> as a 16×16 color grid PNG.</p>
+<h4 id="step-2-bevy-window--one-sprite-week-3"><a class="header" href="#step-2-bevy-window--one-sprite-week-3">Step 2: Bevy Window + One Sprite (Week 3)</a></h4>
+<p>The “Hello RA” moment — a Bevy window opens and displays a single Red Alert sprite with the correct palette applied.</p>
+<p><strong>What this proves:</strong> <code>ra-formats</code> output can flow into Bevy’s <code>Image</code> / <code>TextureAtlas</code> pipeline. Palette-indexed sprites render correctly on a GPU.</p>
+<p><strong>Implementation:</strong></p>
+<ol>
+<li>Load <code>conquer.mix</code> → extract <code>e1.shp</code> (rifle infantry) and <code>temperat.pal</code></li>
+<li>Convert SHP frames to RGBA pixels by looking up each palette index in the <code>.pal</code> → produce a Bevy <code>Image</code></li>
+<li>Build a <code>TextureAtlas</code> from the frame images (Bevy’s sprite sheet system)</li>
+<li>Spawn a Bevy <code>SpriteSheetBundle</code> entity and animate through the idle frames</li>
+<li>Display in a Bevy window with a simple orthographic camera</li>
+</ol>
+<p><strong>Palette handling:</strong> At this stage, palette application happens on the CPU during asset loading (index → RGBA lookup). The GPU palette shader (for runtime player color remapping, palette cycling) comes in Phase 1 proper. CPU conversion is correct and simple — good enough for validation.</p>
+<p><strong>Player color remapping:</strong> Not needed yet. Just render with the default palette. Player colors (palette indices 80–95) are a Phase 1 concern.</p>
+<h4 id="step-3-load-and-render-an-openra-map-weeks-45"><a class="header" href="#step-3-load-and-render-an-openra-map-weeks-45">Step 3: Load and Render an OpenRA Map (Weeks 4–5)</a></h4>
+<p>Parse <code>.oramap</code> files and render the terrain grid in correct isometric projection.</p>
+<p><strong>What this proves:</strong> The coordinate system works. Isometric math is correct. Theater palettes load. Terrain tiles tile without visible seams.</p>
+<p><strong>Implementation:</strong></p>
+<ol>
+<li>Parse <code>.oramap</code> (ZIP archive containing <code>map.yaml</code> + <code>map.bin</code>)</li>
+<li><code>map.yaml</code> defines: map size, tileset/theater, player definitions, actor placements</li>
+<li><code>map.bin</code> is the tile grid: each cell has a tile index + subtile index</li>
+<li>Load the theater tileset (e.g., <code>temperat.mix</code> for Temperate) and its palette</li>
+<li>For each cell in the grid, look up the terrain tile image and blit it at the correct isometric screen position</li>
+</ol>
+<p><strong>Isometric coordinate transform:</strong></p>
+<pre><code>screen_x = (cell_x - cell_y) * tile_half_width
+screen_y = (cell_x + cell_y) * tile_half_height
+</code></pre>
+<p>Where <code>tile_half_width = 30</code> and <code>tile_half_height = 15</code> for classic RA’s 60×30 diamond tiles (these values come from the original source and OpenRA). This is the <code>CoordTransform</code> defined in Phase 0’s architecture work.</p>
+<p><strong>Tile rendering order:</strong> Tiles render left-to-right, top-to-bottom in map coordinates. This is the standard isometric painter’s algorithm. In Bevy, this translates to setting <code>Transform.translation.z</code> based on the cell’s Y coordinate (higher Y = lower z = renders behind).</p>
+<p><strong>Map bounds and camera:</strong> The map defines a playable bounds rectangle within the total tile grid. Set the Bevy camera to center on the map and allow panning with arrow keys / edge scrolling. Zoom with scroll wheel.</p>
+<h4 id="step-4-sprites-on-map--idle-animations--camera-weeks-68"><a class="header" href="#step-4-sprites-on-map--idle-animations--camera-weeks-68">Step 4: Sprites on Map + Idle Animations + Camera (Weeks 6–8)</a></h4>
+<p>Place unit and building sprites on the terrain grid. Animate idle loops. Implement camera controls.</p>
+<p><strong>What this proves:</strong> Sprites render at correct positions on the terrain. Z-ordering works (buildings behind units, shadows under vehicles). Animation timing matches the original game.</p>
+<p><strong>Implementation:</strong></p>
+<ol>
+<li>Read actor placements from <code>map.yaml</code> — each actor has a type name, cell position, and owner</li>
+<li>Look up the actor’s sprite sequence from <code>sequences/*.yaml</code> (or the unit rules) — this gives the <code>.shp</code> filename, frame ranges for each animation, and facing count</li>
+<li>For each placed actor, create a Bevy entity with:
+<ul>
+<li><code>SpriteSheetBundle</code> using the actor’s sprite frames</li>
+<li><code>Transform</code> positioned at the isometric screen location of the actor’s cell</li>
+<li>Z-order based on render layer (see § “Z-Order” above) and Y-position within layer</li>
+</ul>
+</li>
+<li>Animate idle sequences: advance frames at the timing specified in the sequence definition</li>
+<li>Buildings: render the “make” animation’s final frame (fully built state)</li>
+</ol>
+<p><strong>Camera system:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Control</th><th>Input</th><th>Behavior</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Pan</strong></td><td>Arrow keys / edge scroll</td><td>Smoothly move camera. Edge scroll activates within 10px of edge</td></tr>
+<tr><td><strong>Zoom</strong></td><td>Mouse scroll wheel</td><td>Discrete zoom levels (1×, 1.5×, 2×, 3×) or smooth zoom</td></tr>
+<tr><td><strong>Center on map</strong></td><td>Home key</td><td>Reset camera to map center</td></tr>
+<tr><td><strong>Minimap click</strong></td><td>Click on minimap panel</td><td>Camera jumps to clicked location</td></tr>
+</tbody>
+</table>
+</div>
+<p>At this stage, the minimap is a simple downscaled render of the full map — no player colors, no fog. Game-quality minimap rendering comes in Phase 3.</p>
+<p><strong>Z-order validation:</strong> Place overlapping buildings and units in a test map. Verify visually against a screenshot from OpenRA rendering the same map. The 13-layer z-order system (§ “Z-Order” above) must be correct at this step.</p>
+<h4 id="step-5-shroud-fog-of-war-and-selection-weeks-910"><a class="header" href="#step-5-shroud-fog-of-war-and-selection-weeks-910">Step 5: Shroud, Fog-of-War, and Selection (Weeks 9–10)</a></h4>
+<p>Add the visual layers that make it feel like an actual game viewport rather than a debug renderer.</p>
+<p><strong>Shroud rendering:</strong> Unexplored areas are black. Explored-but-not-visible areas show terrain but dimmed (fog). The shroud layer renders on top of everything (z-layer 12). Shroud edges use smooth blending tiles (from the tileset) for clean boundaries. At this stage, shroud state is hardcoded (reveal a circle around the map center) — real fog computation comes in Phase 2 with <code>FogProvider</code>.</p>
+<p><strong>Selection box:</strong> Left-click-drag draws a selection rectangle. In isometric view, this is traditionally a diamond-shaped selection (rotated 45°) to match the grid orientation, though OpenRA uses a screen-aligned rectangle. IC supports both via QoL toggle (D033). Selected units show a health bar and selection bracket below them.</p>
+<p><strong>Cursor system:</strong> The cursor changes based on what it’s hovering over — move cursor on ground, select cursor on own units, attack cursor on enemies. This is the <code>CursorContext</code> system. At this stage, implement the visual cursor switching; the actual order dispatch (right-click → move command) is Phase 2 sim work.</p>
+<h4 id="step-6-sidebar-chrome--first-game-like-frame-weeks-1112"><a class="header" href="#step-6-sidebar-chrome--first-game-like-frame-weeks-1112">Step 6: Sidebar Chrome — First Game-Like Frame (Weeks 11–12)</a></h4>
+<p>Assemble the classic RA sidebar layout to complete the visual frame. No functionality yet — build queues don’t work, credits don’t tick, radar doesn’t update. But the <em>layout</em> is in place.</p>
+<p><strong>What this proves:</strong> Bevy UI can reproduce the RA sidebar layout. Theme YAML (D032) drives the arrangement. The viewport resizes correctly when the sidebar is present.</p>
+<p><strong>Sidebar layout (Classic theme):</strong></p>
+<pre><code>┌───────────────────────────────────────────┬────────────┐
+│                                           │  RADAR     │
+│                                           │  MINIMAP   │
+│                                           ├────────────┤
+│          GAME VIEWPORT                    │  CREDITS   │
+│          (isometric map)                  │  $ 10000   │
+│                                           ├────────────┤
+│                                           │  POWER BAR │
+│                                           │  ████░░░░  │
+│                                           ├────────────┤
+│                                           │  BUILD     │
+│                                           │  QUEUE     │
+│                                           │  [icons]   │
+│                                           │  [icons]   │
+│                                           │            │
+├───────────────────────────────────────────┴────────────┤
+│  STATUS BAR: selected unit info / tooltip              │
+└────────────────────────────────────────────────────────┘
+</code></pre>
+<p><strong>Implementation:</strong> Use Bevy UI (<code>bevy_ui</code>) for the sidebar layout. The sidebar is a fixed-width panel on the right. The game viewport fills the remaining space. Each sidebar section is a placeholder panel with correct sizing and positioning. The radar minimap shows the downscaled terrain render from Step 4. Build queue icons show static sprite images from the unit/building sequences.</p>
+<p><strong>Theme loading:</strong> Read a <code>theme.yaml</code> (D032) that defines: sidebar width, section heights, font, color palette, chrome sprite sheet references. At this stage, only the Classic theme exists — but the loading system is in place so future themes just swap the YAML.</p>
+<h3 id="content-detection--finding-ra-assets"><a class="header" href="#content-detection--finding-ra-assets">Content Detection — Finding RA Assets</a></h3>
+<p>Before any of the above steps can run, the engine must locate the player’s Red Alert game files. IC never distributes copyrighted assets — it loads them from games the player already owns.</p>
+<p><strong>Detection sources (probed at first launch):</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Source</th><th>Detection Method</th><th>Priority</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Steam</strong></td><td><code>SteamApps/common/CnCRemastered/</code> or <code>SteamApps/common/Red Alert/</code> via Steam paths</td><td>1</td></tr>
+<tr><td><strong>GOG</strong></td><td>Registry key or default GOG install path</td><td>2</td></tr>
+<tr><td><strong>Origin / EA App</strong></td><td>Registry key for C&amp;C Ultimate Collection</td><td>3</td></tr>
+<tr><td><strong>OpenRA</strong></td><td><code>~/.openra/Content/ra/</code> — OpenRA’s own content download</td><td>4</td></tr>
+<tr><td><strong>Manual directory</strong></td><td>Player points to a folder containing <code>.mix</code> files</td><td>5</td></tr>
+</tbody>
+</table>
+</div>
+<p>If no content source is found, the first-launch flow guides the player to either install the game from a platform they own it on, or point to existing files. IC does not download game files from the internet (legal boundary).</p>
+<p>See <code>05-FORMATS.md</code> § “Content Source Detection and Installed Asset Locations” for detailed source probing logic and the <code>ContentSource</code> enum.</p>
+<h3 id="timeline-summary"><a class="header" href="#timeline-summary">Timeline Summary</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Weeks</th><th>Step</th><th>Milestone</th><th>Phase Alignment</th></tr>
+</thead>
+<tbody>
+<tr><td>1–2</td><td><code>ra-formats</code> parsers</td><td>CLI can dump any MIX/SHP/PAL/TMP/AUD file</td><td>Phase 0</td></tr>
+<tr><td>3</td><td>Bevy + one sprite</td><td>Window opens, animated RA infantry on screen</td><td>Phase 0 → 1</td></tr>
+<tr><td>4–5</td><td>Map rendering</td><td>Any <code>.oramap</code> renders as isometric terrain grid</td><td>Phase 1</td></tr>
+<tr><td>6–8</td><td>Sprites + animations</td><td>Units and buildings on map, idle animations, camera controls</td><td>Phase 1</td></tr>
+<tr><td>9–10</td><td>Shroud + selection</td><td>Fog overlay, selection box, cursor context switching</td><td>Phase 1</td></tr>
+<tr><td>11–12</td><td>Sidebar chrome</td><td>Classic RA layout assembled — first complete visual frame</td><td>Phase 1</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Phase 0 exit:</strong> Steps 1–2 complete (parsers + one sprite in Bevy). <strong>Phase 1 exit:</strong> All six steps complete — any OpenRA RA map loads and renders with sprites, animations, camera, shroud, and sidebar layout at 144fps on mid-range hardware.</p>
+<p>After Step 6, the rendering slice is done. The next work is Phase 2: making the units actually <em>do</em> things (move, shoot, die) in a deterministic simulation. See <code>08-ROADMAP.md</code> § Phase 2.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../architecture/ra-experience.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../architecture/crate-graph.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../architecture/ra-experience.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../architecture/crate-graph.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../mark-09e88c2c.min.js"></script>
+        <script src="../searcher-c2a407aa.js"></script>
+
+        <script src="../clipboard-1626706a.min.js"></script>
+        <script src="../highlight-abc7f01d.js"></script>
+        <script src="../book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

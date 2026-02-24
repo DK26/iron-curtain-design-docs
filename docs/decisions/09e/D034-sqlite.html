@@ -1,0 +1,713 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>D034 — SQLite Storage - Iron Curtain — Design Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Design docs for a Rust-native Red Alert RTS engine">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../../css/general-2459343d.css">
+        <link rel="stylesheet" href="../../css/chrome-ae938929.css">
+        <link rel="stylesheet" href="../../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../../searchindex-61d2369b.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../../toc-1553b04b.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Iron Curtain — Design Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs/edit/main/src/decisions/09e/D034-sqlite.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h2 id="d034-sqlite-as-embedded-storage-for-services-and-client"><a class="header" href="#d034-sqlite-as-embedded-storage-for-services-and-client">D034: SQLite as Embedded Storage for Services and Client</a></h2>
+<p><strong>Decision:</strong> Use SQLite (via <code>rusqlite</code>) as the embedded database for all backend services that need persistent state and for the game client’s local metadata indices. No external database dependency required for any deployment.</p>
+<p><strong>What this means:</strong> Every service that persists data beyond a single process lifetime uses an embedded SQLite database file. The “just a binary” philosophy (see <code>03-NETCODE.md</code> § Backend Infrastructure) is preserved — an operator downloads a binary, runs it, and persistence is a <code>.db</code> file next to the executable. No PostgreSQL, no MySQL, no managed database service.</p>
+<p><strong>Where SQLite is used:</strong></p>
+<h3 id="backend-services"><a class="header" href="#backend-services">Backend Services</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Service</th><th>What it stores</th><th>Why not in-memory</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Relay server</strong></td><td><code>CertifiedMatchResult</code> records, <code>DesyncReport</code> events, <code>PlayerBehaviorProfile</code> history, replay archive metadata</td><td>Match results and behavioral data are valuable beyond the game session — operators need to query desync patterns, review suspicion scores, link replays to match records. A relay restart shouldn’t erase match history.</td></tr>
+<tr><td><strong>Workshop server</strong></td><td>Resource metadata, versions, dependencies, download counts, ratings, search index (FTS5), license data, replication cursors</td><td>This is a package registry — functionally equivalent to crates.io’s data layer. Search, dependency resolution, and version queries are relational workloads.</td></tr>
+<tr><td><strong>Matchmaking server</strong></td><td>Player ratings (Glicko-2), match history, seasonal league data, leaderboards</td><td>Ratings and match history must survive restarts. Leaderboard queries (<code>top N</code>, per-faction, per-map) are natural SQL.</td></tr>
+<tr><td><strong>Tournament server</strong></td><td>Brackets, match results, map pool votes, community reports</td><td>Tournament state spans hours/days; must survive restarts. Bracket queries and result reporting are relational.</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="game-client-local"><a class="header" href="#game-client-local">Game Client (local)</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Data</th><th>What it stores</th><th>Benefit</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Replay catalog</strong></td><td>Player names, map, factions, date, duration, result, file path, signature status</td><td>Browse and search local replays without scanning files on disk. Filter by map, opponent, date range.</td></tr>
+<tr><td><strong>Save game index</strong></td><td>Save name, campaign, mission, timestamp, playtime, thumbnail path</td><td>Fast save browser without deserializing every save file on launch.</td></tr>
+<tr><td><strong>Workshop cache</strong></td><td>Downloaded resource metadata, versions, checksums, dependency graph</td><td>Offline dependency resolution. Know what’s installed without scanning the filesystem.</td></tr>
+<tr><td><strong>Map catalog</strong></td><td>Map name, player count, size, author, source (local/workshop/OpenRA), tags</td><td>Browse local maps from all sources with a single query.</td></tr>
+<tr><td><strong>Gameplay event log</strong></td><td>Structured <code>GameplayEvent</code> records (D031) per game session</td><td>Queryable post-game analysis without an OTEL stack. Frequently-aggregated fields (<code>event_type</code>, <code>unit_type_id</code>, <code>target_type_id</code>) are denormalized as indexed columns for fast <code>PlayerStyleProfile</code> building (D042). Full payloads remain in <code>data_json</code> for ad-hoc SQL: <code>SELECT json_extract(data_json, '$.weapon'), AVG(json_extract(data_json, '$.damage')) FROM gameplay_events WHERE event_type = 'combat' AND session_id = ?</code>.</td></tr>
+<tr><td><strong>Asset index</strong></td><td><code>.mix</code> archive contents, MiniYAML conversion cache (keyed by file hash)</td><td>Skip re-parsing on startup. Know which <code>.mix</code> contains which file without opening every archive.</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="where-sqlite-is-not-used"><a class="header" href="#where-sqlite-is-not-used">Where SQLite is NOT used</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Area</th><th>Why not</th></tr>
+</thead>
+<tbody>
+<tr><td><strong><code>ic-sim</code></strong></td><td>No I/O in the sim. Ever. Invariant #1.</td></tr>
+<tr><td><strong>Tracking server</strong></td><td>Truly ephemeral data — game listings with TTL. In-memory is correct.</td></tr>
+<tr><td><strong>Hot paths</strong></td><td>No DB queries per tick. All SQLite access is at load time, between games, or on UI/background threads.</td></tr>
+<tr><td><strong>Save game data</strong></td><td>Save files are serde-serialized sim snapshots loaded as a whole unit. No partial queries needed. SQLite indexes their <em>metadata</em>, not their <em>content</em>.</td></tr>
+<tr><td><strong>Campaign state</strong></td><td>Loaded/saved as a unit inside save games. Fits in memory. No relational queries.</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="why-sqlite-specifically"><a class="header" href="#why-sqlite-specifically">Why SQLite specifically</a></h3>
+<p><strong>The strategic argument: SQLite is the world’s most widely deployed database format.</strong> Choosing SQLite means IC’s player data isn’t locked behind a proprietary format that only IC can read — it’s stored in an open, standardized, universally-supported container that anything can query. Python scripts, R notebooks, Jupyter, Grafana, Excel (via ODBC), DB Browser for SQLite, the <code>sqlite3</code> CLI, Datasette, LLM agents, custom analytics tools, research projects, community stat trackers, third-party companion apps — all of them can open an IC <code>.db</code> file and run SQL against it with zero IC-specific tooling. This is a deliberate architectural choice: <strong>player data is a platform, not a product feature.</strong> The community can build things on top of IC’s data that we never imagined, using tools we’ve never heard of, because the interface is SQL — not a custom binary format, not a REST API that requires our servers to be running, not a proprietary export.</p>
+<p>Every use case the community might invent — balance analysis, AI training datasets, tournament statistics, replay research, performance benchmarking, meta-game tracking, coach feedback tools, stream overlays reading live stat data — is a SQL query away. No SDK required. No reverse engineering. No waiting for us to build an export feature. The <code>.db</code> file IS the export.</p>
+<p>This is also why SQLite is chosen over flat files (JSON, CSV): structured data in a relational schema with SQL query support enables questions that flat files can’t answer efficiently. “What’s my win rate with Soviet on maps larger than 128×128 against players I’ve faced more than 3 times?” is a single SQL query against <code>matches</code> + <code>match_players</code>. With JSON files, it’s a custom script.</p>
+<p><strong>The practical arguments:</strong></p>
+<ul>
+<li><strong><code>rusqlite</code></strong> is a mature, well-maintained Rust crate with no unsafe surprises</li>
+<li><strong>Single-file database</strong> — fits the “just a binary” deployment model. No connection strings, no separate database process, no credentials to manage</li>
+<li><strong>Self-hosting alignment</strong> — a community relay operator on a €5 VPS gets persistent match history without installing or operating a database server</li>
+<li><strong>FTS5 full-text search</strong> — covers workshop resource search and replay text search without Elasticsearch or a separate search service</li>
+<li><strong>WAL mode</strong> — handles concurrent reads from web endpoints while a single writer persists new records. Sufficient for community-scale deployments (hundreds of concurrent users, not millions)</li>
+<li><strong>WASM-compatible</strong> — <code>sql.js</code> (Emscripten build of SQLite) or <code>sqlite-wasm</code> for the browser target. The client-side replay catalog and gameplay event log work in the browser build</li>
+<li><strong>Ad-hoc investigation</strong> — any operator can open the <code>.db</code> file in DB Browser for SQLite, DBeaver, or the <code>sqlite3</code> CLI and run queries immediately. No Grafana dashboards required. This fills the gap between “just stdout logs” and “full OTEL stack” for community self-hosters</li>
+<li><strong>Backup-friendly</strong> — <code>VACUUM INTO</code> produces a self-contained, compacted copy safe to take while the database is in use (D061). A backup is just a file copy. No dump/restore ceremony</li>
+<li><strong>Immune to bitrot</strong> — The Library of Congress recommends SQLite as a storage format for datasets. IC player data from 2027 will still be readable in 2047 — the format is that stable</li>
+<li><strong>Deterministic and testable</strong> — in CI, gameplay event assertions are SQL queries against a test fixture database. No mock infrastructure needed</li>
+</ul>
+<h3 id="relationship-to-d031-otel-telemetry"><a class="header" href="#relationship-to-d031-otel-telemetry">Relationship to D031 (OTEL Telemetry)</a></h3>
+<p>D031 (OTEL) and D034 (SQLite) are complementary, not competing:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Concern</th><th>D031 (OTEL)</th><th>D034 (SQLite)</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Real-time monitoring</strong></td><td>Yes — Prometheus metrics, Grafana dashboards</td><td>No</td></tr>
+<tr><td><strong>Distributed tracing</strong></td><td>Yes — Jaeger traces across clients and relay</td><td>No</td></tr>
+<tr><td><strong>Persistent records</strong></td><td>No — metrics are time-windowed, logs rotate</td><td>Yes — match history, ratings, replays are permanent</td></tr>
+<tr><td><strong>Ad-hoc investigation</strong></td><td>Requires OTEL stack running</td><td>Just open the <code>.db</code> file</td></tr>
+<tr><td><strong>Offline operation</strong></td><td>No — needs collector + backends</td><td>Yes — works standalone</td></tr>
+<tr><td><strong>Client-side debugging</strong></td><td>Requires exporting to a collector</td><td>Local <code>.db</code> file, queryable immediately</td></tr>
+<tr><td><strong>AI training pipeline</strong></td><td>Yes — Parquet/Arrow export for ML</td><td>Source data — gameplay events could be exported from SQLite to Parquet</td></tr>
+</tbody>
+</table>
+</div>
+<p>OTEL is for operational monitoring and distributed debugging. SQLite is for persistent records, metadata indices, and standalone investigation. Tournament servers and relay servers use both — OTEL for dashboards, SQLite for match history.</p>
+<h3 id="consumers-of-player-data"><a class="header" href="#consumers-of-player-data">Consumers of Player Data</a></h3>
+<p>SQLite isn’t just infrastructure — it’s a UX pillar. Multiple crates read the client-side database to deliver features no other RTS offers:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Consumer</th><th>Crate</th><th>What it reads</th><th>What it produces</th><th>Required?</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Player-facing analytics</strong></td><td><code>ic-ui</code></td><td><code>gameplay_events</code>, <code>matches</code>, <code>match_players</code>, <code>campaign_missions</code>, <code>roster_snapshots</code></td><td>Post-game stats screen, career stats page, campaign dashboard with roster/veterancy graphs, mod balance dashboard</td><td>Always on</td></tr>
+<tr><td><strong>Adaptive AI</strong></td><td><code>ic-ai</code></td><td><code>matches</code>, <code>match_players</code>, <code>gameplay_events</code></td><td>Difficulty adjustment, build order variety, counter-strategy selection based on player tendencies</td><td>Always on</td></tr>
+<tr><td><strong>LLM personalization</strong></td><td><code>ic-llm</code></td><td><code>matches</code>, <code>gameplay_events</code>, <code>campaign_missions</code>, <code>roster_snapshots</code></td><td>Personalized missions, adaptive briefings, post-match commentary, coaching suggestions, rivalry narratives</td><td><strong>Optional</strong> — requires BYOLLM provider configured (D016)</td></tr>
+<tr><td><strong>Player style profiles</strong> (D042)</td><td><code>ic-ai</code></td><td><code>gameplay_events</code>, <code>match_players</code>, <code>matches</code></td><td><code>player_profiles</code> table — aggregated behavioral models for local player + opponents</td><td>Always on (profile building)</td></tr>
+<tr><td><strong>Training system</strong> (D042)</td><td><code>ic-ai</code> + <code>ic-ui</code></td><td><code>player_profiles</code>, <code>training_sessions</code>, <code>gameplay_events</code></td><td>Quick training scenarios, weakness analysis, progress tracking</td><td>Always on (training UI)</td></tr>
+</tbody>
+</table>
+</div>
+<p>Player analytics, adaptive AI, player style profiles, and the training system are always available. LLM personalization and coaching activate only when the player has configured an LLM provider — the game is fully functional without it.</p>
+<p>All consumers are read-only. The sim writes nothing (invariant #1) — <code>gameplay_events</code> are recorded by a Bevy observer system outside <code>ic-sim</code>, and <code>matches</code>/<code>campaign_missions</code> are written at session boundaries.</p>
+<h3 id="player-facing-analytics-ic-ui"><a class="header" href="#player-facing-analytics-ic-ui">Player-Facing Analytics (<code>ic-ui</code>)</a></h3>
+<p>No other RTS surfaces your own match data this way. SQLite makes it trivial — queries run on a background thread, results drive a lightweight chart component in <code>ic-ui</code> (Bevy 2D: line, bar, pie, heatmap, stacked area).</p>
+<p><strong>Post-game stats screen</strong> (after every match):</p>
+<ul>
+<li>Unit production timeline (stacked area: units built per minute by type)</li>
+<li>Resource income/expenditure curves</li>
+<li>Combat engagement heatmap (where fights happened on the map)</li>
+<li>APM over time, army value graph, tech tree timing</li>
+<li>Head-to-head comparison table vs opponent</li>
+<li>All data: <code>SELECT ... FROM gameplay_events WHERE session_id = ?</code></li>
+</ul>
+<p><strong>Career stats page</strong> (main menu):</p>
+<ul>
+<li>Win rate by faction, map, opponent, game mode — over time and lifetime</li>
+<li>Rating history graph (Glicko-2 from matchmaking, synced to local DB)</li>
+<li>Most-used units, highest kill-count units, signature strategies</li>
+<li>Session history: date, map, opponent, result, duration — clickable → replay</li>
+<li>All data: <code>SELECT ... FROM matches JOIN match_players ...</code></li>
+</ul>
+<p><strong>Campaign dashboard</strong> (D021 integration):</p>
+<ul>
+<li>Roster composition graph per mission (how your army evolves across the campaign)</li>
+<li>Veterancy progression: track named units across missions (the tank that survived from mission 1)</li>
+<li>Campaign path visualization: which branches you took, which missions you replayed</li>
+<li>Performance trends: completion time, casualties, resource efficiency per mission</li>
+<li>All data: <code>SELECT ... FROM campaign_missions JOIN roster_snapshots ...</code></li>
+</ul>
+<p><strong>Mod balance dashboard</strong> (Phase 7, for mod developers):</p>
+<ul>
+<li>Unit win-rate contribution, cost-efficiency scatter plots, engagement outcome distributions</li>
+<li>Compare across balance presets (D019) or mod versions</li>
+<li><code>ic mod stats</code> CLI command reads the same SQLite database</li>
+<li>All data: <code>SELECT ... FROM gameplay_events WHERE mod_id = ?</code></li>
+</ul>
+<h3 id="llm-personalization-ic-llm--optional-byollm"><a class="header" href="#llm-personalization-ic-llm--optional-byollm">LLM Personalization (<code>ic-llm</code>) — Optional, BYOLLM</a></h3>
+<p>When a player has configured an LLM provider (see BYOLLM in D016), <code>ic-llm</code> reads the local SQLite database (read-only) and injects player context into generation prompts. This is entirely optional — every game feature works without it. No data leaves the device unless the user’s chosen LLM provider is cloud-based.</p>
+<p><strong>Personalized mission generation:</strong></p>
+<ul>
+<li>“You’ve been playing Soviet heavy armor for 12 games. Here’s a mission that forces infantry-first tactics.”</li>
+<li>“Your win rate drops against Allied naval. This coastal defense mission trains that weakness.”</li>
+<li>Prompt includes: faction preferences, unit usage patterns, win/loss streaks, map size preferences — all from SQLite aggregates.</li>
+</ul>
+<p><strong>Adaptive briefings:</strong></p>
+<ul>
+<li>Campaign briefings reference your actual roster: “Commander, your veteran Tesla Tank squad from Vladivostok is available for this operation.”</li>
+<li>Difficulty framing adapts to performance: struggling player gets “intel reports suggest light resistance”; dominant player gets “expect fierce opposition.”</li>
+<li>Queries <code>roster_snapshots</code> and <code>campaign_missions</code> tables.</li>
+</ul>
+<p><strong>Post-match commentary:</strong></p>
+<ul>
+<li>LLM generates a narrative summary of the match from <code>gameplay_events</code>: “The turning point was at 8:42 when your MiG strike destroyed the Allied War Factory, halting tank production for 3 minutes.”</li>
+<li>Highlights unusual events: first-ever use of a unit type, personal records, close calls.</li>
+<li>Optional — disabled by default, requires LLM provider configured.</li>
+</ul>
+<p><strong>Coaching suggestions:</strong></p>
+<ul>
+<li>“You built 40 Rifle Infantry across 5 games but they had a 12% survival rate. Consider mixing in APCs for transport.”</li>
+<li>“Your average expansion timing is 6:30. Top players expand at 4:00-5:00.”</li>
+<li>Queries aggregate statistics from <code>gameplay_events</code> across multiple sessions.</li>
+</ul>
+<p><strong>Rivalry narratives:</strong></p>
+<ul>
+<li>Track frequent opponents from <code>matches</code> table: “You’re 3-7 against PlayerX. They favor Allied air rushes — here’s a counter-strategy mission.”</li>
+<li>Generate rivalry-themed campaign missions featuring opponent tendencies.</li>
+</ul>
+<h3 id="adaptive-ai-ic-ai"><a class="header" href="#adaptive-ai-ic-ai">Adaptive AI (<code>ic-ai</code>)</a></h3>
+<p><code>ic-ai</code> reads the player’s match history to calibrate skirmish and campaign AI behavior. No learning during the match — all adaptation happens between games by querying SQLite.</p>
+<ul>
+<li><strong>Difficulty scaling:</strong> AI selects from difficulty presets based on player win rate over recent N games. Avoids both stomps and frustration.</li>
+<li><strong>Build order variety:</strong> AI avoids repeating the same strategy the player has already beaten. Queries <code>gameplay_events</code> for AI build patterns the player countered successfully.</li>
+<li><strong>Counter-strategy selection:</strong> If the player’s last 5 games show heavy tank play, AI is more likely to choose anti-armor compositions.</li>
+<li><strong>Campaign-specific:</strong> In branching campaigns (D021), AI reads the player’s roster strength from <code>roster_snapshots</code> and adjusts reinforcement timing accordingly.</li>
+</ul>
+<p>This is designer-authored adaptation (the AI author sets the rules for how history influences behavior), not machine learning. The SQLite queries are simple aggregates run at mission load time.</p>
+<p><strong>Fallback:</strong> When no match history is available (first launch, empty database, WASM/headless builds without SQLite), <code>ic-ai</code> falls back to default difficulty presets and random strategy selection. All SQLite reads are behind an <code>Option&lt;impl AiHistorySource&gt;</code> — the AI is fully functional without it, just not personalized.</p>
+<h3 id="client-side-schema-key-tables"><a class="header" href="#client-side-schema-key-tables">Client-Side Schema (Key Tables)</a></h3>
+<pre><code class="language-sql">-- Match history (synced from matchmaking server when online, always written locally)
+CREATE TABLE matches (
+    id              INTEGER PRIMARY KEY,
+    session_id      TEXT NOT NULL UNIQUE,
+    map_name        TEXT NOT NULL,
+    game_mode       TEXT NOT NULL,
+    balance_preset  TEXT NOT NULL,
+    mod_id          TEXT,
+    duration_ticks  INTEGER NOT NULL,
+    started_at      TEXT NOT NULL,
+    replay_path     TEXT,
+    replay_hash     BLOB
+);
+
+CREATE TABLE match_players (
+    match_id    INTEGER REFERENCES matches(id),
+    player_name TEXT NOT NULL,
+    faction     TEXT NOT NULL,
+    team        INTEGER,
+    result      TEXT NOT NULL,  -- 'victory', 'defeat', 'disconnect', 'draw'
+    is_local    INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (match_id, player_name)
+);
+
+-- Gameplay events (D031 structured events, written per session)
+-- Top fields denormalized as indexed columns to avoid json_extract() scans
+-- during PlayerStyleProfile aggregation (D042). The full payload remains in
+-- data_json for ad-hoc SQL queries and mod developer analytics.
+CREATE TABLE gameplay_events (
+    id              INTEGER PRIMARY KEY,
+    session_id      TEXT NOT NULL,
+    tick            INTEGER NOT NULL,
+    event_type      TEXT NOT NULL,       -- 'unit_built', 'unit_killed', 'building_placed', ...
+    player          TEXT,
+    game_module     TEXT,                -- denormalized: 'ra1', 'td', 'ra2', custom (set once per session)
+    mod_fingerprint TEXT,                -- denormalized: D062 SHA-256 (updated on profile switch)
+    unit_type_id    INTEGER,             -- denormalized: interned unit type (nullable for non-unit events)
+    target_type_id  INTEGER,             -- denormalized: interned target type (nullable)
+    data_json       TEXT NOT NULL        -- event-specific payload (full detail)
+);
+CREATE INDEX idx_ge_session_event ON gameplay_events(session_id, event_type);
+CREATE INDEX idx_ge_game_module ON gameplay_events(game_module) WHERE game_module IS NOT NULL;
+CREATE INDEX idx_ge_unit_type ON gameplay_events(unit_type_id) WHERE unit_type_id IS NOT NULL;
+
+-- Campaign state (D021 branching campaigns)
+CREATE TABLE campaign_missions (
+    id              INTEGER PRIMARY KEY,
+    campaign_id     TEXT NOT NULL,
+    mission_id      TEXT NOT NULL,
+    outcome         TEXT NOT NULL,
+    duration_ticks  INTEGER NOT NULL,
+    completed_at    TEXT NOT NULL,
+    casualties      INTEGER,
+    resources_spent INTEGER
+);
+
+CREATE TABLE roster_snapshots (
+    id          INTEGER PRIMARY KEY,
+    mission_id  INTEGER REFERENCES campaign_missions(id),
+    snapshot_at TEXT NOT NULL,   -- 'mission_start' or 'mission_end'
+    roster_json TEXT NOT NULL    -- serialized unit list with veterancy, equipment
+);
+
+-- FTS5 for replay and map search (contentless — populated via triggers on matches + match_players)
+CREATE VIRTUAL TABLE replay_search USING fts5(
+    player_names, map_name, factions, content=''
+);
+-- Triggers on INSERT into matches/match_players aggregate player_names and factions
+-- into the FTS index. Contentless means FTS stores its own copy — no content= source mismatch.
+</code></pre>
+<h3 id="schema-migration"><a class="header" href="#schema-migration">Schema Migration</a></h3>
+<p>Each service manages its own schema using embedded SQL migrations (numbered, applied on startup). The <code>rusqlite</code> <code>user_version</code> pragma tracks the current schema version. Forward-only migrations — the binary upgrades the database file automatically on first launch after an update.</p>
+<h3 id="per-database-pragma-configuration"><a class="header" href="#per-database-pragma-configuration">Per-Database PRAGMA Configuration</a></h3>
+<p>Every SQLite database in IC gets a purpose-tuned PRAGMA configuration applied at connection open time. The correct settings depend on the database’s access pattern (write-heavy vs. read-heavy), data criticality (irreplaceable credentials vs. recreatable cache), expected size, and concurrency requirements. A single “one size fits all” configuration would either sacrifice durability for databases that need it (credentials, achievements) or sacrifice throughput for databases that need speed (telemetry, gameplay events).</p>
+<p><strong>All databases share these baseline PRAGMAs:</strong></p>
+<pre><code class="language-sql">PRAGMA journal_mode = WAL;          -- all databases use WAL (concurrent readers, non-blocking writes)
+PRAGMA foreign_keys = ON;           -- enforced everywhere (except single-table telemetry)
+PRAGMA encoding = 'UTF-8';         -- consistent text encoding
+PRAGMA trusted_schema = OFF;        -- defense-in-depth: disable untrusted SQL functions in schema
+</code></pre>
+<p><code>page_size</code> must be set <strong>before</strong> the first write to a new database (it cannot be changed after creation without <code>VACUUM</code>). All other PRAGMAs are applied on every connection open.</p>
+<p><strong>Connection initialization pattern (Rust):</strong></p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Apply purpose-specific PRAGMAs to a freshly opened rusqlite::Connection.
+/// Called immediately after Connection::open(), before any application queries.
+fn configure_connection(conn: &amp;Connection, config: &amp;DbConfig) -&gt; rusqlite::Result&lt;()&gt; {
+    // page_size only effective on new databases (before first table creation)
+    conn.pragma_update(None, "page_size", config.page_size)?;
+    conn.pragma_update(None, "journal_mode", "wal")?;
+    conn.pragma_update(None, "synchronous", config.synchronous)?;
+    conn.pragma_update(None, "cache_size", config.cache_size)?;
+    conn.pragma_update(None, "foreign_keys", config.foreign_keys)?;
+    conn.pragma_update(None, "busy_timeout", config.busy_timeout_ms)?;
+    conn.pragma_update(None, "temp_store", config.temp_store)?;
+    conn.pragma_update(None, "wal_autocheckpoint", config.wal_autocheckpoint)?;
+    conn.pragma_update(None, "trusted_schema", "off")?;
+    if config.mmap_size &gt; 0 {
+        conn.pragma_update(None, "mmap_size", config.mmap_size)?;
+    }
+    if config.auto_vacuum != AutoVacuum::None {
+        conn.pragma_update(None, "auto_vacuum", config.auto_vacuum.as_str())?;
+    }
+    Ok(())
+}
+<span class="boring">}</span></code></pre>
+<h4 id="client-side-databases"><a class="header" href="#client-side-databases">Client-Side Databases</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>PRAGMA / Database</th><th><code>gameplay.db</code></th><th><code>telemetry.db</code></th><th><code>profile.db</code></th><th><code>achievements.db</code></th><th><code>communities/*.db</code></th><th><code>workshop/cache.db</code></th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Purpose</strong></td><td>Match history, events, campaigns, replays, profiles, training</td><td>Telemetry event stream</td><td>Identity, friends, images</td><td>Achievement defs &amp; progress</td><td>Signed credentials</td><td>Workshop metadata cache</td></tr>
+<tr><td><strong>synchronous</strong></td><td><code>NORMAL</code></td><td><code>NORMAL</code></td><td><code>FULL</code></td><td><code>FULL</code></td><td><code>FULL</code></td><td><code>NORMAL</code></td></tr>
+<tr><td><strong>cache_size</strong></td><td><code>-16384</code> (16 MB)</td><td><code>-4096</code> (4 MB)</td><td><code>-2048</code> (2 MB)</td><td><code>-1024</code> (1 MB)</td><td><code>-512</code> (512 KB)</td><td><code>-4096</code> (4 MB)</td></tr>
+<tr><td><strong>page_size</strong></td><td><code>4096</code></td><td><code>4096</code></td><td><code>4096</code></td><td><code>4096</code></td><td><code>4096</code></td><td><code>4096</code></td></tr>
+<tr><td><strong>mmap_size</strong></td><td><code>67108864</code> (64 MB)</td><td><code>0</code></td><td><code>0</code></td><td><code>0</code></td><td><code>0</code></td><td><code>0</code></td></tr>
+<tr><td><strong>busy_timeout</strong></td><td><code>2000</code> (2 s)</td><td><code>1000</code> (1 s)</td><td><code>3000</code> (3 s)</td><td><code>3000</code> (3 s)</td><td><code>3000</code> (3 s)</td><td><code>3000</code> (3 s)</td></tr>
+<tr><td><strong>temp_store</strong></td><td><code>MEMORY</code></td><td><code>MEMORY</code></td><td><code>DEFAULT</code></td><td><code>DEFAULT</code></td><td><code>DEFAULT</code></td><td><code>MEMORY</code></td></tr>
+<tr><td><strong>auto_vacuum</strong></td><td><code>NONE</code></td><td><code>NONE</code></td><td><code>INCREMENTAL</code></td><td><code>NONE</code></td><td><code>NONE</code></td><td><code>INCREMENTAL</code></td></tr>
+<tr><td><strong>wal_autocheckpoint</strong></td><td><code>2000</code> (≈8 MB WAL)</td><td><code>4000</code> (≈16 MB WAL)</td><td><code>500</code> (≈2 MB WAL)</td><td><code>100</code></td><td><code>100</code></td><td><code>1000</code></td></tr>
+<tr><td><strong>foreign_keys</strong></td><td><code>ON</code></td><td><code>OFF</code></td><td><code>ON</code></td><td><code>ON</code></td><td><code>ON</code></td><td><code>ON</code></td></tr>
+<tr><td><strong>Expected size</strong></td><td>10–500 MB</td><td>≤100 MB (pruned)</td><td>1–10 MB</td><td>&lt;1 MB</td><td>&lt;1 MB each</td><td>1–50 MB</td></tr>
+<tr><td><strong>Data criticality</strong></td><td>Valuable (history)</td><td>Low (recreatable)</td><td><strong>Critical</strong> (identity)</td><td>High (player investment)</td><td><strong>Critical</strong> (signed)</td><td>Low (recreatable)</td></tr>
+</tbody>
+</table>
+</div>
+<h4 id="server-side-databases"><a class="header" href="#server-side-databases">Server-Side Databases</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>PRAGMA / Database</th><th>Server <code>telemetry.db</code></th><th>Relay data</th><th>Workshop server</th><th>Matchmaking server</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Purpose</strong></td><td>High-throughput event stream</td><td>Match results, desync, behavior profiles</td><td>Resource registry, FTS5 search</td><td>Ratings, leaderboards, history</td></tr>
+<tr><td><strong>synchronous</strong></td><td><code>NORMAL</code></td><td><code>FULL</code></td><td><code>NORMAL</code></td><td><code>FULL</code></td></tr>
+<tr><td><strong>cache_size</strong></td><td><code>-8192</code> (8 MB)</td><td><code>-8192</code> (8 MB)</td><td><code>-16384</code> (16 MB)</td><td><code>-8192</code> (8 MB)</td></tr>
+<tr><td><strong>page_size</strong></td><td><code>4096</code></td><td><code>4096</code></td><td><code>4096</code></td><td><code>4096</code></td></tr>
+<tr><td><strong>mmap_size</strong></td><td><code>0</code></td><td><code>0</code></td><td><code>268435456</code> (256 MB)</td><td><code>134217728</code> (128 MB)</td></tr>
+<tr><td><strong>busy_timeout</strong></td><td><code>5000</code> (5 s)</td><td><code>5000</code> (5 s)</td><td><code>10000</code> (10 s)</td><td><code>10000</code> (10 s)</td></tr>
+<tr><td><strong>temp_store</strong></td><td><code>MEMORY</code></td><td><code>MEMORY</code></td><td><code>MEMORY</code></td><td><code>MEMORY</code></td></tr>
+<tr><td><strong>auto_vacuum</strong></td><td><code>NONE</code></td><td><code>NONE</code></td><td><code>INCREMENTAL</code></td><td><code>NONE</code></td></tr>
+<tr><td><strong>wal_autocheckpoint</strong></td><td><code>8000</code> (≈32 MB WAL)</td><td><code>1000</code> (≈4 MB WAL)</td><td><code>1000</code> (≈4 MB WAL)</td><td><code>1000</code> (≈4 MB WAL)</td></tr>
+<tr><td><strong>foreign_keys</strong></td><td><code>OFF</code></td><td><code>ON</code></td><td><code>ON</code></td><td><code>ON</code></td></tr>
+<tr><td><strong>Expected size</strong></td><td>≤500 MB (pruned)</td><td>10 MB–10 GB</td><td>10 MB–10 GB</td><td>1 MB–1 GB</td></tr>
+<tr><td><strong>Data criticality</strong></td><td>Low (operational)</td><td><strong>Critical</strong> (signed records)</td><td>Moderate (rebuildable from packages)</td><td><strong>Critical</strong> (player ratings)</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Tournament server</strong> uses the same configuration as relay data — brackets, match results, and map pool votes are signed records with identical durability requirements (<code>synchronous=FULL</code>, 8 MB cache, append-only growth).</p>
+<h4 id="table-to-file-assignments-for-d047-and-d057"><a class="header" href="#table-to-file-assignments-for-d047-and-d057">Table-to-File Assignments for D047 and D057</a></h4>
+<p>Not every table set warrants its own <code>.db</code> file. Two decision areas have SQLite tables that live inside existing databases:</p>
+<ul>
+<li><strong>D047 LLM provider config</strong> (<code>llm_providers</code>, <code>llm_task_routing</code>) → stored in <strong><code>profile.db</code></strong>. These are small config tables (~dozen rows) containing encrypted API keys — they inherit <code>profile.db</code>’s <code>synchronous=FULL</code> durability, which is appropriate for data that includes secrets. Co-locating with identity data keeps all “who am I and what are my settings” data in one backup-critical file.</li>
+<li><strong>D057 Skill Library</strong> (<code>skills</code>, <code>skills_fts</code>, <code>skill_embeddings</code>, <code>skill_compositions</code>) → stored in <strong><code>gameplay.db</code></strong>. Skills are analytical data produced from gameplay — they benefit from <code>gameplay.db</code>’s 16 MB cache and 64 MB mmap (FTS5 keyword search and embedding similarity scans over potentially thousands of skills). A mature skill library with embeddings may reach 10–50 MB, well within <code>gameplay.db</code>’s 10–500 MB expected range. Co-locating with <code>gameplay_events</code> and <code>player_profiles</code> keeps all AI/LLM-consumed data queryable in one file.</li>
+</ul>
+<h4 id="configuration-rationale"><a class="header" href="#configuration-rationale">Configuration Rationale</a></h4>
+<p><strong><code>synchronous</code> — the most impactful setting:</strong></p>
+<ul>
+<li><strong><code>FULL</code></strong> for databases storing irreplaceable data: <code>profile.db</code> (player identity), <code>achievements.db</code> (player investment), <code>communities/*.db</code> (signed credentials that require server contact to re-obtain), relay match data (signed <code>CertifiedMatchResult</code> records), and matchmaking ratings (player ELO/Glicko-2 history). <code>FULL</code> guarantees that a committed transaction survives even an OS crash or power failure — the fsync penalty is acceptable because these databases have low write frequency.</li>
+<li><strong><code>NORMAL</code></strong> for everything else. In WAL mode, <code>NORMAL</code> still guarantees durability against application crashes (the WAL is synced before committing). Only an OS-level crash during a checkpoint could theoretically lose a transaction — an acceptable risk for telemetry events, gameplay analytics, and recreatable caches.</li>
+</ul>
+<p><strong><code>cache_size</code> — scaled to query complexity:</strong></p>
+<ul>
+<li><code>gameplay.db</code> gets 16 MB because it runs the most complex queries: multi-table JOINs for career stats, aggregate functions over thousands of gameplay_events, FTS5 replay search. The large cache keeps hot index pages in memory across analytical queries.</li>
+<li>Server Workshop gets 16 MB for the same reason — FTS5 search over the entire resource registry benefits from a large page cache.</li>
+<li><code>telemetry.db</code> (client and server) gets a moderate cache because writes dominate reads. The write path doesn’t benefit from large caches — it’s all sequential inserts.</li>
+<li>Small databases (<code>achievements.db</code>, <code>communities/*.db</code>) need minimal cache because their entire content fits in a few hundred pages.</li>
+</ul>
+<p><strong><code>mmap_size</code> — for read-heavy databases that grow large:</strong></p>
+<ul>
+<li><code>gameplay.db</code> at 64 MB: after months of play, this database may contain hundreds of thousands of gameplay_events rows. Memory-mapping avoids repeated read syscalls during analytical queries like <code>PlayerStyleProfile</code> aggregation (D042). The 64 MB limit keeps memory pressure manageable on the minimum-spec 4 GB machine — just 1.6% of total RAM. If the database exceeds 64 MB, the remainder uses standard reads. On systems with ≥8 GB RAM, this could be scaled up at runtime.</li>
+<li>Server Workshop and Matchmaking at 128–256 MB: large registries and leaderboard scans benefit from mmap. Workshop search scans FTS5 index pages; matchmaking scans rating tables for top-N queries. Server hardware typically has ≥16 GB RAM.</li>
+<li>Write-dominated databases (<code>telemetry.db</code>) skip mmap entirely — the write path doesn’t benefit, and mmap can actually hinder WAL performance by creating contention between mapped reads and WAL writes.</li>
+</ul>
+<p><strong><code>wal_autocheckpoint</code> — tuned to write cadence, with gameplay override:</strong></p>
+<ul>
+<li>Client <code>telemetry.db</code> at 4000 pages (≈16 MB WAL): telemetry writes are bursty during gameplay (potentially hundreds of events per second during intense combat). A large autocheckpoint threshold batches writes and defers the expensive checkpoint operation, preventing frame drops. The WAL file may grow to 16 MB during a match and get checkpointed during the post-game transition.</li>
+<li>Server <code>telemetry.db</code> at 8000 pages (≈32 MB WAL): relay servers handling multiple concurrent games need even larger write batches. The 32 MB WAL absorbs write bursts without checkpoint contention blocking game event recording.</li>
+<li><code>gameplay.db</code> at 2000 pages (≈8 MB WAL): moderate — gameplay_events arrive faster than profile updates but slower than telemetry. The 8 MB buffer handles end-of-match write bursts.</li>
+<li>Small databases at 100–500 pages: writes are rare; keep the WAL file small and tidy.</li>
+</ul>
+<p><strong>HDD-safe WAL checkpoint strategy:</strong> The <code>wal_autocheckpoint</code> thresholds above are tuned for SSDs. On a 5400 RPM HDD (common on the 2012 min-spec laptop), a WAL checkpoint transfers dirty pages back to the main database file at scattered offsets — <strong>random I/O</strong>. A 16 MB checkpoint can produce 4000 random 4 KB writes, taking 200–500+ ms on a spinning disk. If this triggers during gameplay, the I/O thread stalls, the ring buffer fills, and events are silently lost.</p>
+<p><strong>Mitigation: disable autocheckpoint during active gameplay, checkpoint at safe points.</strong></p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// During match load, disable automatic checkpointing on gameplay-active databases.
+/// The I/O thread calls this after opening connections.
+fn enter_gameplay_mode(conn: &amp;Connection) -&gt; rusqlite::Result&lt;()&gt; {
+    conn.pragma_update(None, "wal_autocheckpoint", 0)?; // 0 = disable auto
+    Ok(())
+}
+
+/// At safe points (loading screen, post-game stats, main menu, single-player pause),
+/// trigger a passive checkpoint that yields if it encounters contention.
+fn checkpoint_at_safe_point(conn: &amp;Connection) -&gt; rusqlite::Result&lt;()&gt; {
+    // PASSIVE: checkpoint pages that don't require blocking readers.
+    // Does not block, does not stall. May leave some pages un-checkpointed.
+    conn.pragma_update(None, "wal_checkpoint", "PASSIVE")?;
+    Ok(())
+}
+
+/// On match end or app exit, restore normal autocheckpoint thresholds.
+fn leave_gameplay_mode(conn: &amp;Connection, normal_threshold: u32) -&gt; rusqlite::Result&lt;()&gt; {
+    conn.pragma_update(None, "wal_autocheckpoint", normal_threshold)?;
+    // Full checkpoint now — we're in a loading/menu screen, stall is acceptable.
+    conn.pragma_update(None, "wal_checkpoint", "TRUNCATE")?;
+    Ok(())
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Safe checkpoint points</strong> (I/O thread triggers these, never the game thread):</p>
+<ul>
+<li>Match loading screen (before gameplay starts)</li>
+<li>Post-game stats screen (results displayed, no sim running)</li>
+<li>Main menu / lobby (no active sim)</li>
+<li>Single-player pause menu (sim is frozen — user is already waiting)</li>
+<li>App exit / minimize / suspend</li>
+</ul>
+<p><strong>WAL file growth during gameplay:</strong> With autocheckpoint disabled, the WAL grows unbounded during a match. Worst case for a 60-minute match at peak event rates: telemetry.db WAL may reach ~50–100 MB, gameplay.db WAL ~20–40 MB. On a 4 GB min-spec machine, this is ~2–3% of RAM — acceptable. The WAL is truncated on the post-game <code>TRUNCATE</code> checkpoint. Players on SSDs experience no difference — checkpoint takes &lt;50 ms regardless of timing.</p>
+<p><strong>Detection:</strong> The I/O thread queries storage type at startup via Bevy’s platform detection (or heuristic: sequential read bandwidth vs. random IOPS ratio). If HDD is detected (or cannot be determined — conservative default), gameplay WAL checkpoint suppression activates automatically. SSD users keep the normal <code>wal_autocheckpoint</code> thresholds. The <code>storage.assume_ssd</code> cvar overrides detection.</p>
+<p><strong><code>auto_vacuum</code> — only where deletions create waste:</strong></p>
+<ul>
+<li><code>INCREMENTAL</code> for <code>profile.db</code> (avatar/banner image replacements leave pages of dead BLOB data), <code>workshop/cache.db</code> (mod uninstalls remove metadata rows), and server Workshop (resource unpublish). Incremental mode marks freed pages for reuse without the full-table rewrite cost of <code>FULL</code> auto_vacuum. Reclamation happens via periodic <code>PRAGMA incremental_vacuum(N)</code> calls on background threads.</li>
+<li><code>NONE</code> everywhere else. Telemetry uses DELETE-based pruning but full VACUUM is only warranted on export (compaction). Achievements, community credentials, and match history grow monotonically — no deletions means no wasted space. Relay match data is append-only.</li>
+</ul>
+<p><strong><code>busy_timeout</code> — preventing SQLITE_BUSY errors:</strong></p>
+<ul>
+<li>1 second for client <code>telemetry.db</code>: telemetry writes must never cause visible gameplay lag. If the database is locked for over 1 second, something is seriously wrong — better to drop the event than stall the game loop.</li>
+<li>2 seconds for <code>gameplay.db</code>: UI queries (career stats page) occasionally overlap with background event writes. All <code>gameplay.db</code> writes happen on a dedicated I/O thread (see “Transaction batching” above), so <code>busy_timeout</code> waits occur on the I/O thread — never on the game loop thread. 2 seconds is sufficient for typical contention.</li>
+<li>5 seconds for server telemetry: high-throughput event recording on servers can create brief WAL contention during checkpoints. Server hardware and dedicated I/O threads make a 5-second timeout acceptable.</li>
+<li>10 seconds for server Workshop and Matchmaking: web API requests may queue behind write transactions during peak load. A generous timeout prevents spurious failures.</li>
+</ul>
+<p><strong><code>temp_store = MEMORY</code> — for databases that run complex queries:</strong></p>
+<ul>
+<li><code>gameplay.db</code>, <code>telemetry.db</code>, Workshop, Matchmaking: complex analytical queries (GROUP BY, ORDER BY, JOIN) may create temporary tables or sort buffers. Storing these in RAM avoids disk I/O overhead for intermediate results.</li>
+<li>Profile, achievements, community databases: queries are simple key lookups and small result sets — <code>DEFAULT</code> (disk-backed temp) is fine and avoids unnecessary memory pressure.</li>
+</ul>
+<p><strong><code>foreign_keys = OFF</code> for <code>telemetry.db</code> only:</strong></p>
+<ul>
+<li>The unified telemetry schema is a single table with no foreign keys. Disabling the pragma avoids the per-statement FK check overhead on every INSERT — measurable savings at high event rates.</li>
+<li>All other databases have proper FK relationships and enforce them.</li>
+</ul>
+<h4 id="wasm-platform-adjustments"><a class="header" href="#wasm-platform-adjustments">WASM Platform Adjustments</a></h4>
+<p>Browser builds (via <code>sql.js</code> or <code>sqlite-wasm</code> on OPFS) operate under different constraints:</p>
+<ul>
+<li><strong><code>mmap_size = 0</code></strong> always — mmap is not available in WASM environments</li>
+<li><strong><code>cache_size</code></strong> reduced by 50% — browser memory budgets are tighter</li>
+<li><strong><code>synchronous = NORMAL</code></strong> for all databases — OPFS provides its own durability guarantees and the browser may not honor fsync semantics</li>
+<li><strong><code>wal_autocheckpoint</code></strong> kept at default (1000) — OPFS handles sequential I/O differently than native filesystems; large WAL files offer less benefit</li>
+</ul>
+<p>These adjustments are applied automatically by the <code>DbConfig</code> builder when it detects the WASM target at compile time (<code>#[cfg(target_arch = "wasm32")]</code>).</p>
+<h3 id="scaling-path"><a class="header" href="#scaling-path">Scaling Path</a></h3>
+<p>SQLite is the default and the right choice for 95% of deployments. For the official infrastructure at high scale, individual services can optionally be configured to use PostgreSQL by swapping the storage backend trait implementation. The schema is designed to be portable (standard SQL, no SQLite-specific syntax). FTS5 is used for full-text search on Workshop and replay catalogs — a PostgreSQL backend would substitute <code>tsvector</code>/<code>tsquery</code> for the same queries. This is a planned scale optimization deferred to <code>M11</code> (<code>P-Scale</code>) unless production scale evidence pulls it forward, and it is not a launch requirement.</p>
+<p>Each service defines its own storage trait — no god-trait mixing unrelated concerns:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Relay server storage — match results, desync reports, behavioral profiles.
+pub trait RelayStorage: Send + Sync {
+    fn store_match_result(&amp;self, result: &amp;CertifiedMatchResult) -&gt; Result&lt;()&gt;;
+    fn query_matches(&amp;self, filter: &amp;MatchFilter) -&gt; Result&lt;Vec&lt;MatchRecord&gt;&gt;;
+    fn store_desync_report(&amp;self, report: &amp;DesyncReport) -&gt; Result&lt;()&gt;;
+    fn update_behavior_profile(&amp;self, player: PlayerId, profile: &amp;BehaviorProfile) -&gt; Result&lt;()&gt;;
+}
+
+/// Matchmaking server storage — ratings, match history, leaderboards.
+pub trait MatchmakingStorage: Send + Sync {
+    fn update_rating(&amp;self, player: PlayerId, rating: &amp;Glicko2Rating) -&gt; Result&lt;()&gt;;
+    fn leaderboard(&amp;self, scope: &amp;LeaderboardScope, limit: u32) -&gt; Result&lt;Vec&lt;LeaderboardEntry&gt;&gt;;
+    fn match_history(&amp;self, player: PlayerId, limit: u32) -&gt; Result&lt;Vec&lt;MatchRecord&gt;&gt;;
+}
+
+/// Workshop server storage — resource metadata, versions, dependencies, search.
+pub trait WorkshopStorage: Send + Sync {
+    fn publish_resource(&amp;self, meta: &amp;ResourceMetadata) -&gt; Result&lt;()&gt;;
+    fn search(&amp;self, query: &amp;str, filter: &amp;ResourceFilter) -&gt; Result&lt;Vec&lt;ResourceListing&gt;&gt;;
+    fn resolve_deps(&amp;self, root: &amp;ResourceId, range: &amp;VersionRange) -&gt; Result&lt;DependencyGraph&gt;;
+}
+
+/// SQLite implementation — each service gets its own SqliteXxxStorage struct
+/// wrapping a rusqlite::Connection (WAL mode, foreign keys on, journal_size_limit set).
+/// PostgreSQL implementations are optional, behind `#[cfg(feature = "postgres")]`.
+<span class="boring">}</span></code></pre>
+<h3 id="alternatives-considered"><a class="header" href="#alternatives-considered">Alternatives Considered</a></h3>
+<ul>
+<li><strong>JSON / TOML flat files</strong> (rejected — no query capability; “what’s my win rate on this map?” requires loading every match file and filtering in code; no indexing, no FTS, no joins; scales poorly past hundreds of records; the user’s data is opaque to external tools unless we also build export scripts)</li>
+<li><strong>RocksDB / sled / redb</strong> (rejected — key-value stores require application-level query logic for everything; no SQL means no ad-hoc investigation, no external tool compatibility, no community reuse; the data is locked behind IC-specific access patterns)</li>
+<li><strong>PostgreSQL as default</strong> (rejected — destroys the “just a binary” deployment model; community relay operators shouldn’t need to install and maintain a database server; adds operational complexity for zero benefit at community scale)</li>
+<li><strong>Redis</strong> (rejected — in-memory only by default; no persistence guarantees without configuration; no SQL; wrong tool for durable structured records)</li>
+<li><strong>Custom binary format</strong> (rejected — maximum vendor lock-in; the community can’t build anything on top of it without reverse engineering; contradicts the open-standard philosophy)</li>
+<li><strong>No persistent storage; compute everything from replay files</strong> (rejected — replays are large, parsing is expensive, and many queries span multiple sessions; pre-computed aggregates in SQLite make career stats and AI adaptation instant)</li>
+</ul>
+<p><strong>Phase:</strong> SQLite storage for relay and client lands in Phase 2 (replay catalog, save game index, gameplay event log). Workshop server storage lands in Phase 6a (D030). Matchmaking and tournament storage land in Phase 5 (competitive infrastructure). The <code>StorageBackend</code> trait is defined early but PostgreSQL implementation is a planned <code>M11</code> (<code>P-Scale</code>) deferral unless scale evidence requires earlier promotion through the execution overlay.</p>
+<hr>
+<hr>
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../../decisions/09e/D031-observability.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../../decisions/09e/D035-creator-attribution.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../../decisions/09e/D031-observability.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../../decisions/09e/D035-creator-attribution.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../../mark-09e88c2c.min.js"></script>
+        <script src="../../searcher-c2a407aa.js"></script>
+
+        <script src="../../clipboard-1626706a.min.js"></script>
+        <script src="../../highlight-abc7f01d.js"></script>
+        <script src="../../book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

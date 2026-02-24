@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-3d47d740.js";
+            window.path_to_searchindex_js = "searchindex-61d2369b.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-914f79aa.js"></script>
+        <script src="toc-1553b04b.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -661,7 +661,7 @@ pub struct LaneConfig {
 </tbody>
 </table>
 </div>
-<p>The Orders and Control lanes share the highest priority tier — both are drained before any Chat or Bulk data is sent. Chat and Voice share priority tier 1 with a 2:1 weight ratio (voice gets more bandwidth because it’s time-sensitive). This ensures that a player spamming chat messages, voice traffic, or a spectator feed generating bulk data never delays order delivery. The lane system is optional for <code>LocalNetwork</code> and <code>MemoryTransport</code> (where bandwidth is unlimited), but critical for the relay deployment where bandwidth to each client is finite. See <code>decisions/09g-interaction.md</code> § D059 for the full VoIP architecture.</p>
+<p>The Orders and Control lanes share the highest priority tier — both are drained before any Chat or Bulk data is sent. Chat and Voice share priority tier 1 with a 2:1 weight ratio (voice gets more bandwidth because it’s time-sensitive). This ensures that a player spamming chat messages, voice traffic, or a spectator feed generating bulk data never delays order delivery. The lane system is optional for <code>LocalNetwork</code> and <code>MemoryTransport</code> (where bandwidth is unlimited), but critical for the relay deployment where bandwidth to each client is finite. See <code>decisions/09g/D059-communication.md</code> for the full VoIP architecture.</p>
 <p><strong>Relay server poll groups:</strong> In a relay deployment serving multiple concurrent games, each game session’s connections are grouped into a <strong>poll group</strong> (terminology from GNS). The relay’s event loop polls all connections within a poll group together, processing messages for one game session in a batch before moving to the next. This improves cache locality (all state for one game is hot in cache during its processing window) and simplifies per-game rate limiting. The poll group concept is internal to the relay server — clients don’t know or care whether they share a relay with other games.</p>
 <h3 id="desync-detection--debugging"><a class="header" href="#desync-detection--debugging">Desync Detection &amp; Debugging</a></h3>
 <p>Desyncs are the hardest problem in lockstep netcode. OpenRA has 135+ desync issues in their tracker — they hash game state per frame (via <code>[VerifySync]</code> attribute) but their sync report buffer is only 7 frames deep, which often isn’t enough to capture the divergence point. Our architecture makes desyncs both <strong>detectable</strong> AND <strong>diagnosable</strong>, drawing on 20+ years of OpenTTD’s battle-tested desync debugging infrastructure.</p>
@@ -1168,7 +1168,7 @@ pub struct NetworkSimConfig {
 <p><strong>Sub-tick ordering (D008) is always-on.</strong> Cost: ~4 bytes per order + one sort of typically ≤5 items per tick. The mechanism is automatic, but the outcome is player-facing — who wins the engineer race, who grabs the contested crate, whose attack resolves first. These moments define close games. Making it optional would require two sim code paths, a deterministic fallback that’s inherently unfair (player ID tiebreak), and a lobby setting nobody understands.</p>
 <p><strong>Adaptive run-ahead is always-on.</strong> Generals proved this over 20 years. Manual latency settings (StarCraft BW’s Low/High/Extra High) were necessary only because BW lacked adaptive run-ahead. IC’s adaptive system replaces the manual knob with a better automatic one.</p>
 <p><strong>Visual prediction is always-on.</strong> Factorio originally offered a “latency hiding” toggle. They removed it in 0.14.0 because always-on was always better — there was no situation where the player benefited from seeing raw lockstep delay.</p>
-<p>Full rationale, cross-game evidence table, and alternatives considered: see <code>decisions/09b-networking.md</code> § D060.</p>
+<p>Full rationale, cross-game evidence table, and alternatives considered: see <code>decisions/09b/D060-netcode-params.md</code>.</p>
 <h2 id="connection-establishment"><a class="header" href="#connection-establishment">Connection Establishment</a></h2>
 <p>Connection method is a concern <em>below</em> the <code>NetworkModel</code>. By the time a <code>NetworkModel</code> is constructed, transport is already established. The discovery/connection flow:</p>
 <pre><code>Discovery (tracking server / join code / direct IP / QR)
@@ -1177,7 +1177,7 @@ pub struct NetworkSimConfig {
       → NetworkModel constructed over Transport (LockstepNetwork&lt;T&gt; or RelayLockstepNetwork&lt;T&gt;)
         → Game loop runs — sim doesn't know or care how connection happened
 </code></pre>
-<p>The transport layer is abstracted behind a <code>Transport</code> trait (D054). Each <code>Transport</code> instance represents a single bidirectional channel (point-to-point). <code>NetworkModel</code> implementations are generic over <code>Transport</code> — relay mode uses one <code>Transport</code> to the relay, P2P mode uses one <code>Transport</code> per peer. This enables different physical transports per platform — raw UDP (connected socket) on desktop, WebSocket in the browser, <code>MemoryTransport</code> in tests — without conditional branches in <code>NetworkModel</code>. The protocol layer always runs its own reliability; on reliable transports the retransmit logic becomes a no-op. See <code>decisions/09d-gameplay.md</code> § D054 for the full trait definition and implementation inventory.</p>
+<p>The transport layer is abstracted behind a <code>Transport</code> trait (D054). Each <code>Transport</code> instance represents a single bidirectional channel (point-to-point). <code>NetworkModel</code> implementations are generic over <code>Transport</code> — relay mode uses one <code>Transport</code> to the relay, P2P mode uses one <code>Transport</code> per peer. This enables different physical transports per platform — raw UDP (connected socket) on desktop, WebSocket in the browser, <code>MemoryTransport</code> in tests — without conditional branches in <code>NetworkModel</code>. The protocol layer always runs its own reliability; on reliable transports the retransmit logic becomes a no-op. See <code>decisions/09d/D054-extended-switchability.md</code> for the full trait definition and implementation inventory.</p>
 <h3 id="commit-reveal-game-seed"><a class="header" href="#commit-reveal-game-seed">Commit-Reveal Game Seed</a></h3>
 <p>The initial RNG seed that determines all stochastic outcomes (combat rolls, scatter patterns, AI decisions) must not be controllable by any single player. A host who chooses the seed can pre-compute favorable outcomes (e.g., “with seed 0xDEAD, my first tank shot always crits”). This is a known exploit in P2P games and was identified in Hypersomnia’s security analysis (see <code>research/veloren-hypersomnia-openbw-ddnet-netcode-analysis.md</code>).</p>
 <p>IC uses a <strong>commit-reveal protocol</strong> to generate the game seed collaboratively:</p>
@@ -1382,7 +1382,7 @@ url = "https://cncnet.org/master"        # CnCNet shared browser (Level 0 compat
 <h3 id="tracking-server-implementation"><a class="header" href="#tracking-server-implementation">Tracking Server Implementation</a></h3>
 <p>The server itself is straightforward — a REST or WebSocket API backed by an in-memory store with TTL expiry. No database needed — listings are ephemeral and expire if the host stops sending heartbeats.</p>
 <blockquote>
-<p><strong>Note:</strong> The tracking server is the only backend service with truly ephemeral data. The relay, workshop, and matchmaking servers all persist data beyond process lifetime using embedded SQLite (D034). See <code>decisions/09e-community.md</code> § D034 for the full storage model.</p>
+<p><strong>Note:</strong> The tracking server is the only backend service with truly ephemeral data. The relay, workshop, and matchmaking servers all persist data beyond process lifetime using embedded SQLite (D034). See <code>decisions/09e/D034-sqlite.md</code> for the full storage model.</p>
 </blockquote>
 <h2 id="backend-infrastructure-tracking--relay"><a class="header" href="#backend-infrastructure-tracking--relay">Backend Infrastructure (Tracking + Relay)</a></h2>
 <p>Both the tracking server and relay server are <strong>standalone Rust binaries</strong>. The simplest deployment is running the executable on any computer — a home PC, a friend’s always-on machine, a €5 VPS, or a Raspberry Pi. No containers, no cloud, no special infrastructure required.</p>
@@ -1638,7 +1638,7 @@ relay:
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="architecture/gameplay-systems.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="architecture/type-safety.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                             </a>
 
@@ -1652,7 +1652,7 @@ relay:
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="architecture/gameplay-systems.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="architecture/type-safety.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                     </a>
 

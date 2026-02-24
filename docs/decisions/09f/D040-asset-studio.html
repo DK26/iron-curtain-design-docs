@@ -1,0 +1,508 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>D040 — Asset Studio - Iron Curtain — Design Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Design docs for a Rust-native Red Alert RTS engine">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../../css/general-2459343d.css">
+        <link rel="stylesheet" href="../../css/chrome-ae938929.css">
+        <link rel="stylesheet" href="../../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../../searchindex-61d2369b.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../../toc-1553b04b.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Iron Curtain — Design Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs/edit/main/src/decisions/09f/D040-asset-studio.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h2 id="d040-asset-studio--visual-resource-editor--agentic-generation"><a class="header" href="#d040-asset-studio--visual-resource-editor--agentic-generation">D040: Asset Studio — Visual Resource Editor &amp; Agentic Generation</a></h2>
+<h3 id="decision-capsule-llmrag-summary"><a class="header" href="#decision-capsule-llmrag-summary">Decision Capsule (LLM/RAG Summary)</a></h3>
+<ul>
+<li><strong>Status:</strong> Accepted</li>
+<li><strong>Phase:</strong> Phase 6a (Asset Studio Layers 1–2), Phase 6b (provenance/publish integration), Phase 7 (agentic generation Layer 3)</li>
+<li><strong>Canonical for:</strong> Asset Studio scope, SDK asset workflow, format conversion bridge, and agentic asset-generation integration boundaries</li>
+<li><strong>Scope:</strong> <code>ic-editor</code> (SDK), <code>ra-formats</code> codecs/read-write support, <code>ic-render</code>/<code>ic-ui</code> preview integration, Workshop publishing workflow</li>
+<li><strong>Decision:</strong> IC ships an <strong>Asset Studio</strong> inside the separate SDK app for browsing, viewing, converting, validating, and preparing assets for gameplay use; agentic (LLM) generation is optional and layered on top.</li>
+<li><strong>Why:</strong> Closes the “last mile” between external art tools and mod-ready assets, preserves legacy C&amp;C asset workflows, and gives creators in-context preview instead of disconnected utilities.</li>
+<li><strong>Non-goals:</strong> Replacing Photoshop/Aseprite/Blender; embedding creator tools in the game binary; making LLM generation mandatory.</li>
+<li><strong>Invariants preserved:</strong> SDK remains separate from <code>ic-game</code>; outputs are standard/mod-ready formats (no proprietary editor-only format); game remains fully functional without LLM providers.</li>
+<li><strong>Defaults / UX behavior:</strong> Asset Studio handles browse/view/edit/convert first; provenance/rights checks surface mainly at Publish Readiness, not as blocking editing popups.</li>
+<li><strong>Compatibility / Export impact:</strong> D040 provides per-asset conversion foundations used by D066 whole-project export workflows and cross-game asset bridging.</li>
+<li><strong>Security / Trust impact:</strong> Asset provenance and AI-generation metadata are captured in Asset Studio (Advanced mode) and enforced primarily at publish time.</li>
+<li><strong>Public interfaces / types / commands:</strong> <code>AssetGenerator</code>, <code>AssetProvenance</code>, <code>AiGenerationMeta</code>, <code>VideoProvider</code>, <code>MusicProvider</code>, <code>SoundFxProvider</code>, <code>VoiceProvider</code></li>
+<li><strong>Affected docs:</strong> <code>src/04-MODDING.md</code>, <code>src/decisions/09c-modding.md</code>, <code>src/17-PLAYER-FLOW.md</code>, <code>src/05-FORMATS.md</code></li>
+<li><strong>Revision note summary:</strong> None</li>
+<li><strong>Keywords:</strong> asset studio, sdk, ra-formats, conversion, vqa aud shp, provenance, ai asset generation, video pipeline, last-mile tooling</li>
+</ul>
+<p><strong>Decision:</strong> Ship an Asset Studio as part of the IC SDK — a visual tool for browsing, viewing, editing, and generating game resources (sprites, palettes, terrain tiles, UI chrome, 3D models). Optionally agentic: modders can describe what they want and an LLM generates or modifies assets, with in-context preview and iterative refinement. The Asset Studio is a tab/mode within the SDK application alongside the scenario editor (D038) — separate from the game binary.</p>
+<p><strong>Context:</strong> The current design covers the full lifecycle <em>around</em> assets — parsing (ra-formats), runtime loading (Bevy pipeline), in-game use (ic-render), mission editing (D038), and distribution (D030 Workshop) — but nothing for the creative work of making or modifying assets. A modder who wants to create a new unit sprite, adjust a palette, or redesign menu chrome has zero tooling in our chain. They use external tools (Photoshop, GIMP, Aseprite) and manually convert. The community’s most-used asset tool is XCC Mixer (a 20-year-old Windows utility for browsing .mix archives). We can do better.</p>
+<p>Bevy does not fill this gap. Bevy’s asset system handles loading and hot-reloading at runtime. The in-development Bevy Editor is a scene/entity inspector, not an art tool. No Bevy ecosystem crate provides C&amp;C-format-aware asset editing.</p>
+<p><strong>What this is NOT:</strong> A Photoshop competitor. The Asset Studio does not provide pixel-level painting or 3D modeling. Artists use professional external tools for that. The Asset Studio handles the last mile: making assets game-ready, previewing them in context, and bridging the gap between “I have a PNG” and “it works as a unit in the game.”</p>
+<h3 id="sdk-architecture--editorgame-separation"><a class="header" href="#sdk-architecture--editorgame-separation">SDK Architecture — Editor/Game Separation</a></h3>
+<p><strong>The IC SDK is a separate application from the game.</strong> Normal players never see editor UI. Creators download the SDK alongside the game (or as part of the <code>ic</code> CLI toolchain). This follows the industry standard: Bethesda’s Creation Kit, Valve’s Hammer/Source SDK, Epic’s Unreal Editor, Blizzard’s StarEdit/World Editor (bundled but launches separately).</p>
+<pre><code>┌──────────────────────────────┐     ┌──────────────────────────────┐
+│         IC Game              │     │          IC SDK              │
+│  (ic-game binary)            │     │  (ic-sdk binary)             │
+│                              │     │                              │
+│  • Play skirmish/campaign    │     │  ┌────────────────────────┐  │
+│  • Online multiplayer        │     │  │   Scenario Editor      │  │
+│  • Browse/install mods       │     │  │   (D038)               │  │
+│  • Watch replays             │     │  ├────────────────────────┤  │
+│  • Settings &amp; profiles       │     │  │   Asset Studio         │  │
+│                              │     │  │   (D040)               │  │
+│  No editor UI.               │     │  ├────────────────────────┤  │
+│  No asset tools.             │     │  │   Campaign Editor      │  │
+│  Clean player experience.    │     │  │   (D038/D021)          │  │
+│                              │     │  ├────────────────────────┤  │
+│                              │     │  │   Game Master Mode     │  │
+│                              │     │  │   (D038)               │  │
+│                              │     │  └────────────────────────┘  │
+│                              │     │                              │
+│                              │     │  Shares: ic-render, ic-sim,  │
+│                              │     │  ic-ui, ic-protocol,         │
+│                              │     │  ra-formats                  │
+└──────────────────────────────┘     └──────────────────────────────┘
+         ▲                                      │
+         │         ic mod run / Test button      │
+         └───────────────────────────────────────┘
+</code></pre>
+<p><strong>Why separate binaries instead of in-game editor:</strong></p>
+<ul>
+<li><strong>Players aren’t overwhelmed.</strong> A player launches the game and sees: Play, Multiplayer, Replays, Settings. No “Editor” menu item they’ll never use.</li>
+<li><strong>SDK can be complex without apology.</strong> The SDK UI can have dense panels, multi-tab layouts, technical property editors. It’s for creators — they expect professional tools.</li>
+<li><strong>Smaller game binary.</strong> All editor systems, asset processing code, LLM integration, and creator UI are excluded from the game build. Players download less.</li>
+<li><strong>Industry convention.</strong> Players expect an SDK. “Download the Creation Kit” is understood. “Open the in-game editor” confuses casual players who accidentally click it.</li>
+</ul>
+<p><strong>Why this still works for fast iteration:</strong></p>
+<ul>
+<li><strong>“Test” button in SDK</strong> launches <code>ic-game</code> with the current scenario/asset loaded. One click, instant playtest. Same <code>LocalNetwork</code> path as before — the preview is real gameplay.</li>
+<li><strong>Hot-reload bridge.</strong> While the game is running from a Test launch, the SDK watches for file changes. Edit a YAML file, save → game hot-reloads. Edit a sprite, save → game picks up the new asset. The iteration loop is seconds, not minutes.</li>
+<li><strong>Shared Bevy crates.</strong> The SDK reuses <code>ic-render</code> for its preview viewports, <code>ic-sim</code> for gameplay preview, <code>ic-ui</code> for shared components. It’s the same rendering and simulation — just in a different window with different chrome.</li>
+</ul>
+<p><strong>D069 shared setup-component reuse (player-first extension):</strong> The SDK’s own first-run setup and maintenance flows should reuse the D069 installation/setup component model (data-dir selection, content source detection, content transfer/verify progress UI, and repair/reclaim patterns) instead of inventing a separate “SDK installer UX.” The SDK layers creator-specific steps on top — Git guidance, optional templates/toolchains, and export-helper dependencies — while preserving the separate <code>ic-editor</code> binary boundary.</p>
+<p><strong>Crate boundary:</strong> <code>ic-editor</code> contains all SDK functionality (scenario editor, asset studio, campaign editor, Game Master mode). It depends on <code>ic-render</code>, <code>ic-sim</code>, <code>ic-ui</code>, <code>ic-protocol</code>, <code>ra-formats</code>, and optionally <code>ic-llm</code> (via traits). <code>ic-game</code> does NOT depend on <code>ic-editor</code>. Both <code>ic-game</code> and <code>ic-editor</code> are separate binary targets in the workspace — they share library crates but produce independent executables.</p>
+<p><strong>Game Master mode exception:</strong> Game Master mode requires real-time manipulation of a live game session. The SDK connects to a running game as a special client — the Game Master’s SDK sends <code>PlayerOrder</code>s through <code>ic-protocol</code> to the game’s <code>NetworkModel</code>, same as any other player. The game doesn’t know it’s being controlled by an SDK — it receives orders. The Game Master’s SDK renders its own view (top-down strategic overview, budget panel, entity palette) but the game session runs in <code>ic-game</code>. Open questions deferred to Phase 6b design: how matchmaking/lobby handles GM slots (dedicated GM slot vs. spectator-with-controls), whether GM can join mid-match, and how GM presence is communicated to players.</p>
+<h3 id="three-layers"><a class="header" href="#three-layers">Three Layers</a></h3>
+<h4 id="layer-1--asset-browser--viewer"><a class="header" href="#layer-1--asset-browser--viewer">Layer 1 — Asset Browser &amp; Viewer</a></h4>
+<p>Browse, search, and preview every asset the engine can load. This is the XCC Mixer replacement — but integrated into a modern Bevy-based UI with live preview.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Capability</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Archive browser</strong></td><td>Browse .mix archive contents, see file list, extract individual files or bulk export</td></tr>
+<tr><td><strong>Sprite viewer</strong></td><td>View .shp sprites with palette applied, animate frame sequences, scrub through frames, zoom</td></tr>
+<tr><td><strong>Palette viewer</strong></td><td>View .pal palettes as color grids, compare palettes side-by-side, see palette applied to any sprite</td></tr>
+<tr><td><strong>Terrain tile viewer</strong></td><td>Preview .tmp terrain tiles in grid layout, see how tiles connect</td></tr>
+<tr><td><strong>Audio player</strong></td><td>Play .aud/.wav/.ogg/.mp3 files directly, waveform visualization, spectral view, loop point markers, sample rate / bit depth / channel info display</td></tr>
+<tr><td><strong>Video player</strong></td><td>Play .vqa/.mp4/.webm cutscenes, frame-by-frame scrub, preview in all three display modes (fullscreen, radar_comm, picture_in_picture)</td></tr>
+<tr><td><strong>Chrome previewer</strong></td><td>View UI theme sprite sheets (D032) with 9-slice visualization, see button states</td></tr>
+<tr><td><strong>3D model viewer</strong></td><td>Preview GLTF/GLB models (and .vxl voxel models for future RA2 module) with rotation, lighting</td></tr>
+<tr><td><strong>Asset search</strong></td><td>Full-text search across all loaded assets — by filename, type, archive, tags</td></tr>
+<tr><td><strong>In-context preview</strong></td><td>“Preview as unit” — see this sprite on an actual map tile. “Preview as building” — see footprint. “Preview as chrome” — see in actual menu layout.</td></tr>
+<tr><td><strong>Dependency graph</strong></td><td>Which assets reference this one? What does this mod override? Visual dependency tree.</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Format support by game module:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Game</th><th>Archive</th><th>Sprites</th><th>Models</th><th>Palettes</th><th>Audio</th><th>Video</th><th>Source</th></tr>
+</thead>
+<tbody>
+<tr><td>RA1 / TD</td><td>.mix</td><td>.shp</td><td>—</td><td>.pal</td><td>.aud</td><td>.vqa</td><td>EA GPL release — fully open</td></tr>
+<tr><td>RA2 / TS</td><td>.mix</td><td>.shp, .vxl (voxels)</td><td>.hva (voxel anim)</td><td>.pal</td><td>.aud</td><td>.bik</td><td>Community-documented (XCC, Ares, Phobos)</td></tr>
+<tr><td>Generals / ZH</td><td>.big</td><td>—</td><td>.w3d (3D meshes)</td><td>—</td><td>—</td><td>.bik</td><td>EA GPL release — fully open</td></tr>
+<tr><td>OpenRA</td><td>.oramap (ZIP)</td><td>.png</td><td>—</td><td>.pal</td><td>.wav/.ogg</td><td>—</td><td>Open source</td></tr>
+<tr><td>IC native</td><td>—</td><td>.png, sprite sheets</td><td>.glb/.gltf</td><td>.pal, .yaml</td><td>.wav/.ogg/.mp3</td><td>.mp4/.webm</td><td>Our format</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Minimal reverse engineering required.</strong> RA1/TD and Generals/ZH are fully open-sourced by EA (GPL). RA2/TS formats are not open-sourced but have been community-documented for 20+ years — .vxl, .hva, .csf are thoroughly understood by the XCC, Ares, and Phobos projects. The <code>FormatRegistry</code> trait (D018) already anticipates per-module format loaders.</p>
+<h4 id="layer-2--asset-editor"><a class="header" href="#layer-2--asset-editor">Layer 2 — Asset Editor</a></h4>
+<p>Scoped asset editing operations. Not pixel painting — structured operations on game asset types.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Tool</th><th>What It Does</th><th>Example</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Palette editor</strong></td><td>Remap colors, adjust faction-color ranges, create palette variants, shift hue/saturation/brightness per range</td><td>“Make a winter palette from temperate” — shift greens to whites</td></tr>
+<tr><td><strong>Sprite sheet organizer</strong></td><td>Reorder frames, adjust animation timing, add/remove frames, composite sprite layers, set hotpoints/offsets</td><td>Import 8 PNG frames → assemble into .shp-compatible sprite sheet with correct facing rotations</td></tr>
+<tr><td><strong>Chrome / theme designer</strong></td><td>Visual editor for D032 UI themes — drag 9-slice panels, position elements, see result live in actual menu mockup</td><td>Design a new sidebar layout: drag resource bar, build queue, minimap into position. Live preview updates.</td></tr>
+<tr><td><strong>Terrain tile editor</strong></td><td>Create terrain tile sets — assign connectivity rules, transition tiles, cliff edges. Preview tiling on a test map.</td><td>Paint a new snow terrain set: assign which tiles connect to which edges</td></tr>
+<tr><td><strong>Import pipeline</strong></td><td>Convert standard formats to game-ready assets: PNG → palette-quantized .shp, GLTF → game model with LODs, font → bitmap font sheet</td><td>Drag in a 32-bit PNG → auto-quantize to .pal, preview dithering options, export as .shp</td></tr>
+<tr><td><strong>Batch operations</strong></td><td>Apply operations across multiple assets: bulk palette remap, bulk resize, bulk re-export</td><td>“Remap all Soviet unit sprites to use the Tiberium Sun palette”</td></tr>
+<tr><td><strong>Diff / compare</strong></td><td>Side-by-side comparison of two versions of an asset — sprite diff, palette diff, before/after</td><td>Compare original RA1 sprite with your modified version, pixel-diff highlighted</td></tr>
+<tr><td><strong>Video converter</strong></td><td>Convert between C&amp;C video formats (.vqa) and modern formats (.mp4, .webm). Trim, crop, resize. Subtitle overlay. Frame rate control. Optional restoration/remaster prep passes and variant-pack export metadata.</td><td>Record a briefing in OBS → import .mp4 → convert to .vqa for classic feel, or keep as .mp4 for modern campaigns. Extract original RA1 briefings to .mp4 for remixing in Premiere/DaVinci, then package as original/clean/AI remaster variants.</td></tr>
+<tr><td><strong>Audio converter</strong></td><td>Convert between C&amp;C audio format (.aud) and modern formats (.wav, .ogg). Trim, normalize, fade in/out. Sample rate conversion. Batch convert entire sound libraries.</td><td>Extract all RA1 sound effects to .wav for remixing in Audacity/Reaper. Record custom EVA lines → normalize → convert to .aud for classic feel. Batch-convert a voice pack from .wav to .ogg for Workshop publish.</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Design rule:</strong> Every operation the Asset Studio performs produces standard output formats. Palette edits produce .pal files. Sprite operations produce .shp or sprite sheet PNGs. Chrome editing produces YAML + sprite sheet PNGs. No proprietary intermediate format — the output is always mod-ready.</p>
+<h4 id="asset-provenance--rights-metadata-advanced-publish-focused"><a class="header" href="#asset-provenance--rights-metadata-advanced-publish-focused">Asset Provenance &amp; Rights Metadata (Advanced, Publish-Focused)</a></h4>
+<p>The Asset Studio is where creators import, convert, and generate assets, so it is the natural place to capture provenance metadata — but <strong>not</strong> to interrupt the core creative loop.</p>
+<p><strong>Design goal:</strong> provenance and rights checks improve trust and publish safety without turning Asset Studio into a compliance wizard.</p>
+<p><strong>Phase 6b behavior (aligned with Publish Readiness in D038):</strong></p>
+<ul>
+<li><strong>Asset metadata panel (Advanced mode)</strong> for source URL/project, author attribution, SPDX license, modification notes, and import method</li>
+<li><strong>AI generation metadata</strong> (when Layer 3 is used): provider/model, generation timestamp, optional prompt hash, and a “human-edited” flag</li>
+<li><strong>Batch metadata operations</strong> for large imports (apply attribution/license to a selected asset set)</li>
+<li><strong>Publish-time surfacing</strong> — most provenance/rules issues appear in the Scenario/Campaign editor’s <strong>Publish Readiness</strong> screen, not as blocking popups during editing</li>
+<li><strong>Channel-sensitive gating</strong> — local saves and playtests never require complete provenance; release-channel Workshop publishing can enforce stricter metadata completeness than beta/private workflows</li>
+</ul>
+<p>This builds on D030/D031/D047/D066 and keeps normal import/preview/edit/test workflows fast.</p>
+<p><strong>Metadata contracts (Phase 6b):</strong></p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct AssetProvenance {
+    pub source_uri: Option&lt;String&gt;,
+    pub source_author: Option&lt;String&gt;,
+    pub license_spdx: Option&lt;String&gt;,
+    pub import_method: AssetImportMethod, // imported / extracted / generated / converted
+    pub modified_by_creator: bool,
+    pub notes: Option&lt;String&gt;,
+}
+
+pub struct AiGenerationMeta {
+    pub provider: String,
+    pub model: String,
+    pub generated_at: String,   // RFC 3339 UTC
+    pub prompt_hash: Option&lt;String&gt;,
+    pub human_edited: bool,
+}
+<span class="boring">}</span></code></pre>
+<h4 id="optional-ai-enhanced-cutscene-remaster-workflow-d068-integration"><a class="header" href="#optional-ai-enhanced-cutscene-remaster-workflow-d068-integration">Optional AI-Enhanced Cutscene Remaster Workflow (D068 Integration)</a></h4>
+<p>IC can support “better remaster” FMV/cutscene packs, including generative AI-assisted enhancement, but the Asset Studio treats them as <strong>optional presentation variants</strong>, not replacements for original campaign media.</p>
+<p><strong>Asset Studio design rules (when remastering original cutscenes):</strong></p>
+<ul>
+<li><strong>Preservation-first output:</strong> original extracted media remains available and publishable as a separate variant pack</li>
+<li><strong>Variant packaging:</strong> remastered outputs are packaged as <code>Original</code>, <code>Clean Remaster</code>, or <code>AI-Enhanced</code> media variants (aligned with D068 selective installs)</li>
+<li><strong>Clear labeling:</strong> AI-assisted outputs are explicitly labeled in pack metadata and Publish Readiness summaries</li>
+<li><strong>Lineage metadata:</strong> provenance records the original source media reference plus restoration/enhancement toolchain details</li>
+<li><strong>Human review required:</strong> creators must preview timing, subtitle sync, and radar-comm/fullscreen presentation before publish</li>
+<li><strong>Fallback-safe:</strong> campaigns continue using other installed variants or text/briefing fallback if the remaster pack is missing</li>
+</ul>
+<p><strong>Quality guardrails (Publish Readiness surfaces warnings/advice):</strong></p>
+<ul>
+<li>frame-to-frame consistency / temporal artifact checks (where detectable)</li>
+<li>subtitle timing drift vs source timestamps</li>
+<li>audio/video duration mismatch and lip-sync drift</li>
+<li>excessive sharpening/denoise artifacts (advisory)</li>
+<li>missing “AI Enhanced” / “Experimental” labeling for AI-assisted remaster packs</li>
+</ul>
+<p>This keeps the SDK open to advanced remaster workflows while preserving trust, legal review, and the original media.</p>
+<h4 id="layer-3--agentic-asset-generation-d016-extension-phase-7"><a class="header" href="#layer-3--agentic-asset-generation-d016-extension-phase-7">Layer 3 — Agentic Asset Generation (D016 Extension, Phase 7)</a></h4>
+<p>LLM-powered asset creation for modders who have ideas but not art skills. Same BYOLLM pattern as D016 — user brings their own provider (DALL-E, Stable Diffusion, Midjourney API, local model), <code>ic-llm</code> routes the request.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Capability</th><th>How It Works</th><th>Example</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Sprite generation</strong></td><td>Describe unit → LLM generates sprite sheet → preview on map → iterate</td><td>“Soviet heavy tank, double barrel, darker than the Mammoth Tank” → generates 8-facing sprite sheet → preview as unit on map → “make the turret bigger” → re-generates</td></tr>
+<tr><td><strong>Palette generation</strong></td><td>Describe mood/theme → LLM generates palette → preview applied to existing sprites</td><td>“Volcanic wasteland palette — reds, oranges, dark stone” → generates .pal → preview on temperate map sprites</td></tr>
+<tr><td><strong>Chrome generation</strong></td><td>Describe UI style → LLM generates theme elements → preview in actual menu</td><td>“Brutalist concrete UI theme, sharp corners, red accents” → generates chrome sprite sheet → preview in sidebar</td></tr>
+<tr><td><strong>Terrain generation</strong></td><td>Describe biome → LLM generates tile set → preview tiling</td><td>“Frozen tundra with ice cracks and snow drifts” → generates terrain tiles with connectivity → preview on test map</td></tr>
+<tr><td><strong>Asset variation</strong></td><td>Take existing asset + describe change → LLM produces variant</td><td>“Take this Allied Barracks and make a Nod version — darker, angular, with a scorpion emblem”</td></tr>
+<tr><td><strong>Style transfer</strong></td><td>Apply visual style across asset set</td><td>“Make all these units look hand-drawn like Advance Wars”</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Workflow:</strong></p>
+<ol>
+<li>Describe what you want (text prompt + optional reference image)</li>
+<li>LLM generates candidate(s) — multiple options when possible</li>
+<li>Preview in-context (on map, in menu, as unit) — not just a floating image, but in the actual game rendering</li>
+<li>Iterate: refine prompt, adjust, regenerate</li>
+<li>Post-process: palette quantize, frame extract, format convert</li>
+<li>Export as mod-ready asset → ready for Workshop publish</li>
+</ol>
+<p><strong>Crate boundary:</strong> <code>ic-editor</code> defines an <code>AssetGenerator</code> trait (input: text description + format constraints + optional reference → output: generated image data). <code>ic-llm</code> implements it by routing to the configured provider. <code>ic-game</code> wires them at startup in the SDK binary. Same pattern as <code>NarrativeGenerator</code> for the replay-to-scenario pipeline. The SDK works without an LLM — Layers 1 and 2 are fully functional. Layer 3 activates when a provider is configured. Asset Studio operations are also exposed through the LLM-callable editor tool bindings (see D016 § “LLM-Callable Editor Tool Bindings”), enabling conversational asset workflows beyond generation — e.g., “apply the volcanic palette to all terrain tiles in this map” or “batch-convert these PNGs to .shp with the Soviet palette.”</p>
+<p><strong>What the LLM does NOT replace:</strong></p>
+<ul>
+<li>Professional art. LLM-generated sprites are good enough for prototyping, playtesting, and small mods. Professional pixel art for a polished release still benefits from a human artist.</li>
+<li>Format knowledge. The LLM generates images. The Asset Studio handles palette quantization, frame extraction, sprite sheet assembly, and format conversion. The LLM doesn’t need to know about .shp internals.</li>
+<li>Quality judgment. The modder decides if the result is good enough. The Asset Studio shows it in context so the judgment is informed.</li>
+</ul>
+<blockquote>
+<p><strong>See also:</strong> D016 § “Generative Media Pipeline” extends agentic generation beyond visual assets to audio and video: voice synthesis (<code>VoiceProvider</code>), music generation (<code>MusicProvider</code>), sound FX (<code>SoundFxProvider</code>), and video/cutscene generation (<code>VideoProvider</code>). The SDK integrates these as Tier 3 Asset Studio tools alongside visual generation. All media provider types use the same BYOLLM pattern and D047 task routing.</p>
+</blockquote>
+<h3 id="menu--chrome-design-workflow"><a class="header" href="#menu--chrome-design-workflow">Menu / Chrome Design Workflow</a></h3>
+<p>UI themes (D032) are YAML + sprite sheets. Currently there’s no visual editor — modders hand-edit coordinates and pixel offsets. The Asset Studio’s chrome designer closes this gap:</p>
+<ol>
+<li><strong>Load a base theme</strong> (Classic, Remastered, Modern, or any workshop theme)</li>
+<li><strong>Visual element editor</strong> — see the 9-slice panels, button states, scrollbar tracks as overlays on the sprite sheet. Drag edges to resize. Click to select.</li>
+<li><strong>Layout preview</strong> — split view: sprite sheet on left, live menu mockup on right. Every edit updates the mockup instantly.</li>
+<li><strong>Element properties</strong> — per-element: padding, margins, color tint, opacity, font assignment, animation (hover/press states)</li>
+<li><strong>Full menu preview</strong> — “Preview as: Main Menu / Sidebar / Build Queue / Lobby / Settings” — switch between all game screens to see the theme in each context</li>
+<li><strong>Export</strong> — produces <code>theme.yaml</code> + sprite sheet PNG, ready for <code>ic mod publish</code></li>
+<li><strong>Agentic mode</strong> — describe desired changes: “make the sidebar narrower with a brushed metal look” → LLM modifies the sprite sheet + adjusts YAML layout → preview → iterate</li>
+</ol>
+<h3 id="cross-game-asset-bridge"><a class="header" href="#cross-game-asset-bridge">Cross-Game Asset Bridge</a></h3>
+<p>The Asset Studio understands multiple C&amp;C format families and can convert between them:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Conversion</th><th>Direction</th><th>Use Case</th><th>Phase</th></tr>
+</thead>
+<tbody>
+<tr><td>.shp (RA1) → .png</td><td>Export</td><td>Extract classic sprites for editing in external tools</td><td>6a</td></tr>
+<tr><td>.png → .shp + .pal</td><td>Import</td><td>Turn modern art into classic-compatible format</td><td>6a</td></tr>
+<tr><td>.vxl (RA2) → .glb</td><td>Export</td><td>Convert RA2 voxel models to standard 3D format for editing</td><td>Future</td></tr>
+<tr><td>.glb → game model</td><td>Import</td><td>Import artist-created 3D models for future 3D game modules</td><td>Future</td></tr>
+<tr><td>.w3d (Generals) → .glb</td><td>Export</td><td>Convert Generals models for viewing and editing</td><td>Future</td></tr>
+<tr><td>.vqa → .mp4/.webm</td><td>Export</td><td>Extract original RA/TD cutscenes to modern formats for viewing, remixing, or re-editing in standard video tools (Premiere, DaVinci, Kdenlive)</td><td>6a</td></tr>
+<tr><td>.mp4/.webm → .vqa</td><td>Import</td><td>Convert custom-recorded campaign briefings/cutscenes to classic VQA format (palette-quantized, VQ-compressed) for authentic retro feel</td><td>6a</td></tr>
+<tr><td>.mp4/.webm passthrough</td><td>Native</td><td>Modern video formats play natively — no conversion required. Campaign creators can use .mp4/.webm directly for briefings and radar comms.</td><td>4</td></tr>
+<tr><td>.aud → .wav/.ogg</td><td>Export</td><td>Extract original RA/TD sound effects, EVA lines, and music to modern formats for remixing or editing in standard audio tools (Audacity, Reaper, FL Studio)</td><td>6a</td></tr>
+<tr><td>.wav/.ogg → .aud</td><td>Import</td><td>Convert custom audio recordings to classic Westwood AUD format (IMA ADPCM compressed) for authentic retro sound or OpenRA mod compatibility</td><td>6a</td></tr>
+<tr><td>.wav/.ogg/.mp3 passthrough</td><td>Native</td><td>Modern audio formats play natively — no conversion required. Mod creators can use .wav/.ogg/.mp3 directly for sound effects, music, and EVA lines.</td><td>3</td></tr>
+<tr><td>Theme YAML ↔ visual</td><td>Bidirectional</td><td>Edit themes visually or as YAML — changes sync both ways</td><td>6a</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>ra-formats write support:</strong> Currently <code>ra-formats</code> is read-only (parse .mix, .shp, .pal, .vqa, .aud). The Asset Studio requires write support — generating .shp from frames, writing .pal files, encoding .vqa video, encoding .aud audio, optionally packing .mix archives. This is an additive extension to <code>ra-formats</code> (no redesign of existing parsers), but non-trivial engineering: .shp writing requires correct header generation, frame offset tables, and optional LCW/RLE compression; .vqa encoding requires VQ codebook generation and frame differencing; .aud encoding requires IMA ADPCM compression with correct <code>AUDHeaderType</code> generation and <code>IndexTable</code>/<code>DiffTable</code> lookup table application; .mix packing requires building the file index and CRC hash table. All encoders reference the EA GPL source code implementations directly (see <code>05-FORMATS.md</code> § Binary Format Codec Reference). Budget accordingly in Phase 6a.</p>
+<p><strong>Video pipeline:</strong> The game engine natively plays .mp4 and .webm via standard media decoders (platform-provided or bundled). Campaign creators can use modern formats directly — no conversion needed. The .vqa ↔ .mp4/.webm conversion in the Asset Studio is for creators who <em>want</em> the classic C&amp;C aesthetic (palette-quantized, low-res FMV look), who need to extract and remix original EA cutscenes, or who want to produce optional remaster variant packs (D068) from preserved source material. The conversion pipeline lives in <code>ra-formats</code> (VQA codec) + <code>ic-editor</code> (UI, preview, trim/crop tools). Someone recording a briefing with a webcam or screen recorder imports their .mp4, previews it in the Video Playback module’s display modes (fullscreen, radar_comm, picture_in_picture), optionally converts to .vqa for retro feel, and publishes via Workshop (D030). Someone remastering classic RA1 briefings can extract <code>.vqa</code> to <code>.mp4</code>, perform restoration/enhancement (traditional or AI-assisted), validate subtitle/audio sync and display-mode previews in Asset Studio, then publish the result as a clearly labeled optional presentation variant pack instead of replacing the originals.</p>
+<p><strong>Audio pipeline:</strong> The game engine natively plays .wav, .ogg, and .mp3 via standard audio decoders (Bevy audio plugin + platform codecs). Modern formats are the recommended choice for new content — .ogg for music and voice lines (good compression, no licensing issues), .wav for short sound effects (zero decode latency). The .aud ↔ .wav/.ogg conversion in the Asset Studio is for creators who need to extract and remix original EA audio (hundreds of classic sound effects, EVA voice lines, and Hell March variations) or who want to encode custom audio in classic AUD format for OpenRA mod compatibility. The conversion pipeline lives in <code>ra-formats</code> (AUD codec — IMA ADPCM encode/decode using the original Westwood <code>IndexTable</code>/<code>DiffTable</code> from the EA GPL source) + <code>ic-editor</code> (UI, waveform preview, trim/normalize/fade tools). Someone recording custom EVA voice lines imports their .wav files, previews with waveform visualization, normalizes volume, optionally converts to .aud for classic feel or keeps as .ogg for modern mods, and publishes via Workshop (D030). Batch conversion handles entire sound libraries — extract all 200+ RA1 sound effects to .wav in one operation.</p>
+<h3 id="alternatives-considered"><a class="header" href="#alternatives-considered">Alternatives Considered</a></h3>
+<ol>
+<li><strong>Rely on external tools entirely</strong> (Photoshop, Aseprite, XCC Mixer) — Rejected. Forces modders to learn multiple disconnected tools with no in-context preview. The “last mile” problem (PNG → game-ready .shp with correct palette, offsets, and facing rotations) is where most modders give up.</li>
+<li><strong>Build a full art suite</strong> (pixel editor, 3D modeler) — Rejected. Scope explosion. Aseprite and Blender exist. We handle the game-specific parts they can’t.</li>
+<li><strong>In-game asset tools</strong> — Rejected. Same reasoning as the overall SDK separation: players shouldn’t see asset editing tools. The SDK is for creators.</li>
+<li><strong>Web-based editor</strong> — Deferred. A browser-based asset viewer/editor is a compelling Phase 7+ goal (especially for the WASM target), but the primary tool ships as a native Bevy application in the SDK.</li>
+</ol>
+<h3 id="phase"><a class="header" href="#phase">Phase</a></h3>
+<ul>
+<li><strong>Phase 0:</strong> <code>ra-formats</code> delivers CLI asset inspection (dump/inspect/validate) — the text-mode precursor.</li>
+<li><strong>Phase 6a:</strong> Asset Studio ships as part of the SDK alongside the scenario editor. Layer 1 (browser/viewer) and Layer 2 (editor) are the deliverables. Chrome designer ships alongside the UI theme system (D032).</li>
+<li><strong>Phase 6b:</strong> Asset provenance/rights metadata panel (Advanced mode), batch provenance editing, and Publish Readiness integration (warnings/gating surfaced primarily at publish time, not during normal editing/playtesting).</li>
+<li><strong>Phase 7:</strong> Layer 3 (agentic generation via <code>ic-llm</code>). Same phase as LLM text generation (D016).</li>
+<li><strong>Future:</strong> .vxl/.hva write support (for RA2 module), .w3d viewing (for Generals module), browser-based viewer.</li>
+</ul>
+<hr>
+<hr>
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../../decisions/09f/D038-scenario-editor.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../../decisions/09f/D047-llm-config.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../../decisions/09f/D038-scenario-editor.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../../decisions/09f/D047-llm-config.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../../mark-09e88c2c.min.js"></script>
+        <script src="../../searcher-c2a407aa.js"></script>
+
+        <script src="../../clipboard-1626706a.min.js"></script>
+        <script src="../../highlight-abc7f01d.js"></script>
+        <script src="../../book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

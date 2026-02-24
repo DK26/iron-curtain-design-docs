@@ -35,10 +35,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-3d47d740.js";
+            window.path_to_searchindex_js = "../searchindex-61d2369b.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-914f79aa.js"></script>
+        <script src="../toc-1553b04b.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -354,9 +354,9 @@ seed_duration_after_exit = "30m"      # Background seeding after game closes
 cache_size_limit = "2 GB"             # LRU eviction when exceeded
 prefer_p2p = true                     # false = always use HTTP direct
 </code></pre>
-<p>The P2P engine uses <strong>rarest-first</strong> piece selection, an <strong>endgame mode</strong> that sends duplicate requests for the last few pieces to prevent stalls, a <strong>connection state machine</strong> (pending → active → blacklisted) that avoids wasting time on dead or throttled peers, <strong>statistical bad-peer detection</strong> (demotes peers whose transfer times deviate beyond 3σ — adapted from Dragonfly’s evaluator), and <strong>3-tier download priority</strong> (lobby-urgent / user-requested / background) for QoS differentiation. Full protocol design details — peer selection policy, weighted multi-dimensional scoring, piece request strategy, announce cycle, size-based piece lengths, health checks, preheat/prefetch, persistent replica count — are in <code>../decisions/09e-community.md</code> § D049 “P2P protocol design details.”</p>
+<p>The P2P engine uses <strong>rarest-first</strong> piece selection, an <strong>endgame mode</strong> that sends duplicate requests for the last few pieces to prevent stalls, a <strong>connection state machine</strong> (pending → active → blacklisted) that avoids wasting time on dead or throttled peers, <strong>statistical bad-peer detection</strong> (demotes peers whose transfer times deviate beyond 3σ — adapted from Dragonfly’s evaluator), and <strong>3-tier download priority</strong> (lobby-urgent / user-requested / background) for QoS differentiation. Full protocol design details — peer selection policy, weighted multi-dimensional scoring, piece request strategy, announce cycle, size-based piece lengths, health checks, preheat/prefetch, persistent replica count — are in <code>../decisions/09e/D049-workshop-assets.md</code> “P2P protocol design details.”</p>
 <p><strong>Cost:</strong> A BitTorrent tracker costs $5-20/month. Centralized CDN for a popular 500MB mod downloaded 10K times = 5TB = $50-450/month. P2P reduces marginal distribution cost to near-zero.</p>
-<p>See <code>../decisions/09e-community.md</code> § D049 for full design including security analysis, Rust implementation options, gaming industry precedent, and phased bootstrap strategy.</p>
+<p>See <code>../decisions/09e/D049-workshop-assets.md</code> for full design including security analysis, Rust implementation options, gaming industry precedent, and phased bootstrap strategy.</p>
 <h3 id="workshop-resource-registry--dependency-system-d030"><a class="header" href="#workshop-resource-registry--dependency-system-d030">Workshop Resource Registry &amp; Dependency System (D030)</a></h3>
 <p>The Workshop operates as a <strong>universal resource repository for game assets</strong>. Any game asset — music, sprites, textures, cutscenes, maps, sound effects, voice lines, templates, balance presets — is individually publishable as a versioned, integrity-verified, licensed resource. Others (including LLM agents) can discover, depend on, and download resources automatically.</p>
 <blockquote>
@@ -531,7 +531,7 @@ mod:
 <ul>
 <li><strong>The platform is not liable</strong> for the content, accuracy, legality, or quality of user-submitted Workshop resources</li>
 <li><strong>No warranty</strong> is provided for Workshop resources — they are offered “as is” by their respective authors</li>
-<li><strong>DMCA safe harbor</strong> applies — the Workshop follows the notice-and-takedown process documented in <code>../decisions/09e-community.md</code> § D030</li>
+<li><strong>DMCA safe harbor</strong> applies — the Workshop follows the notice-and-takedown process documented in <code>../decisions/09e/D030-workshop-registry.md</code></li>
 <li><strong>The Workshop does not review or approve resources before listing.</strong> Anomaly detection (supply chain security) and community moderation provide the safety layer, not pre-publication editorial review</li>
 </ul>
 <p>This disclaimer appears in the Workshop ToS that authors accept before publishing, and is visible to users in the Workshop browser footer.</p>
@@ -542,7 +542,7 @@ mod:
 <li><strong>Lawful basis:</strong> Consent (account creation) and legitimate interest (platform security)</li>
 <li><strong>Retention:</strong> Connection logs purged after configured retention window (default: 30 days). Account data retained while account is active. Deleted on account deletion request.</li>
 <li><strong>User rights (GDPR):</strong> Right to access, right to rectification, right to erasure (account deletion deletes profile and reviews; published resources optionally transferable or removable), right to data portability (export in standard format)</li>
-<li><strong>Third parties:</strong> Federated Workshop servers may replicate metadata. P2P distribution exposes IP addresses to other peers (same as multiplayer — see <code>../decisions/09e-community.md</code> § D049 privacy notes)</li>
+<li><strong>Third parties:</strong> Federated Workshop servers may replicate metadata. P2P distribution exposes IP addresses to other peers (same as multiplayer — see <code>../decisions/09e/D049-workshop-assets.md</code> privacy notes)</li>
 </ul>
 <p>The Privacy Policy template ships with the Workshop server deployment. Community servers customize and publish their own.</p>
 <p><strong>Phase:</strong> ToS text drafted during Phase 3 (manifest format finalized). Requires legal review before official Workshop launch in Phase 4–5. CI/CD headless acceptance in Phase 5+.</p>
@@ -797,7 +797,7 @@ modpack:
 <li><strong>Install:</strong> Place in local cache, update dependency graph</li>
 <li><strong>Ready:</strong> Player joins game with all required content</li>
 </ol>
-<p>Players can cancel at any time. Auto-download respects bandwidth limits configured in settings. Resources downloaded this way are tagged as <strong>transient</strong> — they remain in the local cache and are fully functional, but are subject to auto-cleanup after a configurable period of non-use (default: 30 days). After the session, a non-intrusive toast offers the player the choice to pin (keep forever), let auto-clean run its course, or remove immediately. Frequently-used transient resources (3+ sessions) are automatically promoted to pinned. See <code>../decisions/09e-community.md</code> § D030 “Local Resource Management” for the full lifecycle, storage budget, and cleanup UX.</p>
+<p>Players can cancel at any time. Auto-download respects bandwidth limits configured in settings. Resources downloaded this way are tagged as <strong>transient</strong> — they remain in the local cache and are fully functional, but are subject to auto-cleanup after a configurable period of non-use (default: 30 days). After the session, a non-intrusive toast offers the player the choice to pin (keep forever), let auto-clean run its course, or remove immediately. Frequently-used transient resources (3+ sessions) are automatically promoted to pinned. See <code>../decisions/09e/D030-workshop-registry.md</code> “Local Resource Management” for the full lifecycle, storage budget, and cleanup UX.</p>
 <h3 id="creator-reputation-system-d030"><a class="header" href="#creator-reputation-system-d030">Creator Reputation System (D030)</a></h3>
 <p>Creators earn reputation through community signals:</p>
 <div class="table-wrapper">
@@ -821,7 +821,7 @@ modpack:
 <li><strong>Foundation</strong> — resources depended on by 50+ other resources</li>
 <li><strong>Curator</strong> — maintains high-quality curated collections</li>
 </ul>
-<p>Reputation is displayed but not gatekeeping — any registered user can publish. Badges appear on resource listings, in-game browser, and author profiles. See <code>../decisions/09e-community.md</code> § D030 for full design.</p>
+<p>Reputation is displayed but not gatekeeping — any registered user can publish. Badges appear on resource listings, in-game browser, and author profiles. See <code>../decisions/09e/D030-workshop-registry.md</code> for full design.</p>
 <h3 id="content-moderation--dmcatakedown-policy-d030"><a class="header" href="#content-moderation--dmcatakedown-policy-d030">Content Moderation &amp; DMCA/Takedown Policy (D030)</a></h3>
 <p>The Workshop must be a safe, legal distribution platform. Content moderation is a combination of automated scanning, community reporting, and moderator review.</p>
 <p><strong>Prohibited content:</strong> Malware, hate speech, illegal content, impersonation of other creators.</p>
@@ -861,7 +861,7 @@ achievements:
     script: "triggers/nuclear_winter.lua"
 </code></pre>
 <p>Achievement packs are versioned, dependency-tracked, and license-required like all Workshop resources. Engine-defined achievements (campaign completion, competitive milestones) ship with the game and cannot be overridden by mods.</p>
-<p>See <code>../decisions/09e-community.md</code> § D036 for the full achievement system design including SQL schema and category taxonomy.</p>
+<p>See <code>../decisions/09e/D036-achievements.md</code> for the full achievement system design including SQL schema and category taxonomy.</p>
 <h3 id="workshop-api"><a class="header" href="#workshop-api">Workshop API</a></h3>
 <p>The Workshop server stores all resource metadata, versions, dependencies, ratings, and search indices in an embedded SQLite database (D034). No external database required — the server is a single Rust binary that creates its <code>.db</code> file on first run. FTS5 provides full-text search over resource names, descriptions, and <code>llm_meta</code> tags. WAL mode handles concurrent reads from browse/search endpoints.</p>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]

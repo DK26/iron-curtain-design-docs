@@ -1,0 +1,849 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>D053 — Player Profile - Iron Curtain — Design Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Design docs for a Rust-native Red Alert RTS engine">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../../css/general-2459343d.css">
+        <link rel="stylesheet" href="../../css/chrome-ae938929.css">
+        <link rel="stylesheet" href="../../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../../searchindex-61d2369b.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../../toc-1553b04b.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Iron Curtain — Design Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs/edit/main/src/decisions/09e/D053-player-profile.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h2 id="d053--player-profile-system"><a class="header" href="#d053--player-profile-system">D053 — Player Profile System</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th></th><th></th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Status</strong></td><td>Accepted</td></tr>
+<tr><td><strong>Driver</strong></td><td>Players need a persistent identity, social presence, and reputation display across lobbies, game browser, and community participation</td></tr>
+<tr><td><strong>Depends on</strong></td><td>D034 (SQLite), D036 (Achievements), D042 (Behavioral Profiles), D046 (Premium Content), D050 (Workshop), D052 (Community Servers &amp; SCR)</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="problem"><a class="header" href="#problem">Problem</a></h3>
+<p>Players in multiplayer games are more than a text name. They need to express their identity, showcase achievements, verify reputation, and build social connections. Without a proper profile system, lobbies feel anonymous and impersonal — players can’t distinguish veterans from newcomers, can’t build persistent friendships, and can’t verify who they’re playing against. Every major gaming platform (Steam, Xbox Live, PlayStation Network, Battle.net, Riot Games, Discord) has learned this: <strong>profiles are the social foundation of a gaming community.</strong></p>
+<p>IC has a unique advantage: the Signed Credential Record (SCR) system from D052 means player reputation data (ratings, match counts, achievements) is <strong>cryptographically verified and portable</strong>. No other game has unforgeable, cross-community reputation badges. D053 builds the user-facing system that displays and manages this identity.</p>
+<h3 id="design-principles"><a class="header" href="#design-principles">Design Principles</a></h3>
+<p>Drawn from analysis of Steam, Xbox Live, PSN, Riot Games, Blizzard Battle.net, Discord, and OpenRA:</p>
+<ol>
+<li><strong>Identity expression without vanity bloat.</strong> Players should personalize their presence (avatar, name, bio) but the system shouldn’t become a cosmetic storefront that distracts from gameplay. Keep it clean and functional.</li>
+<li><strong>Reputation is earned, not claimed.</strong> Ratings, achievements, and match counts come from signed SCRs — not self-reported. If a player claims to be 1800-rated, their profile proves (or disproves) it.</li>
+<li><strong>Privacy by default.</strong> Every profile field has visibility controls. Players choose exactly what they share and with whom. Local behavioral data (D042) is never exposed in profiles.</li>
+<li><strong>Portable across communities.</strong> A player’s profile works on any community server they join. Community-specific data (ratings, achievements) is signed by that community. Cross-community viewing shows aggregated identity with per-community verification badges.</li>
+<li><strong>Offline-first.</strong> The profile is stored locally in SQLite (D034). Community-signed data is cached in the local credential store (D052). No server connection needed to view your own profile. Others’ profiles are fetched and cached on first encounter.</li>
+<li><strong>Platform-integrated where possible.</strong> On Steam, friends lists and presence come from Steam’s API via <code>PlatformServices</code>. On standalone builds, IC provides its own social graph backed by community servers. Both paths converge at the same profile UI.</li>
+</ol>
+<h3 id="profile-structure"><a class="header" href="#profile-structure">Profile Structure</a></h3>
+<p>A player profile contains these sections, each with its own visibility controls:</p>
+<p><strong>1. Identity Core</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Field</th><th>Description</th><th>Source</th><th>Max Size</th></tr>
+</thead>
+<tbody>
+<tr><td>Display Name</td><td>Primary visible name</td><td>Player-set, locally stored</td><td>32 chars</td></tr>
+<tr><td>Avatar</td><td>Profile image</td><td>Pre-built gallery or custom upload</td><td>128×128 PNG, max 64 KB</td></tr>
+<tr><td>Banner</td><td>Profile background image</td><td>Pre-built gallery or custom upload</td><td>600×200 PNG, max 128 KB</td></tr>
+<tr><td>Bio</td><td>Short self-description</td><td>Player-written</td><td>500 chars</td></tr>
+<tr><td>Player Title</td><td>Earned or selected title (e.g., “Iron Commander”, “Mammoth Enthusiast”)</td><td>Achievement reward or community grant</td><td>48 chars</td></tr>
+<tr><td>Faction Crest</td><td>Preferred faction emblem (displayed on profile card)</td><td>Player-selected from game module factions</td><td>Enum per game module</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Display names</strong> are not globally unique. Uniqueness is per-community (the community server enforces its own name policy). In a lobby, players are identified by <code>display_name + community_badge</code> or <code>display_name + player_key_prefix</code> when no community is shared. This matches how Discord handles names post-2023 (display names are cosmetic, uniqueness is contextual).</p>
+<p><strong>Avatar system:</strong></p>
+<ul>
+<li><strong>Pre-built gallery:</strong> Ships with ~60 avatars extracted from C&amp;C unit portraits, faction emblems, and structure icons (using game assets the player already owns — loaded by <code>ra-formats</code>, not distributed by IC). Each game module contributes its own set.</li>
+<li><strong>Custom upload:</strong> Players can set any 128×128 PNG image (max 64 KB) as their avatar. The image is stored in the local profile. When joining a lobby, only the SHA-256 hash is transmitted (32 bytes). Other clients fetch the actual image on demand from the player (via the relay, same channel as P2P resource sharing from D052). Fetched avatars are cached locally.</li>
+<li><strong>Content moderation:</strong> Custom avatars are not moderated by IC (no central server to moderate). Community servers can optionally enforce “gallery-only avatars” as a room policy. Players can report abusive avatars to community moderators via the same mechanism used for reporting cheaters (D052 revocation).</li>
+<li><strong>Hash-based deduplication:</strong> Two players using the same custom avatar send the same hash. The image is fetched once and shared from cache. This also means pre-built gallery avatars never need network transfer — both clients have them locally.</li>
+</ul>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct PlayerAvatar {
+    pub source: AvatarSource,
+    pub hash: [u8; 32],          // SHA-256 of the PNG data
+}
+
+pub enum AvatarSource {
+    Gallery { module: GameModuleId, index: u16 },  // Pre-built
+    Custom,                                          // Player-uploaded PNG
+}
+<span class="boring">}</span></code></pre>
+<p><strong>2. Achievement Showcase</strong></p>
+<p>Players can <strong>pin up to 6 achievements</strong> to their profile from their D036 achievement collection. Pinned achievements appear prominently on the profile card and in lobby hover tooltips.</p>
+<pre><code>┌──────────────────────────────────────────────────────┐
+│ ★ Achievements (3 pinned / 47 total)                 │
+│  🏆 Iron Curtain           Survived 100 Ion Cannons  │
+│  🎖️ Desert Fox             Win 50 Desert maps        │
+│  ⚡ Blitz Commander         Win under 5 minutes       │
+│                                                      │
+│  [View All Achievements →]                           │
+└──────────────────────────────────────────────────────┘
+</code></pre>
+<ul>
+<li>Pinned achievements are verified: each has a backing SCR from the relevant community. Viewers can inspect the credential (signed by community X, earned on date Y).</li>
+<li>Achievement rarity is shown when viewing the full achievement list: “Earned by 12% of players on this community.”</li>
+<li>Mod-defined achievements (D036) appear in the profile just like built-in ones — they’re all SCRs.</li>
+</ul>
+<p><strong>3. Statistics Card</strong></p>
+<p>A summary of the player’s competitive record, sourced from verified SCRs (D052). Statistics are <strong>per-community, per-game-module</strong> — a player might be 1800 in RA1 on Official IC but 1400 in TD on Clan Wolfpack.</p>
+<pre><code>┌──────────────────────────────────────────────────────┐
+│ 📊 Statistics — Official IC Community (RA1)          │
+│                                                      │
+│  Rank:      ★ Colonel I                                 │
+│  Rating:    1971 ± 45 (Glicko-2)     Peak: 2023     │
+│  Season:    S3 2028  |  Peak Rank: Brigadier III    │
+│  Matches:   342 played  |  W: 198  L: 131  D: 13    │
+│  Win Rate:  57.9%                                    │
+│  Streak:    W4 (current)  |  Best: W11               │
+│  Playtime:  ~412 hours                               │
+│  Faction:   67% Soviet  |  28% Allied  |  5% Random  │
+│                                                      │
+│  [Match History →]  [Rating Graph →]                 │
+│  [Switch Community ▾]  [Switch Game Module ▾]        │
+└──────────────────────────────────────────────────────┘
+</code></pre>
+<ul>
+<li><strong>Rank tier badge (D055):</strong> Resolved from the game module’s <code>ranked-tiers.yaml</code> configuration. Shows current tier + division and peak tier this season. Icon and color from the tier definition.</li>
+<li><strong>Rating graph:</strong> Visual chart showing rating over time (last 50 matches). Rendered client-side from match SCR timestamps and rating deltas.</li>
+<li><strong>Faction distribution:</strong> Calculated from match SCRs. Displayed as a simple bar or pie.</li>
+<li><strong>Playtime:</strong> Estimated from match durations in local match history. Approximate — not a verified claim.</li>
+<li><strong>Win streak:</strong> Current and best, calculated client-side from match SCRs.</li>
+<li>All numbers come from signed credential records. If a player presents a 1800 rating badge, the viewer’s client cryptographically verifies it against the community’s public key. <strong>Fake ratings are mathematically impossible.</strong></li>
+<li><strong>Verification badge:</strong> Each stat line shows which community signed it and whether the viewer’s client successfully verified the signature. A ✅ means “signature valid, community key recognized.” A ⚠️ means “signature valid, but community key not in your trusted list.” A ❌ means “signature verification failed — possible tampering.” This is visible in the detailed stats view, not the compact tooltip (to avoid visual clutter).</li>
+<li><strong>Inspect credential:</strong> Any SCR-backed number in the profile is clickable. Clicking opens a verification detail panel showing: signing community name + public key fingerprint, SCR sequence number, signature timestamp, raw signed payload (hex-encoded), and verification result. This is the blockchain-style “prove it” button — except it’s just Ed25519 signatures, no blockchain needed.</li>
+</ul>
+<p><strong>Campaign Progress &amp; PvE Progress Card (local-first, optional community comparison):</strong></p>
+<p>Campaign progress is valuable social and motivational context (especially for D021 branching campaigns), but it is <strong>not</strong> the same kind of data as ranked SCR-backed statistics. D053 therefore treats campaign progress as a separate profile card with explicit source/trust labeling.</p>
+<pre><code>┌──────────────────────────────────────────────────────┐
+│ 🗺️ Campaign Progress — Allied Campaign (RA1)         │
+│                                                      │
+│  Progress:        5 / 14 missions (36%)             │
+│  Current Path:    Depth 6                           │
+│  Best Path:       Depth 9                           │
+│  Endings:         1 / 3 unlocked                    │
+│  Last Played:     2 days ago                        │
+│                                                      │
+│  Community Benchmarks (Normal / IC Default):        │
+│  • Ahead of 62% of players        [Community ✓]     │
+│  • Avg completion: 41%            [Community]       │
+│  • Most common branch after M3: Hidden until seen   │
+│                                                      │
+│  [View Campaign Details →]  [Privacy / Sharing...]  │
+└──────────────────────────────────────────────────────┘
+</code></pre>
+<p><strong>Rules (normative):</strong></p>
+<ul>
+<li><strong>Local-first by default.</strong> Your own campaign progress card works offline from local save/history data (D021 + D034/D031).</li>
+<li><strong>Branching-safe metrics.</strong> Show <code>unique missions completed</code>, <code>current path depth</code>, and <code>best path depth</code> separately; do not collapse them into a single ambiguous “farthest mission” number.</li>
+<li><strong>Spoiler-safe defaults.</strong> Locked mission names, hidden endings, and unreached branch labels are redacted unless the player has discovered them (or the campaign author explicitly allows full reveal).</li>
+<li><strong>Opt-in social sharing.</strong> Community comparison metrics require player opt-in and are scoped per campaign version + difficulty + balance preset.</li>
+<li><strong>Trust/source labeling.</strong> Campaign benchmark lines must show whether they are local-only, unsigned community aggregates, or community-verified signed snapshots (if the community provides signed aggregate exports).</li>
+<li><strong>No competitive implications.</strong> Campaign progress comparison data must not affect ranked eligibility, matchmaking, or anti-cheat scoring.</li>
+</ul>
+<p><strong>4. Match History</strong></p>
+<p>Scrollable list of recent matches, each showing:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Field</th><th>Source</th></tr>
+</thead>
+<tbody>
+<tr><td>Date &amp; time</td><td>Match SCR timestamp</td></tr>
+<tr><td>Map name</td><td>Match SCR metadata</td></tr>
+<tr><td>Players</td><td>Match SCR participant list</td></tr>
+<tr><td>Result (Win/Loss/Draw)</td><td>Match SCR outcome</td></tr>
+<tr><td>Rating change (+/- delta)</td><td>Computed from consecutive rating SCRs</td></tr>
+<tr><td>Replay link</td><td>Local replay file if available</td></tr>
+</tbody>
+</table>
+</div>
+<p>Match history is stored locally (from the player’s credential SQLite file). Community servers do not host full match histories — they only issue rating/match SCRs. This is consistent with the local-first principle.</p>
+<p><strong>5. Friends &amp; Social</strong></p>
+<p>IC supports two complementary friend systems:</p>
+<ul>
+<li><strong>Platform friends (Steam, GOG, etc.):</strong> Retrieved via <code>PlatformServices::friends_list()</code>. These are the player’s existing social graph — no IC-specific action needed. Platform friends appear in the in-game friends list automatically. Presence information (online, in-game, in-lobby) is synced bidirectionally with the platform.</li>
+<li><strong>IC friends (community-based):</strong> Players can add friends within a community by mutual friend request. Stored in the local credential file as a bidirectional relationship. Friend list is per-community (friend on Official IC ≠ friend on Clan Wolfpack), but the UI merges all community friends into one unified list with community labels.</li>
+</ul>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Stored in local SQLite — not a signed credential.
+/// Friendships are social bookmarks, not reputation data.
+pub struct FriendEntry {
+    pub player_key: [u8; 32],
+    pub display_name: String,         // cached, may be stale
+    pub community: CommunityId,       // where the friendship was made
+    pub added_at: u64,
+    pub notes: Option&lt;String&gt;,        // private label (e.g., "met in tournament")
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Friends list UI:</strong></p>
+<pre><code>┌──────────────────────────────────────────────────────┐
+│ 👥 Friends (8 online / 23 total)                     │
+│                                                      │
+│  🟢 alice          In Lobby — Desert Arena    [Join] │
+│  🟢 cmdrzod        In Game — RA1 1v1          [Spec] │
+│  🟡 bob            Away (15m)                        │
+│  🟢 carol          Online — Main Menu         [Inv]  │
+│  ─── Offline ───                                     │
+│  ⚫ dave           Last seen: 2 days ago             │
+│  ⚫ eve            Last seen: 1 week ago             │
+│                                                      │
+│  [Add Friend]  [Pending (2)]  [Blocked (1)]          │
+└──────────────────────────────────────────────────────┘
+</code></pre>
+<ul>
+<li><strong>Presence states:</strong> Online, In Game, In Lobby, Away, Invisible, Offline. Synced through the community server (lightweight heartbeat), or through <code>PlatformServices::set_presence()</code> on Steam/GOG/etc.</li>
+<li><strong>Join/Spectate/Invite:</strong> One-click actions from the friends list. “Join” puts you in their lobby. “Spec” joins as spectator if the match is in progress and allows it. “Invite” sends a lobby invite.</li>
+<li><strong>Friend requests:</strong> Mutual-consent only. Player A sends request, Player B accepts or declines. No one-sided “following” (this prevents stalking).</li>
+<li><strong>Block list:</strong> Blocked players are hidden from the friends list, their chat messages are filtered client-side (see Lobby Communication in D052), and they cannot send friend requests. Blocks are local-only — the blocked player is not notified.</li>
+<li><strong>Notes:</strong> Private per-friend notes visible only to you. Useful for remembering context (“great teammate”, “met at tournament”).</li>
+</ul>
+<p><strong>6. Community Memberships</strong></p>
+<p>Players can be members of multiple communities (D052). The profile displays which communities they belong to, with verification badges:</p>
+<pre><code>┌──────────────────────────────────────────────────────┐
+│ 🏛️ Communities                                       │
+│                                                      │
+│  ✅ Official IC Community     Member since 2027-01   │
+│     Rating: 1823 (RA1)  |  342 matches               │
+│  ✅ Clan Wolfpack             Member since 2027-03   │
+│     Rating: 1456 (TD)   |  87 matches                │
+│  ✅ RA Competitive League     Member since 2027-06   │
+│     Tournament rank: #12                              │
+│                                                      │
+│  [Join Community...]                                 │
+└──────────────────────────────────────────────────────┘
+</code></pre>
+<p>Each community membership is backed by a signed credential — the ✅ badge means the viewer’s client verified the SCR signature against the community’s public key. This is IC’s differentiator: <strong>community memberships are cryptographically proven, not self-claimed.</strong> When viewing another player’s profile, you can see exactly which communities vouch for them and their verified standing in each.</p>
+<p><strong>Signed Profile Summary (“proof sheet”)</strong></p>
+<p>When viewing another player’s full profile, a <strong>Verification Summary</strong> panel shows every community that has signed data for this player, what they’ve signed, and whether the signatures check out:</p>
+<pre><code>┌──────────────────────────────────────────────────────────────────┐
+│ 🔒 Profile Verification Summary                                 │
+│                                                                  │
+│  Community                Signed Data             Status         │
+│  ─────────────────────────────────────────────────────────       │
+│  Official IC Community    Rating (1823, RA1)      ✅ Verified    │
+│                           342 matches             ✅ Verified    │
+│                           23 achievements         ✅ Verified    │
+│                           Member since 2027-01    ✅ Verified    │
+│  Clan Wolfpack            Rating (1456, TD)       ✅ Verified    │
+│                           87 matches              ✅ Verified    │
+│                           Member since 2027-03    ✅ Verified    │
+│  RA Competitive League    Tournament rank #12     ⚠️ Untrusted   │
+│                           Member since 2027-06    ⚠️ Untrusted   │
+│                                                                  │
+│  ✅ = Signature verified, community in your trust list           │
+│  ⚠️ = Signature valid, community NOT in your trust list          │
+│  ❌ = Signature verification failed (possible tampering)         │
+│                                                                  │
+│  [Manage Trusted Communities...]                                 │
+└──────────────────────────────────────────────────────────────────┘
+</code></pre>
+<p>This panel answers the question: <strong>“Can I trust what this player’s profile claims?”</strong> The answer is always cryptographically grounded — not trust-me-bro, not server-side-only, but locally verified Ed25519 signatures against community public keys the viewer explicitly trusts.</p>
+<p><strong>How verification works (viewer-side flow):</strong></p>
+<ol>
+<li>Player B presents profile data to Player A.</li>
+<li>Each SCR-backed field includes the raw SCR (payload + signature + community public key).</li>
+<li>Player A’s client verifies: <code>Ed25519::verify(community_public_key, payload, signature)</code>.</li>
+<li>Player A’s client checks: is <code>community_public_key</code> in my <code>trusted_communities</code> table?</li>
+<li>If yes → ✅ Verified. If signature valid but community not trusted → ⚠️ Untrusted. If signature invalid → ❌ Failed.</li>
+<li>All unsigned fields (bio, avatar, display name) are displayed as player-claimed — no verification badge.</li>
+</ol>
+<p>This means <strong>every number in the Statistics Card and every badge in Community Memberships is independently verifiable by any viewer</strong> without contacting any server. The verification is offline-capable — if a player has the community’s public key cached, they can verify another player’s profile on a plane with no internet.</p>
+<p><strong>7. Workshop Creator Profile</strong></p>
+<p>For players who publish mods, maps, or assets to the Workshop (D030/D050), the profile shows a creator section:</p>
+<pre><code>┌──────────────────────────────────────────────────────┐
+│ 🔧 Workshop Creator                                  │
+│                                                      │
+│  Published: 12 resources  |  Total downloads: 8,420  │
+│  ★ Featured: alice/hd-sprites (4,200 downloads)      │
+│  Latest: alice/desert-nights (uploaded 3 days ago)   │
+│                                                      │
+│  [View All Publications →]                           │
+└──────────────────────────────────────────────────────┘
+</code></pre>
+<p>This section appears only for players who have published at least one Workshop resource. Download counts and publication metadata come from the Workshop registry index (D030). Creator tips (D035) link from here.</p>
+<p><strong>Creator feedback inbox / review triage integration (optional):</strong></p>
+<ul>
+<li>Authors may access a feedback inbox for their own Workshop resources (D049) from the creator profile or Workshop publishing surfaces.</li>
+<li>Helpful-review marks granted by the author are displayed as creator activity (e.g., “Helpful reviews acknowledged”), but the profile UI must distinguish this from moderation powers.</li>
+<li>Communities may expose trust labels for creator-side helpful marks (e.g., local-only vs. community-synced metadata).</li>
+</ul>
+<p><strong>Community Feedback Contribution Recognition (profile-only, non-competitive):</strong></p>
+<p>Players who leave reviews that creators mark as helpful can receive <strong>profile/social recognition</strong> (not gameplay rewards). This is presented as a separate contributor signal:</p>
+<pre><code>┌──────────────────────────────────────────────────────┐
+│ 📝 Community Feedback Contributions                  │
+│                                                      │
+│  Helpful reviews marked by creators: 14             │
+│  Creator acknowledgements: 6                        │
+│  Badge: Field Analyst II                            │
+│                                                      │
+│  [View Feedback History →]  [Privacy / Sharing...]  │
+└──────────────────────────────────────────────────────┘
+</code></pre>
+<p><strong>Rules (normative):</strong></p>
+<ul>
+<li>Profile-only recognition (badges/titles/acknowledgements) — no gameplay or ranked impact</li>
+<li>Source/trust labeling applies (local profile state vs. community-synced recognition metadata)</li>
+<li>Visibility is privacy-controlled like other profile sections (default managed by D053 privacy settings)</li>
+<li>Helpful-review recognition is optional and may be disabled per community policy (D037)</li>
+</ul>
+<p><strong>Contribution reputation + points (optional extension, Phase 7+ hardening):</strong></p>
+<ul>
+<li>Communities may expose a <strong>feedback contribution reputation</strong> signal (quality-focused, not positivity/volume-only)</li>
+<li>Communities may optionally enable <strong>Community Contribution Points</strong> redeemable for <strong>profile/cosmetic-only</strong> items</li>
+<li>Point balances and redemption history must be clearly labeled as <strong>non-gameplay / non-ranked</strong></li>
+<li>Rare/manual badges (e.g., <code>Exceptional Contributor</code>) should be policy-governed and auditable, not arbitrary hidden grants</li>
+<li>All grants and redemptions remain subject to revocation if abuse/collusion is confirmed (D037/D052)</li>
+</ul>
+<p><strong>8. Custom Profile Elements</strong></p>
+<p>Optional fields that add personality without cluttering the default view:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Element</th><th>Description</th><th>Source</th></tr>
+</thead>
+<tbody>
+<tr><td>Favorite Quote</td><td>One-liner (e.g., “Kirov reporting!”)</td><td>Player-written, 100 chars max</td></tr>
+<tr><td>Favorite Unit</td><td>Displayed with unit portrait from game assets</td><td>Player-selected per game module</td></tr>
+<tr><td>Replay Highlight</td><td>Link to one pinned replay</td><td>Local replay file</td></tr>
+<tr><td>Social Links</td><td>External URLs (Twitch, YouTube, etc.)</td><td>Player-set, max 3 links</td></tr>
+<tr><td>Country Flag</td><td>Optional nationality display</td><td>Player-selected from ISO 3166 list</td></tr>
+</tbody>
+</table>
+</div>
+<p>These fields are optional and hidden by default. Players who want a minimal profile show only the identity core and statistics. Players who want a rich social presence can fill in everything.</p>
+<h3 id="profile-viewing-contexts"><a class="header" href="#profile-viewing-contexts">Profile Viewing Contexts</a></h3>
+<p>The profile appears in different contexts with different levels of detail:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Context</th><th>What’s shown</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Lobby player list</strong></td><td>Avatar (32×32), display name, rating badge, voice status, ready state</td></tr>
+<tr><td><strong>Lobby hover tooltip</strong></td><td>Avatar (64×64), display name, bio (first line), top 3 pinned achievements, rating, win rate</td></tr>
+<tr><td><strong>Profile card</strong> (click player name)</td><td>Full profile: all sections respecting the viewed player’s privacy settings</td></tr>
+<tr><td><strong>Game browser</strong> (room list)</td><td>Host avatar + name, host rating badge</td></tr>
+<tr><td><strong>In-game sidebar</strong></td><td>Player color, display name, faction crest</td></tr>
+<tr><td><strong>Post-game scoreboard</strong></td><td>Avatar, display name, rating change (+/-), match stats</td></tr>
+<tr><td><strong>Friends list</strong></td><td>Avatar, display name, presence state, community label</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="privacy-controls"><a class="header" href="#privacy-controls">Privacy Controls</a></h3>
+<p>Every profile section has a visibility setting:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Visibility Level</th><th>Who can see it</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Public</strong></td><td>Anyone who encounters your profile (lobby, game browser, post-game)</td></tr>
+<tr><td><strong>Friends</strong></td><td>Only players on your friends list</td></tr>
+<tr><td><strong>Community</strong></td><td>Only players who share at least one community membership with you</td></tr>
+<tr><td><strong>Private</strong></td><td>Only you</td></tr>
+</tbody>
+</table>
+</div>
+<p>Defaults:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Section</th><th>Default Visibility</th></tr>
+</thead>
+<tbody>
+<tr><td>Display Name</td><td>Public</td></tr>
+<tr><td>Avatar</td><td>Public</td></tr>
+<tr><td>Bio</td><td>Public</td></tr>
+<tr><td>Player Title</td><td>Public</td></tr>
+<tr><td>Faction Crest</td><td>Public</td></tr>
+<tr><td>Achievement Showcase</td><td>Public</td></tr>
+<tr><td>Statistics Card</td><td>Public</td></tr>
+<tr><td>Match History</td><td>Friends</td></tr>
+<tr><td>Friends List</td><td>Friends</td></tr>
+<tr><td>Community Memberships</td><td>Public</td></tr>
+<tr><td>Workshop Creator</td><td>Public</td></tr>
+<tr><td>Community Feedback Contributions</td><td>Public</td></tr>
+<tr><td>Custom Elements</td><td>Friends</td></tr>
+<tr><td>Behavioral Profile (D042)</td><td><strong>Private (immutable — never exposed)</strong></td></tr>
+</tbody>
+</table>
+</div>
+<p>The behavioral profile from D042 (<code>PlayerStyleProfile</code>) is <strong>categorically excluded</strong> from the player profile. It’s local analytics data for AI training and self-improvement — not social data. This is a hard privacy boundary.</p>
+<h3 id="profile-storage"><a class="header" href="#profile-storage">Profile Storage</a></h3>
+<p>Local profile data is stored in the player’s SQLite database (D034):</p>
+<pre><code class="language-sql">-- Core profile (locally authoritative)
+CREATE TABLE profile (
+    player_key      BLOB PRIMARY KEY,  -- own Ed25519 public key
+    display_name    TEXT NOT NULL,
+    bio             TEXT,
+    title           TEXT,
+    country_code    TEXT,              -- ISO 3166 alpha-2, nullable
+    favorite_quote  TEXT,
+    favorite_unit   TEXT,              -- "module:unit_id" format
+    created_at      INTEGER NOT NULL,
+    updated_at      INTEGER NOT NULL
+);
+
+-- Avatar and banner images (stored as blobs)
+CREATE TABLE profile_images (
+    image_hash      TEXT PRIMARY KEY,  -- SHA-256 hex
+    image_type      TEXT NOT NULL,     -- 'avatar' or 'banner'
+    image_data      BLOB NOT NULL,     -- PNG bytes
+    width           INTEGER NOT NULL,
+    height          INTEGER NOT NULL
+);
+
+-- Profile references (avatar, banner, highlight replay)
+CREATE TABLE profile_refs (
+    ref_type        TEXT PRIMARY KEY,  -- 'avatar', 'banner', 'highlight_replay'
+    ref_value       TEXT NOT NULL      -- image_hash, or replay file path
+);
+
+-- Pinned achievements (up to 6)
+CREATE TABLE pinned_achievements (
+    slot            INTEGER PRIMARY KEY CHECK (slot BETWEEN 1 AND 6),
+    achievement_id  TEXT NOT NULL,     -- references achievements table (D036)
+    community_id    BLOB,             -- which community signed it (nullable for local)
+    pinned_at       INTEGER NOT NULL
+);
+
+-- Friends list
+CREATE TABLE friends (
+    player_key      BLOB NOT NULL,
+    community_id    BLOB NOT NULL,     -- community where friendship was established
+    display_name    TEXT,              -- cached name (may be stale)
+    notes           TEXT,
+    added_at        INTEGER NOT NULL,
+    PRIMARY KEY (player_key, community_id)
+);
+
+-- Block list
+CREATE TABLE blocked_players (
+    player_key      BLOB PRIMARY KEY,
+    reason          TEXT,
+    blocked_at      INTEGER NOT NULL
+);
+
+-- Privacy settings
+CREATE TABLE privacy_settings (
+    section         TEXT PRIMARY KEY,  -- 'bio', 'stats', 'match_history', etc.
+    visibility      TEXT NOT NULL      -- 'public', 'friends', 'community', 'private'
+);
+
+-- Social links (max 3)
+CREATE TABLE social_links (
+    slot            INTEGER PRIMARY KEY CHECK (slot BETWEEN 1 AND 3),
+    label           TEXT NOT NULL,     -- 'Twitch', 'YouTube', custom
+    url             TEXT NOT NULL
+);
+
+-- Cached profiles of other players (fetched on encounter)
+CREATE TABLE cached_profiles (
+    player_key      BLOB PRIMARY KEY,
+    display_name    TEXT,
+    avatar_hash     TEXT,
+    bio             TEXT,
+    title           TEXT,
+    last_seen       INTEGER,          -- timestamp of last encounter
+    fetched_at      INTEGER NOT NULL
+);
+
+-- Trusted communities (for profile verification and matchmaking filtering)
+CREATE TABLE trusted_communities (
+    community_key   BLOB PRIMARY KEY,  -- Ed25519 public key of the community
+    community_name  TEXT,              -- cached display name
+    community_url   TEXT,              -- cached URL
+    auto_trusted    INTEGER NOT NULL DEFAULT 0,  -- 1 if trusted because you're a member
+    trusted_at      INTEGER NOT NULL
+);
+
+-- Cached community public keys (learned from encounters, not yet trusted)
+CREATE TABLE known_communities (
+    community_key   BLOB PRIMARY KEY,
+    community_name  TEXT,
+    community_url   TEXT,
+    first_seen      INTEGER NOT NULL,  -- when we first encountered this key
+    last_seen       INTEGER NOT NULL
+);
+</code></pre>
+<p><strong>Cache eviction:</strong> Cached profiles of other players are evicted LRU after 1000 entries or 30 days since last encounter. Avatar images in <code>profile_images</code> are evicted if they’re not referenced by own profile or any cached profile.</p>
+<h3 id="profile-synchronization"><a class="header" href="#profile-synchronization">Profile Synchronization</a></h3>
+<p>Profiles are <strong>not centrally hosted</strong>. Each player owns their profile data locally. When a player enters a lobby or is viewed by another player, profile data is exchanged peer-to-peer (via the relay, same as resource sharing in D052).</p>
+<p><strong>Flow when Player A views Player B’s profile:</strong></p>
+<ol>
+<li>Player A’s client checks <code>cached_profiles</code> for Player B’s key.</li>
+<li>If cache miss or stale (&gt;24 hours), request profile from Player B via relay.</li>
+<li>Player B’s client responds with profile data (respecting B’s privacy settings — only fields visible to A’s access level are included).</li>
+<li>Player A’s client verifies any SCR-backed fields (ratings, achievements, community memberships) against known community public keys.</li>
+<li>Player A’s client caches the profile.</li>
+<li>If Player B’s avatar hash is unknown, Player A requests the avatar image. Cached locally after fetch.</li>
+</ol>
+<p><strong>Bandwidth:</strong> A full profile response is ~2 KB (excluding avatar image). Avatar image is max 64 KB, fetched once and cached. For a typical lobby of 8 players, initial profile loading is ~16 KB text + up to 512 KB avatars — negligible, and avatars are fetched only once per unique player.</p>
+<h3 id="trusted-communities--trust-based-filtering"><a class="header" href="#trusted-communities--trust-based-filtering">Trusted Communities &amp; Trust-Based Filtering</a></h3>
+<p>Players can configure a list of <strong>trusted communities</strong> — the communities whose signed credentials they consider authoritative. This is the trust anchor for everything in the profile system.</p>
+<p><strong>Configuration:</strong></p>
+<pre><code class="language-toml"># settings.toml — communities section
+[[communities.joined]]
+name = "Official IC Community"
+url = "https://official.ironcurtain.gg"
+public_key = "ed25519:abc123..."   # cached on first join
+
+[[communities.joined]]
+name = "Clan Wolfpack"
+url = "https://wolfpack.example.com"
+public_key = "ed25519:def456..."
+
+[communities]
+# Communities whose signed credentials you trust for profile verification
+# and matchmaking filtering. You don't need to be a member to trust a community.
+trusted = [
+    "ed25519:abc123...",    # Official IC Community
+    "ed25519:def456...",    # Clan Wolfpack
+    "ed25519:789ghi...",    # EU Competitive League (not a member, but trust their ratings)
+]
+</code></pre>
+<p>Joined communities are automatically trusted (you trust the community you chose to join). Players can also trust communities they haven’t joined — e.g., “I’m not a member of the EU Competitive League, but I trust their ratings as legitimate.” Trust is granted by public key, so it survives community renames and URL changes.</p>
+<p><strong>Trust levels displayed in profiles:</strong></p>
+<p>When viewing another player’s profile, stats from trusted vs. untrusted communities are visually distinct:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Badge</th><th>Meaning</th><th>Display</th></tr>
+</thead>
+<tbody>
+<tr><td>✅</td><td>Signature valid + community in your trust list</td><td>Full color, prominent</td></tr>
+<tr><td>⚠️</td><td>Signature valid + community NOT in your trust list</td><td>Dimmed, italic, “Untrusted community” tooltip</td></tr>
+<tr><td>❌</td><td>Signature verification failed</td><td>Red, strikethrough, “Verification failed” warning</td></tr>
+<tr><td>—</td><td>No signed data (player-claimed)</td><td>Gray, no badge</td></tr>
+</tbody>
+</table>
+</div>
+<p>This lets players immediately distinguish between “1800 rated on a community I trust” and “1800 rated on some random community I’ve never heard of.” The profile doesn’t hide untrusted data — it shows it clearly labeled so the viewer can make their own judgment.</p>
+<p><strong>Trust-based matchmaking and lobby filtering:</strong></p>
+<p>Players can require that opponents have verified credentials from their trusted communities. This is configured per-queue and per-room:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Matchmaking preferences — sent to the community server when queuing.
+pub struct MatchmakingPreferences {
+    pub game_module: GameModuleId,
+    pub rating_range: Option&lt;(i32, i32)&gt;,             // min/max rating
+    pub require_trusted_profile: TrustRequirement,     // NEW
+}
+
+pub enum TrustRequirement {
+    /// Match with anyone — no credential check. Default for casual.
+    None,
+    /// Opponent must have a verified profile from any community
+    /// the matchmaking server itself trusts (server-side check).
+    AnyCommunityVerified,
+    /// Opponent must have a verified profile from at least one of
+    /// these specific communities (by public key). Client sends
+    /// the list; server filters accordingly.
+    SpecificCommunities(Vec&lt;CommunityPublicKey&gt;),
+}
+<span class="boring">}</span></code></pre>
+<p><strong>How it works in practice:</strong></p>
+<ul>
+<li><strong>Casual play (default):</strong> <code>TrustRequirement::None</code>. Anyone can join. Profile badges appear but aren’t gatekeeping. Maximum player pool, minimum friction.</li>
+<li><strong>“Verified only” mode:</strong> <code>TrustRequirement::AnyCommunityVerified</code>. The matchmaking server checks that the opponent has at least one valid SCR from a community the <em>server</em> trusts. This filters out completely anonymous players without requiring specific community membership. Good for semi-competitive play.</li>
+<li><strong>“Trusted community” mode:</strong> <code>TrustRequirement::SpecificCommunities([official_ic_key, wolfpack_key])</code>. The server matches you only with players who have valid SCRs from at least one of those specific communities. This is the strongest filter — effectively “I only play with people vouched for by communities I trust.”</li>
+</ul>
+<p><strong>Room-level trust requirements:</strong></p>
+<p>Room hosts can set a trust requirement when creating a room:</p>
+<pre><code>┌──────────────────────────────────────────────────────┐
+│ Room Settings                                        │
+│                                                      │
+│  Trust Requirement: [Verified Only ▾]                │
+│    ○ Anyone can join (no verification)               │
+│    ● Verified profile required                       │
+│    ○ Specific communities only:                      │
+│      ☑ Official IC Community                         │
+│      ☑ Clan Wolfpack                                 │
+│      ☐ EU Competitive League                         │
+│                                                      │
+│  [Create Room]                                       │
+└──────────────────────────────────────────────────────┘
+</code></pre>
+<p>When a player tries to join a room with a trust requirement they don’t meet, they see a clear rejection: “This room requires a verified profile from: Official IC Community or Clan Wolfpack. [Join Official IC Community…] [Join Clan Wolfpack…]”</p>
+<p><strong>Game browser filtering:</strong></p>
+<p>The game browser (Tier 3 in D052) gains a trust filter column:</p>
+<pre><code>┌──────────────────────────────────────────────────────────────────────────┐
+│  Game Browser                                              [Refresh]   │
+├──────────┬──────┬─────────┬────────┬──────┬───────────────┬─────────────┤
+│ Room     │ Host │ Players │ Map    │ Ping │ Trust         │ Mods        │
+├──────────┼──────┼─────────┼────────┼──────┼───────────────┼─────────────┤
+│ Ranked   │ cmdr │ 1/2     │ Arena  │ 23ms │ ✅ Official   │ none        │
+│ HD Game  │ alice│ 3/4     │ Europe │ 45ms │ ⚠️ Any verified│ hd-pack 2.1 │
+│ Open     │ bob  │ 2/6     │ Desert │ 67ms │ 🔓 Anyone     │ none        │
+└──────────┴──────┴─────────┴────────┴──────┴───────────────┴─────────────┘
+│  Filter: [☑ Show only rooms I can join]  [☑ Show trusted communities]   │
+</code></pre>
+<p>The <code>Show only rooms I can join</code> filter hides rooms whose trust requirements you don’t meet — so you don’t see rooms you’ll be rejected from. The <code>Show trusted communities</code> filter shows only rooms hosted on communities in your trust list.</p>
+<p><strong>Why this matters:</strong></p>
+<p>This solves the smurf/alt-account problem that plagues every competitive game. A player can’t create a fresh anonymous account and grief ranked lobbies — the room requires verified credentials from a trusted community, which means they need a real history of matches. It also solves the fake-rating problem: you can’t claim to be 1800 unless a community you trust has signed an SCR proving it.</p>
+<p>But it’s <strong>not authoritarian</strong>. Players who want casual, open, unverified games can play freely. Trust requirements are opt-in per-room and per-matchmaking-queue. The default is open. The tools are there for communities that want stronger verification — they’re not forced on anyone.</p>
+<p><strong>Anti-abuse considerations:</strong></p>
+<ul>
+<li><strong>Community collusion:</strong> A bad actor could create a community, sign fake credentials, and present them. But no one else would trust that community’s key. Trust is explicitly granted by each player. This is a feature, not a bug — it’s exactly how PGP/GPG web-of-trust works, minus the key-signing parties.</li>
+<li><strong>Community ban evasion:</strong> If a player is banned from a community (D052 revocation), their SCRs from that community become unverifiable. They can’t present banned credentials. They’d need to join a different community and rebuild reputation from scratch.</li>
+<li><strong>Privacy:</strong> The trust requirement reveals which communities a player is a member of (since they must present SCRs). Players uncomfortable with this can stick to <code>TrustRequirement::None</code> rooms. The privacy controls from D053 still apply — you choose which community memberships are visible on your profile, but if a room <em>requires</em> membership proof, you must present it to join.</li>
+</ul>
+<h3 id="relationship-to-existing-decisions"><a class="header" href="#relationship-to-existing-decisions">Relationship to Existing Decisions</a></h3>
+<ul>
+<li><strong>D034 (SQLite):</strong> Profile storage is SQLite. Cached profiles, friends, block lists — all local SQLite tables.</li>
+<li><strong>D036 (Achievements):</strong> Pinned achievements on the profile reference D036 achievement records. Achievement verification uses D052 SCRs.</li>
+<li><strong>D042 (Behavioral Profiles):</strong> Categorically separate. D042 is local AI training data. D053 is social-facing identity. They never merge. This is a hard privacy boundary.</li>
+<li><strong>D046 (Premium Content):</strong> Cosmetic purchases (if any) are displayed in the profile (e.g., custom profile borders, title unlocks). But the core profile is always free and full-featured.</li>
+<li><strong>D050 (Workshop):</strong> Workshop creator statistics feed the creator profile section.</li>
+<li><strong>D052 (Community Servers &amp; SCR):</strong> The verification backbone. Every reputation claim in the profile (rating, achievements, community membership) is backed by a signed credential. D053 is the user-facing layer; D052 is the cryptographic foundation. Trusted Communities (D053) determine which SCR issuers the player considers authoritative — this feeds into profile display, lobby filtering, and matchmaking preferences.</li>
+</ul>
+<h3 id="alternatives-considered"><a class="header" href="#alternatives-considered">Alternatives Considered</a></h3>
+<ul>
+<li><strong>Central profile server</strong> (rejected — contradicts federation model, creates single point of failure, requires infrastructure IC doesn’t want to operate)</li>
+<li><strong>Blockchain-based identity</strong> (rejected — massively overcomplicated, no user benefit over Ed25519 SCR, environmental concerns)</li>
+<li><strong>Rich profile customization (themes, animations, music)</strong> (deferred — too much scope for initial implementation. May be added as Workshop cosmetic packs in Phase 6+)</li>
+<li><strong>Full social network features (posts, feeds, groups)</strong> (rejected — out of scope. IC is a game, not a social network. Communities, friends, and profiles are sufficient. Players who want social features use Discord)</li>
+<li><strong>Mandatory real name / identity verification</strong> (rejected — privacy violation, hostile to the gaming community’s norms, not IC’s business)</li>
+</ul>
+<h3 id="phase"><a class="header" href="#phase">Phase</a></h3>
+<ul>
+<li><strong>Phase 3:</strong> Basic profile (display name, avatar, bio, local storage, lobby display). Friends list (platform-backed via <code>PlatformServices</code>).</li>
+<li><strong>Phase 5:</strong> Community-backed profiles (SCR-verified ratings, achievements, memberships). IC friends (community-based mutual friend requests). Presence system. Profile cards in lobby. Trusted communities configuration. Trust-based matchmaking filtering. Profile verification UI (signed proof sheet). Game browser trust filters.</li>
+<li><strong>Phase 6a:</strong> Workshop creator profiles. Full achievement showcase. Custom profile elements. Privacy controls UI. Profile viewing in game browser. Cross-community trust discovery.</li>
+</ul>
+<hr>
+<hr>
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../../decisions/09e/D049-workshop-assets.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../../decisions/09e/D061-data-backup.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../../decisions/09e/D049-workshop-assets.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../../decisions/09e/D061-data-backup.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../../mark-09e88c2c.min.js"></script>
+        <script src="../../searcher-c2a407aa.js"></script>
+
+        <script src="../../clipboard-1626706a.min.js"></script>
+        <script src="../../highlight-abc7f01d.js"></script>
+        <script src="../../book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

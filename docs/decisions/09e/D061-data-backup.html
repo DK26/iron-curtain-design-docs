@@ -1,0 +1,946 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>D061 — Data Backup - Iron Curtain — Design Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Design docs for a Rust-native Red Alert RTS engine">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../../css/general-2459343d.css">
+        <link rel="stylesheet" href="../../css/chrome-ae938929.css">
+        <link rel="stylesheet" href="../../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../../searchindex-61d2369b.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../../toc-1553b04b.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Iron Curtain — Design Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs/edit/main/src/decisions/09e/D061-data-backup.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h2 id="d061-player-data-backup--portability"><a class="header" href="#d061-player-data-backup--portability">D061: Player Data Backup &amp; Portability</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th></th><th></th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Status</strong></td><td>Accepted</td></tr>
+<tr><td><strong>Driver</strong></td><td>Players need to back up, restore, and migrate their game data — saves, replays, profiles, screenshots, statistics — across machines and over time</td></tr>
+<tr><td><strong>Depends on</strong></td><td>D034 (SQLite), D053 (Player Profile), D052 (Community Servers &amp; SCR), D036 (Achievements), D010 (Snapshottable Sim)</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="problem"><a class="header" href="#problem">Problem</a></h3>
+<p>Every game that stores player data eventually faces the same question: “How do I move my stuff to a new computer?” The answer ranges from terrible (hunt for hidden AppData folders, hope you got the right files) to opaque (proprietary cloud sync that works until it doesn’t). IC’s local-first architecture (D034, D053) means all player data already lives on the player’s machine — which is both the opportunity and the responsibility. If everything is local, losing that data means losing everything: campaign progress, competitive history, replay collection, social connections.</p>
+<p>The design must satisfy three requirements:</p>
+<ol>
+<li><strong>Backup:</strong> A player can create a complete, restorable snapshot of all their IC data.</li>
+<li><strong>Portability:</strong> A player can move their data to another machine or a fresh install and resume exactly where they left off.</li>
+<li><strong>Data export:</strong> A player can extract their data in standard, human-readable formats (GDPR Article 20 compliance, and just good practice).</li>
+</ol>
+<h3 id="design-principles"><a class="header" href="#design-principles">Design Principles</a></h3>
+<ol>
+<li><strong>“Just copy the folder” must work.</strong> The data directory is self-contained. No registry entries, no hidden temp folders, no external database connections. A manual copy of <code>&lt;data_dir&gt;/</code> is a valid (if crude) backup.</li>
+<li><strong>Standard formats only.</strong> ZIP for archives, SQLite for databases, PNG for images, YAML/JSON for configuration. No proprietary backup format. A player should be able to inspect their own data with standard tools (DB Browser for SQLite, any image viewer, any text editor).</li>
+<li><strong>No IC-hosted cloud.</strong> IC does not operate cloud storage. Cloud sync is opt-in through existing platform services (Steam Cloud, GOG Galaxy). This avoids infrastructure cost, liability, and the temptation to make player data hostage to a service.</li>
+<li><strong>SCRs are inherently portable.</strong> Signed Credential Records (D052) are self-verifying — they carry the community public key, payload, and Ed25519 signature. A player’s verified ratings, achievements, and community memberships work on any IC install without re-earning or re-validating. This is IC’s unique advantage over every competitor.</li>
+<li><strong>Backup is a first-class CLI feature.</strong> Not buried in a settings menu, not a third-party tool. <code>ic backup create</code> is a documented, supported command.</li>
+</ol>
+<h3 id="data-directory-layout"><a class="header" href="#data-directory-layout">Data Directory Layout</a></h3>
+<p>All player data lives under a single, stable, documented directory. The layout is defined at Phase 0 (directory structure), stabilized by Phase 2 (save/replay formats finalized), and fully populated by Phase 5 (multiplayer profile data).</p>
+<pre><code>&lt;data_dir&gt;/
+├── config.toml                         # Engine + game settings (D033 toggles, keybinds, render quality)
+├── profile.db                          # Player identity, friends, blocks, privacy settings (D053)
+├── achievements.db                     # Achievement collection (D036)
+├── gameplay.db                         # Event log, replay catalog, save game index, map catalog, asset index (D034)
+├── telemetry.db                        # Unified telemetry events (D031) — pruned at 100 MB
+├── keys/                               # Player Ed25519 keypair (D052) — THE critical file
+│   └── identity.key                    # Private key — recoverable via mnemonic seed phrase
+├── communities/                        # Per-community credential stores (D052)
+│   ├── official-ic.db                  # SCRs: ratings, match results, achievements
+│   └── clan-wolfpack.db
+├── saves/                              # Save game files (.icsave)
+│   ├── campaign-allied-mission5.icsave
+│   ├── autosave-001.icsave
+│   ├── autosave-002.icsave
+│   └── autosave-003.icsave            # Rotating 3-slot autosave
+├── replays/                            # Replay files (.icrep)
+│   └── 2027-03-15-ranked-1v1.icrep
+├── screenshots/                        # Screenshot images (PNG with metadata)
+│   └── 2027-03-15-154532.png
+├── workshop/                           # Downloaded Workshop content (D030)
+│   ├── cache.db                        # Workshop metadata cache (D034)
+│   ├── blobs/                          # Content-addressed blob store (D049, Phase 6a)
+│   └── packages/                       # Per-package manifests (references into blobs/)
+├── mods/                               # Locally installed mods
+├── maps/                               # Locally installed maps
+├── logs/                               # Engine log files (rotated)
+└── backups/                            # Created by `ic backup create`
+    └── ic-backup-2027-03-15.zip
+</code></pre>
+<p><strong>Platform-specific <code>&lt;data_dir&gt;</code> resolution:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Platform</th><th>Default Location</th></tr>
+</thead>
+<tbody>
+<tr><td>Windows</td><td><code>%APPDATA%\IronCurtain\</code></td></tr>
+<tr><td>macOS</td><td><code>~/Library/Application Support/IronCurtain/</code></td></tr>
+<tr><td>Linux</td><td><code>$XDG_DATA_HOME/iron-curtain/</code> (default: <code>~/.local/share/iron-curtain/</code>)</td></tr>
+<tr><td>Steam Deck</td><td>Same as Linux</td></tr>
+<tr><td>Browser (WASM)</td><td>OPFS virtual filesystem (see <code>05-FORMATS.md</code> § Browser Storage)</td></tr>
+<tr><td>Mobile</td><td>App sandbox (platform-managed)</td></tr>
+<tr><td>Portable mode</td><td><code>&lt;exe_dir&gt;/data/</code> (activated by <code>IC_PORTABLE=1</code>, <code>--portable</code>, or <code>portable.marker</code> next to exe)</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Override:</strong> <code>IC_DATA_DIR</code> environment variable or <code>--data-dir</code> CLI flag overrides the default. Portable mode (<code>IC_PORTABLE=1</code>, <code>--portable</code> flag, or <code>portable.marker</code> file next to the executable) resolves all paths relative to the executable via the <a href="https://github.com/DK26/app-path-rs"><code>app-path</code></a> crate — useful for USB-stick deployments, Steam Deck SD cards, and self-contained distributions. All path resolution is centralized in the <code>ic-paths</code> crate (see <code>02-ARCHITECTURE.md</code> § Crate Design Notes).</p>
+<h3 id="backup-system-ic-backup-cli"><a class="header" href="#backup-system-ic-backup-cli">Backup System: <code>ic backup</code> CLI</a></h3>
+<p>The <code>ic backup</code> CLI provides safe, consistent backups. Following the Fossilize-inspired CLI philosophy (D020 — each subcommand does one focused thing well):</p>
+<pre><code>ic backup create                              # Full backup → &lt;data_dir&gt;/backups/ic-backup-&lt;date&gt;.zip
+ic backup create --output ~/my-backup.zip     # Custom output path
+ic backup create --exclude replays,workshop   # Smaller backup — skip large data
+ic backup create --only keys,profile,saves    # Targeted backup — critical data only
+ic backup restore ic-backup-2027-03-15.zip    # Restore from backup (prompts on conflict)
+ic backup restore backup.zip --overwrite      # Restore without prompting
+ic backup list                                # List available backups with size and date
+ic backup verify ic-backup-2027-03-15.zip     # Verify archive integrity without restoring
+</code></pre>
+<p><strong>How <code>ic backup create</code> works:</strong></p>
+<ol>
+<li><strong>SQLite databases:</strong> Each <code>.db</code> file is backed up using <code>VACUUM INTO '&lt;temp&gt;.db'</code> — this creates a consistent, compacted copy without requiring the database to be closed. WAL checkpoints are folded in. No risk of copying a half-written WAL file.</li>
+<li><strong>Binary files:</strong> <code>.icsave</code>, <code>.icrep</code>, <code>.icpkg</code> files are copied as-is (they’re self-contained).</li>
+<li><strong>Image files:</strong> PNG screenshots are copied as-is.</li>
+<li><strong>Config files:</strong> <code>config.toml</code> and other TOML configuration files are copied as-is.</li>
+<li><strong>Key files:</strong> <code>keys/identity.key</code> is included (the player’s private key — also recoverable via mnemonic seed phrase, but a full backup preserves everything).</li>
+<li><strong>Package:</strong> Everything is bundled into a ZIP archive with the original directory structure preserved. No compression on already-compressed files (<code>.icsave</code>, <code>.icrep</code> are LZ4-compressed internally).</li>
+</ol>
+<p><strong>Backup categories for <code>--exclude</code> and <code>--only</code>:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Category</th><th>Contents</th><th>Typical Size</th><th>Critical?</th></tr>
+</thead>
+<tbody>
+<tr><td><code>keys</code></td><td><code>keys/identity.key</code></td><td>&lt; 1 KB</td><td><strong>Yes</strong> — recoverable via mnemonic seed phrase</td></tr>
+<tr><td><code>profile</code></td><td><code>profile.db</code></td><td>&lt; 1 MB</td><td><strong>Yes</strong> — friends, settings, avatar</td></tr>
+<tr><td><code>communities</code></td><td><code>communities/*.db</code></td><td>1–10 MB</td><td><strong>Yes</strong> — ratings, match history (SCRs)</td></tr>
+<tr><td><code>achievements</code></td><td><code>achievements.db</code></td><td>&lt; 1 MB</td><td><strong>Yes</strong> — SCR-backed achievement proofs</td></tr>
+<tr><td><code>config</code></td><td><code>config.toml</code></td><td>&lt; 100 KB</td><td>Medium — preferences, easily recreated</td></tr>
+<tr><td><code>saves</code></td><td><code>saves/*.icsave</code></td><td>10–100 MB</td><td>High — campaign progress, in-progress games</td></tr>
+<tr><td><code>replays</code></td><td><code>replays/*.icrep</code></td><td>100 MB – 10 GB</td><td>Low — sentimental, not functional</td></tr>
+<tr><td><code>screenshots</code></td><td><code>screenshots/*.png</code></td><td>10 MB – 5 GB</td><td>Low — sentimental, not functional</td></tr>
+<tr><td><code>workshop</code></td><td><code>workshop/</code> (cache + packages)</td><td>100 MB – 50 GB</td><td>None — re-downloadable</td></tr>
+<tr><td><code>gameplay</code></td><td><code>gameplay.db</code></td><td>10–100 MB</td><td>Medium — event log, catalogs (rebuildable)</td></tr>
+<tr><td><code>mods</code></td><td><code>mods/</code></td><td>Variable</td><td>Low — re-downloadable or re-installable</td></tr>
+<tr><td><code>maps</code></td><td><code>maps/</code></td><td>Variable</td><td>Low — re-downloadable</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Default <code>ic backup create</code></strong> includes: <code>keys</code>, <code>profile</code>, <code>communities</code>, <code>achievements</code>, <code>config</code>, <code>saves</code>, <code>replays</code>, <code>screenshots</code>, <code>gameplay</code>. Excludes <code>workshop</code>, <code>mods</code>, <code>maps</code> (re-downloadable). Total size for a typical player: 200 MB – 2 GB.</p>
+<h3 id="profile-export-json-data-portability"><a class="header" href="#profile-export-json-data-portability">Profile Export: JSON Data Portability</a></h3>
+<p>For GDPR Article 20 compliance and general good practice, IC provides a machine-readable profile export:</p>
+<pre><code>ic profile export                             # → &lt;data_dir&gt;/exports/profile-export-&lt;date&gt;.json
+ic profile export --format json               # Explicit format (JSON is default)
+</code></pre>
+<p><strong>Export contents:</strong></p>
+<pre><code class="language-json">{
+  "export_version": "1.0",
+  "exported_at": "2027-03-15T14:30:00Z",
+  "engine_version": "0.5.0",
+  "identity": {
+    "display_name": "CommanderZod",
+    "public_key": "ed25519:abc123...",
+    "bio": "Tank rush enthusiast since 1996",
+    "title": "Iron Commander",
+    "country": "DE",
+    "created_at": "2027-01-15T10:00:00Z"
+  },
+  "communities": [
+    {
+      "name": "Official IC Community",
+      "public_key": "ed25519:def456...",
+      "joined_at": "2027-01-15",
+      "rating": { "game_module": "ra1", "value": 1823, "rd": 45 },
+      "matches_played": 342,
+      "achievements": 23,
+      "credentials": [
+        {
+          "type": "rating",
+          "payload_hex": "...",
+          "signature_hex": "...",
+          "note": "Self-verifying — import on any IC install"
+        }
+      ]
+    }
+  ],
+  "friends": [
+    { "display_name": "alice", "community": "Official IC Community", "added_at": "2027-02-01" }
+  ],
+  "statistics_summary": {
+    "total_matches": 429,
+    "total_playtime_hours": 412,
+    "win_rate": 0.579,
+    "faction_distribution": { "soviet": 0.67, "allied": 0.28, "random": 0.05 }
+  },
+  "saves_count": 12,
+  "replays_count": 287,
+  "screenshots_count": 45
+}
+</code></pre>
+<p>The key feature: <strong>SCRs are included in the export and are self-verifying.</strong> A player can import their profile JSON on a new machine, and their ratings and achievements are cryptographically proven without contacting any server. No other game offers this.</p>
+<h3 id="platform-cloud-sync-optional"><a class="header" href="#platform-cloud-sync-optional">Platform Cloud Sync (Optional)</a></h3>
+<p>For players who use Steam, GOG Galaxy, or other platforms with cloud save support, IC can optionally sync critical data via the <code>PlatformServices</code> trait:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Extension to PlatformServices (D053) for cloud backup.
+pub trait PlatformCloudSync {
+    /// Upload a small file to platform cloud storage.
+    fn cloud_save(&amp;self, key: &amp;str, data: &amp;[u8]) -&gt; Result&lt;()&gt;;
+    /// Download a file from platform cloud storage.
+    fn cloud_load(&amp;self, key: &amp;str) -&gt; Result&lt;Option&lt;Vec&lt;u8&gt;&gt;&gt;;
+    /// List available cloud files.
+    fn cloud_list(&amp;self) -&gt; Result&lt;Vec&lt;CloudEntry&gt;&gt;;
+    /// Available cloud storage quota (bytes).
+    fn cloud_quota(&amp;self) -&gt; Result&lt;CloudQuota&gt;;
+}
+
+pub struct CloudQuota {
+    pub used: u64,
+    pub total: u64,  // e.g., Steam Cloud: ~1 GB per game
+}
+<span class="boring">}</span></code></pre>
+<p><strong>What syncs:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Data</th><th>Sync?</th><th>Rationale</th></tr>
+</thead>
+<tbody>
+<tr><td><code>keys/identity.key</code></td><td><strong>Yes</strong></td><td>Critical — also recoverable via mnemonic seed phrase, but cloud sync is simpler</td></tr>
+<tr><td><code>profile.db</code></td><td><strong>Yes</strong></td><td>Small, essential</td></tr>
+<tr><td><code>communities/*.db</code></td><td><strong>Yes</strong></td><td>Small, contains verified reputation (SCRs)</td></tr>
+<tr><td><code>achievements.db</code></td><td><strong>Yes</strong></td><td>Small, contains achievement proofs</td></tr>
+<tr><td><code>config.toml</code></td><td><strong>Yes</strong></td><td>Small, preserves preferences across machines</td></tr>
+<tr><td>Latest autosave</td><td><strong>Yes</strong></td><td>Resume campaign on another machine (one <code>.icsave</code> only)</td></tr>
+<tr><td><code>saves/*.icsave</code></td><td>No</td><td>Too large for cloud quotas (user manages manually)</td></tr>
+<tr><td><code>replays/*.icrep</code></td><td>No</td><td>Too large, not critical</td></tr>
+<tr><td><code>screenshots/*.png</code></td><td>No</td><td>Too large, not critical</td></tr>
+<tr><td><code>workshop/</code></td><td>No</td><td>Re-downloadable</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Total cloud footprint:</strong> ~5–20 MB. Well within Steam Cloud’s ~1 GB per-game quota.</p>
+<p><strong>Sync triggers:</strong> Cloud sync happens at: game launch (download), game exit (upload), and after completing a match/mission (upload changed community DBs). Never during gameplay — no sync I/O on the hot path.</p>
+<h3 id="screenshots"><a class="header" href="#screenshots">Screenshots</a></h3>
+<p>Screenshots are standard PNG files with embedded metadata in the PNG <code>tEXt</code> chunks:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Key</th><th>Value</th></tr>
+</thead>
+<tbody>
+<tr><td><code>IC:EngineVersion</code></td><td><code>"0.5.0"</code></td></tr>
+<tr><td><code>IC:GameModule</code></td><td><code>"ra1"</code></td></tr>
+<tr><td><code>IC:MapName</code></td><td><code>"Arena"</code></td></tr>
+<tr><td><code>IC:Timestamp</code></td><td><code>"2027-03-15T15:45:32Z"</code></td></tr>
+<tr><td><code>IC:Players</code></td><td><code>"CommanderZod (Soviet) vs alice (Allied)"</code></td></tr>
+<tr><td><code>IC:GameTick</code></td><td><code>"18432"</code></td></tr>
+<tr><td><code>IC:ReplayFile</code></td><td><code>"2027-03-15-ranked-1v1.icrep"</code> (if applicable)</td></tr>
+</tbody>
+</table>
+</div>
+<p>Standard PNG viewers ignore these chunks; IC’s screenshot browser reads them for filtering and organization. The screenshot hotkey (mapped in <code>config.toml</code>) captures the current frame, embeds metadata, and saves to <code>screenshots/</code> with a timestamped filename.</p>
+<h3 id="mnemonic-seed-recovery"><a class="header" href="#mnemonic-seed-recovery">Mnemonic Seed Recovery</a></h3>
+<p>The Ed25519 private key in <code>keys/identity.key</code> is the player’s cryptographic identity. If lost without backup, ratings, achievements, and community memberships are gone. Cloud sync and auto-snapshots mitigate this, but both require the original machine to have been configured correctly. A player who never enabled cloud sync and whose hard drive dies loses everything.</p>
+<p><strong>Mnemonic seed phrases</strong> solve this with zero infrastructure. Inspired by BIP-39 (Bitcoin Improvement Proposal 39), the pattern derives a cryptographic keypair deterministically from a human-readable word sequence. The player writes the words on paper. On any machine, entering those words regenerates the identical keypair. The cheapest, most resilient “cloud backup” is a piece of paper in a drawer.</p>
+<h4 id="how-it-works"><a class="header" href="#how-it-works">How It Works</a></h4>
+<ol>
+<li><strong>Key generation:</strong> When IC creates a new identity, it generates 256 bits of entropy from the OS CSPRNG (<code>getrandom</code>).</li>
+<li><strong>Mnemonic encoding:</strong> The entropy maps to a 24-word phrase from the BIP-39 English wordlist (2048 words, 11 bits per word, 24 × 11 = 264 bits — 256 bits entropy + 8-bit checksum). The wordlist is curated for unambiguous reading: no similar-looking words, no offensive words, sorted alphabetically. Example: <code>abandon ability able about above absent absorb abstract absurd abuse access accident</code>.</li>
+<li><strong>Key derivation:</strong> The mnemonic phrase is run through PBKDF2-HMAC-SHA512 (2048 rounds, per BIP-39 spec) with an optional passphrase as salt (default: empty string). The 512-bit output is truncated to 32 bytes and used as the Ed25519 private key seed.</li>
+<li><strong>Deterministic output:</strong> Same 24 words + same passphrase → identical Ed25519 keypair on any platform. The derivation uses only standardized primitives (PBKDF2, HMAC, SHA-512, Ed25519) — no IC-specific code in the critical path.</li>
+</ol>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Derives an Ed25519 keypair from a BIP-39 mnemonic phrase.
+///
+/// The derivation is deterministic: same words + same passphrase
+/// always produce the same keypair on every platform.
+pub fn keypair_from_mnemonic(
+    words: &amp;[&amp;str; 24],
+    passphrase: &amp;str,
+) -&gt; Result&lt;Ed25519Keypair, MnemonicError&gt; {
+    let entropy = mnemonic_to_entropy(words)?;  // validate checksum
+    let salt = format!("mnemonic{}", passphrase);
+    let mut seed = [0u8; 64];
+    pbkdf2_hmac_sha512(
+        &amp;entropy_to_seed_input(words),
+        salt.as_bytes(),
+        2048,
+        &amp;mut seed,
+    );
+    let signing_key = Ed25519SigningKey::from_bytes(&amp;seed[..32])?;
+    Ok(Ed25519Keypair {
+        signing_key,
+        verifying_key: signing_key.verifying_key(),
+    })
+}
+<span class="boring">}</span></code></pre>
+<h4 id="optional-passphrase-advanced"><a class="header" href="#optional-passphrase-advanced">Optional Passphrase (Advanced)</a></h4>
+<p>The mnemonic can optionally be combined with a user-chosen passphrase during key derivation. This provides two-factor recovery: the 24 words (something you wrote down) + the passphrase (something you remember). Different passphrases produce different keypairs from the same words — useful for advanced users who want plausible deniability or multiple identities from one seed. The default is no passphrase (empty string). The UI does not promote this feature — it’s accessible via CLI and the advanced section of the recovery flow.</p>
+<h4 id="cli-commands"><a class="header" href="#cli-commands">CLI Commands</a></h4>
+<pre><code>ic identity seed show          # Display the 24-word mnemonic for the current identity
+                               # Requires interactive confirmation ("This is your recovery phrase.
+                               # Anyone with these words can become you. Write them down and
+                               # store them somewhere safe.")
+ic identity seed verify        # Enter 24 words to verify they match the current identity
+ic identity recover            # Enter 24 words (+ optional passphrase) to regenerate keypair
+                               # If identity.key already exists, prompts for confirmation
+                               # before overwriting
+ic identity recover --passphrase  # Prompt for passphrase in addition to mnemonic
+</code></pre>
+<h4 id="security-properties"><a class="header" href="#security-properties">Security Properties</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Property</th><th>Detail</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Entropy</strong></td><td>256 bits from OS CSPRNG — same as generating a key directly. The mnemonic is an encoding, not a weakening.</td></tr>
+<tr><td><strong>Brute-force resistance</strong></td><td>2²⁵⁶ possible mnemonics. Infeasible to enumerate.</td></tr>
+<tr><td><strong>Checksum</strong></td><td>Last 8 bits are SHA-256 checksum of the entropy. Catches typos during recovery (1 word wrong → checksum fails).</td></tr>
+<tr><td><strong>Offline</strong></td><td>No network, no server, no cloud. The 24 words ARE the identity.</td></tr>
+<tr><td><strong>Standard</strong></td><td>BIP-39 is used by every major cryptocurrency wallet. Millions of users have successfully recovered keys from mnemonic phrases. Battle-tested.</td></tr>
+<tr><td><strong>Platform-independent</strong></td><td>Same words produce the same key on Windows, macOS, Linux, WASM, mobile. The derivation uses only standardized cryptographic primitives.</td></tr>
+</tbody>
+</table>
+</div>
+<h4 id="what-the-mnemonic-does-not-replace"><a class="header" href="#what-the-mnemonic-does-not-replace">What the Mnemonic Does NOT Replace</a></h4>
+<ul>
+<li><strong>Cloud sync</strong> — still the best option for seamless multi-device use. The mnemonic is the disaster recovery layer beneath cloud sync.</li>
+<li><strong>Regular backups</strong> — the mnemonic recovers the <em>identity</em> (keypair). It does not recover save files, replays, screenshots, or settings. A full backup preserves everything.</li>
+<li><strong>Community server records</strong> — after mnemonic recovery, the player’s keypair is restored, but community servers still hold the match history and SCRs. No re-earning needed — the recovered keypair matches the old public key, so existing SCRs validate automatically.</li>
+</ul>
+<h4 id="precedent"><a class="header" href="#precedent">Precedent</a></h4>
+<p>The BIP-39 mnemonic pattern has been used since 2013 by Bitcoin, Ethereum, and every major cryptocurrency wallet. Ledger, Trezor, MetaMask, and Phantom all use 24-word recovery phrases as the standard key backup mechanism. The pattern has survived a decade of adversarial conditions (billions of dollars at stake) and is understood by millions of non-technical users. IC adapts the encoding and derivation steps verbatim — the only IC-specific part is using the derived key for Ed25519 identity rather than cryptocurrency transactions.</p>
+<h3 id="player-experience"><a class="header" href="#player-experience">Player Experience</a></h3>
+<p>The mechanical design above (CLI, formats, directory layout) is the foundation. This section defines what the <em>player</em> actually sees and feels. The guiding principle: <strong>players should never lose data without trying.</strong> The system works in layers:</p>
+<ol>
+<li><strong>Invisible layer (always-on):</strong> Cloud sync for critical data, automatic daily snapshots</li>
+<li><strong>Gentle nudge layer:</strong> Milestone-based reminders, status indicators in settings</li>
+<li><strong>Explicit action layer:</strong> In-game Data &amp; Backup panel, CLI for power users</li>
+<li><strong>Emergency layer:</strong> Disaster recovery, identity re-creation guidance</li>
+</ol>
+<h4 id="first-launch--new-player"><a class="header" href="#first-launch--new-player">First Launch — New Player</a></h4>
+<p>Integrates with D032’s “Day-one nostalgia choice.” After the player picks their experience profile (Classic/Remastered/Modern), two additional steps:</p>
+<p><strong>Step 1 — Identity creation + recovery phrase:</strong></p>
+<pre><code>┌─────────────────────────────────────────────────────────────┐
+│                     WELCOME TO IRON CURTAIN                 │
+│                                                             │
+│  Your player identity has been created.                     │
+│                                                             │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │  CommanderZod                                         │  │
+│  │  ID: ed25519:7f3a...b2c1                              │  │
+│  │  Created: 2027-03-15                                  │  │
+│  └───────────────────────────────────────────────────────┘  │
+│                                                             │
+│  Your recovery phrase — write these 24 words down and       │
+│  store them somewhere safe. They can restore your           │
+│  identity on any machine.                                   │
+│                                                             │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │  1. abandon     7. absorb    13. acid     19. across  │  │
+│  │  2. ability     8. abstract  14. acoustic  20. act    │  │
+│  │  3. able        9. absurd    15. acquire  21. action  │  │
+│  │  4. about      10. abuse     16. adapt    22. actor   │  │
+│  │  5. above      11. access    17. add      23. actress │  │
+│  │  6. absent     12. accident  18. addict   24. actual  │  │
+│  └───────────────────────────────────────────────────────┘  │
+│                                                             │
+│  [I've written them down]            [Skip — I'll do later] │
+│                                                             │
+│  You can view this phrase anytime: Settings → Data &amp; Backup │
+│  or run `ic identity seed show` from the command line.      │
+└─────────────────────────────────────────────────────────────┘
+</code></pre>
+<p><strong>Step 2 — Cloud sync offer:</strong></p>
+<pre><code>┌─────────────────────────────────────────────────────────────┐
+│                     PROTECT YOUR DATA                       │
+│                                                             │
+│  Your recovery phrase protects your identity. Cloud sync    │
+│  also protects your settings, ratings, and progress.        │
+│                                                             │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │ ☁  Enable Cloud Sync                               │    │
+│  │    Automatically backs up your profile,             │    │
+│  │    ratings, and settings via Steam Cloud.           │    │
+│  │    [Enable]                                         │    │
+│  └─────────────────────────────────────────────────────┘    │
+│                                                             │
+│  [Continue]                     [Skip — I'll set up later]  │
+│                                                             │
+│  You can always manage backups in Settings → Data &amp; Backup  │
+└─────────────────────────────────────────────────────────────┘
+</code></pre>
+<p><strong>Rules:</strong></p>
+<ul>
+<li>Identity creation is automatic — no sign-up, no email, no password</li>
+<li>The recovery phrase is shown once during first launch, then always accessible via Settings or CLI</li>
+<li>Cloud sync is offered but not required — “Continue” without enabling works fine</li>
+<li>Skipping the recovery phrase is allowed (no forced engagement) — the first milestone nudge will remind</li>
+<li>If no platform cloud is available (non-Steam/non-GOG install), Step 2 instead shows: “We recommend creating a backup after your first few games. IC will remind you.”</li>
+<li>The entire flow is skippable — no forced engagement</li>
+</ul>
+<h4 id="first-launch--existing-player-on-new-machine"><a class="header" href="#first-launch--existing-player-on-new-machine">First Launch — Existing Player on New Machine</a></h4>
+<p>This is the critical UX flow. Detection logic on first launch:</p>
+<pre><code>                    ┌──────────────┐
+                    │ First launch │
+                    │  detected    │
+                    └──────┬───────┘
+                           │
+                    ┌──────▼───────┐        ┌──────────────────┐
+                    │ Platform     │  Yes   │ Offer automatic  │
+                    │ cloud data   ├───────►│ cloud restore    │
+                    │ available?   │        └──────────────────┘
+                    └──────┬───────┘
+                           │ No
+                    ┌──────▼───────┐
+                    │ Show restore │
+                    │ options      │
+                    └──────────────┘
+</code></pre>
+<p><strong>Cloud restore path (automatic detection):</strong></p>
+<pre><code>┌─────────────────────────────────────────────────────────────┐
+│                  EXISTING PLAYER DETECTED                    │
+│                                                             │
+│  Found data from your other machine:                        │
+│                                                             │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │  CommanderZod                                         │  │
+│  │  Rating: 1823 (Private First Class)                   │  │
+│  │  342 matches played · 23 achievements                 │  │
+│  │  Last played: March 14, 2027 on DESKTOP-HOME          │  │
+│  └───────────────────────────────────────────────────────┘  │
+│                                                             │
+│  [Restore my data]              [Start fresh instead]       │
+│                                                             │
+│  Restores: identity, ratings, achievements, settings,       │
+│  friends list, and latest campaign autosave.                │
+│  Replays, screenshots, and full saves require a backup      │
+│  file or manual folder copy.                                │
+└─────────────────────────────────────────────────────────────┘
+</code></pre>
+<p><strong>Manual restore path (no cloud data):</strong></p>
+<pre><code>┌─────────────────────────────────────────────────────────────┐
+│                     WELCOME TO IRON CURTAIN                 │
+│                                                             │
+│  Played before? Restore your data:                          │
+│                                                             │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │  🔑  Recover from recovery phrase                   │    │
+│  │      Enter your 24-word phrase to restore identity  │    │
+│  └─────────────────────────────────────────────────────┘    │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │  📁  Restore from backup file                       │    │
+│  │      Browse for a .zip backup created by IC         │    │
+│  └─────────────────────────────────────────────────────┘    │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │  📂  Copy from existing data folder                 │    │
+│  │      Point to a copied &lt;data_dir&gt; from your old PC  │    │
+│  └─────────────────────────────────────────────────────┘    │
+│                                                             │
+│  [Start fresh — create new identity]                        │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+</code></pre>
+<p><strong>Mnemonic recovery flow (from “Recover from recovery phrase”):</strong></p>
+<pre><code>┌─────────────────────────────────────────────────────────────┐
+│                   RECOVER YOUR IDENTITY                      │
+│                                                             │
+│  Enter your 24-word recovery phrase:                        │
+│                                                             │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │  1. [________]   7. [________]  13. [________]       │  │
+│  │  2. [________]   8. [________]  14. [________]       │  │
+│  │  3. [________]   9. [________]  15. [________]       │  │
+│  │  4. [________]  10. [________]  16. [________]       │  │
+│  │  5. [________]  11. [________]  17. [________]       │  │
+│  │  6. [________]  12. [________]  18. [________]       │  │
+│  │                                                       │  │
+│  │  19. [________]  21. [________]  23. [________]      │  │
+│  │  20. [________]  22. [________]  24. [________]      │  │
+│  └───────────────────────────────────────────────────────┘  │
+│                                                             │
+│  [Advanced: I used a passphrase]                            │
+│                                                             │
+│  [Recover]                                       [Back]     │
+│                                                             │
+│  Autocomplete suggests words as you type. Only BIP-39       │
+│  wordlist entries are accepted.                              │
+└─────────────────────────────────────────────────────────────┘
+</code></pre>
+<p>On successful recovery, the flow shows the restored identity (display name, public key fingerprint) and continues to the normal first-launch experience. Community servers recognize the recovered identity by its public key — existing SCRs validate automatically.</p>
+<p><strong>Note:</strong> Mnemonic recovery restores the <em>identity only</em> (keypair). Save files, replays, screenshots, and settings are not recovered by the phrase — those require a full backup or folder copy. The restore options panel makes this clear: “Recover from recovery phrase” is listed alongside “Restore from backup file” because they solve different problems. A player who has both a phrase and a backup should use the backup (it includes everything); a player who only has the phrase gets their identity back and can re-earn or re-download the rest.</p>
+<p><strong>Restore progress (both paths):</strong></p>
+<pre><code>┌─────────────────────────────────────────────────────────────┐
+│                     RESTORING YOUR DATA                     │
+│                                                             │
+│  ████████████████████░░░░░░░░  68%                          │
+│                                                             │
+│  ✓ Identity key                                             │
+│  ✓ Profile &amp; friends                                        │
+│  ✓ Community ratings (3 communities, 12 SCRs verified)      │
+│  ✓ Achievements (23 achievement proofs verified)            │
+│  ◎ Save games (4 of 12)...                                  │
+│  ○ Replays                                                  │
+│  ○ Screenshots                                              │
+│  ○ Settings                                                 │
+│                                                             │
+│  SCR verification: all credentials cryptographically valid  │
+└─────────────────────────────────────────────────────────────┘
+</code></pre>
+<p>Key UX detail: <strong>SCRs are verified during restore and the player sees it.</strong> The progress screen shows credentials being cryptographically validated. This is a trust-building moment — “your reputation is portable and provable” becomes tangible.</p>
+<h4 id="automatic-behaviors-no-player-interaction-required"><a class="header" href="#automatic-behaviors-no-player-interaction-required">Automatic Behaviors (No Player Interaction Required)</a></h4>
+<p>Most players never open a settings screen for backup. These behaviors protect them silently:</p>
+<p><strong>Auto cloud sync (if enabled):</strong></p>
+<ul>
+<li><strong>On game exit:</strong> Upload changed <code>profile.db</code>, <code>communities/*.db</code>, <code>achievements.db</code>, <code>config.toml</code>, <code>keys/identity.key</code>, latest autosave. Silent — no UI prompt.</li>
+<li><strong>On game launch:</strong> Download cloud data, merge if needed (last-write-wins for simple files; SCR merge for community DBs — SCRs are append-only with timestamps, so merge is deterministic).</li>
+<li><strong>After completing a match:</strong> Upload updated community DB (new match result / rating change). Background, non-blocking.</li>
+</ul>
+<p><strong>Automatic daily snapshots (always-on, even without cloud):</strong></p>
+<ul>
+<li>On first launch of the day, the engine writes a lightweight “critical data snapshot” to <code>&lt;data_dir&gt;/backups/auto-critical-N.zip</code> containing only <code>keys/</code>, <code>profile.db</code>, <code>communities/*.db</code>, <code>achievements.db</code>, <code>config.toml</code> (~5 MB total).</li>
+<li>Rotating 3-day retention: <code>auto-critical-1.zip</code>, <code>auto-critical-2.zip</code>, <code>auto-critical-3.zip</code>. Oldest overwritten.</li>
+<li>No user interaction, no prompt, no notification. Background I/O during asset loading — invisible.</li>
+<li>Even players who never touch backup settings have 3 rolling days of critical data protection.</li>
+</ul>
+<p><strong>Post-milestone nudges (main menu toasts):</strong></p>
+<p>After significant events, a non-intrusive toast appears on the main menu — same system as D030’s Workshop cleanup toasts:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Trigger</th><th>Toast (cloud sync active)</th><th>Toast (no cloud sync)</th></tr>
+</thead>
+<tbody>
+<tr><td>First ranked match</td><td><code>Your competitive career has begun! Your rating is backed up automatically.</code></td><td><code>Your competitive career has begun! Protect your rating: [Back up now]  [Dismiss]</code></td></tr>
+<tr><td>First campaign mission</td><td><code>Campaign progress saved.</code> (no toast — autosave handles it)</td><td><code>Campaign progress saved. [Create backup]  [Dismiss]</code></td></tr>
+<tr><td>New ranked tier reached</td><td><code>Congratulations — Private First Class!</code></td><td><code>Congratulations — Private First Class! [Back up now]  [Dismiss]</code></td></tr>
+<tr><td>30 days without full backup (no cloud)</td><td>—</td><td><code>It's been a month since your last backup. Your data folder is 1.4 GB. [Back up now]  [Remind me later]</code></td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Nudge rules:</strong></p>
+<ul>
+<li><strong>Never during gameplay.</strong> Only on main menu or post-game screen.</li>
+<li><strong>Maximum one nudge per session.</strong> If multiple triggers fire, highest-priority wins.</li>
+<li><strong>Dismissable and respectful.</strong> “Remind me later” delays by 7 days. Three consecutive dismissals for the same nudge type = never show that nudge again.</li>
+<li><strong>No nudges if cloud sync is active and healthy.</strong> The player is already protected.</li>
+<li><strong>No nudges for the first 3 game sessions.</strong> Let players enjoy the game before talking about data management.</li>
+</ul>
+<h4 id="settings--data--backup-panel"><a class="header" href="#settings--data--backup-panel">Settings → Data &amp; Backup Panel</a></h4>
+<p>In-game UI for players who want to manage their data visually. Accessible from Main Menu → Settings → Data &amp; Backup. This is the GUI equivalent of the <code>ic backup</code> CLI — same operations, visual interface.</p>
+<pre><code>┌──────────────────────────────────────────────────────────────────┐
+│  Settings &gt; Data &amp; Backup                                        │
+│                                                                  │
+│  ┌─ DATA HEALTH ──────────────────────────────────────────────┐  │
+│  │                                                            │  │
+│  │  Identity key          ✓ Backed up (Steam Cloud)           │  │
+│  │  Profile &amp; ratings     ✓ Synced 2 hours ago                │  │
+│  │  Achievements          ✓ Synced 2 hours ago                │  │
+│  │  Campaign progress     ✓ Latest autosave synced            │  │
+│  │  Last full backup      March 10, 2027 (5 days ago)         │  │
+│  │  Data folder size      1.4 GB                              │  │
+│  │                                                            │  │
+│  └────────────────────────────────────────────────────────────┘  │
+│                                                                  │
+│  ┌─ BACKUP ───────────────────────────────────────────────────┐  │
+│  │                                                            │  │
+│  │  [Create full backup]     Saves everything to a .zip file  │  │
+│  │  [Create critical only]   Keys, profile, ratings (&lt; 5 MB)  │  │
+│  │  [Restore from backup]    Load a .zip backup file          │  │
+│  │                                                            │  │
+│  │  Saved backups:                                            │  │
+│  │    ic-backup-2027-03-10.zip     1.2 GB    [Open] [Delete]  │  │
+│  │    ic-backup-2027-02-15.zip     980 MB    [Open] [Delete]  │  │
+│  │    auto-critical-1.zip          4.8 MB    (today)          │  │
+│  │    auto-critical-2.zip          4.7 MB    (yesterday)      │  │
+│  │    auto-critical-3.zip          4.7 MB    (2 days ago)     │  │
+│  │                                                            │  │
+│  └────────────────────────────────────────────────────────────┘  │
+│                                                                  │
+│  ┌─ CLOUD SYNC ───────────────────────────────────────────────┐  │
+│  │                                                            │  │
+│  │  Status: Active (Steam Cloud)                              │  │
+│  │  Last sync: March 15, 2027 14:32                           │  │
+│  │  Cloud usage: 12 MB / 1 GB                                 │  │
+│  │                                                            │  │
+│  │  [Sync now]  [Disable cloud sync]                          │  │
+│  │                                                            │  │
+│  └────────────────────────────────────────────────────────────┘  │
+│                                                                  │
+│  ┌─ EXPORT &amp; PORTABILITY ─────────────────────────────────────┐  │
+│  │                                                            │  │
+│  │  [Export profile (JSON)]   Machine-readable data export    │  │
+│  │  [Open data folder]        Browse files directly           │  │
+│  │                                                            │  │
+│  └────────────────────────────────────────────────────────────┘  │
+│                                                                  │
+└──────────────────────────────────────────────────────────────────┘
+</code></pre>
+<p><strong>When cloud sync is not available</strong> (non-Steam/non-GOG install), the Cloud Sync section shows:</p>
+<pre><code>│  ┌─ CLOUD SYNC ───────────────────────────────────────────────┐  │
+│  │                                                            │  │
+│  │  Status: Not available                                     │  │
+│  │  Cloud sync requires Steam or GOG Galaxy.                  │  │
+│  │                                                            │  │
+│  │  Your data is protected by automatic daily snapshots.      │  │
+│  │  We recommend creating a full backup periodically.         │  │
+│  │                                                            │  │
+│  └────────────────────────────────────────────────────────────┘  │
+</code></pre>
+<p>And Data Health adjusts severity indicators:</p>
+<pre><code>│  │  Identity key          ⚠ Local only — not cloud-backed     │  │
+│  │  Profile &amp; ratings     ⚠ Local only                        │  │
+│  │  Last full backup      Never                               │  │
+│  │  Last auto-snapshot    Today (keys + profile + ratings)    │  │
+</code></pre>
+<p>The ⚠ indicator is yellow, not red — it’s a recommendation, not an error. “Local only” is a valid state, not a broken state.</p>
+<p><strong>“Create full backup” flow:</strong> Clicking the button opens a save-file dialog (pre-filled with <code>ic-backup-&lt;date&gt;.zip</code>). A progress bar shows backup creation. On completion: <code>Backup created: ic-backup-2027-03-15.zip (1.2 GB)</code> with [Open folder] button. The same categories as <code>ic backup create --exclude</code> are exposed via checkboxes in an “Advanced” expander (collapsed by default).</p>
+<p><strong>“Restore from backup” flow:</strong> Opens a file browser filtered to <code>.zip</code> files. After selection, shows the restore progress screen (see “First Launch — Existing Player” above). If existing data conflicts with backup data, prompts: <code>Your current data differs from the backup. [Overwrite with backup]  [Cancel]</code>.</p>
+<h4 id="screenshot-gallery"><a class="header" href="#screenshot-gallery">Screenshot Gallery</a></h4>
+<p>The screenshot browser (Phase 3) uses PNG <code>tEXt</code> metadata to organize screenshots into a browsable gallery. Accessible from Main Menu → Screenshots:</p>
+<pre><code>┌──────────────────────────────────────────────────────────────────┐
+│  Screenshots                                        [Take now ⌂] │
+│                                                                  │
+│  Filter: [All maps ▾]  [All modes ▾]  [Date range ▾]  [Search…] │
+│                                                                  │
+│  ┌────────────┐  ┌────────────┐  ┌────────────┐  ┌────────────┐ │
+│  │            │  │            │  │            │  │            │ │
+│  │  (thumb)   │  │  (thumb)   │  │  (thumb)   │  │  (thumb)   │ │
+│  │            │  │            │  │            │  │            │ │
+│  ├────────────┤  ├────────────┤  ├────────────┤  ├────────────┤ │
+│  │ Arena      │  │ Fjord      │  │ Arena      │  │ Red Pass   │ │
+│  │ 1v1 Ranked │  │ 2v2 Team   │  │ Skirmish   │  │ Campaign   │ │
+│  │ Mar 15     │  │ Mar 14     │  │ Mar 12     │  │ Mar 10     │ │
+│  └────────────┘  └────────────┘  └────────────┘  └────────────┘ │
+│                                                                  │
+│  Selected: Arena — 1v1 Ranked — Mar 15, 2027 15:45               │
+│  CommanderZod (Soviet) vs alice (Allied) · Tick 18432            │
+│  [Watch replay]  [Open file]  [Copy to clipboard]  [Delete]      │
+│                                                                  │
+│  Total: 45 screenshots (128 MB)                                  │
+└──────────────────────────────────────────────────────────────────┘
+</code></pre>
+<p>Key feature: <strong>“Watch replay” links directly to the replay file</strong> via the <code>IC:ReplayFile</code> metadata. Screenshots become bookmarks into match history. A screenshot gallery doubles as a game history browser.</p>
+<p>Filters use metadata: map name, game module, date, player names. Sorting by date (default), map, or file size.</p>
+<h4 id="identity-loss--disaster-recovery"><a class="header" href="#identity-loss--disaster-recovery">Identity Loss — Disaster Recovery</a></h4>
+<p>If a player loses their machine with no backup and no cloud sync, the outcome depends on whether they saved their recovery phrase:</p>
+<p><strong>Recoverable via mnemonic seed phrase:</strong></p>
+<ul>
+<li>Ed25519 private key (the identity itself) — enter 24 words on any machine to regenerate the identical keypair</li>
+<li>Community recognition — recovered key matches the old public key, so existing SCRs validate automatically</li>
+<li>Ratings and match history — community servers recognize the recovered identity without admin intervention</li>
+</ul>
+<p><strong>Not recoverable via mnemonic (requires backup or re-creation):</strong></p>
+<ul>
+<li>Campaign save files, replay files, screenshots</li>
+<li>Local settings and preferences</li>
+<li>Achievement proofs signed by the old key (can be re-earned; or restored from backup if available)</li>
+</ul>
+<p><strong>Re-downloadable:</strong></p>
+<ul>
+<li>Workshop content (mods, maps, resource packs)</li>
+</ul>
+<p><strong>Partially recoverable via community (if mnemonic was also lost):</strong></p>
+<ul>
+<li><strong>Ratings and match history.</strong> Community servers retain match records. A player creates a new identity, and a community admin can associate the new identity with the old record via a verified identity transfer (community-specific policy, not IC-mandated). The old SCRs prove the old identity held those ratings.</li>
+<li><strong>Friends.</strong> Friends with the player in their list can re-add the new identity.</li>
+</ul>
+<p><strong>Recovery hierarchy (best to worst):</strong></p>
+<ol>
+<li><strong>Full backup</strong> — everything restored, including saves, replays, screenshots</li>
+<li><strong>Cloud sync</strong> — identity, profile, ratings, settings, latest autosave restored</li>
+<li><strong>Mnemonic seed phrase</strong> — identity restored; saves, replays, settings lost</li>
+<li><strong>Nothing saved</strong> — fresh identity; community admin can transfer old records</li>
+</ol>
+<p><strong>UX for total loss (no phrase, no backup, no cloud):</strong> No special “recovery wizard.” The player creates a fresh identity. The first-launch flow on the new identity presents the recovery phrase prominently. The system prevents the same mistake twice.</p>
+<h4 id="console-commands-d058"><a class="header" href="#console-commands-d058">Console Commands (D058)</a></h4>
+<p>All Data &amp; Backup panel operations have console equivalents:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Command</th><th>Effect</th></tr>
+</thead>
+<tbody>
+<tr><td><code>/backup create</code></td><td>Create full backup (interactive — shows progress)</td></tr>
+<tr><td><code>/backup create --critical</code></td><td>Create critical-only backup</td></tr>
+<tr><td><code>/backup restore &lt;path&gt;</code></td><td>Restore from backup file</td></tr>
+<tr><td><code>/backup list</code></td><td>List saved backups</td></tr>
+<tr><td><code>/backup verify &lt;path&gt;</code></td><td>Verify archive integrity</td></tr>
+<tr><td><code>/profile export</code></td><td>Export profile to JSON</td></tr>
+<tr><td><code>/identity seed show</code></td><td>Display 24-word recovery phrase (requires confirmation)</td></tr>
+<tr><td><code>/identity seed verify</code></td><td>Enter 24 words to verify they match current identity</td></tr>
+<tr><td><code>/identity recover</code></td><td>Enter 24 words to regenerate keypair (overwrites if exists)</td></tr>
+<tr><td><code>/data health</code></td><td>Show data health summary (identity, sync status, backup age)</td></tr>
+<tr><td><code>/data folder</code></td><td>Open data folder in system file manager</td></tr>
+<tr><td><code>/cloud sync</code></td><td>Trigger immediate cloud sync</td></tr>
+<tr><td><code>/cloud status</code></td><td>Show cloud sync status and quota</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="alternatives-considered"><a class="header" href="#alternatives-considered">Alternatives Considered</a></h3>
+<ul>
+<li><strong>Proprietary backup format with encryption</strong> (rejected — contradicts “standard formats only” principle; a ZIP file can be encrypted separately with standard tools if the player wants encryption)</li>
+<li><strong>IC-hosted cloud backup service</strong> (rejected — creates infrastructure liability, ongoing cost, and makes player data dependent on IC’s servers surviving; violates local-first philosophy)</li>
+<li><strong>Database-level replication</strong> (rejected — over-engineered for the use case; SQLite <code>VACUUM INTO</code> is simpler, safer, and produces a self-contained file)</li>
+<li><strong>Steam Cloud as primary backup</strong> (rejected — platform-specific, limited quota, opaque sync behavior; IC supports it as an <em>option</em>, not a requirement)</li>
+<li><strong>Incremental backup</strong> (deferred — full backup via <code>VACUUM INTO</code> is sufficient for player-scale data; incremental adds complexity with minimal benefit unless someone has 50+ GB of replays)</li>
+<li><strong>Forced backup before first ranked match</strong> (rejected — punishes players to solve a problem most won’t have; auto-snapshots protect critical data without friction)</li>
+<li><strong>Scary “BACK UP YOUR KEY OR ELSE” warnings</strong> (rejected — fear-based UX is hostile; the recovery phrase provides a genuine safety net, making fear unnecessary; factual presentation of options replaces warnings)</li>
+<li><strong>12-word mnemonic phrase</strong> (rejected — 12 words = 128 bits of entropy; sufficient for most uses but 24 words = 256 bits matches Ed25519’s full key strength; the BIP-39 ecosystem standardized on 24 words for high-security applications; the marginal cost of 12 extra words is negligible for a one-time operation)</li>
+<li><strong>Custom IC wordlist</strong> (rejected — BIP-39’s English wordlist is battle-tested, curated for unambiguous reading, and familiar to millions of cryptocurrency users; a custom list would need the same curation effort with no benefit)</li>
+</ul>
+<h3 id="integration-with-existing-decisions"><a class="header" href="#integration-with-existing-decisions">Integration with Existing Decisions</a></h3>
+<ul>
+<li><strong>D010 (Snapshottable Sim):</strong> Save files are sim snapshots — the backup system treats them as opaque binary files. No special handling needed beyond file copy.</li>
+<li><strong>D020 (Mod SDK &amp; CLI):</strong> The <code>ic backup</code> and <code>ic profile export</code> commands join the <code>ic</code> CLI family alongside <code>ic mod</code>, <code>ic replay</code>, <code>ic campaign</code>.</li>
+<li><strong>D030 (Workshop):</strong> Post-milestone nudge toasts use the same toast system as Workshop cleanup prompts — consistent notification UX.</li>
+<li><strong>D032 (UI Themes):</strong> First-launch identity creation integrates as the final step after theme selection. The Data &amp; Backup panel is theme-aware.</li>
+<li><strong>D034 (SQLite):</strong> SQLite is the backbone of player data storage. <code>VACUUM INTO</code> is the safe backup primitive — it handles WAL mode correctly and produces a compacted single-file copy.</li>
+<li><strong>D052 (Community Servers &amp; SCR):</strong> SCRs are the portable reputation unit. The backup system preserves them; the export system includes them. Because SCRs are cryptographically signed, they’re self-verifying on import — no server round-trip needed. Restore progress screen visibly verifies SCRs.</li>
+<li><strong>D053 (Player Profile):</strong> The profile export is D053’s data portability implementation. All locally-authoritative profile fields export to JSON; all SCR-backed fields export with full credential data.</li>
+<li><strong>D036 (Achievements):</strong> Achievement proofs are SCRs stored in <code>achievements.db</code>. Backup preserves them; export includes them in the JSON.</li>
+<li><strong>D058 (Console):</strong> All backup/export operations have <code>/backup</code> and <code>/profile</code> console command equivalents.</li>
+</ul>
+<h3 id="phase"><a class="header" href="#phase">Phase</a></h3>
+<ul>
+<li><strong>Phase 0:</strong> Define and document the <code>&lt;data_dir&gt;</code> directory layout (this decision). Add <code>IC_DATA_DIR</code> / <code>--data-dir</code> override support.</li>
+<li><strong>Phase 2:</strong> <code>ic backup create/restore</code> CLI ships alongside the save/load system. Screenshot capture with PNG metadata. Automatic daily critical snapshots (3-day rotating <code>auto-critical-N.zip</code>). Mnemonic seed generation integrated into identity creation — <code>ic identity seed show</code>, <code>ic identity seed verify</code>, <code>ic identity recover</code> CLI commands.</li>
+<li><strong>Phase 3:</strong> Screenshot browser UI with metadata filtering and replay linking. Data &amp; Backup settings panel (including “View recovery phrase” button). Post-milestone nudge toasts (first nudge reminds about recovery phrase if not yet confirmed). First-launch identity creation with recovery phrase display + cloud sync offer. Mnemonic recovery option in first-launch restore flow.</li>
+<li><strong>Phase 5:</strong> <code>ic profile export</code> ships alongside multiplayer launch (GDPR compliance). Platform cloud sync via <code>PlatformServices</code> trait (Steam Cloud, GOG Galaxy). <code>ic backup verify</code> for archive integrity checking. First-launch restore flow (cloud detection + manual restore + mnemonic recovery). Console commands (<code>/backup</code>, <code>/profile</code>, <code>/identity</code>, <code>/data</code>, <code>/cloud</code>).</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../../decisions/09e/D053-player-profile.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../../decisions/09f-tools.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../../decisions/09e/D053-player-profile.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../../decisions/09f-tools.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../../mark-09e88c2c.min.js"></script>
+        <script src="../../searcher-c2a407aa.js"></script>
+
+        <script src="../../clipboard-1626706a.min.js"></script>
+        <script src="../../highlight-abc7f01d.js"></script>
+        <script src="../../book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

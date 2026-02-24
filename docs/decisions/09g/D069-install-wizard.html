@@ -1,0 +1,665 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>D069 — Install Wizard - Iron Curtain — Design Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Design docs for a Rust-native Red Alert RTS engine">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../../css/general-2459343d.css">
+        <link rel="stylesheet" href="../../css/chrome-ae938929.css">
+        <link rel="stylesheet" href="../../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../../searchindex-61d2369b.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../../toc-1553b04b.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Iron Curtain — Design Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs/edit/main/src/decisions/09g/D069-install-wizard.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h2 id="d069-installation--first-run-setup-wizard--player-first-offline-first-cross-platform"><a class="header" href="#d069-installation--first-run-setup-wizard--player-first-offline-first-cross-platform">D069: Installation &amp; First-Run Setup Wizard — Player-First, Offline-First, Cross-Platform</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th></th><th></th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Status</strong></td><td>Accepted</td></tr>
+<tr><td><strong>Phase</strong></td><td>Phase 4–5 (first-run setup flow + preset selection + repair entry points), Phase 6a (resume/checkpointing + full maintenance wizard + Deck polish), Phase 6b+ (platform variants expanded, smart recommendations, SDK parity)</td></tr>
+<tr><td><strong>Depends on</strong></td><td>D030/D049 (Workshop transport + package verification), D034 (SQLite for checkpoints/setup state), D061 (data/backup/restore UX), D065 (experience profile + controls walkthrough handoff), D068 (selective install profiles/content packs), D033 (no-dead-end UX rule)</td></tr>
+<tr><td><strong>Driver</strong></td><td>Players need a tactful, reversible, fast path from “installed binary” to “playable game” without being trapped by store-specific assumptions, online/account gates, or confusing mod/content prerequisites.</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="decision-capsule-llmrag-summary"><a class="header" href="#decision-capsule-llmrag-summary">Decision Capsule (LLM/RAG Summary)</a></h3>
+<ul>
+<li><strong>Status:</strong> Accepted</li>
+<li><strong>Phase:</strong> Phase 4–5 (desktop/store baseline), Phase 6a (maintenance/resume maturity), Phase 6b+ (advanced variants)</li>
+<li><strong>Canonical for:</strong> Installation/setup wizard UX, first-run setup sequencing, maintenance/repair wizard re-entry, platform-specific install responsibility split</li>
+<li><strong>Scope:</strong> <code>ic-ui</code> setup wizard flow, <code>ic-game</code> platform capability integration, content source detection + install preset planning, transfer/verify UX, post-install maintenance/repair entry points</li>
+<li><strong>Decision:</strong> IC uses a <strong>two-layer installation model</strong>: platform/store/native package handles <strong>binary install/update</strong>, and IC provides a <strong>shared in-app First-Run Setup Wizard</strong> (plus maintenance wizard) for identity, content sources, selective installs, verification, and onboarding handoff.</li>
+<li><strong>Why:</strong> Avoids launcher bloat and duplicated patchers while giving players a consistent, no-dead-end setup experience across Steam/GOG/standalone and deferred browser/mobile platform variants.</li>
+<li><strong>Non-goals:</strong> Replacing platform installers/patchers (Steam/GOG/Epic), mandatory online/account setup, monolithic irreversible install choices, full console certification install-flow detail at this phase.</li>
+<li><strong>Invariants preserved:</strong> Platform-agnostic architecture (<code>InputSource</code>, <code>ScreenClass</code>), D068 selective installs and fingerprints, D049 verification/P2P transport, D061 offline-portable data ownership, D065 onboarding handoff.</li>
+<li><strong>Defaults / UX behavior:</strong> <code>Full Install</code> preset is the default in the wizard (with visible alternatives and size estimates); offline-first optional setup; all choices reversible via Settings → Data maintenance flows.</li>
+<li><strong>Public interfaces / types:</strong> <code>InstallWizardState</code>, <code>InstallWizardMode</code>, <code>InstallStepId</code>, <code>ContentSourceCandidate</code>, <code>ContentInstallPlan</code>, <code>InstallTransferProgress</code>, <code>RepairPlan</code>, <code>WizardCheckpoint</code>, <code>PlatformInstallerCapabilities</code></li>
+<li><strong>Affected docs:</strong> <code>src/17-PLAYER-FLOW.md</code>, <code>src/decisions/09c-modding.md</code> (D068), <code>src/decisions/09e-community.md</code> (D030/D049), <code>src/02-ARCHITECTURE.md</code>, <code>src/04-MODDING.md</code>, <code>src/decisions/09f-tools.md</code></li>
+<li><strong>Revision note summary:</strong> None</li>
+<li><strong>Keywords:</strong> install wizard, first-run setup, setup assistant, repair verify, content detection, selective install presets, offline-first, platform installer, Steam Deck setup</li>
+</ul>
+<h3 id="problem"><a class="header" href="#problem">Problem</a></h3>
+<p>IC already has strong pieces of the setup experience — first-launch identity setup (D061), content detection, no-dead-end guidance (D033), and selective installs (D068) — but they are not yet formalized as a single, tactful <strong>installation and setup wizard</strong>.</p>
+<p>Without a unified design, the project risks:</p>
+<ul>
+<li>duplicating platform installer functionality in-store builds</li>
+<li>inconsistent first-run behavior across Steam/GOG/standalone/browser builds</li>
+<li>confusing transitions between asset detection, content install prompts, and onboarding</li>
+<li>poor recovery/repair UX when sources move, files are corrupted, or content packs are removed</li>
+</ul>
+<p>The wizard must fit IC’s philosophy: <strong>fast, reversible, offline-capable, and clear within one second</strong>.</p>
+<h3 id="decision"><a class="header" href="#decision">Decision</a></h3>
+<p>Define a <strong>two-layer install/setup model</strong>:</p>
+<ol>
+<li><strong>Distribution installer entry (platform/store/standalone specific)</strong> — installs/updates the <strong>binary</strong></li>
+<li><strong>IC First-Run Setup Wizard (shared, platform-adaptive)</strong> — configures the <strong>playable experience</strong></li>
+</ol>
+<p>The in-app wizard is the canonical IC-controlled setup UX and is re-enterable later as a <strong>maintenance wizard</strong> for modify/repair/reinstall-style operations.</p>
+<h3 id="design-principles-normative"><a class="header" href="#design-principles-normative">Design Principles (Normative)</a></h3>
+<h4 id="lean-toward"><a class="header" href="#lean-toward">Lean Toward</a></h4>
+<ul>
+<li>platform-native binary installation/update (Steam/GOG/Epic/OS package managers)</li>
+<li>quick vs advanced setup split</li>
+<li>preset/component selection with size estimates</li>
+<li>resumable/checkpointed setup operations</li>
+<li>source detection with confidence/status and merge guidance</li>
+<li>repair/verify/re-scan as first-class actions</li>
+<li>no-dead-end guidance panels and direct remediation paths</li>
+</ul>
+<h4 id="avoid"><a class="header" href="#avoid">Avoid</a></h4>
+<ul>
+<li>launcher bloat (always-on heavyweight patcher/launcher for normal play)</li>
+<li>redundant binary updaters on store builds</li>
+<li>mandatory online/account setup before local play</li>
+<li>dark patterns or irreversible setup choices</li>
+<li>raw filesystem path workflows as the primary path on touch/mobile platforms</li>
+</ul>
+<h3 id="two-layer-install-model"><a class="header" href="#two-layer-install-model">Two-Layer Install Model</a></h3>
+<h4 id="layer-1--distribution-install-entry-platformstorestandalone"><a class="header" href="#layer-1--distribution-install-entry-platformstorestandalone">Layer 1 — Distribution Install Entry (Platform/Store/Standalone)</a></h4>
+<p>Purpose: place/update the <strong>IC binary</strong> on the device.</p>
+<p>Profiles:</p>
+<ul>
+<li><strong>Store builds (Steam/GOG/Epic):</strong> platform installs/updates/uninstalls binaries</li>
+<li><strong>Standalone desktop:</strong> IC-provided bootstrap package/installer handles binary placement and shortcuts</li>
+<li><strong>Browser / mobile / console:</strong> no traditional installer; jump to a setup-assistant variant</li>
+</ul>
+<p>Rules:</p>
+<ul>
+<li>IC does <strong>not</strong> duplicate store patch/update UX</li>
+<li>IC may offer <strong>guidance links</strong> to platform verify/repair actions</li>
+<li>IC may independently verify and repair <strong>IC-side content/setup state</strong> (packages, cache, source mappings, indexes)</li>
+</ul>
+<h4 id="layer-2--ic-first-run-setup-wizard-shared-platform-adaptive"><a class="header" href="#layer-2--ic-first-run-setup-wizard-shared-platform-adaptive">Layer 2 — IC First-Run Setup Wizard (Shared, Platform-Adaptive)</a></h4>
+<p>Purpose: reach a <strong>playable configured state</strong>.</p>
+<p>Primary outcomes:</p>
+<ul>
+<li>identity initialized (or recovered)</li>
+<li>optional cloud sync decision captured</li>
+<li>content sources detected and selected</li>
+<li>install preset/content plan applied (D068)</li>
+<li>transfer/copy/download/verify/index steps completed</li>
+<li>D065 onboarding handoff offered (experience profile + controls walkthrough)</li>
+<li>player reaches the main menu in a ready state</li>
+</ul>
+<h3 id="wizard-modes"><a class="header" href="#wizard-modes">Wizard Modes</a></h3>
+<h4 id="quick-setup-default-path"><a class="header" href="#quick-setup-default-path">Quick Setup (Default Path)</a></h4>
+<p>Uses the fastest path with visible “Change” affordances:</p>
+<ul>
+<li>best detected content source (or prompts if ambiguous)</li>
+<li><code>Full Install</code> preset preselected (default in D069)</li>
+<li>offline-first path (online features optional)</li>
+<li>default data directory</li>
+</ul>
+<h4 id="advanced-setup-optional"><a class="header" href="#advanced-setup-optional">Advanced Setup (Optional)</a></h4>
+<p>Adds advanced controls without blocking the quick path:</p>
+<ul>
+<li>data directory override / portable-style data placement guidance</li>
+<li>content preset / custom pack selection (D068)</li>
+<li>source priority ordering (Steam vs GOG vs OpenRA vs manual)</li>
+<li>bandwidth/background download behavior</li>
+<li>optional verification depth (basic vs full hash scan)</li>
+<li>accessibility setup before gameplay (text size, high contrast, reduced motion)</li>
+</ul>
+<h3 id="wizard-step-sequence-desktopstore-baseline"><a class="header" href="#wizard-step-sequence-desktopstore-baseline">Wizard Step Sequence (Desktop/Store Baseline)</a></h3>
+<p>The setup wizard is a UI flow inside <code>InMenus</code> (menu/UI-only state). It does not instantiate the sim.</p>
+<h4 id="1-welcome--setup-intent"><a class="header" href="#1-welcome--setup-intent">1. Welcome / Setup Intent</a></h4>
+<p>Actions:</p>
+<ul>
+<li><code>Quick Setup</code></li>
+<li><code>Advanced Setup</code></li>
+<li><code>Restore from Backup / Recovery Phrase</code></li>
+<li><code>Exit</code></li>
+</ul>
+<p>Purpose: set expectations and mode, not collect technical settings.</p>
+<h4 id="2-identity-setup-preserves-existing-first-launch-order"><a class="header" href="#2-identity-setup-preserves-existing-first-launch-order">2. Identity Setup (Preserves Existing First-Launch Order)</a></h4>
+<p>Uses the current D061-first flow:</p>
+<ul>
+<li>recovery phrase creation (or restore path)</li>
+<li>cloud sync offer (optional, if platform service exists)</li>
+</ul>
+<p>UX requirements:</p>
+<ul>
+<li>concise copy</li>
+<li>explicit skip for cloud sync</li>
+<li>“Already have an account?” visible</li>
+<li>deeper explanations behind “Learn more”</li>
+</ul>
+<h4 id="3-content-source-detection"><a class="header" href="#3-content-source-detection">3. Content Source Detection</a></h4>
+<p>Builds on the existing <code>17-PLAYER-FLOW</code> content detection:</p>
+<ul>
+<li>probe Steam, GOG, EA/Origin, OpenRA, manual folder</li>
+<li>show found/not found status</li>
+<li>allow source selection or merge when valid</li>
+<li>if none found, provide guidance to acquisition options and manual browse</li>
+</ul>
+<p>Additions in D069:</p>
+<ul>
+<li><strong>Out-of-the-box Remastered import path:</strong> if the C&amp;C Remastered Collection is detected, the wizard offers a one-click <code>Use Steam Remastered assets</code> path as a first-class source option (not an advanced/manual flow).</li>
+<li>source verification status (basic compatibility/probe confidence)</li>
+<li>per-source hint (“why use this source”)</li>
+<li>saved source preferences and re-scan hooks</li>
+<li>owned/proprietary source handling is explicit: D069 imports/extracts playable assets into IC-managed content storage/indexes (<code>D068</code>/<code>D049</code>) while leaving the original installation untouched.</li>
+<li>imported proprietary sources (Steam/GOG/EA/manual owned installs) can be combined with OpenRA and Workshop content under the same D062/D068 namespace/install-profile rules, with provenance labels preserved.</li>
+</ul>
+<h4 id="4-content-install-plan-d068-integration"><a class="header" href="#4-content-install-plan-d068-integration">4. Content Install Plan (D068 Integration)</a></h4>
+<p>Defaults:</p>
+<ul>
+<li><code>Full Install</code> preselected</li>
+<li>alternatives visible with size estimates:
+<ul>
+<li><code>Campaign Core</code></li>
+<li><code>Minimal Multiplayer</code></li>
+<li><code>Custom</code></li>
+</ul>
+</li>
+</ul>
+<p>Wizard must show:</p>
+<ul>
+<li>estimated download size</li>
+<li>estimated disk usage (CAS-aware if available; conservative otherwise)</li>
+<li>feature summary for each preset</li>
+<li>optional media/language variants</li>
+<li>explicit note: changeable later in <code>Settings → Data</code></li>
+</ul>
+<h4 id="5-transfer--copy--verify-progress"><a class="header" href="#5-transfer--copy--verify-progress">5. Transfer / Copy / Verify Progress</a></h4>
+<p>Unified progress UI for:</p>
+<ul>
+<li>local asset import/copy/extract (including owned proprietary installs such as Remastered)</li>
+<li>Workshop/base package downloads</li>
+<li>checksum verification</li>
+<li>optional indexing/decompression/conversion</li>
+</ul>
+<p>Rules:</p>
+<ul>
+<li>resumable</li>
+<li>cancelable (with clear consequences)</li>
+<li>step-level and overall progress</li>
+<li>actionable error messages</li>
+<li>original detected installs remain read-only from IC’s perspective; repair/re-scan actions rebuild IC-managed caches/indexes rather than mutating the source installation.</li>
+<li>format-by-format importer behavior, importer artifacts (source manifests/provenance/verify results), and milestone sequencing are specified in <code>05-FORMATS.md</code> § “Owned-Source Import &amp; Extraction Pipeline (D069/D068/D049, Format-by-Format)”.</li>
+</ul>
+<h4 id="6-experience-profile--controls-walkthrough-offer-d065-handoff"><a class="header" href="#6-experience-profile--controls-walkthrough-offer-d065-handoff">6. Experience Profile &amp; Controls Walkthrough Offer (D065 Handoff)</a></h4>
+<p>After content is playable:</p>
+<ul>
+<li>D065 self-identification gate</li>
+<li>optional controls walkthrough</li>
+<li><code>Just let me play</code> remains prominent</li>
+</ul>
+<h4 id="7-ready-screen"><a class="header" href="#7-ready-screen">7. Ready Screen</a></h4>
+<p>Summary:</p>
+<ul>
+<li>install preset</li>
+<li>selected content sources</li>
+<li>cloud sync state (if any)</li>
+</ul>
+<p>Actions:</p>
+<ul>
+<li><code>Play Campaign</code></li>
+<li><code>Play Skirmish</code></li>
+<li><code>Multiplayer</code></li>
+<li><code>Settings → Data / Controls</code></li>
+<li><code>Modify Installation</code></li>
+</ul>
+<h3 id="maintenance-wizard-modify--repair--reinstall-ux"><a class="header" href="#maintenance-wizard-modify--repair--reinstall-ux">Maintenance Wizard (Modify / Repair / Reinstall UX)</a></h3>
+<p>The setup wizard is re-enterable after install as a <strong>maintenance wizard</strong>.</p>
+<p>Entry points:</p>
+<ul>
+<li><code>Settings → Data → Modify Installation</code></li>
+<li><code>Settings → Data → Repair / Verify</code></li>
+<li>no-dead-end guidance panels when missing content or configuration is detected</li>
+</ul>
+<p>Supported operations:</p>
+<ul>
+<li>switch install presets (<code>Full</code> ↔ <code>Campaign Core</code> ↔ <code>Minimal Multiplayer</code> ↔ <code>Custom</code>)</li>
+<li>add/remove optional media and language packs</li>
+<li>switch or repair cutscene variant packs (D068)</li>
+<li>re-scan content sources</li>
+<li>verify package checksums / repair metadata/indexes</li>
+<li>reclaim disk space (<code>ic mod gc</code> / D049 CAS cleanup)</li>
+<li>reset setup checkpoints / re-run setup assistant</li>
+</ul>
+<h3 id="platform-variants-concept-complete"><a class="header" href="#platform-variants-concept-complete">Platform Variants (Concept Complete)</a></h3>
+<h4 id="steam--gog--epic-desktop"><a class="header" href="#steam--gog--epic-desktop">Steam / GOG / Epic (Desktop)</a></h4>
+<ul>
+<li>platform manages binary install/update</li>
+<li>IC launches directly into D069 setup wizard when setup is incomplete</li>
+<li>cloud sync step uses <code>PlatformServices</code> when available</li>
+<li>“Verify binary files” surfaces platform guidance where supported</li>
+<li>IC still owns content packs, source detection, optional media, and setup repair</li>
+</ul>
+<h4 id="standalone-desktop-windowsmacoslinux"><a class="header" href="#standalone-desktop-windowsmacoslinux">Standalone Desktop (Windows/macOS/Linux)</a></h4>
+<ul>
+<li>lightweight bootstrap installer/package handles binary placement + shortcuts</li>
+<li>then launches D069 setup wizard</li>
+<li>optional advanced data-dir override / portable usage guidance (<code>IC_DATA_DIR</code>, <code>--data-dir</code>)</li>
+<li>no mandatory background service</li>
+</ul>
+<h4 id="steam-deck"><a class="header" href="#steam-deck">Steam Deck</a></h4>
+<ul>
+<li>same D069 semantics as desktop</li>
+<li>Deck-first navigation and larger targets</li>
+<li>avoid keyboard-heavy steps in the primary flow</li>
+<li>source detection and install presets unchanged in meaning</li>
+</ul>
+<h4 id="browser-wasm"><a class="header" href="#browser-wasm">Browser (WASM)</a></h4>
+<p>No traditional installer; use a <strong>Setup Assistant</strong> variant:</p>
+<ul>
+<li>storage permission/capacity checks (OPFS)</li>
+<li>asset import/source selection</li>
+<li>optional offline caching prompts</li>
+<li>same D065 onboarding handoff once playable</li>
+</ul>
+<h4 id="mobile--console-deferred-concept-m11"><a class="header" href="#mobile--console-deferred-concept-m11">Mobile / Console (Deferred Concept, <code>M11+</code>)</a></h4>
+<ul>
+<li>store install + in-app setup assistant</li>
+<li>guided content package choices, not raw filesystem paths as the primary flow</li>
+<li>optional online/account setup, never hidden command-console requirements</li>
+</ul>
+<h3 id="player-first-sdk-extension-shared-components"><a class="header" href="#player-first-sdk-extension-shared-components">Player-First SDK Extension (Shared Components)</a></h3>
+<p>D069 is player-first, but its components are reusable for the SDK (<code>ic-editor</code>) setup path.</p>
+<p>Shared components:</p>
+<ul>
+<li>data directory selection and health checks</li>
+<li>content source detection (reused for asset import/reference workflows)</li>
+<li>optional pack install/repair/reclaim UI patterns</li>
+<li>transfer/progress/error presentation patterns</li>
+</ul>
+<p>SDK-specific additions (deferred shared-flow variant; <code>M9+</code> after player-first D069 baseline):</p>
+<ul>
+<li>Git availability check (guidance only, no hard gate)</li>
+<li>optional creator components/toolchains/templates</li>
+<li>no forced installation of heavy creator packs by default</li>
+</ul>
+<h3 id="shared-interfaces--types-spec-level-sketches"><a class="header" href="#shared-interfaces--types-spec-level-sketches">Shared Interfaces / Types (Spec-Level Sketches)</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub enum InstallWizardMode {
+    Quick,
+    Advanced,
+    Maintenance,
+}
+
+pub enum InstallStepId {
+    Welcome,
+    IdentitySetup,
+    CloudSyncOffer,
+    ContentSourceDetection,
+    ContentInstallPlan,
+    TransferAndVerify,
+    ExperienceProfileGate,
+    Ready,
+}
+
+pub struct InstallWizardState {
+    pub mode: InstallWizardMode,
+    pub current_step: InstallStepId,
+    pub checkpoints: Vec&lt;WizardCheckpoint&gt;,
+    pub selected_sources: Vec&lt;ContentSourceSelection&gt;,
+    pub install_plan: Option&lt;ContentInstallPlan&gt;,
+    pub platform_capabilities: PlatformInstallerCapabilities,
+    pub network_mode: SetupNetworkMode, // offline / online-optional / online-active
+    pub resume_token: Option&lt;String&gt;,
+}
+
+/// How content is brought into the Iron Curtain content directory.
+pub enum ContentSourceImportMode {
+    /// Deep-copy files into managed content directory. Full isolation.
+    Copy,
+    /// Extract from archive (ZIP, .oramap, etc.) into managed directory.
+    Extract,
+    /// Reference files in-place via symlink/path. No copy. Used for very
+    /// large proprietary assets the user already owns on disk.
+    ReferenceOnly,
+}
+
+/// Legal/licensing classification for a content source.
+pub enum SourceRightsClass {
+    /// Proprietary content the user owns (e.g., purchased C&amp;C disc/Steam).
+    OwnedProprietary,
+    /// Open-source or freely redistributable content (OpenRA assets, CC-BY mods).
+    OpenContent,
+    /// User-created local content with no external distribution rights implications.
+    LocalCustom,
+}
+
+pub struct ContentSourceCandidate {
+    pub source_kind: ContentSourceKind, // steam/gog/openra/manual
+    pub path: String,
+    pub probe_status: ProbeStatus,
+    pub detected_assets: Vec&lt;DetectedAssetSet&gt;,
+    pub notes: Vec&lt;String&gt;,
+    pub import_mode: ContentSourceImportMode,
+    pub rights_class: SourceRightsClass,
+}
+
+pub struct ContentInstallPlan {
+    pub preset: InstallPresetId, // full / campaign_core / minimal_mp / custom
+    pub required_packs: Vec&lt;ResourceId&gt;,
+    pub optional_packs: Vec&lt;ResourceId&gt;,
+    pub estimated_download_bytes: u64,
+    pub estimated_disk_bytes: u64,
+    pub feature_summary: Vec&lt;String&gt;,
+}
+
+pub struct InstallTransferProgress {
+    pub phase: TransferPhase, // copy / download / verify / index
+    pub current_item: Option&lt;String&gt;,
+    pub completed_bytes: u64,
+    pub total_bytes: Option&lt;u64&gt;,
+    pub warnings: Vec&lt;InstallWarning&gt;,
+}
+
+pub struct RepairPlan {
+    pub verify_binary_via_platform: bool,
+    pub verify_workshop_packages: bool,
+    pub rescan_content_sources: bool,
+    pub rebuild_indexes: bool,
+    pub reclaim_space: bool,
+}
+
+pub struct WizardCheckpoint {
+    pub step: InstallStepId,
+    pub completed_at_unix: i64,
+    pub status: StepStatus, // complete / partial / failed / skipped
+    pub data_hash: Option&lt;String&gt;,
+}
+<span class="boring">}</span></code></pre>
+<h3 id="optional-cli--support-tooling-future-capability-targets"><a class="header" href="#optional-cli--support-tooling-future-capability-targets">Optional CLI / Support Tooling (Future Capability Targets)</a></h3>
+<ul>
+<li><code>ic setup doctor</code> — inspect setup state, sources, and missing prerequisites</li>
+<li><code>ic setup reset</code> — reset setup checkpoints while preserving content/data</li>
+<li><code>ic content verify</code> — verify installed content packs/checksums</li>
+<li><code>ic content repair</code> — guided repair (rebuild metadata/indexes + re-fetch as needed)</li>
+</ul>
+<p>Command names can change; the capability set is the requirement.</p>
+<h3 id="ux-rules-normative"><a class="header" href="#ux-rules-normative">UX Rules (Normative)</a></h3>
+<ul>
+<li><strong>No dead-end buttons</strong> applies to setup and maintenance flows</li>
+<li><strong>Offline-first optional:</strong> no account/community/cloud step blocks local play</li>
+<li><strong><code>Full Install</code> default</strong> with visible alternatives and clear sizes</li>
+<li><strong>Always reversible:</strong> setup choices can be changed later in <code>Settings → Data</code> / <code>Settings → Controls</code></li>
+<li><strong>No surprise background behavior:</strong> seeding/background downloads/autostart choices must be explicit</li>
+<li><strong>One-screen purpose:</strong> each step has one primary CTA and a clear back/skip path where safe</li>
+<li><strong>Accessibility from step 1:</strong> text size, high contrast, reduced motion, and device-appropriate navigation supported in the wizard itself</li>
+</ul>
+<h3 id="research--benchmark-workstream-pre-copy--ux-polish"><a class="header" href="#research--benchmark-workstream-pre-copy--ux-polish">Research / Benchmark Workstream (Pre-Copy / UX Polish)</a></h3>
+<p>Create a methodology-compliant research note (e.g., <code>research/install-setup-wizard-ux-analysis.md</code>) covering:</p>
+<ul>
+<li>game/store installers and repair flows (Steam, GOG Galaxy, Battle.net, EA App)</li>
+<li>RTS/community examples (OpenRA, C&amp;C Remastered launcher/workshop-adjacent flows, mod managers)</li>
+<li>cross-platform app installers/updaters (VS Code, Firefox, Discord)</li>
+</ul>
+<p>Use the standard <strong>Fit / Risk / IC Action</strong> format and explicitly record:</p>
+<ul>
+<li>lean toward / avoid patterns</li>
+<li>repair/verify UX examples</li>
+<li>progress/error-handling examples</li>
+<li>dark-pattern warnings</li>
+</ul>
+<h3 id="alternatives-considered"><a class="header" href="#alternatives-considered">Alternatives Considered</a></h3>
+<ol>
+<li><strong>Platform/store installer only, no IC setup wizard</strong> — Rejected. Leaves content detection, selective installs, and repair UX fragmented and inconsistent.</li>
+<li><strong>Custom launcher/updater for all builds</strong> — Rejected. Duplicates platform patching, adds bloat, and conflicts with offline-first simplicity.</li>
+<li><strong>Mandatory online account setup during install</strong> — Rejected. Violates portability/offline goals and creates unnecessary friction.</li>
+<li><strong>Monolithic install with no maintenance wizard</strong> — Rejected. Conflicts with D068 selective installs and tactful no-dead-end UX.</li>
+</ol>
+<h3 id="cross-references"><a class="header" href="#cross-references">Cross-References</a></h3>
+<ul>
+<li><strong>D061 (Player Data Backup &amp; Portability):</strong> Recovery phrase, cloud sync offer, and restore UX are preserved as the early setup steps.</li>
+<li><strong>D065 (Tutorial &amp; New Player Experience):</strong> D069 hands off to the D065 self-identification gate and controls walkthrough after content is playable.</li>
+<li><strong>D068 (Selective Installation):</strong> Install presets, content packs, optional media, and the Installed Content Manager are the core content-planning model used by D069.</li>
+<li><strong>D030/D049 (Workshop):</strong> Setup uses Workshop transport and checksum verification for content downloads; maintenance wizard reuses the same verification and cache-management primitives.</li>
+<li><strong>D033 (QoL / No Dead Ends):</strong> Installation/setup adopts the same no-dead-end button rule and reversible UX philosophy.</li>
+<li><strong><code>17-PLAYER-FLOW.md</code>:</strong> First-launch and maintenance wizard screen flows/mocks.</li>
+<li><strong><code>02-ARCHITECTURE.md</code>:</strong> Platform capability split (store/standalone/browser setup responsibilities) and UI/platform adaptation hooks.</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../../decisions/09g/D065-tutorial.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../../10-PERFORMANCE.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../../decisions/09g/D065-tutorial.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../../10-PERFORMANCE.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../../mark-09e88c2c.min.js"></script>
+        <script src="../../searcher-c2a407aa.js"></script>
+
+        <script src="../../clipboard-1626706a.min.js"></script>
+        <script src="../../highlight-abc7f01d.js"></script>
+        <script src="../../book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

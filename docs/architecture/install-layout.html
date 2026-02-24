@@ -1,0 +1,584 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Install &amp; Source Layout - Iron Curtain — Design Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Design docs for a Rust-native Red Alert RTS engine">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../css/general-2459343d.css">
+        <link rel="stylesheet" href="../css/chrome-ae938929.css">
+        <link rel="stylesheet" href="../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../searchindex-61d2369b.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc-1553b04b.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Iron Curtain — Design Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs/edit/main/src/architecture/install-layout.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h2 id="install--source-layout-community-friendly-project-structure"><a class="header" href="#install--source-layout-community-friendly-project-structure">Install &amp; Source Layout (Community-Friendly Project Structure)</a></h2>
+<p>The directory structure — both the shipped product and the source repository — is designed to feel immediately navigable to anyone who has worked with OpenRA. OpenRA’s modding community thrived because the project was approachable: open a mod folder, find YAML rules organized by category, edit values, see results. IC preserves that muscle memory while fitting the structure to a Rust/Bevy codebase.</p>
+<h3 id="design-principles"><a class="header" href="#design-principles">Design Principles</a></h3>
+<ol>
+<li>
+<p><strong>Game modules are mods.</strong> Built-in game modules (<code>mods/ra/</code>, <code>mods/td/</code>) use the exact same directory layout, <code>mod.yaml</code> manifest, and YAML rule schema as community-created mods. No internal-only APIs, no special paths. If a modder can edit <code>mods/ra/rules/units/vehicles.yaml</code>, anyone can see how the game’s own data is structured. Directly inspired by Factorio’s “game is a mod” principle (validated in D018).</p>
+</li>
+<li>
+<p><strong>Same vocabulary, same directories.</strong> OpenRA uses <code>rules/</code>, <code>sequences/</code>, <code>chrome/</code>, <code>maps/</code>, <code>audio/</code>, <code>scripts/</code>. IC uses the same directory names for the same purposes. An OpenRA modder opening IC’s <code>mods/ra/</code> directory knows where everything is.</p>
+</li>
+<li>
+<p><strong>Separate binaries for separate roles.</strong> Game client, dedicated server, CLI tool, and SDK editor are separate executables — like OpenRA ships <code>OpenRA.exe</code>, <code>OpenRA.Server.exe</code>, and <code>OpenRA.Utility.exe</code>. A server operator never needs the renderer. A modder using the SDK never needs the multiplayer client. Each has its own binary, sharing library crates underneath.</p>
+</li>
+<li>
+<p><strong>Flat and scannable.</strong> No deep nesting for its own sake. A modder looking at <code>mods/ra/</code> should see the high-level structure in a single <code>ls</code>. Subdirectories within <code>rules/</code> organize by category (units, structures, weapons) — the same pattern OpenRA uses.</p>
+</li>
+<li>
+<p><strong>Data next to data, code next to code.</strong> Game content (YAML, Lua, assets) lives in <code>mods/</code>. Engine code (Rust) lives in crate directories. They don’t intermingle. A gameplay modder never touches Rust. A engine contributor goes straight to the crate they need.</p>
+</li>
+</ol>
+<h3 id="install-directory-shipped-product"><a class="header" href="#install-directory-shipped-product">Install Directory (Shipped Product)</a></h3>
+<p>What an end user sees after installing Iron Curtain:</p>
+<pre><code>iron-curtain/
+├── iron-curtain[.exe]              # Game client (ic-game binary)
+├── ic-server[.exe]                 # Relay / dedicated server (ic-net binary)
+├── ic[.exe]                        # CLI tool (mod, backup, export, profile, server commands)
+├── ic-editor[.exe]                 # SDK: scenario editor, asset studio, campaign editor (D038+D040)
+├── mods/                           # Game modules + content — the heart of the project
+│   ├── common/                     # Shared resources used by all C&amp;C-family modules
+│   │   ├── mod.yaml                #   manifest (declares shared chrome, cursors, etc.)
+│   │   ├── chrome/                 #   shared UI layout definitions
+│   │   ├── cursors/                #   shared cursor definitions
+│   │   └── translations/           #   shared localization strings
+│   ├── ra/                         # Red Alert game module (ships Phase 2)
+│   │   ├── mod.yaml                #   manifest — same schema as any community mod
+│   │   ├── rules/                  #   unit, structure, weapon, terrain definitions
+│   │   │   ├── units/              #     infantry.yaml, vehicles.yaml, naval.yaml, aircraft.yaml
+│   │   │   ├── structures/         #     allied-structures.yaml, soviet-structures.yaml
+│   │   │   ├── weapons/            #     ballistics.yaml, missiles.yaml, energy.yaml
+│   │   │   ├── terrain/            #     temperate.yaml, snow.yaml, interior.yaml
+│   │   │   └── presets/            #     balance presets: classic.yaml, openra.yaml, remastered.yaml (D019)
+│   │   ├── maps/                   #   built-in maps
+│   │   ├── missions/               #   campaign missions (YAML scenario + Lua triggers)
+│   │   ├── sequences/              #   sprite sequence definitions (animation frames)
+│   │   ├── chrome/                 #   RA-specific UI layout (sidebar, build queue)
+│   │   ├── audio/                  #   music playlists, EVA definitions, voice mappings
+│   │   ├── ai/                     #   AI personality profiles (D043)
+│   │   ├── scripts/                #   Lua scripts (shared triggers, ability definitions)
+│   │   └── themes/                 #   UI theme overrides: classic.yaml, modern.yaml (D032)
+│   └── td/                         # Tiberian Dawn game module (ships Phase 3–4)
+│       ├── mod.yaml
+│       ├── rules/
+│       ├── maps/
+│       ├── missions/
+│       └── ...                     #   same layout as ra/
+├── LICENSE
+└── THIRD-PARTY-LICENSES
+</code></pre>
+<p><strong>Key features of the install layout:</strong></p>
+<ul>
+<li><strong><code>mods/common/</code></strong> is directly analogous to OpenRA’s <code>mods/common/</code>. Shared assets, chrome, and cursor definitions used across all C&amp;C-family game modules. Community game modules (Dune 2000, RA2) can depend on it or provide their own.</li>
+<li><strong><code>mods/ra/</code></strong> is a mod. It uses the same <code>mod.yaml</code> schema, the same <code>rules/</code> structure, and the same <code>sequences/</code> format as a community mod. There is no “privileged” version of this directory — the engine treats it identically to <code>&lt;data_dir&gt;/mods/my-total-conversion/</code>. This means every modder can read the game’s own data as a working example.</li>
+<li><strong>Every YAML file in <code>mods/ra/rules/</code> is editable.</strong> Want to change tank cost? Open <code>rules/units/vehicles.yaml</code>, find <code>medium_tank</code>, change <code>cost: 800</code> to <code>cost: 750</code>. The same workflow as OpenRA — except the YAML is standard-compliant and serde-typed.</li>
+<li><strong>The CLI (<code>ic</code>) is the Swiss Army knife.</strong> <code>ic mod init</code>, <code>ic mod check</code>, <code>ic mod test</code>, <code>ic mod publish</code>, <code>ic backup create</code>, <code>ic export</code>, <code>ic server validate-config</code>. One binary, consistent subcommands — no separate tools to discover.</li>
+</ul>
+<h3 id="source-repository-contributor-layout"><a class="header" href="#source-repository-contributor-layout">Source Repository (Contributor Layout)</a></h3>
+<p>What a contributor sees after cloning the repository:</p>
+<pre><code>iron-curtain/                       # Cargo workspace root
+├── Cargo.toml                      # Workspace manifest — lists all crates
+├── Cargo.lock
+├── deny.toml                       # cargo-deny license policy (GPL-compatible deps only)
+├── AGENTS.md                       # Agent instructions (this file)
+├── README.md
+├── LICENSE                         # GPL v3 with modding exception (D051)
+├── mods/                           # Game data — YAML, Lua, assets (NOT Rust code)
+│   ├── common/
+│   ├── ra/
+│   └── td/
+├── crates/                         # All Rust crates live here
+│   ├── ra-formats/                 # .mix, .shp, .pal parsers; MiniYAML converter
+│   │   ├── Cargo.toml
+│   │   └── src/
+│   │       ├── lib.rs
+│   │       ├── mix.rs              #   MIX archive reader
+│   │       ├── shp.rs              #   SHP sprite reader
+│   │       ├── pal.rs              #   PAL palette reader
+│   │       ├── aud.rs              #   AUD audio decoder
+│   │       ├── vqa.rs              #   VQA video decoder
+│   │       ├── miniyaml.rs         #   MiniYAML parser + converter (D025)
+│   │       ├── oramap.rs           #   .oramap map loader
+│   │       └── mod_manifest.rs     #   OpenRA mod.yaml parser (D026)
+│   ├── ic-protocol/                # Shared boundary: orders, codecs
+│   │   ├── Cargo.toml
+│   │   └── src/
+│   │       ├── lib.rs
+│   │       ├── orders.rs           #   PlayerOrder, TimestampedOrder
+│   │       └── codec.rs            #   OrderCodec trait
+│   ├── ic-sim/                     # Deterministic simulation (the core)
+│   │   ├── Cargo.toml
+│   │   └── src/
+│   │       ├── lib.rs              #   pub API: Simulation, step(), snapshot()
+│   │       ├── components/         #   ECS components — one file per domain
+│   │       │   ├── mod.rs
+│   │       │   ├── health.rs       #     Health, Armor, DamageState
+│   │       │   ├── mobile.rs       #     Mobile, Locomotor, Facing
+│   │       │   ├── combat.rs       #     Armament, AutoTarget, Turreted, AmmoPool
+│   │       │   ├── production.rs   #     Buildable, ProductionQueue, Prerequisites
+│   │       │   ├── economy.rs      #     Harvester, ResourceStorage, OreField
+│   │       │   ├── transport.rs    #     Cargo, Passenger, Carryall
+│   │       │   ├── power.rs        #     PowerProvider, PowerConsumer
+│   │       │   ├── stealth.rs      #     Cloakable, Detector
+│   │       │   ├── capture.rs      #     Capturable, Captures
+│   │       │   ├── veterancy.rs    #     Veterancy, Experience
+│   │       │   ├── building.rs     #     Placement, Foundation, Sellable, Repairable
+│   │       │   └── support.rs      #     Superweapon, Chronoshift, IronCurtain
+│   │       ├── systems/            #   ECS systems — one file per simulation step
+│   │       │   ├── mod.rs
+│   │       │   ├── orders.rs       #     validate_orders(), apply_orders()
+│   │       │   ├── movement.rs     #     movement_system() — pathfinding integration
+│   │       │   ├── combat.rs       #     combat_system() — targeting, firing, damage
+│   │       │   ├── production.rs   #     production_system() — build queues, prerequisites
+│   │       │   ├── harvesting.rs   #     harvesting_system() — ore collection, delivery
+│   │       │   ├── power.rs        #     power_system() — grid calculation
+│   │       │   ├── fog.rs          #     fog_system() — delegates to FogProvider trait
+│   │       │   ├── triggers.rs     #     trigger_system() — Lua/WASM script callbacks
+│   │       │   ├── conditions.rs   #     condition_system() — D028 condition evaluation
+│   │       │   ├── cleanup.rs      #     cleanup_system() — entity removal, state transitions
+│   │       │   └── weather.rs      #     weather_system() — D022 weather state machine
+│   │       ├── traits/             #   Pluggable abstractions (D041) — NOT OpenRA "traits"
+│   │       │   ├── mod.rs
+│   │       │   ├── pathfinder.rs   #     Pathfinder trait (D013)
+│   │       │   ├── spatial.rs      #     SpatialIndex trait
+│   │       │   ├── fog.rs          #     FogProvider trait
+│   │       │   ├── damage.rs       #     DamageResolver trait
+│   │       │   ├── validator.rs    #     OrderValidator trait (D041)
+│   │       │   └── ai.rs           #     AiStrategy trait (D041)
+│   │       ├── math/               #   Fixed-point arithmetic, coordinates
+│   │       │   ├── mod.rs
+│   │       │   ├── fixed.rs        #     Fixed-point types (i32/i64 scale — P002)
+│   │       │   └── pos.rs          #     WorldPos, CellPos
+│   │       ├── rules/              #   YAML rule deserialization (serde structs)
+│   │       │   ├── mod.rs
+│   │       │   ├── unit.rs         #     UnitDef, Buildable, DisplayInfo
+│   │       │   ├── weapon.rs       #     WeaponDef, Warhead, Projectile
+│   │       │   ├── alias.rs        #     OpenRA trait name alias registry (D023)
+│   │       │   └── inheritance.rs  #     YAML inheritance resolver
+│   │       └── snapshot.rs         #   State serialization for saves/replays/rollback
+│   ├── ic-net/                     # Networking (never imports ic-sim)
+│   │   ├── Cargo.toml
+│   │   └── src/
+│   │       ├── lib.rs
+│   │       ├── network_model.rs    #   NetworkModel trait (D006)
+│   │       ├── lockstep.rs         #   LockstepNetwork implementation
+│   │       ├── local.rs            #   LocalNetwork (testing, single-player)
+│   │       ├── relay_core.rs       #   RelayCore library (D007)
+│   │       └── bin/
+│   │           └── relay.rs        #   relay-server binary entry point
+│   ├── ic-render/                  # Isometric rendering (Bevy plugin)
+│   ├── ic-ui/                      # Game chrome, sidebar, minimap
+│   ├── ic-audio/                   # Sound, music, EVA, VoIP
+│   ├── ic-script/                  # Lua + WASM mod runtimes
+│   ├── ic-ai/                      # Skirmish AI, adaptive difficulty
+│   ├── ic-llm/                     # LLM mission generation (optional)
+│   ├── ic-paths/                   # Platform path resolution, portable mode (wraps `app-path`)
+│   ├── ic-editor/                  # SDK binary: scenario editor, asset studio (D038+D040)
+│   └── ic-game/                    # Game binary: ties all plugins together
+│       ├── Cargo.toml
+│       └── src/
+│           └── main.rs             #   Bevy App setup, plugin registration
+├── tools/                          # Developer tools (not shipped)
+│   ├── miniyaml2yaml/              #   MiniYAML → YAML batch converter CLI
+│   └── replay-corpus/              #   Foreign replay regression test harness (D056)
+└── tests/                          # Integration tests
+    ├── sim/                        #   Deterministic sim regression tests
+    └── format/                     #   File format round-trip tests
+</code></pre>
+<h3 id="where-openra-contributors-find-things"><a class="header" href="#where-openra-contributors-find-things">Where OpenRA Contributors Find Things</a></h3>
+<p>An OpenRA contributor’s first question is “where does this live in IC?” This table maps OpenRA’s C# project structure to IC’s Rust workspace:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>What you did in OpenRA</th><th>Where in OpenRA</th><th>Where in IC</th><th>Notes</th></tr>
+</thead>
+<tbody>
+<tr><td>Edit unit stats (cost, HP, speed)</td><td><code>mods/ra/rules/*.yaml</code></td><td><code>mods/ra/rules/units/*.yaml</code></td><td>Same workflow, real YAML instead of MiniYAML</td></tr>
+<tr><td>Edit weapon definitions</td><td><code>mods/ra/weapons/*.yaml</code></td><td><code>mods/ra/rules/weapons/*.yaml</code></td><td>Nested under <code>rules/</code> for discoverability</td></tr>
+<tr><td>Edit sprite sequences</td><td><code>mods/ra/sequences/*.yaml</code></td><td><code>mods/ra/sequences/*.yaml</code></td><td>Identical location</td></tr>
+<tr><td>Write Lua mission scripts</td><td><code>mods/ra/maps/*/script.lua</code></td><td><code>mods/ra/missions/*.lua</code></td><td>Same API (D024), dedicated directory</td></tr>
+<tr><td>Edit UI layout (chrome)</td><td><code>mods/ra/chrome/*.yaml</code></td><td><code>mods/ra/chrome/*.yaml</code></td><td>Identical location</td></tr>
+<tr><td>Edit balance/speed/settings</td><td><code>mods/ra/mod.yaml</code></td><td><code>mods/ra/rules/presets/*.yaml</code></td><td>Separated into named presets (D019)</td></tr>
+<tr><td>Add a new C# trait (component)</td><td><code>OpenRA.Mods.RA/Traits/*.cs</code></td><td><code>crates/ic-sim/src/components/*.rs</code></td><td>Rust struct + derive instead of C# class</td></tr>
+<tr><td>Add a new activity (behavior)</td><td><code>OpenRA.Mods.Common/Activities/*.cs</code></td><td><code>crates/ic-sim/src/systems/*.rs</code></td><td>ECS system instead of activity object</td></tr>
+<tr><td>Add a new warhead type</td><td><code>OpenRA.Mods.Common/Warheads/*.cs</code></td><td><code>crates/ic-sim/src/components/combat.rs</code></td><td>Warheads are component data + system logic</td></tr>
+<tr><td>Add a format parser</td><td><code>OpenRA.Game/FileFormats/*.cs</code></td><td><code>crates/ra-formats/src/*.rs</code></td><td>One file per format, same as OpenRA</td></tr>
+<tr><td>Add a Lua scripting global</td><td><code>OpenRA.Mods.Common/Scripting/*.cs</code></td><td><code>crates/ic-script/src/*.rs</code></td><td>D024 API surface</td></tr>
+<tr><td>Edit AI behavior</td><td><code>OpenRA.Mods.Common/AI/*.cs</code></td><td><code>crates/ic-ai/src/*.rs</code></td><td>Priority-manager hierarchy</td></tr>
+<tr><td>Edit rendering</td><td><code>OpenRA.Game/Graphics/*.cs</code></td><td><code>crates/ic-render/src/*.rs</code></td><td>Bevy render plugin</td></tr>
+<tr><td>Edit server/network code</td><td><code>OpenRA.Server/*.cs</code></td><td><code>crates/ic-net/src/*.rs</code></td><td>Never touches ic-sim</td></tr>
+<tr><td>Run the utility CLI</td><td><code>OpenRA.Utility.exe</code></td><td><code>ic[.exe]</code></td><td><code>ic mod check</code>, <code>ic export</code>, etc.</td></tr>
+<tr><td>Run a dedicated server</td><td><code>OpenRA.Server.exe</code></td><td><code>ic-server[.exe]</code></td><td>Or <code>ic server run</code> via CLI</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="ecs-translation-openra-traits--ic-components--systems"><a class="header" href="#ecs-translation-openra-traits--ic-components--systems">ECS Translation: OpenRA Traits → IC Components + Systems</a></h3>
+<p>OpenRA merges data and behavior into “traits” (C# classes). In IC’s ECS architecture, these split into <strong>components</strong> (data) and <strong>systems</strong> (behavior):</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>OpenRA Trait</th><th>IC Component(s)</th><th>IC System</th><th>File(s)</th></tr>
+</thead>
+<tbody>
+<tr><td><code>Health</code></td><td><code>Health</code>, <code>Armor</code></td><td><code>combat_system()</code> applies damage</td><td><code>components/health.rs</code>, <code>systems/combat.rs</code></td></tr>
+<tr><td><code>Mobile</code></td><td><code>Mobile</code>, <code>Locomotor</code>, <code>Facing</code></td><td><code>movement_system()</code> moves entities</td><td><code>components/mobile.rs</code>, <code>systems/movement.rs</code></td></tr>
+<tr><td><code>Armament</code></td><td><code>Armament</code>, <code>AmmoPool</code></td><td><code>combat_system()</code> fires weapons</td><td><code>components/combat.rs</code>, <code>systems/combat.rs</code></td></tr>
+<tr><td><code>Harvester</code></td><td><code>Harvester</code>, <code>ResourceStorage</code></td><td><code>harvesting_system()</code> gathers ore</td><td><code>components/economy.rs</code>, <code>systems/harvesting.rs</code></td></tr>
+<tr><td><code>Buildable</code></td><td><code>Buildable</code>, <code>Prerequisites</code></td><td><code>production_system()</code> manages queue</td><td><code>components/production.rs</code>, <code>systems/production.rs</code></td></tr>
+<tr><td><code>Cargo</code>, <code>Passenger</code></td><td><code>Cargo</code>, <code>Passenger</code></td><td><code>transport_system()</code> loads/unloads</td><td><code>components/transport.rs</code></td></tr>
+<tr><td><code>Cloak</code></td><td><code>Cloakable</code>, <code>Detector</code></td><td><code>stealth_system()</code> updates visibility</td><td><code>components/stealth.rs</code></td></tr>
+<tr><td><code>Valued</code></td><td>Part of <code>Buildable</code> (cost field)</td><td>—</td><td><code>components/production.rs</code></td></tr>
+<tr><td><code>ConditionalTrait</code></td><td>Condition system (D028)</td><td><code>condition_system()</code> evaluates</td><td><code>systems/conditions.rs</code></td></tr>
+</tbody>
+</table>
+</div>
+<p>The naming convention follows Rust idioms (<code>snake_case</code> files, <code>PascalCase</code> types) but the organization mirrors OpenRA’s categorical grouping — combat things together, economy things together, movement things together.</p>
+<h3 id="why-this-layout-works-for-the-community"><a class="header" href="#why-this-layout-works-for-the-community">Why This Layout Works for the Community</a></h3>
+<p><strong>For data modders (80% of mods):</strong> Never leave <code>mods/</code>. Edit YAML, run <code>ic mod check</code>, see results. The built-in game modules serve as always-available, documented examples of every YAML feature. No need to read Rust code to understand what fields a unit definition supports — look at <code>mods/ra/rules/units/infantry.yaml</code>.</p>
+<p><strong>For Lua scripters (missions, game modes):</strong> Write <code>scripts/*.lua</code> in your mod directory. The API is a superset of OpenRA’s (D024) — same 16 globals, same function signatures. Existing OpenRA missions run unmodified. Test with <code>ic mod test</code>.</p>
+<p><strong>For engine contributors:</strong> Clone the repo. <code>crates/</code> holds all Rust code. Each crate has a single responsibility and clear boundaries. The naming (<code>ic-sim</code>, <code>ic-net</code>, <code>ic-render</code>) tells you what it does. Within <code>ic-sim</code>, <code>components/</code> holds data, <code>systems/</code> holds logic, <code>traits/</code> holds the pluggable abstractions — the ECS split is consistent and predictable.</p>
+<p><strong>For total-conversion modders:</strong> The <code>ic-sim/src/traits/</code> directory defines every pluggable seam — custom pathfinder, custom AI, custom fog of war, custom damage resolution. Implement a trait as a WASM module (Tier 3), register it in your <code>mod.yaml</code>, and the engine uses your implementation. No forking, no C# DLL stacking.</p>
+<h3 id="development-asset-strategy"><a class="header" href="#development-asset-strategy">Development Asset Strategy</a></h3>
+<p>A clean-sheet engine needs art for editor chrome, UI menus, CI testing, and developer workflows — but it cannot ship or commit copyrighted game content. This subsection documents how reference projects host their game resources, what IC can freely use, and what belongs (or doesn’t belong) in the repository.</p>
+<h4 id="how-reference-projects-host-game-resources"><a class="header" href="#how-reference-projects-host-game-resources">How Reference Projects Host Game Resources</a></h4>
+<p><strong>Original Red Alert (1996):</strong> Assets ship as <code>.mix</code> archives — flat binary containers with CRC-hashed filenames. Originally distributed on CD-ROM, later as a freeware download installer (2008). All sprites (<code>.shp</code>), terrain (<code>.tmp</code>), palettes (<code>.pal</code>), audio (<code>.aud</code>), and cutscenes (<code>.vqa</code>) are packed inside these archives. No separate asset repository — everything distributes as compiled binaries through retail channels. The freeware release means free to download and play, not free to redistribute or embed in another project.</p>
+<p><strong>EA Remastered Collection (2020):</strong> Assets distribute through Steam (and previously Origin). The HD sprite sheets, remastered music, and cutscenes are <strong>proprietary EA content</strong> — not covered by the GPL v3 license that applies only to the C++ engine DLLs. Resources use updated archive formats (MegV3 for TD HD, standard <code>.mix</code> for classic mode) at known Steam AppId paths. See § Content Detection for how IC locates these.</p>
+<p><strong>OpenRA:</strong> The engine <strong>never distributes copyrighted game assets</strong>. On first launch, a content installer detects existing game installations (Steam, Origin, GOG, disc copies) or downloads specific <code>.mix</code> files from EA’s publicly accessible mirrors (the freeware releases). Assets are extracted and stored to <code>~/.openra/Content/ra/</code> (Linux) or the OS-appropriate equivalent. The OpenRA <strong>source repository</strong> contains only engine code (C#, GPL v3), original UI chrome art, mod rules (MiniYAML), maps, Lua scripts, and editor art — all OpenRA-created content. The few original assets (icons, cursors, fonts, panel backgrounds) are small enough for plain git. No Git LFS, no external asset hosting.</p>
+<p><strong>Key pattern:</strong> Every successful engine reimplementation project (OpenRA, CorsixTH, OpenMW, Wargus) uses the same model — engine code in the repo, game content loaded at runtime from the player’s own installation. IC follows this pattern exactly.</p>
+<h4 id="legal-boundaries--what-ic-can-freely-use"><a class="header" href="#legal-boundaries--what-ic-can-freely-use">Legal Boundaries — What IC Can Freely Use</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Source</th><th>What’s freely usable</th><th>What’s NOT usable</th><th>License</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>EA Red Alert source</strong> (<a href="https://github.com/electronicarts/CnC_Red_Alert">CnC_Red_Alert</a>)</td><td>Struct definitions, algorithms, lookup tables, gameplay constants (weapon damage, unit speeds, build times) embedded in C/C++ code</td><td>Zero art assets, zero sprites, zero music, zero palettes — the repo is pure source code</td><td>GPL v3</td></tr>
+<tr><td><strong>EA Remastered source</strong> (<a href="https://github.com/electronicarts/CnC_Remastered_Collection">CnC_Remastered_Collection</a>)</td><td>C++ engine DLL source code, format definitions, bug-fixed gameplay logic</td><td>HD sprite sheets, remastered music, Petroglyph’s C# GUI layer, all visual/audio content</td><td>GPL v3 (C++ DLLs only)</td></tr>
+<tr><td><strong>EA Generals source</strong> (<a href="https://github.com/electronicarts/CnC_Generals_Zero_Hour">CnC_Generals_Zero_Hour</a>)</td><td>Netcode reference, pathfinding code, gameplay system architecture</td><td>No art or audio assets in the repository</td><td>GPL v3</td></tr>
+<tr><td><strong>OpenRA source</strong> (<a href="https://github.com/OpenRA/OpenRA">OpenRA</a>)</td><td>Engine code, UI chrome art (buttons, panels, scrollbars, dropdown frames), custom cursors, fonts, icons, map editor UI art, MiniYAML rule definitions</td><td>Nothing — all repo content is GPL v3</td><td>GPL v3</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>OpenRA’s original chrome art</strong> is technically GPL v3 and could be used — but IC’s design explicitly creates <strong>all theme art as original work</strong> (D032). Copying OpenRA’s chrome would create visual confusion between the two projects and contradict the design direction. Study the <em>patterns</em> (layout structure, what elements exist), create original art.</p>
+<p>The EA GPL source repositories contain <strong>no art assets whatsoever</strong> — only C/C++ source code. The <code>.mix</code> archives containing actual game content (sprites, audio, palettes, terrain, cutscenes) are copyrighted EA property distributed through retail channels, even in the freeware release.</p>
+<h4 id="what-belongs-in-the-repository"><a class="header" href="#what-belongs-in-the-repository">What Belongs in the Repository</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Asset category</th><th>In repo?</th><th>Mechanism</th><th>Notes</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>EA game files</strong> (<code>.mix</code>, <code>.shp</code>, <code>.aud</code>, <code>.vqa</code>, <code>.pal</code>)</td><td><strong>Never</strong></td><td><code>ContentDetector</code> finds player’s install at runtime</td><td>Same model as OpenRA — see § Content Detection</td></tr>
+<tr><td><strong>IC-original editor art</strong> (toolbar icons, cursors)</td><td>Yes</td><td>Plain git — small files (~1-5KB each)</td><td>~20 icons for SDK, original creations</td></tr>
+<tr><td><strong>YAML rules, maps, Lua scripts</strong></td><td>Yes</td><td>Plain git — text files</td><td>All game content data authored by IC</td></tr>
+<tr><td><strong>Synthetic test fixtures</strong></td><td>Yes</td><td>Plain git — tiny hand-crafted binaries</td><td>Minimal <code>.mix</code>/<code>.shp</code>/<code>.pal</code> (~100 bytes) for parser tests</td></tr>
+<tr><td><strong>UI fonts</strong></td><td>Yes</td><td>Plain git — OFL/Apache licensed</td><td>Open fonts bundled with the engine</td></tr>
+<tr><td><strong>Placeholder/debug sprites</strong></td><td>Yes</td><td>Plain git — original creations</td><td>Colored rectangles, grid patterns, numbered circles</td></tr>
+<tr><td><strong>Large binary art</strong> (future HD sprite packs, music)</td><td>No</td><td>Workshop P2P distribution (D049)</td><td>Community-created content</td></tr>
+<tr><td><strong>Demo videos, screenshots</strong></td><td>No</td><td>External hosting, linked from docs</td><td>YouTube, project website</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Git LFS is not needed.</strong> The design docs already rejected Git LFS for Workshop distribution (“1GB free then paid; designed for source code, not binary asset distribution; no P2P” — see D049). The same reasoning applies to development: IC’s repository is code + YAML + design docs + small original icons. Total committed binary assets will stay well under 10MB.</p>
+<p><strong>CI testing strategy:</strong> Parser and format tests use synthetic fixtures — small, hand-crafted binary files (a 2-frame <code>.shp</code>, a trivial <code>.mix</code> with 3 files, a minimal <code>.pal</code>) committed to <code>tests/fixtures/</code>. These are original creations that exercise <code>ra-formats</code> code without containing EA content. Integration tests requiring real RA assets are gated behind an optional feature flag (<code>#[cfg(feature = "integration")]</code>) and run on CI runners where RA is installed, configured via <code>IC_CONTENT_DIR</code> environment variable.</p>
+<h4 id="repository-asset-layout"><a class="header" href="#repository-asset-layout">Repository Asset Layout</a></h4>
+<p>Extending the source repository layout (see § Source Repository above):</p>
+<pre><code>iron-curtain/
+├── assets/                         # IC-original assets ONLY (committed)
+│   ├── editor/                     #   SDK toolbar icons, editor cursors, panel art
+│   ├── ui/                         #   Menu chrome sprites, HUD elements
+│   ├── fonts/                      #   Bundled open-licensed fonts
+│   └── placeholder/                #   Debug sprites, test palettes, grid overlays
+├── tests/
+│   └── fixtures/                   #   Synthetic .mix/.shp/.pal for parser tests
+├── content/                        #   *** GIT-IGNORED *** — local dev game files
+│   └── ra/                         #   Developer's RA installation (pointed to or symlinked)
+├── .gitignore                      #   Ignores content/, target/, *.db
+└── ...
+</code></pre>
+<p>The <code>content/</code> directory is git-ignored. Each developer either symlinks it to their RA installation or sets <code>IC_CONTENT_DIR</code> to point elsewhere. This keeps copyrighted assets completely out of version control while giving developers a consistent local path for testing.</p>
+<h4 id="freely-usable-resources-for-graphics-menus--ci"><a class="header" href="#freely-usable-resources-for-graphics-menus--ci">Freely-Usable Resources for Graphics, Menus &amp; CI</a></h4>
+<p>IC needs original art for editor chrome, UI menus, and visual tooling. These are the recommended open-licensed sources:</p>
+<p><strong>Icon libraries (for editor toolbar, SDK panels, menu items):</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Library</th><th>License</th><th>Notes</th></tr>
+</thead>
+<tbody>
+<tr><td><a href="https://lucide.dev/">Lucide</a></td><td>ISC (MIT-equivalent)</td><td>1500+ clean SVG icons. Fork of Feather Icons with active maintenance. Excellent for toolbar/menu icons</td></tr>
+<tr><td><a href="https://tabler.io/icons">Tabler Icons</a></td><td>MIT</td><td>5400+ SVG icons. Comprehensive coverage including RTS-relevant icons (map, layers, grid, cursor)</td></tr>
+<tr><td><a href="https://fonts.google.com/icons">Material Symbols</a></td><td>Apache 2.0</td><td>Google’s icon set. Variable weight/size. Massive catalog</td></tr>
+<tr><td><a href="https://phosphoricons.com/">Phosphor Icons</a></td><td>MIT</td><td>9000+ icons in 6 weights. Clean geometric style</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Fonts (for UI text, editor panels, console):</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Font</th><th>License</th><th>Notes</th></tr>
+</thead>
+<tbody>
+<tr><td><a href="https://rsms.me/inter/">Inter</a></td><td>OFL 1.1</td><td>Optimized for screens. Excellent for UI text at all sizes</td></tr>
+<tr><td><a href="https://www.jetbrains.com/lp/mono/">JetBrains Mono</a></td><td>OFL 1.1</td><td>Monospace. Ideal for console, YAML editor, debug overlays</td></tr>
+<tr><td><a href="https://fonts.google.com/noto">Noto Sans</a></td><td>OFL 1.1</td><td>Broad Unicode coverage. Strong fallback-family backbone for localization (including RTL/CJK)</td></tr>
+<tr><td><a href="https://github.com/tonsky/FiraCode">Fira Code</a></td><td>OFL 1.1</td><td>Monospace with ligatures. Alternative to JetBrains Mono</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Smart font support note (localization/RTL):</strong></p>
+<ul>
+<li>Primary UI fonts (theme-driven) and fallback fonts (coverage-driven) are distinct concerns.</li>
+<li>A broad-coverage family such as Noto should be available as the fallback backbone for scripts not covered by the theme’s primary font.</li>
+<li>Correct RTL rendering still depends on the shared shaping + BiDi + layout-direction contract above; fallback fonts alone are insufficient.</li>
+</ul>
+<p><strong>UI framework:</strong></p>
+<ul>
+<li><strong>egui</strong> (MIT) — the editor’s panel/widget framework. Ships with Bevy via <code>bevy_egui</code>. Provides buttons, sliders, text inputs, dropdown menus, tree views, docking, color pickers — all rendered procedurally with no external art needed. Handles 95% of SDK chrome requirements.</li>
+<li><strong>Bevy UI</strong> — the game client’s UI framework. Used for in-game chrome (sidebar, minimap, build queue) with IC-original sprite sheets styled per theme (D032).</li>
+</ul>
+<p><strong>Game content (sprites, terrain, audio, cutscenes):</strong></p>
+<ul>
+<li><strong>Player’s own RA installation</strong> — loaded at runtime via <code>ContentDetector</code>. Every developer needs Red Alert installed locally (Steam, GOG, or freeware). This is the development workflow, not a limitation — you’re building an engine for a game you play.</li>
+<li><strong>No external asset CDN.</strong> IC does not host, mirror, or download copyrighted game files. The browser build (Phase 7) uses drag-and-drop import from the player’s local files — see <code>05-FORMATS.md</code> § Browser Asset Storage.</li>
+</ul>
+<p><strong>Placeholder art (for development before real assets load):</strong></p>
+<p>During early development, before the full content detection pipeline is complete, use committed placeholder assets in <code>assets/placeholder/</code>:</p>
+<ul>
+<li>Colored rectangles (16×16, 24×24, 48×48) as unit stand-ins</li>
+<li>Numbered grid tiles for terrain testing</li>
+<li>Solid-color palette files (<code>.pal</code>-format, 768 bytes) for render pipeline testing</li>
+<li>Simple geometric shapes for building footprints</li>
+<li>Generated checkerboard patterns for missing texture fallbacks</li>
+</ul>
+<p>These are all original creations — trivial to produce, zero legal risk, and immediately useful for testing the render pipeline before content detection is wired up.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../architecture/crate-graph.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../architecture/sdk-editor.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../architecture/crate-graph.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../architecture/sdk-editor.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../mark-09e88c2c.min.js"></script>
+        <script src="../searcher-c2a407aa.js"></script>
+
+        <script src="../clipboard-1626706a.min.js"></script>
+        <script src="../highlight-abc7f01d.js"></script>
+        <script src="../book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

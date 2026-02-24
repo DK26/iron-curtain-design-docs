@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-3d47d740.js";
+            window.path_to_searchindex_js = "searchindex-61d2369b.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-914f79aa.js"></script>
+        <script src="toc-1553b04b.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -1076,6 +1076,130 @@ pub fn process_order(order: &amp;PlayerOrder, sim_state: &amp;mut SimState, tick
 </tbody>
 </table>
 </div>
+<hr>
+<h2 id="type-safety-coding-standards"><a class="header" href="#type-safety-coding-standards">Type-Safety Coding Standards</a></h2>
+<p>These rules complement the Type-Safety Architectural Invariants in 02-ARCHITECTURE.md. They define the concrete clippy configuration, review checklist items, and patterns that enforce type safety at the code level.</p>
+<h3 id="clippydisallowed_types-configuration"><a class="header" href="#clippydisallowed_types-configuration">clippy::disallowed_types Configuration</a></h3>
+<p>The following types are banned in specific crates via <code>clippy.toml</code>:</p>
+<p><strong><code>ic-sim</code> crate (deterministic simulation):</strong></p>
+<pre><code class="language-toml"># clippy.toml
+disallowed-types = [
+    { path = "std::collections::HashMap", reason = "Non-deterministic iteration order. Use BTreeMap or IndexMap." },
+    { path = "std::collections::HashSet", reason = "Non-deterministic iteration order. Use BTreeSet or IndexSet." },
+    { path = "std::time::Instant", reason = "Wall-clock time breaks determinism. Use SimTick." },
+    { path = "std::time::SystemTime", reason = "Wall-clock time breaks determinism. Use SimTick." },
+    { path = "rand::rngs::ThreadRng", reason = "Non-deterministic RNG. Use seeded SimRng." },
+    { path = "String", reason = "Use CompactString or domain newtypes (PackageName, OutcomeName) for validated strings. Raw String allowed only in error messages and logging (#[allow] with justification)." },
+]
+</code></pre>
+<p><strong>All crates (project-wide):</strong></p>
+<pre><code class="language-toml">disallowed-types = [
+    { path = "std::path::PathBuf", reason = "Use StrictPath&lt;PathBoundary&gt; for untrusted paths. PathBuf is allowed only for build-time/tool code." },
+]
+</code></pre>
+<p>Note: <code>PathBuf</code> is allowed in build scripts, CLI tools, and test harnesses. Game runtime code that handles user/mod/network-supplied paths must use <code>strict-path</code> types.</p>
+<h3 id="newtype-patterns-code-review-checklist"><a class="header" href="#newtype-patterns-code-review-checklist">Newtype Patterns: Code Review Checklist</a></h3>
+<p>When reviewing code, check:</p>
+<ul>
+<li><input disabled="" type="checkbox"> Are function parameters using newtypes for domain IDs? (<code>PlayerId</code>, not <code>u32</code>)</li>
+<li><input disabled="" type="checkbox"> Are newtype conversions explicit? (no blanket <code>From&lt;u32&gt;</code> — use <code>PlayerId::new(raw)</code> with validation)</li>
+<li><input disabled="" type="checkbox"> Does the newtype derive only the traits it needs? (e.g., <code>PlayerId</code> needs <code>Clone, Copy, Eq, Hash</code> but probably not <code>Add, Sub</code>)</li>
+<li><input disabled="" type="checkbox"> Are newtypes <code>#[repr(transparent)]</code> if they need to be zero-cost?</li>
+<li><input disabled="" type="checkbox"> Are sub-tick timestamps using <code>SubTickTimestamp</code>, never bare <code>u32</code>? (confusion with <code>SimTick</code> is a critical bug class)</li>
+<li><input disabled="" type="checkbox"> Are campaign/workshop/balance identifiers using their newtypes? (<code>MissionId</code>, <code>OutcomeName</code>, <code>PresetId</code>, <code>PublisherId</code>, <code>PackageName</code>, <code>PersonalityId</code>, <code>ThemeId</code>)</li>
+<li><input disabled="" type="checkbox"> Are version constraints parsed into <code>VersionConstraint</code> enum at ingestion, never stored or compared as strings?</li>
+<li><input disabled="" type="checkbox"> Is <code>WasmInstanceId</code> used consistently, never bare <code>u32</code> or <code>usize</code> index?</li>
+<li><input disabled="" type="checkbox"> Is <code>Fingerprint</code> constructed only via <code>Fingerprint::compute()</code>, never from raw <code>[u8; 32]</code>?</li>
+</ul>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>// ✅ Good newtype pattern
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[repr(transparent)]
+pub struct PlayerId(u32);
+
+impl PlayerId {
+    /// Create from raw value. Only called at network boundary deserialization.
+    pub(crate) fn from_raw(raw: u32) -&gt; Self { Self(raw) }
+    pub fn as_raw(self) -&gt; u32 { self.0 }
+}
+
+// ❌ Bad — leaky newtype that defeats the purpose
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct PlayerId(pub u32);  // pub inner field = anyone can construct/destructure
+impl From&lt;u32&gt; for PlayerId {  // blanket From = implicit conversion anywhere
+    fn from(v: u32) -&gt; Self { Self(v) }
+}
+<span class="boring">}</span></code></pre>
+<h3 id="capability-token-patterns-mod-api-review"><a class="header" href="#capability-token-patterns-mod-api-review">Capability Token Patterns: Mod API Review</a></h3>
+<p>When reviewing mod-facing APIs:</p>
+<ul>
+<li><input disabled="" type="checkbox"> Does the API require a capability token parameter?</li>
+<li><input disabled="" type="checkbox"> Is the token type unconstructible outside the host module? (private field or <code>_private: ()</code>)</li>
+<li><input disabled="" type="checkbox"> Are token lifetimes scoped correctly? (e.g., <code>FsReadCapability</code> should not outlive the mod’s execution context)</li>
+<li><input disabled="" type="checkbox"> Is the capability granular enough? (one token per permission, not a god-token)</li>
+</ul>
+<h3 id="typestate-review-checklist"><a class="header" href="#typestate-review-checklist">Typestate Review Checklist</a></h3>
+<p>When reviewing state machine code:</p>
+<ul>
+<li><input disabled="" type="checkbox"> Are states represented as types, not enum variants?</li>
+<li><input disabled="" type="checkbox"> Do transition methods consume <code>self</code> and return the new state type?</li>
+<li><input disabled="" type="checkbox"> Are invalid transitions unrepresentable? (no <code>transition_to(state: SomeEnum)</code> method)</li>
+<li><input disabled="" type="checkbox"> Is the error path handled? (<code>-&gt; Result&lt;NextState, Error&gt;</code> for fallible transitions)</li>
+<li><input disabled="" type="checkbox"> WASM lifecycle: can <code>execute()</code> be called on a <code>WasmTerminated</code> instance? (must be impossible)</li>
+<li><input disabled="" type="checkbox"> Workshop install: can <code>extract()</code> be called on <code>PkgDownloading</code>? (must pass through <code>PkgVerifying</code> first)</li>
+<li><input disabled="" type="checkbox"> Campaign mission: can <code>complete()</code> be called on <code>MissionLoading</code>? (must pass through <code>MissionActive</code>)</li>
+<li><input disabled="" type="checkbox"> Balance patch: can <code>apply()</code> be called on <code>PatchPending</code>? (must pass through <code>PatchValidated</code>)</li>
+</ul>
+<h3 id="bounded-collection-review"><a class="header" href="#bounded-collection-review">Bounded Collection Review</a></h3>
+<p>When reviewing collections in <code>ic-sim</code>:</p>
+<ul>
+<li><input disabled="" type="checkbox"> Does any <code>Vec</code> grow based on player input? If so, is it bounded?</li>
+<li><input disabled="" type="checkbox"> Are <code>push</code>/<code>insert</code> operations checked against capacity?</li>
+<li><input disabled="" type="checkbox"> Is the bound documented and justified? (e.g., “max 200 orders per tick per player — see V17”)</li>
+</ul>
+<h3 id="verified-wrapper-review"><a class="header" href="#verified-wrapper-review">Verified Wrapper Review</a></h3>
+<p>When reviewing code that handles security-sensitive data (see <code>02-ARCHITECTURE.md</code> § “Verified Wrapper Policy”):</p>
+<ul>
+<li><input disabled="" type="checkbox"> Does the function accept <code>Verified&lt;T&gt;</code> rather than bare <code>T</code> for data that must be verified? (SCRs, manifest hashes, replay signatures, validated orders)</li>
+<li><input disabled="" type="checkbox"> Is <code>Verified::new_verified()</code> called ONLY inside actual verification logic? (not in convenience constructors or test helpers without <code>#[cfg(test)]</code>)</li>
+<li><input disabled="" type="checkbox"> Are there any code paths that bypass verification and construct <code>Verified&lt;T&gt;</code> directly? (the <code>_private</code> field should prevent this)</li>
+<li><input disabled="" type="checkbox"> Does the verification function check ALL required properties before wrapping in <code>Verified</code>?</li>
+<li><input disabled="" type="checkbox"> Are <code>Verified</code> values passed through without re-verification? (re-verification is wasted work; the type already proves it)</li>
+</ul>
+<h3 id="hash-type-review"><a class="header" href="#hash-type-review">Hash Type Review</a></h3>
+<p>When reviewing code that computes or compares hashes:</p>
+<ul>
+<li><input disabled="" type="checkbox"> Is the correct hash type used? (<code>SyncHash</code> for live per-tick desync comparison, <code>StateHash</code> for cold-path replay/snapshot verification)</li>
+<li><input disabled="" type="checkbox"> Are hash types never implicitly converted? (no <code>SyncHash</code> → <code>StateHash</code> or vice versa without explicit, documented truncation/expansion)</li>
+<li><input disabled="" type="checkbox"> Is <code>Fingerprint</code> constructed only via <code>Fingerprint::compute()</code>, never from raw bytes?</li>
+</ul>
+<h3 id="chat-scope-review"><a class="header" href="#chat-scope-review">Chat Scope Review</a></h3>
+<p>When reviewing chat message handling:</p>
+<ul>
+<li><input disabled="" type="checkbox"> Is the message type branded with the correct scope? (<code>ChatMessage&lt;TeamScope&gt;</code>, <code>ChatMessage&lt;AllScope&gt;</code>, <code>ChatMessage&lt;WhisperScope&gt;</code>)</li>
+<li><input disabled="" type="checkbox"> Are scope conversions (e.g., team → all) explicit and auditable? (no implicit <code>From</code> conversion)</li>
+<li><input disabled="" type="checkbox"> Does the routing logic accept only the correct branded type? (team handler takes <code>ChatMessage&lt;TeamScope&gt;</code>, not unbranded <code>ChatMessage</code>)</li>
+</ul>
+<h3 id="validated-construction-review"><a class="header" href="#validated-construction-review">Validated Construction Review</a></h3>
+<p>When reviewing types that use the validated construction pattern (see <code>02-ARCHITECTURE.md</code> § “Validated Construction Policy”):</p>
+<ul>
+<li><input disabled="" type="checkbox"> Is the type’s inner field private? (prevents bypass via direct struct construction)</li>
+<li><input disabled="" type="checkbox"> Does the constructor validate ALL invariants before returning <code>Ok</code>?</li>
+<li><input disabled="" type="checkbox"> Is there a <code>_private: ()</code> field or equivalent to prevent external construction?</li>
+<li><input disabled="" type="checkbox"> Are mutation methods (if any) re-validating invariants after modification?</li>
+<li><input disabled="" type="checkbox"> Is <code>OrderBudget</code> constructed via <code>OrderBudget::new()</code>, never via struct literal?</li>
+<li><input disabled="" type="checkbox"> Is <code>CampaignGraph</code> constructed via <code>CampaignGraph::new()</code>, never via struct literal?</li>
+<li><input disabled="" type="checkbox"> Is <code>BalancePreset</code> checked for circular inheritance at construction time?</li>
+<li><input disabled="" type="checkbox"> Is <code>DependencyGraph</code> checked for cycles at construction time?</li>
+</ul>
+<h3 id="bounded-cvar-review"><a class="header" href="#bounded-cvar-review">Bounded Cvar Review</a></h3>
+<p>When reviewing console variable definitions (D058):</p>
+<ul>
+<li><input disabled="" type="checkbox"> Does every cvar with a documented valid range use <code>BoundedCvar&lt;T&gt;</code>, not bare <code>T</code>?</li>
+<li><input disabled="" type="checkbox"> Are <code>BoundedCvar</code> bounds correct? (<code>min &lt;= default &lt;= max</code>)</li>
+<li><input disabled="" type="checkbox"> Does <code>set()</code> clamp rather than reject? (matches the UX expectation of clamping to nearest valid value)</li>
+</ul>
 <hr>
 <h2 id="unsafe-code-policy"><a class="header" href="#unsafe-code-policy">Unsafe Code Policy</a></h2>
 <p><strong>Default: No <code>unsafe</code>.</strong> The engine does not use <code>unsafe</code> Rust unless all of the following are true:</p>

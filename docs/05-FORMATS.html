@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-3d47d740.js";
+            window.path_to_searchindex_js = "searchindex-61d2369b.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-914f79aa.js"></script>
+        <script src="toc-1553b04b.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -234,7 +234,7 @@
 </table>
 </div>
 <p><strong>Why modern formats:</strong> (1) Bevy loads them natively — zero custom code, full hot-reload and async loading. (2) Security — OGG/PNG parsers are fuzz-tested and browser-audited; our custom .aud/.shp parsers are not. (3) Multi-game — non-C&amp;C game modules (D039) won’t use .shp or .aud. (4) Tooling — every editor exports PNG/OGG/WAV/WebM; nobody’s toolchain outputs .aud. (5) WASM — modern formats work in browser builds out of the box.</p>
-<p>The Asset Studio (D040) converts in both directions. See <code>decisions/09e-community.md</code> § D049 for full rationale, storage comparisons, and distribution strategy.</p>
+<p>The Asset Studio (D040) converts in both directions. See <code>decisions/09e/D049-workshop-assets.md</code> for full rationale, storage comparisons, and distribution strategy.</p>
 <h3 id="ra-formats-crate-goals"><a class="header" href="#ra-formats-crate-goals">ra-formats Crate Goals</a></h3>
 <ol>
 <li>Parse all above formats reliably</li>
@@ -985,7 +985,7 @@ impl CoordTransform {
 }
 <span class="boring">}</span></code></pre>
 <blockquote>
-<p><strong>Compression (D063):</strong> The <code>compression_algorithm</code> byte identifies which decompressor to use for the payload. Version 1 files use <code>0x01</code> (LZ4). The <code>version</code> field controls the serialization format (bincode vs. postcard) independently — see <code>decisions/09d-gameplay.md</code> § D054 for codec dispatch and § D063 for algorithm dispatch. Compression level (fastest/balanced/compact) is configurable via <code>settings.toml</code> <code>compression.save_level</code> and affects encoding speed/ratio but not the format.</p>
+<p><strong>Compression (D063):</strong> The <code>compression_algorithm</code> byte identifies which decompressor to use for the payload. Version 1 files use <code>0x01</code> (LZ4). The <code>version</code> field controls the serialization format (bincode vs. postcard) independently — see <code>decisions/09d/D054-extended-switchability.md</code> for codec dispatch and <code>decisions/09a-foundation.md</code> § D063 for algorithm dispatch. Compression level (fastest/balanced/compact) is configurable via <code>settings.toml</code> <code>compression.save_level</code> and affects encoding speed/ratio but not the format.</p>
 </blockquote>
 <blockquote>
 <p><strong>Security (V42):</strong> Shared <code>.icsave</code> files are an attack surface. Enforce: max decompressed size 64 MB, JSON metadata cap 1 MB, schema validation of deserialized <code>SimSnapshot</code> (entity count, position bounds, valid components). Save directory sandboxed via <code>strict-path</code> <code>PathBoundary</code>. See <code>06-SECURITY.md</code> § Vulnerability 42.</p>
@@ -1017,7 +1017,7 @@ impl CoordTransform {
 }
 </code></pre>
 <h3 id="payload"><a class="header" href="#payload">Payload</a></h3>
-<p>The payload is a <code>SimSnapshot</code> serialized via <code>serde</code> (bincode format for compactness) and compressed with LZ4 (fast decompression, good ratio for game state data). LZ4 was chosen over LZO (used by original RA) for its better Rust ecosystem support (<code>lz4_flex</code> crate) and superior decompression speed. The save file header’s <code>version</code> field selects the serialization codec — version <code>1</code> uses bincode; version <code>2</code> is reserved for postcard if introduced under D054’s migration/codec-dispatch path. The <code>compression_algorithm</code> byte selects the decompressor independently (D063). Compression level is configurable via <code>settings.toml</code> (<code>compression.save_level</code>: fastest/balanced/compact). See <code>decisions/09d-gameplay.md</code> § D054 for the serialization version-to-codec dispatch and § D063 for the compression strategy.</p>
+<p>The payload is a <code>SimSnapshot</code> serialized via <code>serde</code> (bincode format for compactness) and compressed with LZ4 (fast decompression, good ratio for game state data). LZ4 was chosen over LZO (used by original RA) for its better Rust ecosystem support (<code>lz4_flex</code> crate) and superior decompression speed. The save file header’s <code>version</code> field selects the serialization codec — version <code>1</code> uses bincode; version <code>2</code> is reserved for postcard if introduced under D054’s migration/codec-dispatch path. The <code>compression_algorithm</code> byte selects the decompressor independently (D063). Compression level is configurable via <code>settings.toml</code> (<code>compression.save_level</code>: fastest/balanced/compact). See <code>decisions/09d/D054-extended-switchability.md</code> for the serialization version-to-codec dispatch and <code>decisions/09a-foundation.md</code> § D063 for the compression strategy.</p>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>pub struct SimSnapshot {
@@ -1066,9 +1066,9 @@ impl CoordTransform {
 }
 <span class="boring">}</span></code></pre>
 <blockquote>
-<p><strong>Compression (D063):</strong> The <code>compression_algorithm</code> byte identifies which decompressor to use for the tick order stream and embedded keyframe snapshots. Version 1 files use <code>0x01</code> (LZ4). Compression level during live recording defaults to <code>fastest</code> (configurable via <code>settings.toml</code> <code>compression.replay_level</code>). Use <code>ic replay recompress</code> to re-encode at a higher compression level for archival. See <code>decisions/09f-tools.md</code> § D063.</p>
+<p><strong>Compression (D063):</strong> The <code>compression_algorithm</code> byte identifies which decompressor to use for the tick order stream and embedded keyframe snapshots. Version 1 files use <code>0x01</code> (LZ4). Compression level during live recording defaults to <code>fastest</code> (configurable via <code>settings.toml</code> <code>compression.replay_level</code>). Use <code>ic replay recompress</code> to re-encode at a higher compression level for archival. See <code>decisions/09a-foundation.md</code> § D063.</p>
 </blockquote>
-<p>The <code>flags</code> field includes a <code>HAS_VOICE</code> bit (bit 3). When set, the voice stream section contains per-player Opus audio tracks recorded with player consent. See <code>decisions/09g-interaction.md</code> § D059 for the voice consent model, storage costs, and replay playback integration.</p>
+<p>The <code>flags</code> field includes a <code>HAS_VOICE</code> bit (bit 3). When set, the voice stream section contains per-player Opus audio tracks recorded with player consent. See <code>decisions/09g/D059-communication.md</code> for the voice consent model, storage costs, and replay playback integration.</p>
 <h3 id="metadata-json-1"><a class="header" href="#metadata-json-1">Metadata (JSON)</a></h3>
 <pre><code class="language-json">{
   "replay_id": "a3f7c2d1-...",
@@ -1097,6 +1097,16 @@ impl CoordTransform {
   "relay_server": "relay.ironcurtain.gg"
 }
 </code></pre>
+<h3 id="data-minimization-privacy"><a class="header" href="#data-minimization-privacy">Data Minimization (Privacy)</a></h3>
+<p>Replay metadata and order streams contain <strong>only gameplay-relevant data</strong>. The following are explicitly excluded from <code>.icrep</code> files:</p>
+<ul>
+<li><strong>Hardware identifiers:</strong> No GPU model, CPU model, RAM size, display resolution, or OS version</li>
+<li><strong>Network identifiers:</strong> No player IP addresses, MAC addresses, or connection fingerprints</li>
+<li><strong>System telemetry:</strong> No frame times, local performance metrics, or diagnostic data (these live in the local SQLite database per D034, not in replays)</li>
+<li><strong>File paths:</strong> No local filesystem paths (mod install directories, asset cache locations, etc.)</li>
+</ul>
+<p>This is a lesson from BAR/Recoil, whose replay format accumulated hardware fingerprinting data that created privacy concerns when replays were shared publicly. IC’s replay format is deliberately minimal: the metadata JSON above is the complete set of fields. Any future metadata additions must pass a privacy review — “would sharing this replay on a public forum leak personally identifying information?”</p>
+<p>Player names in replays are display names (D053), not account identifiers. Anonymization is possible via <code>ic replay anonymize</code> which replaces player names with generic labels (“Player 1”, “Player 2”) for educational sharing.</p>
 <h3 id="tick-order-stream"><a class="header" href="#tick-order-stream">Tick Order Stream</a></h3>
 <p>The order stream is a sequence of per-tick frames:</p>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
@@ -1260,7 +1270,7 @@ pub struct EmbeddedResources {
 </tbody>
 </table>
 </div>
-<p>Both decoders produce a <code>ForeignReplay</code> struct (defined in <code>decisions/09f-tools.md</code> § D056) — a normalized intermediate representation with <code>ForeignFrame</code> / <code>ForeignOrder</code> types. This IR is translated to IC’s <code>TimestampedOrder</code> by <code>ForeignReplayCodec</code> in <code>ic-protocol</code>, then fed to either <code>ForeignReplayPlayback</code> (direct viewing) or the <code>ic replay import</code> CLI (conversion to <code>.icrep</code>).</p>
+<p>Both decoders produce a <code>ForeignReplay</code> struct (defined in <code>decisions/09f/D056-replay-import.md</code>) — a normalized intermediate representation with <code>ForeignFrame</code> / <code>ForeignOrder</code> types. This IR is translated to IC’s <code>TimestampedOrder</code> by <code>ForeignReplayCodec</code> in <code>ic-protocol</code>, then fed to either <code>ForeignReplayPlayback</code> (direct viewing) or the <code>ic replay import</code> CLI (conversion to <code>.icrep</code>).</p>
 <p><strong>Remastered replay header</strong> (from <code>Save_Recording_Values()</code> in <code>REDALERT/INIT.CPP</code>):</p>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -1334,7 +1344,7 @@ pub struct RemasteredRecordedFrame {
 <li>Already-compressed files (<code>.icsave</code>, <code>.icrep</code>) are stored in the ZIP without additional compression (ZIP <code>Store</code> method).</li>
 <li><code>ic backup verify &lt;archive&gt;</code> checks ZIP integrity and validates that all SQLite files in the archive are well-formed.</li>
 <li><code>ic backup restore</code> preserves directory structure and prompts on conflicts (suppress with <code>--overwrite</code>).</li>
-<li><code>--exclude</code> and <code>--only</code> filter by category (keys, profile, communities, achievements, config, saves, replays, screenshots, gameplay, workshop, mods, maps). See <code>decisions/09e-community.md</code> § D061 for category sizes and criticality.</li>
+<li><code>--exclude</code> and <code>--only</code> filter by category (keys, profile, communities, achievements, config, saves, replays, screenshots, gameplay, workshop, mods, maps). See <code>decisions/09e/D061-data-backup.md</code> for category sizes and criticality.</li>
 </ul>
 <h2 id="screenshot-format-d061"><a class="header" href="#screenshot-format-d061">Screenshot Format (D061)</a></h2>
 <p>Screenshots are standard PNG images with IC-specific metadata in PNG <code>tEXt</code> chunks. Any image viewer displays the screenshot; IC’s screenshot browser reads the metadata for filtering and organization.</p>
@@ -1377,6 +1387,111 @@ pub struct RemasteredRecordedFrame {
 </div>
 <p>All binary encoders reference the EA GPL source code implementations documented in § Binary Format Codec Reference. The source provides complete, authoritative struct definitions, compression algorithms, and lookup tables — no reverse engineering required.</p>
 <p><strong>Planned deferral note (<code>.mix</code> write support):</strong> <code>.mix</code> encoding is intentionally deferred to <code>M9</code> / Phase 6a as an optional creator-path feature (<code>P-Creator</code>) after the D040 Asset Studio base and D049 Workshop/CAS packaging flow are in place. Reason: loose-file mod packaging remains a valid path, so <code>.mix</code> writing is not part of <code>M1-M4</code> or <code>M8</code> exit criteria. Validation trigger: <code>M9</code> creator workflows require retro-compatible archive packaging for sharing/export tooling.</p>
+<h3 id="owned-source-import--extraction-pipeline-d069d068d049-format-by-format"><a class="header" href="#owned-source-import--extraction-pipeline-d069d068d049-format-by-format">Owned-Source Import &amp; Extraction Pipeline (D069/D068/D049, Format-by-Format)</a></h3>
+<p>This section defines the implementation-facing <strong>owned-install import/extract plan</strong> for the D069 setup wizard and D068 install profiles, including the requirement that the <strong>C&amp;C Remastered Collection import path works out of the box</strong> when detected.</p>
+<p>It complements:</p>
+<ul>
+<li><code>D069</code> (first-run + maintenance wizard UX)</li>
+<li><code>D068</code> (install profiles and mixed-source content planning)</li>
+<li><code>D049</code> (integrity, provenance, and local CAS storage behavior)</li>
+</ul>
+<h4 id="milestone-placement-explicitly-planned"><a class="header" href="#milestone-placement-explicitly-planned">Milestone placement (explicitly planned)</a></h4>
+<ul>
+<li><strong><code>M1</code> / <code>P-Core</code></strong>: parser/readiness foundation and source-adapter contracts</li>
+<li><strong><code>M3</code> / <code>P-Core</code></strong>: player-facing owned-install import/extract baseline in D069 (<code>Steam Remastered</code>, <code>GOG</code>, <code>EA</code>, manual owned installs)</li>
+<li><strong><code>M8</code> / <code>P-Creator</code></strong>: CLI import diagnostics, import-plan inspection, repair/re-scan tooling</li>
+<li><strong><code>M9</code> / <code>P-Creator</code></strong>: SDK/Asset Studio inspection, previews, and provenance tooling over the same imported data</li>
+</ul>
+<p><strong>Not in <code>M1-M3</code> scope:</strong></p>
+<ul>
+<li>authoring-grade transcoding during first-run import (<code>.vqa -&gt; .mp4</code>, <code>.aud -&gt; .ogg</code>)</li>
+<li>SDK-era previews/thumbnails for every imported asset</li>
+<li>any Workshop mirroring of proprietary content (blocked by D037/D049 policy gates)</li>
+</ul>
+<h4 id="source-adapter-model-how-the-importer-is-structured"><a class="header" href="#source-adapter-model-how-the-importer-is-structured">Source adapter model (how the importer is structured)</a></h4>
+<p>Owned-source import is a two-stage pipeline:</p>
+<ol>
+<li>
+<p><strong>Source adapter (layout-specific)</strong></p>
+<ul>
+<li>Detects a source install and enumerates source files/archives.</li>
+<li>Produces a <strong>source manifest snapshot</strong> (path, size, source type, integrity/probe info, provenance tags).</li>
+<li>Handles source-layout differences (including the Remastered Steam install layout) and feeds normalized import candidates into the shared importer.</li>
+</ul>
+</li>
+<li>
+<p><strong>Format importer (shared, format-specific)</strong></p>
+<ul>
+<li>Parses/validates formats via <code>ra-formats</code> (and source-specific adapters where needed)</li>
+<li>Imports/extracts data into IC-managed storage/CAS</li>
+<li>Builds indexes used by D068 install profiles and D069 maintenance flows</li>
+<li>Emits provenance and repair/re-scan metadata</li>
+</ul>
+</li>
+</ol>
+<p>This keeps Remastered/GOG/EA path handling isolated while preserving a single import/extract core.</p>
+<h4 id="d069-import-modes-copy--extract--reference-only"><a class="header" href="#d069-import-modes-copy--extract--reference-only">D069 import modes (<code>copy</code> / <code>extract</code> / <code>reference-only</code>)</a></h4>
+<p>D069 source selections include an import mode. The implementation contract is:</p>
+<ul>
+<li><strong><code>copy</code></strong> (default for owned/proprietary sources in Quick Setup):
+<ul>
+<li>Copy required source files/archives into IC-managed storage.</li>
+<li>Source install remains read-only.</li>
+<li>Prioritizes resilience if the original install later moves/disappears.</li>
+</ul>
+</li>
+<li><strong><code>extract</code></strong>:
+<ul>
+<li>Extract playable assets into IC-managed storage/CAS and build indexes.</li>
+<li>Also keeps source install read-only.</li>
+</ul>
+</li>
+<li><strong><code>reference-only</code></strong>:
+<ul>
+<li>Record source references + indexes without claiming a portable imported copy.</li>
+<li><strong>Deferred to <code>M8</code> (<code>P-Creator</code>) for user-facing tooling exposure</strong> (advanced/diagnostic path). Not part of the <code>M3</code> out-of-the-box player baseline.</li>
+</ul>
+</li>
+</ul>
+<h4 id="format-by-format-handling-owned-install-importextract-baseline"><a class="header" href="#format-by-format-handling-owned-install-importextract-baseline">Format-by-format handling (owned-install import/extract baseline)</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Format / Source Type</th><th><code>M1</code> Readiness Requirement</th><th><code>M3</code> D069 Import/Extract Baseline</th><th><code>M8-M9</code> Tooling/Diagnostics Extensions</th><th>Failure / Recovery Behavior</th></tr>
+</thead>
+<tbody>
+<tr><td><code>.mix</code> archives</td><td>Parse headers/index, CRC filename lookup, enumerate entries</td><td>Import copies/extracts required archive data into IC-managed storage; build entry index + provenance records; source install untouched</td><td>CLI import-plan inspection, archive entry listing, targeted re-extract/re-index, SDK/archive inspector views</td><td>Corrupt archive/index mismatch -&gt; actionable error, retry/re-scan/source-switch; never mutate source install</td></tr>
+<tr><td><code>.shp</code> sprite sheets</td><td>Parse shape/frame headers, compression flags, frame offsets</td><td>Validate + index metadata; import/store blob with provenance; runtime decode remains on-demand for gameplay</td><td>Thumbnails/previews, frame inspectors, conversion diagnostics in Asset Studio</td><td>Per-file failure logged with source path + reason; importer continues where safe</td></tr>
+<tr><td><code>.pal</code> palettes</td><td>Validate raw 768-byte palette payload and value ranges</td><td>Import palette blobs + palette index; build runtime palette lookup caches as needed</td><td>Palette preview/compare/remap inspectors in SDK</td><td>Invalid palette -&gt; fail item and surface repair/re-scan/source-switch action</td></tr>
+<tr><td><code>.aud</code> audio</td><td>Parse <code>AUDHeaderType</code>, validate flags/sizes, decoder sanity check</td><td>Import <code>.aud</code> blobs + metadata indexes for gameplay playback; no first-run transcode required</td><td>Waveform preview + <code>.aud &lt;-&gt; wav/ogg</code> conversion tooling (<code>D040</code>)</td><td>Header/decode failure reported per file; readiness warns for missing critical voice/EVA assets</td></tr>
+<tr><td><code>.vqa</code> video</td><td>Parse VQA headers/chunks enough for integrity/indexing</td><td>Import <code>.vqa</code> blobs + metadata indexes; no first-run transcode required</td><td>Preview extraction/transcoding diagnostics (<code>D040</code>), cutscene variant tooling</td><td>Parse/index failure falls back to D068 campaign media fallback path where applicable</td></tr>
+<tr><td>Legacy map/mission files (including assets extracted from archives)</td><td>Parse/validate map/mission metadata required for loadability</td><td>Import/index files needed by selected install profile and campaign/skirmish paths</td><td>Import validation reports, conversion/export diagnostics</td><td>Invalid mission/map data surfaced as source-specific validation issue; import remains partial/recoverable</td></tr>
+<tr><td>OpenRA YAML / MiniYAML (mixed-source installs)</td><td>MiniYAML runtime conversion (<code>D025</code>) + YAML alias loading (<code>D023</code>)</td><td>Import/index alongside owned-source content under D062/D068 rules</td><td>Provenance and compatibility diagnostics in CLI/SDK</td><td>Parse/alias issues reported per file; mixed-source import can proceed with explicit warnings</td></tr>
+</tbody>
+</table>
+</div>
+<h4 id="verification-and-provenance-outputs-required-importer-artifacts"><a class="header" href="#verification-and-provenance-outputs-required-importer-artifacts">Verification and provenance outputs (required importer artifacts)</a></h4>
+<p>Every owned-source import/extract run must produce:</p>
+<ul>
+<li><strong>Source manifest snapshot</strong> (what was detected/imported, from where)</li>
+<li><strong>Per-item import/verify results</strong> (success / failed parse / failed verify / skipped)</li>
+<li><strong>Installed-content provenance records</strong> (owned local import vs downloaded package)</li>
+<li><strong>Repair/re-scan metadata</strong> for D069 maintenance and D068 Installed Content Manager</li>
+</ul>
+<p>These artifacts power:</p>
+<ul>
+<li><code>Repair &amp; Verify</code></li>
+<li><code>Re-scan Content Sources</code></li>
+<li>source-switch guidance</li>
+<li>provenance visibility in D068/D049 UI</li>
+</ul>
+<h4 id="execution-overlay-mapping-implementation-sequence"><a class="header" href="#execution-overlay-mapping-implementation-sequence">Execution overlay mapping (implementation sequence)</a></h4>
+<ul>
+<li><strong><code>G1.x</code></strong> (M1 format/import readiness substeps): parser coverage + source-adapter contracts + source-manifest outputs</li>
+<li><strong><code>M3.CORE.PROPRIETARY_ASSET_IMPORT_AND_EXTRACT</code></strong>: player-facing D069 import/extract baseline (including Remastered out-of-box path)</li>
+<li><strong><code>G21.x</code></strong> (M8 creator/operator support substeps): import diagnostics, plan inspection, re-extract/re-index tooling, and documentation</li>
+</ul>
+<p>The developer checklists in <code>18-PROJECT-TRACKER.md</code> mirror this sequencing and define proof artifacts per stage.</p>
 
                     </main>
 

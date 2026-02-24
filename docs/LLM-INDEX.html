@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-3d47d740.js";
+            window.path_to_searchindex_js = "searchindex-61d2369b.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-914f79aa.js"></script>
+        <script src="toc-1553b04b.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -202,7 +202,7 @@
 <h2 id="canonical-source-priority-use-this-order"><a class="header" href="#canonical-source-priority-use-this-order">Canonical Source Priority (Use This Order)</a></h2>
 <p>When multiple docs mention the same topic, agents should prefer sources in this order unless the user specifically asks for roadmap or UX examples:</p>
 <ol>
-<li><strong>Decision docs (<code>src/decisions/*.md</code>)</strong> — normative design choices, tradeoffs, accepted defaults</li>
+<li><strong>Decision docs (<code>src/decisions/09*/D0XX-*.md</code>)</strong> — normative design choices, tradeoffs, accepted defaults. Each decision is now a standalone file (e.g., <code>src/decisions/09b/D052-community-servers.md</code>). The parent <code>09b-networking.md</code> etc. are lightweight index pages.</li>
 <li><strong>Core architecture / netcode / modding / security / performance chapters</strong> (<code>02</code>–<code>06</code>, <code>10</code>) — system-level design details and implementation constraints</li>
 <li><strong>Player Flow (<code>17-PLAYER-FLOW.md</code>)</strong> — UX flows, screen layouts, examples, mock UI</li>
 <li><strong>Roadmap (<code>08-ROADMAP.md</code>)</strong> — phase timing and sequencing (not normative runtime behavior)</li>
@@ -217,13 +217,14 @@
 <tr><th>Doc Class</th><th>Primary Role</th><th>Use For</th><th>Avoid As Sole Source For</th></tr>
 </thead>
 <tbody>
-<tr><td><code>src/decisions/*.md</code></td><td>Normative decisions</td><td>“What did we decide?”, constraints, defaults, alternatives</td><td>Concrete UI layout examples unless the decision itself defines them</td></tr>
-<tr><td><code>src/02-ARCHITECTURE.md</code></td><td>Cross-cutting architecture</td><td>crate boundaries, invariants, trait seams, platform abstraction</td><td>Feature-specific UX policy</td></tr>
+<tr><td><code>src/decisions/09*/D0XX-*.md</code></td><td>Normative decisions (one file per decision)</td><td>“What did we decide?”, constraints, defaults, alternatives</td><td>Concrete UI layout examples unless the decision itself defines them</td></tr>
+<tr><td><code>src/decisions/09b-networking.md</code> etc.</td><td>Decision index pages (routing only)</td><td>“Which decisions exist in this category?” — cheap first-pass routing</td><td>Full decision content (load the individual <code>D0XX-*.md</code> file instead)</td></tr>
+<tr><td><code>src/02-ARCHITECTURE.md</code> + <code>src/architecture/*.md</code></td><td>Cross-cutting architecture (split by subsystem)</td><td>crate boundaries, invariants, trait seams, platform abstraction</td><td>Feature-specific UX policy</td></tr>
 <tr><td><code>src/03-NETCODE.md</code></td><td>Netcode architecture &amp; behavior</td><td>protocol flow, relay behavior, reconnection, desync/debugging</td><td>Product prioritization/phasing</td></tr>
 <tr><td><code>src/04-MODDING.md</code></td><td>Creator/runtime modding system</td><td>CLI, DX workflows, mod packaging, campaign/export concepts</td><td>Canonical acceptance of a disputed feature (check decisions)</td></tr>
 <tr><td><code>src/06-SECURITY.md</code></td><td>Threat model &amp; trust boundaries</td><td>ranked trust, attack surfaces, operational constraints</td><td>UI/UX behavior unless security-gating is the point</td></tr>
 <tr><td><code>src/10-PERFORMANCE.md</code></td><td>Perf philosophy &amp; budgets</td><td>targets, hot-path rules, compatibility tiers</td><td>Final UX/publishing behavior</td></tr>
-<tr><td><code>src/17-PLAYER-FLOW.md</code></td><td>UX navigation &amp; mock screens</td><td>menus, flows, settings surfaces, example panels</td><td>Core architecture invariants</td></tr>
+<tr><td><code>src/17-PLAYER-FLOW.md</code> + <code>src/player-flow/*.md</code></td><td>UX navigation &amp; mock screens (split by screen)</td><td>menus, flows, settings surfaces, example panels</td><td>Core architecture invariants</td></tr>
 <tr><td><code>src/18-PROJECT-TRACKER.md</code> + <code>src/tracking/*.md</code></td><td>Execution planning overlay</td><td>implementation order, dependency DAG, milestone status, “what next?”, ticket breakdown templates</td><td>Canonical runtime behavior or roadmap timing (use decisions/architecture + <code>08-ROADMAP.md</code>)</td></tr>
 <tr><td><code>src/08-ROADMAP.md</code></td><td>Phasing</td><td>“when”, not “what”</td><td>Current runtime behavior/spec guarantees</td></tr>
 </tbody>
@@ -238,16 +239,25 @@
 </thead>
 <tbody>
 <tr><td>Engine invariants / crate boundaries</td><td><code>src/02-ARCHITECTURE.md</code>, <code>src/decisions/09a-foundation.md</code></td><td><code>AGENTS.md</code></td><td><code>AGENTS.md</code> is operational guidance for agents; design docs remain canonical for public spec wording</td></tr>
-<tr><td>Netcode model / relay / sub-tick / reconnection</td><td><code>src/03-NETCODE.md</code>, <code>src/decisions/09b-networking.md</code></td><td><code>src/06-SECURITY.md</code></td><td>Use <code>06-SECURITY.md</code> to resolve ranked/trust/security policy questions</td></tr>
-<tr><td>Modding tiers (YAML/Lua/WASM) / export / compatibility</td><td><code>src/04-MODDING.md</code>, <code>src/decisions/09c-modding.md</code></td><td><code>src/07-CROSS-ENGINE.md</code></td><td><code>09c</code> is canonical for accepted decisions</td></tr>
-<tr><td>Workshop / packages / CAS / profiles / selective install</td><td><code>src/decisions/09e-community.md</code>, <code>src/decisions/09c-modding.md</code></td><td><code>src/17-PLAYER-FLOW.md</code></td><td>D068 (selective install) is in <code>09c</code>; D049 CAS in <code>09e</code></td></tr>
-<tr><td>Scenario editor / asset studio / SDK UX</td><td><code>src/decisions/09f-tools.md</code></td><td><code>src/17-PLAYER-FLOW.md</code>, <code>src/04-MODDING.md</code></td><td><code>17</code> has mock screens/examples; <code>09f</code> is normative</td></tr>
-<tr><td>In-game controls / mobile UX / chat / voice / tutorial</td><td><code>src/decisions/09g-interaction.md</code></td><td><code>src/17-PLAYER-FLOW.md</code>, <code>src/02-ARCHITECTURE.md</code>, <code>research/open-source-rts-communication-markers-study.md</code></td><td><code>17</code> shows surfaces; <code>09g</code> defines interaction rules; use the research note for prior-art communication/beacon/marker UX rationale only</td></tr>
-<tr><td>Campaign structure / persistent state / cutscene flow</td><td><code>src/modding/campaigns.md</code>, <code>src/decisions/09f-tools.md</code></td><td><code>src/04-MODDING.md</code>, <code>src/17-PLAYER-FLOW.md</code></td><td><code>modding/campaigns.md</code> is the detailed D021 runtime/schema spec; use <code>17</code> for player-facing transition examples</td></tr>
+<tr><td>Netcode model / relay / sub-tick / reconnection</td><td><code>src/03-NETCODE.md</code>, <code>src/decisions/09b/D052-community-servers.md</code>, <code>src/decisions/09b/D006-pluggable-net.md</code>, <code>src/decisions/09b/D008-sub-tick.md</code></td><td><code>src/06-SECURITY.md</code></td><td>Use <code>06-SECURITY.md</code> to resolve ranked/trust/security policy questions. Index page: <code>09b-networking.md</code></td></tr>
+<tr><td>Modding tiers (YAML/Lua/WASM) / export / compatibility</td><td><code>src/04-MODDING.md</code>, <code>src/decisions/09c-modding.md</code>, <code>src/decisions/09c/D023–D027</code></td><td><code>src/07-CROSS-ENGINE.md</code></td><td><code>09c</code> is canonical for accepted decisions; D023–D027 cover OpenRA compat (vocabulary aliases, Lua API, MiniYAML, mod manifest, enums)</td></tr>
+<tr><td>Workshop / packages / CAS / profiles / selective install</td><td><code>src/decisions/09e/D049-workshop-assets.md</code>, <code>src/decisions/09e/D030-workshop-registry.md</code>, <code>src/decisions/09c-modding.md</code></td><td><code>src/player-flow/workshop.md</code></td><td>D068 (selective install) is in <code>09c</code>; D049 CAS in <code>09e/D049-workshop-assets.md</code></td></tr>
+<tr><td>Scenario editor / asset studio / SDK UX</td><td><code>src/decisions/09f/D020-mod-sdk.md</code>, <code>src/decisions/09f/D038-scenario-editor.md</code>, <code>src/decisions/09f/D040-asset-studio.md</code></td><td><code>src/player-flow/sdk.md</code>, <code>src/04-MODDING.md</code></td><td>D020 covers SDK architecture and creative workflow; D038/D040 are normative for individual editors; player-flow has mock screens</td></tr>
+<tr><td>In-game controls / mobile UX / chat / voice / tutorial</td><td><code>src/decisions/09g/D058-command-console.md</code>, <code>src/decisions/09g/D059-communication.md</code>, <code>src/decisions/09g/D065-tutorial.md</code></td><td><code>src/player-flow/in-game.md</code>, <code>src/02-ARCHITECTURE.md</code>, <code>research/open-source-rts-communication-markers-study.md</code>, <code>research/rtl-bidi-open-source-implementation-study.md</code></td><td>Player-flow shows surfaces; <code>09g/D058-D065</code> define interaction rules; use the research notes for prior-art communication/beacon/marker UX and RTL/BiDi implementation rationale only</td></tr>
+<tr><td>Localization / RTL / BiDi / font fallback</td><td><code>src/02-ARCHITECTURE.md</code>, <code>src/decisions/09f/D038-scenario-editor.md</code>, <code>src/decisions/09g/D059-communication.md</code></td><td><code>src/player-flow/settings.md</code>, <code>src/tracking/rtl-bidi-qa-corpus.md</code>, <code>research/rtl-bidi-open-source-implementation-study.md</code></td><td>Use architecture for shared text/layout contracts, <code>09f/D038</code> for authoring preview/validation, <code>09g/D059</code> for chat/marker safety split, the QA corpus for concrete test strings, and the research note for implementation-pattern rationale</td></tr>
+<tr><td>Campaign structure / persistent state / cutscene flow</td><td><code>src/modding/campaigns.md</code>, <code>src/decisions/09d/D021-branching-campaigns.md</code>, <code>src/decisions/09f/D016-llm-missions.md</code></td><td><code>src/04-MODDING.md</code>, <code>src/player-flow/single-player.md</code></td><td><code>modding/campaigns.md</code> is the detailed spec; D021 is the decision capsule; use player-flow for player-facing transition examples</td></tr>
+<tr><td>Weather system / terrain surface effects</td><td><code>src/decisions/09d/D022-dynamic-weather.md</code></td><td><code>src/04-MODDING.md</code> (§ Dynamic Weather), <code>src/architecture/gameplay-systems.md</code></td><td>D022 is the decision capsule; 04-MODDING.md has full YAML examples and rendering strategies</td></tr>
+<tr><td>Conditions / multipliers / damage pipeline</td><td><code>src/decisions/09d/D028-conditions-multipliers.md</code></td><td><code>src/11-OPENRA-FEATURES.md</code> (§2–3), <code>src/architecture/gameplay-systems.md</code>, <code>src/04-MODDING.md</code> (§ Conditional Modifiers)</td><td>D028 covers condition system, multiplier stack, and conditional modifiers (Tier 1.5)</td></tr>
+<tr><td>Cross-game components (mind control, carriers, shields, etc.)</td><td><code>src/decisions/09d/D029-cross-game-components.md</code></td><td><code>src/12-MOD-MIGRATION.md</code> (§ Seven Built-In Systems), <code>src/08-ROADMAP.md</code> (Phase 2)</td><td>D029 defines the 7 first-party systems; mod-migration has case-study validation</td></tr>
 <tr><td>Performance budgets / low-end hardware support</td><td><code>src/10-PERFORMANCE.md</code>, <code>src/decisions/09a-foundation.md</code></td><td><code>src/02-ARCHITECTURE.md</code></td><td><code>10</code> is canonical for targets and compatibility tiers</td></tr>
-<tr><td>Philosophy / methodology / design process</td><td><code>src/13-PHILOSOPHY.md</code>, <code>src/14-METHODOLOGY.md</code></td><td><code>research/*.md</code> (e.g., <code>research/mobile-rts-ux-onboarding-community-platform-analysis.md</code>, <code>research/rts-2026-trend-scan.md</code>, <code>research/bar-recoil-source-study.md</code>, <code>research/open-source-rts-communication-markers-study.md</code>)</td><td>Use for “is this aligned?” reviews, source-study takeaways, and inspiration filtering</td></tr>
+<tr><td>Diagnostic overlay / net_graph / real-time observability / <code>/diag</code></td><td><code>src/10-PERFORMANCE.md</code> (§ Diagnostic Overlay &amp; Real-Time Observability), <code>src/decisions/09g/D058-command-console.md</code> (D058 <code>/diag</code> commands)</td><td><code>src/decisions/09e/D031-observability.md</code> (D031 telemetry data sources), <code>research/source-sdk-2013-source-study.md</code>, <code>research/generals-zero-hour-diagnostic-tools-study.md</code></td><td><code>10-PERFORMANCE.md</code> defines overlay levels, panels, and phasing; D058 defines console commands and cvars; D031 defines the telemetry data that feeds the overlay; Generals study refines cushion metric, gross/net time, world markers</td></tr>
+<tr><td>Philosophy / methodology / design process</td><td><code>src/13-PHILOSOPHY.md</code>, <code>src/14-METHODOLOGY.md</code></td><td><code>research/*.md</code> (e.g., <code>research/mobile-rts-ux-onboarding-community-platform-analysis.md</code>, <code>research/rts-2026-trend-scan.md</code>, <code>research/bar-recoil-source-study.md</code>, <code>research/bar-comprehensive-architecture-study.md</code>, <code>research/open-source-rts-communication-markers-study.md</code>, <code>research/rtl-bidi-open-source-implementation-study.md</code>, <code>research/source-sdk-2013-source-study.md</code>)</td><td>Use for “is this aligned?” reviews, source-study takeaways, and inspiration filtering. BAR comprehensive study covers engine/game split, synced/unsynced boundary, widget ecosystem, replay privacy, rating edge cases, and community infrastructure</td></tr>
 <tr><td>Implementation planning / milestone dependencies / project standing</td><td><code>src/18-PROJECT-TRACKER.md</code>, <code>src/tracking/milestone-dependency-map.md</code></td><td><code>src/08-ROADMAP.md</code>, <code>src/09-DECISIONS.md</code>, <code>src/17-PLAYER-FLOW.md</code></td><td>Tracker is an execution overlay: use it for ordering/status; roadmap remains canonical for phase timing</td></tr>
 <tr><td>Ticket breakdown / work-package template for <code>G*</code> steps</td><td><code>src/tracking/implementation-ticket-template.md</code></td><td><code>src/18-PROJECT-TRACKER.md</code>, <code>src/tracking/milestone-dependency-map.md</code></td><td>Use for implementation handoff/work packages after features are mapped into the overlay</td></tr>
+<tr><td>Bootstrapping an external implementation repo to follow IC design docs</td><td><code>src/tracking/external-code-project-bootstrap.md</code>, <code>src/tracking/external-project-agents-template.md</code></td><td><code>src/tracking/source-code-index-template.md</code>, <code>src/18-PROJECT-TRACKER.md</code>, <code>AGENTS.md</code></td><td>Use when starting a separate code repo; includes no-silent-divergence and design-gap escalation workflow</td></tr>
+<tr><td>Source code navigation index (<code>CODE-INDEX.md</code>) template for humans + LLMs</td><td><code>src/tracking/source-code-index-template.md</code></td><td><code>src/tracking/external-code-project-bootstrap.md</code>, <code>src/tracking/implementation-ticket-template.md</code></td><td>Use to create/maintain a codebase map with ownership, hot paths, boundaries, and task routing</td></tr>
+<tr><td>Testing strategy, CI/CD pipeline, automated verification</td><td><code>src/tracking/testing-strategy.md</code></td><td><code>src/06-SECURITY.md</code>, <code>src/10-PERFORMANCE.md</code>, <code>src/16-CODING-STANDARDS.md</code></td><td>Use for “how is X tested?”, CI gate definitions, fuzz targets, performance benchmarks, release criteria</td></tr>
+<tr><td>Type-safety invariants, newtype policy, deterministic collections</td><td><code>src/architecture/type-safety.md</code>, <code>src/16-CODING-STANDARDS.md</code> (§ Type-Safety Coding Standards)</td><td><code>src/06-SECURITY.md</code></td><td>Use for “what types enforce X?”, clippy config, code review checklists for type safety</td></tr>
 <tr><td>Future/deferral wording audit / “is this planned or vague?”</td><td><code>src/tracking/future-language-audit.md</code>, <code>src/tracking/deferral-wording-patterns.md</code></td><td><code>src/18-PROJECT-TRACKER.md</code>, <code>src/14-METHODOLOGY.md</code>, <code>AGENTS.md</code></td><td>Use for classifying future-facing wording and converting vague prose into planned deferrals / North Star claims</td></tr>
 </tbody>
 </table>
@@ -256,10 +266,11 @@
 <h2 id="retrieval-rules-token-efficient-defaults"><a class="header" href="#retrieval-rules-token-efficient-defaults">Retrieval Rules (Token-Efficient Defaults)</a></h2>
 <h3 id="chunking-strategy"><a class="header" href="#chunking-strategy">Chunking Strategy</a></h3>
 <ul>
-<li>Chunk by <strong>ATX headings</strong> (<code>###</code> / <code>####</code>) rather than file-level or <code>##</code>-only blocks</li>
+<li>Decision files are now one-per-decision — chunk at <code>###</code>/<code>####</code> level within each file</li>
+<li>Architecture and player-flow files are now one-per-subsystem/screen — chunk at <code>###</code>/<code>####</code> level within each file</li>
 <li>Include heading path metadata, e.g.:
 <ul>
-<li><code>09g-interaction.md &gt; D065 &gt; Layer 3 &gt; Controls Walkthrough</code></li>
+<li><code>decisions/09g/D065-tutorial.md &gt; Layer 3 &gt; Controls Walkthrough</code></li>
 </ul>
 </li>
 <li>Include decision IDs detected in the chunk (e.g., <code>D065</code>, <code>D068</code>)</li>
@@ -276,8 +287,11 @@
 <li>Prefer decision docs for normative questions (“should”, “must”, “decided”)</li>
 <li>Prefer <code>src/18-PROJECT-TRACKER.md</code> + <code>src/tracking/milestone-dependency-map.md</code> for “what next?”, dependency-order, and implementation sequencing questions</li>
 <li>Prefer <code>src/tracking/implementation-ticket-template.md</code> when the user asks for implementer task breakdowns or ticket-ready work packages tied to <code>G*</code> steps</li>
+<li>Prefer <code>src/tracking/external-code-project-bootstrap.md</code>, <code>src/tracking/external-project-agents-template.md</code>, and <code>src/tracking/source-code-index-template.md</code> when the user asks how to start a separate code repo that should follow these design docs</li>
 <li>Prefer <code>src/tracking/future-language-audit.md</code> + <code>src/tracking/deferral-wording-patterns.md</code> for reviews of vague future wording, deferral placement, and North Star claim formatting</li>
-<li>Prefer <code>17-PLAYER-FLOW.md</code> for UI layout / screen wording questions</li>
+<li>Prefer <code>src/tracking/testing-strategy.md</code> for CI/CD pipeline definitions, test tier assignments, fuzz targets, performance benchmarks, and release criteria</li>
+<li>Prefer <code>src/architecture/type-safety.md</code> + <code>src/16-CODING-STANDARDS.md</code> § Type-Safety Coding Standards for newtype policy, deterministic collection bans, typestate patterns, and clippy configuration</li>
+<li>Prefer <code>src/player-flow/*.md</code> (individual screen files) for UI layout / screen wording questions — use the index in <code>17-PLAYER-FLOW.md</code> to route to the right file</li>
 <li>Prefer <code>08-ROADMAP.md</code> only for “when / phase” questions</li>
 <li>Prefer research docs only when the question is “why this prior art?” or “what did we learn from X?”</li>
 </ul>
@@ -290,22 +304,25 @@
 <li>State the conflict explicitly and cite both locations</li>
 </ol>
 <hr>
-<h2 id="high-cost-docs-split-priorities-for-future-refactor"><a class="header" href="#high-cost-docs-split-priorities-for-future-refactor">High-Cost Docs (Split Priorities for Future Refactor)</a></h2>
-<p>These are accurate but expensive if chunking is coarse. Splitting them by decision (or sub-topic files) gives the biggest RAG win.</p>
+<h2 id="high-cost-docs--resolved"><a class="header" href="#high-cost-docs--resolved">High-Cost Docs — Resolved</a></h2>
+<p>All previously identified high-cost files have been split into individually addressable units:</p>
 <div class="table-wrapper">
 <table>
 <thead>
-<tr><th>Priority</th><th>File</th><th>Why It’s Expensive</th><th>Refactor Direction</th></tr>
+<tr><th>Original File</th><th>Now Split Into</th><th>Index Page</th></tr>
 </thead>
 <tbody>
-<tr><td>1</td><td><code>src/decisions/09f-tools.md</code></td><td><code>D016</code> and <code>D038</code> are very large multi-topic decisions</td><td>Split into one file per decision (<code>D016</code>, <code>D038</code>, <code>D040</code>, etc.)</td></tr>
-<tr><td>1</td><td><code>src/decisions/09g-interaction.md</code></td><td><code>D058</code>, <code>D059</code>, <code>D065</code> are each &gt;1k lines</td><td>Split by decision; preserve shared interaction index page</td></tr>
-<tr><td>1</td><td><code>src/decisions/09b-networking.md</code></td><td><code>D052</code> is large and dense</td><td>Split <code>D052</code>, <code>D055</code>, <code>D060</code> into separate files</td></tr>
-<tr><td>2</td><td><code>src/decisions/09e-community.md</code></td><td>Many 500–700 line decisions in one file</td><td>Split by decision; keep <code>09e</code> as overview</td></tr>
-<tr><td>2</td><td><code>src/decisions/09d-gameplay.md</code></td><td>Multiple long decisions mixed with different concerns</td><td>Split by decision, especially <code>D019</code>, <code>D043</code>, <code>D048</code></td></tr>
+<tr><td><code>src/decisions/09f-tools.md</code></td><td><code>src/decisions/09f/D016-*.md</code> … <code>D057-*.md</code> (6 files)</td><td><code>09f-tools.md</code> (routing table only)</td></tr>
+<tr><td><code>src/decisions/09g-interaction.md</code></td><td><code>src/decisions/09g/D058-*.md</code> … <code>D069-*.md</code> (4 files)</td><td><code>09g-interaction.md</code> (routing table only)</td></tr>
+<tr><td><code>src/decisions/09b-networking.md</code></td><td><code>src/decisions/09b/D006-*.md</code> … <code>D060-*.md</code> (8 files)</td><td><code>09b-networking.md</code> (routing table only)</td></tr>
+<tr><td><code>src/decisions/09e-community.md</code></td><td><code>src/decisions/09e/D030-*.md</code> … <code>D061-*.md</code> (10 files)</td><td><code>09e-community.md</code> (routing table only)</td></tr>
+<tr><td><code>src/decisions/09d-gameplay.md</code></td><td><code>src/decisions/09d/D013-*.md</code> … <code>D070-*.md</code> (11 files)</td><td><code>09d-gameplay.md</code> (routing table only)</td></tr>
+<tr><td><code>src/02-ARCHITECTURE.md</code></td><td><code>src/architecture/*.md</code> (13 subsystem files)</td><td><code>02-ARCHITECTURE.md</code> (core invariants + routing table)</td></tr>
+<tr><td><code>src/17-PLAYER-FLOW.md</code></td><td><code>src/player-flow/*.md</code> (16 screen files)</td><td><code>17-PLAYER-FLOW.md</code> (UX principles + state machine + routing table)</td></tr>
 </tbody>
 </table>
 </div>
+<p><strong>Retrieval pattern:</strong> Read the index page (~500–800 tokens) to identify which sub-file to load, then load only that sub-file (~2k–12k tokens). Never load the full original content unless doing a cross-cutting audit.</p>
 <hr>
 <h2 id="decision-capsule-standard-pointer"><a class="header" href="#decision-capsule-standard-pointer">Decision Capsule Standard (Pointer)</a></h2>
 <p>For better RAG summaries and lower retrieval cost, add a short <strong>Decision Capsule</strong> near the top of each decision (or decision file).</p>

@@ -1,0 +1,1009 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>D070 — Asymmetric Co-op - Iron Curtain — Design Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Design docs for a Rust-native Red Alert RTS engine">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../../css/general-2459343d.css">
+        <link rel="stylesheet" href="../../css/chrome-ae938929.css">
+        <link rel="stylesheet" href="../../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../../searchindex-61d2369b.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../../toc-1553b04b.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Iron Curtain — Design Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs/edit/main/src/decisions/09d/D070-asymmetric-coop.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h2 id="d070-asymmetric-co-op-mode--commander--field-ops-ic-native-template-toolkit"><a class="header" href="#d070-asymmetric-co-op-mode--commander--field-ops-ic-native-template-toolkit">D070: Asymmetric Co-op Mode — Commander &amp; Field Ops (IC-Native Template Toolkit)</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th></th><th></th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Status</strong></td><td>Accepted</td></tr>
+<tr><td><strong>Phase</strong></td><td>Phase 6b design/tooling integration (template + authoring/UX spec), post-6b prototype/playtest validation, future expansion for campaign wrappers and PvP variants</td></tr>
+<tr><td><strong>Depends on</strong></td><td>D006 (NetworkModel), D010 (snapshots), D012 (order validation), D021 (campaigns, later optional wrapper), D030/D049 (Workshop packaging), D038 (Scenario Editor templates + validation), D059 (communication), D065 (onboarding/controls), D066 (export fidelity warnings)</td></tr>
+<tr><td><strong>Driver</strong></td><td>There is a compelling co-op pattern where one player runs macro/base-building and support powers while another (or several others) execute frontline/behind-enemy-lines objectives. IC already has most building blocks; formalizing this as an IC-native template/toolkit enables it cleanly.</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="decision-capsule-llmrag-summary"><a class="header" href="#decision-capsule-llmrag-summary">Decision Capsule (LLM/RAG Summary)</a></h3>
+<ul>
+<li><strong>Status:</strong> Accepted</li>
+<li><strong>Phase:</strong> Prototype/spec first, built-in template/tooling after co-op playtest validation</li>
+<li><strong>Canonical for:</strong> Asymmetric Commander + Field Ops co-op mode scope, role boundaries, request/support coordination model, v1 constraints, and phasing</li>
+<li><strong>Scope:</strong> IC-native scenario/game-mode template + authoring toolkit + role HUD/communication requirements; not engine-core simulation specialization</li>
+<li><strong>Decision:</strong> IC supports an optional <strong>Commander &amp; Field Ops</strong> asymmetric co-op mode as a built-in IC-native template/toolkit with <strong>PvE-first</strong>, <strong>shared battlefield first</strong>, <strong>match-based field progression first</strong>, and <strong>mostly split role control ownership</strong>.</li>
+<li><strong>Why:</strong> The mode fits IC’s strengths (D038 scenarios, D059 communication, D065 onboarding, D021 campaign extensibility) and provides a high-creativity co-op mode without breaking engine invariants.</li>
+<li><strong>Non-goals:</strong> New engine-core simulation mode, true concurrent nested sub-map runtime instances in v1, immediate ranked/competitive asymmetric PvP, mandatory hero-campaign persistence for v1.</li>
+<li><strong>Invariants preserved:</strong> Same deterministic sim and <code>PlayerOrder</code> pipeline, same pluggable netcode/input boundaries, no game-specific engine-core assumptions. Role-scoped control boundaries are enforced by D012’s order validation layer — orders targeting entities outside a player’s assigned <code>ControlScopeRef</code> are rejected deterministically. All support request approvals, denials, and status transitions that affect sim state flow through the <code>PlayerOrder</code> pipeline; UI-only status hints (e.g., “pending” display) may be client-local. Request anti-spam cooldowns are sim-enforced (via D012 order validation rate checks) to prevent modified-client spam.</li>
+<li><strong>Defaults / UX behavior:</strong> v1 is <code>1 Commander + 1 FieldOps</code> tuned, PvE-first, same-map with optional authored portal micro-ops, role-critical interactions always visible + shortcut-accessible.</li>
+<li><strong>Compatibility / Export impact:</strong> IC-native feature set; D066 should warn/block RA1/OpenRA export for asymmetric role HUD/permission/support patterns beyond simple scripted approximations.</li>
+<li><strong>Public interfaces / types:</strong> <code>AsymCoopModeConfig</code>, <code>AsymRoleSlot</code>, <code>RoleAwareObjective</code>, <code>SupportRequest</code>, <code>SupportRequestUpdate</code>, <code>MatchFieldProgressionConfig</code>, <code>PortalOpsPolicy</code></li>
+<li><strong>Affected docs:</strong> <code>src/decisions/09f-tools.md</code>, <code>src/decisions/09g-interaction.md</code>, <code>src/17-PLAYER-FLOW.md</code>, <code>src/decisions/09c-modding.md</code>, <code>src/decisions/09e-community.md</code>, <code>src/modding/campaigns.md</code></li>
+<li><strong>Revision note summary:</strong> None</li>
+<li><strong>Keywords:</strong> asymmetric co-op, commander ops, field ops, support requests, role HUDs, joint objectives, portal micro-ops, PvE co-op template</li>
+</ul>
+<h3 id="problem"><a class="header" href="#problem">Problem</a></h3>
+<p>Classic RTS co-op usually means “two players play the same base-builder role.” That works, but it misses a different style of co-op fantasy:</p>
+<ul>
+<li>one player commands the war effort (macro/base/production/support)</li>
+<li>another player runs a tactical squad (frontline or infiltration ops)</li>
+<li>both must coordinate timing, resources, and objectives to win</li>
+</ul>
+<p>IC can support this without adding a new engine mode because the required pieces already exist or are planned:</p>
+<ul>
+<li>D038 scenario templates + modules + per-player objectives + co-op slots</li>
+<li>D059 pings/chat/voice/markers</li>
+<li>D065 role-aware onboarding and quick reference</li>
+<li>D038 <code>Map Segment Unlock</code> and <code>Sub-Scenario Portal</code> for multi-phase and infiltration flow</li>
+<li>D021 campaign state for future persistent variants</li>
+</ul>
+<p>The missing piece is a <strong>canonical design contract</strong> so these scenarios are consistent, testable, and discoverable.</p>
+<h3 id="decision"><a class="header" href="#decision">Decision</a></h3>
+<p>Define a built-in IC-native template family (working name):</p>
+<ul>
+<li><strong>Commander &amp; Field Ops Co-op</strong></li>
+</ul>
+<p>This is an IC-native <strong>scenario/game-mode template + authoring toolkit</strong>. It is <strong>not</strong> a new engine-core simulation mode.</p>
+<h4 id="player-facing-naming-d070-naming-guidance"><a class="header" href="#player-facing-naming-d070-naming-guidance">Player-facing naming (D070 naming guidance)</a></h4>
+<ul>
+<li><strong>Canonical/internal spec name:</strong> <code>Commander &amp; Field Ops</code> (used in D070 schemas/docs/tooling)</li>
+<li><strong>Player-facing recommended name:</strong> <code>Commander &amp; SpecOps</code></li>
+<li><strong>Acceptable community aliases:</strong> <code>Commando Skirmish</code>, <code>Joint Ops</code>, <code>Plus Commando</code> (Workshop tags / server names), but official UI should prefer one stable label for onboarding and matchmaking discoverability</li>
+</ul>
+<p><strong>Why split naming:</strong> “Field Ops” is a good systems label (broad enough for Tanya/Spy/Engineer squads, artillery detachments, VIP escorts, etc.). “SpecOps” is a clearer and more exciting player-facing fantasy.</p>
+<h4 id="d070-player-facing-naming-matrix-official-names-vs-aliases"><a class="header" href="#d070-player-facing-naming-matrix-official-names-vs-aliases">D070 Player-Facing Naming Matrix (official names vs aliases)</a></h4>
+<p>Use one <strong>stable official UI name</strong> per mode for onboarding/discoverability, while still accepting community aliases in Workshop tags, server names, and discussions.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Mode Family</th><th>Canonical / Internal Spec Name</th><th>Official Player-Facing Name (Recommended)</th><th>Acceptable Community Aliases</th><th>Notes</th></tr>
+</thead>
+<tbody>
+<tr><td>Asymmetric co-op (D070 baseline)</td><td><code>Commander &amp; Field Ops</code></td><td><code>Commander &amp; SpecOps</code></td><td><code>Commando Skirmish</code>, <code>Joint Ops</code>, <code>Plus Commando</code></td><td>Keep one official UI label for lobby/browser/tutorial text</td></tr>
+<tr><td>Commander-avatar assassination (D070-adjacent)</td><td><code>Commander Avatar (Assassination)</code></td><td><code>Assassination Commander</code></td><td><code>Commander Hunt</code>, <code>Kill the Commander</code>, <code>TA-Style Assassination</code></td><td>High-value battlefield commander; death policy must be shown clearly</td></tr>
+<tr><td>Commander-avatar soft influence (D070-adjacent)</td><td><code>Commander Avatar (Presence)</code></td><td><code>Commander Presence</code></td><td><code>Frontline Commander</code>, <code>Command Aura</code>, <code>Forward Command</code></td><td>Prefer soft influence framing over hard control-radius wording</td></tr>
+<tr><td>Commando survival variant (experimental)</td><td><code>Last Commando Standing</code></td><td><code>Last Commando Standing</code></td><td><code>SpecOps Survival</code>, <code>Commando Survival</code></td><td>Experimental/prototype label should remain visible in first-party UI while in test phase</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Naming rule:</strong> avoid leading first-party UI copy with generic trend labels (e.g., “battle royale”). Describe the mode in IC/RTS terms first, and let the underlying inspiration be implicit.</p>
+<h4 id="v1-scope-locked"><a class="header" href="#v1-scope-locked">v1 Scope (Locked)</a></h4>
+<ul>
+<li><strong>PvE-first</strong></li>
+<li><strong>Shared battlefield first</strong> (same map)</li>
+<li><strong>Optional <code>Sub-Scenario Portal</code> micro-ops</strong></li>
+<li><strong>Match-based field progression</strong> (session-local, no campaign persistence required)</li>
+<li><strong>Mostly split control ownership</strong></li>
+<li><strong>Flexible role slot schema</strong>, but first-party missions are tuned for <code>1 Commander + 1 FieldOps</code></li>
+</ul>
+<h3 id="core-loop-v1-pve"><a class="header" href="#core-loop-v1-pve">Core Loop (v1 PvE)</a></h3>
+<h4 id="commander-role"><a class="header" href="#commander-role">Commander role</a></h4>
+<ul>
+<li>builds and expands base</li>
+<li>manages economy and production</li>
+<li>allocates strategic support (CAS, recon, reinforcements, extraction windows, etc.)</li>
+<li>responds to Field Ops requests</li>
+<li>advances strategic and joint objectives</li>
+</ul>
+<h4 id="field-ops-role"><a class="header" href="#field-ops-role">Field Ops role</a></h4>
+<ul>
+<li>controls an assigned squad / special task force</li>
+<li>executes tactical objectives (sabotage, rescue, infiltration, capture, scouting)</li>
+<li>requests support, reinforcements, or resources from Commander</li>
+<li>unlocks opportunities for Commander objectives (e.g., disable AA, open route, mark target)</li>
+</ul>
+<p><strong>Victory design rule:</strong> win conditions should be driven by <strong>joint objective chains</strong>, not only “destroy enemy base.”</p>
+<h3 id="specops-task-catalog-v1-authoring-taxonomy"><a class="header" href="#specops-task-catalog-v1-authoring-taxonomy">SpecOps Task Catalog (v1 Authoring Taxonomy)</a></h3>
+<p>D070 scenarios should draw SpecOps objectives from a reusable task catalog so the mode feels consistent and the Commander can quickly infer the likely war-effort reward.</p>
+<h4 id="recommended-v1-task-categories-specops--field-ops"><a class="header" href="#recommended-v1-task-categories-specops--field-ops">Recommended v1 task categories (SpecOps / Field Ops)</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Task Category</th><th>Example SpecOps Objectives</th><th>Typical War-Effort Reward (Commander/Team)</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Economy / Logistics</strong></td><td>Raid depots, steal credits, hijack/capture harvesters, ambush supply convoys</td><td>Credits/requisition, enemy income delay, allied convoy bonus</td></tr>
+<tr><td><strong>Power Grid</strong></td><td>Sabotage power plants, overload substations, capture power relays</td><td>Enemy low power, defense shutdowns, production slowdown</td></tr>
+<tr><td><strong>Tech / Research</strong></td><td>Infiltrate labs, steal prototype plans, extract scientists/engineers</td><td>Unlock support ability, upgrade, intel, temporary tech access</td></tr>
+<tr><td><strong>Expansion Enablement</strong></td><td>Clear mines/AA/turrets from a future base site, secure an LZ/construction zone</td><td>Safe second-base location, faster expansion timing, reduced setup cost</td></tr>
+<tr><td><strong>Superweapon Denial</strong></td><td>Disable radar uplink, destroy charge relays, sabotage fuel/ammo systems, hack launch control</td><td>Delay charge, targeting disruption, temporary superweapon lockout</td></tr>
+<tr><td><strong>Terrain / Route Control</strong></td><td>Destroy/repair bridges, open/close gates, collapse tunnels, activate lifts</td><td>Route denial, flank opening, timed attack corridor, defensive delay</td></tr>
+<tr><td><strong>Infiltration / Sabotage</strong></td><td>Enter base, hack command post, plant charges, disrupt comms</td><td>Objective unlock, enemy debuffs, shroud/intel changes</td></tr>
+<tr><td><strong>Rescue / Extraction</strong></td><td>Rescue VIPs/civilians/defectors, escort assets to extraction</td><td>Bonus funds, faction support, tech intel, campaign flags (via D021 persistent state)</td></tr>
+<tr><td><strong>Recon / Target Designation</strong></td><td>Scout hidden batteries, laser-designate targets, mark convoy routes</td><td>Commander gets accurate CAS/artillery windows, map reveals</td></tr>
+<tr><td><strong>Counter-SpecOps (proposal-only, post-v1 PvP variant)</strong></td><td>Defend your own power/tech sites from infiltrators</td><td>Prevent enemy bonuses, protect superweapon/expansion tempo</td></tr>
+</tbody>
+</table>
+</div>
+<h4 id="design-rule-side-missions-must-matter-to-the-main-war"><a class="header" href="#design-rule-side-missions-must-matter-to-the-main-war">Design rule: side missions must matter to the main war</a></h4>
+<p>A SpecOps task should usually produce one of these outcome types:</p>
+<ul>
+<li><strong>Economic shift</strong> (credits, income delay, requisition)</li>
+<li><strong>Capability shift</strong> (unlock/disable support, tech, production)</li>
+<li><strong>Map-state shift</strong> (new route, segment unlock, expansion access)</li>
+<li><strong>Timing shift</strong> (delay superweapon, accelerate attack window)</li>
+<li><strong>Intel shift</strong> (vision, target quality, warning time)</li>
+</ul>
+<p>Avoid side missions that are exciting but produce no meaningful war-effort consequence.</p>
+<h3 id="role-boundaries-mostly-split-control"><a class="header" href="#role-boundaries-mostly-split-control">Role Boundaries (Mostly Split Control)</a></h3>
+<h4 id="commander-owns"><a class="header" href="#commander-owns">Commander owns</a></h4>
+<ul>
+<li>base structures</li>
+<li>production queues and strategic economy actions</li>
+<li>strategic support powers and budget allocation</li>
+<li>reinforcement routing/spawn authorization (as authored by the scenario)</li>
+</ul>
+<h4 id="field-ops-owns"><a class="header" href="#field-ops-owns">Field Ops owns</a></h4>
+<ul>
+<li>assigned squad units</li>
+<li>field abilities / local tactical actions</li>
+<li>objective interactions (hack, sabotage, rescue, extraction, capture)</li>
+</ul>
+<h4 id="shared--explicit-handoff-only"><a class="header" href="#shared--explicit-handoff-only">Shared / explicit handoff only</a></h4>
+<ul>
+<li>support requests</li>
+<li>reinforcement requests</li>
+<li>temporary unit attachment/detachment</li>
+<li>mission-scripted overrides (e.g., Commander triggers gate after Field Ops hack)</li>
+</ul>
+<p><strong>Non-goal (v1):</strong> broad shared control over all units.</p>
+<h3 id="casual-join-in--role-fill-behavior-player-facing-co-op"><a class="header" href="#casual-join-in--role-fill-behavior-player-facing-co-op">Casual Join-In / Role Fill Behavior (Player-Facing Co-op)</a></h3>
+<p>One of D070’s core use cases is letting a player join a commander as a dedicated SpecOps leader because commandos are often too attention-intensive for a macro-focused RTS player to use well during normal skirmish.</p>
+<h4 id="v1-policy-casualcustom-first"><a class="header" href="#v1-policy-casualcustom-first">v1 policy (casual/custom first)</a></h4>
+<ul>
+<li>D070 scenarios/templates may expose open <code>FieldOps</code> role slots that a player can join before match start</li>
+<li>Casual/custom hosts may also allow <strong>drop-in</strong> to an unoccupied <code>FieldOps</code> slot mid-match (scenario/host policy)</li>
+<li>If no human fills the role, fallback is scenario-authored:
+<ul>
+<li>AI control</li>
+<li>slot disabled + alternate objectives</li>
+<li>simplified support-only role</li>
+</ul>
+</li>
+</ul>
+<p><strong>Non-goal (v1):</strong> ranked/asymmetric queueing rules for mid-match role joins.</p>
+<h3 id="map-and-mission-flow-v1"><a class="header" href="#map-and-mission-flow-v1">Map and Mission Flow (v1)</a></h3>
+<h4 id="shared-battlefield-default"><a class="header" href="#shared-battlefield-default">Shared battlefield (default)</a></h4>
+<p>The primary play space is one battlefield with authored objective channels:</p>
+<ul>
+<li><strong>Strategic</strong> (Commander-facing)</li>
+<li><strong>Field</strong> (Field Ops-facing)</li>
+<li><strong>Joint</strong> (coordination required)</li>
+</ul>
+<p>Missions should use D038 <code>Map Segment Unlock</code> for phase transitions where appropriate.</p>
+<h4 id="optional-infiltrationinterior-micro-ops-d038-sub-scenario-portal"><a class="header" href="#optional-infiltrationinterior-micro-ops-d038-sub-scenario-portal">Optional infiltration/interior micro-ops (D038 <code>Sub-Scenario Portal</code>)</a></h4>
+<p><code>Sub-Scenario Portal</code> is the v1 way to support “enter structure / run commando micro-op” moments.</p>
+<p>v1 contract:</p>
+<ul>
+<li>portal sequences are <strong>authored optional micro-scenarios</strong></li>
+<li><strong>no true concurrent nested runtime instances</strong> are required</li>
+<li>portal exits can trigger objective updates, reinforcements, debuffs, or segment unlocks</li>
+<li>commander may use an authored <strong>Support Console</strong> panel during portal ops, but this is optional content (not a mandatory runtime feature for all portals)</li>
+</ul>
+<h3 id="match-based-field-progression-v1"><a class="header" href="#match-based-field-progression-v1">Match-Based Field Progression (v1)</a></h3>
+<p>Field progression in v1 is <strong>session-local</strong>:</p>
+<ul>
+<li>squad templates / composition presets</li>
+<li>requisition upgrades</li>
+<li>limited field role upgrades (stealth/demo/medic/etc.)</li>
+<li>support unlocks earned during the match</li>
+</ul>
+<p>This keeps onboarding and balance manageable for co-op skirmish scenarios.</p>
+<p><strong>Later extension:</strong> D021 campaign wrappers may layer persistent squad/hero progression on top (optional “Ops Campaign” style experiences).</p>
+<h3 id="coordination-layer-d059-integration-requirement"><a class="header" href="#coordination-layer-d059-integration-requirement">Coordination Layer (D059 Integration Requirement)</a></h3>
+<p>D070 depends on D059 providing role-aware coordination presets and request lifecycle UI.</p>
+<p>Minimum v1 coordination surfaces:</p>
+<ul>
+<li>Field Ops request wheel / quick actions:
+<ul>
+<li><code>Need Reinforcements</code></li>
+<li><code>Need CAS</code></li>
+<li><code>Need Recon</code></li>
+<li><code>Need Extraction</code></li>
+<li><code>Need Funds / Requisition</code></li>
+<li><code>Objective Complete</code></li>
+</ul>
+</li>
+<li>Commander response shortcuts:
+<ul>
+<li><code>Approved</code></li>
+<li><code>Denied</code></li>
+<li><code>On Cooldown</code></li>
+<li><code>ETA</code></li>
+<li><code>Marking LZ</code></li>
+<li><code>Hold Position</code></li>
+</ul>
+</li>
+<li>Typed pings/markers for LZs, CAS targets, recon sectors, extraction points</li>
+<li>Request status lifecycle UI: pending / approved / queued / inbound / failed / cooldown</li>
+</ul>
+<p><strong>Normative UX rule:</strong> Every role-critical interaction must have both a shortcut path and a visible UI path.</p>
+<h3 id="commanderspecops-request-economy-v1"><a class="header" href="#commanderspecops-request-economy-v1">Commander/SpecOps Request Economy (v1)</a></h3>
+<p>The request/response loop must be strategic, not spammy. D070 therefore defines a <strong>request economy</strong> layered over D059’s communication surfaces.</p>
+<h4 id="core-request-economy-rules-v1"><a class="header" href="#core-request-economy-rules-v1">Core request-economy rules (v1)</a></h4>
+<ul>
+<li><strong>Requests are free to ask, not free to execute.</strong> Field Ops can request support quickly; Commander approval consumes real resources/cooldowns/budget if executed.</li>
+<li><strong>Commander actions are gated by authored support rules.</strong> CAS/recon/reinforcements/extraction are constrained by cooldowns, budget, prerequisites, and availability windows.</li>
+<li><strong>Requests can be queued and denied with reasons.</strong> “No” is valid and should be visible (<code>cooldown</code>, <code>insufficient funds</code>, <code>not unlocked</code>, <code>out of range</code>, <code>unsafe LZ</code>, etc.).</li>
+<li><strong>Request urgency is a hint, not a bypass.</strong> Urgent requests rise in commander UI priority but do not skip gameplay costs.</li>
+</ul>
+<h4 id="anti-spam--clarity-guardrails"><a class="header" href="#anti-spam--clarity-guardrails">Anti-spam / clarity guardrails</a></h4>
+<ul>
+<li>duplicate request collapsing (same type + same target window)</li>
+<li>per-field-team request cooldowns for identical asks (configurable, short)</li>
+<li>commander-side quick responses (<code>On Cooldown</code>, <code>ETA</code>, <code>Hold</code>, <code>Denied</code>) to reduce chat noise</li>
+<li>request queue prioritization by urgency + objective channel (<code>Joint</code> &gt; <code>Field</code> side tasks by default, configurable)</li>
+</ul>
+<h4 id="reward-split-rule-v1"><a class="header" href="#reward-split-rule-v1">Reward split rule (v1)</a></h4>
+<p>When a SpecOps task succeeds, rewards should be <strong>explicitly split</strong> or categorized so both roles understand the outcome:</p>
+<ul>
+<li>team-wide reward (e.g., bridge destroyed, superweapon delayed)</li>
+<li>commander-side reward (credits, expansion access, support unlock)</li>
+<li>field-side reward (requisition points, temporary gear, squad upgrade unlock)</li>
+</ul>
+<p>This keeps the mode from feeling like “Commander gets everything” or “SpecOps is a disconnected mini-game.”</p>
+<h3 id="optional-pacing-layer-operational-momentum-one-more-phase-effect"><a class="header" href="#optional-pacing-layer-operational-momentum-one-more-phase-effect">Optional Pacing Layer: Operational Momentum (“One More Phase” Effect)</a></h3>
+<p>RTS does not have Civilization-style turns, but D070 scenarios can still create a similar <strong>“one more turn” pull</strong> by chaining near-term rewards into visible medium-term and long-term strategic payoffs. In IC terms, this is an optional pacing layer called <strong>Operational Momentum</strong> (internal shorthand: <strong>“one more phase”</strong>).</p>
+<h4 id="core-design-goal"><a class="header" href="#core-design-goal">Core design goal</a></h4>
+<p>Create the feeling that:</p>
+<ul>
+<li>one more objective is almost complete,</li>
+<li>completing it unlocks a meaningful strategic advantage,</li>
+<li>and that advantage opens the next near-term opportunity.</li>
+</ul>
+<p>This should feel like strategic momentum, not checklist grind.</p>
+<h4 id="three-horizon-pacing-model-recommended"><a class="header" href="#three-horizon-pacing-model-recommended">Three-horizon pacing model (recommended)</a></h4>
+<p>D070 missions using Operational Momentum should expose progress at three time horizons:</p>
+<ul>
+<li><strong>Immediate (10-30s):</strong> survive engagement, mark target, hack terminal, hold LZ, escort VIP to extraction point</li>
+<li><strong>Operational (1-3 min):</strong> disable AA battery, secure relay, clear expansion site, escort convoy, steal codes</li>
+<li><strong>Strategic (5-15 min):</strong> superweapon delay, command-network expansion, support unlock chain, route control, phase breakthrough</li>
+</ul>
+<p>The “one more phase” effect emerges when these horizons are linked and visible.</p>
+<h4 id="war-effort--ops-agenda-board-recommended-ui-concept"><a class="header" href="#war-effort--ops-agenda-board-recommended-ui-concept">War-Effort / Ops Agenda board (recommended UI concept)</a></h4>
+<p>D070 scenarios may define a visible <strong>Operational Agenda</strong> (aka <strong>War-Effort Board</strong>) that tracks 3-5 authored progress lanes, for example:</p>
+<ul>
+<li><code>Economy</code></li>
+<li><code>Power</code></li>
+<li><code>Intel</code></li>
+<li><code>Command Network</code></li>
+<li><code>Superweapon Denial</code></li>
+</ul>
+<p>Each lane contains authored milestones with explicit rewards (for example: <code>Recon Sweep unlocked</code>, <code>AA disabled for 90s</code>, <code>Forward LZ unlocked</code>, <code>Enemy charge delayed +2:00</code>). The board should make the next meaningful payoff obvious without overwhelming the player.</p>
+<h4 id="design-rules-normative-v1"><a class="header" href="#design-rules-normative-v1">Design rules (normative, v1)</a></h4>
+<ul>
+<li>Operational Momentum is an <strong>optional authored pacing layer</strong>, not a requirement for every D070 mission.</li>
+<li>Rewards must be <strong>war-effort meaningful</strong> (economy/power/tech/map-state/timing/intel), not cosmetic score-only filler.</li>
+<li>The system must create <strong>genuine interdependence</strong>, not fake dependency (Commander and Field Ops should each influence at least one agenda lane in co-op variants).</li>
+<li>Objective chains should create “just one more operation” tension without removing clear stopping points.</li>
+<li>“Stay longer for one more objective” decisions are good; hidden mandatory chains are not.</li>
+<li>Avoid timer overload: only the most relevant near-term and next strategic milestone should be foregrounded at once.</li>
+</ul>
+<h4 id="extraction-vs-stay-riskreward-optional-d070-pattern"><a class="header" href="#extraction-vs-stay-riskreward-optional-d070-pattern">Extraction-vs-stay risk/reward (optional D070 pattern)</a></h4>
+<p>Operational Momentum pairs especially well with authored <strong>Extraction vs Stay Longer</strong> decisions:</p>
+<ul>
+<li>extract now = secure current gains safely</li>
+<li>stay for one more objective/cache/relay = higher reward, higher risk</li>
+</ul>
+<p>This is a strong source of replayable tension and should be surfaced explicitly in UI (<code>reward</code>, <code>risk</code>, <code>time pressure</code>) rather than left implicit.</p>
+<h4 id="snowball--anti-fun-guardrails"><a class="header" href="#snowball--anti-fun-guardrails">Snowball / anti-fun guardrails</a></h4>
+<p>To avoid a runaway “winner wins harder forever” loop:</p>
+<ul>
+<li>prefer <strong>bounded</strong> tactical advantages and timed windows over permanent exponential buffs</li>
+<li>keep some comeback-capable objectives valuable for trailing teams/players</li>
+<li>ensure momentum rewards improve options, not instantly auto-win the match</li>
+<li>keep failure in one lane from hard-locking all future agenda progress unless explicitly authored as a high-stakes mission</li>
+</ul>
+<h4 id="d021-campaign-wrapper-synergy-optional-later-extension"><a class="header" href="#d021-campaign-wrapper-synergy-optional-later-extension">D021 campaign wrapper synergy (optional later extension)</a></h4>
+<p>In <code>Ops Campaign</code> wrappers (D021), Operational Momentum can bridge mission-to-mission pacing:</p>
+<ul>
+<li>campaign flags track which strategic lanes were advanced (<code>intel_chain_progress</code>, <code>command_network_tier</code>, <code>superweapon_delays_applied</code>)</li>
+<li>the next mission reacts with altered objectives, support availability, route options, or enemy readiness</li>
+</ul>
+<p>This preserves the “one more phase” feel across a mini-campaign without turning it into a full grand-strategy layer.</p>
+<h3 id="authoring-contract-d038-integration-requirement"><a class="header" href="#authoring-contract-d038-integration-requirement">Authoring Contract (D038 Integration Requirement)</a></h3>
+<p>The Scenario Editor (D038) should treat this as a <strong>template + toolkit</strong>, not a one-off scripted mode.</p>
+<p>Required authoring surfaces (v1):</p>
+<ul>
+<li>role slot definitions (<code>Commander</code>, <code>FieldOps</code>, future <code>CounterOps</code>, <code>Observer</code>)</li>
+<li>ownership/control-scope authoring (who controls which units/structures)</li>
+<li>role-aware objective channels (<code>Strategic</code>, <code>Field</code>, <code>Joint</code>)</li>
+<li>support catalog + requisition rules</li>
+<li>optional <strong>Operational Momentum / Agenda Board</strong> lanes, milestones, reward hooks, and extraction-vs-stay prompts</li>
+<li>request/response simulation in Preview/Test</li>
+<li>portal micro-op integration (using existing D038 portal tooling)</li>
+<li>validation profile for asymmetric missions</li>
+</ul>
+<h4 id="v1-authoring-validation-rules-normative"><a class="header" href="#v1-authoring-validation-rules-normative">v1 authoring validation rules (normative)</a></h4>
+<ul>
+<li>both roles must have meaningful actions within the first ~90 seconds</li>
+<li>every request type used by objectives must map to at least one commander action path</li>
+<li>joint objectives must declare role contributions explicitly</li>
+<li>portal micro-ops require timeout/failure return behavior</li>
+<li>no progression-critical hidden chat syntax</li>
+<li>role HUDs must expose shared mission status and teammate state</li>
+<li>if Operational Momentum is enabled, each lane milestone must declare explicit rewards and role visibility</li>
+<li>warn on foreground HUD overload (too many concurrent timers/counters/agenda milestones)</li>
+</ul>
+<h3 id="public-interfaces--type-sketches-spec-level"><a class="header" href="#public-interfaces--type-sketches-spec-level">Public Interfaces / Type Sketches (Spec-Level)</a></h3>
+<p>These belong in gameplay/template/UI schema layers, not engine-core sim assumptions.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub enum AsymRoleKind {
+    Commander,
+    FieldOps,
+    CounterOps, // proposal-only: deferred asymmetric PvP / defense variants (post-v1, not scheduled)
+    Observer,
+}
+
+pub struct AsymRoleSlot {
+    pub slot_id: String,
+    pub role: AsymRoleKind,
+    pub min_players: u8,
+    pub max_players: u8,
+    pub control_scope: ControlScopeRef,
+    pub ui_profile: String,  // e.g. "commander_hud", "field_ops_hud"
+    pub comm_preset: String, // D059 role comm preset
+}
+
+pub struct AsymCoopModeConfig {
+    pub id: String,
+    pub version: u32,
+    pub slots: Vec&lt;AsymRoleSlot&gt;,
+    pub role_permissions: Vec&lt;RolePermissionRule&gt;,
+    pub objective_channels: Vec&lt;ObjectiveChannelConfig&gt;,
+    pub requisition_rules: RequisitionRules,
+    pub support_catalog: Vec&lt;SupportAbilityConfig&gt;,
+    pub field_progression: MatchFieldProgressionConfig,
+    pub portal_ops_policy: PortalOpsPolicy,
+    pub operational_momentum: OperationalMomentumConfig, // optional pacing layer ("one more phase")
+}
+
+pub enum SupportRequestKind {
+    Reinforcements,
+    Airstrike,
+    CloseAirSupport,
+    ReconSweep,
+    Extraction,
+    ResourceDrop,
+    MedicalSupport,
+    DemolitionSupport,
+}
+
+pub struct SupportRequest {
+    pub request_id: u64,
+    pub from_player: PlayerId,
+    pub field_team_id: String,
+    pub kind: SupportRequestKind,
+    pub target: SupportTargetRef,
+    pub urgency: RequestUrgency,
+    pub note: Option&lt;String&gt;,
+    pub created_at_tick: u32,
+}
+
+pub enum SupportRequestStatus {
+    Pending,
+    Approved,
+    Denied,
+    Queued,
+    Inbound,
+    Completed,
+    Failed,
+    CooldownBlocked,
+}
+
+pub struct SupportRequestUpdate {
+    pub request_id: u64,
+    pub status: SupportRequestStatus,
+    pub responder: Option&lt;PlayerId&gt;,
+    pub eta_ticks: Option&lt;u32&gt;,
+    pub reason: Option&lt;String&gt;,
+}
+
+pub enum ObjectiveChannel {
+    Strategic,
+    Field,
+    Joint,
+    Hidden,
+}
+
+pub struct RoleAwareObjective {
+    pub id: String,
+    pub channel: ObjectiveChannel,
+    pub visible_to_roles: Vec&lt;AsymRoleKind&gt;,
+    pub completion_credit_roles: Vec&lt;AsymRoleKind&gt;,
+    pub dependencies: Vec&lt;String&gt;,
+    pub rewards: Vec&lt;ObjectiveReward&gt;,
+}
+
+pub struct MatchFieldProgressionConfig {
+    pub enabled: bool,
+    pub squad_templates: Vec&lt;SquadTemplateId&gt;,
+    pub requisition_currency: String,
+    pub upgrade_tiers: Vec&lt;FieldUpgradeTier&gt;,
+    pub respawn_policy: FieldRespawnPolicy,
+    pub session_only: bool, // true in v1
+}
+
+pub enum ParentBattleBehavior {
+    Paused,         // parent sim pauses during portal micro-op (simplest, deterministic)
+    ContinueAi,     // parent sim continues with AI auto-resolve (authored, deterministic)
+}
+
+pub enum PortalOpsPolicy {
+    Disabled,
+    OptionalMicroOps {
+        max_duration_sec: u16,
+        commander_support_console: bool,
+        parent_sim_behavior: ParentBattleBehavior,
+    },
+    // True concurrent nested runtime instances intentionally deferred.
+}
+
+pub enum MomentumRewardCategory {
+    Economy,
+    Power,
+    Intel,
+    CommandNetwork,
+    SuperweaponDelay,
+    RouteControl,
+    SupportUnlock,
+    SquadUpgrade,
+    TemporaryWindow,
+}
+
+pub struct MomentumMilestone {
+    pub id: String,
+    pub lane_id: String,
+    pub visible_to_roles: Vec&lt;AsymRoleKind&gt;,
+    pub progress_target: u32,
+    pub reward_category: MomentumRewardCategory,
+    pub reward_description: String,
+    pub duration_sec: Option&lt;u16&gt;, // for temporary windows/buffs/delays
+}
+
+pub struct OperationalMomentumConfig {
+    pub enabled: bool,
+    pub lanes: Vec&lt;String&gt;, // e.g. economy/power/intel/command_network/superweapon_denial
+    pub milestones: Vec&lt;MomentumMilestone&gt;,
+    pub foreground_limit: u8,           // UI guardrail; recommended small (2-3)
+    pub extraction_vs_stay_enabled: bool,
+}
+<span class="boring">}</span></code></pre>
+<h3 id="experimental-d070-adjacent-variant-last-commando-standing-specops-survival"><a class="header" href="#experimental-d070-adjacent-variant-last-commando-standing-specops-survival">Experimental D070-Adjacent Variant: Last Commando Standing (<code>SpecOps Survival</code>)</a></h3>
+<p>D070 also creates a natural experimental variant: a <strong>SpecOps-focused survival / last-team-standing</strong> mode where each player (or squad) fields a commando-led team and fights to survive while contesting neutral objectives.</p>
+<p>This is <strong>not</strong> the D070 baseline and should not delay the Commander/Field Ops co-op path. It is a <strong>prototype-first D070-adjacent template</strong> that reuses D070 building blocks:</p>
+<ul>
+<li>Field Ops-style squad control and match-based progression concepts</li>
+<li>SpecOps Task Catalog categories (economy/power/tech/route/intel objectives)</li>
+<li>D038 phase/hazard scripting and <code>Map Segment Unlock</code></li>
+<li>D059 communication/pings (and optional support requests if the scenario includes support powers)</li>
+</ul>
+<h4 id="player-facing-naming-guidance-experimental"><a class="header" href="#player-facing-naming-guidance-experimental">Player-facing naming guidance (experimental)</a></h4>
+<ul>
+<li><strong>Recommended player-facing names:</strong> <code>Last Commando Standing</code>, <code>SpecOps Survival</code></li>
+<li>Avoid marketing it as a generic “battle royale” mode in first-party UI; the fantasy should stay RTS/Red-Alert-first.</li>
+</ul>
+<h4 id="v1-experimental-mode-contract-prototype-scope"><a class="header" href="#v1-experimental-mode-contract-prototype-scope">v1 experimental mode contract (prototype scope)</a></h4>
+<ul>
+<li>Small-to-medium player counts (prototype scale, not mass BR scale)</li>
+<li>Each player/team starts with:
+<ul>
+<li>one elite commando / hero-like operative</li>
+<li>a small support squad (author-configured)</li>
+</ul>
+</li>
+<li>Objective: <strong>last team standing</strong>, with optional score/time variants for custom servers</li>
+<li>Neutral AI-guarded objectives and caches provide warfighting advantages</li>
+<li>Short rounds are preferred for early playtests (clarity &gt; marathon runtime)</li>
+</ul>
+<p><strong>Non-goals (v1 experiment):</strong></p>
+<ul>
+<li>50-100 player scale</li>
+<li>deep loot-inventory simulation</li>
+<li>mandatory persistent between-match progression</li>
+<li>ranked/competitive queueing before fun/clarity is proven</li>
+</ul>
+<h4 id="hazard-contraction-model-ra-flavored-shrinking-zone"><a class="header" href="#hazard-contraction-model-ra-flavored-shrinking-zone">Hazard contraction model (RA-flavored “shrinking zone”)</a></h4>
+<p>Instead of a generic circle-only battle royale zone, D070 experimental survival variants should prefer authored IC/RA-themed hazard contraction patterns:</p>
+<ul>
+<li>radiation storm sectors</li>
+<li>artillery saturation zones</li>
+<li>chrono distortion / instability fields</li>
+<li>firestorm / gas spread</li>
+<li>power-grid blackout sectors affecting vision/support</li>
+</ul>
+<p>Design rules:</p>
+<ul>
+<li>hazard phases must be deterministic and replay-safe (scripted or seed-derived)</li>
+<li>hazard warnings must be telegraphed before activation (map markers, timers, EVA text, visual preview)</li>
+<li>hazard contraction should pressure movement and conflict, not cause unavoidable instant deaths without warning</li>
+<li>custom maps may use non-circular contraction shapes if readability remains clear</li>
+</ul>
+<h4 id="neutral-objective-catalog-survival-variant"><a class="header" href="#neutral-objective-catalog-survival-variant">Neutral objective catalog (survival variant)</a></h4>
+<p>Neutral objectives should reward tactical risk and create reasons to move, not just camp.</p>
+<p>Recommended v1 objective clusters:</p>
+<ul>
+<li><strong>Supply cache / depot raid</strong> -&gt; requisition / credits / ammo/consumables (if the scenario uses consumables)</li>
+<li><strong>Power node / relay</strong> -&gt; temporary shielded safe zone, radar denial, or support recharge bonus</li>
+<li><strong>Tech uplink / command terminal</strong> -&gt; recon sweep, target intel, temporary support unlock</li>
+<li><strong>Bridge / route control</strong> -&gt; route denial/opening, forced pathing shifts, ambush windows</li>
+<li><strong>Extraction / medevac point</strong> -&gt; squad recovery, reinforcement call opportunity, revive token (scenario-defined)</li>
+<li><strong>VIP rescue / capture</strong> -&gt; bonus requisition/intel or temporary faction support perk</li>
+<li><strong>Superweapon relay sabotage</strong> (optional high-tier event) -&gt; removes/limits a late-phase map threat or grants timing relief</li>
+</ul>
+<h4 id="reward-economy-survival-variant"><a class="header" href="#reward-economy-survival-variant">Reward economy (survival variant)</a></h4>
+<p>Rewards should be explicit and bounded to preserve tactical clarity:</p>
+<ul>
+<li><strong>Team requisition</strong> (buy squad upgrades / reinforcements / support consumables)</li>
+<li><strong>Temporary support charges</strong> (smoke, recon sweep, limited CAS, decoy drop)</li>
+<li><strong>Intel advantages</strong> (brief reveal, hazard forecast, cache reveal)</li>
+<li><strong>Field upgrades</strong> (speed/stealth/demo/medic tier improvements; match-only in v1)</li>
+<li><strong>Positioning advantages</strong> (temporary route access, defended outpost, extraction window)</li>
+</ul>
+<p>Guardrails:</p>
+<ul>
+<li>avoid snowball rewards that make early winners uncatchable</li>
+<li>prefer short-lived tactical advantages over permanent exponential scaling</li>
+<li>ensure at least some contested objectives remain valuable to trailing players</li>
+</ul>
+<h4 id="prototype-validation-metrics-before-promotion"><a class="header" href="#prototype-validation-metrics-before-promotion">Prototype validation metrics (before promotion)</a></h4>
+<p>D070 experimental survival variants should remain Workshop/prototype-first until these are tested:</p>
+<ul>
+<li>median round length (target band defined per map size; avoid excessive early downtime)</li>
+<li>time-to-first meaningful encounter</li>
+<li>elimination downtime (spectator/redeploy policy effectiveness)</li>
+<li>objective contest rate (are players moving, or camping?)</li>
+<li>hazard-related deaths vs combat-related deaths (hazard should pressure, not dominate)</li>
+<li>perceived agency/fun ratings for eliminated and surviving players</li>
+<li>clarity of reward effects (players can explain what a captured objective changed)</li>
+</ul>
+<p>If the prototype proves consistently fun and readable, it can be promoted to a first-class built-in template (still IC-native, not engine-core).</p>
+<h3 id="d070-adjacent-mode-family-commander-avatar-on-battlefield-assassination--commander-presence"><a class="header" href="#d070-adjacent-mode-family-commander-avatar-on-battlefield-assassination--commander-presence">D070-Adjacent Mode Family: Commander Avatar on Battlefield (<code>Assassination</code> / <code>Commander Presence</code>)</a></h3>
+<p>Another D070-adjacent direction that fits IC well is a <strong>Commander Avatar</strong> mode family inspired by Total Annihilation / Supreme Commander-style commander units: a high-value commander unit exists on the battlefield, and its position/survival materially affects the match.</p>
+<p>This should be treated as an <strong>optional IC-native mode/template family</strong>, not a default replacement for classic RA skirmish.</p>
+<h4 id="why-this-makes-sense-for-ic"><a class="header" href="#why-this-makes-sense-for-ic">Why this makes sense for IC</a></h4>
+<ul>
+<li>It creates tactical meaning for commander positioning without requiring a new engine-core mode.</li>
+<li>It composes naturally with D070’s role split (<code>Commander</code> + <code>SpecOps</code>) and support/request systems.</li>
+<li>It gives designers a place to use hero-like commander units without forcing hero gameplay into standard skirmish.</li>
+<li>It reuses existing IC building blocks: D038 templates, D059 communication/pings, D065 onboarding/Quick Reference, D021 campaign wrappers.</li>
+</ul>
+<h4 id="v1-recommendation-start-with-assassination-commander-not-hard-control-radius"><a class="header" href="#v1-recommendation-start-with-assassination-commander-not-hard-control-radius">v1 recommendation: start with <strong>Assassination Commander</strong>, not hard control radius</a></h4>
+<p>Start with a simple, proven variant:</p>
+<ul>
+<li>each player has a <strong>Commander Avatar</strong> unit (or equivalent named commander entity)</li>
+<li><strong>commander death = defeat</strong> (or authored “downed -&gt; rescue timer” variant)</li>
+<li>commander may have special build/support/command powers depending on the scenario/module</li>
+</ul>
+<p>This is easy to explain, easy to test, and creates immediate battlefield tension.</p>
+<h4 id="command-presence-soft-influence--preferred-over-hard-control-denial"><a class="header" href="#command-presence-soft-influence--preferred-over-hard-control-denial">Command Presence (soft influence) — preferred over hard control denial</a></h4>
+<p>A more advanced variant is <strong>Commander Presence</strong>: the commander avatar’s position provides tactical/strategic advantages, but does <strong>not</strong> hard-lock unit control outside a radius in v1.</p>
+<p>Preferred v1/v2 presence effects (soft, readable, and less frustrating):</p>
+<ul>
+<li>support ability availability/quality (CAS/recon radius, reduced error, shorter ETA)</li>
+<li>local radar/command uplink strength</li>
+<li>field repair / reinforcement call-in eligibility</li>
+<li>morale / reload / response bonuses near the commander (scenario-defined)</li>
+<li>local build/deploy speed bonuses (especially for forward bases/outposts)</li>
+</ul>
+<p><strong>Avoid in v1:</strong> “you cannot control units outside commander range.” Hard control denial often feels like input punishment and creates anti-fun edge cases in macro-heavy matches.</p>
+<h4 id="command-network-map-control-layer-high-value-extension"><a class="header" href="#command-network-map-control-layer-high-value-extension">Command Network map-control layer (high-value extension)</a></h4>
+<p>A Commander Avatar mode becomes much richer when paired with <strong>command network objectives</strong>:</p>
+<ul>
+<li>comm towers / uplinks / radar nodes</li>
+<li>forward command posts</li>
+<li>jammers / signal disruptors</li>
+<li>bridges and routes that affect commander movement/support timing</li>
+</ul>
+<p>This ties avatar positioning to map control and creates natural SpecOps tasks (sabotage, restore, hold, infiltrate).</p>
+<h4 id="risk--counterplay-guardrails-snipe-meta-prevention"><a class="header" href="#risk--counterplay-guardrails-snipe-meta-prevention">Risk / counterplay guardrails (snipe-meta prevention)</a></h4>
+<p>Commander Avatar modes are fun when the commander matters, but they can devolve into pure “commander snipe” gameplay if not designed carefully.</p>
+<p>Recommended guardrails:</p>
+<ul>
+<li>clear commander-threat warnings (D059 markers/EVA text)</li>
+<li>authored anti-snipe defenses / detectors / patrols / decoys</li>
+<li>optional <code>downed</code> or rescue-timer defeat policy in casual/co-op variants</li>
+<li>rewards for frontline commander presence (so hiding forever is suboptimal)</li>
+<li>multiple viable win paths (objective pressure + commander pressure), not snipe-only</li>
+</ul>
+<h4 id="d070--commander-avatar-synergy-commander--specops"><a class="header" href="#d070--commander-avatar-synergy-commander--specops">D070 + Commander Avatar synergy (Commander &amp; SpecOps)</a></h4>
+<p>This mode family composes especially well with D070:</p>
+<ul>
+<li>the Commander player has a battlefield avatar that matters</li>
+<li>the SpecOps player can escort, scout, or create openings for the Commander Avatar</li>
+<li>enemy SpecOps/counter-ops can threaten command networks and assassination windows</li>
+</ul>
+<p>This turns “protect the commander” into a real co-op role interaction instead of background flavor.</p>
+<h4 id="d021-composition-pattern-rescue-the-commander-mini-campaign-bootstrap"><a class="header" href="#d021-composition-pattern-rescue-the-commander-mini-campaign-bootstrap">D021 composition pattern: “Rescue the Commander” mini-campaign bootstrap</a></h4>
+<p>A strong campaign/mini-campaign pattern is:</p>
+<ol>
+<li><strong>SpecOps rescue mission</strong> (no base-building yet)
+<ul>
+<li>the commander is captured / isolated / missing</li>
+<li>the player controls a commando/squad to infiltrate and rescue them</li>
+</ul>
+</li>
+<li><strong>Commander recovered</strong> -&gt; campaign flag unlocks command capability
+<ul>
+<li>e.g., <code>Campaign.set_flag("commander_recovered", true)</code></li>
+</ul>
+</li>
+<li><strong>Follow-up mission(s)</strong> unlock:
+<ul>
+<li>base construction / production menus</li>
+<li>commander support powers</li>
+<li>commander avatar presence mechanics</li>
+<li>broader army coordination and reinforcement requests</li>
+</ul>
+</li>
+</ol>
+<p>This is a clean way to teach the player the mode in layers while making the commander feel narratively and mechanically important.</p>
+<p>Design rule:</p>
+<ul>
+<li>if command/building is gated behind commander rescue, the mission UI must explain the restriction clearly and show the unlock when it happens (no hidden “why can’t I build?” confusion).</li>
+</ul>
+<h4 id="d038-templatetooling-expectation-authoring-support"><a class="header" href="#d038-templatetooling-expectation-authoring-support">D038 template/tooling expectation (authoring support)</a></h4>
+<p>D038 should support this family as template/preset combinations, not hardcoded logic:</p>
+<ul>
+<li><strong>Assassination Commander</strong> preset (commander death policy + commander unit setup)</li>
+<li><strong>Commander Presence</strong> preset (soft influence profiles and command-network objective hooks)</li>
+<li>optional <strong>D070 Commander &amp; SpecOps + Commander Avatar</strong> combo preset</li>
+<li>validation for commander-death policy, commander spawn safety, and anti-snipe/readability warnings</li>
+</ul>
+<h4 id="spec-level-type-sketches-d070-adjacent"><a class="header" href="#spec-level-type-sketches-d070-adjacent">Spec-Level Type Sketches (D070-adjacent)</a></h4>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub enum CommanderAvatarMode {
+    Disabled,
+    Assassination,     // commander death = defeat (or authored downed policy)
+    Presence,          // commander provides soft influence bonuses
+    AssassinationPresence, // both
+}
+
+pub enum CommanderAvatarDeathPolicy {
+    ImmediateDefeat,
+    DownedRescueTimer { timeout_sec: u16 },
+    TeamVoteSurrenderWindow { timeout_sec: u16 },
+}
+
+pub struct CommanderPresenceRule {
+    pub effect_id: String,              // e.g. "cas_radius_bonus"
+    pub radius_cells: u16,
+    pub requires_command_network: bool,
+    pub value_curve: PresenceValueCurve, // authored falloff/profile
+}
+
+pub struct CommanderAvatarConfig {
+    pub mode: CommanderAvatarMode,
+    pub commander_unit_tag: String,      // named unit / archetype ref
+    pub death_policy: CommanderAvatarDeathPolicy,
+    pub presence_rules: Vec&lt;CommanderPresenceRule&gt;,
+    pub command_network_objectives: Vec&lt;String&gt;, // objective IDs / tags
+}
+<span class="boring">}</span></code></pre>
+<h3 id="failure-modes--guardrails"><a class="header" href="#failure-modes--guardrails">Failure Modes / Guardrails</a></h3>
+<p>Key risks that must be validated before promoting the mode:</p>
+<ul>
+<li>Commander becomes a “request clerk” instead of a strategic player</li>
+<li>Field Ops suffers downtime or loses agency</li>
+<li>Communication UI is too slow under pressure</li>
+<li>Resource/support gating creates deadlocks or unwinnable states</li>
+<li>Portal micro-ops cause role disengagement</li>
+<li>Commander Avatar variants collapse into snipe-only meta or punitive control denial</li>
+</ul>
+<p>D070 therefore requires a prototype/playtest phase before claiming this as a polished built-in mode.</p>
+<h4 id="recommended-proving-format-d070-mini-campaign-vertical-slice-ops-prologue"><a class="header" href="#recommended-proving-format-d070-mini-campaign-vertical-slice-ops-prologue">Recommended proving format: D070 mini-campaign vertical slice (“Ops Prologue”)</a></h4>
+<p>The preferred way to validate D070 before promoting it as a polished built-in mode is a short <strong>mini-campaign vertical slice</strong> rather than only sandbox/skirmish test maps.</p>
+<p>Why a mini-campaign is preferred:</p>
+<ul>
+<li>teaches the mode in layers (SpecOps first -&gt; Commander return -&gt; joint coordination)</li>
+<li>validates D021 campaign transitions/flags with D070 gameplay</li>
+<li>produces better player-facing onboarding and playtest data than a single “all mechanics at once” scenario</li>
+<li>stress-tests D059 request UX and D065 role onboarding in realistic narrative pacing</li>
+</ul>
+<p>Recommended proving arc (3-4 missions):</p>
+<ol>
+<li><strong>Rescue the Commander</strong> (SpecOps-focused, no base-building)</li>
+<li><strong>Establish Forward Command</strong> (Commander returns, limited support/building)</li>
+<li><strong>Joint Operation</strong> (full Commander + SpecOps loop)</li>
+<li><em>(Optional)</em> <strong>Counterstrike / Defense</strong> (counter-specops pressure, anti-snipe/readability checks)</li>
+</ol>
+<p>This mini-campaign can be shipped internally first as a validation artifact (design/playtest vertical slice) and later adapted into a player-facing “Ops Prologue” if playtests confirm the mode is fun and readable.</p>
+<h3 id="test-cases-design-acceptance"><a class="header" href="#test-cases-design-acceptance">Test Cases (Design Acceptance)</a></h3>
+<ol>
+<li><code>1 Commander + 1 FieldOps</code> mission gives both roles meaningful tasks within 90 seconds.</li>
+<li>Field Ops request → commander approval/denial → status update loop is visible and understandable.</li>
+<li>A shared-map mission phase unlock depends on Field Ops action and changes Commander strategy options.</li>
+<li>Portal micro-op returns with explicit outcome effects and no undefined parent-state behavior.</li>
+<li>Flexible slot schema supports <code>1 Commander + 2 FieldOps</code> configuration without breaking validation (even if not first-party tuned).</li>
+<li>Role boundaries prevent accidental full shared control unless explicitly authored.</li>
+<li>Field progression works without campaign persistence.</li>
+<li>D065 role onboarding and Quick Reference can present role-specific instructions via semantic action prompts.</li>
+<li>A D070 mission includes at least one SpecOps task that yields a meaningful war-effort reward (economy/power/tech/route/timing/intel), not just side-score.</li>
+<li>Duplicate support requests are collapsed/communicated clearly so Commander UI remains usable under pressure.</li>
+<li>Casual/custom drop-in to an open <code>FieldOps</code> role follows the authored fallback/join policy without breaking mission state.</li>
+<li>A D070 scenario can define both commander-side and field-side rewards for a single SpecOps objective, and both are surfaced clearly in UI/debrief.</li>
+<li>An Assassination/Commander Avatar variant telegraphs commander threat and defeat policy clearly (instant defeat vs downed/rescue timer).</li>
+<li>A Commander Presence variant yields meaningful commander-positioning decisions without hard input-lock behavior in v1.</li>
+<li>A “Rescue the Commander” mini-campaign bootstrap cleanly gates command/building features behind an explicit D021 flag and unlock message.</li>
+<li>A D070 mini-campaign vertical slice (3-4 missions) demonstrates layered onboarding and produces better role-clarity/playtest evidence than a single all-in-one sandbox scenario.</li>
+<li>A D070 mission using Operational Momentum shows at least one clear near-term milestone and one visible strategic payoff without creating HUD timer overload.</li>
+<li>An extraction-vs-stay decision (if authored) surfaces explicit reward/risk/time-pressure cues and results in a legible war-effort consequence.</li>
+</ol>
+<h3 id="alternatives-considered"><a class="header" href="#alternatives-considered">Alternatives Considered</a></h3>
+<ul>
+<li><strong>Hardcode a new engine-level asymmetric mode</strong> (rejected — violates IC’s engine/gameplay separation; this composes from existing systems)</li>
+<li><strong>Ship PvP asymmetric (2v2 commander+ops vs commander+ops) first</strong> (rejected — too many balance and grief/friction variables before proving co-op fun)</li>
+<li><strong>Require campaign persistence/hero progression in v1</strong> (rejected — increases complexity and onboarding cost; defer to D021 wrapper extension)</li>
+<li><strong>Treat SpecOps as “just a hero unit in normal skirmish”</strong> (rejected — this is exactly the attention-overload problem D070 is meant to solve; the dedicated role and request economy are the point)</li>
+<li><strong>Start Commander Avatar variants with hard unit-control radius restrictions</strong> (rejected for v1 — high frustration risk; start with soft presence bonuses and clear support gating)</li>
+<li><strong>Require true concurrent nested sub-map simulation for infiltration</strong> (rejected for v1 — high complexity, low proof requirement; use D038 portals first)</li>
+</ul>
+<h3 id="relationship-to-existing-decisions"><a class="header" href="#relationship-to-existing-decisions">Relationship to Existing Decisions</a></h3>
+<ul>
+<li><strong>D038 (Scenario Editor):</strong> D070 is primarily realized as a built-in game-mode template + authoring toolkit with validation and preview support.</li>
+<li><strong>D038 Game Mode Templates:</strong> TA-style commander avatar / assassination / command-presence variants should be delivered as optional presets/templates, not core skirmish rule changes.</li>
+<li><strong>D059 (Communication):</strong> Role-aware requests, responses, and typed coordination markers are a D059 extension, not a separate communication system.</li>
+<li><strong>D065 (Tutorial / Controls / Quick Reference):</strong> Commander and Field Ops role onboarding use the same semantic input action catalog and quick-reference infrastructure.</li>
+<li><strong>D021 (Branching Campaigns):</strong> Campaign persistence is optional and deferred for “Ops Campaign” variants; v1 remains session-based progression.</li>
+<li><strong>D021 Campaign Patterns:</strong> “Rescue the Commander” mini-campaign bootstraps are a recommended composition pattern for unlocking command/building capabilities and teaching layered mechanics.</li>
+<li><strong>D021 Hero Toolkit:</strong> A future <code>Ops Campaign</code> variant may use D021’s built-in hero toolkit for a custom SpecOps leader (e.g., Tanya-like or custom commando actor) with persistent skills between matches/missions. This is optional content-layer progression, not a D070 baseline requirement.</li>
+<li><strong>D021 Pacing Composition:</strong> D070’s optional Operational Momentum layer can feed D021 campaign flags/state to preserve “one more phase” pacing across an <code>Ops Campaign</code> mini-campaign arc.</li>
+<li><strong>D066 (Export):</strong> D070 scenarios are IC-native and expected to have limited/no RA1/OpenRA export fidelity for role/HUD/request orchestration.</li>
+<li><strong>D030/D049 (Workshop):</strong> D070 scenarios/templates publish as normal content packages. No special runtime/network privileges are granted by Workshop packaging.</li>
+</ul>
+<h3 id="phase"><a class="header" href="#phase">Phase</a></h3>
+<ul>
+<li><strong>Prototype / validation first (post-6b planning):</strong> paper specs + internal playtests for <code>1 Commander + 1 FieldOps</code>, ideally via a short D070 mini-campaign vertical slice (“Ops Prologue” style proving arc)</li>
+<li><strong>Optional pacing-layer validation:</strong> Operational Momentum / “one more phase” should be proven in the same prototype phase before being treated as a recommended D070 preset pattern.</li>
+<li><strong>Built-in PvE template v1:</strong> after role-clarity and communication UX are validated</li>
+<li><strong>Later expansions:</strong> multiple field squads, D021 <code>Ops Campaign</code> wrappers (including optional persistent hero-style SpecOps leaders), and asymmetric PvP variants (<code>CounterOps</code>)</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../../decisions/09d/D054-extended-switchability.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../../decisions/09e-community.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../../decisions/09d/D054-extended-switchability.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../../decisions/09e-community.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../../mark-09e88c2c.min.js"></script>
+        <script src="../../searcher-c2a407aa.js"></script>
+
+        <script src="../../clipboard-1626706a.min.js"></script>
+        <script src="../../highlight-abc7f01d.js"></script>
+        <script src="../../book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

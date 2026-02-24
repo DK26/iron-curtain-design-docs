@@ -1,0 +1,604 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>D054 — Extended Switchability - Iron Curtain — Design Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Design docs for a Rust-native Red Alert RTS engine">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../../css/general-2459343d.css">
+        <link rel="stylesheet" href="../../css/chrome-ae938929.css">
+        <link rel="stylesheet" href="../../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../../searchindex-61d2369b.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../../toc-1553b04b.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Iron Curtain — Design Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs/edit/main/src/decisions/09d/D054-extended-switchability.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h2 id="d054-extended-switchability--transport-cryptographic-signatures-and-snapshot-serialization"><a class="header" href="#d054-extended-switchability--transport-cryptographic-signatures-and-snapshot-serialization">D054: Extended Switchability — Transport, Cryptographic Signatures, and Snapshot Serialization</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th></th><th></th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Status</strong></td><td>Accepted</td></tr>
+<tr><td><strong>Driver</strong></td><td>Architecture switchability audit identified three subsystems that are currently hardcoded but carry meaningful risk of regret within 5–10 years</td></tr>
+<tr><td><strong>Depends on</strong></td><td>D006 (NetworkModel), D010 (Snapshottable sim), D041 (Trait-abstracted subsystems), D052 (Community Servers &amp; SCR)</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="problem"><a class="header" href="#problem">Problem</a></h3>
+<p>The engine already trait-abstracts 23 subsystems (D041 inventory) and data-drives 7 more through YAML/Lua. But an architecture switchability audit identified three remaining subsystems where the <em>implementation</em> is hardcoded below an existing abstraction layer, creating risks that are cheap to mitigate now but expensive to fix later:</p>
+<ol>
+<li>
+<p><strong>Transport layer</strong> — <code>NetworkModel</code> abstracts the logical protocol (lockstep vs. rollback) but not the transport beneath it. Raw UDP is hardcoded. WASM builds cannot use raw UDP sockets at all — browser multiplayer is blocked until this is abstracted. WebTransport and QUIC are maturing rapidly and may supersede raw UDP for game transport within the engine’s lifetime.</p>
+</li>
+<li>
+<p><strong>Cryptographic signature scheme</strong> — Ed25519 is hardcoded in ~15 callsites across the codebase: SCR records (D052), replay signature chains, Workshop index signing, <code>CertifiedMatchResult</code>, key rotation records, and community identity. Ed25519 is excellent today (128-bit security, fast, compact), but NIST’s post-quantum transition timeline (ML-DSA standardized 2024, recommended migration by ~2035) means the engine may need to swap signature algorithms without breaking every signed record in existence.</p>
+</li>
+<li>
+<p><strong>Snapshot serialization codec</strong> — <code>SimSnapshot</code> is serialized with bincode + LZ4, hardcoded in the save/load path. Bincode is not self-describing — schema changes (adding a field, reordering an enum) silently produce corrupt deserialization rather than a clean error. Cross-version save compatibility requires codec-version awareness that doesn’t currently exist.</p>
+</li>
+</ol>
+<p>Each uses the right abstraction mechanism for its specific situation: <strong>Transport</strong> gets a trait (open-ended, third-party implementations expected, hot path where monomorphization matters), <strong>SignatureScheme</strong> gets an enum (closed set of 2–3 algorithms, runtime dispatch needed for mixed-version verification), and <strong>SnapshotCodec</strong> gets version-tagged dispatch (internal versioning, no pluggability needed). The total cost is ~80 lines of definitions. The benefit is that none of these becomes a rewrite-required bottleneck when reality changes.</p>
+<h3 id="the-principle-from-d041"><a class="header" href="#the-principle-from-d041">The Principle (from D041)</a></h3>
+<p>Abstract the <em>transport mechanism</em>, not the <em>data</em>. If the concern is “which bytes go over which wire” or “which algorithm signs these bytes” or “which codec serializes this struct” — that’s a mechanism that can change independently of the logic above it. The logic (lockstep protocol, credential verification, snapshot semantics) stays identical regardless of which mechanism implements it.</p>
+<h3 id="1-transport--network-transport-abstraction"><a class="header" href="#1-transport--network-transport-abstraction">1. <code>Transport</code> — Network Transport Abstraction</a></h3>
+<p><strong>Risk level: HIGH.</strong> Browser multiplayer (Invariant #10: platform-agnostic) is blocked without this. WASM cannot open raw UDP sockets — it’s a platform API limitation, not a library gap. Every browser RTS (Chrono Divide, OpenRA-web experiments) solves this by abstracting transport. We already abstract the protocol layer (<code>NetworkModel</code>); failing to abstract the transport layer below it is an inconsistency.</p>
+<p><strong>Current state:</strong> The connection establishment flow in <code>03-NETCODE.md</code> shows transport as a concern “below” <code>NetworkModel</code>:</p>
+<pre><code>Discovery → Connection establishment → NetworkModel constructed → Game loop
+</code></pre>
+<p>But connection establishment hardcodes UDP. A <code>Transport</code> trait makes this explicit.</p>
+<p><strong>Trait definition:</strong></p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Abstracts a single bidirectional network channel beneath NetworkModel.
+/// Each Transport instance represents ONE connection (to a relay, or to a
+/// single peer in P2P). NetworkModel manages multiple Transport instances
+/// for multi-peer P2P; relay mode uses a single Transport to the relay.
+///
+/// Lives in ic-net. NetworkModel implementations are generic over Transport.
+///
+/// Design: point-to-point, not connectionless. No endpoint parameter in
+/// send/recv — the Transport IS the connection. For UDP, this maps to a
+/// connected socket (UdpSocket::connect()). For WebSocket/QUIC, this is
+/// the natural model. Multi-peer routing is NetworkModel's concern.
+///
+/// All transports expose datagram/message semantics. The protocol layer
+/// (NetworkModel) always runs its own reliability and ordering — sequence
+/// numbers, retransmission, frame resend (§ Frame Data Resilience). On
+/// reliable transports (WebSocket), these mechanisms become no-ops at
+/// runtime (retransmit timers never fire). This eliminates conditional
+/// branches in NetworkModel and keeps a single code path and test matrix.
+pub trait Transport: Send + Sync {
+    /// Send a datagram/message to the connected peer. Non-blocking or
+    /// returns WouldBlock. Data is a complete message (not a byte stream).
+    fn send(&amp;self, data: &amp;[u8]) -&gt; Result&lt;(), TransportError&gt;;
+
+    /// Receive the next available message, if any. Non-blocking.
+    /// Returns the number of bytes written to `buf`, or None if no
+    /// message is available.
+    fn recv(&amp;self, buf: &amp;mut [u8]) -&gt; Result&lt;Option&lt;usize&gt;, TransportError&gt;;
+
+    /// Maximum payload size for a single send() call.
+    /// UdpTransport returns ~476 (MTU-safe). WebSocketTransport returns ~64KB.
+    fn max_payload(&amp;self) -&gt; usize;
+
+    /// Establish the connection to the target endpoint.
+    fn connect(&amp;mut self, target: &amp;Endpoint) -&gt; Result&lt;(), TransportError&gt;;
+
+    /// Tear down the connection.
+    fn disconnect(&amp;mut self);
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Default implementations:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Implementation</th><th>Backing</th><th>Platform</th><th>Phase</th><th>Notes</th></tr>
+</thead>
+<tbody>
+<tr><td><code>UdpTransport</code></td><td><code>std::net::UdpSocket</code></td><td>Desktop, Server</td><td>5</td><td>Default. Raw UDP, MTU-aware, same as current hardcoded behavior.</td></tr>
+<tr><td><code>WebSocketTransport</code></td><td><code>tungstenite</code> / browser WebSocket API</td><td>WASM, Fallback</td><td>5</td><td>Enables browser multiplayer. Reliable + ordered (NetworkModel’s retransmit logic becomes a no-op — single code path, zero conditional branches). Higher latency than UDP but functional.</td></tr>
+<tr><td><code>WebTransportImpl</code></td><td>WebTransport API</td><td>WASM (future)</td><td>Future</td><td>Unreliable datagrams over QUIC. Best of both worlds — UDP-like semantics in the browser. Spec still maturing (W3C Working Draft).</td></tr>
+<tr><td><code>QuicTransport</code></td><td><code>quinn</code></td><td>Desktop (future)</td><td>Future</td><td>Stream multiplexing, built-in encryption, 0-RTT reconnects. Candidate to replace raw UDP + custom reliability when QUIC ecosystem matures.</td></tr>
+<tr><td><code>MemoryTransport</code></td><td><code>crossbeam</code> channel</td><td>Testing</td><td>2</td><td>Zero-latency, zero-loss in-process transport. Already implied by <code>LocalNetwork</code> — this makes it explicit as a <code>Transport</code>. NetworkModel manages a <code>Vec&lt;T&gt;</code> of these for multi-peer test scenarios.</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Relationship to <code>NetworkModel</code>:</strong></p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// NetworkModel becomes generic over Transport.
+/// Existing code that constructs LockstepNetwork or RelayLockstepNetwork
+/// now specifies a Transport. For desktop builds, this is UdpTransport.
+/// For WASM builds, this is WebSocketTransport.
+///
+/// Relay mode: single Transport to the relay server.
+/// P2P mode: Vec&lt;T&gt; — one Transport per peer connection.
+pub struct LockstepNetwork&lt;T: Transport&gt; {
+    transport: T,       // relay mode: connection to relay
+    // ... existing fields unchanged
+}
+
+pub struct P2PLockstepNetwork&lt;T: Transport&gt; {
+    peers: Vec&lt;T&gt;,      // one connection per peer
+    // ... existing fields unchanged
+}
+
+impl&lt;T: Transport&gt; NetworkModel for LockstepNetwork&lt;T&gt; {
+    // All existing logic unchanged. send()/recv() calls go through
+    // self.transport instead of directly calling UdpSocket methods.
+    // Reliability layer (sequence numbers, retransmit, frame resend)
+    // runs identically regardless of transport — on reliable transports,
+    // retransmit timers simply never fire.
+}
+<span class="boring">}</span></code></pre>
+<p><strong>What does NOT change:</strong> The wire format (delta-compressed TLV), the <code>OrderCodec</code> trait, the <code>NetworkModel</code> trait API, connection discovery (join codes, tracking servers), or the relay server protocol. Transport is purely “how bytes move,” not “what bytes mean.”</p>
+<p><strong>Why no <code>is_reliable()</code> method?</strong> Adding reliability awareness to <code>Transport</code> would create conditional branches in <code>NetworkModel</code> — one code path for unreliable transports (full retransmit logic) and another for reliable ones (skip retransmit). This doubles the test matrix and creates subtle behavioral differences between deployment targets. Instead, <code>NetworkModel</code> always runs its full reliability layer. On reliable transports (WebSocket), retransmit timers never fire and the redundancy costs nothing at runtime. One code path, one test matrix, zero conditional complexity. This is the same approach used by ENet, Valve’s GameNetworkingSockets, and most serious game networking libraries.</p>
+<p><strong>Message lanes (from GNS):</strong> <code>NetworkModel</code> multiplexes multiple logical streams (lanes) over a single <code>Transport</code> connection — each with independent priority and weight. Lanes are a protocol-layer concern, not a transport-layer concern: <code>Transport</code> provides raw byte delivery; <code>NetworkModel</code> handles lane scheduling, priority draining, and per-lane buffering. See <code>03-NETCODE.md</code> § Message Lanes for the lane definitions (<code>Orders</code>, <code>Control</code>, <code>Chat</code>, <code>Voice</code>, <code>Bulk</code>) and scheduling policy. The lane system ensures time-critical orders are never delayed by chat traffic, voice data, or bulk data — a pattern validated by GNS’s configurable lane architecture (see <code>research/valve-github-analysis.md</code> § 1.4). The <code>Voice</code> lane (D059) carries relay-forwarded Opus VoIP frames as unreliable, best-effort traffic.</p>
+<p><strong>Transport encryption (from GNS):</strong> All multiplayer transports are encrypted with AES-256-GCM over an X25519 key exchange — the same cryptographic suite used by Valve’s GameNetworkingSockets and DTLS 1.3. Encryption sits between <code>Transport</code> and <code>NetworkModel</code>, transparent to both layers. Each connection generates an ephemeral Curve25519 keypair for forward secrecy; the symmetric key is never reused across sessions. After key exchange, the handshake is signed with the player’s Ed25519 identity key (D052) to bind the encrypted channel to a verified identity. The GCM nonce incorporates the packet sequence number, preventing replay attacks. See <code>03-NETCODE.md</code> § Transport Encryption for the full specification and <code>06-SECURITY.md</code> for the threat model. <code>MemoryTransport</code> (testing) and <code>LocalNetwork</code> (single-player) skip encryption.</p>
+<p><strong>Pluggable signaling (from GNS):</strong> Connection establishment is further decomposed into a <code>Signaling</code> trait — abstracting how peers exchange connection metadata (IP addresses, relay tokens, ICE candidates) before the <code>Transport</code> is established. This follows GNS’s <code>ISteamNetworkingConnectionSignaling</code> pattern. Different deployment contexts use different signaling: relay-brokered, rendezvous + hole-punch, direct IP, or WebRTC for browser builds. Adding a new connection method (e.g., Steamworks P2P, Epic Online Services) requires only a new <code>Signaling</code> implementation — no changes to <code>Transport</code> or <code>NetworkModel</code>. See <code>03-NETCODE.md</code> § Pluggable Signaling for trait definition and implementations.</p>
+<p><strong>Why not abstract this earlier (D006/D041)?</strong> At D006 design time, browser multiplayer was a distant future target and raw UDP was the obvious choice. Invariant #10 (platform-agnostic) was added later, making the gap visible. D041 explicitly listed the transport layer in its inventory of <em>already-abstracted</em> concerns via <code>NetworkModel</code> — but <code>NetworkModel</code> abstracts the protocol, not the transport. This decision corrects that conflation.</p>
+<h3 id="2-signaturescheme--cryptographic-algorithm-abstraction"><a class="header" href="#2-signaturescheme--cryptographic-algorithm-abstraction">2. <code>SignatureScheme</code> — Cryptographic Algorithm Abstraction</a></h3>
+<p><strong>Risk level: HIGH.</strong> Ed25519 is hardcoded in ~15 callsites. NIST standardized ML-DSA (post-quantum signatures) in 2024 and recommends migration by ~2035. The engine’s 10+ year lifespan means a signature algorithm swap is probable, not speculative. More immediately: different deployment contexts may want different algorithms (Ed448 for higher security margin, ML-DSA-65 for post-quantum compliance).</p>
+<p><strong>Current state:</strong> D052’s SCR format deliberately has “No algorithm field. Always Ed25519.” — this was the right call to prevent JWT’s algorithm confusion vulnerability (CVE-2015-9235). But the solution isn’t “hardcode one algorithm forever” — it’s “the version field implies the algorithm, and the verifier looks up the algorithm from the version, never from attacker-controlled input.”</p>
+<p><strong>Why enum dispatch, not a trait?</strong> The set of signature algorithms is small and closed — realistically 2–3 over the engine’s entire lifetime (Ed25519 now, ML-DSA-65 later, possibly one more). This makes it fundamentally different from <code>Transport</code> (which is open-ended — anyone can write a new transport). A trait would introduce design tension: associated types (<code>PublicKey</code>, <code>SecretKey</code>, <code>Signature</code>) are not object-safe with <code>Clone</code>, meaning <code>dyn SignatureScheme</code> won’t compile. But runtime dispatch is <em>required</em> — a player’s credential file contains mixed-version SCRs (version 1 Ed25519 alongside future version 2 ML-DSA), and the verifier must handle both in the same loop. Workarounds exist (erase types to <code>Vec&lt;u8&gt;</code>, or drop <code>Clone</code>) but they sacrifice type safety that was the supposed benefit of the trait.</p>
+<p>Enum dispatch resolves all of these tensions: exhaustive <code>match</code> with no default arm (compiler catches missing variants), <code>Clone</code>/<code>Copy</code> for free, zero vtable overhead, and idiomatic Rust for small closed sets. Adding a third algorithm someday means adding one enum variant — the compiler then flags every callsite that needs updating.</p>
+<p><strong>Enum definition:</strong></p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Signature algorithm selection for all signed records.
+/// Lives in ic-net (signing + verification are I/O concerns; ic-sim
+/// never signs or verifies anything — Invariant #1).
+///
+/// NOT a trait. The algorithm set is small and closed (2–3 variants
+/// over the engine's lifetime). Enum dispatch gives:
+/// - Exhaustive match (compiler catches missing variants on addition)
+/// - Clone/Copy for free
+/// - Zero vtable overhead
+/// - Runtime dispatch without object-safety headaches
+///
+/// Third-party signature algorithms are out of scope — cryptographic
+/// agility is a security risk (see JWT CVE-2015-9235). The engine
+/// controls which algorithms it trusts.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SignatureScheme {
+    Ed25519,
+    // MlDsa65,  // future: post-quantum (NIST FIPS 204)
+}
+
+impl SignatureScheme {
+    /// Sign a message. Returns the signature bytes.
+    pub fn sign(&amp;self, sk: &amp;[u8], msg: &amp;[u8]) -&gt; Vec&lt;u8&gt; {
+        match self {
+            Self::Ed25519 =&gt; ed25519_sign(sk, msg),
+            // Self::MlDsa65 =&gt; ml_dsa_65_sign(sk, msg),
+        }
+    }
+
+    /// Verify a signature against a public key and message.
+    pub fn verify(&amp;self, pk: &amp;[u8], msg: &amp;[u8], sig: &amp;[u8]) -&gt; bool {
+        match self {
+            Self::Ed25519 =&gt; ed25519_verify(pk, msg, sig),
+            // Self::MlDsa65 =&gt; ml_dsa_65_verify(pk, msg, sig),
+        }
+    }
+
+    /// Generate a new keypair. Returns (public_key, secret_key).
+    pub fn generate_keypair(&amp;self) -&gt; (Vec&lt;u8&gt;, Vec&lt;u8&gt;) {
+        match self {
+            Self::Ed25519 =&gt; ed25519_generate_keypair(),
+            // Self::MlDsa65 =&gt; ml_dsa_65_generate_keypair(),
+        }
+    }
+
+    /// Public key size in bytes. Determines SCR binary format layout.
+    pub fn public_key_len(&amp;self) -&gt; usize {
+        match self {
+            Self::Ed25519 =&gt; 32,
+            // Self::MlDsa65 =&gt; 1952,
+        }
+    }
+
+    /// Signature size in bytes. Determines SCR binary format layout.
+    pub fn signature_len(&amp;self) -&gt; usize {
+        match self {
+            Self::Ed25519 =&gt; 64,
+            // Self::MlDsa65 =&gt; 3309,
+        }
+    }
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Algorithm variants:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Variant</th><th>Algorithm</th><th>Key Size</th><th>Sig Size</th><th>Phase</th><th>Notes</th></tr>
+</thead>
+<tbody>
+<tr><td><code>Ed25519</code></td><td>Ed25519</td><td>32 bytes</td><td>64 bytes</td><td>5</td><td>Default. Current behavior. 128-bit security. Fast, compact, battle-tested.</td></tr>
+<tr><td><code>MlDsa65</code></td><td>ML-DSA-65</td><td>1952 bytes</td><td>3309 bytes</td><td>Future</td><td>Post-quantum. NIST FIPS 204. Larger keys/sigs but quantum-resistant.</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Version-implies-algorithm (preserving D052’s anti-confusion guarantee):</strong></p>
+<p>D052’s SCR format already has a <code>version</code> byte (currently <code>0x01</code>). The version-to-algorithm mapping is hardcoded in the <em>verifier</em>, never read from the record itself:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Version → SignatureScheme mapping.
+/// This is the verifier's lookup table, NOT a field in the signed record.
+/// Preserves D052's guarantee: no algorithm negotiation, no attacker-controlled
+/// algorithm selection. The version byte is set by the issuer at signing time;
+/// the verifier uses it to select the correct verification algorithm.
+///
+/// Returns Result, not panic — version bytes come from user-provided files
+/// (credential stores, replays, save files) and must fail gracefully.
+fn scheme_for_version(version: u8) -&gt; Result&lt;SignatureScheme, CredentialError&gt; {
+    match version {
+        0x01 =&gt; Ok(SignatureScheme::Ed25519),
+        // 0x02 =&gt; Ok(SignatureScheme::MlDsa65),
+        _ =&gt; Err(CredentialError::UnknownVersion(version)),
+    }
+}
+<span class="boring">}</span></code></pre>
+<p><strong>What changes in the SCR binary format:</strong> Nothing structurally. The <code>version</code> byte already exists. What changes is the <em>interpretation</em>:</p>
+<ul>
+<li><strong>Before (D052):</strong> “Version is for format evolution. Algorithm is always Ed25519.”</li>
+<li><strong>After (D054):</strong> “Version implies both format layout AND algorithm. Version 1 = Ed25519 (32-byte keys, 64-byte sigs). Version 2 = ML-DSA-65 (1952-byte keys, 3309-byte sigs). The verifier dispatches on version, never on an attacker-controlled field.”</li>
+</ul>
+<p>The variable-length fields (<code>community_key</code>, <code>player_key</code>, <code>signature</code>) are already length-implied by <code>version</code> — version 1 readers know key=32, sig=64. Version 2 readers know key=1952, sig=3309. No length prefix needed because the version fully determines the layout.</p>
+<p><strong>Backward compatibility:</strong> A version 1 SCR issued by a community running Ed25519 remains valid forever. A community migrating to ML-DSA-65 issues version 2 SCRs. Both can coexist in a player’s credential file. Version 1 SCRs don’t expire or become invalid — they just can’t be <em>newly issued</em> once the community upgrades.</p>
+<p><strong>Affected callsites (all change from direct <code>ed25519_dalek</code> calls to <code>SignatureScheme</code> enum method calls):</strong></p>
+<ul>
+<li>SCR record signing/verification (D052 — community servers + client)</li>
+<li>Replay signature chain (<code>TickSignature</code> in <code>05-FORMATS.md</code>)</li>
+<li>Workshop index signing (D049 — CI signing pipeline)</li>
+<li><code>CertifiedMatchResult</code> (D052 — relay server)</li>
+<li>Key rotation records (D052 — community servers)</li>
+<li>Player identity keypairs (D052/D053)</li>
+</ul>
+<p><strong>Why not a <code>version</code> field in each signature?</strong> Because that’s exactly JWT’s <code>alg</code> header vulnerability. The version lives in the <em>container</em> (SCR record header, replay file header, Workshop index header) — not in the signature itself. The container’s version is written by the issuer and verified structurally (known offset, not parsed from attacker-controlled payload). This is the same defense D052 already uses; D054 just extends it to support future algorithms.</p>
+<h3 id="3-snapshotcodec--savereplay-serialization-versioning"><a class="header" href="#3-snapshotcodec--savereplay-serialization-versioning">3. <code>SnapshotCodec</code> — Save/Replay Serialization Versioning</a></h3>
+<p><strong>Risk level: MEDIUM.</strong> Bincode is fast and compact but not self-describing — if any field in <code>SimSnapshot</code> is added, removed, or reordered, deserialization silently produces garbage or panics. The save format header already has a <code>version: u16</code> field (<code>05-FORMATS.md</code>), but no code dispatches on it. Today, version is always 1 and the codec is always bincode + LZ4. This works until the first schema change — which is inevitable as the sim evolves through Phase 2–7.</p>
+<p><strong>This is NOT a trait in <code>ic-sim</code>.</strong> Snapshot serialization is I/O — it belongs in <code>ic-game</code> (save/load) and <code>ic-net</code> (snapshot transfer for late-join). The sim produces/consumes <code>SimSnapshot</code> as an in-memory struct. How that struct becomes bytes is the codec’s concern.</p>
+<p><strong>Codec dispatch (version → codec):</strong></p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Version-to-codec dispatch for SimSnapshot serialization.
+/// Lives in ic-game (save/load path) and ic-net (snapshot transfer).
+///
+/// NOT a trait — there's no pluggability need here. Game modules don't
+/// provide custom codecs. This is internal versioning, not extensibility.
+/// A match statement is simpler, more explicit, and easier to audit than
+/// a trait registry.
+pub fn encode_snapshot(
+    snapshot: &amp;SimSnapshot,
+    version: u16,
+) -&gt; Result&lt;Vec&lt;u8&gt;, CodecError&gt; {
+    let serialized = match version {
+        1 =&gt; bincode::serialize(snapshot)
+            .map_err(|e| CodecError::Serialize(e.to_string()))?,
+        2 =&gt; postcard::to_allocvec(snapshot)
+            .map_err(|e| CodecError::Serialize(e.to_string()))?,
+        _ =&gt; return Err(CodecError::UnknownVersion(version)),
+    };
+    Ok(lz4_flex::compress_prepend_size(&amp;serialized))
+}
+
+pub fn decode_snapshot(
+    data: &amp;[u8],
+    version: u16,
+) -&gt; Result&lt;SimSnapshot, CodecError&gt; {
+    let decompressed = lz4_flex::decompress_size_prepended(data)
+        .map_err(|e| CodecError::Decompress(e.to_string()))?;
+    match version {
+        1 =&gt; bincode::deserialize(&amp;decompressed)
+            .map_err(|e| CodecError::Deserialize(e.to_string())),
+        2 =&gt; postcard::from_bytes(&amp;decompressed)
+            .map_err(|e| CodecError::Deserialize(e.to_string())),
+        _ =&gt; Err(CodecError::UnknownVersion(version)),
+    }
+}
+
+/// Errors from snapshot/replay codec operations. Surfaced in UI as
+/// "incompatible save file" or "corrupted replay" — never a panic.
+#[derive(Debug)]
+pub enum CodecError {
+    UnknownVersion(u16),
+    Serialize(String),
+    Deserialize(String),
+    Decompress(String),
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Why postcard as the likely version 2?</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Property</th><th>bincode (v1)</th><th>postcard (v2 candidate)</th></tr>
+</thead>
+<tbody>
+<tr><td>Self-describing</td><td>No</td><td>Yes (with <code>postcard-schema</code>)</td></tr>
+<tr><td>Varint integers</td><td>No (fixed-width)</td><td>Yes (smaller payloads)</td></tr>
+<tr><td>Schema evolution</td><td>Field add = silent corrupt</td><td>Field append = <code>#[serde(default)]</code> compatible (same as bincode); structural mismatch = detected and rejected at load time (vs. bincode’s silent corruption)</td></tr>
+<tr><td><code>#[serde]</code> compat</td><td>Yes</td><td>Yes</td></tr>
+<tr><td><code>no_std</code> support</td><td>Limited</td><td>Full (embedded-friendly)</td></tr>
+<tr><td>Speed</td><td>Very fast</td><td>Very fast (within 5%)</td></tr>
+<tr><td>WASM support</td><td>Yes</td><td>Yes (designed for it)</td></tr>
+</tbody>
+</table>
+</div>
+<p>The version 1 → 2 migration path: saves with version 1 headers decode via bincode. New saves write version 2 headers and encode via postcard. Old saves remain loadable forever. The <code>SimSnapshot</code> struct itself doesn’t change — only the codec that serializes it.</p>
+<p><strong>Migration strategy (from Factorio + DFU analysis):</strong> Mojang’s DataFixerUpper uses algebraic optics (profunctor-based type-safe transformations) for Minecraft save migration — academically elegant but massively over-engineered for practical use (see <code>research/mojang-wube-modding-analysis.md</code>). Factorio’s two-tier migration system is the better model: (1) <strong>Declarative renames</strong> — a YAML mapping of <code>old_field_name → new_field_name</code> per category, applied automatically by version number, and (2) <strong>Lua migration scripts</strong> — for complex structural transformations that can’t be expressed as simple renames. Scripts are ordered by version and applied sequentially. This avoids DFU’s complexity while handling real-world schema evolution. Additionally, every IC YAML rule file should include a <code>format_version</code> field (e.g., <code>format_version: "1.0.0"</code>) — following the pattern used by both Minecraft Bedrock (<code>"format_version": "1.26.0"</code> in every JSON entity file) and Factorio (<code>"factorio_version": "2.0"</code> in <code>info.json</code>). This enables the migration system to detect and transform old formats without guessing.</p>
+<p><strong>Why NOT a trait?</strong> Unlike Transport and SignatureScheme, snapshot codecs have zero pluggability requirement. No game module, mod, or community server needs to provide a custom snapshot serializer. This is purely internal version dispatch — a <code>match</code> statement is the right abstraction, not a trait. D041’s principle: “abstract the <em>algorithm</em>, not the <em>data</em>.” Snapshot serialization is data marshaling with no algorithmic variation — the right tool is version-tagged dispatch, not trait polymorphism.</p>
+<p><strong>Relationship to replay format:</strong> The replay file format (<code>05-FORMATS.md</code>) also has a <code>version: u16</code> in its header. The same version-to-codec dispatch applies to replay tick frames (<code>ReplayTickFrame</code> serialization). Replay version 1 uses bincode + LZ4 block compression. A future version 2 could use postcard + LZ4. The replay header version and the save header version evolve independently — a replay viewer doesn’t need to understand save files and vice versa.</p>
+<h3 id="what-still-does-not-need-abstraction"><a class="header" href="#what-still-does-not-need-abstraction">What Still Does NOT Need Abstraction</a></h3>
+<p>This audit explicitly confirmed that the following remain correctly un-abstracted (extending D041’s “What Does NOT Need a Trait” table):</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Subsystem</th><th>Why No Abstraction Needed</th></tr>
+</thead>
+<tbody>
+<tr><td>YAML parser (<code>serde_yaml</code>)</td><td>Parser crate is a Cargo dependency swap — no trait needed, no code change beyond <code>Cargo.toml</code>.</td></tr>
+<tr><td>Lua runtime (<code>mlua</code>)</td><td>Deeply integrated via <code>ic-script</code>. Switching Lua impls is a rewrite regardless of traits. The scripting <em>API</em> is the abstraction.</td></tr>
+<tr><td>WASM runtime (<code>wasmtime</code>)</td><td>Same — the WASM API is the abstraction, not the runtime binary.</td></tr>
+<tr><td>Compression (LZ4)</td><td>Used in exactly two places (snapshot, replay). Swapping is a one-line change. No trait overhead justified.</td></tr>
+<tr><td>Bevy</td><td>The engine framework. Abstracting Bevy is abstracting gravity. If Bevy is replaced, everything is rewritten.</td></tr>
+<tr><td>State hash algorithm</td><td>SHA-256 Merkle tree. Changing this requires coordinated protocol version bump across all clients — a trait wouldn’t help.</td></tr>
+<tr><td>RNG (<code>DeterministicRng</code>)</td><td>Already deterministic and internal to <code>ic-sim</code>. Swapping PRNG algorithms is a single-struct replacement. No polymorphism needed.</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="alternatives-considered"><a class="header" href="#alternatives-considered">Alternatives Considered</a></h3>
+<ul>
+<li><strong>Abstract everything now</strong> (rejected — violates D015’s “no speculative abstractions”; the 7 items above don’t carry meaningful regret risk)</li>
+<li><strong>Abstract nothing, handle it later</strong> (rejected — Transport blocks WASM multiplayer <em>now</em>; SignatureScheme’s 15 hardcoded callsites grow with every feature; SnapshotCodec’s first schema change will force an emergency versioning retrofit)</li>
+<li><strong>Use <code>dyn</code> trait objects instead of generics for Transport</strong> (rejected — <code>dyn Transport</code> adds vtable overhead on every <code>send()</code>/<code>recv()</code> in the hot network path; monomorphized generics are zero-cost. <code>Transport</code> is used in tight loops — static dispatch is correct here)</li>
+<li><strong>Make SignatureScheme a trait with associated types</strong> (rejected — associated types are not object-safe with <code>Clone</code>, but runtime dispatch is required for mixed-version SCR verification. Erasing types to <code>Vec&lt;u8&gt;</code> sacrifices the type safety that was the supposed benefit. Enum dispatch gives exhaustive match, <code>Clone</code>/<code>Copy</code>, zero vtable, and compiler-enforced completeness when adding variants)</li>
+<li><strong>Make SignatureScheme a trait with <code>&amp;[u8]</code> params (object-safe)</strong> (rejected — works technically, but the algorithm set is small and closed. A trait implies open extensibility; the engine deliberately controls which algorithms it trusts. Enum is the idiomatic Rust pattern for closed dispatch)</li>
+<li><strong>Add algorithm negotiation to SCR</strong> (rejected — this IS JWT’s <code>alg</code> header. Version-implies-algorithm is strictly safer and already fits D052’s format)</li>
+<li><strong>Use protobuf/flatbuffers for snapshot serialization</strong> (rejected — adds external IDL dependency, <code>.proto</code> file maintenance, code generation step. Postcard gives schema stability within the <code>serde</code> ecosystem IC already uses)</li>
+<li><strong>Make SnapshotCodec a trait</strong> (rejected — no pluggability requirement exists. A <code>match</code> statement is simpler and more auditable than a trait registry for internal version dispatch)</li>
+<li><strong>Add <code>is_reliable()</code> to Transport</strong> (rejected — would create conditional branches in NetworkModel: one code path for unreliable transports with full retransmit, another for reliable transports that skips it. Doubles the test matrix. Instead, NetworkModel always runs its reliability layer; on reliable transports the retransmit timers simply never fire. Zero runtime cost, one code path)</li>
+<li><strong>Connectionless (endpoint-addressed) Transport API</strong> (rejected — creates impedance mismatch: UDP is connectionless but WebSocket/QUIC are connection-oriented. Point-to-point model fits all transports naturally. For UDP, use connected sockets. Multi-peer routing is NetworkModel’s concern, not Transport’s)</li>
+</ul>
+<h3 id="relationship-to-existing-decisions"><a class="header" href="#relationship-to-existing-decisions">Relationship to Existing Decisions</a></h3>
+<ul>
+<li><strong>D006 (NetworkModel):</strong> <code>Transport</code> lives below <code>NetworkModel</code>. The connection establishment flow becomes: Discovery → Transport::connect() → NetworkModel constructed over Transport → Game loop. <code>NetworkModel</code> gains a <code>T: Transport</code> type parameter.</li>
+<li><strong>D010 (Snapshottable sim):</strong> Snapshot encoding/decoding is the I/O layer around D010’s <code>SimSnapshot</code>. D010 defines the struct; D054 defines how it becomes bytes.</li>
+<li><strong>D041 (Trait-abstracted subsystems):</strong> <code>Transport</code> is added to D041’s inventory table. <code>SignatureScheme</code> uses enum dispatch (not a trait) — it belongs in the “closed set” category alongside <code>SnapshotCodec</code>’s version dispatch. Both are version-tagged, exhaustive, and compiler-enforced. Neither needs the open extensibility that traits provide.</li>
+<li><strong>D052 (Community Servers &amp; SCR):</strong> The <code>version</code> byte in SCR format now implies the signature algorithm. D052’s anti-algorithm-confusion guarantee is preserved — the defense shifts from “hardcode one algorithm” to “version determines algorithm, verifier never reads algorithm from attacker input.”</li>
+<li><strong>Invariant #10 (Platform-agnostic):</strong> <code>Transport</code> trait directly enables WASM multiplayer, the primary platform gap.</li>
+</ul>
+<h3 id="phase"><a class="header" href="#phase">Phase</a></h3>
+<ul>
+<li><strong>Phase 2:</strong> <code>MemoryTransport</code> for testing (already implied by <code>LocalNetwork</code>; making it explicit as a <code>Transport</code>). <code>SnapshotCodec</code> version dispatch (v1 = bincode + LZ4, matching current behavior).</li>
+<li><strong>Phase 5:</strong> <code>UdpTransport</code>, <code>WebSocketTransport</code> (matching current hardcoded behavior — the trait boundary exists, the implementation is unchanged). <code>SignatureScheme::Ed25519</code> enum variant wired into all D052 SCR code, replacing direct <code>ed25519_dalek</code> calls.</li>
+<li><strong>Future:</strong> <code>WebTransportImpl</code> (when spec stabilizes), <code>QuicTransport</code> (when ecosystem matures), <code>SignatureScheme::MlDsa65</code> variant (when post-quantum migration timeline firms up), <code>SnapshotCodec</code> v2 (postcard, when first <code>SimSnapshot</code> schema change occurs).</li>
+</ul>
+<hr>
+<hr>
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../../decisions/09d/D048-render-modes.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../../decisions/09d/D070-asymmetric-coop.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../../decisions/09d/D048-render-modes.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../../decisions/09d/D070-asymmetric-coop.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../../mark-09e88c2c.min.js"></script>
+        <script src="../../searcher-c2a407aa.js"></script>
+
+        <script src="../../clipboard-1626706a.min.js"></script>
+        <script src="../../highlight-abc7f01d.js"></script>
+        <script src="../../book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

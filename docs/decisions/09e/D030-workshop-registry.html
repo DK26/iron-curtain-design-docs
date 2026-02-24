@@ -1,0 +1,892 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>D030 — Workshop Registry - Iron Curtain — Design Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Design docs for a Rust-native Red Alert RTS engine">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../../css/general-2459343d.css">
+        <link rel="stylesheet" href="../../css/chrome-ae938929.css">
+        <link rel="stylesheet" href="../../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../../searchindex-61d2369b.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../../toc-1553b04b.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Iron Curtain — Design Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs/edit/main/src/decisions/09e/D030-workshop-registry.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h2 id="d030-workshop-resource-registry--dependency-system"><a class="header" href="#d030-workshop-resource-registry--dependency-system">D030: Workshop Resource Registry &amp; Dependency System</a></h2>
+<h3 id="decision-capsule-llmrag-summary"><a class="header" href="#decision-capsule-llmrag-summary">Decision Capsule (LLM/RAG Summary)</a></h3>
+<ul>
+<li><strong>Status:</strong> Accepted</li>
+<li><strong>Phase:</strong> Phase 0–3 (Git index MVP), Phase 3–4 (P2P added), Phase 4–5 (minimal viable Workshop), Phase 6a (full federation), Phase 7+ (advanced discovery)</li>
+<li><strong>Canonical for:</strong> Workshop resource registry model, dependency semantics, resource granularity, and federated package ecosystem strategy</li>
+<li><strong>Scope:</strong> Workshop package identities/manifests, dependency resolution, registry/index architecture, publish/install flows, resource licensing/AI-usage metadata</li>
+<li><strong>Decision:</strong> IC’s Workshop is a <strong>crates.io-style resource registry</strong> where assets and mods are publishable as independent versioned resources with semver dependencies, license metadata, and optional AI-usage permissions.</li>
+<li><strong>Why:</strong> Enables reuse instead of copy-paste, preserves attribution, supports automation/CI publishing, and gives both humans and LLM agents a structured way to discover and compose community content.</li>
+<li><strong>Non-goals:</strong> A monolithic “mods only” Workshop with no reusable resource granularity; forcing a single centralized infrastructure from day one.</li>
+<li><strong>Invariants preserved:</strong> Federation-first architecture (aligned with D050), compatibility with existing mod packaging flows, and community ownership/self-hosting principles.</li>
+<li><strong>Defaults / UX behavior:</strong> Workshop packages are versioned resources; dependencies can be required or optional; auto-download/install resolves dependency trees for players/lobbies.</li>
+<li><strong>Compatibility / Export impact:</strong> Resource registry supports both IC-native and compatibility-oriented content; D049 defines canonical format recommendations and P2P delivery details.</li>
+<li><strong>Security / Trust impact:</strong> License metadata and <code>ai_usage</code> permissions are first-class; supports automated policy checks and creator consent for agentic tooling.</li>
+<li><strong>Performance / Ops impact:</strong> Phased rollout starts with a low-cost Git index and grows toward full infrastructure only as needed.</li>
+<li><strong>Public interfaces / types / commands:</strong> <code>publisher/name@version</code> IDs, semver dependency ranges in <code>mod.yaml</code>, <code>.icpkg</code> packages, <code>ic mod publish/install/init</code></li>
+<li><strong>Affected docs:</strong> <code>src/04-MODDING.md</code>, <code>src/decisions/09e-community.md</code> (D049/D050/D061), <code>src/decisions/09c-modding.md</code>, <code>src/17-PLAYER-FLOW.md</code></li>
+<li><strong>Revision note summary:</strong> None</li>
+<li><strong>Keywords:</strong> workshop registry, dependencies, semver, icpkg, federated workshop, reusable resources, ai_usage permissions, mod publish</li>
+</ul>
+<p><strong>Decision:</strong> The Workshop operates as a crates.io-style resource registry where any game asset — music, sprites, textures, <strong>video cutscenes</strong>, <strong>rendered cutscene sequence bundles</strong>, maps, sound effects, palettes, voice lines, UI themes, templates — is publishable as an independent, versioned, licensable resource that others (including LLM agents, with author consent) can discover, depend on, and pull automatically. Authors control AI access to their resources separately from the license via <code>ai_usage</code> permissions.</p>
+<p><strong>Rationale:</strong></p>
+<ul>
+<li>OpenRA has no resource sharing infrastructure — modders copy-paste files, share on forums, lose attribution</li>
+<li>Individual resources (a single music track, one sprite sheet) should be as easy to publish and consume as full mods</li>
+<li>A dependency system eliminates duplication: five mods that need the same HD sprite pack declare it as a dependency instead of each bundling 200MB of sprites</li>
+<li>License metadata protects community creators and enables automated compatibility checking</li>
+<li>LLM agents generating missions need a way to discover and pull community assets without human intervention</li>
+<li>The mod ecosystem grows faster when building blocks are reusable — this is why npm/crates.io/pip changed their respective ecosystems</li>
+<li>CI/CD-friendly publishing (headless CLI, scoped API tokens) lets serious mod teams automate their release pipeline — no manual uploads</li>
+</ul>
+<p><strong>Key Design Elements:</strong></p>
+<h3 id="phased-delivery-strategy"><a class="header" href="#phased-delivery-strategy">Phased Delivery Strategy</a></h3>
+<p>The Workshop design below is comprehensive, but it ships incrementally:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Phase</th><th>Scope</th><th>Complexity</th></tr>
+</thead>
+<tbody>
+<tr><td>Phase 0–3</td><td><strong>Git-hosted index:</strong> <code>workshop-index</code> GitHub repo as package registry (<code>index.yaml</code> + per-package manifests). <code>.icpkg</code> files stored on GitHub Releases (free CDN). Community contributes via PR. <code>git-index</code> source type in Workshop client. Zero infrastructure cost</td><td>Minimal</td></tr>
+<tr><td>Phase 3–4</td><td><strong>Add P2P:</strong> BitTorrent tracker ($5-10/month VPS). Package manifests gain <code>torrent</code> source entries. P2P delivery for large packages. Git index remains discovery layer. Format recommendations published</td><td>Low–Medium</td></tr>
+<tr><td>Phase 4–5</td><td><strong>Minimal viable Workshop:</strong> Full Workshop server (search, ratings, deps) + integrated P2P tracker + <code>ic mod publish</code> + <code>ic mod install</code> + in-game browser + auto-download on lobby join</td><td>Medium</td></tr>
+<tr><td>Phase 6a</td><td><strong>Full Workshop:</strong> Federation, community servers join P2P swarm, replication, promotion channels, CI/CD token scoping, creator reputation, DMCA process, Steam Workshop as optional source</td><td>High</td></tr>
+<tr><td>Phase 7+</td><td><strong>Advanced:</strong> LLM-driven discovery, premium hosting tiers</td><td>Low priority</td></tr>
+</tbody>
+</table>
+</div>
+<p>The Artifactory-level federation design is the end state, not the MVP. Ship simple, iterate toward complex. P2P delivery (D049) is integrated from Phase 3–4 because centralized hosting costs are a sustainability risk — better to solve early than retrofit. Workshop packages use the <code>.icpkg</code> format (ZIP with <code>manifest.yaml</code>) — see D049 for full specification.</p>
+<p><strong>Cross-engine validation:</strong> O3DE’s <strong>Gem system</strong> uses a declarative <code>gem.json</code> manifest with explicit dependency declarations, version constraints, and categorized tags — the same structure IC targets for Workshop packages. O3DE’s template system (<code>o3de register --template-path</code>) scaffolds new projects from standard templates, validating IC’s planned <code>ic mod init --template=...</code> CLI command. Factorio’s mod portal uses semver dependency ranges (e.g., <code>&gt;= 1.1.0</code>) with automatic resolution — the same model IC should use for Workshop package dependencies. See <code>research/godot-o3de-engine-analysis.md</code> § O3DE and <code>research/mojang-wube-modding-analysis.md</code> § Factorio.</p>
+<h3 id="resource-identity--versioning"><a class="header" href="#resource-identity--versioning">Resource Identity &amp; Versioning</a></h3>
+<p>Every Workshop resource gets a globally unique identifier: <code>publisher/name@version</code>.</p>
+<ul>
+<li><strong>Publisher</strong> = author username or organization (e.g., <code>alice</code>, <code>community-hd-project</code>)</li>
+<li><strong>Name</strong> = resource name, lowercase with hyphens (e.g., <code>soviet-march-music</code>, <code>allied-infantry-hd</code>)</li>
+<li><strong>Version</strong> = semver (e.g., <code>1.2.0</code>)</li>
+<li>Full ID example: <code>alice/soviet-march-music@1.2.0</code></li>
+</ul>
+<h3 id="resource-categories-expanded"><a class="header" href="#resource-categories-expanded">Resource Categories (Expanded)</a></h3>
+<p>Resources aren’t limited to mod-sized packages. Granularity is flexible:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Category</th><th>Granularity Examples</th></tr>
+</thead>
+<tbody>
+<tr><td>Music</td><td>Single track, album, soundtrack</td></tr>
+<tr><td>Sound Effects</td><td>Weapon sound pack, ambient loops, UI sounds</td></tr>
+<tr><td>Voice Lines</td><td>EVA pack, unit response set, faction voice pack</td></tr>
+<tr><td>Sprites</td><td>Single unit sheet, building sprites, effects pack</td></tr>
+<tr><td>Textures</td><td>Terrain tileset, UI skin, palette-indexed sprites</td></tr>
+<tr><td>Palettes</td><td>Theater palette, faction palette, seasonal palette</td></tr>
+<tr><td>Maps</td><td>Single map, map pack, tournament map pool</td></tr>
+<tr><td>Missions</td><td>Single mission, mission chain</td></tr>
+<tr><td>Campaign Chapters</td><td>Story arc with persistent state</td></tr>
+<tr><td>Scene Templates</td><td>Tera scene template for LLM composition</td></tr>
+<tr><td>Mission Templates</td><td>Tera mission template for LLM composition</td></tr>
+<tr><td>Cutscenes / Video</td><td>Briefing video, in-game cinematic, tutorial clip</td></tr>
+<tr><td>UI Themes</td><td>Sidebar layout, font pack, cursor set</td></tr>
+<tr><td>Balance Presets</td><td>Tuned unit/weapon stats as a selectable preset</td></tr>
+<tr><td>QoL Presets</td><td>Gameplay behavior toggle set (D033) — sim-affecting + client-only toggles</td></tr>
+<tr><td>Experience Profile</td><td>Combined balance + theme + QoL + AI + pathfinding + render mode (D019+D032+D033+D043+D045+D048)</td></tr>
+<tr><td>Resource Packs</td><td>Switchable asset layer for any category — see <code>04-MODDING.md</code> § “Resource Packs”</td></tr>
+<tr><td>Script Libraries</td><td>Reusable Lua modules, utility functions, AI behavior scripts, trigger templates, console automation scripts (<code>.iccmd</code>) — see D058 § “Competitive Integrity”</td></tr>
+<tr><td>Full Mods</td><td>Traditional mod (may depend on individual resources)</td></tr>
+</tbody>
+</table>
+</div>
+<p>A published resource is just a <code>ResourcePackage</code> with the appropriate <code>ResourceCategory</code>. The existing <code>asset-pack</code> template and <code>ic mod publish</code> flow handle this natively — no separate command needed.</p>
+<h3 id="dependency-declaration"><a class="header" href="#dependency-declaration">Dependency Declaration</a></h3>
+<p><code>mod.yaml</code> already has a <code>dependencies:</code> section. D030 formalizes the resolution semantics:</p>
+<pre><code class="language-yaml"># mod.yaml
+dependencies:
+  - id: "community-project/hd-infantry-sprites"
+    version: "^2.0"                    # semver range (cargo-style)
+    source: workshop                   # workshop | local | url
+  - id: "alice/soviet-march-music"
+    version: "&gt;=1.0, &lt;3.0"
+    source: workshop
+    optional: true                     # soft dependency — mod works without it
+  - id: "bob/desert-terrain-textures"
+    version: "~1.4"                    # compatible with 1.4.x
+    source: workshop
+</code></pre>
+<p>Resource packages can also declare dependencies on other resources (transitive):</p>
+<pre><code class="language-yaml"># A mission pack depends on a sprite pack and a music track
+dependencies:
+  - id: "community-project/hd-sprites"
+    version: "^2.0"
+    source: workshop
+  - id: "alice/briefing-videos"
+    version: "^1.0"
+    source: workshop
+</code></pre>
+<h3 id="repository-types"><a class="header" href="#repository-types">Repository Types</a></h3>
+<p>The Workshop uses three repository types (architecture inspired by Artifactory’s local/remote/virtual model):</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Source Type</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Local</strong></td><td>A directory on disk following Workshop structure. Stores resources you create. Used for development, LAN parties, offline play, pre-publish testing.</td></tr>
+<tr><td><strong>Remote</strong></td><td>A Workshop server (official or community-hosted). Resources are downloaded and cached locally on first access. Cache is used for subsequent requests — works offline after first pull.</td></tr>
+<tr><td><strong>Virtual</strong></td><td>The aggregated view across all configured sources. The <code>ic</code> CLI and in-game browser query the virtual view — it merges listings from all local + remote + git-index sources, deduplicates by resource ID, and resolves version conflicts using priority ordering.</td></tr>
+</tbody>
+</table>
+</div>
+<p>The <code>settings.toml</code> <code>sources</code> list defines which local and remote sources compose the virtual view. This is the federation model — the client never queries raw servers directly, it queries the merged Workshop view.</p>
+<h3 id="package-integrity"><a class="header" href="#package-integrity">Package Integrity</a></h3>
+<p>Every published resource includes cryptographic checksums for integrity verification:</p>
+<ul>
+<li><strong>SHA-256 checksum</strong> stored in the package manifest and on the Workshop server</li>
+<li><code>ic mod install</code> verifies checksums after download — mismatch → abort + warning</li>
+<li><code>ic.lock</code> records both version AND checksum for each dependency — guarantees byte-identical installs across machines</li>
+<li>Protects against: corrupted downloads, CDN tampering, mirror drift</li>
+<li>Workshop server computes checksums on upload; clients verify on download. Trust but verify.</li>
+</ul>
+<h3 id="hash-and-signature-strategy-fit-for-purpose-d049d052d037"><a class="header" href="#hash-and-signature-strategy-fit-for-purpose-d049d052d037">Hash and Signature Strategy (Fit-for-Purpose, D049/D052/D037)</a></h3>
+<p>IC uses a <strong>layered integrity + authenticity model</strong>:</p>
+<ul>
+<li><strong>SHA-256 (canonical interoperability digest):</strong>
+<ul>
+<li>package manifest fields (<code>manifest_hash</code>, full-package hash)</li>
+<li><code>ic.lock</code> reproducibility checks</li>
+<li>conservative, widely supported digest for cross-tooling/legal/provenance references</li>
+</ul>
+</li>
+<li><strong>BLAKE3 (performance-oriented internal integrity, Phase 6a+ / <code>M9</code>):</strong>
+<ul>
+<li>local CAS blob/chunk verification and repair acceleration</li>
+<li>optional server-side chunk hashing and dedup optimization</li>
+<li>may coexist with SHA-256; it does not replace SHA-256 as the canonical publish/interchange digest without a separate explicit decision</li>
+</ul>
+</li>
+<li><strong>Ed25519 signatures (authenticity):</strong>
+<ul>
+<li>signed index snapshots (git-index phase and later)</li>
+<li>signed manifest/release records and publish-channel metadata (Workshop server phases)</li>
+<li>trust claims (“official”, “verified publisher”, “reviewed”) must be backed by signature-verifiable metadata, not UI labels alone</li>
+</ul>
+</li>
+</ul>
+<p><strong>Design choice:</strong> The system signs <strong>manifests/index/release metadata records</strong>, not a bespoke wrapper around every content binary as the primary trust mechanism. File/package hashes provide integrity; signatures provide authenticity and provenance of the published metadata that references them.</p>
+<p>This keeps verification fast, auditable, and compatible with D030 federation while avoiding unnecessary package-format complexity.</p>
+<h3 id="manifest-integrity--confusion-prevention"><a class="header" href="#manifest-integrity--confusion-prevention">Manifest Integrity &amp; Confusion Prevention</a></h3>
+<p>The canonical package manifest is <strong>inside the <code>.icpkg</code> archive</strong> (<code>manifest.yaml</code>). The git-index entry and Workshop server metadata are derived summaries — never independent sources of truth. See <code>06-SECURITY.md</code> § Vulnerability 20 for the full threat analysis (inspired by the 2023 npm manifest confusion affecting 800+ packages).</p>
+<ul>
+<li><strong><code>manifest_hash</code> field:</strong> Every index entry includes <code>manifest_hash: SHA-256(manifest.yaml)</code> — the hash of the manifest file itself, separate from the full-package hash. Clients verify this independently.</li>
+<li><strong>CI validation (git-index phase):</strong> PR validation CI downloads the <code>.icpkg</code>, extracts <code>manifest.yaml</code>, computes its hash, and verifies against the declared <code>manifest_hash</code>. Mismatch → PR rejected.</li>
+<li><strong>Client verification:</strong> <code>ic mod install</code> verifies the extracted <code>manifest.yaml</code> matches the index’s <code>manifest_hash</code> before processing mod content. Mismatch → abort.</li>
+</ul>
+<h3 id="version-immutability"><a class="header" href="#version-immutability">Version Immutability</a></h3>
+<p>Once version X.Y.Z is published, its content <strong>cannot</strong> be modified or overwritten. The SHA-256 hash recorded at publish time is permanent.</p>
+<ul>
+<li><strong>Yanking ≠ deletion:</strong> Yanked versions are hidden from new <code>ic mod install</code> searches but remain downloadable for existing <code>ic.lock</code> files that reference them.</li>
+<li><strong>Git-index enforcement:</strong> CI rejects PRs that modify fields in existing version manifest files. Only additions of new version files are accepted.</li>
+<li><strong>Registry enforcement (Phase 4+):</strong> Workshop server API rejects publish requests for existing version numbers with HTTP 409 Conflict. No override flag.</li>
+</ul>
+<h3 id="typosquat--name-confusion-prevention"><a class="header" href="#typosquat--name-confusion-prevention">Typosquat &amp; Name Confusion Prevention</a></h3>
+<p>Publisher-scoped naming (<code>publisher/package</code>) is the structural defense — see <code>06-SECURITY.md</code> § Vulnerability 19. Additional measures:</p>
+<ul>
+<li><strong>Name similarity checking at publish time:</strong> Levenshtein distance + common substitution patterns checked against existing packages. Edit distance ≤ 2 from an existing popular package → flagged for manual review.</li>
+<li><strong>Disambiguation in mod manager:</strong> When multiple similar names exist, the search UI shows a notice with download counts and publisher reputation.</li>
+</ul>
+<h3 id="reputation-system-integrity"><a class="header" href="#reputation-system-integrity">Reputation System Integrity</a></h3>
+<p>The Workshop reputation system (download count, average rating, dependency count, publish consistency, community reports) includes anti-gaming measures:</p>
+<ul>
+<li><strong>Rate-limited reviews:</strong> One review per account per package. Accounts must be &gt;7 days old with at least one game session to leave reviews.</li>
+<li><strong>Download deduplication:</strong> Counts unique authenticated users, not raw download events. Anonymous downloads deduplicated by IP with a time window.</li>
+<li><strong>Sockpuppet detection:</strong> Burst of positive reviews from newly created accounts → flagged for moderator review. Review weight is proportional to reviewer account age and activity.</li>
+<li><strong>Source repo verification (optional):</strong> If a package links to a source repository, the publisher can verify push access to earn a “verified source” badge.</li>
+</ul>
+<h3 id="abandoned-package-policy"><a class="header" href="#abandoned-package-policy">Abandoned Package Policy</a></h3>
+<p>A published package is considered <strong>abandoned</strong> after 18+ months of inactivity AND no response to 3 maintainer contact attempts over 90 days.</p>
+<ul>
+<li><strong>Archive-first default:</strong> Abandoned packages are archived (still installable, marked “unmaintained” with a banner) rather than transferred.</li>
+<li><strong>Transfer process:</strong> Community can nominate a new maintainer. Requires moderator approval + 30-day public notice period. Original author can reclaim within 6 months.</li>
+<li><strong>Published version immutability survives transfer.</strong> New maintainer can publish new versions but cannot modify existing ones.</li>
+</ul>
+<h3 id="promotion--maturity-channels"><a class="header" href="#promotion--maturity-channels">Promotion &amp; Maturity Channels</a></h3>
+<p>Resources can be published to maturity channels, allowing staged releases:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Channel</th><th>Purpose</th><th>Visibility</th></tr>
+</thead>
+<tbody>
+<tr><td><code>dev</code></td><td>Work-in-progress, local testing</td><td>Author only (local repos only)</td></tr>
+<tr><td><code>beta</code></td><td>Pre-release, community testing</td><td>Opt-in (users enable beta flag)</td></tr>
+<tr><td><code>release</code></td><td>Stable, production-ready</td><td>Default (everyone sees these)</td></tr>
+</tbody>
+</table>
+</div>
+<pre><code class="language-yaml"># mod.yaml
+mod:
+  version: "1.3.0-beta.1"            # semver pre-release tag
+  channel: beta                       # publish to beta channel
+</code></pre>
+<ul>
+<li><code>ic mod publish --channel beta</code> → visible only to users who opt in to beta resources</li>
+<li><code>ic mod publish</code> (no flag) → release channel by default</li>
+<li><code>ic mod install</code> pulls from release channel unless <code>--include-beta</code> is specified</li>
+<li>Promotion: <code>ic mod promote 1.3.0-beta.1 release</code> → moves resource to release channel without re-upload</li>
+</ul>
+<h3 id="replication--mirroring"><a class="header" href="#replication--mirroring">Replication &amp; Mirroring</a></h3>
+<p>Community Workshop servers can replicate from the official server (pull replication, Artifactory-style):</p>
+<ul>
+<li><strong>Pull replication:</strong> Community server periodically syncs popular resources from official. Reduces latency for regional players, provides redundancy.</li>
+<li><strong>Selective sync:</strong> Community servers choose which categories/publishers to replicate (e.g., replicate all Maps but not Mods)</li>
+<li><strong>Offline bundles:</strong> <code>ic workshop export-bundle</code> creates a portable archive of selected resources for LAN parties or airgapped environments. <code>ic workshop import-bundle</code> loads them into a local repository.</li>
+</ul>
+<h3 id="dependency-resolution"><a class="header" href="#dependency-resolution">Dependency Resolution</a></h3>
+<p>Cargo-inspired version solving:</p>
+<ul>
+<li><strong>Semver ranges:</strong> <code>^1.2</code> (&gt;=1.2.0, &lt;2.0.0), <code>~1.2</code> (&gt;=1.2.0, &lt;1.3.0), <code>&gt;=1.0, &lt;3.0</code>, exact <code>=1.2.3</code></li>
+<li><strong>Lockfile:</strong> <code>ic.lock</code> records exact resolved versions + SHA-256 checksums for reproducible installs. In multi-source configurations, also records the <strong>source identifier</strong> per dependency (<code>source:publisher/package@version</code>) to prevent dependency confusion across federated sources (see <code>06-SECURITY.md</code> § Vulnerability 22).</li>
+<li><strong>Transitive resolution:</strong> If mod A depends on resource B which depends on resource C, all three are resolved</li>
+<li><strong>Conflict detection:</strong> Two dependencies requiring incompatible versions of the same resource → error with resolution suggestions</li>
+<li><strong>Deduplication:</strong> Same resource pulled by multiple dependents is stored once in local cache</li>
+<li><strong>Offline resolution:</strong> Once cached, all dependencies resolve from local cache — no network required</li>
+</ul>
+<h3 id="cli-extensions"><a class="header" href="#cli-extensions">CLI Extensions</a></h3>
+<pre><code>ic mod resolve         # compute dependency graph, report conflicts
+ic mod install         # download all dependencies to local cache
+ic mod update          # update deps to latest compatible versions (respects semver)
+ic mod tree            # display dependency tree (like `cargo tree`)
+ic mod lock            # regenerate ic.lock from current mod.yaml
+ic mod audit           # check dependency licenses for compatibility + source confusion detection
+ic mod list             # list all local resources (state, size, last used, source)
+ic mod remove &lt;pkg&gt;     # remove resource from disk (dependency-aware, prompts for cascade)
+ic mod deactivate &lt;pkg&gt; # keep on disk but don't load (quick toggle without re-download)
+ic mod activate &lt;pkg&gt;   # re-enable a deactivated resource
+ic mod pin &lt;pkg&gt;        # mark as "keep" — exempt from auto-cleanup
+ic mod unpin &lt;pkg&gt;      # allow auto-cleanup (returns to transient state)
+ic mod clean            # remove all expired transient resources
+ic mod clean --dry-run  # show what would be cleaned without removing anything
+ic mod status           # disk usage summary: total, by category, by state, largest resources
+</code></pre>
+<p>These extend the existing <code>ic</code> CLI (D020), not replace it. <code>ic mod publish</code> already exists — it now also uploads dependency metadata and validates license presence.</p>
+<h3 id="local-resource-management"><a class="header" href="#local-resource-management">Local Resource Management</a></h3>
+<p>Without active management, a player’s disk fills with resources from lobby auto-downloads, one-off map packs, and abandoned mods. IC treats this as a first-class design problem — not an afterthought.</p>
+<p><strong>Resource lifecycle states:</strong></p>
+<p>Every local resource is in exactly one of these states:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>State</th><th>On disk?</th><th>Loaded by game?</th><th>Auto-cleanup eligible?</th><th>How to enter</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Pinned</strong></td><td>Yes</td><td>Yes</td><td>No — stays until explicitly removed</td><td><code>ic mod install</code>, “Install” in Workshop UI, <code>ic mod pin</code>, or auto-promotion</td></tr>
+<tr><td><strong>Transient</strong></td><td>Yes</td><td>Yes</td><td>Yes — after TTL expires</td><td>Lobby auto-download, transitive dependency of a transient resource</td></tr>
+<tr><td><strong>Deactivated</strong></td><td>Yes</td><td>No</td><td>No — explicit state, player decides</td><td><code>ic mod deactivate</code> or toggle in UI</td></tr>
+<tr><td><strong>Expiring</strong></td><td>Yes</td><td>Yes</td><td>Yes — in grace period, deletion pending</td><td>Transient resource unused for <code>transient_ttl_days</code></td></tr>
+<tr><td><strong>Removed</strong></td><td>No</td><td>No</td><td>N/A</td><td><code>ic mod remove</code>, auto-cleanup, or player confirmation</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Pinned vs. Transient — the core distinction:</strong></p>
+<ul>
+<li><strong>Pinned</strong> resources are things the player explicitly chose: they clicked “Install,” ran <code>ic mod install</code>, marked a resource as “Keep,” or selected a content preset/pack in the D069 setup or maintenance wizard. Pinned resources stay on disk forever until the player explicitly removes them. This is the default state for deliberate installations.</li>
+<li><strong>Transient</strong> resources arrived automatically — lobby auto-downloads, dependencies pulled transitively by other transient resources. They’re fully functional (loaded, playable, seedable) but have a time-to-live. After <code>transient_ttl_days</code> without being used in a game session (default: 30 days), they enter the <strong>Expiring</strong> state.</li>
+</ul>
+<p>This distinction means a player who joins a modded lobby once doesn’t accumulate permanent disk debt. The resources work for that session and stick around for a month in case the player returns to similar lobbies — then quietly clean up.</p>
+<p><strong>Auto-promotion:</strong> If a transient resource is used in 3+ separate game sessions, it’s automatically promoted to Pinned. A non-intrusive notification tells the player: “Kept alice/hd-sprites — you’ve used it in 5 matches.” This preserves content the player clearly enjoys without requiring manual action.</p>
+<p><strong>Deactivation:</strong></p>
+<p>Deactivated resources stay on disk but aren’t loaded by the game. Use cases:</p>
+<ul>
+<li>Temporarily disable a heavy mod without losing it (and having to re-download 500 MB later)</li>
+<li>Keep content available for quick re-activation (one click, no network)</li>
+<li>Deactivated resources are still available as P2P seeds (configurable via <code>seed_deactivated</code> setting) since they’re already integrity-verified</li>
+</ul>
+<p>Dependency-aware: deactivating a resource that others depend on offers: “bob/tank-skins depends on this. Deactivate both? [Both / Just this one / Cancel]”. Deactivating “just this one” means dependents that reference it will show a missing-dependency warning in the mod manager.</p>
+<p><strong>Dependency-aware removal:</strong></p>
+<p><code>ic mod remove alice/hd-sprites</code> checks the reverse dependency graph:</p>
+<ul>
+<li>If nothing depends on it → remove immediately.</li>
+<li>If bob/tank-skins depends on it → prompt: “bob/tank-skins depends on alice/hd-sprites. Remove both? [Yes / No / Remove only alice/hd-sprites and deactivate bob/tank-skins]”</li>
+<li><code>ic mod remove alice/hd-sprites --cascade</code> → removes the resource and all resources that become orphaned as a result (no explicit dependents left).</li>
+<li>Orphan detection: after any removal, scan for resources with zero dependents and zero explicit install (not pinned by the player). These are cleanup candidates.</li>
+</ul>
+<p><strong>Storage budget and auto-cleanup:</strong></p>
+<pre><code class="language-toml"># settings.toml
+[workshop]
+cache_dir = "~/.ic/cache"
+
+[workshop.storage]
+budget_gb = 10                    # max transient cache before auto-cleanup (0 = unlimited)
+transient_ttl_days = 30           # days of non-use before transient resources expire
+cleanup_prompt = "weekly"         # never | after-session | weekly | monthly
+low_disk_warning_gb = 5           # warn when OS free space drops below this
+seed_deactivated = false          # P2P seed deactivated (but verified) resources
+</code></pre>
+<ul>
+<li><code>budget_gb</code> applies to <strong>transient</strong> resources only. Pinned and deactivated resources don’t count against the auto-cleanup budget (but are shown in disk usage summaries).</li>
+<li>When transient cache exceeds <code>budget_gb</code>, the oldest (by last-used timestamp) transient resources are cleaned first — LRU eviction.</li>
+<li>At 80% of budget, the content manager shows a gentle notice: “Workshop cache is 8.1 / 10 GB. [Clean up now] [Adjust budget]”</li>
+<li>On low system disk space (below <code>low_disk_warning_gb</code>), cleanup suggestions become more prominent and include deactivated resources as candidates.</li>
+</ul>
+<p><strong>Post-session cleanup prompt:</strong></p>
+<p>After a game session that auto-downloaded resources, a non-intrusive toast appears:</p>
+<pre><code> Downloaded 2 new resources for this match (47 MB).
+  alice/hd-sprites@2.0    38 MB
+  bob/desert-map@1.1       9 MB
+ [Pin (keep forever)]  [They'll auto-clean in 30 days]  [Remove now]
+</code></pre>
+<p>The default (clicking away or ignoring the toast) is “transient” — resources stay for 30 days then auto-clean. The player only needs to act if they want to explicitly keep or immediately remove. This is the low-friction path: do nothing = reasonable default.</p>
+<p><strong>Periodic cleanup prompt (configurable):</strong></p>
+<p>Based on <code>cleanup_prompt</code> setting:</p>
+<ul>
+<li><code>after-session</code>: prompt after every session that used transient resources</li>
+<li><code>weekly</code> (default): once per week if there are expiring transient resources</li>
+<li><code>monthly</code>: once per month</li>
+<li><code>never</code>: fully manual — player uses <code>ic mod clean</code> or the content manager</li>
+</ul>
+<p>The prompt shows total reclaimable space and a one-click “Clean all expired” button:</p>
+<pre><code> Workshop cleanup: 3 resources unused for 30+ days (1.2 GB)
+  [Clean all]  [Review individually]  [Remind me later]
+</code></pre>
+<p><strong>In-game Local Content Manager:</strong></p>
+<p>Accessible from the Workshop tab → “My Content” (or a dedicated top-level menu item). This is the player’s disk management dashboard:</p>
+<pre><code>┌──────────────────────────────────────────────────────────────────┐
+│  My Content                                        Storage: 6.2 GB │
+│  ┌──────────────────────────────────────────────────────────────┐ │
+│  │ Pinned: 4.1 GB (12 resources)                               │ │
+│  │ Transient: 1.8 GB (23 resources, 5 expiring soon)           │ │
+│  │ Deactivated: 0.3 GB (2 resources)                           │ │
+│  │ Budget: 1.8 / 10 GB transient    [Clean expired: 340 MB]    │ │
+│  └──────────────────────────────────────────────────────────────┘ │
+├──────────────────────────────────────────────────────────────────┤
+│  Filter: [All ▾]  [Any category ▾]  Sort: [Size ▾]  [Search…]  │
+├────────────────────┬──────┬───────┬───────────┬────────┬────────┤
+│ Resource           │ Size │ State │ Last Used │ Source │ Action │
+├────────────────────┼──────┼───────┼───────────┼────────┼────────┤
+│ alice/hd-sprites   │ 38MB │ 📌    │ 2 days ago│ Manual │ [···]  │
+│ bob/desert-map     │  9MB │ ⏳    │ 28 days   │ Lobby  │ [···]  │
+│ core/ra-balance    │  1MB │ 📌    │ today     │ Manual │ [···]  │
+│ dave/retro-sounds  │ 52MB │ 💤    │ 3 months  │ Manual │ [···]  │
+│ eve/snow-map       │  4MB │ ⏳⚠   │ 32 days   │ Lobby  │ [···]  │
+└────────────────────┴──────┴───────┴───────────┴────────┴────────┘
+│  📌 = Pinned  ⏳ = Transient  💤 = Deactivated  ⚠ = Expiring    │
+│  [Select all]  [Bulk: Pin | Deactivate | Remove]                │
+└──────────────────────────────────────────────────────────────────┘
+</code></pre>
+<p>The <code>[···]</code> action menu per resource:</p>
+<ul>
+<li><strong>Pin / Unpin</strong> — toggle between pinned and transient</li>
+<li><strong>Deactivate / Activate</strong> — toggle loading without removing</li>
+<li><strong>Remove</strong> — delete from disk (dependency-aware prompt)</li>
+<li><strong>View in Workshop</strong> — open the Workshop page for this resource</li>
+<li><strong>Show dependents</strong> — what local resources depend on this one</li>
+<li><strong>Show dependencies</strong> — what this resource requires</li>
+<li><strong>Open folder</strong> — reveal the resource’s cache directory in the file manager</li>
+</ul>
+<p><strong>Bulk operations:</strong> Select multiple resources → Pin all, Deactivate all, Remove all. “Select all transient” and “Select all expiring” shortcuts for quick cleanup.</p>
+<p><strong>“What’s using my disk?” view:</strong> A treemap or bar chart showing disk usage by category (Maps, Mods, Resource Packs, Script Libraries) with the largest individual resources highlighted. Helps players identify space hogs quickly. Accessible from the storage summary at the top of the content manager.</p>
+<p><strong>Group operations:</strong></p>
+<ul>
+<li><strong>Pin with dependencies:</strong> <code>ic mod pin alice/total-conversion --with-deps</code> pins the resource AND all its transitive dependencies. Ensures the entire dependency tree is protected from auto-cleanup.</li>
+<li><strong>Remove with orphans:</strong> <code>ic mod remove alice/total-conversion --cascade</code> removes the resource and any dependencies that become orphaned (no other pinned or transient resource needs them).</li>
+<li><strong>Modpack-aware:</strong> Pinning a modpack (D030 § Modpacks) pins all resources in the modpack. Removing a modpack removes all resources that were only needed by that modpack.</li>
+</ul>
+<p><strong>How resources from different sources interact:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Source</th><th>Default state</th><th>Auto-cleanup?</th></tr>
+</thead>
+<tbody>
+<tr><td><code>ic mod install</code> (explicit)</td><td>Pinned</td><td>No</td></tr>
+<tr><td>Workshop UI “Install” button</td><td>Pinned</td><td>No</td></tr>
+<tr><td>Lobby auto-download</td><td>Transient</td><td>Yes (after TTL)</td></tr>
+<tr><td>Dependency of a pinned resource</td><td>Pinned (inherited)</td><td>No</td></tr>
+<tr><td>Dependency of a transient resource</td><td>Transient (inherited)</td><td>Yes</td></tr>
+<tr><td><code>ic workshop import-bundle</code></td><td>Pinned</td><td>No</td></tr>
+<tr><td>Steam Workshop subscription</td><td>Pinned (managed by Steam)</td><td>Steam handles</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Edge case — mixed dependency state:</strong> If resource C is a dependency of both pinned resource A and transient resource B: C is treated as pinned (strongest state wins). If A is later removed, C reverts to transient (inheriting from B). The state is always computed from the dependency graph, not stored independently for shared deps.</p>
+<p><strong>Phase:</strong> Resource states (pinned/transient) and <code>ic mod remove/deactivate/clean/status</code> ship in Phase 4–5 with the Workshop. Storage budget and auto-cleanup prompts in Phase 5. In-game content manager UI in Phase 5–6a.</p>
+<h3 id="continuous-deployment"><a class="header" href="#continuous-deployment">Continuous Deployment</a></h3>
+<p>The <code>ic</code> CLI is designed for CI/CD pipelines — every command works headless (no interactive prompts). Authors authenticate via scoped API tokens (<code>IC_WORKSHOP_TOKEN</code> environment variable or <code>--token</code> flag). Tokens are scoped to specific operations (<code>publish</code>, <code>promote</code>, <code>admin</code>) and expire after a configurable duration. This enables:</p>
+<ul>
+<li><strong>Tag-triggered publish:</strong> Push a <code>v1.2.0</code> git tag → CI validates, tests headless, publishes to Workshop automatically</li>
+<li><strong>Beta channel CI:</strong> Every merge to <code>main</code> publishes to <code>beta</code>; explicit tag promotes to <code>release</code></li>
+<li><strong>Multi-resource monorepos:</strong> Matrix builds publish multiple resource packs from a single repo</li>
+<li><strong>Automated quality gates:</strong> <code>ic mod check</code> + <code>ic mod test</code> + <code>ic mod audit</code> run before every publish</li>
+<li><strong>Scheduled compatibility checks:</strong> Cron-triggered CI re-publishes against latest engine version to catch regressions</li>
+</ul>
+<p>Works with GitHub Actions, GitLab CI, Gitea Actions, or any CI system — the CLI is a single static binary. See <code>04-MODDING.md</code> § “Continuous Deployment for Workshop Authors” for the full workflow including a GitHub Actions example.</p>
+<h3 id="script-libraries--sharing"><a class="header" href="#script-libraries--sharing">Script Libraries &amp; Sharing</a></h3>
+<p><strong>Lesson from ArmA/OFP:</strong> ArmA’s modding ecosystem thrives partly because the community developed shared script libraries (CBA — Community Base Addons, ACE3’s interaction framework, ACRE radio system) that became foundational infrastructure. Mods built on shared libraries instead of reimplementing common patterns. IC makes this a first-class Workshop category.</p>
+<p>A Script Library is a Workshop resource containing reusable Lua modules that other mods can depend on:</p>
+<pre><code class="language-yaml"># mod.yaml for a script library resource
+mod:
+  name: "rts-ai-behaviors"
+  category: script-library
+  version: "1.0.0"
+  license: "MIT"
+  description: "Reusable AI behavior patterns for mission scripting"
+  exports:
+    - "patrol_routes"        # Lua module names available to dependents
+    - "guard_behaviors"
+    - "retreat_logic"
+</code></pre>
+<p>Dependent mods declare the library as a dependency and import its modules:</p>
+<pre><code class="language-lua">-- In a mission script that depends on rts-ai-behaviors
+local patrol = require("rts-ai-behaviors.patrol_routes")
+local guard  = require("rts-ai-behaviors.guard_behaviors")
+
+patrol.create_route(unit, waypoints, { loop = true, pause_time = 30 })
+guard.assign_area(squad, Region.Get("base_perimeter"))
+</code></pre>
+<p><strong>Key design points:</strong></p>
+<ul>
+<li>Script libraries are Workshop resources with the <code>script-library</code> category — they use the same dependency, versioning (semver), and resolution system as any other resource (see Dependency Declaration above)</li>
+<li><code>require()</code> in the Lua sandbox resolves to installed Workshop dependencies, not filesystem paths — maintaining sandbox security</li>
+<li>Libraries are versioned independently — a library author can release 2.0 without breaking mods pinned to <code>^1.0</code></li>
+<li><code>ic mod check</code> validates that all <code>require()</code> calls in a mod resolve to declared dependencies</li>
+<li>Script libraries encourage specialization: AI behavior experts publish behavior libraries, UI specialists publish UI helper libraries, campaign designers share narrative utilities</li>
+</ul>
+<p>This turns the Lua tier from “every mod reimplements common patterns” into a composable ecosystem — the same shift that made npm/crates.io transformative for their respective communities.</p>
+<h3 id="license-system"><a class="header" href="#license-system">License System</a></h3>
+<p><strong>Every published Workshop resource MUST have a <code>license</code> field.</strong> Publishing without one is rejected.</p>
+<pre><code class="language-yaml"># In mod.yaml or resource manifest
+mod:
+  license: "CC-BY-SA-4.0"             # SPDX identifier (required for publishing)
+</code></pre>
+<ul>
+<li>Uses <a href="https://spdx.org/licenses/">SPDX identifiers</a> for machine-readable license classification</li>
+<li>Workshop UI displays license prominently on every resource listing</li>
+<li><code>ic mod audit</code> checks the full dependency tree for license compatibility (e.g., CC-BY-NC dep in a CC-BY mod → warning)</li>
+<li>Common licenses for game assets: <code>CC-BY-4.0</code>, <code>CC-BY-SA-4.0</code>, <code>CC-BY-NC-4.0</code>, <code>CC0-1.0</code>, <code>MIT</code>, <code>GPL-3.0-only</code>, <code>LicenseRef-Custom</code> (with link to full text)</li>
+<li>Resources with incompatible licenses can coexist in the Workshop but <code>ic mod audit</code> warns when combining them</li>
+<li><strong>Optional EULA</strong> for authors who need additional terms beyond SPDX (e.g., “no use in commercial products without written permission”). EULA cannot contradict the SPDX license. See <code>04-MODDING.md</code> § “Optional EULA”</li>
+<li><strong>Workshop Terms of Service (platform license):</strong> By publishing, authors grant the platform minimum rights to host, cache, replicate, index, generate previews, serve as dependency, and auto-download in multiplayer — regardless of the resource’s declared license. Same model as GitHub/npm/Steam Workshop. The ToS does not expand what <em>recipients</em> can do (that’s the license) — it ensures the platform can mechanically operate. See <code>04-MODDING.md</code> § “Workshop Terms of Service”</li>
+<li><strong>Minimum age (COPPA):</strong> Workshop accounts require users to be 13+. See <code>04-MODDING.md</code> § “Minimum Age Requirement”</li>
+<li><strong>Third-party content disclaimer:</strong> IC is not liable for Workshop content. See <code>04-MODDING.md</code> § “Third-Party Content Disclaimer”</li>
+<li><strong>Privacy Policy:</strong> Required before Workshop server deployment. Covers data collection, retention, GDPR rights. See <code>04-MODDING.md</code> § “Privacy Policy Requirements”</li>
+</ul>
+<h3 id="llm-driven-resource-discovery"><a class="header" href="#llm-driven-resource-discovery">LLM-Driven Resource Discovery</a></h3>
+<p><code>ic-llm</code> can search the Workshop programmatically and incorporate discovered resources into generated content:</p>
+<pre><code>Pipeline:
+  1. LLM generates mission concept ("Soviet ambush in snowy forest")
+  2. Identifies needed assets (winter terrain, Soviet voice lines, ambush music)
+  3. Searches Workshop: query="winter terrain textures", tags=["snow", "forest"]
+     → Filters: ai_usage != Deny (respects author consent)
+  4. Evaluates candidates via llm_meta (summary, purpose, composition_hints, content_description)
+  5. Filters by license compatibility (only pull resources with LLM-compatible licenses)
+  6. Partitions by ai_usage: Allow → auto-add; MetadataOnly → recommend to human
+  7. Adds discovered resources as dependencies in generated mod.yaml
+  8. Generated mission references assets by resource ID — resolved at install time
+</code></pre>
+<p>This turns the Workshop into a composable asset library that both humans and AI agents can draw from.</p>
+<h3 id="author-consent-for-llm-usage-ai_usage"><a class="header" href="#author-consent-for-llm-usage-ai_usage">Author Consent for LLM Usage (ai_usage)</a></h3>
+<p>Every Workshop resource carries an <code>ai_usage</code> field <strong>separate from the SPDX license</strong>. The license governs human legal rights; <code>ai_usage</code> governs automated AI agent behavior. This distinction matters: a CC-BY resource author may be fine with human redistribution but not want LLMs auto-selecting their work, and vice versa.</p>
+<p><strong>Three tiers:</strong></p>
+<ul>
+<li><strong><code>allow</code></strong> — LLMs can discover, evaluate, and auto-add this resource as a dependency. No human approval per-use.</li>
+<li><strong><code>metadata_only</code></strong> (default) — LLMs can read metadata and recommend the resource, but a human must approve adding it. Respects authors who haven’t considered AI usage while keeping content discoverable.</li>
+<li><strong><code>deny</code></strong> — Resource is invisible to LLM queries. Human users can still browse and install normally.</li>
+</ul>
+<p><code>ai_usage</code> is required on publish. Default is <code>metadata_only</code>. Authors can change it at any time via <code>ic mod update --ai-usage allow|metadata_only|deny</code>. See <code>04-MODDING.md</code> § “Author Consent for LLM Usage” for full design including YAML examples, Workshop UI integration, and composition sets.</p>
+<h3 id="workshop-server-resolution-resolves-p007"><a class="header" href="#workshop-server-resolution-resolves-p007">Workshop Server Resolution (resolves P007)</a></h3>
+<p><strong>Decision: Federated multi-source with merge.</strong> The Workshop client can aggregate listings from multiple sources:</p>
+<pre><code class="language-toml"># settings.toml
+[[workshop.sources]]
+url = "https://workshop.ironcurtain.gg"      # official (always included)
+priority = 1
+
+[[workshop.sources]]
+url = "https://mods.myclan.com/workshop"      # community server
+priority = 2
+
+[[workshop.sources]]
+path = "C:/my-local-workshop"                 # local directory
+priority = 3
+
+[workshop]
+deduplicate = true                # same resource ID from multiple sources → highest priority wins
+</code></pre>
+<p>Rationale: Single-source is too limiting for a resource registry. Crates.io has mirrors; npm has registries. A dependency system inherently benefits from federation — tournament organizers publish to their server, LAN parties use local directories, the official server is the default. Deduplication by resource ID + priority ordering handles conflicts.</p>
+<p><strong>Alternatives considered:</strong></p>
+<ul>
+<li>Single source only (simpler but doesn’t scale for a registry model — what happens when the official server is down?)</li>
+<li>Full decentralization with no official server (too chaotic for discoverability)</li>
+<li>Git-based distribution like Go modules (too complex for non-developer modders)</li>
+<li>Steam Workshop only (platform lock-in, no WASM/browser target, no self-hosting)</li>
+</ul>
+<h3 id="steam-workshop-integration"><a class="header" href="#steam-workshop-integration">Steam Workshop Integration</a></h3>
+<p>The federated model includes <strong>Steam Workshop as a source type</strong> alongside IC-native Workshop servers and local directories. For Steam builds, the Workshop browser can query Steam Workshop in addition to IC sources:</p>
+<pre><code class="language-toml"># settings.toml (Steam build)
+[[workshop.sources]]
+url = "https://workshop.ironcurtain.gg"      # IC official
+priority = 1
+
+[[workshop.sources]]
+type = "steam-workshop"                      # Steam Workshop (Steam builds only)
+app_id = "&lt;steam_app_id&gt;"
+priority = 2
+
+[[workshop.sources]]
+path = "C:/my-local-workshop"
+priority = 3
+</code></pre>
+<ul>
+<li><strong>Publish to both:</strong> <code>ic mod publish</code> uploads to IC Workshop; Steam builds additionally push to Steam Workshop via Steamworks API. One command, dual publish.</li>
+<li><strong>Subscribe from either:</strong> IC resources and Steam Workshop items appear in the same in-game browser (virtual view merges them).</li>
+<li><strong>Non-Steam builds are not disadvantaged.</strong> IC’s own Workshop is the primary registry. Steam Workshop is an optional distribution channel that broadens reach for creators on Steam.</li>
+<li><strong>Maps are the primary Steam Workshop content type</strong> (matching Remastered’s pattern). Full mods are better served by the IC Workshop due to richer metadata, dependency resolution, and federation.</li>
+</ul>
+<h3 id="in-game-workshop-browser"><a class="header" href="#in-game-workshop-browser">In-Game Workshop Browser</a></h3>
+<p>The Workshop is accessible from the main menu, not only via the <code>ic</code> CLI. The in-game browser provides:</p>
+<ul>
+<li><strong>Search</strong> with full-text search (FTS5 via D034), category filters, tag filters, and sorting (popular, recent, trending, most-depended-on)</li>
+<li><strong>Resource detail pages</strong> with description, screenshots/preview, license, author, download count, rating, dependency tree, changelog</li>
+<li><strong>One-click install</strong> with automatic dependency resolution — same as <code>ic mod install</code> but from the game UI</li>
+<li><strong>Ratings and reviews</strong> — 1-5 star rating plus optional text review per user per resource</li>
+<li><strong>Creator profiles</strong> — browse all resources by a specific author, see their total downloads, reputation badges</li>
+<li><strong>Collections</strong> — user-curated lists of resources (“My Competitive Setup”, “Best Soviet Music”), shareable via link</li>
+<li><strong>Trending and featured</strong> — algorithmically surfaced (time-weighted download velocity) plus editorially curated featured lists</li>
+</ul>
+<h3 id="auto-download-on-lobby-join"><a class="header" href="#auto-download-on-lobby-join">Auto-Download on Lobby Join</a></h3>
+<p>When a player joins a multiplayer lobby, the game automatically resolves and downloads any required mods, maps, or resource packs that the player doesn’t have locally:</p>
+<ol>
+<li><strong>Lobby advertises requirements:</strong> The <code>GameListing</code> (see <code>03-NETCODE.md</code>) includes mod ID, version, and Workshop source for all required resources</li>
+<li><strong>Client checks local cache:</strong> Already have the exact version? Skip download.</li>
+<li><strong>Missing resources auto-resolve:</strong> Client queries the virtual Workshop repository, downloads missing resources via P2P (BitTorrent/WebTorrent — D049) with HTTP fallback. Lobby peers are prioritized as download sources (they already have the required content).</li>
+<li><strong>Progress UI:</strong> Download progress bar shown in lobby with source indicator (P2P/HTTP). Game start blocked until all players have all required resources.</li>
+<li><strong>Rejection option:</strong> Player can decline to download and leave the lobby instead.</li>
+<li><strong>Size warning:</strong> Downloads exceeding a configurable threshold (default 100MB) prompt confirmation before proceeding.</li>
+</ol>
+<p>This matches CS:GO/CS2’s pattern where community maps download automatically when joining a server — zero friction for players. It also solves ArmA Reforger’s most-cited community complaint about mod management friction. P2P delivery means lobby auto-download is fast (peers in the same lobby are direct seeds) and free (no CDN cost per join). See D052 § “In-Lobby P2P Resource Sharing” for the full lobby protocol: room discovery, host-as-tracker, security model, and verification flow.</p>
+<p><strong>Local resource lifecycle:</strong> Resources downloaded this way are tagged as <strong>transient</strong> (not pinned). They remain fully functional but are subject to auto-cleanup after <code>transient_ttl_days</code> (default 30 days) of non-use. After the session, a non-intrusive toast offers: “[Pin (keep forever)] [They’ll auto-clean in 30 days] [Remove now]”. Frequently-used transient resources (3+ sessions) are automatically promoted to pinned. See D030 § “Local Resource Management” for the full lifecycle, storage budget, and cleanup UX.</p>
+<h3 id="creator-reputation-system"><a class="header" href="#creator-reputation-system">Creator Reputation System</a></h3>
+<p>Creators accumulate reputation through their Workshop activity. Reputation is displayed on resource listings and creator profiles:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Signal</th><th>Weight</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td>Total downloads</td><td>Medium</td><td>Cumulative downloads across all published resources</td></tr>
+<tr><td>Average rating</td><td>High</td><td>Mean star rating across published resources (minimum 10 ratings to display)</td></tr>
+<tr><td>Dependency count</td><td>High</td><td>How many other resources/mods depend on this creator’s work</td></tr>
+<tr><td>Publish consistency</td><td>Low</td><td>Regular updates and new content over time</td></tr>
+<tr><td>Community reports</td><td>Negative</td><td>DMCA strikes, policy violations reduce reputation</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Badges:</strong></p>
+<ul>
+<li><strong>Verified</strong> — identity confirmed (e.g., linked GitHub account)</li>
+<li><strong>Prolific</strong> — 10+ published resources with ≥4.0 average rating</li>
+<li><strong>Foundation</strong> — resources depended on by 50+ other resources</li>
+<li><strong>Curator</strong> — maintains high-quality curated collections</li>
+</ul>
+<p>Reputation is displayed but not gatekeeping — any registered user can publish. Reputation helps players discover trustworthy content in a growing registry.</p>
+<h3 id="post-play-feedback-prompts--helpful-review-recognition-optional-profile-only-rewards"><a class="header" href="#post-play-feedback-prompts--helpful-review-recognition-optional-profile-only-rewards">Post-Play Feedback Prompts &amp; Helpful Review Recognition (Optional, Profile-Only Rewards)</a></h3>
+<p>IC may prompt players <strong>after a match/session/campaign step</strong> for lightweight feedback on the experience and, when relevant, the active mode/mod/campaign package. This is intended to improve creator iteration quality without becoming a nag loop.</p>
+<p><strong>Prompt design rules (normative):</strong></p>
+<ul>
+<li><strong>Sampled, not every match.</strong> Use cooldowns/sampling and minimum playtime thresholds before prompting.</li>
+<li><strong>Skippable and snoozeable.</strong> Always provide <code>Skip</code>, <code>Snooze</code>, and <code>Don't ask for this mode/mod</code> options.</li>
+<li><strong>Non-blocking.</strong> Feedback prompts must not delay replay save, re-queue, or returning to menu.</li>
+<li><strong>Scope-labeled.</strong> The UI should clearly state what the feedback applies to (base mode, specific Workshop mod, campaign pack, etc.).</li>
+</ul>
+<p><strong>Creator feedback inbox (Workshop / My Content / Publishing):</strong></p>
+<ul>
+<li>Resource authors can view submitted feedback for their own resources (subject to community/server policy and privacy settings).</li>
+<li>Authors can triage entries as <code>Helpful</code>, <code>Needs follow-up</code>, <code>Duplicate</code>, or <code>Not actionable</code>.</li>
+<li>Marking a review as <strong>Helpful</strong> is a creator-quality signal, not a moderation verdict and not a rating override.</li>
+</ul>
+<p><strong>Helpful-review rewards (strictly profile/social only):</strong></p>
+<ul>
+<li>Allowed examples: profile badges, reviewer reputation progress, cosmetic titles, creator acknowledgements (“Thanks from <creator>”)</creator></li>
+<li>Disallowed examples: gameplay currency, ranked benefits, unlocks that affect matches, hidden matchmaking advantages</li>
+<li>Reward state must be revocable if abuse/fraud is later detected (D037 governance + D052 moderation support)</li>
+</ul>
+<p><strong>Community contribution recognition tiers (optional, profile-only):</strong></p>
+<ul>
+<li><strong>Badges (M10)</strong> — visible milestones (e.g., <code>Helpful Reviewer</code>, <code>Field Analyst I–III</code>, <code>Creator Favorite</code>, <code>Community Tester</code>)</li>
+<li><strong>Contribution reputation (M10)</strong> — a profile/social signal summarizing sustained helpful feedback quality (separate from ranked rating and Workshop star ratings)</li>
+<li><strong>Contribution points (M11+, optional)</strong> — non-tradable, non-cashable, revocable points usable only for approved <strong>profile/cosmetic</strong> rewards (for example profile frames, banners, titles, showcase cosmetics). This is not a gameplay economy.</li>
+<li><strong>Contribution achievements (M10/M11)</strong> — achievement entries for feedback quality milestones and creator acknowledgements (can include rare/manual “Exceptional Contributor” style recognition under community governance policy)</li>
+</ul>
+<p><strong>Points / redemption guardrails (if enabled in Phase 7+):</strong></p>
+<ul>
+<li>Points are earned from <strong>helpful/actionable</strong> recognition, not positivity or review volume alone</li>
+<li>Points and reputation are <strong>non-transferable</strong>, <strong>non-tradable</strong>, and <strong>cannot</strong> be exchanged for paid currency</li>
+<li>Redeemable rewards must be <strong>profile/cosmetic-only</strong> (no gameplay, no ranked, no matchmaking weight)</li>
+<li>Communities may cap accrual, delay grants pending abuse checks, and revoke points/redeemed cosmetics if fraud/collusion is confirmed (D037)</li>
+<li>UI wording should prefer “community contribution rewards” or “profile rewards” over ambiguous “bonuses”</li>
+</ul>
+<p><strong>Anti-abuse guardrails (normative):</strong></p>
+<ul>
+<li>One helpful-mark reward per review (idempotent if toggled)</li>
+<li>Minimum account age / playtime requirements before a review is eligible for helpful-reward recognition</li>
+<li>No self-reviews, collaborator self-dealing, or same-identity reward loops</li>
+<li>Rate limits and anomaly detection for reciprocal helpful-mark rings / alt-account farming</li>
+<li>“Helpful” must not be synonymous with “positive” — negative-but-actionable feedback remains eligible</li>
+<li>Communities may audit or revoke abusive helpful marks; repeated abuse affects creator reputation/moderation standing</li>
+</ul>
+<p><strong>Relationship to D053:</strong> Helpful-review recognition appears on the player’s profile as a <strong>community contribution / feedback quality</strong> signal, separate from ranked stats and separate from Workshop star ratings.</p>
+<h3 id="content-moderation--dmcatakedown-policy"><a class="header" href="#content-moderation--dmcatakedown-policy">Content Moderation &amp; DMCA/Takedown Policy</a></h3>
+<p>The Workshop requires a clear content policy and takedown process:</p>
+<p><strong>Prohibited content:</strong></p>
+<ul>
+<li>Assets ripped from commercial games without permission (the ArmA community’s perennial problem)</li>
+<li>Malicious content (WASM modules with harmful behavior — mitigated by capability sandbox)</li>
+<li>Content violating the license declared in its manifest</li>
+<li>Hate speech, illegal content (standard platform policy)</li>
+</ul>
+<p><strong>Takedown process:</strong></p>
+<ol>
+<li><strong>Reporter files takedown request</strong> via Workshop UI or email, specifying the resource and the claim (DMCA, license violation, policy violation)</li>
+<li><strong>Resource is flagged</strong> — not immediately removed — and the author is notified with a 72-hour response window</li>
+<li><strong>Author can counter-claim</strong> (e.g., they hold the rights, the reporter is mistaken)</li>
+<li><strong>Workshop moderators review</strong> — if the claim is valid, the resource is delisted (not deleted — remains in local caches of existing users)</li>
+<li><strong>Repeat offenders</strong> accumulate strikes. Three strikes → account publishing privileges suspended. Appeals process available.</li>
+<li><strong>DMCA safe harbor:</strong> The Workshop server operator (official or community-hosted) follows standard DMCA safe harbor procedures. Community-hosted servers set their own moderation policies.</li>
+</ol>
+<p><strong>License enforcement integration:</strong></p>
+<ul>
+<li><code>ic mod audit</code> already checks dependency tree license compatibility</li>
+<li>Workshop server rejects publish if declared license conflicts with dependency licenses</li>
+<li>Resources with <code>LicenseRef-Custom</code> must provide a URL to full license text</li>
+</ul>
+<p><strong>Rationale (from ArmA research):</strong> ArmA’s private mod ecosystem exists specifically because the Workshop can’t protect creators or manage IP claims. Disney, EA, and others actively DMCA ArmA Workshop content. Bohemia established an IP ban list but the community found it heavy-handed. IC’s approach: clear rules, due process, creator notification first — not immediate removal.</p>
+<p><strong>Phase:</strong> Minimal Workshop in Phase 4–5 (central server + publish + browse + auto-download); full Workshop (federation, Steam source, reputation, DMCA) in Phase 6a; preparatory work in Phase 3 (manifest format finalized).</p>
+<hr>
+<hr>
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../../decisions/09e-community.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../../decisions/09e/D031-observability.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../../decisions/09e-community.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../../decisions/09e/D031-observability.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../../mark-09e88c2c.min.js"></script>
+        <script src="../../searcher-c2a407aa.js"></script>
+
+        <script src="../../clipboard-1626706a.min.js"></script>
+        <script src="../../highlight-abc7f01d.js"></script>
+        <script src="../../book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

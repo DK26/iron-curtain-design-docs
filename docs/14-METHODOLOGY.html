@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-3d47d740.js";
+            window.path_to_searchindex_js = "searchindex-61d2369b.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-914f79aa.js"></script>
+        <script src="toc-1553b04b.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -253,7 +253,7 @@
 <li>Research is concurrent with other work in later stages — new questions arise during implementation</li>
 <li>Research is a <strong>continuous discipline</strong>, not a phase that ends. Every new prior art study can challenge assumptions, confirm patterns, or reveal gaps. The project’s commit history shows active research throughout pre-development — not tapering early but intensifying as design maturity makes it easier to ask precise questions.</li>
 </ul>
-<p><strong>Current status (February 2026):</strong> The major architectural questions are answered across 14 design chapters, 70+ indexed decisions, and 38+ research analyses. Research continues as a parallel track — recent examples include AI implementation surveys across 7+ codebases, Stratagus/Stargus engine analysis, a transcript-backed RTS 2026 trend scan (<code>research/rts-2026-trend-scan.md</code>), a BAR/Recoil source-study (<code>research/bar-recoil-source-study.md</code>) used to refine creator-workflow and scripting-boundary implementation priorities, and an open-source RTS communication/marker study (<code>research/open-source-rts-communication-markers-study.md</code>) used to harden D059 beacon/marker schema and <code>M7</code> communication UX priorities. Each produces cross-references and actionable refinements. The shift is from <em>exploratory</em> research (“what should we build?”) to <em>confirmatory</em> research (“does this prior art validate or challenge our approach?”).</p>
+<p><strong>Current status (February 2026):</strong> The major architectural questions are answered across 14 design chapters, 70+ indexed decisions, and 41+ research analyses. Research continues as a parallel track — recent examples include AI implementation surveys across 7+ codebases, Stratagus/Stargus engine analysis, a transcript-backed RTS 2026 trend scan (<code>research/rts-2026-trend-scan.md</code>), a BAR/Recoil source-study (<code>research/bar-recoil-source-study.md</code>) used to refine creator-workflow and scripting-boundary implementation priorities, an open-source RTS communication/marker study (<code>research/open-source-rts-communication-markers-study.md</code>) used to harden D059 beacon/marker schema and <code>M7</code> communication UX priorities, an RTL/BiDi implementation study (<code>research/rtl-bidi-open-source-implementation-study.md</code>) used to harden localization directionality/font-fallback/shaping requirements across <code>M6</code>/<code>M7</code>/<code>M9</code>/<code>M10</code>, a Source SDK 2013 source study (<code>research/source-sdk-2013-source-study.md</code>) used to validate fixed-point determinism, safe parsing, capability tokens, typestate, and CI-from-day-one priorities, and a Generals/Zero Hour diagnostic tools study (<code>research/generals-zero-hour-diagnostic-tools-study.md</code>) used to refine the diagnostic overlay design with SAGE engine patterns (cushion metric, gross/net time, category-filtered world markers, tick-stepping). Each produces cross-references and actionable refinements. The shift is from <em>exploratory</em> research (“what should we build?”) to <em>confirmatory</em> research (“does this prior art validate or challenge our approach?”).</p>
 <h3 id="trend-scan-checklist-videos-listicles-talks-showcase-demos"><a class="header" href="#trend-scan-checklist-videos-listicles-talks-showcase-demos">Trend Scan Checklist (Videos, Listicles, Talks, Showcase Demos)</a></h3>
 <p>Use this checklist when the source is a <strong>trend signal</strong> (YouTube roundup, trailer breakdown, conference talk, showcase demo) rather than a primary technical source. The goal is to extract inspiration <strong>without importing hype or scope creep</strong>.</p>
 <p><strong>1. Classify the source (signal quality)</strong></p>
@@ -444,6 +444,24 @@ Parallel tracks (can proceed alongside sim work):
 </li>
 <li>If this mapping is missing, the feature remains an idea/proposal, not scheduled work.</li>
 </ul>
+<p><strong>External implementation repo bootstrap gate (mandatory before code execution starts in a new repo):</strong></p>
+<ul>
+<li>If implementation work moves into a separate source-code repository, bootstrap it with:
+<ul>
+<li>a local <code>AGENTS.md</code> aligned to the canonical design docs (<code>src/tracking/external-project-agents-template.md</code>)</li>
+<li>a code navigation index (<code>CODE-INDEX.md</code>) aligned to milestone/<code>G*</code> work (<code>src/tracking/source-code-index-template.md</code>)</li>
+</ul>
+</li>
+<li>Do not treat the external repo as design-aligned until it has:
+<ul>
+<li>canonical design-doc links/version pin</li>
+<li>no-silent-divergence rules</li>
+<li>design-gap escalation workflow</li>
+<li>code ownership/boundary navigation map</li>
+</ul>
+</li>
+<li>Use <code>src/tracking/external-code-project-bootstrap.md</code> as the setup procedure and checklist.</li>
+</ul>
 <p><strong>Future/deferral language gate (mandatory for canonical docs):</strong></p>
 <ul>
 <li>Future-facing design statements must be classified as one of: <code>PlannedDeferral</code>, <code>NorthStarVision</code>, <code>VersioningEvolution</code>, or an explicitly non-planning context (narrative example, historical quote, legal phrase).</li>
@@ -457,6 +475,13 @@ Parallel tracks (can proceed alongside sim work):
 </li>
 <li>Use <code>src/tracking/future-language-audit.md</code> for repo-wide audit/remediation tracking and <code>src/tracking/deferral-wording-patterns.md</code> for replacement wording examples.</li>
 <li>Quick audit inventory command (canonical docs): <code>rg -n "\\bfuture\\b|\\blater\\b|\\bdefer(?:red)?\\b|\\beventually\\b|\\bTBD\\b|\\bnice-to-have\\b" src README.md AGENTS.md --glob '!research/**'</code></li>
+</ul>
+<p><strong>Testing strategy gate (mandatory for all implementation milestones):</strong></p>
+<ul>
+<li>Every design feature must map to at least one automated test in <code>src/tracking/testing-strategy.md</code>.</li>
+<li>CI pipeline tiers (PR gate, post-merge, nightly, weekly) define when each test category runs.</li>
+<li>New features must specify which test tier covers them and what the exit criteria are.</li>
+<li>Performance benchmarks, fuzz targets, and anti-cheat calibration datasets are defined in the testing strategy and must be updated when new attack surfaces or performance-sensitive code paths are added.</li>
 </ul>
 <p><strong>Exit criteria:</strong></p>
 <ul>
@@ -541,7 +566,7 @@ Does NOT touch: ic-render, ic-net, ic-ui, ic-editor
 <tbody>
 <tr><td>1</td><td>Research Stratagus/Stargus engine architecture</td><td><code>research/</code></td><td>GitHub repos, AGENTS.md § Reference Material</td><td>—</td></tr>
 <tr><td>2</td><td>Create research document with findings</td><td><code>research/</code></td><td>Notes from #1</td><td>#1</td></tr>
-<tr><td>3</td><td>Extract lessons applicable to IC AI system</td><td><code>decisions/09d-gameplay.md</code></td><td>Research doc from #2, D043 section</td><td>#2</td></tr>
+<tr><td>3</td><td>Extract lessons applicable to IC AI system</td><td><code>decisions/09d/D043-ai-presets.md</code></td><td>Research doc from #2, D043 section</td><td>#2</td></tr>
 <tr><td>4</td><td>Update modding docs with Lua AI primitives</td><td><code>src/04-MODDING.md</code></td><td>Research doc from #2, existing Lua API section</td><td>#2</td></tr>
 <tr><td>5</td><td>Update security docs with Lua stdlib policy</td><td><code>src/06-SECURITY.md</code></td><td>Research doc from #2, existing sandbox section</td><td>#2</td></tr>
 <tr><td>6</td><td>Update AGENTS.md reference material</td><td><code>AGENTS.md</code></td><td>Research doc from #2</td><td>#2</td></tr>

@@ -1,0 +1,633 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>D043 — AI Presets - Iron Curtain — Design Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Design docs for a Rust-native Red Alert RTS engine">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../../css/general-2459343d.css">
+        <link rel="stylesheet" href="../../css/chrome-ae938929.css">
+        <link rel="stylesheet" href="../../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../../searchindex-61d2369b.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../../toc-1553b04b.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Iron Curtain — Design Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs/edit/main/src/decisions/09d/D043-ai-presets.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h2 id="d043-ai-behavior-presets--classic-openra-and-ic-default"><a class="header" href="#d043-ai-behavior-presets--classic-openra-and-ic-default">D043: AI Behavior Presets — Classic, OpenRA, and IC Default</a></h2>
+<p><strong>Status:</strong> Accepted
+<strong>Scope:</strong> <code>ic-ai</code>, <code>ic-sim</code> (read-only), game module configuration
+<strong>Phase:</strong> Phase 4 (ships with AI &amp; Single Player)</p>
+<h3 id="the-problem"><a class="header" href="#the-problem">The Problem</a></h3>
+<p>D019 gives players switchable <em>balance</em> presets (Classic RA vs. OpenRA vs. Remastered values). D041 provides the <code>AiStrategy</code> trait for pluggable AI algorithms. But neither addresses a parallel concern: AI <em>behavioral</em> style. Original Red Alert AI, OpenRA AI, and a research-informed IC AI all make fundamentally different decisions given the same balance values. A player who selects “Classic RA” balance expects an AI that <em>plays like Classic RA</em> — predictable build orders, minimal micro, base-walk expansion, no focus-fire — not an advanced AI that happens to use 1996 damage tables.</p>
+<h3 id="decision"><a class="header" href="#decision">Decision</a></h3>
+<p>Ship <strong>AI behavior presets</strong> as first-class configurations alongside balance presets (D019). Each preset defines how the AI plays — its decision-making style, micro level, strategic patterns, and quirks — independent of which balance values or pathfinding behavior are active.</p>
+<h3 id="built-in-presets"><a class="header" href="#built-in-presets">Built-In Presets</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Preset</th><th>Behavior Description</th><th>Source</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Classic RA</strong></td><td>Mimics original RA AI quirks: predictable build queues, base-walk expansion, minimal unit micro, no focus-fire, doesn’t scout, doesn’t adapt to player strategy</td><td>EA Red Alert source code analysis</td></tr>
+<tr><td><strong>OpenRA</strong></td><td>Matches OpenRA skirmish AI: better micro, uses attack-move, scouts, adapts build to counter player’s army composition, respects fog of war properly</td><td>OpenRA AI implementation analysis</td></tr>
+<tr><td><strong>IC Default</strong></td><td>Research-informed enhanced AI: flowfield-aware group tactics, proper formation movement, multi-prong attacks, economic harassment, tech-switching, adaptive aggression</td><td>Open-source RTS AI research (see below)</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="ic-default-ai--research-foundation"><a class="header" href="#ic-default-ai--research-foundation">IC Default AI — Research Foundation</a></h3>
+<p>The IC Default preset draws from published research and open-source implementations across the RTS genre:</p>
+<ul>
+<li><strong>0 A.D.</strong> — economic AI with resource balancing heuristics, expansion timing models</li>
+<li><strong>Spring Engine (BAR/Zero-K)</strong> — group micro, terrain-aware positioning, retreat mechanics, formation movement</li>
+<li><strong>Wargus (Stratagus)</strong> — Warcraft II AI with build-order scripting and adaptive counter-play</li>
+<li><strong>OpenRA</strong> — the strongest open-source C&amp;C AI; baseline for improvement</li>
+<li><strong>MicroRTS / AIIDE competitions</strong> — academic RTS AI research: MCTS-based planning, influence maps, potential fields for tactical positioning</li>
+<li><strong>StarCraft: Brood War AI competitions (SSCAIT, AIIDE)</strong> — decades of research on build-order optimization, scouting, harassment timing</li>
+</ul>
+<p>The IC Default AI is not a simple difficulty bump — it’s a qualitatively different decision process. Where Classic RA groups all units and attack-moves to the enemy base, IC Default maintains map control, denies expansions, and probes for weaknesses before committing.</p>
+<h3 id="ic-default-ai--implementation-architecture"><a class="header" href="#ic-default-ai--implementation-architecture">IC Default AI — Implementation Architecture</a></h3>
+<p>Based on cross-project analysis of EA Red Alert, EA Generals/Zero Hour, OpenRA, 0 A.D. Petra, Spring Engine, MicroRTS, and Stratagus (see <code>research/rts-ai-implementation-survey.md</code> and <code>research/stratagus-stargus-opencraft-analysis.md</code>), <code>PersonalityDrivenAi</code> uses a <strong>priority-based manager hierarchy</strong> — the dominant pattern across all surveyed RTS AI implementations (independently confirmed in 7 codebases):</p>
+<pre><code>PersonalityDrivenAi → AiStrategy trait impl
+├── EconomyManager
+│   ├── HarvesterController     (nearest-resource assignment, danger avoidance)
+│   ├── PowerMonitor            (urgency-based power plant construction)
+│   └── ExpansionPlanner        (economic triggers for new base timing)
+├── ProductionManager
+│   ├── UnitCompositionTarget   (share-based, self-correcting — from OpenRA)
+│   ├── BuildOrderEvaluator     (priority queue with urgency — from Petra)
+│   └── StructurePlanner        (influence-map placement — from 0 A.D.)
+├── MilitaryManager
+│   ├── AttackPlanner           (composition thresholds + timing — from Petra)
+│   ├── DefenseResponder        (event-driven reactive defense — from OpenRA)
+│   └── SquadManager            (unit grouping, assignment, retreat)
+└── AiState (shared)
+    ├── ThreatMap               (influence map: enemy unit positions + DPS)
+    ├── ResourceMap             (known resource node locations and status)
+    ├── ScoutingMemory          (last-seen timestamps for enemy buildings)
+    └── StrategyClassification  (Phase 5+: opponent archetype tracking)
+</code></pre>
+<p>Each manager runs on its own tick-gated schedule (see Performance Budget below). Managers communicate through shared <code>AiState</code>, not direct calls — the same pattern used by 0 A.D. Petra and OpenRA’s modular bot architecture.</p>
+<h4 id="key-techniques-phase-4"><a class="header" href="#key-techniques-phase-4">Key Techniques (Phase 4)</a></h4>
+<p>These six techniques form the Phase 4 implementation. Each is proven across multiple surveyed projects:</p>
+<ol>
+<li>
+<p><strong>Priority-based resource allocation</strong> (from Petra’s <code>QueueManager</code>) — single most impactful pattern. Build requests go into a priority queue ordered by urgency. Power plant at 90% capacity is urgent; third barracks is not. Prevents the “AI has 50k credits and no power” failure mode seen in EA Red Alert.</p>
+</li>
+<li>
+<p><strong>Share-based unit composition</strong> (from OpenRA’s <code>UnitBuilderBotModule</code>) — production targets expressed as ratios (e.g., infantry 40%, vehicles 50%, air 10%). Each production cycle builds whatever unit type is furthest below its target share. Self-correcting: losing tanks naturally shifts production toward tanks. Personality parameters (D043 YAML config) tune the ratios per preset.</p>
+</li>
+<li>
+<p><strong>Influence map for building placement</strong> (from 0 A.D. Petra) — a grid overlay scoring each cell by proximity to resources, distance from known threats, and connectivity to existing base. Dramatically better base layouts than EA RA’s random placement. The influence map is a fixed-size array in <code>AiScratch</code>, cleared and rebuilt on the building-placement schedule.</p>
+</li>
+<li>
+<p><strong>Tick-gated evaluation</strong> (from Generals/Petra/MicroRTS) — expensive decisions run infrequently, cheap ones run often. Defense response is near-instant (every tick, event-driven). Strategic reassessment is every 60 ticks (~2 seconds). This pattern appears in <em>every</em> surveyed project that handles 200+ units. See Performance Budget table below.</p>
+</li>
+<li>
+<p><strong>Fuzzy engagement logic</strong> (from OpenRA’s <code>AttackOrFleeFuzzy</code>) — combat decisions use fuzzy membership functions over health ratio, relative DPS, and nearby ally strength, producing a continuous attack↔retreat score rather than a binary threshold. This avoids the “oscillating dance” where units alternate between attacking and fleeing at a hard HP boundary.</p>
+</li>
+<li>
+<p><strong>Computation budget cap</strong> (from MicroRTS) — <code>AiStrategy::tick_budget_hint()</code> (D041) returns a microsecond budget. The AI <em>must</em> return within this budget, even if evaluation is incomplete — partial results are better than frame stalls. The manager hierarchy makes this natural: if the budget is exhausted after <code>EconomyManager</code> and <code>ProductionManager</code>, <code>MilitaryManager</code> runs its cached plan from last evaluation.</p>
+</li>
+</ol>
+<h4 id="evaluation-and-threat-assessment"><a class="header" href="#evaluation-and-threat-assessment">Evaluation and Threat Assessment</a></h4>
+<p>The evaluation function is the foundation of all AI decision-making. A bad evaluation function makes every other component worse (MicroRTS research). Iron Curtain uses <strong>Lanchester-inspired threat scoring</strong>:</p>
+<pre><code>threat(army) = Σ(unit_dps × unit_hp) × count^0.7
+</code></pre>
+<p>This captures Lanchester’s Square Law — military power scales superlinearly with unit count. Two tanks aren’t twice as effective as one; they’re ~1.6× as effective (at exponent 0.7, conservative vs. full Lanchester exponent of 2.0). The exponent is a YAML-tunable personality parameter, allowing presets to value army mass differently.</p>
+<p>For evaluating damage taken against our own units:</p>
+<pre><code>value(unit) = unit_cost × sqrt(hp / max_hp) × 40
+</code></pre>
+<p>The <code>sqrt(hp/maxHP)</code> gives diminishing returns for overkill — killing a 10% HP unit is worth less than the same cost in fresh units. This is the MicroRTS <code>SimpleSqrtEvaluationFunction</code> pattern, validated across years of AI competition.</p>
+<p>Both formulas use fixed-point arithmetic (integer math only, consistent with sim determinism).</p>
+<h4 id="phase-5-enhancements"><a class="header" href="#phase-5-enhancements">Phase 5+ Enhancements</a></h4>
+<p>These techniques are explicitly deferred — the Phase 4 AI ships without them:</p>
+<ul>
+<li><strong>Strategy classification and adaptation:</strong> Track opponent behavior patterns (build timing, unit composition, attack frequency). Classify into archetypes: “rush”, “turtle”, “boom”, “all-in”. Select counter-strategy from personality parameters. This is the MicroRTS Stratified Strategy Selection (SCV) pattern applied at RTS scale.</li>
+<li><strong>Active scouting system:</strong> No surveyed project scouts well — opportunity to lead. Periodically send cheap units to explore unknown areas. Maintain “last seen” timestamps for enemy building locations in <code>AiState::ScoutingMemory</code>. Higher urgency when opponent is quiet (they’re probably teching up).</li>
+<li><strong>Multi-pronged attacks:</strong> Graduate from Petra/OpenRA’s single-army-blob pattern. Split forces based on attack plan (main force + flanking/harassment force). Coordinate timing via shared countdown in <code>AiState</code>. The <code>AiEventLog</code> (D041) enables coordination visibility between sub-plans.</li>
+<li><strong>Advanced micro:</strong> Kiting, focus-fire priority targeting, ability usage. Kept out of Phase 4 to avoid the “chasing optimal AI” anti-pattern.</li>
+</ul>
+<h4 id="what-to-explicitly-not-do"><a class="header" href="#what-to-explicitly-not-do">What to Explicitly Not Do</a></h4>
+<p>Five anti-patterns identified from surveyed implementations (full analysis in <code>research/rts-ai-implementation-survey.md</code> §9):</p>
+<ol>
+<li><strong>Don’t implement MCTS/minimax for strategic decisions.</strong> The search space is too large for 500+ unit games. MicroRTS research confirms: portfolio/script search beats raw MCTS at RTS scale. Reserve tree search for micro-scale decisions only (if at all).</li>
+<li><strong>Don’t use behavior trees for the strategic AI.</strong> Every surveyed RTS uses priority cascades or manager hierarchies, not BTs. BTs add complexity without proven benefit at RTS strategic scale.</li>
+<li><strong>Don’t chase “optimal” AI at launch.</strong> RA shipped with terrible AI and sold 10 million copies. The Remastered Collection shipped with the same terrible AI. Get a good-enough AI working, then iterate. Phase 4 target: “better than EA RA, comparable to OpenRA.”</li>
+<li><strong>Don’t hardcode strategies.</strong> Use YAML configuration (the personality model above) so modders and the difficulty system can tune behavior without code changes.</li>
+<li><strong>Don’t skip evaluation function design.</strong> A bad evaluation function makes every other AI component worse. Invest time in getting threat assessment right (Lanchester scoring above) — it’s the foundation everything else builds on.</li>
+</ol>
+<h4 id="ai-performance-budget"><a class="header" href="#ai-performance-budget">AI Performance Budget</a></h4>
+<p>Based on the efficiency pyramid (D015) and surveyed projects’ performance characteristics (see also <code>10-PERFORMANCE.md</code>):</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>AI Component</th><th>Frequency</th><th>Target Time</th><th>Approach</th></tr>
+</thead>
+<tbody>
+<tr><td>Harvester assignment</td><td>Every 4 ticks</td><td>&lt; 0.1ms</td><td>Nearest-resource lookup</td></tr>
+<tr><td>Defense response</td><td>Every tick (reactive)</td><td>&lt; 0.1ms</td><td>Event-driven, not polling</td></tr>
+<tr><td>Unit production</td><td>Every 8 ticks</td><td>&lt; 0.2ms</td><td>Priority queue evaluation</td></tr>
+<tr><td>Building placement</td><td>On demand</td><td>&lt; 1.0ms</td><td>Influence map lookup</td></tr>
+<tr><td>Attack planning</td><td>Every 30 ticks</td><td>&lt; 2.0ms</td><td>Composition check + timing</td></tr>
+<tr><td>Strategic reassessment</td><td>Every 60 ticks</td><td>&lt; 5.0ms</td><td>Full state evaluation</td></tr>
+<tr><td><strong>Total per tick (amortized)</strong></td><td></td><td><strong>&lt; 0.5ms</strong></td><td><strong>Budget for 500 units</strong></td></tr>
+</tbody>
+</table>
+</div>
+<p>All AI working memory (influence maps, squad rosters, composition tallies, priority queues) is pre-allocated in <code>AiScratch</code> — analogous to <code>TickScratch</code> (Layer 5 of the efficiency pyramid). Zero per-tick heap allocation. Influence maps are fixed-size arrays, cleared and rebuilt on their evaluation schedule.</p>
+<h3 id="configuration-model"><a class="header" href="#configuration-model">Configuration Model</a></h3>
+<p>AI presets are YAML-driven, paralleling balance presets:</p>
+<pre><code class="language-yaml"># ai/presets/classic-ra.yaml
+ai_preset:
+  name: "Classic Red Alert"
+  description: "Faithful recreation of original RA AI behavior"
+  strategy: personality-driven     # AiStrategy implementation to use
+  personality:
+    aggression: 0.6
+    tech_priority: rush
+    micro_level: none              # no individual unit control
+    scout_frequency: never
+    build_order: scripted          # fixed build queues per faction
+    expansion_style: base_walk     # builds structures adjacent to existing base
+    focus_fire: false
+    retreat_behavior: never        # units fight to the death
+    adaptation: none               # doesn't change strategy based on opponent
+    group_tactics: blob            # all units in one control group
+
+# ai/presets/ic-default.yaml
+ai_preset:
+  name: "IC Default"
+  description: "Research-informed AI with modern RTS intelligence"
+  strategy: personality-driven
+  personality:
+    aggression: 0.5
+    tech_priority: balanced
+    micro_level: moderate          # focus-fire, kiting ranged units, retreat wounded
+    scout_frequency: periodic      # sends scouts every 60-90 seconds
+    build_order: adaptive          # adjusts build based on scouting information
+    expansion_style: strategic     # expands to control resource nodes
+    focus_fire: true
+    retreat_behavior: wounded      # retreats units below 30% HP
+    adaptation: reactive           # counters observed army composition
+    group_tactics: multi_prong     # splits forces for flanking/harassment
+    influence_maps: true           # uses influence maps for threat assessment
+    harassment: true               # sends small squads to attack economy
+</code></pre>
+<h3 id="relationship-to-existing-decisions"><a class="header" href="#relationship-to-existing-decisions">Relationship to Existing Decisions</a></h3>
+<ul>
+<li><strong>D019 (balance presets):</strong> Orthogonal. Balance defines <em>what units can do</em>; AI presets define <em>how the AI uses them</em>. A player can combine any balance preset with any AI preset. “Classic RA balance + IC Default AI” is valid and interesting.</li>
+<li><strong>D041 (<code>AiStrategy</code> trait):</strong> AI presets are configurations for the default <code>PersonalityDrivenAi</code> strategy. The trait allows entirely different AI algorithms (neural net, GOAP planner); presets are parameter sets within one algorithm. Both coexist — presets for built-in AI, traits for custom AI.</li>
+<li><strong>D042 (<code>StyleDrivenAi</code>):</strong> Player behavioral profiles are a fourth source of AI behavior (alongside Classic/OpenRA/IC Default presets). No conflict — <code>StyleDrivenAi</code> implements <code>AiStrategy</code> independently of presets.</li>
+<li><strong>D033 (QoL toggles / experience profiles):</strong> AI preset selection integrates naturally into experience profiles. The “Classic Red Alert” experience profile bundles classic balance + classic AI + classic theme.</li>
+</ul>
+<h3 id="experience-profile-integration"><a class="header" href="#experience-profile-integration">Experience Profile Integration</a></h3>
+<pre><code class="language-yaml">profiles:
+  classic-ra:
+    balance: classic
+    ai_preset: classic-ra          # D043 — original RA AI behavior
+    pathfinding: classic-ra        # D045 — original RA movement feel
+    render_mode: classic           # D048 — original sprite rendering
+    theme: classic
+    qol: vanilla
+
+  openra-ra:
+    balance: openra
+    ai_preset: openra
+    pathfinding: openra            # D045 — OpenRA movement feel
+    render_mode: classic           # D048
+    theme: modern
+    qol: openra
+
+  iron-curtain-ra:
+    balance: classic
+    ai_preset: ic-default          # D043 — enhanced AI
+    pathfinding: ic-default        # D045 — modern flowfield movement
+    render_mode: hd                # D048 — high-definition sprites
+    theme: modern
+    qol: iron_curtain
+</code></pre>
+<h3 id="lobby-integration"><a class="header" href="#lobby-integration">Lobby Integration</a></h3>
+<p>AI preset is selectable per AI player slot in the lobby, independent of game-wide balance preset:</p>
+<pre><code>Player 1: [Human]           Faction: Soviet
+Player 2: [AI] IC Default (Hard)    Faction: Allied
+Player 3: [AI] Classic RA (Normal)  Faction: Allied
+Player 4: [AI] OpenRA (Brutal)      Faction: Soviet
+
+Balance Preset: Classic RA
+</code></pre>
+<p>This allows mixed AI playstyles in the same game – useful for testing, fun for variety, and educational for understanding how different AI approaches handle the same scenario.</p>
+<h3 id="community-ai-presets"><a class="header" href="#community-ai-presets">Community AI Presets</a></h3>
+<p>Modders can create custom AI presets as Workshop resources (D030):</p>
+<ul>
+<li>YAML preset files defining <code>personality</code> parameters for <code>PersonalityDrivenAi</code></li>
+<li>Full <code>AiStrategy</code> implementations via WASM Tier 3 mods (D041)</li>
+<li>AI tournament brackets: community members compete by submitting AI presets, tournament server runs automated matches</li>
+</ul>
+<h3 id="engine-level-difficulty-system"><a class="header" href="#engine-level-difficulty-system">Engine-Level Difficulty System</a></h3>
+<p>Inspired by 0 A.D.’s two-axis difficulty (engine cheats + behavioral parameters) and AoE2’s strategic number scaling with opt-out (see <code>research/rts-ai-extensibility-survey.md</code>), Iron Curtain separates difficulty into two independent layers:</p>
+<p><strong>Layer 1 — Engine scaling (applies to ALL AI players by default):</strong></p>
+<p>The engine provides resource, build-time, and reaction-time multipliers that scale an AI’s raw capability independent of how smart its decisions are. This ensures that even a simple YAML-configured AI can be made harder or easier without touching its behavioral parameters.</p>
+<pre><code class="language-yaml"># difficulties/built-in.yaml
+difficulties:
+  sandbox:
+    name: "Sandbox"
+    description: "AI barely acts — for learning the interface"
+    engine_scaling:
+      resource_gather_rate: 0.5     # AI gathers half speed (fixed-point: 512/1024)
+      build_time_multiplier: 1.5    # AI builds 50% slower
+      reaction_delay_ticks: 30      # AI waits 30 ticks (~1s) before acting on events
+      vision_range_multiplier: 0.8  # AI sees 20% less
+    personality_overrides:
+      aggression: 0.1
+      adaptation: none
+
+  easy:
+    name: "Easy"
+    engine_scaling:
+      resource_gather_rate: 0.8
+      build_time_multiplier: 1.2
+      reaction_delay_ticks: 8
+      vision_range_multiplier: 1.0
+
+  normal:
+    name: "Normal"
+    engine_scaling:
+      resource_gather_rate: 1.0     # No modification
+      build_time_multiplier: 1.0
+      reaction_delay_ticks: 0
+      vision_range_multiplier: 1.0
+
+  hard:
+    name: "Hard"
+    engine_scaling:
+      resource_gather_rate: 1.0     # No economic bonus
+      build_time_multiplier: 1.0
+      reaction_delay_ticks: 0
+      vision_range_multiplier: 1.0
+    # Hard is purely behavioral — the AI makes smarter decisions, not cheaper ones
+    personality_overrides:
+      micro_level: moderate
+      adaptation: reactive
+
+  brutal:
+    name: "Brutal"
+    engine_scaling:
+      resource_gather_rate: 1.3     # AI gets 30% bonus
+      build_time_multiplier: 0.8    # AI builds 20% faster
+      reaction_delay_ticks: 0
+      vision_range_multiplier: 1.2  # AI sees 20% further
+    personality_overrides:
+      aggression: 0.8
+      micro_level: extreme
+      adaptation: full
+</code></pre>
+<p><strong>Layer 2 — Implementation-level difficulty (per-<code>AiStrategy</code> impl):</strong></p>
+<p>Each <code>AiStrategy</code> implementation interprets difficulty through its own behavioral parameters. <code>PersonalityDrivenAi</code> uses the <code>personality:</code> YAML config (aggression, micro level, adaptation). A neural-net AI might have a “skill cap” parameter. A GOAP planner might limit search depth. The <code>get_parameters()</code> method (from MicroRTS research) exposes these as introspectable knobs.</p>
+<p><strong>Engine scaling opt-out</strong> (from AoE2’s <code>sn-do-not-scale-for-difficulty-level</code>): Sophisticated AI implementations that model difficulty internally can opt out of engine scaling by returning <code>false</code> from <code>uses_engine_difficulty_scaling()</code>. This prevents double-scaling — an advanced AI that already weakens its play at Easy difficulty shouldn’t also get the engine’s gather-rate penalty on top.</p>
+<p><strong>Modder-addable difficulty levels:</strong> Difficulty levels are YAML files, not hardcoded enums. Community modders can define new difficulties via Workshop (D030) — no code required (Tier 1):</p>
+<pre><code class="language-yaml"># workshop: community/nightmare-difficulty/difficulty.yaml
+difficulty:
+  name: "Nightmare"
+  description: "Economy bonuses + perfect micro — for masochists"
+  engine_scaling:
+    resource_gather_rate: 2.0
+    build_time_multiplier: 0.5
+    reaction_delay_ticks: 0
+    vision_range_multiplier: 1.5
+  personality_overrides:
+    aggression: 0.95
+    micro_level: extreme
+    adaptation: full
+    harassment: true
+    group_tactics: multi_prong
+</code></pre>
+<p>Once installed, “Nightmare” appears alongside built-in difficulties in the lobby dropdown. Any <code>AiStrategy</code> implementation (first-party or community) can be paired with any difficulty level — they compose independently.</p>
+<h3 id="mod-selectable-and-mod-provided-ai"><a class="header" href="#mod-selectable-and-mod-provided-ai">Mod-Selectable and Mod-Provided AI</a></h3>
+<p>The three built-in behavior presets (Classic RA, OpenRA, IC Default) are configurations for <code>PersonalityDrivenAi</code>. They are not the only <code>AiStrategy</code> implementations. The trait (D041) is explicitly open to community implementations — following the same pattern as <code>Pathfinder</code> (D013/D045) and render modes (D048).</p>
+<p><strong>Two-axis lobby selection:</strong></p>
+<p>In the lobby, each AI player slot has two independent selections:</p>
+<ol>
+<li><strong>AI implementation</strong> — which <code>AiStrategy</code> algorithm</li>
+<li><strong>Difficulty level</strong> — which engine scaling + personality config</li>
+</ol>
+<pre><code>Player 2: [AI] IC Default / Hard        Faction: Allied
+Player 3: [AI] Classic RA / Normal      Faction: Allied
+Player 4: [AI] Workshop: GOAP Planner / Brutal   Faction: Soviet
+Player 5: [AI] Workshop: Neural Net v2 / Nightmare   Faction: Soviet
+
+Balance Preset: Classic RA
+</code></pre>
+<p>This is different from pathfinders (one axis: which algorithm). AI has two orthogonal axes because <em>how smart the AI plays</em> and <em>what advantages it gets</em> are independent concerns. A “Brutal Classic RA” AI should play with original 1996 patterns but get economic bonuses and instant reactions; an “Easy IC Default” AI should use modern tactics but gather slowly and react late.</p>
+<p><strong>Modder as consumer — selecting an AI:</strong></p>
+<p>A mod’s YAML manifest can declare which <code>AiStrategy</code> implementations it ships with or requires:</p>
+<pre><code class="language-yaml"># mod.yaml — total conversion with custom AI
+mod:
+  name: "Zero Hour Remake"
+  ai_strategies:
+    - goap-planner              # Requires this community AI
+    - personality-driven        # Also supports the built-in default
+  default_ai: goap-planner
+  depends:
+    - community/goap-planner-ai@^2.0
+</code></pre>
+<p>If the mod doesn’t specify <code>ai_strategies</code>, all registered AI implementations are available.</p>
+<p><strong>Modder as author — providing an AI:</strong></p>
+<p>A Tier 3 WASM mod can implement the <code>AiStrategy</code> trait and register it:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>// WASM mod: GOAP (Goal-Oriented Action Planning) AI
+impl AiStrategy for GoapPlannerAi {
+    fn decide(&amp;mut self, player: PlayerId, view: &amp;FogFilteredView, tick: u64) -&gt; Vec&lt;PlayerOrder&gt; {
+        // 1. Update world model from FogFilteredView
+        // 2. Evaluate goal priorities (expand? attack? defend? tech?)
+        // 3. GOAP search: find action sequence to achieve highest-priority goal
+        // 4. Emit orders for first action in plan
+        // ...
+    }
+
+    fn name(&amp;self) -&gt; &amp;str { "GOAP Planner" }
+    fn difficulty(&amp;self) -&gt; AiDifficulty { AiDifficulty::Custom("adaptive".into()) }
+
+    fn on_enemy_spotted(&amp;mut self, unit: EntityId, unit_type: &amp;str) {
+        // Re-prioritize goals: if enemy spotted near base, defend goal priority increases
+        self.goal_priorities.defend += self.threat_weight(unit_type);
+    }
+
+    fn on_under_attack(&amp;mut self, _unit: EntityId, _attacker: EntityId) {
+        // Emergency re-plan: abort current plan, switch to defense
+        self.force_replan = true;
+    }
+
+    fn get_parameters(&amp;self) -&gt; Vec&lt;ParameterSpec&gt; {
+        vec![
+            ParameterSpec { name: "plan_depth".into(), min_value: 1, max_value: 10, default_value: 5, .. },
+            ParameterSpec { name: "replan_interval".into(), min_value: 10, max_value: 120, default_value: 30, .. },
+            ParameterSpec { name: "aggression_weight".into(), min_value: 0, max_value: 100, default_value: 50, .. },
+        ]
+    }
+
+    fn uses_engine_difficulty_scaling(&amp;self) -&gt; bool { false } // handles difficulty internally
+}
+<span class="boring">}</span></code></pre>
+<p>The mod registers its AI in its manifest:</p>
+<pre><code class="language-yaml"># goap_planner/mod.yaml
+mod:
+  name: "GOAP Planner AI"
+  type: ai_strategy
+  ai_strategy_id: goap-planner
+  display_name: "GOAP Planner"
+  description: "Goal-oriented action planning AI — plans multi-step strategies"
+  wasm_module: goap_planner.wasm
+  capabilities:
+    read_visible_state: true
+    issue_orders: true
+  config:
+    plan_depth: 5
+    replan_interval_ticks: 30
+</code></pre>
+<p><strong>Workshop distribution:</strong> Community AI implementations are Workshop resources (D030). They can be rated, reviewed, and depended upon — same as pathfinder mods. The Workshop can host AI tournament leaderboards: automated matches between community AI submissions, ranked by Elo/TrueSkill (inspired by BWAPI’s SSCAIT and AoE2’s AI ladder communities, see <code>research/rts-ai-extensibility-survey.md</code>).</p>
+<p><strong>Multiplayer implications:</strong> AI selection is NOT sim-affecting in the same way pathfinding is. In a human-vs-AI game, each AI player can run a different <code>AiStrategy</code> — they’re independent agents. In AI-vs-AI tournaments, all AI players can be different. The engine doesn’t need to validate that all clients have the same AI WASM module (unlike pathfinding). However, for determinism, the AI’s <code>decide()</code> output must be identical on all clients — so the WASM binary hash IS validated per AI player slot.</p>
+<h3 id="relationship-to-existing-decisions-1"><a class="header" href="#relationship-to-existing-decisions-1">Relationship to Existing Decisions</a></h3>
+<ul>
+<li><strong>D019 (balance presets):</strong> Orthogonal. Balance defines <em>what units can do</em>; AI presets define <em>how the AI uses them</em>. A player can combine any balance preset with any AI preset. “Classic RA balance + IC Default AI” is valid and interesting.</li>
+<li><strong>D041 (<code>AiStrategy</code> trait):</strong> AI behavior presets are configurations for the default <code>PersonalityDrivenAi</code> strategy. The trait allows entirely different AI algorithms (neural net, GOAP planner); presets are parameter sets within one algorithm. Both coexist — presets for built-in AI, traits for custom AI. The trait now includes event callbacks, parameter introspection, and engine scaling opt-out based on cross-project research.</li>
+<li><strong>D042 (<code>StyleDrivenAi</code>):</strong> Player behavioral profiles are a fourth source of AI behavior (alongside Classic/OpenRA/IC Default presets). No conflict — <code>StyleDrivenAi</code> implements <code>AiStrategy</code> independently of presets.</li>
+<li><strong>D033 (QoL toggles / experience profiles):</strong> AI preset selection integrates naturally into experience profiles. The “Classic Red Alert” experience profile bundles classic balance + classic AI + classic theme.</li>
+<li><strong>D045 (pathfinding presets):</strong> Same modder-selectable pattern. Mods select or provide pathfinders; mods select or provide AI implementations. Both distribute via Workshop; both compose with experience profiles. Key difference: pathfinding is one axis (algorithm), AI is two axes (algorithm + difficulty).</li>
+<li><strong>D048 (render modes):</strong> Same modder-selectable pattern. The trait-per-subsystem architecture means every pluggable system follows the same model: engine ships built-in implementations, mods can add more, players/modders pick what they want.</li>
+</ul>
+<h3 id="alternatives-considered"><a class="header" href="#alternatives-considered">Alternatives Considered</a></h3>
+<ul>
+<li>AI difficulty only, no style presets (rejected — difficulty is orthogonal to style; a “Hard Classic RA” AI should be hard but still play like original RA, not like a modern AI turned up)</li>
+<li>One “best” AI only (rejected — the community is split like they are on balance; offer choice)</li>
+<li>Lua-only AI scripting (rejected — too slow for tick-level decisions; Lua is for mission triggers, WASM for full AI replacement)</li>
+<li>Difficulty as a fixed enum only (rejected — modders should be able to define new difficulty levels via YAML without code changes; AoE2’s 20+ years of community AI prove that a large parameter space outlasts a restrictive one)</li>
+<li>No engine-level difficulty scaling (rejected — delegating difficulty entirely to AI implementations produces inconsistent experiences across different AIs; 0 A.D. and AoE2 both provide engine scaling with opt-out, proving this is the right separation of concerns)</li>
+<li>No event callbacks on <code>AiStrategy</code> (rejected — polling-only AI misses reactive opportunities; Spring Engine and BWAPI both use event + tick hybrid, which is the proven model)</li>
+</ul>
+<hr>
+<hr>
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../../decisions/09d/D042-behavioral-profiles.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../../decisions/09d/D044-llm-ai.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../../decisions/09d/D042-behavioral-profiles.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../../decisions/09d/D044-llm-ai.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../../mark-09e88c2c.min.js"></script>
+        <script src="../../searcher-c2a407aa.js"></script>
+
+        <script src="../../clipboard-1626706a.min.js"></script>
+        <script src="../../highlight-abc7f01d.js"></script>
+        <script src="../../book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

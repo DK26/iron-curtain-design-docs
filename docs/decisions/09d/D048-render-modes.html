@@ -1,0 +1,707 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>D048 — Render Modes - Iron Curtain — Design Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Design docs for a Rust-native Red Alert RTS engine">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../../css/general-2459343d.css">
+        <link rel="stylesheet" href="../../css/chrome-ae938929.css">
+        <link rel="stylesheet" href="../../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../../searchindex-61d2369b.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../../toc-1553b04b.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Iron Curtain — Design Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs/edit/main/src/decisions/09d/D048-render-modes.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h2 id="d048-switchable-render-modes--classic-hd-and-3d-in-one-game"><a class="header" href="#d048-switchable-render-modes--classic-hd-and-3d-in-one-game">D048: Switchable Render Modes — Classic, HD, and 3D in One Game</a></h2>
+<p><strong>Status:</strong> Accepted
+<strong>Scope:</strong> <code>ic-render</code>, <code>ic-game</code>, <code>ic-ui</code>
+<strong>Phase:</strong> Phase 2 (render mode infrastructure), Phase 3 (toggle UI), Phase 6a (3D mode mod support)</p>
+<h3 id="the-problem"><a class="header" href="#the-problem">The Problem</a></h3>
+<p>The C&amp;C Remastered Collection’s most iconic UX feature is pressing F1 to instantly toggle between classic 320×200 sprites and hand-painted HD art — mid-game, no loading screen. This isn’t just swapping sprites. It’s switching the <em>entire visual presentation</em>: sprite resolution, palette handling, terrain tiles, shadow rendering, UI chrome, and scaling behavior. The engine already has pieces to support this (resource packs in <code>04-MODDING.md</code>, dual asset rendering in D029, <code>Renderable</code> trait, <code>ScreenToWorld</code> trait, 3D render mods in <code>02-ARCHITECTURE.md</code>), but they exist as independent systems with no unified mechanism for “switch everything at once.” Furthermore, the current design treats 3D rendering exclusively as a Tier 3 WASM mod that <strong>replaces</strong> the default renderer — there’s no concept of a game or mod that ships <em>both</em> 2D and 3D views and lets the player toggle between them.</p>
+<h3 id="decision"><a class="header" href="#decision">Decision</a></h3>
+<p>Introduce <strong>render modes</strong> as a first-class engine concept. A render mode bundles a rendering backend, camera system, resource pack selection, and visual configuration into a named, instantly-switchable unit. Game modules and mods can register multiple render modes; the player toggles between them with a keybind or settings menu.</p>
+<h3 id="what-a-render-mode-is"><a class="header" href="#what-a-render-mode-is">What a Render Mode Is</a></h3>
+<p>A render mode composes four concerns that must change together:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Concern</th><th>What Changes</th><th>Trait / System</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Render backend</strong></td><td>Sprite renderer vs. mesh renderer vs. voxel renderer</td><td><code>Renderable</code> impl</td></tr>
+<tr><td><strong>Camera</strong></td><td>Isometric orthographic vs. free 3D perspective; zoom range</td><td><code>ScreenToWorld</code> impl + <code>CameraConfig</code></td></tr>
+<tr><td><strong>Resource packs</strong></td><td>Which asset set to use (classic <code>.shp</code>, HD sprites, GLTF models)</td><td>Resource pack selection</td></tr>
+<tr><td><strong>Visual config</strong></td><td>Scaling mode, palette handling, shadow style, post-FX preset</td><td><code>RenderSettings</code> subset</td></tr>
+</tbody>
+</table>
+</div>
+<p>A render mode is NOT a game module. The simulation, pathfinding, networking, balance, and game rules are completely unchanged between modes. Two players in the same multiplayer game can use different render modes — the sim is view-agnostic (this is already an established architectural property).</p>
+<h3 id="render-mode-registration"><a class="header" href="#render-mode-registration">Render Mode Registration</a></h3>
+<p>Game modules register their supported render modes via the <code>GameModule</code> trait:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct RenderMode {
+    pub id: String,                        // "classic", "hd", "3d"
+    pub display_name: String,              // "Classic (320×200)", "HD Sprites", "3D View"
+    pub render_backend: RenderBackendId,   // Which Renderable impl to use
+    pub camera: CameraMode,                // Isometric, Perspective, FreeRotate
+    pub camera_config: CameraConfig,       // Zoom range, pan speed (see 02-ARCHITECTURE.md § Camera)
+    pub resource_pack_overrides: Vec&lt;ResourcePackRef&gt;, // Per-category pack selections
+    pub visual_config: VisualConfig,       // Scaling, palette, shadow, post-FX
+    pub keybind: Option&lt;KeyCode&gt;,          // Optional dedicated toggle key
+}
+
+pub struct CameraConfig {
+    pub zoom_min: f32,                     // minimum zoom (0.5 = zoomed way out)
+    pub zoom_max: f32,                     // maximum zoom (4.0 = close-up)
+    pub zoom_default: f32,                 // starting zoom level (1.0)
+    pub integer_snap: bool,                // snap to integer scale for pixel art (Classic mode)
+}
+
+pub struct VisualConfig {
+    pub scaling: ScalingMode,              // IntegerNearest, Bilinear, Native
+    pub palette_mode: PaletteMode,         // IndexedPalette, DirectColor
+    pub shadow_style: ShadowStyle,         // SpriteShadow, ProjectedShadow, None
+    pub post_fx: PostFxPreset,             // None, Classic, Enhanced
+}
+<span class="boring">}</span></code></pre>
+<p>The RA1 game module would register:</p>
+<pre><code class="language-yaml">render_modes:
+  classic:
+    display_name: "Classic"
+    render_backend: sprite
+    camera: isometric
+    camera_config:
+      zoom_min: 0.5
+      zoom_max: 3.0
+      zoom_default: 1.0
+      integer_snap: true           # snap OrthographicProjection.scale to integer multiples
+    resource_packs:
+      sprites: classic-shp
+      terrain: classic-tiles
+    visual_config:
+      scaling: integer_nearest
+      palette_mode: indexed
+      shadow_style: sprite_shadow
+      post_fx: none
+    description: "Original 320×200 pixel art, integer-scaled"
+
+  hd:
+    display_name: "HD"
+    render_backend: sprite
+    camera: isometric
+    camera_config:
+      zoom_min: 0.5
+      zoom_max: 4.0
+      zoom_default: 1.0
+      integer_snap: false          # smooth zoom at all levels
+    resource_packs:
+      sprites: hd-sprites         # Requires HD sprite resource pack
+      terrain: hd-terrain
+    visual_config:
+      scaling: native
+      palette_mode: direct_color
+      shadow_style: sprite_shadow
+      post_fx: enhanced
+    description: "High-definition sprites at native resolution"
+</code></pre>
+<p>A 3D render mod adds a third mode:</p>
+<pre><code class="language-yaml"># 3d_mod/render_modes.yaml (extends base game module)
+render_modes:
+  3d:
+    display_name: "3D View"
+    render_backend: mesh            # Provided by the WASM mod
+    camera: free_rotate
+    camera_config:
+      zoom_min: 0.25               # 3D allows wider zoom range
+      zoom_max: 6.0
+      zoom_default: 1.0
+      integer_snap: false
+    resource_packs:
+      sprites: 3d-models           # GLTF meshes mapped to unit types
+      terrain: 3d-terrain
+    visual_config:
+      scaling: native
+      palette_mode: direct_color
+      shadow_style: projected_shadow
+      post_fx: enhanced
+    description: "Full 3D rendering with free camera"
+    requires_mod: "3d-ra"          # Only available when this mod is loaded
+</code></pre>
+<h3 id="toggle-mechanism"><a class="header" href="#toggle-mechanism">Toggle Mechanism</a></h3>
+<p><strong>Default keybind:</strong> F1 cycles through available render modes (matching the Remastered Collection). A game with only <code>classic</code> and <code>hd</code> modes: F1 toggles between them. A game with three modes: F1 cycles classic → hd → 3d → classic. The cycle order matches the <code>render_modes</code> declaration order.</p>
+<p><strong>Settings UI:</strong></p>
+<pre><code>Settings → Graphics → Render Mode
+┌───────────────────────────────────────────────┐
+│ Active Render Mode:  [HD ▾]                   │
+│                                               │
+│ Toggle Key: [F1]                              │
+│ Cycle Order: Classic → HD → 3D                │
+│                                               │
+│ Available Modes:                              │
+│ ● Classic — Original pixel art, integer-scaled│
+│ ● HD — High-definition sprites (requires      │
+│         HD sprite pack)                       │
+│ ● 3D View — Full 3D (requires 3D RA mod)     │
+│              [Browse Workshop →]              │
+└───────────────────────────────────────────────┘
+</code></pre>
+<p>Modes whose required resource packs or mods aren’t installed remain clickable — selecting one opens a guidance panel explaining what’s needed and linking directly to Workshop or settings (see D033 § “UX Principle: No Dead-End Buttons”). No greyed-out entries.</p>
+<h3 id="how-the-switch-works-runtime"><a class="header" href="#how-the-switch-works-runtime">How the Switch Works (Runtime)</a></h3>
+<p>The toggle is instant — no loading screen, no fade-to-black for same-backend switches:</p>
+<ol>
+<li>
+<p><strong>Same render backend</strong> (classic ↔ hd): Swap <code>Handle</code> references on all <code>Renderable</code> components. Both asset sets are loaded at startup (or on first toggle). Bevy’s asset system makes this a single-frame operation — exactly like the Remastered Collection’s F1.</p>
+</li>
+<li>
+<p><strong>Different render backend</strong> (2D ↔ 3D): Swap the active <code>Renderable</code> implementation and camera. This is heavier — the first switch loads the 3D asset set (brief loading indicator). Subsequent switches are instant because both backends stay resident. Camera interpolates smoothly between isometric and perspective over ~0.3 seconds.</p>
+</li>
+<li>
+<p><strong>Multiplayer</strong>: Render mode is a client-only setting. The sim doesn’t know or care. No sync, no lobby lock. One player on Classic, one on HD, one on 3D — all in the same game. This already works architecturally; D048 just formalizes it.</p>
+</li>
+<li>
+<p><strong>Replays</strong>: Render mode is switchable during replay playback. Watch a classic-era replay in 3D, or vice versa.</p>
+</li>
+</ol>
+<h3 id="cross-view-multiplayer"><a class="header" href="#cross-view-multiplayer">Cross-View Multiplayer</a></h3>
+<p>This deserves emphasis because it’s a feature no shipped C&amp;C game has offered: <strong>players using different visual presentations in the same multiplayer match.</strong> The sim/render split (Invariant #1, #9) makes this free. A competitive player who prefers classic pixel clarity plays against someone using 3D — same rules, same sim, same balance, different eyes.</p>
+<p>Cross-view also means <strong>cross-view spectating</strong>: an observer can watch a tournament match in 3D while the players compete in classic 2D. This creates unique content creation and broadcasting opportunities.</p>
+<h3 id="information-equivalence-across-render-modes"><a class="header" href="#information-equivalence-across-render-modes">Information Equivalence Across Render Modes</a></h3>
+<p>Cross-view multiplayer is competitively safe because all render modes display <strong>identical game-state information:</strong></p>
+<ul>
+<li><strong>Fog of war:</strong> Visibility is computed by <code>FogProvider</code> in the sim. Every render mode receives the same <code>VisibilityGrid</code> — no mode can reveal fogged units or terrain that another mode hides.</li>
+<li><strong>Unit visibility:</strong> Cloaked, burrowed, and disguised units are shown/hidden based on sim-side detection state (<code>DetectCloaked</code>, <code>IgnoresDisguise</code>). The render mode determines <em>how</em> a shimmer or disguise looks, not <em>whether</em> the player sees it.</li>
+<li><strong>Health bars, status indicators, minimap:</strong> All driven by sim state. A unit at 50% health shows 50% health in every render mode. Minimap icons are derived from the same entity positions regardless of visual presentation.</li>
+<li><strong>Selection and targeting:</strong> Click hitboxes are defined per render mode via <code>ScreenToWorld</code>, but the available actions and information (tooltip, stats panel) are identical.</li>
+</ul>
+<p>If a future render mode creates an information asymmetry (e.g., 3D terrain occlusion that hides units behind buildings when the 2D mode shows them), the mode must equalize information display — either by adding a visibility indicator or by using the sim’s visibility grid as the authority for what’s shown. <strong>The principle: render modes change how the game looks, never what the player knows.</strong></p>
+<h3 id="relationship-to-existing-systems"><a class="header" href="#relationship-to-existing-systems">Relationship to Existing Systems</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>System</th><th>Before D048</th><th>After D048</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Resource Packs</strong></td><td>Per-category asset selection in Settings</td><td>Resource packs become a <em>component</em> of render modes; the mode auto-selects the right packs</td></tr>
+<tr><td><strong>D029 Dual Asset</strong></td><td>Dual asset handles per entity</td><td>Generalized to N render modes, not just two. D029’s mechanism is how same-backend switches work</td></tr>
+<tr><td><strong>3D Render Mods</strong></td><td>Tier 3 WASM mod that <em>replaces</em> the default renderer</td><td>Tier 3 WASM mod that <em>adds</em> a render mode alongside the default — toggleable, not a replacement</td></tr>
+<tr><td><strong>D032 UI Themes</strong></td><td>Switchable UI chrome</td><td>UI theme can optionally be paired with a render mode (classic mode + classic chrome)</td></tr>
+<tr><td><strong>Render Quality Tiers</strong></td><td>Hardware-adaptive Baseline → Ultra</td><td>Tiers apply <em>within</em> a render mode. Classic mode on Tier 0 hardware; 3D mode requires Tier 2 minimum</td></tr>
+<tr><td><strong>Experience Profiles</strong></td><td>Balance + theme + QoL + AI + pathfinding</td><td>Now also include a default render mode</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="what-mod-authors-need-to-do"><a class="header" href="#what-mod-authors-need-to-do">What Mod Authors Need to Do</a></h3>
+<p><strong>For a sprite HD pack</strong> (most common case): Nothing new. Publish a resource pack with HD sprites. The game module’s <code>hd</code> render mode references it. The player installs it and F1 toggles.</p>
+<p><strong>For a 3D rendering mod</strong> (Tier 3): Ship a WASM mod that provides a <code>Renderable</code> impl (mesh renderer) and a <code>ScreenToWorld</code> impl (3D camera). Declare a render mode in YAML that references these implementations and the 3D asset resource packs. The engine registers the mode alongside the built-in modes — F1 now cycles through all three.</p>
+<p><strong>For a complete 3D game module</strong> (e.g., Generals clone): The game module can register only 3D render modes — no classic 2D at all. Or it can ship both. The architecture supports any combination.</p>
+<h3 id="minimum-viable-scope"><a class="header" href="#minimum-viable-scope">Minimum Viable Scope</a></h3>
+<p>Phase 2 delivers the infrastructure — render mode registration, asset handle swapping, the <code>RenderMode</code> struct. The HD/SD toggle (classic ↔ hd) works. Phase 3 adds the settings UI and keybind. Phase 6a supports mod-provided render modes (3D). The architecture supports all of this from day one; the phases gate what’s <em>tested and polished.</em></p>
+<h3 id="alternatives-considered"><a class="header" href="#alternatives-considered">Alternatives Considered</a></h3>
+<ol>
+<li><strong>Resource packs only, no render mode concept</strong> — Rejected. Switching from 2D to 3D requires changing the render backend and camera, not just assets. Resource packs can’t do that.</li>
+<li><strong>3D as a separate game module</strong> — Rejected. A “3D RA1” game module would duplicate all the rules, balance, and systems from the base RA1 module. The whole point is that the sim is unchanged.</li>
+<li><strong>No 2D↔3D toggle; 3D replaces 2D permanently when mod is active</strong> — Rejected. The Remastered Collection proved that <em>toggling</em> is the feature, not just having two visual options. Players love comparing. Content creators use it for dramatic effect. It’s also a safety net — if the 3D mod has rendering bugs, you can toggle back.</li>
+</ol>
+<h3 id="lessons-from-the-remastered-collection"><a class="header" href="#lessons-from-the-remastered-collection">Lessons from the Remastered Collection</a></h3>
+<p>The Remastered Collection’s F1 toggle is the gold-standard reference for this feature. Its architecture — recovered from the GPL source (<code>DLLInterface.cpp</code>) and our analysis (<code>research/remastered-collection-netcode-analysis.md</code> § 9) — reveals how Petroglyph achieved instant switching, and where IC can improve:</p>
+<p><strong>How the Remastered toggle works internally:</strong></p>
+<p>The Remastered Collection runs <strong>two rendering pipelines in parallel.</strong> The original C++ engine still software-renders every frame to <code>GraphicBufferClass</code> RAM buffers (palette-based 8-bit blitting) — exactly as in 1995. Simultaneously, <code>DLL_Draw_Intercept</code> captures every draw call as structured metadata (<code>CNCObjectStruct</code>: position, type, shape index, frame, palette, cloak state, health, selection) and forwards it to the C# GlyphX client via <code>CNC_Get_Game_State()</code>. The GlyphX layer renders the same scene using HD art and GPU acceleration. When the player presses Tab (their toggle key), the C# layer simply switches which final framebuffer is composited to screen — the classic software buffer or the HD GPU buffer. Both are always up-to-date because both render every frame.</p>
+<p><strong>Why dual-render works for Remastered but is wrong for IC:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Remastered approach</th><th>IC approach</th><th>Why different</th></tr>
+</thead>
+<tbody>
+<tr><td>Both pipelines render every frame</td><td>Only the active mode renders</td><td>The Remastered C++ engine is a sealed DLL — you can’t stop it rendering. IC owns both pipelines and can skip work. Rendering both wastes GPU budget.</td></tr>
+<tr><td>Classic renderer is software (CPU blit to RAM)</td><td>Both modes are GPU-based (wgpu via Bevy)</td><td>Classic-mode GPU sprites are cheap but not free. Dual GPU render passes halve available GPU budget for post-FX, particles, unit count.</td></tr>
+<tr><td>Switch is trivial: flip a “which buffer to present” flag</td><td>Switch swaps asset handles on live entities</td><td>Remastered pays for dual-render continuously to make the flip trivial. IC pays nothing continuously and does a one-frame swap at toggle time.</td></tr>
+<tr><td>Two codebases: C++ (classic) and C# (HD)</td><td>One codebase: same Bevy systems, different data</td><td>IC’s approach is fundamentally lighter — same draw call dispatch, different texture atlases.</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Key insight IC adopts:</strong> The Remastered Collection’s critical architectural win is that <strong>the sim is completely unaware of the render switch.</strong> The C++ sim DLL (<code>CNC_Advance_Instance</code>) has no knowledge of which visual mode is active — it advances identically in both cases. IC inherits this principle via Invariant #1 (sim is pure). The sim never imports from <code>ic-render</code>. Render mode is a purely client-side concern.</p>
+<p><strong>Key insight IC rejects:</strong> Dual-rendering every frame is wasteful when you own both pipelines. The Remastered Collection pays this cost because the C++ DLL cannot be told “don’t render this frame” — <code>DLL_Draw_Intercept</code> fires unconditionally. IC has no such constraint. Only the active render mode’s systems should run.</p>
+<h3 id="bevy-implementation-strategy"><a class="header" href="#bevy-implementation-strategy">Bevy Implementation Strategy</a></h3>
+<p>The render mode switch is implementable entirely within Bevy’s existing architecture — no custom render passes, no engine modifications. The key mechanisms are <strong><code>Visibility</code> component toggling</strong>, <strong><code>Handle</code> swapping on <code>Sprite</code>/<code>Mesh</code> components</strong>, and <strong>Bevy’s system set run conditions</strong>.</p>
+<h4 id="architecture-two-approaches-one-hybrid"><a class="header" href="#architecture-two-approaches-one-hybrid">Architecture: Two Approaches, One Hybrid</a></h4>
+<p><strong>Approach A: Entity-per-mode (rejected for same-backend switches)</strong></p>
+<p>Spawn separate sprite entities for classic and HD, toggle <code>Visibility</code>. Simple but doubles entity count (500 units × 2 = 1000 sprite entities) and doubles <code>Transform</code> sync work. Only justified for cross-backend switches (2D entity + 3D entity) where the components are structurally different.</p>
+<p><strong>Approach B: Handle-swap on shared entity (adopted for same-backend switches)</strong></p>
+<p>Each renderable entity has one <code>Sprite</code> component. On toggle, swap its <code>Handle&lt;Image&gt;</code> (or <code>TextureAtlas</code> index) from the classic atlas to the HD atlas. One entity, one transform, one visibility check — the sprite batch simply references different texture data. This is what <code>D029 Dual Asset</code> already designed.</p>
+<p><strong>Hybrid: same-backend swaps use handle-swap; cross-backend swaps use visibility-gated entity groups.</strong></p>
+<h4 id="core-ecs-components"><a class="header" href="#core-ecs-components">Core ECS Components</a></h4>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Marker resource: the currently active render mode.
+/// Changed via F1 keypress or settings UI.
+/// Bevy change detection (Res&lt;ActiveRenderMode&gt;.is_changed()) triggers swap systems.
+#[derive(Resource)]
+pub struct ActiveRenderMode {
+    pub current: RenderModeId,       // "classic", "hd", "3d"
+    pub cycle: Vec&lt;RenderModeId&gt;,    // Ordered list for F1 cycling
+    pub registry: HashMap&lt;RenderModeId, RenderModeConfig&gt;,
+}
+
+/// Per-entity component: maps this entity's render data for each available mode.
+/// Populated at spawn time from the game module's YAML asset mappings.
+#[derive(Component)]
+pub struct RenderModeAssets {
+    /// For same-backend modes (classic ↔ hd): alternative texture handles.
+    /// Key = render mode id, Value = handle to that mode's texture atlas.
+    pub sprite_handles: HashMap&lt;RenderModeId, Handle&lt;Image&gt;&gt;,
+    /// For same-backend modes: alternative atlas layout indices.
+    pub atlas_mappings: HashMap&lt;RenderModeId, TextureAtlasLayout&gt;,
+    /// For cross-backend modes (2D ↔ 3D): entity IDs of the alternative representations.
+    /// These entities exist but have Visibility::Hidden until their mode activates.
+    pub cross_backend_entities: HashMap&lt;RenderModeId, Entity&gt;,
+}
+
+/// System set that only runs when a render mode switch just occurred.
+/// Uses Bevy's run_if condition to avoid any per-frame cost when not switching.
+#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct RenderModeSwitchSet;
+<span class="boring">}</span></code></pre>
+<h4 id="the-toggle-system-f1-handler"><a class="header" href="#the-toggle-system-f1-handler">The Toggle System (F1 Handler)</a></h4>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Runs every frame (cheap: one key check).
+fn handle_render_mode_toggle(
+    input: Res&lt;ButtonInput&lt;KeyCode&gt;&gt;,
+    mut active: ResMut&lt;ActiveRenderMode&gt;,
+) {
+    if input.just_pressed(KeyCode::F1) {
+        let idx = active.cycle.iter()
+            .position(|id| *id == active.current)
+            .unwrap_or(0);
+        let next = (idx + 1) % active.cycle.len();
+        active.current = active.cycle[next].clone();
+        // Bevy change detection fires: active.is_changed() == true this frame.
+        // All systems in RenderModeSwitchSet will run exactly once.
+    }
+}
+<span class="boring">}</span></code></pre>
+<h4 id="same-backend-swap-classic--hd"><a class="header" href="#same-backend-swap-classic--hd">Same-Backend Swap (Classic ↔ HD)</a></h4>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Runs ONLY when ActiveRenderMode changes (run_if condition).
+/// Cost: iterates all renderable entities ONCE, swaps Handle + atlas.
+/// For 500 units + 200 buildings + terrain = ~1000 entities: &lt; 0.5ms.
+fn swap_sprite_handles(
+    active: Res&lt;ActiveRenderMode&gt;,
+    mut query: Query&lt;(&amp;RenderModeAssets, &amp;mut Sprite)&gt;,
+) {
+    let mode = &amp;active.current;
+    for (assets, mut sprite) in &amp;mut query {
+        if let Some(handle) = assets.sprite_handles.get(mode) {
+            sprite.image = handle.clone();
+        }
+        // Atlas layout swap happens similarly via TextureAtlas component
+    }
+}
+
+/// Swap camera and visual settings when render mode changes.
+/// Updates the GameCamera zoom range and the OrthographicProjection scaling mode.
+/// Camera position is preserved across switches — only zoom behavior changes.
+/// See 02-ARCHITECTURE.md § "Camera System" for the canonical GameCamera resource.
+fn swap_visual_config(
+    active: Res&lt;ActiveRenderMode&gt;,
+    mut game_camera: ResMut&lt;GameCamera&gt;,
+    mut camera_query: Query&lt;&amp;mut OrthographicProjection, With&lt;GameCameraMarker&gt;&gt;,
+) {
+    let config = &amp;active.registry[&amp;active.current];
+
+    // Update zoom range from the new render mode's camera config.
+    game_camera.zoom_min = config.camera_config.zoom_min;
+    game_camera.zoom_max = config.camera_config.zoom_max;
+    // Clamp current zoom to new range (e.g., 3D mode allows wider range than Classic).
+    game_camera.zoom_target = game_camera.zoom_target
+        .clamp(game_camera.zoom_min, game_camera.zoom_max);
+
+    for mut proj in &amp;mut camera_query {
+        proj.scaling_mode = match config.visual_config.scaling {
+            ScalingMode::IntegerNearest =&gt; bevy::render::camera::ScalingMode::Fixed {
+                width: 320.0, height: 200.0, // Classic RA viewport
+            },
+            ScalingMode::Native =&gt; bevy::render::camera::ScalingMode::AutoMin {
+                min_width: 1280.0, min_height: 720.0,
+            },
+            // ...
+        };
+    }
+}
+<span class="boring">}</span></code></pre>
+<h4 id="cross-backend-swap-2d--3d"><a class="header" href="#cross-backend-swap-2d--3d">Cross-Backend Swap (2D ↔ 3D)</a></h4>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// For cross-backend switches: toggle Visibility on entity groups.
+/// The 3D entities exist from the start but are Hidden.
+/// Swap cost: iterate entities, flip Visibility enum. Still &lt; 1ms.
+fn swap_render_backends(
+    active: Res&lt;ActiveRenderMode&gt;,
+    mut query: Query&lt;(&amp;RenderModeAssets, &amp;mut Visibility)&gt;,
+    mut cross_entities: Query&lt;&amp;mut Visibility, Without&lt;RenderModeAssets&gt;&gt;,
+) {
+    let mode = &amp;active.current;
+    let config = &amp;active.registry[mode];
+
+    for (assets, mut vis) in &amp;mut query {
+        // If this entity's backend matches the active mode, show it.
+        // Otherwise, hide it and show the cross-backend counterpart.
+        if assets.sprite_handles.contains_key(mode) {
+            *vis = Visibility::Inherited;
+            // Hide cross-backend counterparts
+            for (other_mode, &amp;entity) in &amp;assets.cross_backend_entities {
+                if *other_mode != *mode {
+                    if let Ok(mut other_vis) = cross_entities.get_mut(entity) {
+                        *other_vis = Visibility::Hidden;
+                    }
+                }
+            }
+        } else if let Some(&amp;entity) = assets.cross_backend_entities.get(mode) {
+            *vis = Visibility::Hidden;
+            if let Ok(mut other_vis) = cross_entities.get_mut(entity) {
+                *other_vis = Visibility::Inherited;
+            }
+        }
+    }
+}
+<span class="boring">}</span></code></pre>
+<h4 id="system-scheduling"><a class="header" href="#system-scheduling">System Scheduling</a></h4>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>impl Plugin for RenderModePlugin {
+    fn build(&amp;self, app: &amp;mut App) {
+        app.init_resource::&lt;ActiveRenderMode&gt;()
+           // F1 handler runs every frame — trivially cheap (one key check).
+           .add_systems(Update, handle_render_mode_toggle)
+           // Swap systems run ONLY on the frame when ActiveRenderMode changes.
+           .add_systems(Update, (
+               swap_sprite_handles,
+               swap_visual_config,
+               swap_render_backends,
+               swap_ui_theme,            // D032 theme pairing
+               swap_post_fx_pipeline,    // Post-processing preset
+               emit_render_mode_event,   // Telemetry: D031
+           ).in_set(RenderModeSwitchSet)
+            .run_if(resource_changed::&lt;ActiveRenderMode&gt;));
+    }
+}
+<span class="boring">}</span></code></pre>
+<h4 id="performance-characteristics"><a class="header" href="#performance-characteristics">Performance Characteristics</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Operation</th><th>Cost</th><th>When It Runs</th><th>Notes</th></tr>
+</thead>
+<tbody>
+<tr><td>F1 key check</td><td>~0 (one <code>HashMap</code> lookup)</td><td>Every frame</td><td>Bevy input system already processes keys; we just read</td></tr>
+<tr><td>Same-backend swap (classic ↔ hd)</td><td>~0.3–0.5 ms for 1000 entities</td><td>Once on toggle</td><td>Iterate entities, write <code>Handle&lt;Image&gt;</code>. No GPU work. Bevy batches texture changes automatically on next draw.</td></tr>
+<tr><td>Cross-backend swap (2D ↔ 3D)</td><td>~0.5–1 ms for 1000 entity pairs</td><td>Once on toggle</td><td>Toggle <code>Visibility</code>. Hidden entities are culled by Bevy’s visibility system — zero draw calls.</td></tr>
+<tr><td>3D asset first-load</td><td>50–500 ms (one-time)</td><td>First toggle to 3D</td><td>GLTF meshes + textures loaded async by Bevy’s asset server. Brief loading indicator. Cached thereafter.</td></tr>
+<tr><td>Steady-state (non-toggle frames)</td><td><strong>0 ms</strong></td><td>Every frame</td><td><code>run_if(resource_changed)</code> gates all swap systems. Zero per-frame overhead.</td></tr>
+<tr><td>VRAM usage</td><td>Classic atlas (~8 MB) + HD atlas (~64 MB)</td><td>Resident when loaded</td><td>Both atlases stay in VRAM. Modern GPUs: trivial. Min-spec 512 MB VRAM: still &lt;15%.</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Key property: zero per-frame cost.</strong> Bevy’s <code>resource_changed</code> run condition means the swap systems literally do not execute unless the player presses F1. Between toggles, the renderer treats the active atlas as the only atlas — standard sprite batching, standard draw calls, no branching.</p>
+<h4 id="asset-pre-loading-strategy"><a class="header" href="#asset-pre-loading-strategy">Asset Pre-Loading Strategy</a></h4>
+<p>The critical difference from the Remastered Collection: IC does NOT dual-render. Instead, it pre-loads both texture atlases into VRAM at match start (or lazily on first toggle):</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Called during match loading. Pre-loads all registered render mode assets.
+fn preload_render_mode_assets(
+    active: Res&lt;ActiveRenderMode&gt;,
+    asset_server: Res&lt;AssetServer&gt;,
+    mut preload_handles: ResMut&lt;RenderModePreloadHandles&gt;,
+) {
+    for (mode_id, config) in &amp;active.registry {
+        for pack_ref in &amp;config.resource_pack_overrides {
+            // Bevy's asset server loads asynchronously.
+            // We hold the Handle to keep the asset resident in memory.
+            let handle = asset_server.load(pack_ref.atlas_path());
+            preload_handles.retain.push(handle);
+        }
+    }
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Loading strategy by mode type:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Mode pair</th><th>Pre-load?</th><th>Memory cost</th><th>Rationale</th></tr>
+</thead>
+<tbody>
+<tr><td>Classic ↔ HD (same backend)</td><td>Yes, at match start</td><td>+64 MB VRAM for HD atlas</td><td>Both are texture atlases. Pre-loading makes F1 instant.</td></tr>
+<tr><td>2D ↔ 3D (cross backend)</td><td>Lazy, on first toggle</td><td>+100–300 MB for 3D meshes</td><td>3D assets are large. Don’t penalize 2D-only players. Loading indicator on first 3D toggle.</td></tr>
+<tr><td>Any ↔ Any (menu/lobby)</td><td>Active mode only</td><td>Minimal</td><td>No gameplay; loading time acceptable.</td></tr>
+</tbody>
+</table>
+</div>
+<h4 id="transform-synchronization-cross-backend-only"><a class="header" href="#transform-synchronization-cross-backend-only">Transform Synchronization (Cross-Backend Only)</a></h4>
+<p>When 2D and 3D entities coexist (one hidden), their <code>Transform</code> must stay in sync so the switch looks seamless. The sim writes to a <code>SimPosition</code> component (in world coordinates). Both the 2D sprite entity and the 3D mesh entity read from the same <code>SimPosition</code> and compute their own <code>Transform</code>:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Runs every frame for ALL visible renderable entities.
+/// Converts SimPosition → entity Transform using the active camera model.
+/// Hidden entities skip this (Bevy's visibility propagation prevents
+/// transform updates on Hidden entities from triggering GPU uploads).
+fn sync_render_transforms(
+    active: Res&lt;ActiveRenderMode&gt;,
+    mut query: Query&lt;(&amp;SimPosition, &amp;mut Transform), With&lt;Visibility&gt;&gt;,
+) {
+    let camera_model = &amp;active.registry[&amp;active.current].camera;
+    for (sim_pos, mut transform) in &amp;mut query {
+        *transform = camera_model.world_to_render(sim_pos);
+    }
+}
+<span class="boring">}</span></code></pre>
+<p>Bevy’s built-in visibility system already ensures that <code>Hidden</code> entities’ transforms aren’t uploaded to the GPU, so the 3D entity transforms are only computed when 3D mode is active.</p>
+<h4 id="comparison-remastered-vs-ic-render-switch"><a class="header" href="#comparison-remastered-vs-ic-render-switch">Comparison: Remastered vs. IC Render Switch</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Aspect</th><th>Remastered Collection</th><th>Iron Curtain</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Architecture</strong></td><td>Dual-render: both pipelines run every frame</td><td>Single-render: only active mode draws</td></tr>
+<tr><td><strong>Switch cost</strong></td><td>~0 (flip framebuffer pointer)</td><td>~0.5 ms (swap handles on ~1000 entities)</td></tr>
+<tr><td><strong>Steady-state cost</strong></td><td>Full classic render every frame (~2-5ms CPU) even when showing HD</td><td><strong>0 ms</strong> — inactive mode has zero cost</td></tr>
+<tr><td><strong>Why the trade-off</strong></td><td>C++ DLL can’t be told “don’t render”</td><td>IC owns both pipelines, can skip work</td></tr>
+<tr><td><strong>Memory</strong></td><td>Classic (RAM buffer) + HD (VRAM)</td><td>Both atlases in VRAM (unified GPU memory)</td></tr>
+<tr><td><strong>Cross-backend (2D↔3D)</strong></td><td>Not supported</td><td>Supported via visibility-gated entity groups</td></tr>
+<tr><td><strong>Multiplayer</strong></td><td>Both players must use same mode</td><td>Cross-view: each player picks independently</td></tr>
+<tr><td><strong>Camera</strong></td><td>Fixed isometric in both modes</td><td>Camera model switches with render mode</td></tr>
+<tr><td><strong>UI chrome</strong></td><td>Switches with graphics mode</td><td>Independently switchable (D032) but can be paired</td></tr>
+<tr><td><strong>Modder-extensible</strong></td><td>No</td><td>YAML registration + WASM render backends</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<hr>
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../../decisions/09d/D045-pathfinding-presets.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../../decisions/09d/D054-extended-switchability.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../../decisions/09d/D045-pathfinding-presets.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../../decisions/09d/D054-extended-switchability.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../../mark-09e88c2c.min.js"></script>
+        <script src="../../searcher-c2a407aa.js"></script>
+
+        <script src="../../clipboard-1626706a.min.js"></script>
+        <script src="../../highlight-abc7f01d.js"></script>
+        <script src="../../book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

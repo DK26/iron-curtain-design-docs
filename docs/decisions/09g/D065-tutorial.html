@@ -1,0 +1,1638 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>D065 — Tutorial - Iron Curtain — Design Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Design docs for a Rust-native Red Alert RTS engine">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../../css/general-2459343d.css">
+        <link rel="stylesheet" href="../../css/chrome-ae938929.css">
+        <link rel="stylesheet" href="../../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../../searchindex-61d2369b.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../../toc-1553b04b.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Iron Curtain — Design Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs/edit/main/src/decisions/09g/D065-tutorial.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h2 id="d065-tutorial--new-player-experience--five-layer-onboarding-system"><a class="header" href="#d065-tutorial--new-player-experience--five-layer-onboarding-system">D065: Tutorial &amp; New Player Experience — Five-Layer Onboarding System</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th></th><th></th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Status</strong></td><td>Accepted</td></tr>
+<tr><td><strong>Phase</strong></td><td>Phase 3 (contextual hints, new player pipeline, progressive discovery), Phase 4 (Commander School campaign, skill assessment, post-game learning, tutorial achievements)</td></tr>
+<tr><td><strong>Depends on</strong></td><td>D004 (Lua Scripting), D021 (Branching Campaigns), D033 (QoL Toggles — experience profiles), D034 (SQLite — hint history, skill estimate), D036 (Achievements), D038 (Scenario Editor — tutorial modules), D043 (AI Behavior Presets — tutorial AI tier)</td></tr>
+<tr><td><strong>Driver</strong></td><td>OpenRA’s new player experience is a wiki link to a YouTube video. The Remastered Collection added basic tooltips. No open-source RTS has a structured onboarding system. The genre’s complexity is the #1 barrier to new players — players who bounce from one failed match never return.</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Revision note (2026-02-22):</strong> Revised D065 to support a single cross-device tutorial curriculum with semantic prompt rendering (<code>InputCapabilities</code>/<code>ScreenClass</code> aware), a skippable first-run controls walkthrough, camera bookmark instruction, and a touch-focused Tempo Advisor (advisory only). This revision incorporates confirmatory prior-art research on mobile strategy UX, platform adaptation, and community distribution friction (<code>research/mobile-rts-ux-onboarding-community-platform-analysis.md</code>).</p>
+<h3 id="decision-capsule-llmrag-summary"><a class="header" href="#decision-capsule-llmrag-summary">Decision Capsule (LLM/RAG Summary)</a></h3>
+<ul>
+<li><strong>Status:</strong> Accepted (Revised 2026-02-22)</li>
+<li><strong>Phase:</strong> Phase 3 (pipeline, hints, progressive discovery), Phase 4 (Commander School, assessment, post-game learning)</li>
+<li><strong>Canonical for:</strong> Tutorial/new-player onboarding architecture, cross-device tutorial prompt model, controls walkthrough, and onboarding-related adaptive pacing</li>
+<li><strong>Scope:</strong> <code>ic-ui</code> onboarding systems, tutorial Lua APIs, hint history + skill estimate persistence (SQLite/D034), cross-device prompt rendering, player-facing tutorial UX</li>
+<li><strong>Decision:</strong> IC uses a <strong>five-layer onboarding system</strong> (campaign tutorial + contextual hints + first-run pipeline + skill assessment + adaptive pacing) integrated across the product rather than a single tutorial screen/mode.</li>
+<li><strong>Why:</strong> RTS newcomers, veterans, and experienced OpenRA/Remastered players have different onboarding needs; one fixed tutorial path either overwhelms or bores large groups.</li>
+<li><strong>Non-goals:</strong> Separate desktop and mobile tutorial campaigns; forced full tutorial completion before normal play; mouse-only prompt wording in shared tutorial content.</li>
+<li><strong>Invariants preserved:</strong> Input remains abstracted (<code>InputCapabilities</code>/<code>ScreenClass</code> and core <code>InputSource</code> design); tutorial pacing/advisory systems are UI/client-level and do not alter simulation determinism.</li>
+<li><strong>Defaults / UX behavior:</strong> Commander School is a first-class campaign; controls walkthrough is short and skippable; tutorial prompts are semantic and rendered per device/input mode.</li>
+<li><strong>Mobile / accessibility impact:</strong> Touch platforms use the same curriculum with device-specific prompt text/UI anchors; Tempo Advisor is advisory-only and warns without blocking player choice (except existing ranked authority rules elsewhere).</li>
+<li><strong>Public interfaces / types / commands:</strong> <code>InputPromptAction</code>, <code>TutorialPromptContext</code>, <code>ResolvedInputPrompt</code>, <code>UiAnchorAlias</code>, <code>LayoutAnchorResolver</code>, <code>TempoAdvisorContext</code></li>
+<li><strong>Affected docs:</strong> <code>src/17-PLAYER-FLOW.md</code>, <code>src/02-ARCHITECTURE.md</code>, <code>src/decisions/09b-networking.md</code>, <code>src/decisions/09d-gameplay.md</code></li>
+<li><strong>Revision note summary:</strong> Added cross-device semantic prompts, skippable controls walkthrough, camera bookmark teaching, and touch tempo advisory hooks based on researched mobile UX constraints.</li>
+<li><strong>Keywords:</strong> tutorial, commander school, onboarding, cross-device prompts, controls walkthrough, tempo advisor, mobile tutorial, semantic action prompts</li>
+</ul>
+<h3 id="problem"><a class="header" href="#problem">Problem</a></h3>
+<p>Classic RTS games are notoriously hostile to new players. The original Red Alert’s “tutorial” was Mission 1 of the Allied campaign, which assumed the player already understood control groups, attack-move, and ore harvesting. OpenRA offers no in-game tutorial at all. The Remastered Collection added tooltips and a training mode but no structured curriculum.</p>
+<p>IC targets three distinct player populations and must serve all of them:</p>
+<ol>
+<li><strong>Complete RTS newcomers</strong> — never played any RTS. Need camera, selection, movement, and minimap/radar concepts before anything else.</li>
+<li><strong>Lapsed RA veterans</strong> — played in the 90s, remember concepts vaguely, need a refresher on specific mechanics and new IC features.</li>
+<li><strong>OpenRA / Remastered players</strong> — know RA well but may not know IC-specific features (weather, experience profiles, campaign persistence, console commands).</li>
+</ol>
+<p>A single-sized tutorial serves none of them well. Veterans resent being forced through basics. Newcomers drown in information presented too fast. The system must adapt.</p>
+<h3 id="decision"><a class="header" href="#decision">Decision</a></h3>
+<p>A five-layer tutorial system that integrates throughout the player experience rather than existing as a single screen or mode. Each layer operates independently — players benefit from whichever layers they encounter, in any order.</p>
+<p><strong>Cross-device curriculum rule:</strong> IC ships one tutorial curriculum (Commander School + hints + skill assessment), not separate desktop and mobile tutorial campaigns. Tutorial content defines <strong>semantic actions</strong> (“move command”, “assign control group”, “save camera bookmark”) and the UI layer renders device-specific instructions and highlights using <code>InputCapabilities</code> and <code>ScreenClass</code>.</p>
+<p><strong>Controls walkthrough addition (Layer 3):</strong> A short, skippable controls walkthrough (60-120s) is offered during first-run onboarding. It teaches camera pan/zoom, selection, context commands, minimap/radar, control groups, build UI basics, and camera bookmarks for the active platform before the player enters Commander School or regular play.</p>
+<h3 id="layer-1--commander-school-tutorial-campaign"><a class="header" href="#layer-1--commander-school-tutorial-campaign">Layer 1 — Commander School (Tutorial Campaign)</a></h3>
+<p>A dedicated 10-mission tutorial campaign using the D021 branching graph system, accessible from <code>Main Menu → Campaign → Commander School</code>. This is a first-class campaign, not a popup sequence — it has briefings, EVA voice lines, map variety, and a branching graph with remedial branches for players who struggle. It is shared across desktop and touch platforms; only prompt wording and UI highlight anchors differ by platform.</p>
+<h4 id="mission-structure"><a class="header" href="#mission-structure">Mission Structure</a></h4>
+<pre><code>                    ┌─────────────────┐
+                    │  01: First Steps │  Camera, selection, movement
+                    │  (Movement Only) │
+                    └────────┬────────┘
+                             │
+              ┌──────────────┼──────────────┐
+              │ pass         │ struggle     │
+              ▼              ▼              │
+    ┌─────────────────┐  ┌──────────────┐  │
+    │  02: First Blood │  │  01r: Camera  │  │  Remedial: just camera + selection
+    │  (Basic Combat)  │  │  Basics      │──┘
+    └────────┬────────┘  └──────────────┘
+             │
+             ▼
+    ┌─────────────────┐
+    │  03: Base Camp   │  Build a power plant + barracks
+    │  (Construction)  │
+    └────────┬────────┘
+             │
+             ▼
+    ┌─────────────────┐
+    │  04: Supply Line │  Build a refinery, protect harvesters
+    │  (Economy)       │
+    └────────┬────────┘
+             │
+             ▼
+    ┌─────────────────┐
+    │  05: Hold the    │  Walls, turrets, repair
+    │  Line (Defense)  │
+    └────────┬────────┘
+             │
+             ▼
+    ┌─────────────────┐
+    │  06: Command     │  Control groups, hotkeys, camera bookmarks,
+    │  Basics          │  queue commands
+    │  (Controls)      │
+    └────────┬────────┘
+             │
+             ▼
+    ┌─────────────────┐
+    │  07: Combined    │  Rock-paper-scissors: infantry vs vehicles
+    │  Arms            │  vs air; counter units
+    └────────┬────────┘
+             │
+             ▼
+    ┌─────────────────┐
+    │  08: Iron        │  Full skirmish vs tutorial AI; apply
+    │  Curtain Rising  │  everything learned
+    │  (First Skirmish)│
+    └────────┬────────┘
+             │
+       ┌─────┴─────┐
+       │ victory    │ defeat
+       ▼            ▼
+    ┌────────┐  ┌──────────────┐
+    │  09:   │  │  08r: Second │  Retry with hints enabled
+    │  Multi │  │  Chance      │──► loops back to 09
+    │  player│  └──────────────┘
+    │  Intro │
+    └───┬────┘
+        │
+        ▼
+    ┌─────────────────┐
+    │  10: Advanced    │  Tech tree, superweapons, naval,
+    │  Tactics         │  weather effects (optional)
+    └─────────────────┘
+</code></pre>
+<p>Every mission is <strong>skippable</strong>. Players can jump to any unlocked mission from the Commander School menu. Completing mission N unlocks mission N+1 (and its remedial branch, if any). Veterans can skip directly to Mission 08 (First Skirmish) or 10 (Advanced Tactics) after a brief skill check.</p>
+<h4 id="tutorial-ai-difficulty-tier"><a class="header" href="#tutorial-ai-difficulty-tier">Tutorial AI Difficulty Tier</a></h4>
+<p>Commander School uses a dedicated tutorial AI difficulty tier below D043’s Easy:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>AI Tier</th><th>Behavior</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Tutorial</strong></td><td>Scripted responses only. Attacks on cue. Does not exploit weaknesses. Builds at fixed timing.</td></tr>
+<tr><td><strong>Easy</strong> (D043)</td><td>Priority-based; slow reactions; limited tech tree; no harassment</td></tr>
+<tr><td><strong>Normal</strong> (D043)</td><td>Full priority-based; moderate aggression; uses counters</td></tr>
+<tr><td><strong>Hard+</strong> (D043)</td><td>Full AI with aggression/strategy axes</td></tr>
+</tbody>
+</table>
+</div>
+<p>The Tutorial tier is <strong>Lua-scripted per mission</strong>, not a general-purpose AI. Mission 02’s AI sends two rifle squads after 3 minutes. Mission 08’s AI builds a base and attacks after 5 minutes. The behavior is pedagogically tuned — the AI exists to teach, not to win.</p>
+<h4 id="experience-profile-awareness"><a class="header" href="#experience-profile-awareness">Experience-Profile Awareness</a></h4>
+<p>Commander School adapts to the player’s experience profile (D033):</p>
+<ul>
+<li><strong>New to RTS:</strong> Full hints, slower pacing, EVA narration on every new concept</li>
+<li><strong>RA veteran / OpenRA player:</strong> Skip basic missions, focus on IC-specific features (weather, console, experience profiles)</li>
+<li><strong>Custom:</strong> Player chose which missions to unlock via the skill assessment (Layer 3)</li>
+</ul>
+<p>The experience profile is read from the first-launch self-identification (see <code>17-PLAYER-FLOW.md</code>). It is not a difficulty setting — it controls <em>what is taught</em>, not <em>how hard the AI fights</em>. On touch devices, “slower pacing” also informs the default tutorial tempo recommendation (<code>slower</code> on phone/tablet, advisory only and overridable by the player).</p>
+<h4 id="campaign-yaml-definition"><a class="header" href="#campaign-yaml-definition">Campaign YAML Definition</a></h4>
+<pre><code class="language-yaml"># campaigns/tutorial/campaign.yaml
+campaign:
+  id: commander_school
+  title: "Commander School"
+  description: "Learn to command — from basic movement to full-scale warfare"
+  start_mission: tutorial_01
+  category: tutorial  # displayed under Campaign → Tutorial, not Campaign → Allied/Soviet
+  icon: tutorial_icon
+  badge: commander_school  # shown on campaign menu for players who haven't started
+
+  persistent_state:
+    unit_roster: false        # tutorial missions don't carry units forward
+    veterancy: false
+    resources: false
+    equipment: false
+    custom_flags:
+      skills_demonstrated: []  # tracks which skills the player has shown
+
+  missions:
+    tutorial_01:
+      map: missions/tutorial/01-first-steps
+      briefing: briefings/tutorial/01.yaml
+      skip_allowed: true
+      experience_profiles: [new_to_rts, all]  # shown to these profiles
+      outcomes:
+        pass:
+          description: "Mission complete"
+          next: tutorial_02
+          state_effects:
+            append_flag: { skills_demonstrated: [camera, selection, movement] }
+        struggle:
+          description: "Player struggled with camera/selection"
+          next: tutorial_01r
+        skip:
+          description: "Player skipped"
+          next: tutorial_02
+          state_effects:
+            append_flag: { skills_demonstrated: [camera, selection, movement] }
+
+    tutorial_01r:
+      map: missions/tutorial/01r-camera-basics
+      briefing: briefings/tutorial/01r.yaml
+      remedial: true  # UI shows this as a "practice" mission, not a setback
+      outcomes:
+        pass:
+          next: tutorial_02
+          state_effects:
+            append_flag: { skills_demonstrated: [camera, selection] }
+
+    tutorial_02:
+      map: missions/tutorial/02-first-blood
+      briefing: briefings/tutorial/02.yaml
+      skip_allowed: true
+      outcomes:
+        pass:
+          next: tutorial_03
+          state_effects:
+            append_flag: { skills_demonstrated: [attack, force_fire] }
+        skip:
+          next: tutorial_03
+
+    # ... missions 03–10 follow the same pattern ...
+
+    tutorial_08:
+      map: missions/tutorial/08-first-skirmish
+      briefing: briefings/tutorial/08.yaml
+      skip_allowed: false  # this one is the capstone — encourage completion
+      outcomes:
+        victory:
+          next: tutorial_09
+          state_effects:
+            append_flag: { skills_demonstrated: [full_skirmish] }
+        defeat:
+          next: tutorial_08r
+          debrief: briefings/tutorial/08-debrief-defeat.yaml
+
+    tutorial_08r:
+      map: missions/tutorial/08-first-skirmish
+      briefing: briefings/tutorial/08r.yaml
+      remedial: true
+      adaptive:
+        on_previous_defeat:
+          bonus_resources: 3000
+          bonus_units: [medium_tank, medium_tank]
+          enable_tutorial_hints: true  # force hints on for retry
+      outcomes:
+        victory:
+          next: tutorial_09
+        defeat:
+          next: tutorial_08r  # can retry indefinitely
+
+    tutorial_09:
+      map: missions/tutorial/09-multiplayer-intro
+      briefing: briefings/tutorial/09.yaml
+      skip_allowed: true
+      outcomes:
+        pass:
+          next: tutorial_10
+        skip:
+          next: tutorial_10
+
+    tutorial_10:
+      map: missions/tutorial/10-advanced-tactics
+      briefing: briefings/tutorial/10.yaml
+      optional: true  # not required for "Graduate" achievement
+      experience_profiles: [all]
+      outcomes:
+        pass:
+          description: "Commander School complete"
+</code></pre>
+<h4 id="tutorial-mission-lua-script-pattern"><a class="header" href="#tutorial-mission-lua-script-pattern">Tutorial Mission Lua Script Pattern</a></h4>
+<p>Each tutorial mission uses the <code>Tutorial</code> Lua global to manage the teaching flow:</p>
+<pre><code class="language-lua">-- missions/tutorial/02-first-blood.lua
+-- Mission 02: First Blood — introduces basic combat
+
+-- Mission setup
+function OnMissionStart()
+    -- Disable sidebar building (not taught yet)
+    Tutorial.RestrictSidebar(true)
+
+    -- Spawn player units
+    local player = Player.GetPlayer("GoodGuy")
+    local rifles = Actor.Create("e1", player, entry_south, { count = 5 })
+
+    -- Spawn enemy patrol (tutorial AI — scripted, not general AI)
+    local enemy = Player.GetPlayer("BadGuy")
+    local patrol = Actor.Create("e1", enemy, patrol_start, { count = 3 })
+
+    -- Step 1: Introduce the enemy
+    Tutorial.SetStep("spot_enemy", {
+        title = "Enemy Contact",
+        hint = "Red units are hostile. Select your soldiers and right-click an enemy to attack.",
+        focus_area = patrol_start,       -- camera pans here
+        highlight_ui = nil,              -- no UI highlight needed
+        eva_line = "enemy_units_detected",
+        completion = { type = "kill", count = 1 }  -- complete when player kills any enemy
+    })
+end
+
+-- Step progression
+function OnStepComplete(step_id)
+    if step_id == "spot_enemy" then
+        Tutorial.SetStep("attack_move", {
+            title = "Attack-Move",
+            hint = "Hold Ctrl and right-click to attack-move. Your units will engage enemies along the way.",
+            highlight_ui = "attack_move_button",  -- highlights the A-move button on the command bar
+            eva_line = "commander_tip_attack_move",
+            completion = { type = "action", action = "attack_move" }
+        })
+
+    elseif step_id == "attack_move" then
+        Tutorial.SetStep("clear_area", {
+            title = "Clear the Area",
+            hint = "Destroy all remaining enemies to complete the mission.",
+            completion = { type = "kill_all", faction = "BadGuy" }
+        })
+
+    elseif step_id == "clear_area" then
+        -- Mission complete
+        Campaign.complete("pass")
+    end
+end
+
+-- Detect struggle: if player hasn't killed anyone after 2 minutes
+Trigger.AfterDelay(DateTime.Minutes(2), function()
+    if Tutorial.GetCurrentStep() == "spot_enemy" then
+        Tutorial.ShowHint("Try selecting your units (click + drag) then right-clicking on an enemy.")
+        -- If still stuck after 4 minutes total, the campaign graph routes to a remedial mission
+    end
+end)
+
+-- Detect struggle: player lost most units without killing enemies
+Trigger.OnAllKilledOrCaptured(Player.GetPlayer("GoodGuy"):GetActors(), function()
+    Campaign.complete("struggle")
+end)
+</code></pre>
+<h3 id="layer-2--contextual-hints-yaml-driven-always-on"><a class="header" href="#layer-2--contextual-hints-yaml-driven-always-on">Layer 2 — Contextual Hints (YAML-Driven, Always-On)</a></h3>
+<p>Contextual hints appear as translucent overlay callouts during gameplay, triggered by game state. They are NOT part of Commander School — they work in any game mode (skirmish, multiplayer, custom campaigns). Modders can author custom hints for their mods.</p>
+<h4 id="hint-pipeline"><a class="header" href="#hint-pipeline">Hint Pipeline</a></h4>
+<pre><code>  HintTrigger          HintFilter           HintRenderer
+  (game state     →    (suppression,    →   (overlay, fade,
+   evaluation)          cooldowns,           positioning,
+                        experience           dismiss)
+                        profile)
+</code></pre>
+<ol>
+<li><strong>HintTrigger</strong> evaluates conditions against the current game state every N ticks (configurable, default: every 150 ticks / 5 seconds). Triggers are YAML-defined — no Lua required for standard hints.</li>
+<li><strong>HintFilter</strong> suppresses hints the player doesn’t need: already dismissed, demonstrated mastery (performed the action N times), cooldown not expired, experience profile excludes this hint.</li>
+<li><strong>HintRenderer</strong> displays the hint as a UI overlay — positioned near the relevant screen element, with fade-in/fade-out, dismiss button, and “don’t show again” toggle.</li>
+</ol>
+<h4 id="hint-definition-schema-hintsyaml"><a class="header" href="#hint-definition-schema-hintsyaml">Hint Definition Schema (<code>hints.yaml</code>)</a></h4>
+<pre><code class="language-yaml"># hints/base-game.yaml — ships with the game
+# Modders create their own hints.yaml in their mod directory
+
+hints:
+  - id: idle_harvester
+    title: "Idle Harvester"
+    text: "Your harvester is sitting idle. Click it and right-click an ore field to start collecting."
+    category: economy
+    icon: hint_harvester
+    trigger:
+      type: unit_idle
+      unit_type: "harvester"
+      idle_duration_seconds: 15    # only triggers after 15s of idling
+    suppression:
+      mastery_action: harvest_command      # stop showing after player has issued 5 harvest commands
+      mastery_threshold: 5
+      cooldown_seconds: 120               # don't repeat more than once every 2 minutes
+      max_shows: 10                       # never show more than 10 times total
+    experience_profiles: [new_to_rts, ra_veteran]  # show to these profiles, not openra_player
+    priority: high     # high priority hints interrupt low priority ones
+    position: near_unit  # position hint near the idle harvester
+    eva_line: null       # no EVA voice for this hint (too frequent)
+    dismiss_action: got_it  # "Got it" button only — no "don't show again" on high-priority hints
+
+  - id: negative_power
+    title: "Low Power"
+    text: "Your base is low on power. Build more Power Plants to restore production speed."
+    category: economy
+    icon: hint_power
+    trigger:
+      type: resource_threshold
+      resource: power
+      condition: negative        # power demand &gt; power supply
+      sustained_seconds: 10      # must be negative for 10s (not transient during building)
+    suppression:
+      mastery_action: build_power_plant
+      mastery_threshold: 3
+      cooldown_seconds: 180
+      max_shows: 8
+    experience_profiles: [new_to_rts]
+    priority: high
+    position: near_sidebar       # position near the build queue
+    eva_line: low_power           # EVA says "Low power"
+
+  - id: control_groups
+    title: "Control Groups"
+    text: "Select units and press Ctrl+1 to assign them to group 1. Press 1 to reselect them instantly."
+    category: controls
+    icon: hint_hotkey
+    trigger:
+      type: unit_count
+      condition: "&gt;= 8"         # suggest control groups when player has 8+ units
+      without_action: assign_control_group  # only if they haven't used groups yet
+      sustained_seconds: 60      # must have 8+ units for 60s without grouping
+    suppression:
+      mastery_action: assign_control_group
+      mastery_threshold: 1       # one use = mastery for this hint
+      cooldown_seconds: 300
+      max_shows: 3
+    experience_profiles: [new_to_rts]
+    priority: medium
+    position: screen_top         # general hint, not tied to a unit
+    eva_line: commander_tip_control_groups
+
+  - id: tech_tree_reminder
+    title: "Tech Up"
+    text: "New units become available as you build advanced structures. Check the sidebar for greyed-out options."
+    category: strategy
+    icon: hint_tech
+    trigger:
+      type: time_without_action
+      action: build_tech_structure
+      time_minutes: 5            # 5 minutes into a game with no tech building
+      min_game_time_minutes: 3   # don't trigger in the first 3 minutes
+    suppression:
+      mastery_action: build_tech_structure
+      mastery_threshold: 1
+      cooldown_seconds: 600
+      max_shows: 3
+    experience_profiles: [new_to_rts]
+    priority: low
+    position: near_sidebar
+
+  # Modder-authored hint example (from a hypothetical "Chrono Warfare" mod):
+  - id: chrono_shift_intro
+    title: "Chrono Shift Ready"
+    text: "Your Chronosphere is charged! Select units, then click the Chronosphere and pick a destination."
+    category: mod_specific
+    icon: hint_chrono
+    trigger:
+      type: building_ready
+      building_type: "chronosphere"
+      ability: "chrono_shift"
+      first_time: true           # only on the first Chronosphere completion per game
+    suppression:
+      mastery_action: use_chrono_shift
+      mastery_threshold: 1
+      cooldown_seconds: 0        # first_time already limits it
+      max_shows: 1
+    experience_profiles: [all]
+    priority: high
+    position: near_building
+    eva_line: chronosphere_ready
+</code></pre>
+<h4 id="trigger-types-extensible"><a class="header" href="#trigger-types-extensible">Trigger Types (Extensible)</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Trigger Type</th><th>Parameters</th><th>Fires When</th></tr>
+</thead>
+<tbody>
+<tr><td><code>unit_idle</code></td><td><code>unit_type</code>, <code>idle_duration_seconds</code></td><td>A unit of that type has been idle for N seconds</td></tr>
+<tr><td><code>resource_threshold</code></td><td><code>resource</code>, <code>condition</code>, <code>sustained_seconds</code></td><td>A resource exceeds/falls below a threshold for N seconds</td></tr>
+<tr><td><code>unit_count</code></td><td><code>condition</code>, <code>without_action</code>, <code>sustained_seconds</code></td><td>Player has N units and hasn’t performed the suggested action</td></tr>
+<tr><td><code>time_without_action</code></td><td><code>action</code>, <code>time_minutes</code>, <code>min_game_time_minutes</code></td><td>N minutes pass without the player performing a specific action</td></tr>
+<tr><td><code>building_ready</code></td><td><code>building_type</code>, <code>ability</code>, <code>first_time</code></td><td>A building completes construction (or its ability charges)</td></tr>
+<tr><td><code>first_encounter</code></td><td><code>entity_type</code></td><td>Player sees an enemy unit/building type for the first time</td></tr>
+<tr><td><code>damage_taken</code></td><td><code>damage_source_type</code>, <code>threshold_percent</code></td><td>Player units take significant damage from a specific type</td></tr>
+<tr><td><code>area_enter</code></td><td><code>area</code>, <code>unit_types</code></td><td>Player units enter a named map region</td></tr>
+<tr><td><code>custom</code></td><td><code>lua_condition</code></td><td>Lua expression evaluates to true (Tier 2 mods only)</td></tr>
+</tbody>
+</table>
+</div>
+<p>Modders define new triggers via Lua (Tier 2) or WASM (Tier 3). The <code>custom</code> trigger type is a Lua escape hatch for conditions that don’t fit the built-in types.</p>
+<h4 id="hint-history-sqlite"><a class="header" href="#hint-history-sqlite">Hint History (SQLite)</a></h4>
+<pre><code class="language-sql">-- In player.db (D034)
+CREATE TABLE hint_history (
+    hint_id       TEXT NOT NULL,
+    show_count    INTEGER NOT NULL DEFAULT 0,
+    last_shown    INTEGER,          -- Unix timestamp
+    dismissed     BOOLEAN NOT NULL DEFAULT FALSE,  -- "Don't show again"
+    mastery_count INTEGER NOT NULL DEFAULT 0,      -- times the mastery_action was performed
+    PRIMARY KEY (hint_id)
+);
+</code></pre>
+<p>The hint system queries this table before showing each hint. <code>mastery_count &gt;= mastery_threshold</code> suppresses the hint permanently. <code>dismissed = TRUE</code> suppresses it permanently. <code>last_shown + cooldown_seconds &gt; now</code> suppresses it temporarily.</p>
+<h4 id="qol-integration-d033"><a class="header" href="#qol-integration-d033">QoL Integration (D033)</a></h4>
+<p>Hints are individually toggleable per category in <code>Settings → QoL → Hints</code>:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Setting</th><th>Default (New to RTS)</th><th>Default (RA Vet)</th><th>Default (OpenRA)</th></tr>
+</thead>
+<tbody>
+<tr><td>Economy hints</td><td>On</td><td>On</td><td>Off</td></tr>
+<tr><td>Combat hints</td><td>On</td><td>Off</td><td>Off</td></tr>
+<tr><td>Controls hints</td><td>On</td><td>On</td><td>Off</td></tr>
+<tr><td>Strategy hints</td><td>On</td><td>Off</td><td>Off</td></tr>
+<tr><td>Mod-specific hints</td><td>On</td><td>On</td><td>On</td></tr>
+<tr><td>Hint frequency</td><td>Normal</td><td>Reduced</td><td>Minimal</td></tr>
+<tr><td>EVA voice on hints</td><td>On</td><td>Off</td><td>Off</td></tr>
+</tbody>
+</table>
+</div>
+<p><code>/hints</code> console commands (D058): <code>/hints list</code>, <code>/hints enable &lt;category&gt;</code>, <code>/hints disable &lt;category&gt;</code>, <code>/hints reset</code>, <code>/hints suppress &lt;id&gt;</code>.</p>
+<h3 id="layer-3--new-player-pipeline"><a class="header" href="#layer-3--new-player-pipeline">Layer 3 — New Player Pipeline</a></h3>
+<p>The first-launch flow (see <code>17-PLAYER-FLOW.md</code>) includes a self-identification step:</p>
+<pre><code>Theme Selection (D032) → Self-Identification → Controls Walkthrough (optional) → Tutorial Offer → Main Menu
+</code></pre>
+<h4 id="self-identification-gate"><a class="header" href="#self-identification-gate">Self-Identification Gate</a></h4>
+<pre><code>┌──────────────────────────────────────────────────┐
+│  WELCOME, COMMANDER                              │
+│                                                  │
+│  How familiar are you with real-time strategy?   │
+│                                                  │
+│  ► New to RTS games                              │
+│  ► Played some RTS games before                  │
+│  ► Red Alert veteran                             │
+│  ► OpenRA / Remastered player                    │
+│  ► Skip — just let me play                       │
+│                                                  │
+└──────────────────────────────────────────────────┘
+</code></pre>
+<p>This sets the <code>experience_profile</code> used by all five layers. The profile is stored in <code>player.db</code> (D034) and changeable in <code>Settings → QoL → Experience Profile</code>.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Selection</th><th>Experience Profile</th><th>Default Hints</th><th>Tutorial Offer</th></tr>
+</thead>
+<tbody>
+<tr><td>New to RTS</td><td><code>new_to_rts</code></td><td>All on</td><td>“Would you like to start with Commander School?”</td></tr>
+<tr><td>Played some RTS</td><td><code>rts_player</code></td><td>Economy + Controls</td><td>“Commander School available in Campaigns”</td></tr>
+<tr><td>Red Alert veteran</td><td><code>ra_veteran</code></td><td>Economy only</td><td>Badge on campaign menu</td></tr>
+<tr><td>OpenRA / Remastered</td><td><code>openra_player</code></td><td>Mod-specific only</td><td>Badge on campaign menu</td></tr>
+<tr><td>Skip</td><td><code>skip</code></td><td>All off</td><td>No offer</td></tr>
+</tbody>
+</table>
+</div>
+<h4 id="controls-walkthrough-phase-3-skippable"><a class="header" href="#controls-walkthrough-phase-3-skippable">Controls Walkthrough (Phase 3, Skippable)</a></h4>
+<p>A short controls walkthrough is offered immediately after self-identification. It is <strong>platform-specific in presentation</strong> and <strong>shared in intent</strong>:</p>
+<ul>
+<li><strong>Desktop:</strong> mouse/keyboard prompts (“Right-click to move”, <code>Ctrl+F5</code> to save camera bookmark)</li>
+<li><strong>Tablet:</strong> touch prompts with sidebar + on-screen hotbar highlights</li>
+<li><strong>Phone:</strong> touch prompts with build drawer, command rail, minimap cluster, and bookmark dock highlights</li>
+</ul>
+<p>The walkthrough teaches only control fundamentals (camera pan/zoom, selection, context commands, control groups, minimap/radar, camera bookmarks, and build UI basics) and ends with three options:</p>
+<ul>
+<li><code>Start Commander School</code></li>
+<li><code>Practice Sandbox</code></li>
+<li><code>Skip to Game</code></li>
+</ul>
+<p>This keeps D065’s early experience friendly on touch devices without duplicating Commander School missions.</p>
+<h4 id="canonical-input-action-model-and-official-binding-profiles"><a class="header" href="#canonical-input-action-model-and-official-binding-profiles">Canonical Input Action Model and Official Binding Profiles</a></h4>
+<p>To keep desktop, touch, Steam Deck, TV/gamepad, tutorials, and accessibility remaps aligned, D065 defines a <strong>single semantic input action catalog</strong>. The game binds physical inputs to semantic actions; tutorial prompts, the Controls Quick Reference, and the Controls-Changed Walkthrough all render from the same catalog.</p>
+<p><strong>Design rule:</strong> IC does not define “the keyboard layout” as raw keys first. It defines <strong>actions</strong> first, then ships official binding profiles per device/input class.</p>
+<p><strong>Semantic action categories (canonical):</strong></p>
+<ul>
+<li><strong>Camera</strong> — pan, zoom, center-on-selection, cycle alerts, save/jump camera bookmark, minimap jump/scrub</li>
+<li><strong>Selection &amp; Orders</strong> — select, add/remove selection, box select, deselect, context command, attack-move, guard, stop, force action, deploy, stance/ability shortcuts</li>
+<li><strong>Production &amp; Build</strong> — open/close build UI, category navigation, queue/cancel, structure placement confirm/cancel/rotate (module-specific), repair/sell/context build actions</li>
+<li><strong>Control Groups</strong> — select group, assign group, add-to-group, center group</li>
+<li><strong>Communication &amp; Coordination</strong> — open chat, channel shortcuts, whisper, push-to-talk, ping wheel, chat wheel, minimap draw, tactical markers, callvote, and role-aware support request/response actions for asymmetric modes (D070)</li>
+<li><strong>UI / System</strong> — pause/menu, scoreboard, controls quick reference, console (where supported), screenshot, replay controls, observer panels</li>
+</ul>
+<p><strong>Official profile families (shipped defaults):</strong></p>
+<ul>
+<li><code>Classic RA (KBM)</code> — preserves classic RTS muscle memory where practical</li>
+<li><code>OpenRA (KBM)</code> — optimized for OpenRA veterans (matching common command expectations)</li>
+<li><code>Modern RTS (KBM)</code> — IC default desktop profile tuned for discoverability and D065 onboarding</li>
+<li><code>Gamepad Default</code> — cursor/radial hybrid for TV/console-style play</li>
+<li><code>Steam Deck Default</code> — Deck-specific variant (touchpads/optional gyro/OSK-aware), not just generic gamepad</li>
+<li><code>Touch Phone</code> and <code>Touch Tablet</code> — gesture + HUD layout profiles (defined by D059/D065 mobile control rules; not “key” maps, but still part of the same action catalog)</li>
+</ul>
+<p><strong>D070 role actions:</strong> Asymmetric mode actions (e.g., <code>support_request_cas</code>, <code>support_request_recon</code>, <code>support_response_approve</code>, <code>support_response_eta</code>) are additional semantic actions layered onto the same catalog and surfaced only when the active scenario/mode assigns a role that uses them.</p>
+<p><strong>Binding profile behavior:</strong></p>
+<ul>
+<li>Profiles are versioned. A local profile stores either a stock profile ID or a <strong>diff</strong> from a stock profile (<code>Custom</code>).</li>
+<li>Rebinding UI edits semantic actions, never hardcodes UI-widget-local shortcuts.</li>
+<li>A single action may have multiple bindings (e.g., keyboard key + mouse button chord, or gamepad button + radial fallback).</li>
+<li>Platform-incompatible actions are hidden or remapped with a visible alternative (no dead-end actions on controller/touch).</li>
+<li>Tutorial prompts and quick reference entries resolve against the <strong>active profile + current <code>InputCapabilities</code> + <code>ScreenClass</code></strong>.</li>
+</ul>
+<p><strong>Official baseline defaults (high-level, normative examples):</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Action</th><th>Desktop KBM default (Modern RTS)</th><th>Steam Deck / Gamepad default</th><th>Touch default</th></tr>
+</thead>
+<tbody>
+<tr><td>Select / context command</td><td>Left-click / Right-click</td><td>Cursor confirm button (<code>A</code>/<code>Cross</code>)</td><td>Tap</td></tr>
+<tr><td>Box select</td><td>Left-drag</td><td>Hold modifier + cursor drag / touchpad drag</td><td>Hold + drag</td></tr>
+<tr><td>Attack-Move</td><td><code>A</code> then target</td><td>Command radial → Attack-Move</td><td>Command rail <code>Attack-Move</code> (optional)</td></tr>
+<tr><td>Guard</td><td><code>Q</code> then target/self</td><td>Command radial → Guard</td><td>Command rail <code>Guard</code> (optional)</td></tr>
+<tr><td>Stop</td><td><code>S</code></td><td>Face button / radial shortcut</td><td>Visible button in command rail/overflow</td></tr>
+<tr><td>Deploy</td><td><code>D</code></td><td>Context action / radial</td><td>Context tap or rail button</td></tr>
+<tr><td>Control groups</td><td><code>1–0</code>, <code>Ctrl+1–0</code></td><td>D-pad pages / radial groups (profile-defined)</td><td>Bottom control-group bar chips</td></tr>
+<tr><td>Camera bookmarks</td><td><code>F5–F8</code>, <code>Ctrl+F5–F8</code></td><td>D-pad/overlay quick slots (profile-defined)</td><td>Bookmark dock near minimap (tap/long-press)</td></tr>
+<tr><td>Open chat</td><td><code>Enter</code></td><td>Menu shortcut + OSK</td><td>Chat button + OS keyboard</td></tr>
+<tr><td>Controls Quick Reference</td><td><code>F1</code></td><td>Pause → Controls (optionally bound)</td><td>Pause → Controls</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Controller / Deck interaction model requirements (official profiles):</strong></p>
+<ul>
+<li>Controller profiles must provide a visible, discoverable path to all high-frequency orders (context command + command radial + pause/quick reference fallback)</li>
+<li>Steam Deck profile may use touchpad cursor and optional gyro precision, but every action must remain usable with gamepad-only input</li>
+<li>Text-heavy actions (chat, console where allowed) may invoke OSK; gameplay-critical actions may not depend on text entry</li>
+<li>Communication actions (PTT, ping wheel, chat wheel) must remain reachable without leaving combat camera control for more than one gesture/button chord</li>
+</ul>
+<p><strong>Accessibility requirements for all profiles:</strong></p>
+<ul>
+<li>Full rebinding across keyboard, mouse, gamepad, and Deck controls</li>
+<li>Hold/toggle alternatives (e.g., PTT, radial hold vs tap-toggle, sticky modifiers)</li>
+<li>Adjustable repeat rates, deadzones, stick curves, cursor acceleration, and gyro sensitivity (where supported)</li>
+<li>One-handed / reduced-dexterity viable alternatives for high-frequency commands (via remaps, radials, or quick bars)</li>
+<li>Controls Quick Reference always reflects the player’s current bindings and accessibility overrides, not only stock defaults</li>
+</ul>
+<p><strong>Competitive integrity note:</strong> Binding/remap freedom is supported, but multi-action automation/macros remain governed by D033 competitive equalization policy. Official profiles define discoverable defaults, not privileged input capabilities.</p>
+<h4 id="official-default-binding-matrix-v1-normative-baseline"><a class="header" href="#official-default-binding-matrix-v1-normative-baseline">Official Default Binding Matrix (v1, Normative Baseline)</a></h4>
+<p>The tables below define the <strong>normative baseline defaults</strong> for:</p>
+<ul>
+<li><code>Modern RTS (KBM)</code></li>
+<li><code>Gamepad Default</code></li>
+<li><code>Steam Deck Default</code> (Deck-specific overrides and additions)</li>
+</ul>
+<p><code>Classic RA (KBM)</code> and <code>OpenRA (KBM)</code> are compatibility-oriented profiles layered on the same semantic action catalog. They may differ in key placement, but must expose the same actions and remain fully documented in the Controls Quick Reference.</p>
+<p><strong>Controller naming convention (generic):</strong></p>
+<ul>
+<li><code>Confirm</code> = primary face button (<code>A</code> / <code>Cross</code>)</li>
+<li><code>Cancel</code> = secondary face button (<code>B</code> / <code>Circle</code>)</li>
+<li><code>Cmd Radial</code> = default <strong>hold</strong> command radial button (profile-defined; <code>Y</code> / <code>Triangle</code> by default)</li>
+<li><code>Menu</code> / <code>View</code> = start/select-equivalent buttons</li>
+</ul>
+<p><strong>Steam Deck defaults:</strong> Deck inherits <code>Gamepad Default</code> semantics but prefers <strong>right trackpad cursor</strong> and optional <strong>gyro precision</strong> for fine targeting. All actions remain usable without gyro.</p>
+<h5 id="camera--navigation"><a class="header" href="#camera--navigation">Camera &amp; Navigation</a></h5>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Semantic action</th><th>Modern RTS (KBM)</th><th>Gamepad Default</th><th>Steam Deck Default</th><th>Notes</th></tr>
+</thead>
+<tbody>
+<tr><td>Camera pan</td><td>Mouse to screen edge / Middle-mouse drag</td><td>Left stick</td><td>Left stick</td><td>Edge-scroll can be disabled; drag-pan remains</td></tr>
+<tr><td>Camera zoom in</td><td>Mouse wheel up</td><td><code>RB</code> (tap) or zoom radial</td><td><code>RB</code> (tap) / two-finger trackpad pinch emulation optional</td><td>Profile may swap with category cycling if player prefers</td></tr>
+<tr><td>Camera zoom out</td><td>Mouse wheel down</td><td><code>LB</code> (tap) or zoom radial</td><td><code>LB</code> (tap) / two-finger trackpad pinch emulation optional</td><td>Same binding family as zoom in</td></tr>
+<tr><td>Center on selection</td><td><code>C</code></td><td><code>R3</code> click</td><td><code>R3</code> click / <code>L4</code> (alt binding)</td><td>Mode-safe in gameplay and observer views</td></tr>
+<tr><td>Cycle recent alert</td><td><code>Space</code></td><td><code>D-pad Down</code></td><td><code>D-pad Down</code></td><td>In replay mode, <code>Space</code> is reserved for replay pause/play</td></tr>
+<tr><td>Jump bookmark slot 1–4</td><td><code>F5–F8</code></td><td><code>D-pad Left/Right</code> page + quick slot overlay confirm</td><td>Bookmark dock overlay via <code>R5</code>, then face/d-pad select</td><td>Quick slots map to D065 bookmark system</td></tr>
+<tr><td>Save bookmark slot 1–4</td><td><code>Ctrl+F5–F8</code></td><td>Hold bookmark overlay + <code>Confirm</code> on slot</td><td>Hold bookmark overlay (<code>R5</code>) + slot click/confirm</td><td>Matches desktop/touch semantics</td></tr>
+<tr><td>Open minimap focus / camera jump mode</td><td>Mouse click minimap</td><td><code>View</code> + left stick (minimap focus mode)</td><td>Left trackpad minimap focus (default) / <code>View</code>+stick fallback</td><td>No hidden-only path; visible in quick reference</td></tr>
+</tbody>
+</table>
+</div>
+<h5 id="selection--orders"><a class="header" href="#selection--orders">Selection &amp; Orders</a></h5>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Semantic action</th><th>Modern RTS (KBM)</th><th>Gamepad Default</th><th>Steam Deck Default</th><th>Notes</th></tr>
+</thead>
+<tbody>
+<tr><td>Select / Context command</td><td>Left-click select / Right-click context</td><td>Cursor + <code>Confirm</code></td><td>Trackpad cursor + <code>R2</code> (<code>Confirm</code>)</td><td>Same semantic action, resolved by context</td></tr>
+<tr><td>Add/remove selection modifier</td><td><code>Shift</code> + click/drag</td><td><code>LT</code> modifier while selecting</td><td><code>L2</code> modifier while selecting</td><td>Also used for queue modifier in production UI</td></tr>
+<tr><td>Box select</td><td>Left-drag</td><td>Hold selection modifier + cursor drag</td><td>Hold <code>L2</code> + trackpad drag (or stick drag)</td><td>Touch remains hold+drag (D059/D065 mobile)</td></tr>
+<tr><td>Deselect</td><td><code>Esc</code> / click empty UI space</td><td><code>Cancel</code></td><td><code>B</code> / <code>Cancel</code></td><td><code>Cancel</code> also exits modal targeting</td></tr>
+<tr><td>Attack-Move</td><td><code>A</code>, then target</td><td><code>Cmd Radial</code> → Attack-Move</td><td><code>R1</code> radial → Attack-Move</td><td>High-frequency, surfaced in radial + quick ref</td></tr>
+<tr><td>Guard</td><td><code>Q</code>, then target/self</td><td><code>Cmd Radial</code> → Guard</td><td><code>R1</code> radial → Guard</td><td><code>Q</code> avoids conflict with <code>Hold G</code> ping wheel</td></tr>
+<tr><td>Stop</td><td><code>S</code></td><td><code>X</code> (tap)</td><td><code>X</code> (tap) / <code>R4</code> (alt)</td><td>Immediate command, no target required</td></tr>
+<tr><td>Force Action / Force Fire</td><td><code>F</code>, then target</td><td><code>Cmd Radial</code> → Force Action</td><td><code>R1</code> radial → Force Action</td><td>Name varies by module; semantic action remains</td></tr>
+<tr><td>Deploy / Toggle deploy state</td><td><code>D</code></td><td><code>Y</code> (tap, context-sensitive) or radial</td><td><code>Y</code> / radial</td><td>Falls back to context action if deployable selected</td></tr>
+<tr><td>Scatter / emergency disperse</td><td><code>X</code></td><td><code>Cmd Radial</code> → Scatter</td><td><code>R1</code> radial → Scatter</td><td>Optional per module/profile; present if module supports</td></tr>
+<tr><td>Cycle selected-unit subtype</td><td><code>Ctrl+Tab</code></td><td><code>D-pad Right</code> (selection mode)</td><td><code>D-pad Right</code> (selection mode)</td><td>If selection contains mixed types</td></tr>
+</tbody>
+</table>
+</div>
+<h5 id="production-build-and-control-groups"><a class="header" href="#production-build-and-control-groups">Production, Build, and Control Groups</a></h5>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Semantic action</th><th>Modern RTS (KBM)</th><th>Gamepad Default</th><th>Steam Deck Default</th><th>Notes</th></tr>
+</thead>
+<tbody>
+<tr><td>Open/close production panel focus</td><td><code>B</code> (focus build UI) / click sidebar</td><td><code>D-pad Left</code> (tap)</td><td><code>D-pad Left</code> (tap)</td><td>Does not pause; focus shifts to production UI</td></tr>
+<tr><td>Cycle production categories</td><td><code>Q/E</code> (while build UI focused)</td><td><code>LB/RB</code></td><td><code>LB/RB</code></td><td>Contextual to production focus mode</td></tr>
+<tr><td>Queue selected item</td><td><code>Enter</code> / left-click on item</td><td><code>Confirm</code></td><td><code>R2</code> / trackpad click</td><td>Works in production focus mode</td></tr>
+<tr><td>Queue 5 / repeat modifier</td><td><code>Shift</code> + queue</td><td><code>LT</code> + queue</td><td><code>L2</code> + queue</td><td>Uses same modifier family as selection add</td></tr>
+<tr><td>Cancel queue item</td><td>Right-click queue slot</td><td><code>Cancel</code> on queue slot</td><td><code>B</code> on queue slot</td><td>Contextual in queue UI</td></tr>
+<tr><td>Set rally point / waypoint</td><td><code>R</code>, then target</td><td><code>Cmd Radial</code> → Rally/Waypoint</td><td><code>R1</code> radial → Rally/Waypoint</td><td>Module-specific labeling</td></tr>
+<tr><td>Building placement confirm</td><td>Left-click</td><td><code>Confirm</code></td><td><code>R2</code> / trackpad click</td><td>Ghost preview remains visible</td></tr>
+<tr><td>Building placement cancel</td><td><code>Esc</code> / Right-click</td><td><code>Cancel</code></td><td><code>B</code></td><td>Consistent across modes</td></tr>
+<tr><td>Building placement rotate (if supported)</td><td><code>R</code></td><td><code>Y</code> (placement mode)</td><td><code>Y</code> (placement mode)</td><td>Context-sensitive; only shown if module supports rotation</td></tr>
+<tr><td>Select control group 1–0</td><td><code>1–0</code></td><td>Control-group overlay + slot select (<code>D-pad Up</code> opens)</td><td>Bottom/back-button overlay (<code>L4</code>) + slot select</td><td>Touch uses bottom control-group bar chips</td></tr>
+<tr><td>Assign control group 1–0</td><td><code>Ctrl+1–0</code></td><td>Overlay + hold slot</td><td>Overlay + hold slot</td><td>Assignment is explicit to avoid accidental overwrite</td></tr>
+<tr><td>Center camera on control group</td><td>Double-tap <code>1–0</code></td><td>Overlay + reselect active slot</td><td>Overlay + reselect active slot</td><td>Mirrors desktop double-tap behavior</td></tr>
+</tbody>
+</table>
+</div>
+<h5 id="communication--coordination-d059"><a class="header" href="#communication--coordination-d059">Communication &amp; Coordination (D059)</a></h5>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Semantic action</th><th>Modern RTS (KBM)</th><th>Gamepad Default</th><th>Steam Deck Default</th><th>Notes</th></tr>
+</thead>
+<tbody>
+<tr><td>Open chat input</td><td><code>Enter</code></td><td><code>View</code> (hold) → chat input / OSK</td><td><code>View</code> (hold) or keyboard shortcut + OSK</td><td>D058/D059 command browser remains available where supported</td></tr>
+<tr><td>Team chat shortcut</td><td><code>/team</code> prefix or channel toggle in chat UI</td><td>Chat panel channel tab</td><td>Chat panel channel tab</td><td>Semantic action resolves to channel switch</td></tr>
+<tr><td>All-chat shortcut</td><td><code>/all</code> prefix or channel toggle in chat UI</td><td>Chat panel channel tab</td><td>Chat panel channel tab</td><td>D058 <code>/s</code> remains one-shot send</td></tr>
+<tr><td>Whisper</td><td><code>/w &lt;player&gt;</code> or player context menu</td><td>Player card → Whisper</td><td>Player card → Whisper</td><td>Visible UI path required</td></tr>
+<tr><td>Push-to-talk (PTT)</td><td><code>CapsLock</code> (default, rebindable)</td><td><code>LB</code> (hold)</td><td><code>L1</code> (hold)</td><td>VAD optional, PTT default per D059</td></tr>
+<tr><td>Ping wheel</td><td><code>Hold G</code> + mouse direction</td><td><code>R3</code> (hold) + right stick</td><td><code>R3</code> hold + stick or right trackpad radial</td><td>Matches D059 controller guidance</td></tr>
+<tr><td>Quick ping</td><td><code>G</code> tap</td><td><code>D-pad Up</code> tap</td><td><code>D-pad Up</code> tap</td><td>Tap vs hold disambiguation for ping wheel</td></tr>
+<tr><td>Chat wheel</td><td><code>Hold V</code> + mouse direction</td><td><code>D-pad Right</code> hold</td><td><code>D-pad Right</code> hold</td><td>Quick-reference shows phrase preview by profile</td></tr>
+<tr><td>Minimap draw</td><td><code>Alt</code> + minimap drag</td><td>Minimap focus mode + <code>RT</code> draw</td><td>Touch minimap draw or minimap focus mode + <code>R2</code></td><td>Deck prefers touch minimap when available</td></tr>
+<tr><td>Callvote menu / command</td><td><code>/callvote</code> or Pause → Vote</td><td>Pause → Vote</td><td>Pause → Vote</td><td>Console command remains equivalent where exposed</td></tr>
+<tr><td>Mute/unmute player</td><td>Scoreboard/context menu (<code>Tab</code>)</td><td>Scoreboard/context menu</td><td>Scoreboard/context menu</td><td>No hidden shortcut required</td></tr>
+</tbody>
+</table>
+</div>
+<h5 id="ui--system--replay--spectator"><a class="header" href="#ui--system--replay--spectator">UI / System / Replay / Spectator</a></h5>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Semantic action</th><th>Modern RTS (KBM)</th><th>Gamepad Default</th><th>Steam Deck Default</th><th>Notes</th></tr>
+</thead>
+<tbody>
+<tr><td>Pause / Escape menu</td><td><code>Esc</code></td><td><code>Menu</code></td><td><code>Menu</code></td><td>In multiplayer opens escape menu, not sim pause</td></tr>
+<tr><td>Scoreboard / player list</td><td><code>Tab</code></td><td><code>View</code> (tap)</td><td><code>View</code> (tap)</td><td>Supports mute/report/context actions</td></tr>
+<tr><td>Controls Quick Reference</td><td><code>F1</code></td><td>Pause → Controls (bindable shortcut optional)</td><td><code>L5</code> (hold) optional + Pause → Controls</td><td>Always reachable from pause/settings</td></tr>
+<tr><td>Developer console (where supported)</td><td><code>~</code></td><td>Pause → Command Browser (GUI)</td><td>Pause → Command Browser (GUI)</td><td>No tilde requirement on non-keyboard platforms</td></tr>
+<tr><td>Screenshot</td><td><code>F12</code></td><td>Pause → Photo/Share submenu (platform API)</td><td><code>Steam</code>+<code>R1</code> (OS default) / in-game photo action</td><td>Platform-specific capture APIs may override</td></tr>
+<tr><td>Replay pause/play (replay mode)</td><td><code>Space</code></td><td><code>Confirm</code></td><td><code>R2</code> / <code>Confirm</code></td><td>Mode-specific; does not conflict with live match <code>Space</code> alert cycle</td></tr>
+<tr><td>Replay seek step ±</td><td><code>,</code> / <code>.</code></td><td><code>LB/RB</code> (replay mode)</td><td><code>LB/RB</code> (replay mode)</td><td>Profile may remap to triggers</td></tr>
+<tr><td>Observer panel toggle</td><td><code>O</code></td><td><code>Y</code> (observer mode)</td><td><code>Y</code> (observer mode)</td><td>Only visible in spectator/caster contexts</td></tr>
+</tbody>
+</table>
+</div>
+<h4 id="workshop-shareable-configuration-profiles-optional"><a class="header" href="#workshop-shareable-configuration-profiles-optional">Workshop-Shareable Configuration Profiles (Optional)</a></h4>
+<p>Players can share <strong>configuration profiles</strong> via the Workshop as an optional, non-gameplay resource type. This includes:</p>
+<ul>
+<li>control bindings / input profiles (KBM, gamepad, Deck, touch layout preferences)</li>
+<li>accessibility presets (target size, hold/toggle behavior, deadzones, high-contrast HUD toggles)</li>
+<li>HUD/layout preference bundles (where layout profiles permit customization)</li>
+<li>camera/QoL preference bundles (non-authoritative client settings)</li>
+</ul>
+<p><strong>Hard boundaries (safety / trust):</strong></p>
+<ul>
+<li>No secrets or credentials (API keys, tokens, account auth data) — those remain D047-only local secrets</li>
+<li>No absolute file paths, device serials, hardware IDs, or OS-specific personal data</li>
+<li>No executable scripts/macros bundled in config profiles</li>
+<li>No automatic application on install; imports always show a <strong>scope + diff preview</strong> before apply</li>
+</ul>
+<p><strong>Compatibility metadata (required for controls-focused profiles):</strong></p>
+<ul>
+<li>semantic action catalog version</li>
+<li>target input class (<code>desktop_kbm</code>, <code>gamepad</code>, <code>deck</code>, <code>touch_phone</code>, <code>touch_tablet</code>)</li>
+<li>optional <code>ScreenClass</code> / layout profile compatibility hints</li>
+<li>notes for features required by the profile (e.g., gyro, rear buttons, command rail enabled)</li>
+</ul>
+<p><strong>UX behavior:</strong></p>
+<ul>
+<li>Controls screen supports <code>Import</code>, <code>Export</code>, and <code>Share on Workshop</code></li>
+<li>Workshop pages show the target device/profile class and a human-readable action summary (e.g., “Deck profile: right-trackpad cursor + gyro precision + PTT on L1”)</li>
+<li>Applying a profile can be partial (controls-only, touch-only, accessibility-only) to avoid clobbering unrelated preferences</li>
+</ul>
+<p>This follows the same philosophy as the Controls Quick Reference and D065 prompt system: shared semantics, device-specific presentation, and no hidden behavior.</p>
+<h4 id="controls-quick-reference-always-available-non-blocking"><a class="header" href="#controls-quick-reference-always-available-non-blocking">Controls Quick Reference (Always Available, Non-Blocking)</a></h4>
+<p>D065 also provides a persistent <strong>Controls Quick Reference</strong> overlay/menu entry so advanced actions are never hidden behind memory or community lore.</p>
+<p><strong>Rules:</strong></p>
+<ul>
+<li>Always available from gameplay (desktop, controller/Deck, and touch), pause menu, and settings</li>
+<li>Device-specific presentation, shared semantic content (same action catalog, different prompts/icons)</li>
+<li>Includes core actions + advanced/high-friction actions (camera bookmarks, command rail overrides, build drawer/sidebar interactions, chat/ping wheels)</li>
+<li>Dismissable, searchable, and safe to open/close without disrupting the current mode</li>
+<li>Can be pinned in reduced form during early sessions (optional setting), then auto-unpins as the player demonstrates mastery</li>
+</ul>
+<p>This is a <strong>reference aid</strong>, not a tutorial gate. It never blocks gameplay and does not require completion.</p>
+<h4 id="asymmetric-co-op-role-onboarding-d070-extension"><a class="header" href="#asymmetric-co-op-role-onboarding-d070-extension">Asymmetric Co-op Role Onboarding (D070 Extension)</a></h4>
+<p>When a player enters a D070 <code>Commander &amp; Field Ops</code> scenario for the first time, D065 can offer a short, skippable <strong>role onboarding</strong> overlay before match start (or as a replayable help entry from pause/settings).</p>
+<p><strong>What it teaches (v1):</strong></p>
+<ul>
+<li>the assigned role (<code>Commander</code> vs <code>Field Ops</code>)</li>
+<li>role-specific HUD regions and priorities</li>
+<li>request/response coordination loop (request support ↔ approve/deny/ETA)</li>
+<li>objective channel semantics (<code>Strategic</code>, <code>Field</code>, <code>Joint</code>)</li>
+<li>where to find the role-specific Controls Quick Reference page</li>
+</ul>
+<p><strong>Rules:</strong></p>
+<ul>
+<li>skippable and replayable</li>
+<li>concept-first, not mission-specific scripting</li>
+<li>uses the same D065 semantic action prompt model (no separate input prompt system)</li>
+<li>profile/device aware (<code>KBM</code>, controller/Deck, touch) where the scenario/platform supports the role</li>
+</ul>
+<h4 id="controls-changed-walkthrough-one-time-after-input-ux-changes"><a class="header" href="#controls-changed-walkthrough-one-time-after-input-ux-changes">Controls-Changed Walkthrough (One-Time After Input UX Changes)</a></h4>
+<p>When a game update changes control defaults, official input profile mappings, touch gesture behavior, command-rail mappings, or HUD placements in a way that affects muscle memory, D065 can show a short <strong>What’s Changed in Controls</strong> walkthrough on next launch.</p>
+<p><strong>Behavior:</strong></p>
+<ul>
+<li>Triggered by a local controls-layout/version mismatch (e.g., input profile schema version or layout profile revision)</li>
+<li>One-time prompt per affected profile/device; skippable and replayable later from Settings</li>
+<li>Focuses only on changed interactions (not a full tutorial replay)</li>
+<li>Prioritizes touch-platform changes (where discoverability regressions are most likely), but desktop can use it too</li>
+<li>Links to the Controls Quick Reference and Commander School for deeper refreshers</li>
+</ul>
+<p><strong>Philosophy fit:</strong> This preserves discoverability and reduces frustration without forcing players through onboarding again. It is a reversible UI aid, not a simulation change.</p>
+<h4 id="skill-assessment-phase-4"><a class="header" href="#skill-assessment-phase-4">Skill Assessment (Phase 4)</a></h4>
+<p>After Commander School Mission 01 (or as a standalone 2-minute exercise accessible from <code>Settings → QoL → Recalibrate</code>), the engine estimates the player’s baseline skill:</p>
+<pre><code>┌──────────────────────────────────────────────────┐
+│  SKILL CALIBRATION (2 minutes)                   │
+│                                                  │
+│  Complete these exercises:                       │
+│  ✓  Select and move units to waypoints           │
+│  ✓  Select specific units from a mixed group     │
+│  ►  Camera: pan to each flashing area            │
+│  ►  Optional: save/jump a camera bookmark        │
+│     Timed combat: destroy targets in order       │
+│                                                  │
+│  [Skip Assessment]                               │
+└──────────────────────────────────────────────────┘
+</code></pre>
+<p>Measures:</p>
+<ul>
+<li><strong>Selection speed</strong> — time to select correct units from a mixed group</li>
+<li><strong>Camera fluency</strong> — time to pan to each target area</li>
+<li><strong>Camera bookmark fluency (optional)</strong> — time to save and jump to a bookmarked location (measured only on platforms where bookmarks are surfaced in the exercise)</li>
+<li><strong>Combat efficiency</strong> — accuracy of focused fire on marked targets</li>
+<li><strong>APM estimate</strong> — actions per minute during the exercises</li>
+</ul>
+<p>Results stored in SQLite:</p>
+<pre><code class="language-sql">-- In player.db
+CREATE TABLE player_skill_estimate (
+    player_id        TEXT PRIMARY KEY,
+    selection_speed  INTEGER,    -- percentile (0–100)
+    camera_fluency   INTEGER,
+    bookmark_fluency INTEGER,    -- nullable/0 if exercise omitted
+    combat_efficiency INTEGER,
+    apm_estimate     INTEGER,    -- raw APM
+    input_class      TEXT,       -- 'desktop', 'touch_phone', 'touch_tablet', 'deck'
+    screen_class     TEXT,       -- 'Phone', 'Tablet', 'Desktop', 'TV'
+    assessed_at      INTEGER,    -- Unix timestamp
+    assessment_type  TEXT        -- 'tutorial_01' or 'standalone'
+);
+</code></pre>
+<p>Percentiles are normalized <strong>within input class</strong> (desktop vs touch phone vs touch tablet vs deck) so touch players are not under-rated against mouse/keyboard baselines.</p>
+<p>The skill estimate feeds Layers 2 and 4: hint frequency scales with skill (fewer hints for skilled players), the first skirmish AI difficulty recommendation uses the estimate, and touch tempo guidance can widen/narrow its recommended speed band based on demonstrated comfort.</p>
+<h3 id="layer-4--adaptive-pacing-engine"><a class="header" href="#layer-4--adaptive-pacing-engine">Layer 4 — Adaptive Pacing Engine</a></h3>
+<p>A background system (no direct UI — it shapes the other layers) that continuously estimates player mastery and adjusts the learning experience.</p>
+<h4 id="inputs"><a class="header" href="#inputs">Inputs</a></h4>
+<ul>
+<li><code>hint_history</code> — which hints have been shown, dismissed, or mastered</li>
+<li><code>player_skill_estimate</code> — from the skill assessment</li>
+<li><code>gameplay_events</code> (D031) — actual in-game actions (build orders, APM, unit losses, idle time)</li>
+<li><code>experience_profile</code> — self-identified experience level</li>
+<li><code>input_capabilities</code> / <code>screen_class</code> — touch vs mouse/keyboard and phone/tablet layout context</li>
+<li>optional touch friction signals — misclick proxies, selection retries, camera thrash, pause frequency (single-player)</li>
+</ul>
+<h4 id="outputs"><a class="header" href="#outputs">Outputs</a></h4>
+<ul>
+<li><strong>Hint frequency multiplier</strong> — scales the cooldown on all hints. A player demonstrating mastery gets longer cooldowns (fewer hints). A struggling player gets shorter cooldowns (more hints).</li>
+<li><strong>Difficulty recommendation</strong> — suggested AI difficulty for the next skirmish. Displayed as a tooltip in the lobby AI picker: “Based on your recent games, Normal difficulty is recommended.”</li>
+<li><strong>Feature discovery pacing</strong> — controls how quickly progressive discovery notifications appear (Layer 5 below).</li>
+<li><strong>Touch tutorial prompt density</strong> — controls how much on-screen guidance is shown for touch platforms (e.g., keep command-rail hints visible slightly longer for new phone players).</li>
+<li><strong>Recommended tempo band (advisory)</strong> — preferred speed range for the current device/input/skill context. Used by UI warnings only; never changes sim state on its own.</li>
+<li><strong>Camera bookmark suggestion eligibility</strong> — enables/disables “save camera location” hints based on camera fluency and map scale.</li>
+<li><strong>Tutorial EVA activation</strong> — in the Allied/Soviet campaigns (not Commander School), first encounters with new unit types or buildings trigger a brief EVA line if the player hasn’t completed the relevant Commander School mission. “Construction complete. This is a Radar Dome — it reveals the minimap.” Only triggers once per entity type per campaign playthrough.</li>
+</ul>
+<h4 id="pacing-algorithm"><a class="header" href="#pacing-algorithm">Pacing Algorithm</a></h4>
+<pre><code>skill_estimate = weighted_average(
+    0.3 × selection_speed_percentile,
+    0.2 × camera_fluency_percentile,
+    0.2 × combat_efficiency_percentile,
+    0.15 × recent_apm_trend,           -- from gameplay_events
+    0.15 × hint_mastery_rate            -- % of hints mastered vs shown
+)
+
+hint_frequency_multiplier = clamp(
+    2.0 - (skill_estimate / 50.0),      -- range: 0.0 (no hints) to 2.0 (double frequency)
+    min = 0.2,
+    max = 2.0
+)
+
+recommended_difficulty = match skill_estimate {
+    0..25   =&gt; "Easy",
+    25..50  =&gt; "Normal",
+    50..75  =&gt; "Hard",
+    75..100 =&gt; "Brutal",
+}
+</code></pre>
+<h4 id="mobile-tempo-advisor-client-only-advisory"><a class="header" href="#mobile-tempo-advisor-client-only-advisory">Mobile Tempo Advisor (Client-Only, Advisory)</a></h4>
+<p>The adaptive pacing engine also powers a <strong>Tempo Advisor</strong> for touch-first play. This system is intentionally non-invasive:</p>
+<ul>
+<li><strong>Single-player:</strong> any speed allowed; warnings shown outside the recommended band; one-tap “Return to Recommended”</li>
+<li><strong>Casual multiplayer (host-controlled):</strong> lobby shows a warning if the selected speed is outside the recommended band for participating touch players</li>
+<li><strong>Ranked multiplayer:</strong> informational only; speed remains server/queue enforced (D055/D064, see <code>09b-networking.md</code>)</li>
+</ul>
+<p>Initial default bands (experimental; tune from playtests):</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Context</th><th>Recommended Band</th><th>Default</th></tr>
+</thead>
+<tbody>
+<tr><td>Phone (new/average touch)</td><td><code>slowest</code>-<code>normal</code></td><td><code>slower</code></td></tr>
+<tr><td>Phone (high skill estimate + tutorial complete)</td><td><code>slower</code>-<code>faster</code></td><td><code>normal</code></td></tr>
+<tr><td>Tablet</td><td><code>slower</code>-<code>faster</code></td><td><code>normal</code></td></tr>
+<tr><td>Desktop / Deck</td><td>unchanged</td><td><code>normal</code></td></tr>
+</tbody>
+</table>
+</div>
+<p>Commander School on phone/tablet starts at <code>slower</code> by default, but players may override it.</p>
+<p>The advisor emits local-only analytics events (D031-compatible) such as <code>mobile_tempo.warning_shown</code> and <code>mobile_tempo.warning_dismissed</code> to validate whether recommendations reduce overload without reducing agency.</p>
+<p>This is deterministic and entirely local — no LLM, no network, no privacy concerns. The pacing engine exists in <code>ic-ui</code> (not <code>ic-sim</code>) because it affects presentation, not simulation.</p>
+<h4 id="implementation-facing-interfaces-clientui-layer-no-sim-impact"><a class="header" href="#implementation-facing-interfaces-clientui-layer-no-sim-impact">Implementation-Facing Interfaces (Client/UI Layer, No Sim Impact)</a></h4>
+<p>These types live in <code>ic-ui</code> / <code>ic-game</code> client codepaths (not <code>ic-sim</code>) and formalize camera bookmarks, semantic prompt resolution, and tempo advice:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct CameraBookmarkSlot {
+    pub slot: u8,                    // 1..=9
+    pub label: Option&lt;String&gt;,       // local-only label
+    pub world_pos: WorldPos,
+    pub zoom_level: Option&lt;FixedPoint&gt;, // optional client camera zoom
+}
+
+pub struct CameraBookmarkState {
+    pub slots: [Option&lt;CameraBookmarkSlot&gt;; 9],
+    pub quick_slots: [u8; 4],        // defaults: [1, 2, 3, 4]
+}
+
+pub enum CameraBookmarkIntent {
+    Save { slot: u8 },
+    Jump { slot: u8 },
+    Clear { slot: u8 },
+    Rename { slot: u8, label: String },
+}
+
+pub enum InputPromptAction {
+    Select,
+    BoxSelect,
+    MoveCommand,
+    AttackCommand,
+    AttackMoveCommand,
+    OpenBuildUi,
+    QueueProduction,
+    UseMinimap,
+    SaveCameraBookmark,
+    JumpCameraBookmark,
+}
+
+pub struct TutorialPromptContext {
+    pub input_capabilities: InputCapabilities,
+    pub screen_class: ScreenClass,
+    pub advanced_mode: bool,
+}
+
+pub struct ResolvedInputPrompt {
+    pub text: String,             // localized, device-specific wording
+    pub icon_tokens: Vec&lt;String&gt;, // e.g. "tap", "f5", "ctrl+f5"
+}
+
+pub struct UiAnchorAlias(pub String); // e.g. "primary_build_ui", "minimap_cluster"
+
+pub enum TempoSpeedLevel {
+    Slowest,
+    Slower,
+    Normal,
+    Faster,
+    Fastest,
+}
+
+pub struct TempoComfortBand {
+    pub recommended_min: TempoSpeedLevel,
+    pub recommended_max: TempoSpeedLevel,
+    pub default_speed: TempoSpeedLevel,
+    pub warn_above: Option&lt;TempoSpeedLevel&gt;,
+    pub warn_below: Option&lt;TempoSpeedLevel&gt;,
+}
+
+pub enum InputSourceKind {
+    MouseKeyboard,
+    TouchPhone,
+    TouchTablet,
+    Controller,
+}
+
+pub struct TempoAdvisorContext {
+    pub screen_class: ScreenClass,
+    pub has_touch: bool,
+    pub primary_input: InputSourceKind, // advisory classification only
+    pub skill_estimate: Option&lt;PlayerSkillEstimate&gt;,
+    pub mode: MatchMode,            // SP / casual MP / ranked
+}
+
+pub enum TempoWarning {
+    AboveRecommendedBand,
+    BelowRecommendedBand,
+    TouchOverloadRisk,
+}
+
+pub struct TempoRecommendation {
+    pub band: TempoComfortBand,
+    pub warnings: Vec&lt;TempoWarning&gt;,
+    pub rationale: Vec&lt;String&gt;,     // short UI strings
+}
+<span class="boring">}</span></code></pre>
+<p>The touch/mobile control layer maps these UI intents to normal <code>PlayerOrder</code>s through the existing <code>InputSource</code> pipeline. Bookmarks and tempo advice remain local UI state; they never enter the deterministic simulation.</p>
+<h3 id="layer-5--post-game-learning"><a class="header" href="#layer-5--post-game-learning">Layer 5 — Post-Game Learning</a></h3>
+<p>After every match, the post-game stats screen (D034) includes a learning section:</p>
+<h4 id="rule-based-tips"><a class="header" href="#rule-based-tips">Rule-Based Tips</a></h4>
+<p>YAML-driven pattern matching on <code>gameplay_events</code>:</p>
+<pre><code class="language-yaml"># tips/base-game-tips.yaml
+tips:
+  - id: idle_harvesters
+    title: "Keep Your Economy Running"
+    positive: false
+    condition:
+      type: stat_threshold
+      stat: idle_harvester_seconds
+      threshold: 30
+    text: "Your harvesters sat idle for {idle_harvester_seconds} seconds. Idle harvesters mean lost income."
+    learn_more: tutorial_04  # links to Commander School Mission 04 (Economy)
+
+  - id: good_micro
+    title: "Sharp Micro"
+    positive: true
+    condition:
+      type: stat_threshold
+      stat: average_unit_efficiency  # damage dealt / damage taken per unit
+      threshold: 1.5
+      direction: above
+    text: "Your units dealt {ratio}× more damage than they took — strong micro."
+
+  - id: no_tech
+    title: "Explore the Tech Tree"
+    positive: false
+    condition:
+      type: never_built
+      building_types: [radar_dome, tech_center, battle_lab]
+      min_game_length_minutes: 8
+    text: "You didn't build any advanced structures. Higher-tech units can turn the tide."
+    learn_more: tutorial_07  # links to Commander School Mission 07 (Combined Arms)
+</code></pre>
+<p><strong>Tip selection:</strong> 1–3 tips per game. At least one positive (“you did this well”) and at most one improvement (“you could try this”). Tips rotate — the engine avoids repeating the same tip in consecutive games.</p>
+<h4 id="annotated-replay-mode"><a class="header" href="#annotated-replay-mode">Annotated Replay Mode</a></h4>
+<p>“Watch the moment” links in post-game tips jump to an annotated replay — the replay plays with an overlay highlighting the relevant moment:</p>
+<pre><code>┌────────────────────────────────────────────────────────────┐
+│  REPLAY — ANNOTATED                                        │
+│  ┌──────────────────────────────────────────────────────┐  │
+│  │                                                      │  │
+│  │   [Game replay playing at 0.5x speed]               │  │
+│  │                                                      │  │
+│  │   ┌─────────────────────────────────┐               │  │
+│  │   │ 💡 Your harvester sat idle here │               │  │
+│  │   │    for 23 seconds while ore was │               │  │
+│  │   │    available 3 cells away.      │               │  │
+│  │   │    [Return to Stats]            │               │  │
+│  │   └─────────────────────────────────┘               │  │
+│  │                                                      │  │
+│  └──────────────────────────────────────────────────────┘  │
+│  ◄◄  ►  ►►  │ 4:23 / 12:01 │ 0.5x │                       │
+└────────────────────────────────────────────────────────────┘
+</code></pre>
+<p>The annotation data is generated at match end (not during gameplay — no sim overhead). It’s a list of <code>(tick, position, text)</code> tuples stored alongside the replay file.</p>
+<h4 id="progressive-feature-discovery"><a class="header" href="#progressive-feature-discovery">Progressive Feature Discovery</a></h4>
+<p>Milestone-based main menu notifications that surface features over the player’s first weeks:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Milestone</th><th>Feature Suggested</th><th>Notification</th></tr>
+</thead>
+<tbody>
+<tr><td>First game completed</td><td>Replays</td><td>“Your game was saved as a replay. Watch it from the Replays menu.”</td></tr>
+<tr><td>3 games completed</td><td>Experience profiles</td><td>“Did you know? You can switch gameplay presets in Settings → QoL.”</td></tr>
+<tr><td>First multiplayer game</td><td>Ranked play</td><td>“Ready for a challenge? Ranked matches calibrate your skill rating.”</td></tr>
+<tr><td>5 games completed</td><td>Workshop</td><td>“The Workshop has community maps, mods, and campaigns. Browse it anytime.”</td></tr>
+<tr><td>Commander School done</td><td>Training mode</td><td>“Try training mode to practice against AI with custom settings.”</td></tr>
+<tr><td>10 games completed</td><td>Console</td><td>“Press Enter and type / to access console commands.”</td></tr>
+<tr><td>First mod installed</td><td>Mod profiles</td><td>“Create mod profiles to switch between different mod setups quickly.”</td></tr>
+</tbody>
+</table>
+</div>
+<p>Maximum one notification per session. Three dismissals of the same category = never again. Discovery state stored in <code>hint_history</code> SQLite table (reuses the same suppression infrastructure as Layer 2).</p>
+<p><code>/discovery</code> console commands (D058): <code>/discovery list</code>, <code>/discovery reset</code>, <code>/discovery trigger &lt;milestone&gt;</code>.</p>
+<h3 id="tutorial-lua-global-api"><a class="header" href="#tutorial-lua-global-api">Tutorial Lua Global API</a></h3>
+<p>The <code>Tutorial</code> global is an IC-exclusive Lua extension available in all game modes (not just Commander School). Modders use it to build tutorial sequences in their own campaigns and scenarios.</p>
+<pre><code class="language-lua">-- === Step Management ===
+
+-- Define and activate a tutorial step. The step is displayed as a hint overlay
+-- and tracked for completion. Only one step can be active at a time.
+-- Calling SetStep while a step is active replaces it.
+Tutorial.SetStep(step_id, {
+    title = "Step Title",                    -- displayed in the hint overlay header
+    hint = "Instructional text for the player", -- main body text
+    hint_action = "move_command",            -- optional semantic prompt token; renderer
+                                             -- resolves to device-specific wording/icons
+    focus_area = position_or_region,         -- optional: camera pans to this location
+    highlight_ui = "ui_element_id",          -- optional: logical UI target or semantic alias
+    eva_line = "eva_sound_id",               -- optional: play an EVA voice line
+    completion = {                           -- when is this step "done"?
+        type = "action",                     -- "action", "kill", "kill_all", "build",
+                                             -- "select", "move_to", "research", "custom"
+        action = "attack_move",              -- specific action to detect
+        -- OR:
+        count = 3,                           -- for "kill": kill N enemies
+        -- OR:
+        unit_type = "power_plant",           -- for "build": build this structure
+        -- OR:
+        lua_condition = "CheckCustomGoal()", -- for "custom": Lua expression
+    },
+})
+
+-- Query the currently active step ID (nil if no step active)
+local current = Tutorial.GetCurrentStep()
+
+-- Manually complete the current step (triggers OnStepComplete)
+Tutorial.CompleteStep()
+
+-- Skip the current step without triggering completion
+Tutorial.SkipStep()
+
+-- === Hint Display ===
+
+-- Show a one-shot hint (not tied to a step). Useful for contextual tips
+-- within a mission script without the full step tracking machinery.
+Tutorial.ShowHint(text, {
+    title = "Optional Title",        -- nil = no title bar
+    duration = 8,                    -- seconds before auto-dismiss (0 = manual dismiss only)
+    position = "near_unit",          -- "near_unit", "near_building", "screen_top",
+                                     -- "screen_center", "near_sidebar", position_table
+    icon = "hint_icon_id",           -- optional icon
+    eva_line = "eva_sound_id",       -- optional EVA line
+    dismissable = true,              -- show dismiss button (default: true)
+})
+
+-- Show a hint anchored to a specific actor (follows the actor on screen)
+Tutorial.ShowActorHint(actor, text, options)
+
+-- Show a one-shot hint using a semantic action token. The renderer chooses
+-- desktop/touch wording (e.g., "Right-click" vs "Tap") and icon glyphs.
+Tutorial.ShowActionHint(action_name, {
+    title = "Optional Title",
+    highlight_ui = "ui_element_id",   -- logical UI target or semantic alias
+    duration = 8,
+})
+
+-- Dismiss all currently visible hints
+Tutorial.DismissAllHints()
+
+-- === Camera &amp; Focus ===
+
+-- Smoothly pan the camera to a position or region
+Tutorial.FocusArea(position_or_region, {
+    duration = 1.5,                  -- pan duration in seconds
+    zoom = 1.0,                      -- optional zoom level (1.0 = default)
+    lock = false,                    -- if true, player can't move camera until unlock
+})
+
+-- Release a camera lock set by FocusArea
+Tutorial.UnlockCamera()
+
+-- === UI Highlighting ===
+
+-- Highlight a UI element with a pulsing glow effect
+Tutorial.HighlightUI(element_id, {
+    style = "pulse",                 -- "pulse", "arrow", "outline", "dim_others"
+    duration = 0,                    -- seconds (0 = until manually cleared)
+    text = "Click here",             -- optional tooltip on the highlight
+})
+
+-- Clear a specific highlight
+Tutorial.ClearHighlight(element_id)
+
+-- Clear all highlights
+Tutorial.ClearAllHighlights()
+
+-- === Restrictions (for teaching pacing) ===
+
+-- Disable sidebar/building (player can't construct until enabled)
+Tutorial.RestrictSidebar(enabled)
+
+-- Restrict which unit types the player can build
+Tutorial.RestrictBuildOptions(allowed_types)  -- e.g., {"power_plant", "barracks"}
+
+-- Restrict which orders the player can issue
+Tutorial.RestrictOrders(allowed_orders)  -- e.g., {"move", "stop", "attack"}
+
+-- Clear all restrictions
+Tutorial.ClearRestrictions()
+
+-- === Progress Tracking ===
+
+-- Check if the player has demonstrated a skill (from campaign state flags)
+local knows_groups = Tutorial.HasSkill("assign_control_group")
+
+-- Get the number of times a specific hint has been shown (from hint_history)
+local shown = Tutorial.GetHintShowCount("idle_harvester")
+
+-- Check if a specific Commander School mission has been completed
+local passed = Tutorial.IsMissionComplete("tutorial_04")
+
+-- === Callbacks ===
+
+-- Register a callback for when a step completes
+-- (also available as the global OnStepComplete function)
+Tutorial.OnStepComplete(function(step_id)
+    -- step_id is the string passed to SetStep
+end)
+
+-- Register a callback for when the player performs a specific action
+Tutorial.OnAction(action_name, function(context)
+    -- context contains details: { actor = ..., target = ..., position = ... }
+end)
+</code></pre>
+<h4 id="ui-element-ids-and-semantic-aliases-for-highlightui"><a class="header" href="#ui-element-ids-and-semantic-aliases-for-highlightui">UI Element IDs and Semantic Aliases for HighlightUI</a></h4>
+<p>The <code>element_id</code> parameter refers to logical UI element names (not internal Bevy entity IDs). These IDs may be:</p>
+<ol>
+<li><strong>Concrete logical element IDs</strong> (stable names for a specific surface, e.g. <code>attack_move_button</code>)</li>
+<li><strong>Semantic UI aliases</strong> resolved by the active layout profile (desktop sidebar vs phone build drawer)</li>
+</ol>
+<p>This allows a single tutorial step to say “highlight the primary build UI” while the renderer picks the correct widget for <code>ScreenClass::Desktop</code>, <code>ScreenClass::Tablet</code>, or <code>ScreenClass::Phone</code>.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Element ID</th><th>What It Highlights</th></tr>
+</thead>
+<tbody>
+<tr><td><code>sidebar</code></td><td>The entire build sidebar</td></tr>
+<tr><td><code>sidebar_building</code></td><td>The building tab of the sidebar</td></tr>
+<tr><td><code>sidebar_unit</code></td><td>The unit tab of the sidebar</td></tr>
+<tr><td><code>sidebar_item:&lt;type&gt;</code></td><td>A specific buildable item (e.g., <code>sidebar_item:power_plant</code>)</td></tr>
+<tr><td><code>build_drawer</code></td><td>Phone build drawer (collapsed/expanded production UI)</td></tr>
+<tr><td><code>minimap</code></td><td>The minimap</td></tr>
+<tr><td><code>minimap_cluster</code></td><td>Touch minimap cluster (minimap + alerts + bookmark dock)</td></tr>
+<tr><td><code>command_bar</code></td><td>The unit command bar (move, stop, attack, etc.)</td></tr>
+<tr><td><code>control_group_bar</code></td><td>Bottom control-group strip (desktop or touch)</td></tr>
+<tr><td><code>command_rail</code></td><td>Touch command rail (attack-move/guard/force-fire, etc.)</td></tr>
+<tr><td><code>command_rail_slot:&lt;action&gt;</code></td><td>Specific touch command-rail slot (e.g., <code>command_rail_slot:attack_move</code>)</td></tr>
+<tr><td><code>attack_move_button</code></td><td>The attack-move button specifically</td></tr>
+<tr><td><code>deploy_button</code></td><td>The deploy button</td></tr>
+<tr><td><code>guard_button</code></td><td>The guard button</td></tr>
+<tr><td><code>money_display</code></td><td>The credits/resource counter</td></tr>
+<tr><td><code>power_bar</code></td><td>The power supply/demand indicator</td></tr>
+<tr><td><code>radar_toggle</code></td><td>The radar on/off button</td></tr>
+<tr><td><code>sell_button</code></td><td>The sell (wrench/dollar) button</td></tr>
+<tr><td><code>repair_button</code></td><td>The repair button</td></tr>
+<tr><td><code>camera_bookmark_dock</code></td><td>Touch bookmark quick dock (phone/tablet minimap cluster)</td></tr>
+<tr><td><code>camera_bookmark_slot:&lt;n&gt;</code></td><td>A specific bookmark slot (e.g., <code>camera_bookmark_slot:1</code>)</td></tr>
+</tbody>
+</table>
+</div>
+<p>Modders can register custom UI element IDs for custom UI panels via <code>Tutorial.RegisterUIElement(id, description)</code>.</p>
+<p><strong>Semantic UI alias examples (built-in):</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Alias</th><th>Desktop</th><th>Tablet</th><th>Phone</th></tr>
+</thead>
+<tbody>
+<tr><td><code>primary_build_ui</code></td><td><code>sidebar</code></td><td><code>sidebar</code></td><td><code>build_drawer</code></td></tr>
+<tr><td><code>minimap_cluster</code></td><td><code>minimap</code></td><td><code>minimap</code></td><td><code>minimap</code> (plus bookmark dock/alerts cluster)</td></tr>
+<tr><td><code>bottom_control_groups</code></td><td><code>command_bar</code> / HUD bar region</td><td>touch group bar</td><td>touch group bar</td></tr>
+<tr><td><code>command_rail_attack_move</code></td><td><code>attack_move_button</code></td><td>command rail A-move slot</td><td>command rail A-move slot</td></tr>
+<tr><td><code>tempo_speed_picker</code></td><td>lobby speed dropdown</td><td>same</td><td>mobile speed picker + advisory chip</td></tr>
+</tbody>
+</table>
+</div>
+<p>The alias-to-element mapping is provided by the active UI layout profile (<code>ic-ui</code>) and keyed by <code>ScreenClass</code> + <code>InputCapabilities</code>.</p>
+<h3 id="tutorial-achievements-d036"><a class="header" href="#tutorial-achievements-d036">Tutorial Achievements (D036)</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Achievement</th><th>Condition</th><th>Icon</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Graduate</strong></td><td>Complete Commander School (missions 01–09)</td><td>🎓</td></tr>
+<tr><td><strong>Honors Graduate</strong></td><td>Complete Commander School with zero retries</td><td>🏅</td></tr>
+<tr><td><strong>Quick Study</strong></td><td>Complete Commander School in under 45 minutes total</td><td>⚡</td></tr>
+<tr><td><strong>Helping Hand</strong></td><td>Complete a community-made tutorial campaign</td><td>🤝</td></tr>
+</tbody>
+</table>
+</div>
+<p>These are engine-defined achievements (not mod-defined). They use the D036 achievement system and sync with Steam achievements for Steam builds.</p>
+<h3 id="multiplayer-onboarding"><a class="header" href="#multiplayer-onboarding">Multiplayer Onboarding</a></h3>
+<p>First time clicking <strong>Multiplayer</strong> from the main menu, a welcome overlay appears (see <code>17-PLAYER-FLOW.md</code> for the full layout):</p>
+<ul>
+<li>Explains relay server model (no host advantage)</li>
+<li>Suggests: casual game first → ranked → spectate</li>
+<li>“Got it, let me play” dismisses permanently</li>
+<li>Stored in <code>hint_history</code> as <code>mp_welcome_dismissed</code></li>
+</ul>
+<p>After the player’s first multiplayer game, a brief overlay explains the post-game stats and rating system if ranked.</p>
+<h3 id="modder-tutorial-api--custom-tutorial-campaigns"><a class="header" href="#modder-tutorial-api--custom-tutorial-campaigns">Modder Tutorial API — Custom Tutorial Campaigns</a></h3>
+<p>The entire tutorial infrastructure is available to modders. A modder creating a total conversion or a complex mod with novel mechanics can build their own Commander School equivalent:</p>
+<ol>
+<li><strong>Campaign YAML:</strong> Use <code>category: tutorial</code> in the campaign definition. The campaign appears under <code>Campaign → Tutorial</code> in the main menu.</li>
+<li><strong>Tutorial Lua API:</strong> All <code>Tutorial.*</code> functions work in any campaign or scenario, not just the built-in Commander School. Call <code>Tutorial.SetStep()</code>, <code>Tutorial.ShowHint()</code>, <code>Tutorial.HighlightUI()</code>, etc.</li>
+<li><strong>Custom hints:</strong> Add a <code>hints.yaml</code> to the mod directory. Hints are merged with the base game hints at load time. Mod hints can reference mod-specific unit types, building types, and actions.</li>
+<li><strong>Custom trigger types:</strong> Define custom triggers via Lua using the <code>custom</code> trigger type in <code>hints.yaml</code>, or register a full trigger type via WASM (Tier 3).</li>
+<li><strong>Scenario editor modules:</strong> Use the Tutorial Step and Tutorial Hint modules (D038) to build tutorial sequences visually without writing Lua.</li>
+</ol>
+<h4 id="end-to-end-example-modder-tutorial-campaign"><a class="header" href="#end-to-end-example-modder-tutorial-campaign">End-to-End Example: Modder Tutorial Campaign</a></h4>
+<p>A modder creating a “Chrono Warfare” mod with a time-manipulation mechanic wants a 3-mission tutorial introducing the new features:</p>
+<pre><code class="language-yaml"># mods/chrono-warfare/campaigns/tutorial/campaign.yaml
+campaign:
+  id: chrono_tutorial
+  title: "Chrono Warfare — Basic Training"
+  description: "Learn the new time-manipulation abilities"
+  start_mission: chrono_01
+  category: tutorial
+  requires_mod: chrono-warfare
+
+  missions:
+    chrono_01:
+      map: missions/chrono-tutorial/01-temporal-basics
+      briefing: briefings/chrono-01.yaml
+      outcomes:
+        pass: { next: chrono_02 }
+        skip: { next: chrono_02 }
+
+    chrono_02:
+      map: missions/chrono-tutorial/02-chrono-shift
+      briefing: briefings/chrono-02.yaml
+      outcomes:
+        pass: { next: chrono_03 }
+        skip: { next: chrono_03 }
+
+    chrono_03:
+      map: missions/chrono-tutorial/03-time-bomb
+      briefing: briefings/chrono-03.yaml
+      outcomes:
+        pass: { description: "Training complete" }
+</code></pre>
+<pre><code class="language-lua">-- mods/chrono-warfare/missions/chrono-tutorial/01-temporal-basics.lua
+
+function OnMissionStart()
+    -- Restrict everything except the new mechanic
+    Tutorial.RestrictSidebar(true)
+    Tutorial.RestrictOrders({"move", "stop", "chrono_freeze"})
+
+    -- Step 1: Introduce the Chrono Freeze ability
+    Tutorial.SetStep("learn_freeze", {
+        title = "Temporal Freeze",
+        hint = "Your Chrono Trooper can freeze enemies in time. " ..
+               "Select the trooper and use the Chrono Freeze ability on the enemy tank.",
+        focus_area = enemy_tank_position,
+        highlight_ui = "sidebar_item:chrono_freeze",
+        eva_line = "chrono_tech_available",
+        completion = { type = "action", action = "chrono_freeze" }
+    })
+end
+
+function OnStepComplete(step_id)
+    if step_id == "learn_freeze" then
+        Tutorial.ShowHint("The enemy tank is frozen in time for 10 seconds. " ..
+                          "Frozen units can't move, shoot, or be damaged.", {
+            duration = 6,
+            position = "near_unit",
+        })
+
+        Trigger.AfterDelay(DateTime.Seconds(8), function()
+            Tutorial.SetStep("destroy_frozen", {
+                title = "Shatter the Frozen",
+                hint = "When the freeze ends, the target takes bonus damage for 3 seconds. " ..
+                       "Attack the tank right as the freeze expires!",
+                completion = { type = "kill", count = 1 }
+            })
+        end)
+
+    elseif step_id == "destroy_frozen" then
+        Campaign.complete("pass")
+    end
+end
+</code></pre>
+<pre><code class="language-yaml"># mods/chrono-warfare/hints/chrono-hints.yaml
+hints:
+  - id: chrono_freeze_ready
+    title: "Chrono Freeze Available"
+    text: "Your Chrono Trooper's freeze ability is ready. Use it on high-value targets."
+    category: mod_specific
+    trigger:
+      type: building_ready
+      building_type: "chrono_trooper"
+      ability: "chrono_freeze"
+      first_time: true
+    suppression:
+      mastery_action: use_chrono_freeze
+      mastery_threshold: 3
+      cooldown_seconds: 0
+      max_shows: 1
+    experience_profiles: [all]
+    priority: high
+    position: near_unit
+</code></pre>
+<h3 id="campaign-pedagogical-pacing-guidelines"><a class="header" href="#campaign-pedagogical-pacing-guidelines">Campaign Pedagogical Pacing Guidelines</a></h3>
+<p>For the built-in Allied and Soviet campaigns (not Commander School), IC follows these pacing guidelines to ensure the official campaigns serve as gentle second-layer tutorials:</p>
+<ol>
+<li><strong>One new mechanic per mission maximum.</strong> Mission 1 introduces movement. Mission 2 adds combat. Mission 3 adds base building. Never two new systems in the same mission.</li>
+<li><strong>Tutorial EVA lines for first encounters.</strong> The first time the player builds a new structure type or encounters a new enemy unit type, EVA provides a brief explanation — but only if the player hasn’t completed the relevant Commander School lesson. This is context-sensitive, not a lecture.</li>
+<li><strong>Safe-to-fail early missions.</strong> The first 3 missions of each campaign have generous time limits, weak enemies, and no base-building pressure. The player can explore at their own pace.</li>
+<li><strong>No mechanic is required without introduction.</strong> If Mission 7 requires naval combat, Mission 6 introduces shipyards in a low-pressure scenario.</li>
+<li><strong>Difficulty progression: linear, not spiked.</strong> No “brick wall” missions. If a mission has a significant difficulty increase, it offers a remedial branch (D021 campaign graph).</li>
+</ol>
+<p>These guidelines apply to modders creating campaigns intended for the <code>category: campaign</code> (not <code>category: tutorial</code>). They’re documented here rather than enforced by the engine — modders can choose to follow or ignore them.</p>
+<h3 id="cross-references"><a class="header" href="#cross-references">Cross-References</a></h3>
+<ul>
+<li><strong>D004 (Lua Scripting):</strong> <code>Tutorial</code> is a Lua global, part of the IC-exclusive API extension set (see <code>04-MODDING.md</code> § IC-exclusive extensions).</li>
+<li><strong>D021 (Branching Campaigns):</strong> Commander School’s branching graph (with remedial branches) uses the standard D021 campaign system. Tutorial campaigns are campaigns — they use the same YAML format, Lua API, and campaign graph engine.</li>
+<li><strong>D033 (QoL Toggles):</strong> Experience profiles control hint defaults. Individual hint categories are toggleable. The D033 QoL panel exposes hint frequency settings.</li>
+<li><strong>D034 (SQLite):</strong> <code>hint_history</code>, <code>player_skill_estimate</code>, and discovery state in <code>player.db</code>. Tip display history also in SQLite.</li>
+<li><strong>D036 (Achievements):</strong> Graduate, Honors Graduate, Quick Study, Helping Hand. Engine-defined, Steam-synced.</li>
+<li><strong>D038 (Scenario Editor):</strong> Tutorial Step and Tutorial Hint modules enable visual tutorial creation without Lua. See D038’s module library.</li>
+<li><strong>D043 (AI Behavior Presets):</strong> Tutorial AI tier sits below Easy difficulty. It’s Lua-scripted per mission, not a general-purpose AI.</li>
+<li><strong>D058 (Command Console):</strong> <code>/hints</code> and <code>/discovery</code> console commands for hint management and discovery milestone control.</li>
+<li><strong>D070 (Asymmetric Commander &amp; Field Ops Co-op):</strong> D065 provides role onboarding overlays and role-aware Quick Reference surfaces using the same semantic input action catalog and prompt renderer.</li>
+<li><strong>D069 (Installation &amp; First-Run Setup Wizard):</strong> D069 hands off to D065 after content is playable (experience profile gate + controls walkthrough offer) and reuses D065 prompt/Quick Reference systems during setup and post-update control changes.</li>
+<li><strong>D031 (Telemetry):</strong> New player pipeline emits <code>onboarding.step</code> telemetry events. Hint shows/dismissals are tracked in <code>gameplay_events</code> for UX analysis.</li>
+<li><strong><code>17-PLAYER-FLOW.md</code>:</strong> Full player flow mockups for all five tutorial layers, including the self-identification screen, Commander School entry, multiplayer onboarding, and post-game tips.</li>
+<li><strong><code>08-ROADMAP.md</code>:</strong> Phase 3 deliverables (hint system, new player pipeline, progressive discovery), Phase 4 deliverables (Commander School, skill assessment, post-game learning, tutorial achievements).</li>
+</ul>
+<hr>
+<hr>
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../../decisions/09g/D059-communication.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../../decisions/09g/D069-install-wizard.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../../decisions/09g/D059-communication.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../../decisions/09g/D069-install-wizard.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../../mark-09e88c2c.min.js"></script>
+        <script src="../../searcher-c2a407aa.js"></script>
+
+        <script src="../../clipboard-1626706a.min.js"></script>
+        <script src="../../highlight-abc7f01d.js"></script>
+        <script src="../../book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

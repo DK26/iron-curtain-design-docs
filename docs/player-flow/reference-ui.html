@@ -1,0 +1,362 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Reference Game UI Analysis - Iron Curtain — Design Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Design docs for a Rust-native Red Alert RTS engine">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../css/general-2459343d.css">
+        <link rel="stylesheet" href="../css/chrome-ae938929.css">
+        <link rel="stylesheet" href="../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../searchindex-61d2369b.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc-1553b04b.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Iron Curtain — Design Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs/edit/main/src/player-flow/reference-ui.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h2 id="reference-game-ui-analysis"><a class="header" href="#reference-game-ui-analysis">Reference Game UI Analysis</a></h2>
+<p>Every screen and interaction in this document was informed by studying the actual UIs of Red Alert (1996), the Remastered Collection (2020), OpenRA, and modern competitive games. This section documents what each game actually does and what IC takes from it. For full source analysis, see <code>research/westwood-ea-development-philosophy.md</code>, <code>11-OPENRA-FEATURES.md</code>, <code>research/ranked-matchmaking-analysis.md</code>, and <code>research/blizzard-github-analysis.md</code>.</p>
+<h3 id="red-alert-1996--the-foundation"><a class="header" href="#red-alert-1996--the-foundation">Red Alert (1996) — The Foundation</a></h3>
+<p><strong>Actual main menu structure:</strong> Static title screen (no shellmap) → Main Menu with buttons: New Game, Load Game, Multiplayer Game, Intro &amp; Sneak Peek, Options, Exit Game. “New Game” immediately forks: Allied or Soviet. No campaign map — missions are sequential. Options screen covers Video, Sound, Controls only. Multiplayer options: Modem, Serial, IPX Network (later Westwood Online/CnCNet). There is no replay system, no server browser, no profile, no ranked play, no encyclopedia — just the game.</p>
+<p><strong>Actual in-game sidebar:</strong> Right side, always visible. Top: radar minimap (requires Radar Dome). Below: credit counter with ticking animation. Below: power bar (green = surplus, yellow = low, red = deficit). Below: build queue icons organized by category tabs (with icons, not text). Production icons show build progress as a clock-wipe animation. Right-click cancels. No queue depth indicator (single-item production only). Bottom: selected unit info (name, health bar — internal only, not on-screen over units).</p>
+<p><strong>What IC takes from RA1:</strong></p>
+<ul>
+<li>Right-sidebar as default layout (IC’s <code>SidebarPosition::Right</code>)</li>
+<li>Credit counter with ticking animation → IC preserves this in all themes</li>
+<li>Power bar with color-coded surplus/deficit → IC preserves this</li>
+<li>Context-sensitive cursor (move on ground, attack on enemy, harvest on ore) → IC’s 14-state <code>CursorState</code> enum</li>
+<li>Tab-organized build categories → IC’s Infantry/Vehicle/Aircraft/Naval/Structure/Defense tabs</li>
+<li>“The cursor <em>is</em> the verb” principle (see <code>research/westwood-ea-development-philosophy.md</code> § Context-Sensitive Cursor)</li>
+<li>Core flow: Menu → Pick mode → Configure → Play → Results → Menu</li>
+<li>Default hotkey profile matches RA1 bindings (e.g., S for stop, G for guard)</li>
+<li>Classic theme (D032) reproduces the 1996 aesthetic: static title, military minimalism, no shellmap</li>
+</ul>
+<p><strong>What IC improves from RA1 (documented limitations):</strong></p>
+<ul>
+<li>No health bars displayed over units → IC defaults to <code>on_selection</code> (D033)</li>
+<li>No attack-move, guard, scatter, waypoint queue, rally points, force-fire ground → IC enables all via D033</li>
+<li>Single-item build queue → IC supports multi-queue with parallel factories</li>
+<li>No control group limit → IC allows unlimited control groups</li>
+<li>Exit-to-menu between campaign missions → IC provides continuous mission flow (D021)</li>
+<li>No replays, no observer mode, no ranked play → IC adds all three</li>
+</ul>
+<h3 id="cc-remastered-collection-2020--the-gold-standard"><a class="header" href="#cc-remastered-collection-2020--the-gold-standard">C&amp;C Remastered Collection (2020) — The Gold Standard</a></h3>
+<p><strong>Actual main menu structure:</strong> Live shellmap (scripted AI battle) behind a semi-transparent menu panel. Game selection screen: pick Tiberian Dawn or Red Alert (two separate games in one launcher). Per-game menu: Campaign, Skirmish, Multiplayer, Bonus Gallery, Options. Campaign screen shows the faction selection (Allied/Soviet) with difficulty options. Multiplayer: Quick Match (Elo-based 1v1 matchmaking), Custom Game (lobby-based), Leaderboard. Options: Video, Audio, Controls, Gameplay. The Bonus Gallery (concept art, behind-the-scenes, FMV jukebox, music jukebox) is a genuine UX innovation — it turns the game into a museum of its own history.</p>
+<p><strong>Actual in-game sidebar:</strong> Preserves the right-sidebar layout from RA1 but with HD sprites and modern polish. Key additions: rally points on production structures, attack-move command, queued production (build multiple of the same unit), cleaner icon layout that scales to 4K. The <strong>F1 toggle</strong> switches the entire game (sprites, terrain, sidebar, UI) between original 320×200 SD and new HD art instantly, with zero loading — the most celebrated UX feature of the remaster.</p>
+<p><strong>Actual in-game QoL vs. original</strong> (from D033 comparison tables):</p>
+<ul>
+<li>Multi-queue: ✅ (original: ❌)</li>
+<li>Parallel factories: ✅ (original: ❌)</li>
+<li>Attack-move: ✅ (original: ❌)</li>
+<li>Waypoint queue: ✅ (original: ❌)</li>
+<li>Rally points: ✅ (original: ❌)</li>
+<li>Health bars: on selection (original: never)</li>
+<li>Guard command: ❌, Scatter: ❌, Stance system: Basic only</li>
+</ul>
+<p><strong>What IC takes from Remastered:</strong></p>
+<ul>
+<li>Shellmap behind main menu → IC’s default for Remastered and Modern themes</li>
+<li>“Clean, uncluttered UI that scales well to modern resolutions” (quoted from <code>01-VISION.md</code>)</li>
+<li>Information density balance — “where OpenRA sometimes overwhelms with GUI elements, Remastered gets the density right”</li>
+<li>F1 render mode toggle → IC generalizes to Classic↔HD↔3D cycling (D048)</li>
+<li>QoL additions (rally points, attack-move, queue) as the baseline, not optional extras</li>
+<li>Bonus Gallery concept → IC’s Encyclopedia (auto-generated from YAML rules)</li>
+<li>One-click matchmaking reducing friction vs. manual lobby creation</li>
+<li>“Remastered” theme in D032: “clean modern military — HD polish, sleek panels, reverent to the original but refined”</li>
+</ul>
+<p><strong>What IC improves from Remastered:</strong></p>
+<ul>
+<li>No range circles or build radius display → IC defaults to showing both</li>
+<li>No guard command or scatter command → IC enables both</li>
+<li>No target lines showing order destinations → IC enables by default</li>
+<li>Proprietary networking → IC uses open relay architecture</li>
+<li>No mod/Workshop support → IC provides full Workshop integration</li>
+</ul>
+<h3 id="openra--the-community-standard"><a class="header" href="#openra--the-community-standard">OpenRA — The Community Standard</a></h3>
+<p><strong>Actual main menu structure:</strong> Shellmap (live AI battle) behind main menu. Buttons: Singleplayer (Missions, Skirmish), Multiplayer (Join Server, Create Server, Server Browser), Map Editor, Asset Browser, Settings, Extras (Credits, System Info). Server browser shows game name, host, map, players, status (waiting/playing), mod and version, ping. Lobby shows player list, map preview, game settings, chat, ready toggle. Settings cover: Input (hotkeys, classic vs modern mouse), Display, Audio, Advanced. No ranked matchmaking — entirely community-organized tournaments.</p>
+<p><strong>Actual in-game sidebar:</strong> The RA mod uses a tabbed production sidebar inspired by Red Alert 3 (not the original RA1 single-tab sidebar). Categories shown as clickable tabs at the top (Infantry, Vehicles, Aircraft, Structures, etc.). This is a significant departure from the original RA1 layout. Full modern RTS QoL: attack-move, force-fire, waypoint queue, guard, scatter, stances (aggressive/defensive/hold fire/return fire), rally points, unlimited control groups, tab-cycle through types in multi-selection, health bars always visible, range circles on hover, build radius display, target lines, rally point display.</p>
+<p><strong>Actual widget system</strong> (from <code>11-OPENRA-FEATURES.md</code>): 60+ widget types in the UI layer. Key logic classes: <code>MainMenuLogic</code> (menu flow), <code>ServerListLogic</code> (server browser), <code>LobbyLogic</code> (game lobby), <code>MapChooserLogic</code> (20KB — map selection is complex), <code>MissionBrowserLogic</code> (19KB), <code>ReplayBrowserLogic</code> (26KB), <code>SettingsLogic</code>, <code>AssetBrowserLogic</code> (23KB — the asset browser alone is a substantial application). Profile system with anonymous and registered identity tiers.</p>
+<p><strong>What IC takes from OpenRA:</strong></p>
+<ul>
+<li>Command interface excellence — “17 years of UI iteration; adopt their UX patterns for player interaction” (quoted from <code>01-VISION.md</code>)</li>
+<li>Full QoL feature set as the standard (attack-move, stances, rally points, etc.)</li>
+<li>Server browser with filtering and multi-source tracking</li>
+<li>Observer/spectator overlays (army, production, economy panels)</li>
+<li>In-game map editor accessible from menu</li>
+<li>Asset browser concept → IC’s Asset Studio in the SDK</li>
+<li>Profile system with identity tiers</li>
+<li>Community-driven balance and UX iteration process</li>
+</ul>
+<p><strong>What IC improves from OpenRA:</strong></p>
+<ul>
+<li>“Functional, data-driven, but with a generic feel that doesn’t evoke the same nostalgia” → IC’s D032 switchable themes restore the aesthetic</li>
+<li>“Sometimes overwhelms with GUI elements” → IC follows Remastered’s information density model</li>
+<li>Hardcoded QoL (no way to get the vanilla experience) → IC’s D033 makes every QoL individually toggleable</li>
+<li>Campaign neglect (exit-to-menu between missions, incomplete campaigns) → IC’s D021 continuous campaign flow</li>
+<li>Terrain-only scenario editor → IC’s full scenario editor with trigger/script/module editing (D038)</li>
+<li>C# recompilation required for deep mods → IC’s YAML→Lua→WASM tiered modding (no recompilation)</li>
+</ul>
+<h3 id="starcraft-ii--competitive-ux-reference"><a class="header" href="#starcraft-ii--competitive-ux-reference">StarCraft II — Competitive UX Reference</a></h3>
+<p><strong>What IC takes from SC2:</strong></p>
+<ul>
+<li>Three-interface model for AI/replay analysis (raw, feature layer, rendered) → informs IC’s sim/render split</li>
+<li>Observer overlay design (army composition, production tracking, economy graphs) → IC mirrors exactly</li>
+<li>Dual display ranked system (visible tier + hidden MMR) → IC’s Captain II (1623) format (D055)</li>
+<li>Action Result taxonomy (214 error codes for rejected orders) → informs IC’s order validation UX</li>
+<li>APM vs EPM distinction (“EPM is a better measure of meaningful player activity”) → IC’s <code>GameScore</code> tracks both</li>
+</ul>
+<h3 id="age-of-empires-ii-de--rts-ux-benchmark"><a class="header" href="#age-of-empires-ii-de--rts-ux-benchmark">Age of Empires II: DE — RTS UX Benchmark</a></h3>
+<p><strong>What IC takes from AoE2:DE:</strong></p>
+<ul>
+<li>Technology tree / encyclopedia as an in-game reference → IC’s Encyclopedia (auto-generated from YAML)</li>
+<li>Simple ranked queue appropriate for RTS community size</li>
+<li>Zoom-toward-cursor camera behavior (shared with SC2, OpenRA)</li>
+<li>Bottom-bar as a viable alternative to sidebar → IC’s D032 supports both layouts</li>
+</ul>
+<h3 id="counter-strike-2--modern-competitive-ux"><a class="header" href="#counter-strike-2--modern-competitive-ux">Counter-Strike 2 — Modern Competitive UX</a></h3>
+<p><strong>What IC takes from CS2:</strong></p>
+<ul>
+<li>Sub-tick order timestamps for fairness (D008)</li>
+<li>Vote system visual presentation → IC’s Callvote overlay</li>
+<li>Auto-download mods on lobby join → IC’s Workshop auto-download</li>
+<li>Premier mode ranked structure (named tiers, Glicko-2, placement matches) → IC’s D055</li>
+</ul>
+<h3 id="dota-2--communication-ux"><a class="header" href="#dota-2--communication-ux">Dota 2 — Communication UX</a></h3>
+<p><strong>What IC takes from Dota 2:</strong></p>
+<ul>
+<li>Chat wheel with auto-translated phrases → IC’s 32-phrase chat wheel (D059)</li>
+<li>Ping wheel for tactical communication → IC’s 8-segment ping wheel</li>
+<li>Contextual ping system (Apex Legends also influenced this)</li>
+</ul>
+<h3 id="factorio--settings--modding-ux"><a class="header" href="#factorio--settings--modding-ux">Factorio — Settings &amp; Modding UX</a></h3>
+<p><strong>What IC takes from Factorio:</strong></p>
+<ul>
+<li>“Game is a mod” architecture → IC’s <code>GameModule</code> trait (D018)</li>
+<li>Three-phase data loading for deterministic mod compatibility</li>
+<li>Settings that persist between sessions and respect the player’s choices</li>
+<li>Mod portal as a first-class feature, not an afterthought → IC’s Workshop</li>
+</ul>
+<hr>
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../player-flow/sdk.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../player-flow/flow-comparison.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../player-flow/sdk.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../player-flow/flow-comparison.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../mark-09e88c2c.min.js"></script>
+        <script src="../searcher-c2a407aa.js"></script>
+
+        <script src="../clipboard-1626706a.min.js"></script>
+        <script src="../highlight-abc7f01d.js"></script>
+        <script src="../book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

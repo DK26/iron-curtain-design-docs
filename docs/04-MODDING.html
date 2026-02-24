@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-3d47d740.js";
+            window.path_to_searchindex_js = "searchindex-61d2369b.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-914f79aa.js"></script>
+        <script src="toc-1553b04b.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -404,7 +404,7 @@ tanya:
     weapon: tanya_pistol_nerfed  # references an OpenRA-balanced weapon definition
 </code></pre>
 <p><strong>Lobby integration:</strong> Preset is selected in the game lobby alongside map and faction. All players in a multiplayer game use the same preset (enforced by the sim). The preset name is embedded in replays.</p>
-<p>See D019 in <code>decisions/09d-gameplay.md</code> for full rationale.</p>
+<p>See <code>decisions/09d/D019-balance-presets.md</code> for full rationale.</p>
 <h3 id="rust-deserialization"><a class="header" href="#rust-deserialization">Rust Deserialization</a></h3>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -635,13 +635,13 @@ fingerprint: null  # computed at activation
 <tr><td><code>Workshop</code></td><td>Mod metadata queries</td></tr>
 <tr><td><code>LLM</code></td><td>LLM integration hooks (Phase 7)</td></tr>
 <tr><td><code>Achievement</code></td><td>Achievement trigger/query API (D036)</td></tr>
-<tr><td><code>Tutorial</code></td><td>Tutorial step management, contextual hints, UI highlighting, camera focus, build/order restrictions for pedagogical pacing (D065). Available in all game modes — modders use it to build tutorial sequences in custom campaigns. See <code>decisions/09g-interaction.md</code> § D065 for the full API.</td></tr>
+<tr><td><code>Tutorial</code></td><td>Tutorial step management, contextual hints, UI highlighting, camera focus, build/order restrictions for pedagogical pacing (D065). Available in all game modes — modders use it to build tutorial sequences in custom campaigns. See <code>decisions/09g/D065-tutorial.md</code> for the full API.</td></tr>
 <tr><td><code>Ai</code></td><td>AI scripting primitives (Phase 4) — force composition, resource ratios, patrol/attack commands; inspired by Stratagus’s proven Lua AI API (<code>AiForce</code>, <code>AiSetCollect</code>, <code>AiWait</code> pattern — see <code>research/stratagus-stargus-opencraft-analysis.md</code>). Enables Tier 2 modders to write custom AI behaviors without Tier 3 WASM.</td></tr>
 </tbody>
 </table>
 </div>
 <p>Each actor reference exposes properties matching its components (<code>.Health</code>, <code>.Location</code>, <code>.Owner</code>, <code>.Move()</code>, <code>.Attack()</code>, <code>.Stop()</code>, <code>.Guard()</code>, <code>.Deploy()</code>, etc.) — identical to OpenRA’s actor property groups.</p>
-<p><strong>In-game command system (inspired by Mojang’s Brigadier):</strong> Mojang’s Brigadier parser (3,668★, MIT) defines commands as a typed tree where each node is an argument with a parser, suggestions, and permission checks. This architecture — tree-based, type-safe, permission-aware, with mod-injected commands — is the model for IC’s in-game console and chat commands. Mods should be able to register custom commands (e.g., <code>/spawn</code>, <code>/weather</code>, <code>/teleport</code> for mission scripting) using the same tree-based architecture, with tab-completion suggestions generated from the command tree. See <code>research/mojang-wube-modding-analysis.md</code> § Brigadier and <code>decisions/09g-interaction.md</code> § D058 for the full command console design.</p>
+<p><strong>In-game command system (inspired by Mojang’s Brigadier):</strong> Mojang’s Brigadier parser (3,668★, MIT) defines commands as a typed tree where each node is an argument with a parser, suggestions, and permission checks. This architecture — tree-based, type-safe, permission-aware, with mod-injected commands — is the model for IC’s in-game console and chat commands. Mods should be able to register custom commands (e.g., <code>/spawn</code>, <code>/weather</code>, <code>/teleport</code> for mission scripting) using the same tree-based architecture, with tab-completion suggestions generated from the command tree. See <code>research/mojang-wube-modding-analysis.md</code> § Brigadier and <code>decisions/09g/D058-command-console.md</code> for the full command console design.</p>
 <h3 id="api-design-principle-runtime-independent-api-surface"><a class="header" href="#api-design-principle-runtime-independent-api-surface">API Design Principle: Runtime-Independent API Surface</a></h3>
 <p>The Lua API is defined as an <strong>engine-level abstraction</strong>, independent of the Lua VM implementation. This lesson comes from Valve’s Source Engine VScript architecture (see <code>research/valve-github-analysis.md</code> § 2.3): VScript defined a scripting API abstraction layer so the same mod scripts work across Squirrel, Lua, and Python backends — the <em>API surface</em> is the stable contract, not the VM runtime.</p>
 <p>For IC, this means:</p>
@@ -1570,12 +1570,12 @@ pub fn render_mission_template(
 </ol>
 <p>This is dramatically more reliable than raw generation. The template constrains the LLM’s output to valid parameter space, and the schema validates it. The LLM becomes a smart form-filler, not an unconstrained code generator.</p>
 <blockquote>
-<p><strong>Lifelong learning (D057):</strong> Proven template parameter combinations — which <code>ambush</code> location choices, <code>defend_position</code> wave compositions, and multi-scene sequences produce missions that players rate highly — are stored in the <strong>skill library</strong> (<code>decisions/09f-tools.md</code> § D057) and retrieved as few-shot examples for future generation. The template library provides the valid output space; the skill library provides accumulated knowledge about what works within that space.</p>
+<p><strong>Lifelong learning (D057):</strong> Proven template parameter combinations — which <code>ambush</code> location choices, <code>defend_position</code> wave compositions, and multi-scene sequences produce missions that players rate highly — are stored in the <strong>skill library</strong> (<code>decisions/09f/D057-llm-skill-library.md</code>) and retrieved as few-shot examples for future generation. The template library provides the valid output space; the skill library provides accumulated knowledge about what works within that space.</p>
 </blockquote>
 <h3 id="scene-templates-composable-building-blocks"><a class="header" href="#scene-templates-composable-building-blocks">Scene Templates (Composable Building Blocks)</a></h3>
 <p>Inspired by Operation Flashpoint / ArmA’s mission editor: scene templates are <strong>sub-mission components</strong> — reusable, pre-scripted building blocks that snap together inside a mission. Each scene template has its own trigger logic, AI behavior, and Lua scripts already written and tested. The user or LLM only fills in parameters.</p>
 <blockquote>
-<p><strong>Visual editor equivalent:</strong> The IC SDK’s scenario editor (D038) exposes these same building blocks as <strong>modules</strong> — drag-and-drop logic nodes with a properties panel. Scene templates are the YAML/Lua format; modules are the visual editor face. Same underlying data — a composition saved in the editor can be loaded as a scene template by Lua/LLM, and vice versa. See <code>decisions/09f-tools.md</code> § D038.</p>
+<p><strong>Visual editor equivalent:</strong> The IC SDK’s scenario editor (D038) exposes these same building blocks as <strong>modules</strong> — drag-and-drop logic nodes with a properties panel. Scene templates are the YAML/Lua format; modules are the visual editor face. Same underlying data — a composition saved in the editor can be loaded as a scene template by Lua/LLM, and vice versa. See <code>decisions/09f/D038-scenario-editor.md</code>.</p>
 </blockquote>
 <p><strong>Template hierarchy:</strong></p>
 <pre><code>Scene Template    — a single scripted encounter or event
@@ -2395,7 +2395,7 @@ Phase 4: Map expands east (enemy HQ). Final assault.
 </table>
 </div>
 <blockquote>
-<p><strong>Format guidance (D049):</strong> New Workshop content should use Bevy-native modern formats (OGG, PNG, WAV, WebM, KTX2, GLTF) for best compatibility, security, and tooling support. C&amp;C legacy formats (.aud, .shp, .vqa, .tmp) are fully supported for backward compatibility but not recommended for new content. See <code>05-FORMATS.md</code> § Canonical Asset Format Recommendations and <code>decisions/09e-community.md</code> § D049 for full rationale.</p>
+<p><strong>Format guidance (D049):</strong> New Workshop content should use Bevy-native modern formats (OGG, PNG, WAV, WebM, KTX2, GLTF) for best compatibility, security, and tooling support. C&amp;C legacy formats (.aud, .shp, .vqa, .tmp) are fully supported for backward compatibility but not recommended for new content. See <code>05-FORMATS.md</code> § Canonical Asset Format Recommendations and <code>decisions/09e/D049-workshop-assets.md</code> for full rationale.</p>
 </blockquote>
 <h2 id="resource-packs-switchable-asset-layers"><a class="header" href="#resource-packs-switchable-asset-layers">Resource Packs (Switchable Asset Layers)</a></h2>
 <p>Resource packs are <strong>switchable asset override layers</strong> — the player selects which version of a resource category to use (cutscenes, sprites, music, voice lines, etc.), and the engine swaps to those assets without touching gameplay. Same concept as Minecraft’s resource packs or the Remastered Collection’s SD/HD toggle, but generalized to any asset type.</p>
@@ -2826,8 +2826,8 @@ llm:
 ├── templates/                # Tera mission/scene templates
 └── README.md                 # human-readable mod description
 </code></pre>
-<p><strong>Contextual hints (<code>hints/</code>):</strong> Modders define YAML-driven gameplay hints that appear at point-of-need during any game mode. Hints are merged with the base game’s hints at load time. The full schema — trigger types, suppression rules, experience profile targeting, and SQLite tracking — is documented in <code>decisions/09g-interaction.md</code> § D065 Layer 2.</p>
-<p><strong>Post-game tips (<code>tips/</code>):</strong> YAML-driven rule-based tips shown on the post-game stats screen, matching gameplay event patterns. See <code>decisions/09g-interaction.md</code> § D065 Layer 5.</p>
+<p><strong>Contextual hints (<code>hints/</code>):</strong> Modders define YAML-driven gameplay hints that appear at point-of-need during any game mode. Hints are merged with the base game’s hints at load time. The full schema — trigger types, suppression rules, experience profile targeting, and SQLite tracking — is documented in <code>decisions/09g/D065-tutorial.md</code> Layer 2.</p>
+<p><strong>Post-game tips (<code>tips/</code>):</strong> YAML-driven rule-based tips shown on the post-game stats screen, matching gameplay event patterns. See <code>decisions/09g/D065-tutorial.md</code> Layer 5.</p>
 <h3 id="mod-templates-via-cargo-generate"><a class="header" href="#mod-templates-via-cargo-generate">Mod Templates (via <code>cargo-generate</code>)</a></h3>
 <p><code>ic mod init</code> uses <code>cargo-generate</code>-style templates. Built-in templates:</p>
 <div class="table-wrapper">

@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-3d47d740.js";
+            window.path_to_searchindex_js = "searchindex-61d2369b.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-914f79aa.js"></script>
+        <script src="toc-1553b04b.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -1114,7 +1114,203 @@ smoothing = true                    # Interpolated camera movement between sim t
 <li>Gameplay event stream for AI training data collection</li>
 <li>Debug overlay (via <code>bevy_egui</code>) reads live telemetry for real-time profiling during development</li>
 </ul>
-<p>Telemetry is zero-cost when disabled (compile-time feature gate). Release builds intended for players ship without it. Tournament servers, AI training, and development builds enable it. See <code>decisions/09e-community.md</code> § D031 for full design.</p>
+<p>Telemetry is zero-cost when disabled (compile-time feature gate). Release builds intended for players ship without it. Tournament servers, AI training, and development builds enable it. See <code>decisions/09e/D031-observability.md</code> for full design.</p>
+<h3 id="diagnostic-overlay--real-time-observability"><a class="header" href="#diagnostic-overlay--real-time-observability">Diagnostic Overlay &amp; Real-Time Observability</a></h3>
+<p>IC needs a <strong>player-visible diagnostic overlay</strong> — the equivalent of Source Engine’s <code>net_graph</code>, but designed for lockstep RTS rather than client-server FPS. The overlay reads live telemetry data (D031) and renders via <code>bevy_egui</code> as a configurable HUD element. Console commands (D058) control which panels are visible.</p>
+<p><strong>Inspired by:</strong> Source Engine’s <code>net_graph 1/2/3</code> (layered detail), Factorio’s debug panels (F4/F5), StarCraft 2’s Ctrl+Alt+F (latency/FPS bar), Supreme Commander’s sim speed indicator. Source’s <code>net_graph</code> is the gold standard for “always visible, never in the way” — IC adapts the concept to lockstep semantics where there is no prediction, no interpolation, and latency means order-delivery delay rather than entity rubber-banding.</p>
+<h4 id="overlay-levels"><a class="header" href="#overlay-levels">Overlay Levels</a></h4>
+<p>The overlay has four levels, toggled by <code>/diag &lt;level&gt;</code> or the cvar <code>debug.diag_level</code>. Higher levels include everything from lower levels.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Level</th><th>Name</th><th>Audience</th><th>What It Shows</th><th>Feature Gate</th></tr>
+</thead>
+<tbody>
+<tr><td>0</td><td>Off</td><td>—</td><td>Nothing</td><td>—</td></tr>
+<tr><td>1</td><td>Basic</td><td>All players</td><td>FPS, sim tick time, network latency (RTT), entity count</td><td>Always available</td></tr>
+<tr><td>2</td><td>Detailed</td><td>Power users, modders</td><td>Per-system tick breakdown, pathfinding stats, order queue depth, memory, tick sync status</td><td>Always available</td></tr>
+<tr><td>3</td><td>Full</td><td>Developers, debugging</td><td>ECS component inspector, AI state viewer, fog debug visualization, network packet log, desync hash comparison</td><td><code>dev-tools</code> feature flag</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Level 1 — Basic</strong> (the “net_graph 1” equivalent):</p>
+<pre><code>┌─────────────────────────────┐
+│  FPS: 60    Tick: 15.0 tps  │
+│  RTT: 42ms  Jitter: ±3ms   │
+│  Entities: 847              │
+│  Sim: 4.2ms / 66ms budget   │
+│  ████░░░░░░ 6.4%            │
+└─────────────────────────────┘
+</code></pre>
+<ul>
+<li><strong>FPS:</strong> Render frames per second (client-side, independent of sim rate)</li>
+<li><strong>Tick:</strong> Actual simulation ticks per second vs target (e.g., 15.0/15 tps). Drops below target indicate sim overload</li>
+<li><strong>RTT:</strong> Round-trip time to the relay server (multiplayer) or “Local” (single-player). Sourced from <code>relay.player.rtt_ms</code></li>
+<li><strong>Jitter:</strong> RTT variance — high jitter means inconsistent order delivery</li>
+<li><strong>Entities:</strong> Total sim entities (units + projectiles + buildings + effects)</li>
+<li><strong>Sim:</strong> Current tick computation time vs budget, with a bar graph showing budget utilization. Green = &lt;50%, yellow = 50-80%, red = &gt;80%</li>
+</ul>
+<p><strong>Level 2 — Detailed</strong> (the “net_graph 2” equivalent):</p>
+<pre><code>┌─────────────────────────────────────────┐
+│  FPS: 60    Tick: 15.0 tps              │
+│  RTT: 42ms  Jitter: ±3ms               │
+│  Entities: 847  (Units: 612  Proj: 185) │
+│                                         │
+│  ── Sim Tick Breakdown (4.2ms) ──       │
+│  movement    ██████░░░░  1.8ms (net 1.2)│
+│  combat      ████░░░░░░  1.1ms          │
+│  pathfinding ██░░░░░░░░  0.5ms          │
+│  fog         █░░░░░░░░░  0.3ms          │
+│  production  ░░░░░░░░░░  0.2ms          │
+│  orders      ░░░░░░░░░░  0.1ms          │
+│  other       ░░░░░░░░░░  0.2ms          │
+│                                         │
+│  ── Pathfinding ──                      │
+│  Requests: 23/tick  Cache: 87% hit      │
+│  Flowfields: 4 active  Recalc: 1        │
+│                                         │
+│  ── Network ──                          │
+│  Orders TX: 3/tick  RX: 12/tick         │
+│  Cushion: 3 ticks (200ms) ✓            │
+│  Queue depth: 2 ticks ahead             │
+│  Tick sync: ✓ (0 drift)                 │
+│  State hash: 0xA3F7…  ✓ match          │
+│                                         │
+│  ── Memory ──                           │
+│  Scratch: 48KB / 256KB                  │
+│  Component storage: 12.4 MB             │
+│  Flowfield cache: 2.1 MB (4 fields)     │
+└─────────────────────────────────────────┘
+</code></pre>
+<ul>
+<li><strong>Sim tick breakdown:</strong> Per-system execution time, drawn as horizontal bar chart. Systems are sorted by cost (most expensive first). Colors match budget status. System names map to the OTEL metrics from D031 (<code>sim.system.&lt;name&gt;_us</code>). Each system shows <strong>net time</strong> (excluding child calls) by default; gross time (including children) shown on hover/expand. This gross/net distinction — inspired by SAGE engine’s <code>PerfGather</code> hierarchical profiler (see <code>research/generals-zero-hour-diagnostic-tools-study.md</code>) — prevents the confusion where “movement: 3ms” includes pathfinding that’s already shown separately</li>
+<li><strong>Pathfinding:</strong> Active flowfield count, cache hit rate (<code>sim.pathfinding.cache_hits</code> / <code>sim.pathfinding.requests</code>), recalculations this tick</li>
+<li><strong>Network:</strong> Orders sent/received per tick, <strong>command arrival cushion</strong> (how far ahead orders arrive before they’re needed — the most meaningful lockstep metric, inspired by SAGE’s <code>FrameMetrics::getMinimumCushion()</code>), order queue depth, tick synchronization status (drift from canonical tick), and the current <code>state_hash</code> with match/mismatch indicator. Cushion warning: yellow at &lt;3 ticks, red at &lt;2 ticks (stall imminent)</li>
+<li><strong>Memory:</strong> TickScratch buffer usage, total ECS component storage, flowfield cache footprint</li>
+</ul>
+<p><strong>Collection interval:</strong> Expensive Level 2 metrics (pathfinding cache analysis, memory accounting, ECS archetype counts) are batched on a configurable interval (<code>debug.diag_batch_interval_ms</code> cvar, default: 500ms) rather than computed per-frame. This pattern is validated by SAGE engine’s 2-second collection interval in <code>gatherDebugStats()</code>. Cheap metrics (FPS, tick time, entity count) are still per-frame</p>
+<p><strong>Level 3 — Full</strong> (developer mode, <code>dev-tools</code> feature flag required):</p>
+<p>Adds interactive panels rendered via <code>bevy_egui</code>:</p>
+<ul>
+<li><strong>ECS Inspector:</strong> Browse entities by archetype, view component values in real time. Click an entity in the game world to inspect it. Shows position, health, current order, AI state, owner, all components. Read-only — inspection never modifies sim state (Invariant #1)</li>
+<li><strong>AI State Viewer:</strong> For selected unit(s), shows current task/schedule, interrupt mask, strategy slot assignment, failed path count, idle reason. Essential for debugging “why won’t my units move?” scenarios</li>
+<li><strong>Order Queue Inspector:</strong> Shows the full order pipeline: pending orders in the network queue, orders being validated (D012), orders applied this tick. Includes sub-tick timestamps (D008)</li>
+<li><strong>Fog Debug Visualization:</strong> Overlays fog-of-war boundaries on the game world. Shows which cells are visible/explored/hidden for the selected player. Highlights stagger bucket boundaries (which portion of the fog map updated this tick)</li>
+<li><strong>World Debug Markers:</strong> A global <code>debug_marker(pos, color, duration, category)</code> API callable from any system — pathfinding, AI, combat, triggers — with <strong>category-based filtering</strong> via <code>/diag ai paths</code>, <code>/diag ai zones</code>, <code>/diag fog cells</code> as independent toggles. Self-expiring markers clean up automatically. Inspired by SAGE engine’s <code>addIcon()</code> pattern (see <code>research/generals-zero-hour-diagnostic-tools-study.md</code>) but with category filtering that SAGE lacked — essential for 1000-unit games where showing all markers simultaneously would be unusable</li>
+<li><strong>Network Packet Log:</strong> Scrollable log of recent network messages (orders, state hashes, relay control messages). Filterable by type, player, tick. Shows raw byte sizes and timing</li>
+<li><strong>Desync Debugger:</strong> When a desync is detected, freezes the overlay and shows the divergence point — which tick, which state hash components differ, and (if both clients have telemetry) a field-level diff of the diverged state. <strong>Frame-gated detail logging:</strong> on desync detection, automatically enables detailed state logging for 50 ticks before and after the divergence point (ring buffer captures the “before” window), dumps to structured JSON, and makes available via <code>/diag export</code>. This adopts SAGE engine’s focused-capture pattern rather than always-on deep logging. Export includes a machine/session identifier for cross-client <code>diff</code> analysis (inspired by SAGE’s per-machine CRC dump files)</li>
+</ul>
+<h4 id="console-commands-d058-integration"><a class="header" href="#console-commands-d058-integration">Console Commands (D058 Integration)</a></h4>
+<p>All diagnostic overlay commands go through the existing <code>CommandDispatcher</code> (D058). They are <strong>client-local</strong> — they do not produce <code>PlayerOrder</code>s and do not flow through the network. They read telemetry data that is already being collected.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Command</th><th>Behavior</th><th>Permission</th></tr>
+</thead>
+<tbody>
+<tr><td><code>/diag</code> or <code>/diag 1</code></td><td>Toggle basic overlay (level 1)</td><td>Player</td></tr>
+<tr><td><code>/diag 0</code></td><td>Turn off overlay</td><td>Player</td></tr>
+<tr><td><code>/diag 2</code></td><td>Detailed overlay</td><td>Player</td></tr>
+<tr><td><code>/diag 3</code></td><td>Full developer overlay</td><td>Developer (<code>dev-tools</code> required)</td></tr>
+<tr><td><code>/diag net</code></td><td>Show only the network panel (any level)</td><td>Player</td></tr>
+<tr><td><code>/diag sim</code></td><td>Show only the sim tick breakdown panel</td><td>Player</td></tr>
+<tr><td><code>/diag path</code></td><td>Show only the pathfinding panel</td><td>Player</td></tr>
+<tr><td><code>/diag mem</code></td><td>Show only the memory panel</td><td>Player</td></tr>
+<tr><td><code>/diag ai</code></td><td>Show AI state viewer for selected unit(s)</td><td>Developer</td></tr>
+<tr><td><code>/diag orders</code></td><td>Show order queue inspector</td><td>Developer</td></tr>
+<tr><td><code>/diag fog</code></td><td>Toggle fog debug visualization</td><td>Developer</td></tr>
+<tr><td><code>/diag desync</code></td><td>Show desync debugger panel</td><td>Developer</td></tr>
+<tr><td><code>/diag pos &lt;corner&gt;</code></td><td>Move overlay position: <code>tl</code>, <code>tr</code>, <code>bl</code>, <code>br</code> (default: <code>tr</code>)</td><td>Player</td></tr>
+<tr><td><code>/diag scale &lt;0.5-2.0&gt;</code></td><td>Scale overlay text size (accessibility)</td><td>Player</td></tr>
+<tr><td><code>/diag export</code></td><td>Dump current overlay state to a timestamped JSON file</td><td>Player</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Cvar mappings</strong> (for <code>config.toml</code> and persistent configuration):</p>
+<pre><code class="language-toml">[debug]
+diag_level = 0            # 0-3, default off
+diag_position = "tr"      # tl, tr, bl, br
+diag_scale = 1.0          # text scale factor
+diag_opacity = 0.8        # overlay background opacity (0.0-1.0)
+show_fps = true           # standalone FPS counter (separate from diag overlay)
+show_network_stats = false # legacy alias for diag_level &gt;= 1 net panel
+</code></pre>
+<h4 id="graph-history-mode"><a class="header" href="#graph-history-mode">Graph History Mode</a></h4>
+<p>The basic and detailed overlays show instantaneous values by default. Pressing <code>/diag history</code> or clicking the overlay header toggles <strong>graph history mode</strong>: key metrics are rendered as scrolling line graphs over the last N seconds (configurable via <code>debug.diag_history_seconds</code>, default: 30).</p>
+<p>Graphed metrics:</p>
+<ul>
+<li><strong>FPS</strong> (line graph, green/yellow/red zones)</li>
+<li><strong>Sim tick time</strong> (line graph with budget line overlay)</li>
+<li><strong>RTT</strong> (line graph with jitter band)</li>
+<li><strong>Entity count</strong> (line graph)</li>
+<li><strong>Pathfinding cost per tick</strong> (line graph)</li>
+</ul>
+<p>Graph history mode is especially useful for identifying <strong>intermittent spikes</strong> — a single frame’s numbers disappear instantly, but a spike in the graph persists and is visible at a glance. This is the pattern that Source Engine’s <code>net_graph 3</code> uses for bandwidth history, adapted to RTS-relevant metrics.</p>
+<pre><code>┌─ Sim Tick History (30s) ─────────────────┐
+│ 10ms ┤                                    │
+│      │         ╭─╮                        │
+│  5ms ┤─────────╯ ╰────────────────────── │
+│      │                                    │
+│  0ms ┤────────────────────────────────── │
+│      └────────────────────────────────── │
+│       -30s                          now   │
+│ ── budget (66ms) far above graph ✓ ──    │
+└──────────────────────────────────────────┘
+</code></pre>
+<h4 id="mobile--touch-support"><a class="header" href="#mobile--touch-support">Mobile / Touch Support</a></h4>
+<p>On mobile/tablet (D065), the diagnostic overlay is accessible via:</p>
+<ul>
+<li><strong>Settings gear → Debug → Diagnostics</strong> (GUI path, no console needed)</li>
+<li><strong>Three-finger triple-tap</strong> (hidden gesture, for developers testing on physical devices)</li>
+<li>Level 1 and 2 are available on mobile; Level 3 requires <code>dev-tools</code> which is not expected on player-facing mobile builds</li>
+</ul>
+<p>The overlay renders at a larger font size on mobile (auto-scaled by DPI) and uses the bottom-left corner by default (avoiding thumb zones and the minimap). Graph history mode uses touch-friendly swipe-to-scroll.</p>
+<h4 id="mod-developer-diagnostics"><a class="header" href="#mod-developer-diagnostics">Mod Developer Diagnostics</a></h4>
+<p>Mods (Lua/WASM) can register custom diagnostic panels via the telemetry API:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Mod-registered diagnostic metric. Appears in a "Mod Diagnostics" panel
+/// visible at overlay level 2+. Mods cannot read engine internals — they
+/// can only publish their own metrics through this API.
+pub struct ModDiagnosticMetric {
+    pub name: String,        // e.g., "AI Think Time"
+    pub value: DiagValue,    // Gauge, Counter, or Text
+    pub category: String,    // Grouping label in the UI
+}
+
+/// Client-side display only — never enters ic-sim or deterministic game logic.
+pub enum DiagValue {
+    Gauge(f64),              // Current value (e.g., 4.2ms) — f64 is safe here (presentation only)
+    Counter(u64),            // Monotonically increasing (e.g., total pathfinding requests)
+    Text(String),            // Freeform (e.g., "State: Attacking")
+}
+<span class="boring">}</span></code></pre>
+<p>Mod diagnostics are sandboxed: mods publish metrics through the API, the engine renders them. Mods cannot read other mods’ diagnostics or engine-internal metrics. This prevents information leakage (e.g., a mod reading fog-of-war data through the diagnostic API).</p>
+<h4 id="performance-overhead"><a class="header" href="#performance-overhead">Performance Overhead</a></h4>
+<p>The diagnostic overlay itself must not become a performance problem:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Level</th><th>Overhead</th><th>Mechanism</th></tr>
+</thead>
+<tbody>
+<tr><td>0 (Off)</td><td>Zero</td><td>No reads, no rendering</td></tr>
+<tr><td>1 (Basic)</td><td>&lt; 0.1ms/frame</td><td>Read 5 atomic counters + render 6 text lines via egui</td></tr>
+<tr><td>2 (Detailed)</td><td>&lt; 0.5ms/frame</td><td>Read ~20 metrics + render breakdown bars + text</td></tr>
+<tr><td>3 (Full)</td><td>&lt; 2ms/frame</td><td>ECS query for selected entity + scrollable log rendering</td></tr>
+<tr><td>Graph history</td><td>+0.2ms/frame</td><td>Ring buffer append + line graph rendering</td></tr>
+</tbody>
+</table>
+</div>
+<p>All metric reads are <strong>lock-free</strong>: the sim writes to atomic counters/gauges, the overlay reads them on the render thread. No mutex contention, no sim slowdown from enabling the overlay. The ECS inspector (Level 3) uses Bevy’s standard query system and runs in the render schedule, not the sim schedule.</p>
+<h4 id="implementation-phase"><a class="header" href="#implementation-phase">Implementation Phase</a></h4>
+<ul>
+<li><strong>Phase 2 (M2):</strong> Level 1 overlay (FPS, tick time, entity count) — requires only sim tick instrumentation that already exists for benchmarks</li>
+<li><strong>Phase 3 (M3):</strong> Level 2 overlay (per-system breakdown, pathfinding, memory) — requires D031 telemetry instrumentation</li>
+<li><strong>Phase 4 (M4):</strong> Network panels (RTT, order queue, tick sync, state hash) — requires netcode instrumentation</li>
+<li><strong>Phase 5+ (M6):</strong> Level 3 developer panels (ECS inspector, AI viewer, desync debugger) — requires mature sim + AI + netcode</li>
+<li><strong>Phase 6a (M8):</strong> Mod diagnostic API — requires mod runtime (Lua/WASM) with telemetry bridge</li>
+</ul>
 <h3 id="profile-before-parallelize"><a class="header" href="#profile-before-parallelize">Profile Before Parallelize</a></h3>
 <p>Never add <code>par_iter()</code> without profiling first. Measure single-threaded. If a system takes &gt; 1ms, consider parallelizing. If it takes &lt; 0.1ms, sequential is faster (avoids coordination overhead).</p>
 <p><strong>Recommended profiling tool:</strong> Embark Studios’ <strong>puffin</strong> (1,674★, MIT/Apache-2.0) — a frame-based instrumentation profiler built for game loops. Puffin’s thread-local profiling streams have ~1ns overhead when disabled (atomic bool check, no allocation), making it safe to leave instrumentation in release builds. Key features validated by production use at Embark: frame-scoped profiling (maps directly to IC’s sim tick loop), remote TCP streaming for profiling headless servers (relay server profiling without local UI), and the <code>puffin_egui</code> viewer for real-time flame graphs in development builds via <code>bevy_egui</code>. IC’s <code>telemetry</code> feature flag (D031) should gate puffin’s collection, maintaining zero-cost when disabled. See <code>research/embark-studios-rust-gamedev-analysis.md</code> § puffin.</p>
@@ -1133,7 +1329,7 @@ smoothing = true                    # Interpolated camera movement between sim t
 <li>Trigger/module hotspot links where traceability exists</li>
 <li>Optional detailed flame graph / trace view for advanced debugging</li>
 </ul>
-<p>This complements the Scenario Complexity Meter in <code>decisions/09f-tools.md</code> § D038: the meter is a heuristic guide, while Profile Playtest provides measured evidence during playtest.</p>
+<p>This complements the Scenario Complexity Meter in <code>decisions/09f/D038-scenario-editor.md</code>: the meter is a heuristic guide, while Profile Playtest provides measured evidence during playtest.</p>
 <p><strong>CLI/CI parity (Phase 6b):</strong> Headless profiling summaries (<code>ic mod perf-test</code>) should reuse the same summary schema as the SDK view so teams can gate performance in CI without an SDK-only format.</p>
 <h2 id="delta-encoding--change-tracking-performance"><a class="header" href="#delta-encoding--change-tracking-performance">Delta Encoding &amp; Change Tracking Performance</a></h2>
 <p>Snapshots (D010) are the foundation of save games, replays, desync debugging, and reconnection. Full snapshots of 1000 units are ~200-400KB (ECS-packed). At 15 tps, saving full snapshots every tick would cost ~3-6 MB/s — wasteful when most fields don’t change most ticks.</p>
@@ -1242,7 +1438,7 @@ pub struct EntityBaseline {
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="decisions/09g-interaction.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="decisions/09g/D069-install-wizard.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                             </a>
 
@@ -1256,7 +1452,7 @@ pub struct EntityBaseline {
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="decisions/09g-interaction.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="decisions/09g/D069-install-wizard.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                     </a>
 

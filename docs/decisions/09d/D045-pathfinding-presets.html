@@ -1,0 +1,447 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>D045 — Pathfinding Presets - Iron Curtain — Design Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Design docs for a Rust-native Red Alert RTS engine">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../../css/general-2459343d.css">
+        <link rel="stylesheet" href="../../css/chrome-ae938929.css">
+        <link rel="stylesheet" href="../../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../../searchindex-61d2369b.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../../toc-1553b04b.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Iron Curtain — Design Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs/edit/main/src/decisions/09d/D045-pathfinding-presets.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h2 id="d045-pathfinding-behavior-presets--movement-feel"><a class="header" href="#d045-pathfinding-behavior-presets--movement-feel">D045: Pathfinding Behavior Presets — Movement Feel</a></h2>
+<p><strong>Status:</strong> Accepted
+<strong>Scope:</strong> <code>ic-sim</code>, game module configuration
+<strong>Phase:</strong> Phase 2 (ships with simulation)</p>
+<h3 id="the-problem"><a class="header" href="#the-problem">The Problem</a></h3>
+<p>D013 provides the <code>Pathfinder</code> trait for pluggable pathfinding <em>algorithms</em> (multi-layer hybrid vs. navmesh). D019 provides switchable <em>balance</em> values. But movement <em>feel</em> — how units navigate, group, avoid each other, and handle congestion — varies dramatically between Classic RA, OpenRA, and what modern pathfinding research enables. This is partially balance (unit speed values) but mostly <em>behavioral</em>: how the pathfinder handles collisions, how units merge into formations, how traffic jams resolve, and how responsive movement commands feel.</p>
+<h3 id="decision"><a class="header" href="#decision">Decision</a></h3>
+<p>Ship <strong>pathfinding behavior presets</strong> as separate <code>Pathfinder</code> trait implementations (D013), each sourced from the codebase it claims to reproduce. Presets are selectable alongside balance presets (D019) and AI presets (D043), bundled into experience profiles, and presented through progressive disclosure so casual players never see the word “pathfinding.”</p>
+<h3 id="built-in-presets"><a class="header" href="#built-in-presets">Built-In Presets</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Preset</th><th>Movement Feel</th><th>Source</th><th><code>Pathfinder</code> Implementation</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Classic RA</strong></td><td>Unit-level A*-like pathing, units block each other, congestion causes jams, no formation movement, units take wide detours around obstacles</td><td>EA Remastered Collection source code (GPL v3)</td><td><code>RemastersPathfinder</code></td></tr>
+<tr><td><strong>OpenRA</strong></td><td>Improved cell-based pathing, basic crush/push logic, units attempt to flow around blockages, locomotor-based speed modifiers, no formal formations</td><td>OpenRA pathfinding implementation (GPL v3)</td><td><code>OpenRaPathfinder</code></td></tr>
+<tr><td><strong>IC Default</strong></td><td>Multi-layer hybrid: hierarchical sectors for routing, JPS for small groups, flow field tiles for mass movement, ORCA-lite local avoidance, formation-aware group coordination</td><td>Open-source RTS research + IC original (see below)</td><td><code>IcPathfinder</code></td></tr>
+</tbody>
+</table>
+</div>
+<p>Each preset is a <strong>distinct <code>Pathfinder</code> trait implementation</strong>, not a parameterized variant of one algorithm. The Remastered pathfinder and OpenRA pathfinder use fundamentally different algorithms and produce fundamentally different movement behavior — parameterizing one to emulate the other would be an approximation at best and a lie at worst. The <code>Pathfinder</code> trait (D013) was designed for exactly this: slot in different implementations without touching sim code.</p>
+<p><strong>Why “IcPathfinder,” not “IcFlowfieldPathfinder”?</strong> Research revealed that no shipped RTS engine uses pure flowfields (except SupCom2/PA by the same team). Spring Engine tried flow maps and abandoned them. Independent developers (jdxdev) documented the same “ant line” failure with 100+ units. IC’s default pathfinder is a multi-layer hybrid — flowfield tiles are one layer activated for large groups, not the system’s identity. See <code>research/pathfinding-ic-default-design.md</code> for full architecture.</p>
+<p><strong>Why Remastered, not original RA source?</strong> The Remastered Collection engine DLLs (GPL v3) contain the same pathfinding logic as original RA but with bug fixes and modernized C++ that’s easier to port to Rust. The original RA source is also GPL and available for cross-reference. Both produce the same movement feel — the Remastered version is simply a cleaner starting point.</p>
+<h3 id="ic-default-pathfinding--research-foundation"><a class="header" href="#ic-default-pathfinding--research-foundation">IC Default Pathfinding — Research Foundation</a></h3>
+<p>The IC Default preset (<code>IcPathfinder</code>) is a five-layer hybrid architecture synthesizing pathfinding approaches from across the open-source RTS ecosystem and academic research. Full design: <code>research/pathfinding-ic-default-design.md</code>.</p>
+<p><strong>Layer 1 — Cost Field &amp; Passability:</strong> Per-cell movement cost (u8, 1–255) per locomotor type, inspired by EA Remastered terrain cost tables and 0 A.D.’s passability classes.</p>
+<p><strong>Layer 2 — Hierarchical Sector Graph:</strong> Map divided into 32×32-cell sectors with portal connections between them. Flood-fill domain IDs for O(1) reachability checks. Inspired by OpenRA’s hierarchical abstraction and HPA* research.</p>
+<p><strong>Layer 3 — Adaptive Detailed Pathfinding:</strong> JPS (Jump Point Search) for small groups (&lt;8 units) — 10–100× faster than A* on uniform-cost grids. Flow field tiles for mass movement (≥8 units sharing a destination). Weighted A* fallback for non-uniform terrain. LRU flow field cache. Inspired by 0 A.D.’s JPS, SupCom2’s flow field tiles, Game AI Pro 2’s JPS+ precomputed tables.</p>
+<p><strong>Layer 4 — ORCA-lite Local Avoidance:</strong> Fixed-point deterministic collision avoidance based on RVO2/ORCA (Reciprocal Velocity Obstacles). Commitment locking prevents hallway dance. Cooperative side selection (“mind reading”) from HowToRTS research.</p>
+<p><strong>Layer 5 — Group Coordination:</strong> Formation offset assignment, synchronized arrival, chokepoint compression. Inspired by jdxdev’s boids-for-RTS formation offsets and Spring Engine’s group movement.</p>
+<p><strong>Source engines studied:</strong></p>
+<ul>
+<li><strong>EA Remastered Collection</strong> (GPL v3) — obstacle-tracing, terrain cost tables, integer math</li>
+<li><strong>OpenRA</strong> (GPL v3) — hierarchical A*, custom search graph with 10×10 abstraction</li>
+<li><strong>Spring Engine</strong> (GPL v2) — QTPFS quadtree, flow-map attempt (abandoned), unit push/slide</li>
+<li><strong>0 A.D.</strong> (GPL v2/MIT) — JPS long-range + vertex short-range, clearance-based sizing, fixed-point <code>CFixed_15_16</code></li>
+<li><strong>Warzone 2100</strong> (GPL v2) — A* with LRU context caching, gateway optimization</li>
+<li><strong>SupCom2/PA</strong> — flow field tiles (only shipped flowfield RTS)</li>
+<li><strong>Academic</strong> — RVO2/ORCA (UNC), HPA*, continuum crowds (Treuille et al.), JPS+ (Game AI Pro 2)</li>
+</ul>
+<h3 id="configuration-model"><a class="header" href="#configuration-model">Configuration Model</a></h3>
+<p>Each <code>Pathfinder</code> implementation exposes its own tunable parameters via YAML. Parameters differ between implementations because they control fundamentally different algorithms — there is no shared “pathfinding config” struct that applies to all three.</p>
+<pre><code class="language-yaml"># pathfinding/remastered.yaml — RemastersPathfinder tunables
+remastered_pathfinder:
+  name: "Classic Red Alert"
+  description: "Movement feel matching the original game"
+  # These are behavioral overrides on the Remastered pathfinder.
+  # Defaults reproduce original behavior exactly.
+  harvester_stuck_fix: false         # true = apply minor QoL fix for harvesters stuck on each other
+  bridge_queue_behavior: original    # original | relaxed (slightly wider queue threshold)
+  infantry_scatter_pattern: original # original | smoothed (less jagged scatter on damage)
+
+# pathfinding/openra.yaml — OpenRaPathfinder tunables
+openra_pathfinder:
+  name: "OpenRA"
+  description: "Movement feel matching OpenRA's pathfinding"
+  locomotor_speed_modifiers: true    # per-terrain speed multipliers (OpenRA feature)
+  crush_logic: true                  # vehicles can crush infantry
+  blockage_flow: true                # units attempt to flow around blocking units
+
+# pathfinding/ic-default.yaml — IcPathfinder tunables
+ic_pathfinder:
+  name: "IC Default"
+  description: "Multi-layer hybrid: JPS + flow field tiles + ORCA-lite avoidance"
+
+  # Layer 2 — Hierarchical sectors
+  sector_size: 32                    # cells per sector side
+  portal_max_width: 8                # max portal opening (cells)
+
+  # Layer 3 — Adaptive pathfinding
+  flowfield_group_threshold: 8       # units sharing dest before flowfield activates
+  flowfield_cache_size: 64           # LRU cache entries for flow field tiles
+  jps_enabled: true                  # JPS for small groups on uniform terrain
+  repath_frequency: adaptive         # low | medium | high | adaptive
+
+  # Layer 4 — Local avoidance (ORCA-lite)
+  avoidance_radius_multiplier: 1.2   # multiplier on unit collision radius
+  commitment_frames: 4               # frames locked into avoidance direction
+  cooperative_avoidance: true        # "mind reading" side selection
+
+  # Layer 5 — Group coordination
+  formation_movement: true           # groups move in formation
+  synchronized_arrival: true         # units slow down to arrive together
+  chokepoint_compression: true       # formation compresses at narrow passages
+
+  # General
+  path_smoothing: funnel             # none | funnel | spline
+  influence_avoidance: true          # avoid areas with high enemy threat
+</code></pre>
+<p>Power users can override any parameter in the lobby’s advanced settings or in mod YAML. Casual players never see these — they pick an experience profile and the correct implementation + parameters are selected automatically.</p>
+<h3 id="sim-affecting-nature"><a class="header" href="#sim-affecting-nature">Sim-Affecting Nature</a></h3>
+<p>Pathfinding presets are <strong>sim-affecting</strong> — they change how the deterministic simulation resolves movement. Like balance presets (D019):</p>
+<ul>
+<li>All players in a multiplayer game must use the same pathfinding preset (enforced by lobby, validated by sim)</li>
+<li>Preset selection is part of the game configuration hash for desync detection</li>
+<li>Replays record the active pathfinding preset</li>
+</ul>
+<h3 id="experience-profile-integration"><a class="header" href="#experience-profile-integration">Experience Profile Integration</a></h3>
+<pre><code class="language-yaml">profiles:
+  classic-ra:
+    balance: classic
+    ai_preset: classic-ra
+    pathfinding: classic-ra          # NEW — movement feel
+    theme: classic
+    qol: vanilla
+
+  openra-ra:
+    balance: openra
+    ai_preset: openra
+    pathfinding: openra              # NEW — OpenRA movement feel
+    theme: modern
+    qol: openra
+
+  iron-curtain-ra:
+    balance: classic
+    ai_preset: ic-default
+    pathfinding: ic-default          # NEW — modern movement
+    theme: modern
+    qol: iron_curtain
+</code></pre>
+<h3 id="user-facing-ux--progressive-disclosure"><a class="header" href="#user-facing-ux--progressive-disclosure">User-Facing UX — Progressive Disclosure</a></h3>
+<p>Pathfinding selection follows the same progressive disclosure pyramid as the rest of the experience profile system. A casual player should never encounter the word “pathfinding.”</p>
+<p><strong>Level 1 — One dropdown (casual player):</strong> The lobby’s experience profile selector offers “Classic RA,” “OpenRA,” or “Iron Curtain.” Picking one sets balance, theme, QoL, AI, movement feel, AND render mode. The pathfinder and render mode selections are invisible — they’re bundled. A player who picks “Classic RA” gets Remastered pathfinding and classic pixel art because that’s what Classic RA <em>is</em>.</p>
+<p><strong>Level 2 — Per-axis override (intermediate player):</strong> An “Advanced” toggle in the lobby expands the experience profile into its 6 independent axes. The movement axis is labeled by feel, not algorithm: “Movement: Classic / OpenRA / Modern” — not “<code>RemastersPathfinder</code> / <code>OpenRaPathfinder</code> / <code>IcPathfinder</code>.” The render mode axis shows “Graphics: Classic / HD / 3D” (D048). The player can mix “OpenRA balance + Classic movement + HD graphics” if they want.</p>
+<p><strong>Level 3 — Parameter tuning (power user / modder):</strong> A gear icon next to the movement axis opens implementation-specific parameters (see Configuration Model above). This is where harvester stuck fixes, pressure diffusion strength, and formation toggles live.</p>
+<h3 id="scenario-required-pathfinding"><a class="header" href="#scenario-required-pathfinding">Scenario-Required Pathfinding</a></h3>
+<p>Scenarios and campaign missions can specify a <strong>required</strong> or <strong>recommended</strong> pathfinding preset in their YAML metadata:</p>
+<pre><code class="language-yaml">scenario:
+  name: "Bridge Assault"
+  pathfinding:
+    required: classic-ra    # this mission depends on chokepoint blocking behavior
+    reason: "Mission balance depends on single-file bridge queuing"
+</code></pre>
+<p>When the lobby loads this scenario, it auto-selects the required pathfinder and shows the player why: “This scenario requires Classic movement (mission balance depends on chokepoint behavior).” The player cannot override a <code>required</code> setting. A <code>recommended</code> setting auto-selects but allows override with a warning.</p>
+<p>This preserves original campaign missions. A mission designed around units jamming at a bridge works correctly because it ships with <code>required: classic-ra</code>. A modern community scenario can ship with <code>required: ic-default</code> to ensure smooth flowfield behavior.</p>
+<h3 id="mod-selectable-and-mod-provided-pathfinders"><a class="header" href="#mod-selectable-and-mod-provided-pathfinders">Mod-Selectable and Mod-Provided Pathfinders</a></h3>
+<p>The three built-in presets are the <strong>first-party</strong> <code>Pathfinder</code> implementations. They are not the only ones. The <code>Pathfinder</code> trait (D013) is explicitly open to community implementations.</p>
+<p><strong>Modder as consumer — selecting a pathfinder:</strong></p>
+<p>A mod’s YAML manifest can declare which pathfinder it uses. The modder picks from any available implementation — first-party or community:</p>
+<pre><code class="language-yaml"># mod.yaml — total conversion mod that uses IC's modern pathfinding
+mod:
+  name: "Desert Strike"
+  pathfinder: ic-default            # Use IC's multi-layer hybrid
+  # Or: remastered, openra, layered-grid-generals, community/navmesh-pro, etc.
+</code></pre>
+<p>If the mod doesn’t specify a pathfinder, it inherits whatever the player’s experience profile selects. When specified, it overrides the experience profile’s pathfinding axis — the same way <code>scenario.pathfinding.required</code> works (see “Scenario-Required Pathfinding” above), but at the mod level.</p>
+<p><strong>Modder as author — providing a pathfinder:</strong></p>
+<p>A Tier 3 WASM mod can implement the <code>Pathfinder</code> trait and register it as a new option:</p>
+<p><strong>Host ABI note:</strong> The Rust trait-style example below is <strong>conceptual</strong>. A WASM pathfinder does not share a native Rust trait object directly with the engine. In implementation, the engine exposes a stable host ABI and adapts the WASM exports to the <code>Pathfinder</code> trait on the host side.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>// WASM mod: custom pathfinder (e.g., Generals-style layered grid)
+impl Pathfinder for LayeredGridPathfinder {
+    fn request_path(&amp;mut self, origin: WorldPos, dest: WorldPos, locomotor: LocomotorType) -&gt; PathId {
+        // Surface bitmask check, zone reachability, A* with bridge layers
+        // ...
+    }
+    fn get_path(&amp;self, id: PathId) -&gt; Option&lt;&amp;[WorldPos]&gt; { /* ... */ }
+    fn is_passable(&amp;self, pos: WorldPos, locomotor: LocomotorType) -&gt; bool { /* ... */ }
+    fn invalidate_area(&amp;mut self, center: WorldPos, radius: SimCoord) { /* ... */ }
+}
+<span class="boring">}</span></code></pre>
+<p>The mod registers its pathfinder in its manifest with a YAML config block (like the built-in presets):</p>
+<pre><code class="language-yaml"># mod.yaml — community pathfinder distributed via Workshop
+mod:
+  name: "Generals Pathfinder"
+  type: pathfinder                   # declares this mod provides a Pathfinder impl
+  pathfinder_id: layered-grid-generals
+  display_name: "Generals (Layered Grid)"
+  description: "Grid pathfinding with bridge layers and surface bitmasks, inspired by C&amp;C Generals"
+  wasm_module: generals_pathfinder.wasm
+  config:
+    zone_block_size: 10
+    bridge_clearance: 10.0
+    surface_types: [ground, water, cliff, air, rubble]
+</code></pre>
+<p>Once installed, the community pathfinder appears alongside first-party presets in the lobby’s Level 2 per-axis override (“Movement: Classic / OpenRA / Modern / Generals”) and is selectable by other mods via <code>pathfinder: layered-grid-generals</code>.</p>
+<p><strong>Workshop distribution:</strong> Community pathfinders are Workshop resources (D030) like any other mod. They can be rated, reviewed, and depended upon. A total conversion mod declares <code>depends: community/generals-pathfinder@^1.0</code> and the engine auto-downloads it on lobby join (same as CS:GO-style auto-download).</p>
+<p><strong>Sim-affecting implications:</strong> Because pathfinding is deterministic and sim-affecting, all players in a multiplayer game must use the same pathfinder. A community pathfinder is synced like a first-party preset — the lobby validates that all clients have the same pathfinder WASM module (by SHA-256 hash), same config, same version.</p>
+<h3 id="wasm-pathfinder-policy-determinism-performance-ranked"><a class="header" href="#wasm-pathfinder-policy-determinism-performance-ranked">WASM Pathfinder Policy (Determinism, Performance, Ranked)</a></h3>
+<p>Community pathfinders are allowed, but they are not a free-for-all in every mode:</p>
+<ul>
+<li><strong>Single-player / skirmish / custom lobbies:</strong> allowed by default (subject to normal WASM sandbox rules)</li>
+<li><strong>Ranked queues / competitive ladders:</strong> disallowed by default unless a queue/community explicitly certifies and whitelists the pathfinder (hash + version + config schema)</li>
+<li><strong>Determinism contract:</strong> no wall-clock time, no nondeterministic RNG, no filesystem/network I/O, no host APIs that expose machine-specific timing/order</li>
+<li><strong>Performance contract:</strong> pathfinder modules must declare budget expectations and pass deterministic conformance + performance checks (<code>ic mod test</code>, <code>ic mod perf-test</code>) on the baseline hardware tier before certification</li>
+<li><strong>Failure policy:</strong> if a pathfinder module fails validation/loading/perf certification for a ranked queue, the lobby rejects the configuration before match start (never mid-match fail-open)</li>
+</ul>
+<p>This preserves D013’s openness for experimentation while protecting ranked integrity, baseline hardware support, and deterministic simulation guarantees.</p>
+<h3 id="relationship-to-existing-decisions"><a class="header" href="#relationship-to-existing-decisions">Relationship to Existing Decisions</a></h3>
+<ul>
+<li><strong>D013 (<code>Pathfinder</code> trait):</strong> Each preset is a separate <code>Pathfinder</code> trait implementation. <code>RemastersPathfinder</code>, <code>OpenRaPathfinder</code>, and <code>IcPathfinder</code> are all registered by the RA1 game module. Community mods add more via WASM. The trait boundary serves triple duty: it separates algorithmic families (grid vs. navmesh), behavioral families (Classic vs. Modern), AND first-party from community-provided implementations.</li>
+<li><strong>D018 (<code>GameModule</code> trait):</strong> The RA1 game module ships all three first-party pathfinder implementations. Community pathfinders are registered by the mod loader alongside them. The lobby’s experience profile selection determines which one is active — <code>fn pathfinder()</code> returns whichever <code>Box&lt;dyn Pathfinder&gt;</code> was selected, whether first-party or community.</li>
+<li><strong>D019 (balance presets):</strong> Parallel concept. Balance = what units can do. Pathfinding = how they get there. Both are sim-affecting, synced in multiplayer, and open to community alternatives.</li>
+<li><strong>D043 (AI presets):</strong> Orthogonal. AI decides where to send units; pathfinding decides how they move. An AI preset + pathfinding preset combination determines overall movement behavior. Both are modder-selectable.</li>
+<li><strong>D033 (QoL toggles):</strong> Some implementation-specific parameters (harvester stuck fix, infantry scatter smoothing) could be classified as QoL. Presets bundle them for consistency; individual toggles in advanced settings allow fine-tuning.</li>
+<li><strong>D048 (render modes):</strong> Same modder-selectable pattern. Mods select or provide render modes; mods select or provide pathfinders. The trait-per-subsystem architecture means every pluggable system follows the same model.</li>
+</ul>
+<h3 id="alternatives-considered"><a class="header" href="#alternatives-considered">Alternatives Considered</a></h3>
+<ul>
+<li><strong>One “best” pathfinding only</strong> (rejected — Classic RA movement feel is part of the nostalgia and is critical for original scenario compatibility; forcing modern pathing on purists would alienate them AND break existing missions)</li>
+<li><strong>Pathfinding differences handled by balance presets</strong> (rejected — movement behavior is fundamentally different from numeric values; a separate axis deserves separate selection)</li>
+<li><strong>One parameterized implementation that emulates all three</strong> (rejected — Remastered pathfinding and IC flowfield pathfinding are fundamentally different algorithms with different data structures and different computational models; parameterizing one to approximate the other produces a neither-fish-nor-fowl result that reproduces neither accurately; separate implementations are honest and maintainable)</li>
+<li><strong>Only IC Default pathfinding, with “classic mode” as a cosmetic approximation</strong> (rejected — scenario compatibility requires <em>actual</em> reproduction of original movement behavior, not an approximation; bridge missions, chokepoint defense, harvester timing all depend on specific pathfinding quirks)</li>
+</ul>
+<hr>
+<hr>
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../../decisions/09d/D044-llm-ai.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../../decisions/09d/D048-render-modes.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../../decisions/09d/D044-llm-ai.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../../decisions/09d/D048-render-modes.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../../mark-09e88c2c.min.js"></script>
+        <script src="../../searcher-c2a407aa.js"></script>
+
+        <script src="../../clipboard-1626706a.min.js"></script>
+        <script src="../../highlight-abc7f01d.js"></script>
+        <script src="../../book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>
