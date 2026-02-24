@@ -946,6 +946,151 @@ pub fn process_order(order: &PlayerOrder, sim_state: &mut SimState, tick: u32) {
 
 ---
 
+## Type-Safety Coding Standards
+
+These rules complement the Type-Safety Architectural Invariants in 02-ARCHITECTURE.md. They define the concrete clippy configuration, review checklist items, and patterns that enforce type safety at the code level.
+
+### clippy::disallowed_types Configuration
+
+The following types are banned in specific crates via `clippy.toml`:
+
+**`ic-sim` crate (deterministic simulation):**
+
+```toml
+# clippy.toml
+disallowed-types = [
+    { path = "std::collections::HashMap", reason = "Non-deterministic iteration order. Use BTreeMap or IndexMap." },
+    { path = "std::collections::HashSet", reason = "Non-deterministic iteration order. Use BTreeSet or IndexSet." },
+    { path = "std::time::Instant", reason = "Wall-clock time breaks determinism. Use SimTick." },
+    { path = "std::time::SystemTime", reason = "Wall-clock time breaks determinism. Use SimTick." },
+    { path = "rand::rngs::ThreadRng", reason = "Non-deterministic RNG. Use seeded SimRng." },
+    { path = "String", reason = "Use CompactString or domain newtypes (PackageName, OutcomeName) for validated strings. Raw String allowed only in error messages and logging (#[allow] with justification)." },
+]
+```
+
+**All crates (project-wide):**
+
+```toml
+disallowed-types = [
+    { path = "std::path::PathBuf", reason = "Use StrictPath<PathBoundary> for untrusted paths. PathBuf is allowed only for build-time/tool code." },
+]
+```
+
+Note: `PathBuf` is allowed in build scripts, CLI tools, and test harnesses. Game runtime code that handles user/mod/network-supplied paths must use `strict-path` types.
+
+### Newtype Patterns: Code Review Checklist
+
+When reviewing code, check:
+
+- [ ] Are function parameters using newtypes for domain IDs? (`PlayerId`, not `u32`)
+- [ ] Are newtype conversions explicit? (no blanket `From<u32>` — use `PlayerId::new(raw)` with validation)
+- [ ] Does the newtype derive only the traits it needs? (e.g., `PlayerId` needs `Clone, Copy, Eq, Hash` but probably not `Add, Sub`)
+- [ ] Are newtypes `#[repr(transparent)]` if they need to be zero-cost?
+- [ ] Are sub-tick timestamps using `SubTickTimestamp`, never bare `u32`? (confusion with `SimTick` is a critical bug class)
+- [ ] Are campaign/workshop/balance identifiers using their newtypes? (`MissionId`, `OutcomeName`, `PresetId`, `PublisherId`, `PackageName`, `PersonalityId`, `ThemeId`)
+- [ ] Are version constraints parsed into `VersionConstraint` enum at ingestion, never stored or compared as strings?
+- [ ] Is `WasmInstanceId` used consistently, never bare `u32` or `usize` index?
+- [ ] Is `Fingerprint` constructed only via `Fingerprint::compute()`, never from raw `[u8; 32]`?
+
+```rust
+// ✅ Good newtype pattern
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[repr(transparent)]
+pub struct PlayerId(u32);
+
+impl PlayerId {
+    /// Create from raw value. Only called at network boundary deserialization.
+    pub(crate) fn from_raw(raw: u32) -> Self { Self(raw) }
+    pub fn as_raw(self) -> u32 { self.0 }
+}
+
+// ❌ Bad — leaky newtype that defeats the purpose
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct PlayerId(pub u32);  // pub inner field = anyone can construct/destructure
+impl From<u32> for PlayerId {  // blanket From = implicit conversion anywhere
+    fn from(v: u32) -> Self { Self(v) }
+}
+```
+
+### Capability Token Patterns: Mod API Review
+
+When reviewing mod-facing APIs:
+
+- [ ] Does the API require a capability token parameter?
+- [ ] Is the token type unconstructible outside the host module? (private field or `_private: ()`)
+- [ ] Are token lifetimes scoped correctly? (e.g., `FsReadCapability` should not outlive the mod's execution context)
+- [ ] Is the capability granular enough? (one token per permission, not a god-token)
+
+### Typestate Review Checklist
+
+When reviewing state machine code:
+
+- [ ] Are states represented as types, not enum variants?
+- [ ] Do transition methods consume `self` and return the new state type?
+- [ ] Are invalid transitions unrepresentable? (no `transition_to(state: SomeEnum)` method)
+- [ ] Is the error path handled? (`-> Result<NextState, Error>` for fallible transitions)
+- [ ] WASM lifecycle: can `execute()` be called on a `WasmTerminated` instance? (must be impossible)
+- [ ] Workshop install: can `extract()` be called on `PkgDownloading`? (must pass through `PkgVerifying` first)
+- [ ] Campaign mission: can `complete()` be called on `MissionLoading`? (must pass through `MissionActive`)
+- [ ] Balance patch: can `apply()` be called on `PatchPending`? (must pass through `PatchValidated`)
+
+### Bounded Collection Review
+
+When reviewing collections in `ic-sim`:
+
+- [ ] Does any `Vec` grow based on player input? If so, is it bounded?
+- [ ] Are `push`/`insert` operations checked against capacity?
+- [ ] Is the bound documented and justified? (e.g., "max 200 orders per tick per player — see V17")
+
+### Verified Wrapper Review
+
+When reviewing code that handles security-sensitive data (see `02-ARCHITECTURE.md` § "Verified Wrapper Policy"):
+
+- [ ] Does the function accept `Verified<T>` rather than bare `T` for data that must be verified? (SCRs, manifest hashes, replay signatures, validated orders)
+- [ ] Is `Verified::new_verified()` called ONLY inside actual verification logic? (not in convenience constructors or test helpers without `#[cfg(test)]`)
+- [ ] Are there any code paths that bypass verification and construct `Verified<T>` directly? (the `_private` field should prevent this)
+- [ ] Does the verification function check ALL required properties before wrapping in `Verified`?
+- [ ] Are `Verified` values passed through without re-verification? (re-verification is wasted work; the type already proves it)
+
+### Hash Type Review
+
+When reviewing code that computes or compares hashes:
+
+- [ ] Is the correct hash type used? (`SyncHash` for live per-tick desync comparison, `StateHash` for cold-path replay/snapshot verification)
+- [ ] Are hash types never implicitly converted? (no `SyncHash` → `StateHash` or vice versa without explicit, documented truncation/expansion)
+- [ ] Is `Fingerprint` constructed only via `Fingerprint::compute()`, never from raw bytes?
+
+### Chat Scope Review
+
+When reviewing chat message handling:
+
+- [ ] Is the message type branded with the correct scope? (`ChatMessage<TeamScope>`, `ChatMessage<AllScope>`, `ChatMessage<WhisperScope>`)
+- [ ] Are scope conversions (e.g., team → all) explicit and auditable? (no implicit `From` conversion)
+- [ ] Does the routing logic accept only the correct branded type? (team handler takes `ChatMessage<TeamScope>`, not unbranded `ChatMessage`)
+
+### Validated Construction Review
+
+When reviewing types that use the validated construction pattern (see `02-ARCHITECTURE.md` § "Validated Construction Policy"):
+
+- [ ] Is the type's inner field private? (prevents bypass via direct struct construction)
+- [ ] Does the constructor validate ALL invariants before returning `Ok`?
+- [ ] Is there a `_private: ()` field or equivalent to prevent external construction?
+- [ ] Are mutation methods (if any) re-validating invariants after modification?
+- [ ] Is `OrderBudget` constructed via `OrderBudget::new()`, never via struct literal?
+- [ ] Is `CampaignGraph` constructed via `CampaignGraph::new()`, never via struct literal?
+- [ ] Is `BalancePreset` checked for circular inheritance at construction time?
+- [ ] Is `DependencyGraph` checked for cycles at construction time?
+
+### Bounded Cvar Review
+
+When reviewing console variable definitions (D058):
+
+- [ ] Does every cvar with a documented valid range use `BoundedCvar<T>`, not bare `T`?
+- [ ] Are `BoundedCvar` bounds correct? (`min <= default <= max`)
+- [ ] Does `set()` clamp rather than reject? (matches the UX expectation of clamping to nearest valid value)
+
+---
+
 ## Unsafe Code Policy
 
 **Default: No `unsafe`.** The engine does not use `unsafe` Rust unless all of the following are true:

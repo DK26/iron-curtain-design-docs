@@ -51,6 +51,7 @@ iron-curtain/
 ├── ic-script      # Lua + WASM mod runtimes
 ├── ic-ai          # Skirmish AI, mission scripting
 ├── ic-llm         # LLM mission/campaign generation, asset generation, adaptive difficulty
+├── ic-paths       # Platform path resolution: data dirs, portable mode (wraps `app-path` crate)
 └── ic-game        # Top-level Bevy App, ties all game plugins together (NO editor code)
 ```
 
@@ -165,8 +166,9 @@ When you need deeper detail, read the specific design doc. Sub-documents are lis
 | Topic                                                                                                                                    | Read                                   |
 | ---------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
 | Goals, competitive landscape, why this exists                                                                                            | `src/01-VISION.md`                     |
-| Crate structure, ECS, sim/render split, game loop, UI themes, install & source layout, RA experience recreation, SDK/editor architecture | `src/02-ARCHITECTURE.md`               |
+| Crate structure, ECS, sim/render split (core invariants + index to subsystem pages)                                                      | `src/02-ARCHITECTURE.md`               |
 | — Extended gameplay systems: power, construction, production, harvesting, combat, fog, shroud, crates, veterancy, superweapons           | `src/architecture/gameplay-systems.md` |
+| — Game loop, state recording, pathfinding, platform portability, UI themes, crate graph, install layout, SDK/editor, type-safety         | `src/architecture/*.md` (13 files)     |
 | NetworkModel trait, relay server, CS2 sub-tick, lockstep, adaptive run-ahead                                                             | `src/03-NETCODE.md`                    |
 | — Match lifecycle: lobby, loading, tick processing, pause, disconnect, desync, replay, post-game                                         | `src/netcode/match-lifecycle.md`       |
 | YAML rules, Lua scripting, WASM modules, sandboxing, LLM metadata, Mod SDK                                                               | `src/04-MODDING.md`                    |
@@ -178,12 +180,12 @@ When you need deeper detail, read the specific design doc. Sub-documents are lis
 | 36-month phased roadmap with exit criteria                                                                                               | `src/08-ROADMAP.md`                    |
 | Decision log — index with links to all 54 decisions                                                                                      | `src/09-DECISIONS.md`                  |
 | — Decisions: Language, Bevy, YAML, fixed-point, snapshots, efficiency, rendering, multi-game, engine scope, config format                | `src/decisions/09a-foundation.md`      |
-| — Decisions: Pluggable net, relay, sub-tick, cross-engine, order validation, community servers, ranked, netcode params                   | `src/decisions/09b-networking.md`      |
+| — Decisions: Pluggable net, relay, sub-tick, cross-engine, order validation, community servers, ranked, netcode params                   | `src/decisions/09b-networking.md` → `src/decisions/09b/D0XX-*.md` |
 | — Decisions: Lua, WASM, Tera, UI themes, Workshop lib, GPL v3, mod profiles, cross-engine export                                         | `src/decisions/09c-modding.md`         |
-| — Decisions: Pathfinding, balance, QoL, trait subsystems, AI presets, LLM AI, render modes, extended switchability                       | `src/decisions/09d-gameplay.md`        |
-| — Decisions: Workshop, telemetry, SQLite, achievements, governance, premium, profiles, data backup                                       | `src/decisions/09e-community.md`       |
-| — Decisions: LLM missions, scenario editor, asset studio, LLM config, foreign replay, skill library                                      | `src/decisions/09f-tools.md`           |
-| — Decisions: Command console, communication (chat, voice, pings), tutorial/new player experience                                         | `src/decisions/09g-interaction.md`     |
+| — Decisions: Pathfinding, balance, QoL, trait subsystems, AI presets, LLM AI, render modes, extended switchability                       | `src/decisions/09d-gameplay.md` → `src/decisions/09d/D0XX-*.md` |
+| — Decisions: Workshop, telemetry, SQLite, achievements, governance, premium, profiles, data backup                                       | `src/decisions/09e-community.md` → `src/decisions/09e/D0XX-*.md` |
+| — Decisions: LLM missions, scenario editor, asset studio, LLM config, foreign replay, skill library                                      | `src/decisions/09f-tools.md` → `src/decisions/09f/D0XX-*.md` |
+| — Decisions: Command console, communication (chat, voice, pings), tutorial/new player experience                                         | `src/decisions/09g-interaction.md` → `src/decisions/09g/D0XX-*.md` |
 | Efficiency pyramid, profiling, performance targets, benchmarks                                                                           | `src/10-PERFORMANCE.md`                |
 | OpenRA feature catalog (~700 traits), gap analysis, migration mapping                                                                    | `src/11-OPENRA-FEATURES.md`            |
 | Combined Arms mod migration, Remastered recreation feasibility                                                                           | `src/12-MOD-MIGRATION.md`              |
@@ -191,7 +193,8 @@ When you need deeper detail, read the specific design doc. Sub-documents are lis
 | Development methodology, context-bounded work units, research rigor                                                                      | `src/14-METHODOLOGY.md`                |
 | Server admin guide: configuration, deployment profiles, tournament ops, best practices                                                   | `src/15-SERVER-GUIDE.md`               |
 | Coding standards: file structure, commenting philosophy, naming, error handling, testing, code review                                    | `src/16-CODING-STANDARDS.md`           |
-| Player flow & UI navigation: every screen, menu, overlay, and path from launch through gameplay, UX principles, platform adaptations     | `src/17-PLAYER-FLOW.md`                |
+| Player flow & UI navigation: UX principles, state machine, and index to per-screen sub-pages                                            | `src/17-PLAYER-FLOW.md`                |
+| — Per-screen flows: first launch, main menu, single player, multiplayer, in-game, post-game, replays, workshop, settings, profile, SDK   | `src/player-flow/*.md` (16 files)      |
 
 ## Legal Protections
 
@@ -238,7 +241,7 @@ The project requires a **Developer Certificate of Origin (DCO)** — contributor
 
 - **Minimum age:** 13+ (COPPA compliance).
 - **Third-party content disclaimer:** IC is not liable for Workshop content.
-- **DMCA safe harbor:** See `src/decisions/09e-community.md` § D030 for takedown process.
+- **DMCA safe harbor:** See `src/decisions/09e/D030-workshop-registry.md` for takedown process.
 
 ### Legal Operational Milestones
 
@@ -281,7 +284,9 @@ Additional rules:
 Canonical references:
 - `src/18-PROJECT-TRACKER.md` (what next / status overlay)
 - `src/tracking/milestone-dependency-map.md` (what blocks what)
+- `src/tracking/testing-strategy.md` (how is it tested / CI pipeline tiers / fuzz targets / release criteria)
 - `src/14-METHODOLOGY.md` (tracker integration gate + process discipline)
+- For external implementation repos: `src/tracking/external-code-project-bootstrap.md`, `src/tracking/external-project-agents-template.md`, `src/tracking/source-code-index-template.md`
 
 ### Future / Deferral Language Discipline
 

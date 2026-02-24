@@ -1,0 +1,225 @@
+## Post-Game
+
+### Post-Game Screen
+
+```
+InGame → Victory/Defeat → Post-Game
+```
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│  VICTORY                                                     │
+│  Coastal Fortress — 12:34                                    │
+│                                                              │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │ STATS           You              Opponent             │  │
+│  │ Units Built:    87               63                   │  │
+│  │ Units Lost:     34               63 (all)             │  │
+│  │ Structures:     12               8                    │  │
+│  │ Economy:        $45,200          $31,800              │  │
+│  │ APM:            142              98                   │  │
+│  │ Peak Army:      52               41                   │  │
+│  └───────────────────────────────────────────────────────┘  │
+│                                                              │
+│  Rating: Captain II → Captain I (+32)  🎖                    │
+│                                                              │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │ CHAT (30-second post-game lobby, still active)       │   │
+│  │ Opponent: gg wp                                      │   │
+│  │ You: gg                                              │   │
+│  └──────────────────────────────────────────────────────┘   │
+│                                                              │
+│  [Watch Replay]  [Save Replay]  [Re-Queue]  [Main Menu]     │
+│                                                              │
+│  [Report Player]                          Closes in: 4:32    │
+│                                                              │
+│  💡 TIP: You had 15 idle harvester seconds — try keeping     │
+│     all harvesters active for higher income. [Learn more →]  │
+└──────────────────────────────────────────────────────────────┘
+```
+
+**Post-game elements:**
+
+- **Stats comparison** — Economy, production, combat, activity (APM/EPM). Graphs available on hover/click.
+- **Rating update** — Tier badge animation if promoted/demoted. Delta shown.
+- **Chat** — 30-second active period, auto-closes after 5 minutes.
+- **Post-game learning** (D065) — Rule-based tip analyzing the match (e.g., idle harvesters, low APM, no control groups used). Links to tutorial or replay annotation.
+- **Watch Replay** → Replay Viewer (immediate, file already recorded)
+- **Save Replay** → Save `.icrep` file with metadata
+- **Re-Queue** → Back to matchmaking queue (ranked)
+- **Main Menu** → Return to main menu
+- **Report Player** → Report dialog (reason dropdown, optional text)
+- **Post-play feedback pulse** (optional, sampled) — quick "how was this?" prompt for mode/mod/campaign with skip/snooze controls
+
+#### Post-Play Feedback Prompt (Modes / Mods / Campaigns; Optional D049 + D053)
+
+The post-game screen may show a **sampled, skippable** feedback prompt. It is designed to help mode/mod/campaign authors improve content without blocking normal post-game actions.
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│  HOW WAS THIS MATCH / MODE?                                 │
+│                                                              │
+│  Target: Commander & SpecOps (IC-native mode)               │
+│  Optional mod in use: "Combined Arms v2.1"                  │
+│                                                              │
+│  Fun / Experience:  [★] [★] [★] [★] [★]                    │
+│  Quick tags: [Fun] [Confusing] [Too fast] [Great co-op]     │
+│                                                              │
+│  Feedback (optional): [__________________________________]  │
+│                                                              │
+│  If sent to the author/community, constructive feedback may │
+│  earn profile-only recognition if marked helpful.           │
+│  (No gameplay or ranked bonuses.)                           │
+│                                                              │
+│  [Send Feedback] [Skip] [Snooze] [Don't Ask for This Mode]  │
+└──────────────────────────────────────────────────────────────┘
+```
+
+**UX rules:**
+- sampled/cooldown-based, not every match/session
+- non-blocking: replay/save/requeue/main-menu actions remain available
+- clearly labeled target (`mode`, `campaign`, `Workshop resource`)
+- spoiler-safe defaults for campaign feedback prompts
+- "helpful review" recognition wording is explicit about **profile-only** rewards
+
+#### Report / Block / Avoid Player Dialog (D059 + D052 + D055)
+
+The `Report Player` action (also available from lobby/player-list context menus) opens a compact moderation dialog with local safety controls and queue preferences in the same place, but with clear scope labels.
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│  REPORT PLAYER: Opponent                                    │
+│                                                              │
+│  Category: [Cheating ▾]                                      │
+│  Note (optional): [Suspicious impossible scout timing...]    │
+│                                                              │
+│  Evidence to attach (auto):                                  │
+│   ✓ Signed replay / match ID                                 │
+│   ✓ Relay telemetry summary                                  │
+│   ✓ Timestamps / event markers                               │
+│                                                              │
+│  Quick actions                                               │
+│   [Mute Player]  (Local comms)                               │
+│   [Block Player] (Local social)                              │
+│   [Avoid Player] (Queue preference, best-effort)             │
+│                                                              │
+│  Reports are reviewed by the community server. Submission    │
+│  does not guarantee punishment. False reports may be penalized│
+│                                                              │
+│  [Submit Report]  [Cancel]                                   │
+└──────────────────────────────────────────────────────────────┘
+```
+
+**UX rules:**
+- `Avoid Player` is labeled **best-effort** and links to ranked queue constraints (D055)
+- `Mute`/`Block` remain usable without submitting a report
+- Evidence is attached by reference/ID when possible (no unnecessary duplicate upload). The reporter does **not** see raw relay telemetry — only the moderation backend and reviewers with appropriate privileges access telemetry summaries.
+- The dialog is available post-game, from scoreboard/player list, and from lobby profile/context menus
+
+#### Community Review Queue (Optional D052 "Overwatch"-Style, Reviewer/Moderator Surface)
+
+Eligible community reviewers (or moderators) may access an optional review queue if the community server enables D052's review capability. This is a **separate role surface** from normal player matchmaking UX.
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│  COMMUNITY REVIEW QUEUE (Official IC Community)             │
+│  Reviewer: calibrated ✓   Weight: 0.84                      │
+│                                                              │
+│  Case: #2026-02-000123        Category: Suspected Cheating   │
+│  State: In Review             Evidence: Replay + Telemetry   │
+│  Anonymized Subject: Player-7F3A                             │
+│                                                              │
+│  ┌────────────────────────────────────────────────────────┐  │
+│  │ Replay timeline (flagged markers)                     │  │
+│  │ 12:14  suspicious scout timing                        │  │
+│  │ 15:33  repeated impossible reaction window            │  │
+│  │ 18:07  order-rate spike                               │  │
+│  │ [Watch Clip] [Full Replay] [Telemetry Summary]        │  │
+│  └────────────────────────────────────────────────────────┘  │
+│                                                              │
+│  Vote                                                        │
+│  [Likely Clean] [Suspected Griefing] [Suspected Cheating]    │
+│  [Insufficient Evidence] [Escalate]                          │
+│  Confidence: [70 ▮▮▮▮▮▮▮□□□]                                 │
+│  Notes (optional): [____________________________________]    │
+│                                                              │
+│  [Submit Vote]   [Skip Case]   [Reviewer Guide]             │
+└──────────────────────────────────────────────────────────────┘
+```
+
+**Reviewer UI rules (D052/D037/`06-SECURITY`):**
+- anonymized subject identity by default; identity resolution requires moderator privileges
+- no direct "ban player" buttons in reviewer UI
+- case verdicts feed consensus/moderator workflows; they do not apply irreversible sanctions directly
+- calibration and reviewer-weight details are visible to the reviewer for transparency, but not editable
+- audit logging records case assignment, replay access, and vote submission events
+
+#### Moderator Case Resolution (Optional D052)
+
+Moderator tools extend the reviewer surface with:
+- identity resolution (subject + reporters) when needed
+- consensus summary + reviewer agreement breakdown
+- prior sanctions / community standing context
+- action panel (warn, comms restriction, queue cooldown, low-priority queue, ranked suspension)
+- appeal state management and case notes
+
+This keeps the "Overwatch"-style layer useful for scaling review while preserving D037 moderator accountability for final enforcement.
+
+#### Asymmetric Co-op Post-Game Breakdown (D070)
+
+D070 matches add a role-aware breakdown tab/card to the post-game screen:
+
+- **Commander support efficiency**
+  - requests answered / denied / timed out
+  - average request response time
+  - support impact events (e.g., CAS confirmed kills, successful extraction)
+- **SpecOps objective execution**
+  - field objectives completed
+  - infiltration/sabotage/rescue success rate
+  - squad survival / losses / requisition spend
+- **War-effort impact categories**
+  - economy gains/denials
+  - power/tech disruptions
+  - route/bridge/expansion unlock events
+  - superweapon delay / denial events
+- **Joint coordination highlights** (optional)
+  - moments where Field Ops objective completion unlocked a commander push (segment unlock, AA disable, radar outage)
+
+This reinforces the mode's cooperative identity and provides actionable learning without forcing competitive scoring semantics onto a PvE-first mode.
+
+#### Experimental Survival Post-Game Breakdown (D070-adjacent `Last Commando Standing` / `SpecOps Survival`) — Proposal-Only
+
+D070-adjacent survival matches (proposal-only, `M10+`, `P-Optional`) add a placement- and objective-focused breakdown so players understand **why** they survived (or were eliminated), not just who got the last hit.
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│  LAST COMMANDO STANDING — 2nd PLACE / 8 Teams               │
+│  Iron Wastes — 18:42                                        │
+│                                                              │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │ SURVIVAL SUMMARY                                      │  │
+│  │ Team Eliminations: 3      Squad Losses: 7            │  │
+│  │ Hazard Escapes: 5         Final Hazard Phase: 6      │  │
+│  │ Objective Captures: 4     Redeploy Tokens Used: 1    │  │
+│  │ Requisition Spent: 1,240  Unspent: 180              │  │
+│  └───────────────────────────────────────────────────────┘  │
+│                                                              │
+│  KEY OBJECTIVE IMPACTS                                        │
+│  • Captured Tech Uplink → Recon Sweep unlocked (Phase 3)     │
+│  • Destroyed Bridge → Forced Team Delta into hazard lane     │
+│  • Failed Power Relay Hold → Lost safe corridor window       │
+│                                                              │
+│  ELIMINATION CONTEXT                                           │
+│  Phase 6 chrono contraction + enemy ambush near Depot C      │
+│  [Watch Replay] [View Timeline] [Save Replay] [Main Menu]     │
+└──────────────────────────────────────────────────────────────┘
+```
+
+**Survival breakdown focus (prototype-first):**
+- **Placement + elimination context** (where/how the run ended)
+- **Objective contesting and reward impact** (what captures actually changed)
+- **Hazard pressure stats** (escapes, hazard-phase survival, hazard-caused vs combat-caused losses)
+- **Squad/redeploy usage** (downs, revives/redeploys, token efficiency)
+- **Field progression spend** (what upgrades/support buys were used)
+
+This keeps the D070-adjacent survival mode readable and learnable without forcing a generic battle-royale scoreboard style onto an RTS-flavored commando mode.

@@ -1258,7 +1258,11 @@ fn validate_tier_config(config: &RankedTierConfig) -> Result<(), TierConfigError
         }
     }
 
-    // Icon paths must be relative, no traversal
+    // Icon paths must be validated via strict-path boundary enforcement.
+    // The naive string check below is illustrative; production code uses
+    // StrictPath<PathBoundary> (see Path Security Infrastructure section)
+    // which defends against symlinks, 8.3 short names, ADS, encoding
+    // tricks, and TOCTOU races — not just ".." sequences.
     for tier in config.tiers.iter().chain(config.elite_tiers.iter()) {
         if tier.icon.contains("..") || tier.icon.starts_with('/') || tier.icon.starts_with('\\') {
             return Err(TierConfigError::PathTraversal(tier.icon.clone()));
@@ -1660,6 +1664,291 @@ If the background writer thread falls behind (disk I/O spike, system memory pres
 
 **Phase:** Replay writer hardening ships with replay system (Phase 2). Frame loss tracking is a Phase 2 exit criterion.
 
+## Vulnerability 46: Player Display Name Unicode Confusable Impersonation
+
+### The Problem
+
+**Severity: HIGH**
+
+Players can create display names using Unicode homoglyphs (e.g., Cyrillic "а" U+0430 vs Latin "a" U+0061) to visually impersonate other players, admins, or system accounts. This enables social engineering in lobbies, chat, and tournament contexts. Combined with RTL override characters (U+202E), names can appear reversed or misleadingly reordered.
+
+### Mitigation
+
+**Confusable detection:** All display names are checked against the Unicode Confusable Mappings (UTS #39 skeleton algorithm). Two names that produce the same skeleton are considered confusable. The second registration is rejected or flagged.
+
+**Mixed-script restriction:** Display names must use characters from a single Unicode script family (Latin, Cyrillic, CJK, Arabic, etc.) plus Common/Inherited. Mixed-script names (e.g., Latin + Cyrillic) are rejected unless they match a curated allow-list of legitimate mixed-script patterns.
+
+**Dangerous codepoint stripping:** The following categories are stripped from display names before storage:
+- BiDi override characters (U+202A–U+202E, U+2066–U+2069)
+- Zero-width joiners/non-joiners outside approved script contexts
+- Tag characters (U+E0001–U+E007F)
+- Invisible formatting characters (U+200B–U+200F, U+FEFF)
+
+**Visual similarity scoring:** When a player joins a lobby, their display name is compared against all current participants. If any pair of names has a confusable skeleton match, a warning icon appears next to the newer name and the lobby host is notified.
+
+**Cross-reference:** RTL/BiDi text sanitization rules in D059 (09g-interaction.md) apply to display names. The sanitization pipeline from the RTL/BiDi QA corpus (rtl-bidi-qa-corpus.md) categories E and F provides regression vectors.
+
+**Phase:** Display name validation ships with account/identity system (Phase 3). UTS #39 skeleton check is a Phase 3 exit criterion.
+
+## Vulnerability 47: Player Identity Key Rotation Absence
+
+### The Problem
+
+**Severity: HIGH**
+
+The Ed25519 identity system (BIP-39 mnemonic + SCR signed credentials) has no mechanism for key rotation. If a player's private key is compromised, there is no way to migrate their identity — match history, ranked standing, friend relationships — to a new key pair. The player must create an entirely new identity, losing all progression.
+
+### Mitigation
+
+**Rotation protocol:** A player can generate a new Ed25519 key pair and create a `KeyRotation` message signed by both the old and new private keys. This message is broadcast to relay servers and recorded in a key-history chain.
+
+```rust
+pub struct KeyRotation {
+    pub old_public_key: Ed25519PublicKey,
+    pub new_public_key: Ed25519PublicKey,
+    pub rotation_timestamp: i64,
+    pub reason: KeyRotationReason, // compromised / scheduled / device_change
+    pub old_key_signature: Ed25519Signature, // signs (new_pubkey, timestamp, reason)
+    pub new_key_signature: Ed25519Signature, // signs (old_pubkey, timestamp, reason)
+}
+```
+
+**Grace period:** After rotation, the old key remains valid for authentication for 72 hours (configurable by server policy). This allows in-progress sessions to complete and gives federated servers time to propagate the rotation.
+
+**Revocation list:** Relay servers maintain a revocation list of old public keys. After the grace period, authentication attempts with revoked keys are rejected with a message directing the player to recover via their BIP-39 mnemonic.
+
+**Emergency revocation:** If a player suspects compromise, they can issue an emergency rotation using their BIP-39 mnemonic to derive a recovery key. Emergency rotations take effect immediately with no grace period.
+
+**Phase:** Key rotation protocol ships with ranked matchmaking (Phase 5). Emergency revocation is a Phase 5 exit criterion.
+
+## Vulnerability 48: Community Server Key Revocation Gap
+
+### The Problem
+
+**Severity: HIGH**
+
+Community servers authenticate via Ed25519 key pairs (D060), but there is no revocation mechanism. A compromised community server key allows an attacker to impersonate the server, intercept player sessions, and potentially inject malicious match results or replay data until the key naturally expires (if it ever does).
+
+### Mitigation
+
+**Server key certificate chain:** Community servers obtain signed certificates from a federation authority (relay master server or community trust anchor). Certificates have a bounded validity period (default: 90 days, max: 1 year).
+
+**Certificate revocation list (CRL):** The federation authority maintains a CRL distributed via a signed, timestamped manifest. Clients check the CRL before establishing sessions with community servers. CRL checks use a cached-with-TTL model (TTL: 1 hour) to avoid blocking on every connection.
+
+**OCSP-style fast revocation:** For urgent revocations, a lightweight online check endpoint returns revocation status for a single server key. Clients try the fast check first (50ms timeout) and fall back to the cached CRL.
+
+**Operator-initiated revocation:** Server operators can revoke their own key via a signed revocation request to the federation authority. This is useful for planned key rotation or suspected compromise.
+
+**Phase:** Community server key revocation ships with community server support (Phase 7). CRL distribution is a Phase 7 exit criterion.
+
+## Vulnerability 49: Workshop Package Author Signing Absence
+
+### The Problem
+
+**Severity: HIGH**
+
+Workshop packages (D030) use SHA-256 content digests and Ed25519 metadata signatures, but these signatures are applied by the Workshop registry infrastructure, not by the package author. This means the registry is a single point of trust — a compromised registry can serve modified packages that pass all verification checks. Authors cannot independently prove package authenticity.
+
+### Mitigation
+
+**Author-level Ed25519 signing:** Package authors sign their package manifest with their personal Ed25519 key before uploading. The registry stores the author signature alongside its own infrastructure signature, creating a two-layer trust model.
+
+```rust
+pub struct PackageManifest {
+    pub package_id: WorkshopPackageId,
+    pub version: SemVer,
+    pub content_digest: Sha256Digest,
+    pub author_public_key: Ed25519PublicKey,
+    pub author_signature: Ed25519Signature,     // author signs (package_id, version, content_digest)
+    pub registry_signature: Ed25519Signature,   // registry counter-signs the above
+    pub registry_timestamp: i64,
+}
+```
+
+**Verification chain:** Clients verify both signatures. If the author signature is invalid, the package is rejected regardless of registry signature validity. This ensures even a compromised registry cannot forge author intent.
+
+**Key pinning:** After a user installs a package, the author's public key is pinned. Future updates must be signed by the same key (or a rotated key via V47's rotation protocol). Key changes without proper rotation trigger a warning.
+
+**Phase:** Author signing ships with Workshop package verification (M8/M9). Author signature verification is an M8 exit criterion; key pinning is M9.
+
+## Vulnerability 50: WASM Inter-Module Communication Isolation
+
+### The Problem
+
+**Severity: MEDIUM**
+
+The tiered modding system (Invariant #3) sandboxes individual WASM modules, but the design does not specify isolation boundaries for inter-module communication. A malicious WASM mod could probe or manipulate another mod's state through shared host-provided resources (e.g., shared ECS queries, event buses, or resource pools).
+
+### Mitigation
+
+**Module namespace isolation:** Each WASM module operates in its own namespace. Host-provided imports (`ic_query_*`, `ic_spawn_*`, `ic_format_*`) are scoped to the calling module's declared capabilities. A module cannot query entities or components registered by another module unless the target module explicitly exports them.
+
+**Capability-gated cross-module calls:** Cross-module communication is only possible through a host-mediated message-passing API. Modules declare `exports` and `imports` in their manifest. The host validates that import/export pairs match before linking.
+
+```rust
+// In mod manifest (mod.yaml)
+// exports: ["custom_unit_stats"]
+// imports: ["base_game.terrain_query"]
+```
+
+**Resource pool isolation:** Each module gets its own memory allocation pool. Host-imposed limits (memory, CPU ticks, entity count) are per-module, not shared. A module exhausting its allocation cannot starve other modules.
+
+**Audit logging:** All cross-module calls are logged with caller/callee module IDs, capability tokens, and call arguments. Suspicious patterns (high-frequency probing, unauthorized access attempts) trigger rate limiting and are reported to the anti-cheat system.
+
+**Phase:** WASM inter-module isolation ships with WASM modding tier (Phase 6). Namespace isolation is a Phase 6 exit criterion.
+
+## Vulnerability 51: Workshop Package Quarantine for Popular Packages
+
+### The Problem
+
+**Severity: MEDIUM**
+
+Popular Workshop packages (high download count, many dependents) are high-value targets for supply-chain attacks. If an author's key is compromised or an author turns malicious, a single update can affect thousands of players. The current design has no mechanism to delay or review updates to widely-deployed packages.
+
+### Mitigation
+
+**Popularity threshold quarantine:** Packages exceeding a subscriber threshold (configurable, default: 1000 subscribers) enter a quarantine zone for updates. New versions are held for a review period (default: 24 hours) before automatic distribution.
+
+**Diff-based review signal:** During quarantine, the registry computes a structural diff between the old and new version. Large changes (>50% of files modified, new WASM modules added, new capabilities requested) extend the quarantine period and flag the update for manual review by Workshop moderators.
+
+**Rollback capability:** If a quarantined update is found to be malicious or broken, the registry can issue a rollback directive. Clients that already installed the update receive a forced downgrade notification.
+
+**Author notification:** Authors of popular packages are notified that their updates are subject to quarantine. The quarantine period can be reduced (to a minimum of 1 hour) for authors with a strong track record (no prior incidents, account age >6 months, 2FA enabled).
+
+**Cross-reference:** WREG-006 (star-jacking / reputation gaming) — artificially inflating subscriber counts to avoid or trigger quarantine thresholds is itself a sanctionable offense.
+
+**Phase:** Package quarantine ships with Workshop moderation tools (M9). Quarantine pipeline is an M9 exit criterion.
+
+## Vulnerability 52: Star-Jacking and Workshop Reputation Gaming (WREG-006)
+
+### The Problem
+
+**Severity: MEDIUM**
+
+Workshop reputation systems (ratings, subscriber counts, featured placement) are vulnerable to manipulation. Techniques include: sock-puppet accounts inflating ratings, fork-bombing (cloning popular packages with minor changes to dilute search results), and subscriber count inflation via automated installs from throwaway accounts.
+
+### Mitigation
+
+**Rate limiting:** Accounts created within 24 hours cannot rate or subscribe to packages. Accounts must have at least 1 hour of verified gameplay before Workshop interactions are counted.
+
+**Anomaly detection:** Statistical analysis of rating/subscription patterns. Sudden spikes (>10x normal rate) trigger a hold on the package's reputation score pending review. Coordinated actions from accounts with correlated metadata (IP ranges, creation timestamps, user-agent patterns) are flagged.
+
+**Fork detection:** Package uploads are compared against existing packages using structural similarity (file tree diff, asset hash overlap). Packages with >80% overlap with an existing package are flagged as potential forks and require author justification.
+
+**Reputation decay:** Inactive accounts' ratings decay over time (weight halving every 6 months). This prevents abandoned sock-puppet networks from permanently inflating scores.
+
+**Phase:** Reputation gaming defenses ship with Workshop moderation tools (M9). Anomaly detection is an M9 exit criterion.
+
+## Vulnerability 53: P2P Replay Peer-Attestation Gap
+
+### The Problem
+
+**Severity: MEDIUM**
+
+In peer-to-peer modes (LAN, direct connect without relay), replays are recorded locally by each client. There is no mutual attestation — a player can modify their local replay to remove evidence of cheating or alter match outcomes. Since there is no relay server to act as a neutral observer, replay integrity depends entirely on the local client.
+
+### Mitigation
+
+**Peer-attested frame hashes:** At the end of each sim tick, all peers exchange signed hashes of their current sim state (already required for desync detection). These signed hashes are recorded in each peer's replay file, creating a cross-attestation chain.
+
+```rust
+pub struct PeerAttestation {
+    pub tick: SimTick,
+    pub peer_id: PlayerId,
+    pub state_hash: SimStateHash,
+    pub peer_signature: Ed25519Signature,
+}
+```
+
+**Replay reconciliation:** When a dispute arises, replays from all peers can be compared. Frames where peer-attested hashes diverge from the replay's recorded state indicate tampering. The attestation chain provides cryptographic proof of which peer's replay was modified.
+
+**End-of-match summary signing:** At match end, all peers sign a match summary (final score, duration, player list, final state hash). This summary is embedded in all replays and can be independently verified.
+
+**Phase:** P2P replay attestation ships with P2P networking mode (Phase 4). Peer hash exchange is a Phase 4 exit criterion.
+
+## Vulnerability 54: Anti-Cheat False-Positive Rate Targets
+
+### The Problem
+
+**Severity: MEDIUM**
+
+The behavioral anti-cheat system (fog-of-war access patterns, APM anomaly detection, click accuracy outliers) has no defined false-positive rate targets. Without explicit thresholds, aggressive detection can alienate legitimate high-skill players while lenient detection misses actual cheaters.
+
+### Mitigation
+
+**Tiered confidence thresholds:**
+
+| Detection Category     | Action          | Minimum Confidence | Max False-Positive Rate |
+| ---------------------- | --------------- | ------------------ | ----------------------- |
+| Fog oracle (maphack)   | Auto-flag       | 95%                | 1 in 10,000 matches     |
+| APM anomaly (bot)      | Auto-flag       | 99%                | 1 in 100,000 matches    |
+| Click precision (aimbot)| Review queue    | 90%                | 1 in 1,000 matches      |
+| Desync pattern (exploit)| Auto-disconnect | 99.9%              | 1 in 1,000,000 matches  |
+
+**Calibration dataset:** Before deployment, each detector is calibrated against a corpus of labeled replays: confirmed-cheating replays (from test accounts) and confirmed-legitimate replays (from high-skill tournament players). The false-positive rate is measured against the legitimate corpus.
+
+**Graduated response:** No single detection event triggers a ban. The system uses a point-based accumulation model:
+- Auto-flag: +1 point (decays after 30 days)
+- Review-confirmed: +5 points (no decay)
+- 10 points → temporary suspension (7 days) + manual review
+- 25 points → permanent ban (appealable)
+
+**Transparency report:** Aggregate anti-cheat statistics (total flags, false-positive rate, ban count) are published quarterly. Individual detection details are not disclosed (to avoid teaching cheaters to evade).
+
+**Phase:** False-positive calibration ships with ranked matchmaking (Phase 5). Calibration dataset creation is a Phase 5 exit criterion.
+
+## Vulnerability 55: Platform Bug vs Cheat Desync Classification
+
+### The Problem
+
+**Severity: MEDIUM**
+
+Desync events (clients diverging from deterministic sim state) can be caused by either legitimate platform bugs (floating-point differences across CPUs, compiler optimizations, OS scheduling) or deliberate cheating (memory editing, modified binaries). The current desync detection treats all desyncs uniformly, which can lead to false cheat accusations from genuine bugs.
+
+### Mitigation
+
+**Desync fingerprinting:** When a desync is detected, the system captures a diagnostic fingerprint: divergence tick, diverging state components (which ECS resources differ), hardware/OS info, and recent order history. Platform bugs produce characteristic patterns (e.g., divergence in physics-adjacent systems on specific CPU architectures) that differ from cheat patterns (e.g., divergence in fog-of-war state or resource counts).
+
+**Classification heuristic:**
+
+| Signal                                         | Likely Platform Bug | Likely Cheat          |
+| ---------------------------------------------- | ------------------- | --------------------- |
+| Divergence in position/pathfinding only         | ✓                   |                       |
+| Divergence in fog/vision state                  |                     | ✓                     |
+| Divergence in resource/unit count               |                     | ✓                     |
+| Affects multiple independent matches            | ✓                   |                       |
+| Correlates with specific CPU/OS combination     | ✓                   |                       |
+| Divergence immediately after suspicious order   |                     | ✓                     |
+| Both peers report same divergence point         | ✓                   |                       |
+| Only one peer reports divergence                |                     | ✓ (modified client)   |
+
+**Bug report pipeline:** Desyncs classified as likely-platform-bug are automatically filed as bug reports with the diagnostic fingerprint. These do not count toward anti-cheat points (V54).
+
+**Phase:** Desync classification ships with anti-cheat system (Phase 5). Classification heuristic is a Phase 5 exit criterion.
+
+## Vulnerability 56: RTL/BiDi Override Character Injection in Non-Chat Contexts
+
+### The Problem
+
+**Severity: LOW**
+
+D059 (09g-interaction.md) defines RTL/BiDi sanitization for chat messages and marker labels, but other text-rendering contexts — player display names (see V46), package descriptions, mod names, lobby titles, tournament names — may not pass through the same sanitization pipeline, allowing BiDi override characters to create misleading visual presentations.
+
+### Mitigation
+
+**Unified text sanitization pipeline:** All user-supplied text passes through a single sanitization function before rendering, regardless of context. The pipeline:
+
+1. Strip dangerous BiDi overrides (U+202A–U+202E) except in contexts where explicit direction marks are legitimate (chat with mixed-direction text uses U+2066–U+2069 isolates instead)
+2. Normalize Unicode to NFC form
+3. Apply context-specific length/width limits
+4. Validate against context-specific allowed script sets
+
+**Context registry:** Each text-rendering context (chat, display name, package title, lobby name, etc.) registers its sanitization policy. The pipeline applies the correct policy based on context, preventing bypass through context confusion.
+
+**Cross-reference:** V46 (display name confusables), D059 (chat/marker sanitization), RTL/BiDi QA corpus categories E and F.
+
+**Phase:** Unified text pipeline ships with UI system (Phase 3). Pipeline coverage for all user-text contexts is a Phase 3 exit criterion.
+
 ## Path Security Infrastructure
 
 All path operations involving untrusted input — archive extraction, save game loading, mod file references, Workshop package installation, replay resource extraction, YAML asset paths — require boundary-enforced path handling that defends against more than `..` sequences.
@@ -1742,6 +2031,17 @@ Iron Curtain's anti-cheat is **architectural, not bolted on.** Every defense eme
 | Dev mode exploit     | Sim-state flag + lobby-only + ranked disabled     | Multiplayer integrity (V44)              |
 | Replay frame loss    | Frame loss counter + `send_timeout` + gap mark    | Replay integrity (V45)                   |
 | Path traversal       | `strict-path` boundary enforcement                | Path security infrastructure             |
+| Name impersonation   | UTS #39 skeleton + mixed-script ban + BiDi strip  | Display name validation (V46)            |
+| Key compromise       | Dual-signed rotation + BIP-39 emergency recovery  | Identity key rotation (V47)              |
+| Server impersonation | Cert chain + CRL + OCSP-style fast revocation     | Community server auth (V48)              |
+| Package forgery      | Author Ed25519 signing + registry counter-sign    | Workshop package integrity (V49)         |
+| Mod cross-probing    | Namespace isolation + capability-gated IPC         | WASM module isolation (V50)              |
+| Supply chain update  | Popularity quarantine + diff review + rollback    | Workshop package quarantine (V51)        |
+| Star-jacking         | Rate limit + anomaly detection + fork detection   | Workshop reputation defense (V52)        |
+| P2P replay forgery   | Peer-attested frame hashes + end-match signing    | P2P replay attestation (V53)             |
+| False accusations    | Tiered thresholds + calibration + graduated resp  | Anti-cheat false-positive control (V54)  |
+| Bug-as-cheat         | Desync fingerprint + classification heuristic     | Desync classification (V55)              |
+| BiDi text injection  | Unified sanitization pipeline + context registry  | Text safety (V56)                        |
 
 **No kernel-level anti-cheat.** Open-source, cross-platform, no ring-0 drivers. We accept that lockstep RTS will always have a maphack risk in P2P/relay modes — the fog-authoritative server is the real answer for high-stakes play.
 

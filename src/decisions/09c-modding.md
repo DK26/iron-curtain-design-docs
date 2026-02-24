@@ -4,6 +4,18 @@ Scripting tiers (Lua/WASM), OpenRA compatibility, UI themes, mod profiles, licen
 
 ---
 
+### Standalone Decision Files (09c/)
+
+| Decision | Title | File |
+|----------|-------|------|
+| D023 | OpenRA Vocabulary Compatibility Layer | [D023](09c/D023-vocabulary-compat.md) |
+| D024 | Lua API Superset of OpenRA | [D024](09c/D024-lua-superset.md) |
+| D025 | Runtime MiniYAML Loading | [D025](09c/D025-miniyaml-runtime.md) |
+| D026 | OpenRA Mod Manifest Compatibility | [D026](09c/D026-mod-manifest.md) |
+| D027 | Canonical Enum Compatibility with OpenRA | [D027](09c/D027-canonical-enums.md) |
+
+---
+
 ## D004: Modding — Lua (Not Python) for Scripting
 
 **Decision:** Use Lua for Tier 2 scripting. Do NOT use Python.
@@ -1139,6 +1151,59 @@ Design rules:
 
 This lets IC support preservation-first users, storage-constrained users, and "best possible remaster" users without fragmenting campaign logic or installs.
 
+### Voice-Over Variant Packs (Language / Style / Mix)
+
+D068 explicitly supports multiple **voice-over variants** as optional presentation packs and player preferences, similar to cutscene variants but with per-category selection.
+
+Examples:
+
+- `official/ra1-voices-original-en` (canonical English EVA/unit responses)
+- `official/ra1-voices-localized-he` (Hebrew localized voice pack where rights/content permit)
+- `official/ra1-voices-eva-classic` (classic EVA style pack)
+- `official/ra1-voices-eva-remastered` (alternate EVA style/tone pack)
+- `community/modx-voices-faction-overhaul` (mod-specific presentation voice pack)
+
+Design rules:
+
+- Voice-over variants are **presentation-only** unless they alter gameplay timing/logic (they should not).
+- Voice-over selection is a **player preference**, not a multiplayer compatibility gate.
+- Preferences may be configured **per category**, with at minimum:
+  - `eva_voice`
+  - `unit_responses`
+  - `campaign_dialogue_voice`
+  - `cutscene_dub_voice` (where dubbed audio variants exist)
+- A selected category may use:
+  - `Auto` (follow display/subtitle language and content availability),
+  - a specific language/style variant,
+  - or `Off` where the category supports text/subtitle fallback.
+- Missing preferred voice variants must fall back predictably (see D068 fallback rules below) and never block mission/campaign progression.
+
+This allows players to choose a preferred language, nostalgia-first/classic voice style, or alternate voice presentation while preserving shared gameplay compatibility.
+
+### Media Language Capability Matrix (Cutscenes / Dubs / Subtitles / Closed Captions)
+
+D068 requires media packages that participate in campaign/cutscene playback to expose enough language metadata for clients to choose a safe fallback path.
+
+At minimum, the content system must be able to reason about:
+
+- available cutscene audio/dub languages
+- available subtitle languages
+- available closed-caption languages
+- translation source/trust labeling (human / machine / hybrid)
+- coverage (full vs partial, and/or per-track completeness)
+
+This metadata may live in D049 Workshop package manifests/index summaries and/or local import indexes, but the fallback semantics are defined here in D068.
+
+Player preference model (minimum):
+
+- primary spoken-voice preference (per category, see voice-over variants above)
+- primary subtitle/CC language
+- optional secondary subtitle/CC fallback language
+- original-audio fallback preference when preferred dub is unavailable
+- optional machine-translated subtitle/CC fallback toggle (see phased rollout below)
+
+This prevents the common failure mode where a cutscene pack exists but does not support the player's preferred language, and the client has no deterministic fallback behavior.
+
 ### Optional Media Must Not Break Campaign Flow
 
 This is the central rule.
@@ -1147,11 +1212,29 @@ If a player installs "Campaign Core" but not media packs:
 
 - **Cutscene missing** → show briefing/intermission fallback (text, portrait, static image, or radar comm text)
 - **Music missing** → use silence, ambient loop, or module fallback
-- **Voice missing** → subtitles/text remain available
+- **Voice missing** → subtitles/closed captions/text remain available
 
 Campaign progression, mission completion, and save/load must continue normally.
 
 If multiple cutscene variants are installed (Original / Clean / AI-Enhanced), the client uses the player's preferred variant. If the preferred variant is unavailable for a specific cutscene, the client falls back to another installed variant (preferably Original, then Clean, then other configured fallback) before dropping to text/briefing fallback.
+
+If multiple voice-over variants are installed, the client applies the player's **per-category voice preference**. If the preferred voice variant is unavailable for a line/category, the client falls back to:
+
+1. another installed variant in the same category/language preference chain,
+2. another installed compatible category default (e.g. default EVA pack),
+3. text/subtitle/closed-caption presentation (for categories that support it),
+4. silence/none (only where explicitly allowed by the category policy).
+
+For cutscenes/dialogue language support, the fallback chain must distinguish **audio**, **subtitles**, and **closed captions**:
+
+1. preferred dub audio + preferred subtitle/CC language,
+2. original audio + preferred subtitle/CC language,
+3. original audio + secondary subtitle/CC language (if configured),
+4. original audio + machine-translated subtitle/CC fallback (optional, clearly labeled, if user enabled and available),
+5. briefing/intermission/text fallback,
+6. skip cutscene (never block progression).
+
+**Machine-translated subtitle/CC fallback** is an optional, clearly labeled presentation feature. It is **deferred to `M11` (`P-Optional`)** after `M9.COM.D049_FULL_WORKSHOP_CAS`, `M9.COM.WORKSHOP_MANIFEST_SIGNING_AND_PROVENANCE`, and `M10.SDK.LOCALIZATION_PLUGIN_HARDENING`; it is not part of the `M6.SP.MEDIA_VARIANTS_AND_FALLBACKS` baseline. Validation trigger: labeled machine-translation metadata/trust tags, user opt-in UX, and fallback-safe campaign path tests in `M11` platform/content polish.
 
 This aligns with IC's existing media/cinematic tooling philosophy (D038): media enriches the experience but should not be a hidden gameplay dependency unless a creator explicitly marks a mission as requiring a specific media pack (and Publish validation surfaces that requirement).
 
@@ -1177,6 +1260,10 @@ Examples:
   - action button: `Download Cutscene Pack`
 - Selecting `AI Enhanced Cutscenes` in Settings when the pack is not installed:
   - guidance panel: `Install AI Enhanced Cutscene Pack` / `Use Original Cutscenes` / `Use Briefing Fallback`
+- Starting a cutscene where the selected dub language is unavailable:
+  - non-blocking prompt: `No Hebrew dub for this cutscene. Use English audio + Hebrew subtitles?`
+  - options: `Use Original Audio + Subtitles` / `Use Secondary Subtitle Language` / `Use Briefing Fallback`
+  - optional toggle (if enabled in later phases): `Allow Machine-Translated Subtitles for Missing Languages`
 
 ### First-Run Setup Wizard Integration (D069)
 
@@ -1191,6 +1278,23 @@ Wizard rules:
 
 This keeps first-run setup fast while preserving D068's space-saving flexibility.
 
+### Owned Proprietary Source Import (Remastered / GOG / EA Installs)
+
+D068 supports install plans that are satisfied by a mix of:
+- **local owned-source imports** (proprietary assets detected by D069, such as the C&C Remastered Collection),
+- **open/free sources** (OpenRA assets, community packs where rights permit), and
+- **Workshop/official package downloads**.
+
+Rules:
+- **Out-of-the-box Remastered import:** D069 must support importing/extracting Red Alert assets from a detected Remastered Collection install without requiring manual path wrangling or external conversion tools.
+- **Read-only source installs:** IC treats detected proprietary installs as read-only sources. D069 imports/extracts into IC-managed storage and indexes; repair/rebuild actions target IC-managed data, not the original game install.
+- **No implicit redistribution:** Imported proprietary assets remain local content. D068 install profiles may reference them, but this does not imply Workshop mirroring or publish rights.
+- **Provenance visibility:** Installed Content Manager and D069 maintenance flows should show which content comes from owned local imports vs downloaded packages, so players understand what can be repaired locally vs re-downloaded.
+
+This preserves the easy player experience ("use my Remastered install") without weakening D049/D037 provenance and redistribution rules.
+
+Implementation detail and sequencing are specified in `05-FORMATS.md` § "Owned-Source Import & Extraction Pipeline (D069/D068/D049, Format-by-Format)" and the execution-overlay `G1.x` / `G21.x` substeps.
+
 ### Multiplayer Compatibility: Gameplay vs Presentation Fingerprints
 
 Selective install introduces a compatibility trap: a player missing music/cutscenes should not fail multiplayer compatibility if gameplay content is identical.
@@ -1203,6 +1307,7 @@ D068 resolves this by splitting namespace compatibility into two fingerprints:
 Lobby compatibility and ranked verification use the **gameplay fingerprint** as the hard gate. The presentation fingerprint is informational (and may affect cosmetics only).
 
 AI-enhanced cutscene packs are explicitly **presentation fingerprint** scope unless they introduce gameplay-significant content (which they should not).
+Voice-over variant packs (language/style/category variants) are also **presentation fingerprint** scope unless they alter gameplay-significant timing/data (which they should not).
 
 If a pack changes gameplay-relevant data, it belongs in gameplay fingerprint scope — not presentation.
 
@@ -1225,7 +1330,9 @@ The game's Settings/Data area includes an **Installed Content Manager**:
 - active install profile (`Minimal Multiplayer`, `Campaign Core`, `Custom`, etc.)
 - pack list with size, installed/not installed status
 - per-pack purpose labels (`Gameplay required`, `Optional media`, `Language voice pack`)
-- media variant groups (e.g., `Cutscenes: Original / Clean / AI-Enhanced`) with preferred variant selection
+- media variant groups (e.g., `Cutscenes: Original / Clean / AI-Enhanced`, `EVA Voice: Classic / Remastered / Localized`) with preferred variant selection
+- language capability badges and labels for media packs (`Audio`, `Subs`, `CC`, translation source/trust label, coverage)
+- voice-over category preference controls (or link-out to `Settings → Audio`) for `EVA`, `Unit Responses`, and campaign/cutscene dialogue voice where available
 - reclaimable space estimate before uninstall
 - one-click switches between install presets
 - "keep gameplay, remove media" shortcut

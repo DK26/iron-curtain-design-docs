@@ -77,7 +77,7 @@ Development follows eight stages. They're roughly sequential, but later stages f
 - Research is concurrent with other work in later stages — new questions arise during implementation
 - Research is a **continuous discipline**, not a phase that ends. Every new prior art study can challenge assumptions, confirm patterns, or reveal gaps. The project's commit history shows active research throughout pre-development — not tapering early but intensifying as design maturity makes it easier to ask precise questions.
 
-**Current status (February 2026):** The major architectural questions are answered across 14 design chapters, 70+ indexed decisions, and 38+ research analyses. Research continues as a parallel track — recent examples include AI implementation surveys across 7+ codebases, Stratagus/Stargus engine analysis, a transcript-backed RTS 2026 trend scan (`research/rts-2026-trend-scan.md`), a BAR/Recoil source-study (`research/bar-recoil-source-study.md`) used to refine creator-workflow and scripting-boundary implementation priorities, and an open-source RTS communication/marker study (`research/open-source-rts-communication-markers-study.md`) used to harden D059 beacon/marker schema and `M7` communication UX priorities. Each produces cross-references and actionable refinements. The shift is from *exploratory* research ("what should we build?") to *confirmatory* research ("does this prior art validate or challenge our approach?").
+**Current status (February 2026):** The major architectural questions are answered across 14 design chapters, 70+ indexed decisions, and 41+ research analyses. Research continues as a parallel track — recent examples include AI implementation surveys across 7+ codebases, Stratagus/Stargus engine analysis, a transcript-backed RTS 2026 trend scan (`research/rts-2026-trend-scan.md`), a BAR/Recoil source-study (`research/bar-recoil-source-study.md`) used to refine creator-workflow and scripting-boundary implementation priorities, an open-source RTS communication/marker study (`research/open-source-rts-communication-markers-study.md`) used to harden D059 beacon/marker schema and `M7` communication UX priorities, an RTL/BiDi implementation study (`research/rtl-bidi-open-source-implementation-study.md`) used to harden localization directionality/font-fallback/shaping requirements across `M6`/`M7`/`M9`/`M10`, a Source SDK 2013 source study (`research/source-sdk-2013-source-study.md`) used to validate fixed-point determinism, safe parsing, capability tokens, typestate, and CI-from-day-one priorities, and a Generals/Zero Hour diagnostic tools study (`research/generals-zero-hour-diagnostic-tools-study.md`) used to refine the diagnostic overlay design with SAGE engine patterns (cushion metric, gross/net time, category-filtered world markers, tick-stepping). Each produces cross-references and actionable refinements. The shift is from *exploratory* research ("what should we build?") to *confirmatory* research ("does this prior art validate or challenge our approach?").
 
 ### Trend Scan Checklist (Videos, Listicles, Talks, Showcase Demos)
 
@@ -259,6 +259,17 @@ This avoids the common pre-implementation failure mode where a richly designed f
   - tracker representation (Dxxx row and/or feature cluster entry)
 - If this mapping is missing, the feature remains an idea/proposal, not scheduled work.
 
+**External implementation repo bootstrap gate (mandatory before code execution starts in a new repo):**
+- If implementation work moves into a separate source-code repository, bootstrap it with:
+  - a local `AGENTS.md` aligned to the canonical design docs (`src/tracking/external-project-agents-template.md`)
+  - a code navigation index (`CODE-INDEX.md`) aligned to milestone/`G*` work (`src/tracking/source-code-index-template.md`)
+- Do not treat the external repo as design-aligned until it has:
+  - canonical design-doc links/version pin
+  - no-silent-divergence rules
+  - design-gap escalation workflow
+  - code ownership/boundary navigation map
+- Use `src/tracking/external-code-project-bootstrap.md` as the setup procedure and checklist.
+
 **Future/deferral language gate (mandatory for canonical docs):**
 - Future-facing design statements must be classified as one of: `PlannedDeferral`, `NorthStarVision`, `VersioningEvolution`, or an explicitly non-planning context (narrative example, historical quote, legal phrase).
 - Ambiguous future wording ("could add later", "future convenience", "deferred" without placement/reason) is not acceptable in canonical docs.
@@ -268,6 +279,12 @@ This avoids the common pre-implementation failure mode where a richly designed f
   - a **Pending Decision (`Pxxx`)** with the missing decision clearly stated.
 - Use `src/tracking/future-language-audit.md` for repo-wide audit/remediation tracking and `src/tracking/deferral-wording-patterns.md` for replacement wording examples.
 - Quick audit inventory command (canonical docs): `rg -n "\\bfuture\\b|\\blater\\b|\\bdefer(?:red)?\\b|\\beventually\\b|\\bTBD\\b|\\bnice-to-have\\b" src README.md AGENTS.md --glob '!research/**'`
+
+**Testing strategy gate (mandatory for all implementation milestones):**
+- Every design feature must map to at least one automated test in `src/tracking/testing-strategy.md`.
+- CI pipeline tiers (PR gate, post-merge, nightly, weekly) define when each test category runs.
+- New features must specify which test tier covers them and what the exit criteria are.
+- Performance benchmarks, fuzz targets, and anti-cheat calibration datasets are defined in the testing strategy and must be updated when new attack surfaces or performance-sensitive code paths are added.
 
 **Exit criteria:**
 - Every task has its dependencies identified (hard, soft, test)
@@ -343,7 +360,7 @@ The context-bounded discipline applies equally to design work — not just code.
 | --- | ---------------------------------------------- | --------------------------- | ---------------------------------------------- | ---------- |
 | 1   | Research Stratagus/Stargus engine architecture | `research/`                 | GitHub repos, AGENTS.md § Reference Material   | —          |
 | 2   | Create research document with findings         | `research/`                 | Notes from #1                                  | #1         |
-| 3   | Extract lessons applicable to IC AI system     | `decisions/09d-gameplay.md` | Research doc from #2, D043 section             | #2         |
+| 3   | Extract lessons applicable to IC AI system     | `decisions/09d/D043-ai-presets.md` | Research doc from #2, D043 section             | #2         |
 | 4   | Update modding docs with Lua AI primitives     | `src/04-MODDING.md`         | Research doc from #2, existing Lua API section | #2         |
 | 5   | Update security docs with Lua stdlib policy    | `src/06-SECURITY.md`        | Research doc from #2, existing sandbox section | #2         |
 | 6   | Update AGENTS.md reference material            | `AGENTS.md`                 | Research doc from #2                           | #2         |

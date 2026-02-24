@@ -171,13 +171,13 @@ This inventory is a moving count. It will change as docs grow and as ambiguous w
 
 - **Status:** baseline complete for planning-intent wording; residual hits are classified as North Star, versioning evolution, narrative/historical examples, or technical/runtime semantics
 - **Resolved in this pass (explicit rewrites):**
-  - `src/decisions/09d-gameplay.md` D042 manual AI personality editor "future nice-to-have" -> explicit `M10-M11` planned optional deferral with dependencies and out-of-scope boundary
-  - `src/decisions/09e-community.md` D031/D034 optional OTEL and PostgreSQL scaling wording -> explicit `M7`/`M11` planned deferrals (`P-Scale`)
-  - `src/decisions/09e-community.md` D035 monetization schema/comments + creator program paid-tier wording -> explicit deferred optional `M11+` policy path
-  - `src/decisions/09f-tools.md` D016 generative media video/cutscene wording -> explicit deferred optional `M11` path
-  - `src/decisions/09g-interaction.md` D058 RCON and voice-feature deferrals -> explicit `M7` / `M11` planned deferrals with scope boundaries
+  - `src/decisions/09d/D042-behavioral-profiles.md` manual AI personality editor "future nice-to-have" -> explicit `M10-M11` planned optional deferral with dependencies and out-of-scope boundary
+  - `src/decisions/09e/D031-observability.md` / `src/decisions/09e/D034-sqlite.md` optional OTEL and PostgreSQL scaling wording -> explicit `M7`/`M11` planned deferrals (`P-Scale`)
+  - `src/decisions/09e/D035-creator-attribution.md` monetization schema/comments + creator program paid-tier wording -> explicit deferred optional `M11+` policy path
+  - `src/decisions/09f/D016-llm-missions.md` generative media video/cutscene wording -> explicit deferred optional `M11` path
+  - `src/decisions/09g/D058-command-console.md` RCON and voice-feature deferrals -> explicit `M7` / `M11` planned deferrals with scope boundaries
   - `src/07-CROSS-ENGINE.md` cross-engine correction/certification/host-mode wording -> explicit deferred `M7+`/`M11` certification decisions and North Star guardrails
-  - `src/decisions/09b-networking.md` D006/D011/D055 "future/later" netcode/ranking wording -> explicit deferred milestone phrasing
+  - `src/decisions/09b/D006-pluggable-net.md` / `src/decisions/09b/D011-cross-engine.md` / `src/decisions/09b/D055-ranked-matchmaking.md` "future/later" netcode/ranking wording -> explicit deferred milestone phrasing
   - `src/decisions/09c-modding.md` plugin capability wording -> explicit separately approved deferred capability path
   - `README.md` cross-engine interop and contributor reward wording -> explicit deferred milestone framing (`M7+`/`M11`) while preserving marketing readability
 - **Residual C3 hits (classified, no rewrite needed by default):**

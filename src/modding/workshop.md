@@ -175,11 +175,11 @@ cache_size_limit = "2 GB"             # LRU eviction when exceeded
 prefer_p2p = true                     # false = always use HTTP direct
 ```
 
-The P2P engine uses **rarest-first** piece selection, an **endgame mode** that sends duplicate requests for the last few pieces to prevent stalls, a **connection state machine** (pending → active → blacklisted) that avoids wasting time on dead or throttled peers, **statistical bad-peer detection** (demotes peers whose transfer times deviate beyond 3σ — adapted from Dragonfly's evaluator), and **3-tier download priority** (lobby-urgent / user-requested / background) for QoS differentiation. Full protocol design details — peer selection policy, weighted multi-dimensional scoring, piece request strategy, announce cycle, size-based piece lengths, health checks, preheat/prefetch, persistent replica count — are in `../decisions/09e-community.md` § D049 "P2P protocol design details."
+The P2P engine uses **rarest-first** piece selection, an **endgame mode** that sends duplicate requests for the last few pieces to prevent stalls, a **connection state machine** (pending → active → blacklisted) that avoids wasting time on dead or throttled peers, **statistical bad-peer detection** (demotes peers whose transfer times deviate beyond 3σ — adapted from Dragonfly's evaluator), and **3-tier download priority** (lobby-urgent / user-requested / background) for QoS differentiation. Full protocol design details — peer selection policy, weighted multi-dimensional scoring, piece request strategy, announce cycle, size-based piece lengths, health checks, preheat/prefetch, persistent replica count — are in `../decisions/09e/D049-workshop-assets.md` "P2P protocol design details."
 
 **Cost:** A BitTorrent tracker costs $5-20/month. Centralized CDN for a popular 500MB mod downloaded 10K times = 5TB = $50-450/month. P2P reduces marginal distribution cost to near-zero.
 
-See `../decisions/09e-community.md` § D049 for full design including security analysis, Rust implementation options, gaming industry precedent, and phased bootstrap strategy.
+See `../decisions/09e/D049-workshop-assets.md` for full design including security analysis, Rust implementation options, gaming industry precedent, and phased bootstrap strategy.
 
 ### Workshop Resource Registry & Dependency System (D030)
 
@@ -372,7 +372,7 @@ Iron Curtain provides Workshop hosting infrastructure — not editorial approval
 
 - **The platform is not liable** for the content, accuracy, legality, or quality of user-submitted Workshop resources
 - **No warranty** is provided for Workshop resources — they are offered "as is" by their respective authors
-- **DMCA safe harbor** applies — the Workshop follows the notice-and-takedown process documented in `../decisions/09e-community.md` § D030
+- **DMCA safe harbor** applies — the Workshop follows the notice-and-takedown process documented in `../decisions/09e/D030-workshop-registry.md`
 - **The Workshop does not review or approve resources before listing.** Anomaly detection (supply chain security) and community moderation provide the safety layer, not pre-publication editorial review
 
 This disclaimer appears in the Workshop ToS that authors accept before publishing, and is visible to users in the Workshop browser footer.
@@ -385,7 +385,7 @@ The Workshop collects and processes data necessary for operation. Before any Wor
 - **Lawful basis:** Consent (account creation) and legitimate interest (platform security)
 - **Retention:** Connection logs purged after configured retention window (default: 30 days). Account data retained while account is active. Deleted on account deletion request.
 - **User rights (GDPR):** Right to access, right to rectification, right to erasure (account deletion deletes profile and reviews; published resources optionally transferable or removable), right to data portability (export in standard format)
-- **Third parties:** Federated Workshop servers may replicate metadata. P2P distribution exposes IP addresses to other peers (same as multiplayer — see `../decisions/09e-community.md` § D049 privacy notes)
+- **Third parties:** Federated Workshop servers may replicate metadata. P2P distribution exposes IP addresses to other peers (same as multiplayer — see `../decisions/09e/D049-workshop-assets.md` privacy notes)
 
 The Privacy Policy template ships with the Workshop server deployment. Community servers customize and publish their own.
 
@@ -678,7 +678,7 @@ When a player joins a multiplayer lobby, the client checks `GameListing.required
 5. **Install:** Place in local cache, update dependency graph
 6. **Ready:** Player joins game with all required content
 
-Players can cancel at any time. Auto-download respects bandwidth limits configured in settings. Resources downloaded this way are tagged as **transient** — they remain in the local cache and are fully functional, but are subject to auto-cleanup after a configurable period of non-use (default: 30 days). After the session, a non-intrusive toast offers the player the choice to pin (keep forever), let auto-clean run its course, or remove immediately. Frequently-used transient resources (3+ sessions) are automatically promoted to pinned. See `../decisions/09e-community.md` § D030 "Local Resource Management" for the full lifecycle, storage budget, and cleanup UX.
+Players can cancel at any time. Auto-download respects bandwidth limits configured in settings. Resources downloaded this way are tagged as **transient** — they remain in the local cache and are fully functional, but are subject to auto-cleanup after a configurable period of non-use (default: 30 days). After the session, a non-intrusive toast offers the player the choice to pin (keep forever), let auto-clean run its course, or remove immediately. Frequently-used transient resources (3+ sessions) are automatically promoted to pinned. See `../decisions/09e/D030-workshop-registry.md` "Local Resource Management" for the full lifecycle, storage budget, and cleanup UX.
 
 ### Creator Reputation System (D030)
 
@@ -698,7 +698,7 @@ Creators earn reputation through community signals:
 - **Foundation** — resources depended on by 50+ other resources
 - **Curator** — maintains high-quality curated collections
 
-Reputation is displayed but not gatekeeping — any registered user can publish. Badges appear on resource listings, in-game browser, and author profiles. See `../decisions/09e-community.md` § D030 for full design.
+Reputation is displayed but not gatekeeping — any registered user can publish. Badges appear on resource listings, in-game browser, and author profiles. See `../decisions/09e/D030-workshop-registry.md` for full design.
 
 ### Content Moderation & DMCA/Takedown Policy (D030)
 
@@ -753,7 +753,7 @@ achievements:
 
 Achievement packs are versioned, dependency-tracked, and license-required like all Workshop resources. Engine-defined achievements (campaign completion, competitive milestones) ship with the game and cannot be overridden by mods.
 
-See `../decisions/09e-community.md` § D036 for the full achievement system design including SQL schema and category taxonomy.
+See `../decisions/09e/D036-achievements.md` for the full achievement system design including SQL schema and category taxonomy.
 
 ### Workshop API
 

@@ -348,13 +348,13 @@ This principle governs all IC-generated and IC-authored content — not just han
 **Rule:** When creating or reviewing narrative content for IC — whether human-authored, LLM-generated, or community-submitted — check it against the seven pillars above. C&C's identity is its narrative voice. A technically perfect RTS with generic storytelling is not a C&C game. The camp, the conviction, and the quotability are as much a part of the engine's identity as the ECS architecture or the fixed-point math.
 
 **Where this applies:**
-- LLM system prompts and story style presets ([decisions/09f-tools.md](decisions/09f-tools.md) § D016 — "C&C Classic" is the default because of this principle)
+- LLM system prompts and story style presets ([decisions/09f/D016-llm-missions.md](decisions/09f/D016-llm-missions.md) — "C&C Classic" is the default because of this principle)
 - Campaign authoring guidelines ([decisions/09c-modding.md](decisions/09c-modding.md) § D021 — briefings, character voices, narrative arc)
-- Cheat code and console command naming ([decisions/09g-interaction.md](decisions/09g-interaction.md) § D058 — Cold War/franchise cultural references)
+- Cheat code and console command naming ([decisions/09g/D058-command-console.md](decisions/09g/D058-command-console.md) — Cold War/franchise cultural references)
 - EVA voice line design guidance for `ic-audio` (Phase 3)
 - Unit voice design guidelines for modders ([04-MODDING.md](04-MODDING.md))
-- Scenario editor content templates ([decisions/09f-tools.md](decisions/09f-tools.md) § D038 — briefing authoring, character creation)
-- Workshop content review criteria ([decisions/09e-community.md](decisions/09e-community.md) § D030 — "C&C Classic" style validation)
+- Scenario editor content templates ([decisions/09f/D038-scenario-editor.md](decisions/09f/D038-scenario-editor.md) — briefing authoring, character creation)
+- Workshop content review criteria ([decisions/09e/D030-workshop-registry.md](decisions/09e/D030-workshop-registry.md) — "C&C Classic" style validation)
 - The foreword, README, and all public-facing project communication — IC's own voice should reflect the franchise it serves (direct, confident, unpretentious)
 
 ---

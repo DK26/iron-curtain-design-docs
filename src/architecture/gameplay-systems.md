@@ -995,7 +995,7 @@ pub struct GameScore {
 
 ### Debug / Developer Tools
 
-> See also `../decisions/09g-interaction.md` § D058 for the unified chat/command console, cvar system, and Brigadier-style command tree that provides the text-based interface to these developer tools.
+> See also `../decisions/09g/D058-command-console.md` for the unified chat/command console, cvar system, and Brigadier-style command tree that provides the text-based interface to these developer tools.
 
 Developer mode (toggled in settings, not available in ranked):
 

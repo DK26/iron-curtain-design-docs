@@ -346,7 +346,7 @@ Beyond balance, every quality-of-life improvement added by OpenRA or the Remaste
 
 Select a profile, then override any individual setting. Want classic balance with OpenRA's attack-move but without build radius circles? Done. Good defaults, full customization.
 
-See D019 and D033 in `src/decisions/09d-gameplay.md`, and D032 in `src/decisions/09c-modding.md`.
+See `src/decisions/09d/D019-balance-presets.md` and `src/decisions/09d/D033-qol-presets.md`, and D032 in `src/decisions/09c-modding.md`.
 
 ## Timing Assessment
 
