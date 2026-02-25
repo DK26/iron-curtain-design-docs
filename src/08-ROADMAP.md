@@ -220,6 +220,7 @@ Units moving, shooting, dying — headless sim + rendered. Record replay file. P
 - **`ic` CLI prototype:** `ic mod init`, `ic mod check`, `ic mod run` — early tooling for Lua script development (full SDK in Phase 6a)
 - **`ic profile` CLI (D062):** `ic profile save/list/activate/inspect/diff` — named mod compositions with switchable experience settings; modpack curators can save and compare configurations; profile fingerprint enables replay verification
 - **Minimal Workshop (D030 early delivery):** Central IC Workshop server + `ic mod publish` + `ic mod install` + basic in-game browser + auto-download on lobby join. Simple HTTP REST API, SQLite-backed. No federation, no replication, no promotion channels yet — those are Phase 6a
+- **Standalone installer (D069 Layer 1):** Platform-native installers for non-store distribution — NSIS `.exe` for Windows, `.dmg` for macOS, `.AppImage` for Linux. Handles binary placement, shortcuts, file associations (`.icrep`, `.icsave`, `ironcurtain://` URI scheme), and uninstaller registration. Portable mode checkbox creates `portable.marker`. Installer launches IC on completion → enters D069 First-Run Setup Wizard. CI pipeline builds installers automatically per release.
 
 ### Exit Criteria
 - Can play through **all** Allied and Soviet campaign missions start to finish

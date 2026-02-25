@@ -249,6 +249,21 @@ pub struct AppDirs {
 pub enum PathMode { Platform, Portable }
 ```
 
+**Additional override:** `--data-dir <path>` CLI flag overrides the data directory location regardless of mode. This is useful for developers running multiple profiles or testing with different data sets. If `--data-dir` is set, `PathMode` is still reported as `Platform` or `Portable` based on the detection above — the override only changes `data_dir`, not the mode label.
+
+**Visibility:** The current path mode is shown in:
+- Settings → Data tab: `"Data location: C:\Games\IC\data\ (portable mode)"` or `"Data location: %APPDATA%\IronCurtain\ (standard)"`
+- Console: `ic_paths` command prints all resolved paths and the active mode
+- First-launch wizard: if portable mode is detected, a brief note: `"Running in portable mode — all data is stored next to the game executable."`
+- Main menu footer (optional, subtle): a small `[P]` badge or `"Portable"` label if the player wants to see it (toggleable via Settings → Video → Show Mode Indicator)
+
+**Creating a portable installation:** To convert a standard install into a portable one, a user just:
+1. Copies the game folder to a USB drive (or any location)
+2. Creates an empty `portable.marker` file next to the executable
+3. Launches the game — done
+
+No explicit init step needed. On first launch in portable mode, the engine auto-creates the `data/` directory and runs the first-launch wizard normally. If the user already has a platform install on the same machine, the wizard detects it and offers: `"Found existing IC data on this machine. [Import my settings & identity] [Start fresh]"`. This replaces any need for a separate init command — the wizard handles everything, and the user doesn't need to learn a CLI command to set up portable mode.
+
 **WASM:** Browser builds return OPFS-backed virtual paths. Portable mode is not applicable — `PathMode::Platform` is always used. Mobile builds use the platform app sandbox unconditionally.
 
 **Phase:** Phase 1 (required before any file I/O — asset loading, config, logs).

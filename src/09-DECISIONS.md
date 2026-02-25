@@ -13,7 +13,7 @@ For improved agentic retrieval / RAG summaries, see the reusable **Decision Caps
 | [Foundation & Core](decisions/09a-foundation.md)        | Language, framework, data formats, simulation invariants, core engine identity              | D001–D003, D009, D010, D015, D017, D018, D039, D063, D064, D067 |
 | [Networking & Multiplayer](decisions/09b-networking.md) | Network model, relay server, sub-tick ordering, community servers, ranked play              | D006–D008, D011, D012, D052, D055, D060             |
 | [Modding & Compatibility](decisions/09c-modding.md)     | Scripting tiers, OpenRA compatibility, UI themes, mod profiles, licensing, export           | D004, D005, D014, D023–D027, D032, D050, D051, D062, D066, D068 |
-| [Gameplay & AI](decisions/09d-gameplay.md)              | Pathfinding, balance, QoL, AI systems, render modes, trait-abstracted subsystems, asymmetric co-op mode design | D013, D019, D021, D022, D028, D029, D033, D041–D045, D048, D054, D070 |
+| [Gameplay & AI](decisions/09d-gameplay.md)              | Pathfinding, balance, QoL, AI systems, render modes, trait-abstracted subsystems, asymmetric co-op mode design, LLM exhibition/prompt-coached match modes | D013, D019, D021, D022, D028, D029, D033, D041–D045, D048, D054, D070, D073 |
 | [Community & Platform](decisions/09e-community.md)      | Workshop, telemetry, storage, achievements, governance, profiles, data portability          | D030, D031, D034–D037, D046, D049, D053, D061       |
 | [Tools & Editor](decisions/09f-tools.md)                | LLM mission generation, scenario editor, asset studio, mod SDK, foreign replays, skill library | D016, D020, D038, D040, D047, D056, D057            |
 | [In-Game Interaction](decisions/09g-interaction.md)     | Command console, communication systems (chat, voice, pings), tutorial/new player experience, installation/setup wizard UX | D058, D059, D065, D069                                    |
@@ -94,6 +94,9 @@ For improved agentic retrieval / RAG summaries, see the reusable **Decision Caps
 | D068 | Selective Installation & Content Footprints        | [Modding](decisions/09c-modding.md)         |
 | D069 | Installation & First-Run Setup Wizard              | [Interaction](decisions/09g/D069-install-wizard.md) |
 | D070 | Asymmetric Co-op Mode — Commander & Field Ops      | [Gameplay](decisions/09d/D070-asymmetric-coop.md)       |
+| D071 | External Tool API — IC Remote Protocol (ICRP)      | [Tools](decisions/09f/D071-external-tool-api.md)        |
+| D072 | Dedicated Server Management                         | [Networking](decisions/09b/D072-server-management.md)   |
+| D073 | LLM Exhibition Matches & Prompt-Coached Modes      | [Gameplay](decisions/09d/D073-llm-exhibition-modes.md)  |
 
 ---
 

@@ -1,6 +1,6 @@
 # Decision Log — Tools & Editor
 
-LLM mission generation, mod SDK, scenario editor, asset studio, LLM configuration, foreign replays, and skill library.
+LLM mission generation, mod SDK, scenario editor, asset studio, LLM configuration, foreign replays, skill library, and external tool API.
 
 ---
 
@@ -13,3 +13,4 @@ LLM mission generation, mod SDK, scenario editor, asset studio, LLM configuratio
 | D047 | LLM Configuration Manager — Provider Management & Community Sharing | [D047](09f/D047-llm-config.md) |
 | D056 | Foreign Replay Import (OpenRA & Remastered Collection) | [D056](09f/D056-replay-import.md) |
 | D057 | LLM Skill Library — Lifelong Learning for AI and Content Generation | [D057](09f/D057-llm-skill-library.md) |
+| D071 | External Tool API — IC Remote Protocol (ICRP) | [D071](09f/D071-external-tool-api.md) |

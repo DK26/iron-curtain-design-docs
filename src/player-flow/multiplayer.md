@@ -81,8 +81,89 @@ Multiplayer Hub → Game Browser
 - Click a game → Join Lobby (mod auto-download if needed, D030)
 - In-progress games show [Spectate →] if spectating is enabled
 - Trust indicators: ✓ Verified (bundled sources) vs. "Community" (user-added tracking servers)
-- Filters: map name, mod, game status (waiting/in-progress), player count, ping range
 - Sources configurable in Settings — merge view across official + community + OpenRA + CnCNet tracking servers
+
+**Server/room listing metadata** — each listing in the game browser will expose the following fields. Not all fields are shown as columns in the default table view — some are visible on hover, in an expanded detail panel, or as filter/sort criteria.
+
+| Category | Field | Notes |
+|----------|-------|-------|
+| **Identity** | Server/Room Name | User-chosen name |
+| | Host Player Name | With verified badge if cryptographically verified (D052) |
+| | Dedicated / Listen Server | Dedicated = standalone server; Listen = hosted by a player's client |
+| | Description (free-text) | Optional short description set by host (max ~200 chars) |
+| | MOTD (Message of the Day) | Optional longer message shown on join or in detail panel |
+| | Server URL / Rules Page | Link to community rules, Discord, website |
+| | Tags / Keywords | Free-form tags for flexible filtering (inspired by Valve A2S); e.g., `newbies`, `no-rush-20`, `tournament`, `clan-war` |
+| **Game state** | Status | `Waiting` / `In-Game` / `Post-Game` |
+| | Lobby Phase (detail) | More granular: `open` / `filling` / `ready` / `countdown` / `in-game` / `post-game` |
+| | Playtime / Duration | How long the current game has been running (for in-progress games) |
+| | Rejoinable | Whether a disconnected player can rejoin (important for lockstep) |
+| | Replay Recording | Whether the match is being recorded as a `.icrep` |
+| **Players** | Current Players / Max Players | e.g., "3/6" |
+| | Team Format | Compact format: `1v1`, `2v2`, `3v3`, `FFA`, `2v2v2`, `Co-op` |
+| | AI Count + Difficulty | e.g., "2 AI (Hard)" — not just count |
+| | Spectator Count / Spectator Slots | Whether spectators are allowed and current count |
+| | Open Slots | Remaining player capacity |
+| | Average Player Rating | Average Glicko-2 rating of joined players (AoE2 pattern — lets skilled players find competitive matches) |
+| | Player Competitive Ranks | Rank tiers of joined players shown in detail panel |
+| **Map** | Map Name | Display name |
+| | Map Preview / Thumbnail | Visual preview image |
+| | Map Size | Dimensions or category (small/medium/large) |
+| | Map Tileset / Theater | Temperate, Snow, Desert, etc. (C&C visual theme) |
+| | Map Type | Skirmish / Scenario / Random-generated |
+| | Map Source | Built-in / Workshop / Custom (so clients know where to auto-download) |
+| | Map Player Capacity | The map's designed max players (may differ from server max) |
+| **Game rules** | Game Module | Red Alert, Tiberian Dawn, etc. |
+| | Game Type / Mode | Casual, Competitive/Ranked, Co-op, Tournament, Custom |
+| | Experience Preset | Which balance/AI/pathfinding preset is active (D033/D054) |
+| | Victory Conditions | Destruction, capture, timed, scenario-specific |
+| | Game Speed | Slow / Normal / Fast |
+| | Starting Credits | Initial resource amount |
+| | Fog of War Mode | Shroud / Explored / Revealed |
+| | Crates | On / Off |
+| | Superweapons | On / Off |
+| | Tech Level | Starting tech level |
+| | Viewable CVars (subset) | Host-selected subset of relevant configuration variables exposed to browser (from D064's `server_config.toml`; not all ~200 parameters — only host-curated "most relevant" settings) |
+| **Mods & version** | Engine Version | Exact IC build version |
+| | Mod Name + Version | Active mods with version identifiers |
+| | Mod Fingerprint / Content Hash | Integrity hash for map + mod content (Spring pattern — prevents join-then-desync) |
+| | Mod Compatibility Indicator | Client-side computed: green (have everything) / yellow (auto-downloadable) / red (incompatible) |
+| | Pure / Unmodded Flag | Single boolean: completely vanilla (Warzone pattern — instant competitive filter) |
+| | Protocol Version | Client compatibility check (Luanti pattern: `proto_min`/`proto_max`) |
+| **Network** | Ping / Latency | Round-trip time measured from client |
+| | Relay Server Region | Geographic location of the relay (e.g., EU-West, US-East) |
+| | Relay Operator | Which community operates the relay |
+| | Connection Type | Relayed / Direct / LAN |
+| **Trust & access** | Trust Label | `IC Certified` / `IC Casual` / `Cross-Engine Experimental` / `Foreign Engine` (D011) |
+| | Public / Private | Open, password-protected, invite-only, or code-only |
+| | Community Membership | Which community server(s) the game is listed on, with verified badges/icons/logos |
+| | Community Tags | Official game, clan-specific, tournament bracket, etc. |
+| | Custom Icons / Logos | Verified community branding; custom host icons (with abuse prevention — see D052) |
+| | Minimum Rank Requirement | Entry barrier (Spring pattern — host can require minimum experience) |
+| **Communication** | Voice Chat | Enabled / Disabled (D059) |
+| | Language | Global (Mixed), English, Russian, etc. — self-declared by host |
+| | AllChat Policy | Whether cross-team chat is enabled |
+| **Tournament** | Tournament ID / Name | If part of an organized tournament |
+| | Bracket Link | Link to tournament bracket |
+| | Shoutcast / Stream URL | Link to a live stream of this game |
+
+**Filters & sorting:**
+
+- Filter by: game module (RA/TD), map name/size/type, mod (specific or "unmodded only"), game type (casual/competitive/co-op/tournament), player count, ping range, community, password-protected, voice enabled, language, trust label, has open slots, spectatable, compatible mods (green indicator), minimum/maximum average rating, tags (include/exclude)
+- Sort by: any column (room name, host, players, map, ping, rating, game type)
+- Auto-refresh on configurable interval
+
+**Client-side browser organization** (persistent across sessions, stored in local SQLite per D034):
+
+| Feature | Description |
+|---------|-------------|
+| **Favorites** | Bookmark servers/communities for quick access |
+| **History** | Recently visited servers |
+| **Blacklist** | Permanently hide servers (anti-abuse) |
+| **Friends' Games** | Show games where friends are playing (if friends list implemented) |
+| **LAN** | Automatic local network discovery tab |
+| **Community Subscriptions** | Show games only from subscribed communities |
+| **Quick Join** | Auto-join best matching game based on saved preferences, ping, and rating |
 
 ### Ranked Matchmaking Flow
 
@@ -179,6 +260,22 @@ Direct Connect → Enter IP
 - **Share** — Copy join code (`IRON-7K3M`) or deep link for Discord/Steam.
 - **Spectator slots** — Visible if enabled. Join as spectator option.
 - **Trust label** — Lobby header and join dialog show trust/certification status (`IC Certified`, `IC Casual`, `Cross-Engine Experimental`, `Foreign Engine`) before Ready.
+
+**Additional lobby-visible metadata** (shown in lobby header, detail panel, or game settings area):
+
+- **Dedicated / Listen indicator** — shows whether this is a dedicated server or a player-hosted listen server (with host account name)
+- **MOTD (Message of the Day)** — optional host-set message displayed on join (e.g., community rules, welcome text)
+- **Description** — optional free-text description visible in a detail panel
+- **Voice chat status** — enabled/disabled indicator with mic icon (D059)
+- **Language** — self-declared lobby language (Global/Mixed, English, Russian, etc.)
+- **Victory conditions** — destruction, capture, timed, scenario-specific
+- **Superweapons** — on/off toggle (classic C&C setting, visible alongside crates/fog)
+- **Tech level** — starting tech level
+- **Experience preset name** — which named preset is active (D033/D054), shown alongside balance/speed
+- **Game type badge** — casual, competitive, co-op, tournament (visible in lobby header alongside trust label)
+- **Community branding** — verified community icons/logos in lobby header if the game is hosted under a specific community (D052)
+- **Relay region** — geographic location of the relay server (e.g., EU-West)
+- **Replay recording indicator** — whether the match will be recorded
 
 **Lobby → Game transition:** Host clicks "Start Game" → all clients enter Loading state → per-player progress bars → 3-second countdown → InGame.
 

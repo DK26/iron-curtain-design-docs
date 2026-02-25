@@ -1,6 +1,6 @@
 # Decision Log — Gameplay & AI
 
-Pathfinding, balance presets, QoL toggles, weather, campaigns, conditions/multipliers, cross-game components, trait abstraction, behavioral profiles, AI presets, LLM-enhanced AI, pathfinding presets, render modes, extended switchability, and asymmetric co-op.
+Pathfinding, balance presets, QoL toggles, weather, campaigns, conditions/multipliers, cross-game components, trait abstraction, behavioral profiles, AI presets, LLM-enhanced AI, pathfinding presets, render modes, extended switchability, asymmetric co-op, and LLM exhibition/prompt-coached match modes.
 
 ---
 
@@ -21,3 +21,4 @@ Pathfinding, balance presets, QoL toggles, weather, campaigns, conditions/multip
 | D048 | Switchable Render Modes — Classic, HD, and 3D in One Game | [D048](09d/D048-render-modes.md) |
 | D054 | Extended Switchability — Transport, Cryptographic Signatures, and Snapshot Serialization | [D054](09d/D054-extended-switchability.md) |
 | D070 | Asymmetric Co-op Mode — Commander & Field Ops (IC-Native Template Toolkit) | [D070](09d/D070-asymmetric-coop.md) |
+| D073 | LLM Exhibition Matches & Prompt-Coached Modes — Spectacle Without Breaking Competitive Integrity | [D073](09d/D073-llm-exhibition-modes.md) |

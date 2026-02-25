@@ -2,6 +2,8 @@
 
 This page is a **retrieval-oriented map** of the design docs for agentic LLM use (RAG, assistants, copilots, review bots).
 
+For a **human-facing overview** of the project's experimental LLM gameplay/content/tooling plans, see [Experimental LLM Modes & Plans (BYOLLM)](LLM-MODES.md).
+
 It is not a replacement for the main docs. It exists to improve:
 
 - retrieval precision

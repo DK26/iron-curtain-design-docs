@@ -777,9 +777,27 @@ Community servers publish their active rooms to a room listing API. The in-game 
 └──────────────┴──────┴─────────┴────────┴──────┴─────────────┘
 ```
 
-Filter by: game module (RA/TD), map, player count, ping, mods required, community, password protected. Sort by any column. Auto-refresh on configurable interval.
-
 This is the traditional server browser experience (OpenRA has this, Quake had this, every classic RTS had this). It coexists with room codes — a room visible in the browser also has a room code.
+
+**Room listing API payload** — community servers publish room metadata via a structured API. The full field set, filtering/sorting capabilities, and client-side browser organization (favorites, history, blacklist, friends' games, LAN tab, quick join) are documented in `player-flow/multiplayer.md` § Game Browser. The listing payload includes:
+
+- **Identity:** room name, host name (verified badge), dedicated/listen flag, optional description, optional MOTD, server URL/rules page, free-form tags/keywords
+- **Game state:** status (waiting/in-game/post-game), granular lobby phase, playtime/duration, rejoinable flag, replay recording flag
+- **Players:** current/max players, team format (1v1/2v2/FFA/co-op), AI count + difficulty, spectator count/slots, open slots, average player rating, player competitive ranks
+- **Map:** name, preview thumbnail, size, tileset/theater, type (skirmish/scenario/random), source (built-in/workshop/custom), designed player capacity
+- **Game rules:** game module (RA/TD), game type (casual/competitive/co-op/tournament), experience preset (D033), victory conditions, game speed, starting credits, fog of war mode, crates, superweapons, tech level, host-curated viewable cvars (D064)
+- **Mods & version:** engine version, mod name + version, content fingerprint/hash (map + mods — prevents join-then-desync in lockstep), client-side mod compatibility indicator (green/yellow/red), pure/unmodded flag, protocol version range
+- **Network:** ping/latency, relay server region, relay operator, connection type (relayed/direct/LAN)
+- **Trust & access:** trust label (D011: IC Certified/Casual/Cross-Engine/Foreign), public/private/invite-only, community membership with verified badges/icons/logos, community tags, minimum rank requirement
+- **Communication:** voice chat enabled/disabled (D059), language preference, AllChat policy
+- **Tournament:** tournament ID/name, bracket link, shoutcast/stream URL
+
+**Anti-abuse for listings:**
+- Room names, descriptions, and tags are subject to relay-side content filtering (configurable per community server, D064)
+- Custom icons/logos require community-level verification to prevent impersonation
+- Listing TTL with heartbeat — stale listings expire automatically (OpenRA pattern)
+- Community servers can delist rooms that violate their policies
+- Client-side blacklist allows players to permanently hide specific servers
 
 **Tier 4 — Matchmaking Queue (D052)**
 

@@ -1764,7 +1764,180 @@ All coordination features are accessible via the command console:
 /replay strip-voice <file> # Remove voice from replay file
 ```
 
-### 10. Role-Aware Coordination Presets (D070 Commander & Field Ops Co-op)
+### 10. Tactical Coordination Requests (Team Games)
+
+In team games (2v2, 3v3, co-op), players need to coordinate beyond chat and pings. IC provides a lightweight **tactical request system** — structured enough to be actionable, fast enough to not feel like work.
+
+**Design principle:** This is a game, not a project manager. Requests are quick, visual, contextual, and auto-expire. Zero backlog. Zero admin overhead. The system should feel like a C&C battlefield radio — short, punchy, tactical.
+
+#### Request Wheel (Standard Team Games)
+
+A second radial menu (separate from the chat wheel) for structured team requests. Opened with a dedicated key (default: `T`) or by holding the ping key and flicking to "Request."
+
+```
+         ┌──────────────┐
+    ┌────┤ Need Backup  ├────┐
+    │    └──────────────┘    │
+┌───┴──────┐          ┌─────┴────┐
+│ Need AA  │    [T]   │ Need Tanks│
+└───┬──────┘          └─────┬────┘
+    │    ┌──────────────┐    │
+    └────┤ Build Expand ├────┘
+         └──────────────┘
+```
+
+**Request categories (YAML-defined, moddable):**
+
+```yaml
+# coordination_requests.yaml
+requests:
+  - id: need_backup
+    category: military
+    label: { en: "Need backup here!", ru: "Нужна подмога!" }
+    icon: shield
+    target: location           # Request is pinned to where cursor was
+    audio_cue: "eva_backup"
+    auto_expire_seconds: 60
+
+  - id: need_anti_air
+    category: military
+    label: { en: "Need anti-air!", ru: "Нужна ПВО!" }
+    icon: aa_gun
+    target: location
+    audio_cue: "eva_air_threat"
+    auto_expire_seconds: 45
+
+  - id: need_tanks
+    category: military
+    label: { en: "Send armor!", ru: "Нужна бронетехника!" }
+    icon: heavy_tank
+    target: location
+    audio_cue: "eva_armor"
+    auto_expire_seconds: 60
+
+  - id: build_expansion
+    category: economy
+    label: { en: "Build expansion here", ru: "Постройте базу здесь" }
+    icon: refinery
+    target: location
+    auto_expire_seconds: 90
+
+  - id: attack_target
+    category: tactical
+    label: { en: "Focus fire this target!", ru: "Огонь по цели!" }
+    icon: crosshair
+    target: entity_or_location  # Can target a specific building/unit
+    auto_expire_seconds: 45
+
+  - id: defend_area
+    category: tactical
+    label: { en: "Defend this area!", ru: "Защитите зону!" }
+    icon: fortify
+    target: location
+    auto_expire_seconds: 90
+
+  - id: share_resources
+    category: economy
+    label: { en: "Need credits!", ru: "Нужны деньги!" }
+    icon: credits
+    target: none               # No location — general request
+    auto_expire_seconds: 30
+
+  - id: retreat_now
+    category: tactical
+    label: { en: "Fall back! Regrouping.", ru: "Отступаем! Перегруппировка." }
+    icon: retreat
+    target: location           # Suggested rally point
+    auto_expire_seconds: 30
+```
+
+#### How It Looks In-Game
+
+When a player sends a request:
+
+1. **Minimap marker** appears at the target location with the request icon (pulsing gently for 5 seconds, then steady)
+2. **Brief audio cue** plays for teammates (EVA voice line if configured, otherwise a notification sound)
+3. **Team chat message** auto-posted: `[CommanderZod] requests: Need backup here! [minimap ping]`
+4. **Floating indicator** appears at the world location (visible when camera is nearby — same rendering as tactical markers)
+
+When a teammate responds:
+
+```
+┌──────────────────────────────────┐
+│  CommanderZod requests:          │
+│  "Need backup here!" (0:42 left) │
+│                                  │
+│  [✓ On my way]  [✗ Can't help]  │
+└──────────────────────────────────┘
+```
+
+- **"On my way"** — small notification to the requester: `"alice is responding to your request"`. Marker changes to show a responder icon.
+- **"Can't help"** — small notification: `"alice can't help right now"`. No judgment, no penalty.
+- **No response required** — teammates can ignore requests. The request auto-expires silently. No nagging.
+
+#### Auto-Expire and Anti-Spam
+
+- **Auto-expire:** Every request has a `auto_expire_seconds` value (30–90 seconds depending on type). When it expires, the marker fades and disappears. No clutter accumulation.
+- **Max active requests:** 3 per player at a time. Sending a 4th replaces the oldest.
+- **Cooldown:** 5-second cooldown between requests from the same player.
+- **Duplicate collapse:** If a player requests "Need backup" twice at nearly the same location, the second request refreshes the timer instead of creating a duplicate.
+
+#### Context-Aware Requests
+
+The request wheel adapts based on game state:
+
+| Context | Available requests |
+|---------|-------------------|
+| **Early game** (first 3 minutes) | Build expansion, Share resources, Scout here |
+| **Under air attack** | "Need AA" is highlighted / auto-suggested |
+| **Ally's base under attack** | "Need backup at [ally's base]" auto-fills location |
+| **Low on resources** | "Need credits" is highlighted |
+| **Enemy superweapon detected** | "Destroy superweapon!" appears as a special request option |
+
+This is lightweight context — the request wheel shows all options always, but highlights contextually relevant ones with a subtle glow. No options are hidden.
+
+#### Integration with Existing Systems
+
+| System | How requests integrate |
+|--------|----------------------|
+| **Pings (D059 §3)** | Requests are an extension of the ping system — same minimap markers, same rendering pipeline, same deterministic order stream |
+| **Chat wheel (D059 §4a)** | Chat wheel is for social phrases ("gg", "gl hf"). Request wheel is for tactical coordination. Separate keys, separate radials. |
+| **Tactical markers (D059 §3)** | Requests create tactical markers with a request-specific icon and auto-expire behavior |
+| **D070 support requests** | In Commander & SpecOps mode, the request wheel transforms into the role-specific request wheel (§10 below). Same UX, different content. |
+| **Replay** | Requests are recorded as `PlayerOrder::CoordinationRequest` in the order stream. Replays show all requests with timing and responses — reviewers can see the teamwork. |
+| **MVP Awards** | "Best Wingman" award (post-game.md) tracks request responses as assist actions |
+
+#### Mode-Aware Behavior
+
+| Game mode | Request system behavior |
+|-----------|------------------------|
+| **1v1** | Request wheel disabled (no teammates) |
+| **2v2, 3v3, FFA teams** | Standard request wheel with military/economy/tactical categories |
+| **Co-op vs AI** | Same as team games, plus cooperative-specific requests ("Hold this lane", "I'll take left") |
+| **Commander & SpecOps (D070)** | Request wheel becomes the role-specific request/response system (§10 below) with lifecycle states, support queue, and Commander approval flow |
+| **Survival (D070-adjacent)** | Request wheel adds survival-specific options ("Need medkit", "Cover me", "Objective spotted") |
+
+#### Fun Factor Alignment
+
+The coordination system is designed around C&C's "toy soldiers on a battlefield" identity:
+
+- **EVA voice lines** for requests make them feel like military radio chatter, not UI notifications
+- **Visual language matches the game** — request markers use the same art style as other tactical markers (military iconography, faction-colored)
+- **Speed over precision** — one key + one flick = request sent. No menus, no typing, no forms
+- **Social, not demanding** — responses are optional, positive ("On my way" vs "Can't help" — no "Why aren't you helping?")
+- **Auto-expire = no guilt** — missed requests vanish. No persistent task list making players feel like they failed
+- **Post-game recognition** — "Best Wingman" award rewards players who respond to requests. Positive reinforcement, not punishment for ignoring them
+
+#### Moddable
+
+The entire request catalog is YAML-driven. Modders and game modules can:
+- Add game-specific requests (Tiberian Dawn: "Need ion cannon target", "GDI reinforcements")
+- Change auto-expire timers, cooldowns, max active count
+- Add custom EVA voice lines per request
+- Publish custom request sets to Workshop
+- Total conversion mods can replace the entire request vocabulary
+
+### 11. Role-Aware Coordination Presets (D070 Commander & Field Ops Co-op)
 
 D070's asymmetric co-op mode (`Commander & Field Ops`) extends D059 with a **standardized request/response coordination layer**. This is a D059 communication feature, not a separate subsystem.
 

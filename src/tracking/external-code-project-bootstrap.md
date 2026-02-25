@@ -103,11 +103,15 @@ When implementation reveals a mismatch, missing detail, or contradiction in the 
    - concrete conflict/missing "how"
    - proposed options and tradeoffs
    - impact on milestones/dependencies/priority
-4. If work can proceed safely, implement a bounded temporary approach and label it:
+4. **Document the divergence rationale locally in the implementation repo.** The codebase that diverges must keep its own record of why — not just rely on an upstream issue. This includes:
+   - a note in `docs/design-gap-requests/` or equivalent local tracking file
+   - inline code comments at the divergence point referencing the issue and rationale
+   - the full reasoning for why the original design was not followed
+5. If work can proceed safely, implement a bounded temporary approach and label it:
    - `proposal-only`
    - `implementation placeholder`
    - `blocked on Pxxx`
-5. Update the design-doc tracker/overlay in the same planning pass if the change is accepted.
+6. Update the design-doc tracker/overlay in the same planning pass if the change is accepted.
 
 ## What Counts as a Design Gap (Examples)
 

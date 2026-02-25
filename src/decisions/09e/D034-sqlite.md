@@ -236,6 +236,162 @@ CREATE VIRTUAL TABLE replay_search USING fts5(
 -- into the FTS index. Contentless means FTS stores its own copy — no content= source mismatch.
 ```
 
+### User-Facing Database Access
+
+The `.db` files are not hidden infrastructure — they are a user-facing feature. IC explicitly exposes SQLite databases to players, modders, community tool developers, and server operators as a queryable, exportable, optimizable data surface.
+
+**Philosophy:** The `.db` file IS the export. No SDK required. No reverse engineering. No waiting for us to build an API. A player's data is theirs, stored in the most widely-supported database format in the world. Every tool that reads SQLite — DB Browser, DBeaver, `sqlite3` CLI, Python's `sqlite3` module, Datasette, spreadsheet import — works with IC data out of the box.
+
+**`ic db` CLI subcommand** — unified entry point for all local database operations:
+
+```
+ic db list                              # List all local .db files with sizes and last-modified
+ic db query gameplay "SELECT ..."       # Run a read-only SQL query against gameplay.db
+ic db query profile "SELECT ..."        # Run a read-only SQL query against profile.db
+ic db query community <name> "SELECT ..." # Query a specific community's credential store
+ic db query telemetry "SELECT ..."      # Query telemetry.db (frame times, tick durations, I/O latency)
+ic db export gameplay matches --format csv > matches.csv  # Export a table or view to CSV
+ic db export gameplay v_win_rate_by_faction --format json  # Export a pre-built view to JSON
+ic db schema gameplay                   # Print the full schema of gameplay.db
+ic db schema gameplay matches           # Print the schema of a specific table
+ic db optimize                          # VACUUM + ANALYZE all local databases (reclaim space, rebuild indexes)
+ic db optimize gameplay                 # Optimize a specific database
+ic db size                              # Show disk usage per database
+ic db open gameplay                     # Open gameplay.db in the system's default SQLite browser (if installed)
+```
+
+**All queries are read-only by default.** `ic db query` opens the database in `SQLITE_OPEN_READONLY` mode. There is no `ic db write` command — the engine owns the schema and write paths. Users who want to modify their data can do so with external tools (it's their file), but IC does not provide write helpers that could corrupt internal state.
+
+**Shipped `.sql` files** — the SQL queries that the engine uses internally are shipped as readable `.sql` files alongside the game. This is not just documentation — these are the actual queries the engine executes, extracted into standalone files that users can inspect, learn from, adapt, and use as templates for their own tooling.
+
+```
+<install_dir>/sql/
+├── schema/
+│   ├── gameplay.sql              # CREATE TABLE/INDEX/VIEW for gameplay.db
+│   ├── profile.sql               # CREATE TABLE/INDEX/VIEW for profile.db
+│   ├── achievements.sql          # CREATE TABLE/INDEX/VIEW for achievements.db
+│   ├── telemetry.sql             # CREATE TABLE/INDEX/VIEW for telemetry.db
+│   └── community.sql             # CREATE TABLE/INDEX/VIEW for community credential stores
+├── queries/
+│   ├── career-stats.sql          # Win rate, faction breakdown, rating history
+│   ├── post-game-stats.sql       # Per-match stats shown on the post-game screen
+│   ├── campaign-dashboard.sql    # Roster progression, branch visualization
+│   ├── ai-adaptation.sql         # Queries ic-ai uses for difficulty scaling and counter-strategy
+│   ├── player-style-profile.sql  # D042 behavioral aggregation queries
+│   ├── replay-search.sql         # FTS5 queries for replay catalog search
+│   ├── mod-balance.sql           # Unit win-rate contribution, cost-efficiency analysis
+│   ├── economy-trends.sql        # Harvesting, spending, efficiency over time
+│   ├── mvp-awards.sql            # Post-game award computation queries
+│   └── matchmaking-rating.sql    # Glicko-2 update queries (community server)
+├── views/
+│   ├── v_win_rate_by_faction.sql
+│   ├── v_recent_matches.sql
+│   ├── v_economy_trends.sql
+│   ├── v_unit_kd_ratio.sql
+│   └── v_apm_per_match.sql
+├── examples/
+│   ├── stream-overlay.sql        # Example: live stats for OBS/streaming overlays
+│   ├── discord-bot.sql           # Example: match result posting for Discord bots
+│   ├── coaching-report.sql       # Example: weakness analysis for coaching tools
+│   ├── balance-spreadsheet.sql   # Example: export data for spreadsheet analysis
+│   └── tournament-audit.sql      # Example: verify signed match results
+└── migrations/
+    ├── 001-initial.sql
+    ├── 002-add-mod-fingerprint.sql
+    └── ...                       # Numbered, forward-only migrations
+```
+
+**Why ship `.sql` files:**
+
+- **Transparency.** Players can see exactly what queries the AI uses to adapt, what stats the post-game screen computes, how matchmaking ratings are calculated. No black boxes. This is the "hacky in the good way" philosophy — the game trusts its users with knowledge.
+- **Templates.** Community tool developers don't start from scratch. They copy `queries/career-stats.sql`, modify it for their Discord bot, and it works because it's the same query the engine uses.
+- **Education.** New SQL users learn by reading real, production queries with comments explaining the logic. The `examples/` directory provides copy-paste starting points for common community tools.
+- **Moddable queries.** Modders can ship custom `.sql` files in their Workshop packages — for example, a total conversion mod might ship `queries/mod-balance.sql` tuned to its custom unit types. The `ic db query --file` flag runs any `.sql` file against the local databases.
+- **Auditability.** Tournament organizers and competitive players can verify that the matchmaking and rating queries are fair by reading the actual SQL.
+
+**`ic db` integration with `.sql` files:**
+
+```
+ic db query gameplay --file sql/queries/career-stats.sql     # Run a shipped query file
+ic db query gameplay --file my-custom-query.sql               # Run a user's custom query file
+ic db query gameplay --file sql/examples/stream-overlay.sql   # Run an example query
+```
+
+**Pre-built SQL views for common queries** — shipped as part of the schema (and as standalone `.sql` files in `sql/views/`), queryable by users without writing complex SQL:
+
+```sql
+-- Pre-built views created during schema migration, available to external tools
+CREATE VIEW v_win_rate_by_faction AS
+    SELECT faction, COUNT(*) as games,
+           SUM(CASE WHEN result = 'victory' THEN 1 ELSE 0 END) as wins,
+           ROUND(100.0 * SUM(CASE WHEN result = 'victory' THEN 1 ELSE 0 END) / COUNT(*), 1) as win_pct
+    FROM match_players WHERE is_local = 1
+    GROUP BY faction;
+
+CREATE VIEW v_recent_matches AS
+    SELECT m.started_at, m.map_name, m.game_mode, m.duration_ticks,
+           mp.faction, mp.result, mp.player_name
+    FROM matches m JOIN match_players mp ON m.id = mp.match_id
+    WHERE mp.is_local = 1
+    ORDER BY m.started_at DESC LIMIT 50;
+
+CREATE VIEW v_economy_trends AS
+    SELECT session_id, tick,
+           json_extract(data_json, '$.total_harvested') as harvested,
+           json_extract(data_json, '$.total_spent') as spent
+    FROM gameplay_events
+    WHERE event_type = 'economy_snapshot';
+
+CREATE VIEW v_unit_kd_ratio AS
+    SELECT unit_type_id, COUNT(*) FILTER (WHERE event_type = 'unit_killed') as kills,
+           COUNT(*) FILTER (WHERE event_type = 'unit_lost') as deaths
+    FROM gameplay_events
+    WHERE event_type IN ('unit_killed', 'unit_lost') AND player = (SELECT name FROM local_identity)
+    GROUP BY unit_type_id;
+
+CREATE VIEW v_apm_per_match AS
+    SELECT session_id,
+           COUNT(*) FILTER (WHERE event_type LIKE 'order_%') as total_orders,
+           MAX(tick) as total_ticks,
+           ROUND(COUNT(*) FILTER (WHERE event_type LIKE 'order_%') * 1800.0 / MAX(tick), 1) as apm
+    FROM gameplay_events
+    GROUP BY session_id;
+```
+
+**Schema documentation** is published as part of the IC SDK and bundled with the game installation:
+- `<install_dir>/docs/db-schema/gameplay.md` — full table/view/index reference with example queries
+- `<install_dir>/docs/db-schema/profile.md`
+- `<install_dir>/docs/db-schema/community.md`
+- Also available in the SDK's embedded manual (`F1` → Database Schema Reference)
+- Schema docs are versioned alongside the engine — each release notes schema changes
+
+**`ic db optimize`** — maintenance command for players on constrained storage:
+- Runs `VACUUM` (defragment and reclaim space) + `ANALYZE` (rebuild index statistics) on all local databases
+- Safe to run while the game is closed
+- Particularly useful for portable mode / flash drive users where fragmented databases waste limited space
+- Can be triggered from `Settings → Data → Optimize Databases` in the UI
+
+**Access policy by database:**
+
+| Database | Read | Write | Optimize | Notes |
+|----------|------|-------|----------|-------|
+| `gameplay.db` | Full SQL access | External tools only (user's file) | Yes | Main analytics surface — stats, events, match history |
+| `profile.db` | Full SQL access | External tools only | Yes | Friends, settings, avatar, privacy |
+| `communities/*.db` | Full SQL access | **Tamper-evident** — SCRs are signed, modifying them invalidates Ed25519 signatures | Yes | Ratings, match results, achievements |
+| `achievements.db` | Full SQL access | **Tamper-evident** — SCR-backed | Yes | Achievement proofs |
+| `telemetry.db` | Full SQL access | External tools only | Yes | Frame times, tick durations, I/O latency — self-diagnosis |
+| `workshop/cache.db` | Full SQL access | External tools only | Yes | Mod metadata, dependency trees, download history |
+
+**Community tool use cases enabled by this access:**
+
+- **Stream overlays** reading live stats from `gameplay.db` (via file polling or SQLite `PRAGMA data_version` change detection)
+- **Discord bots** reporting match results from `communities/*.db`
+- **Coaching tools** querying `gameplay_events` for weakness analysis
+- **Balance analysis scripts** aggregating unit performance across matches
+- **Tournament tools** auditing match results from signed SCRs
+- **Player dashboard websites** importing data via `ic db export`
+- **Spreadsheet analysis** via CSV export (`ic db export gameplay v_win_rate_by_faction --format csv`)
+
 ### Schema Migration
 
 Each service manages its own schema using embedded SQL migrations (numbered, applied on startup). The `rusqlite` `user_version` pragma tracks the current schema version. Forward-only migrations — the binary upgrades the database file automatically on first launch after an update.

@@ -79,6 +79,8 @@ Every decision has a rationale. Every system has been thought through against th
 
 What started as "can I get this to work?" turned into "how do I make sure everything I build can serve the community?" That's where I am now.
 
+My goal is simple: make us fall in love again.
+
 ---
 
 *— David Krasnitsky, February 2026*

@@ -41,6 +41,7 @@ InGame → Victory/Defeat → Post-Game
 **Post-game elements:**
 
 - **Stats comparison** — Economy, production, combat, activity (APM/EPM). Graphs available on hover/click.
+- **MVP Awards** — Stat-based recognition cards highlighting top performers (see MVP Awards section below).
 - **Rating update** — Tier badge animation if promoted/demoted. Delta shown.
 - **Chat** — 30-second active period, auto-closes after 5 minutes.
 - **Post-game learning** (D065) — Rule-based tip analyzing the match (e.g., idle harvesters, low APM, no control groups used). Links to tutorial or replay annotation.
@@ -50,6 +51,73 @@ InGame → Victory/Defeat → Post-Game
 - **Main Menu** → Return to main menu
 - **Report Player** → Report dialog (reason dropdown, optional text)
 - **Post-play feedback pulse** (optional, sampled) — quick "how was this?" prompt for mode/mod/campaign with skip/snooze controls
+
+#### MVP Awards (Post-Game Recognition)
+
+After every multiplayer match (skirmish, ranked, co-op, team), the post-game screen will display stat-based MVP award cards recognizing standout performance. These are auto-calculated from match data — no player voting required.
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│  MVP AWARDS                                                  │
+│                                                              │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐         │
+│  │ 🏆 MVP      │  │ ⚔ Warlord   │  │ 💰 Tycoon   │         │
+│  │ CommanderX  │  │ TankRush99  │  │ You         │         │
+│  │ Score: 4820 │  │ 142 kills   │  │ $68,200     │         │
+│  │             │  │ 23 K/D      │  │ harvested   │         │
+│  └─────────────┘  └─────────────┘  └─────────────┘         │
+│                                                              │
+│  Personal: 🛡 Iron Wall — lost only 12 units                │
+└──────────────────────────────────────────────────────────────┘
+```
+
+**Award categories** — the engine selects 2–4 awards per match from the following categories, based on which stats are most exceptional relative to the match context. Not all awards appear every game — only standout performances are highlighted.
+
+| Category | Award Name | Criteria |
+|----------|-----------|----------|
+| **Overall** | MVP | Highest composite score (weighted: economy + combat + production + map control) |
+| **Economy** | Tycoon | Highest total resources harvested |
+| | Efficient Commander | Best resource-to-army conversion ratio (least waste) |
+| | Expansion Master | Fastest or most ore/refinery expansions |
+| **Combat** | Warlord | Most enemy units destroyed |
+| | Iron Wall | Best unit preservation (lowest units lost relative to army size) |
+| | Tank Buster | Most enemy vehicles/armor destroyed |
+| | Air Superiority | Most enemy aircraft destroyed or air-to-ground kills |
+| | First Strike | First player to destroy an enemy unit |
+| | Decimator | Largest single engagement (most units destroyed in one battle) |
+| **Production** | War Machine | Most units produced |
+| | Tech Rush | Fastest time to highest tech tier |
+| | Builder | Most structures built |
+| **Strategic** | Blitzkrieg | Fastest victory (shortest match duration, only in decisive wins) |
+| | Map Control | Highest average map vision / territory control |
+| | Spy Master | Most intelligence gathered (scout actions, radar coverage) |
+| | Saboteur | Most enemy structures destroyed |
+| **Team** (team games) | Best Wingman | Most assist actions (shared vision, resource transfers, combined attacks) |
+| | Team Backbone | Highest resource sharing / support to allies |
+| | Last Stand | Survived longest after allies were eliminated |
+| **Co-op** (D070) | Mission Critical | Highest objective completion contribution |
+| | Guardian Angel | Most successful support/extraction actions (Commander role) |
+| | Shadow Operative | Most field objectives completed (SpecOps role) |
+| **Fun / Flavor** | Overkill | Used superweapon when conventional forces would have sufficed |
+| | Comeback King | Won after being behind by >50% army value |
+| | Untouchable | Won without losing a single structure |
+| | Turtle | Longest time before first attack |
+
+**Award selection algorithm:**
+
+1. After match ends, compute all stat categories for all players
+2. For each category, check if any player's stat is significantly above the match average (threshold: top percentile relative to match context, not absolute values)
+3. Select the top 2–4 most exceptional awards — prefer variety across categories (don't show 3 combat awards)
+4. In 1v1: show 1–2 awards per player. In team games: show 3–4 total across all players. Overall MVP always shown if the match has 3+ players
+5. Each player also sees a **personal award** (their single best stat) even if they didn't earn a match-wide award
+
+**Design rules:**
+
+- **No effect on ranked rating.** Awards are cosmetic recognition only — Glicko-2 rating changes are computed purely from win/loss (D055).
+- **Profile-visible.** Award counts are tracked in the player profile (D053) — e.g., "MVP ×47, Tycoon ×23, Iron Wall ×15." Displayed as a stat line, not badges.
+- **Moddable.** Award definitions are YAML-driven (`awards.yaml`): name, icon, stat formula, threshold, flavor text. Modders can add game-module-specific awards (e.g., Tiberian Dawn: "Nod Commander" for most stealth unit kills). Workshop-publishable.
+- **Anti-farming.** Awards are only granted in matches that meet minimum thresholds: minimum match duration (>3 minutes), minimum opponent count/difficulty, and no early surrenders. AI-only matches grant awards but they are tagged as `vs-AI` in the profile and tracked separately.
+- **Replay-linked.** Each award links to the replay moment that earned it (e.g., "Decimator" links to the tick of the largest battle). Clicking the award in the post-game screen jumps to that moment in the replay viewer.
 
 #### Post-Play Feedback Prompt (Modes / Mods / Campaigns; Optional D049 + D053)
 

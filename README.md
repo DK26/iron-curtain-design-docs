@@ -37,6 +37,8 @@ The Remastered Collection is a faithful preservation — Windows-only, game logi
 
 Iron Curtain is designed so anyone can **create with it, compete on it, and build communities around it** — on an engine designed to outlast any single organization.
 
+The goal is simple: **make us fall in love again.**
+
 ## What You Get
 
 **A creativity platform.** A full scenario editor, campaign editor, asset studio, and Workshop — not just map painting, but drag-and-drop mission design inspired by Operation Flashpoint and ArmA. Three modding tiers (YAML data, Lua scripting, WASM engine mods) with zero recompilation. Hot-reload everything. Optional LLM-generated missions and campaigns if you want them. Publish anything to the Workshop — maps, music, sprites, scripts, balance presets, full mods — each independently versioned with one-click install.
@@ -151,7 +153,9 @@ I've been a Red Alert fan since childhood — two kids on ancient computers play
 
 I started learning to code at 12 (Pascal), worked my way through network engineering, backend development, and cyber defense, and eventually found Rust — a language that lets you build close to the hardware without the fear of C's footguns. Over the next five years I went deep: building backend systems in Rust, contributing to its open-source ecosystem, and making it my primary language. When I discovered OpenRA, I was thrilled the community had kept Red Alert alive — and the idea of writing an engine in Rust started taking root.
 
-I wasn't trying to replace OpenRA — I just wanted to test new technology and see what was possible. But the more I thought about the design, the more I realized it could serve the community. Years later, LLM agents matured into useful development tools, and that gave me the confidence to take on the full scope of what this project has become.
+This project also lets me get hands-on experience in game dev and create and play with experimental ideas. I wasn't trying to replace OpenRA — I just wanted to test new technology and see what was possible. But the more I thought about the design, the more I realized it could serve the community. LLM agents matured into useful development tools, and that gave me the confidence to take on the full scope of what this project can become.
+
+I chose Rust because I believe it's the best match for working with LLMs: the language has rules that make bugs and errors harder to create and easy to notice, while the LLM brings velocity to development with this amazing language. I see it as the future of LLM-made products, at least until AI is capable of creating binary executables without a single error in them.
 
 My most formative gaming experience outside Red Alert was Operation Flashpoint — a game that gave you tools to create your own scenarios. That philosophy — games as platforms, not just products — is at the heart of this project.
 

@@ -44,6 +44,8 @@ A Rust-native RTS engine that supports OpenRA resource formats (`.mix`, `.shp`, 
 | 16  | `16-CODING-STANDARDS.md`           | Coding standards: file structure, commenting philosophy, naming conventions, error handling, testing patterns, code review checklist                                  | You're writing code, reviewing a PR, onboarding as a contributor, or want to understand the project's code style   |
 | 17  | `17-PLAYER-FLOW.md`                | Player flow & UI navigation: every screen, menu, overlay, and navigation path from first launch through gameplay, UX principles, platform adaptations                 | You're designing UI, implementing a screen, tracing how a player reaches a feature, or evaluating the UX           |
 
+**LLM feature overview (optional / experimental):** See [Experimental LLM Modes & Plans (BYOLLM)](LLM-MODES.md) for a consolidated overview of planned LLM gameplay modes, creator tooling, and external-tool integrations. The project is fully designed to work without any LLM configured.
+
 ## Key Architectural Invariants
 
 These are non-negotiable across the entire project:

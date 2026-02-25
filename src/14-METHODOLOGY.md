@@ -494,9 +494,11 @@ The full agent rules live in `AGENTS.md` § "Working With This Codebase." This s
 
 3. **Log design changes in the decisions sub-documents.** If a decision changes, don't silently edit it — find the decision in the appropriate sub-file via [09-DECISIONS.md](09-DECISIONS.md) and add a note: "Revised from X to Y because implementation revealed Z." The decision log is a history, not just a current snapshot.
 
-4. **Community feedback triggers design review.** If the community consistently reports that a design choice doesn't work in practice, that's data. Evaluate it against the philosophy principles, and if the design is wrong, update it. See [13-PHILOSOPHY](13-PHILOSOPHY.md) principle #2: "Fun beats documentation — if it's in the doc but plays poorly, cut it."
+4. **If implementation diverges from the original design, track it with full rationale — and open an issue.** The implementation repo must locally document why it chose to diverge (in code comments, a design-gap tracking file, or both), and post a design-change issue in the design-doc repo with the complete rationale and proposed changes. See `src/tracking/external-code-project-bootstrap.md` § Design Change Escalation Workflow for the full process.
 
-5. **Never silently promise something the code can't deliver.** If a design doc describes a feature that hasn't been built yet, it must use future tense. If a feature was cut or descoped, the doc must say so explicitly. Silence implies completeness — and that makes silence a lie.
+5. **Community feedback triggers design review.** If the community consistently reports that a design choice doesn't work in practice, that's data. Evaluate it against the philosophy principles, and if the design is wrong, update it. See [13-PHILOSOPHY](13-PHILOSOPHY.md) principle #2: "Fun beats documentation — if it's in the doc but plays poorly, cut it."
+
+6. **Never silently promise something the code can't deliver.** If a design doc describes a feature that hasn't been built yet, it must use future tense. If a feature was cut or descoped, the doc must say so explicitly. Silence implies completeness — and that makes silence a lie.
 
 **What triggers design evolution:**
 - Implementation reveals a better approach than what was planned
