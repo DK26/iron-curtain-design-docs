@@ -35,10 +35,10 @@
             const path_to_root = "../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-61d2369b.js";
+            window.path_to_searchindex_js = "../../searchindex-f3722748.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../../toc-1553b04b.js"></script>
+        <script src="../../toc-56a6701d.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -903,8 +903,28 @@ fn matchmaking_tick(pool: &amp;mut Vec&lt;MatchmakingEntry&gt;, provider: &amp;d
 │ Newbies Only │ bob  │ 2/6     │ Desert │ 67ms │ none        │
 └──────────────┴──────┴─────────┴────────┴──────┴─────────────┘
 </code></pre>
-<p>Filter by: game module (RA/TD), map, player count, ping, mods required, community, password protected. Sort by any column. Auto-refresh on configurable interval.</p>
 <p>This is the traditional server browser experience (OpenRA has this, Quake had this, every classic RTS had this). It coexists with room codes — a room visible in the browser also has a room code.</p>
+<p><strong>Room listing API payload</strong> — community servers publish room metadata via a structured API. The full field set, filtering/sorting capabilities, and client-side browser organization (favorites, history, blacklist, friends’ games, LAN tab, quick join) are documented in <code>player-flow/multiplayer.md</code> § Game Browser. The listing payload includes:</p>
+<ul>
+<li><strong>Identity:</strong> room name, host name (verified badge), dedicated/listen flag, optional description, optional MOTD, server URL/rules page, free-form tags/keywords</li>
+<li><strong>Game state:</strong> status (waiting/in-game/post-game), granular lobby phase, playtime/duration, rejoinable flag, replay recording flag</li>
+<li><strong>Players:</strong> current/max players, team format (1v1/2v2/FFA/co-op), AI count + difficulty, spectator count/slots, open slots, average player rating, player competitive ranks</li>
+<li><strong>Map:</strong> name, preview thumbnail, size, tileset/theater, type (skirmish/scenario/random), source (built-in/workshop/custom), designed player capacity</li>
+<li><strong>Game rules:</strong> game module (RA/TD), game type (casual/competitive/co-op/tournament), experience preset (D033), victory conditions, game speed, starting credits, fog of war mode, crates, superweapons, tech level, host-curated viewable cvars (D064)</li>
+<li><strong>Mods &amp; version:</strong> engine version, mod name + version, content fingerprint/hash (map + mods — prevents join-then-desync in lockstep), client-side mod compatibility indicator (green/yellow/red), pure/unmodded flag, protocol version range</li>
+<li><strong>Network:</strong> ping/latency, relay server region, relay operator, connection type (relayed/direct/LAN)</li>
+<li><strong>Trust &amp; access:</strong> trust label (D011: IC Certified/Casual/Cross-Engine/Foreign), public/private/invite-only, community membership with verified badges/icons/logos, community tags, minimum rank requirement</li>
+<li><strong>Communication:</strong> voice chat enabled/disabled (D059), language preference, AllChat policy</li>
+<li><strong>Tournament:</strong> tournament ID/name, bracket link, shoutcast/stream URL</li>
+</ul>
+<p><strong>Anti-abuse for listings:</strong></p>
+<ul>
+<li>Room names, descriptions, and tags are subject to relay-side content filtering (configurable per community server, D064)</li>
+<li>Custom icons/logos require community-level verification to prevent impersonation</li>
+<li>Listing TTL with heartbeat — stale listings expire automatically (OpenRA pattern)</li>
+<li>Community servers can delist rooms that violate their policies</li>
+<li>Client-side blacklist allows players to permanently hide specific servers</li>
+</ul>
 <p><strong>Tier 4 — Matchmaking Queue (D052)</strong></p>
 <p>Already designed above. Player enters a queue; community server matches by rating. This creates rooms automatically — the player never sees a room code or browser.</p>
 <p><strong>Tier 5 — Deep Links / Invites</strong></p>

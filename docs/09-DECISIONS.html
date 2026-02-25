@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-61d2369b.js";
+            window.path_to_searchindex_js = "searchindex-f3722748.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-1553b04b.js"></script>
+        <script src="toc-56a6701d.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -194,7 +194,7 @@
 <tr><td><a href="decisions/09a-foundation.html">Foundation &amp; Core</a></td><td>Language, framework, data formats, simulation invariants, core engine identity</td><td>D001–D003, D009, D010, D015, D017, D018, D039, D063, D064, D067</td></tr>
 <tr><td><a href="decisions/09b-networking.html">Networking &amp; Multiplayer</a></td><td>Network model, relay server, sub-tick ordering, community servers, ranked play</td><td>D006–D008, D011, D012, D052, D055, D060</td></tr>
 <tr><td><a href="decisions/09c-modding.html">Modding &amp; Compatibility</a></td><td>Scripting tiers, OpenRA compatibility, UI themes, mod profiles, licensing, export</td><td>D004, D005, D014, D023–D027, D032, D050, D051, D062, D066, D068</td></tr>
-<tr><td><a href="decisions/09d-gameplay.html">Gameplay &amp; AI</a></td><td>Pathfinding, balance, QoL, AI systems, render modes, trait-abstracted subsystems, asymmetric co-op mode design</td><td>D013, D019, D021, D022, D028, D029, D033, D041–D045, D048, D054, D070</td></tr>
+<tr><td><a href="decisions/09d-gameplay.html">Gameplay &amp; AI</a></td><td>Pathfinding, balance, QoL, AI systems, render modes, trait-abstracted subsystems, asymmetric co-op mode design, LLM exhibition/prompt-coached match modes</td><td>D013, D019, D021, D022, D028, D029, D033, D041–D045, D048, D054, D070, D073</td></tr>
 <tr><td><a href="decisions/09e-community.html">Community &amp; Platform</a></td><td>Workshop, telemetry, storage, achievements, governance, profiles, data portability</td><td>D030, D031, D034–D037, D046, D049, D053, D061</td></tr>
 <tr><td><a href="decisions/09f-tools.html">Tools &amp; Editor</a></td><td>LLM mission generation, scenario editor, asset studio, mod SDK, foreign replays, skill library</td><td>D016, D020, D038, D040, D047, D056, D057</td></tr>
 <tr><td><a href="decisions/09g-interaction.html">In-Game Interaction</a></td><td>Command console, communication systems (chat, voice, pings), tutorial/new player experience, installation/setup wizard UX</td><td>D058, D059, D065, D069</td></tr>
@@ -279,6 +279,9 @@
 <tr><td>D068</td><td>Selective Installation &amp; Content Footprints</td><td><a href="decisions/09c-modding.html">Modding</a></td></tr>
 <tr><td>D069</td><td>Installation &amp; First-Run Setup Wizard</td><td><a href="decisions/09g/D069-install-wizard.html">Interaction</a></td></tr>
 <tr><td>D070</td><td>Asymmetric Co-op Mode — Commander &amp; Field Ops</td><td><a href="decisions/09d/D070-asymmetric-coop.html">Gameplay</a></td></tr>
+<tr><td>D071</td><td>External Tool API — IC Remote Protocol (ICRP)</td><td><a href="decisions/09f/D071-external-tool-api.html">Tools</a></td></tr>
+<tr><td>D072</td><td>Dedicated Server Management</td><td><a href="decisions/09b/D072-server-management.html">Networking</a></td></tr>
+<tr><td>D073</td><td>LLM Exhibition Matches &amp; Prompt-Coached Modes</td><td><a href="decisions/09d/D073-llm-exhibition-modes.html">Gameplay</a></td></tr>
 </tbody>
 </table>
 </div>
@@ -305,7 +308,7 @@
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                             </a>
 
-                            <a rel="next prefetch" href="decisions/DECISION-CAPSULE-TEMPLATE.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="LLM-MODES.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                             </a>
 
@@ -319,7 +322,7 @@
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                     </a>
 
-                    <a rel="next prefetch" href="decisions/DECISION-CAPSULE-TEMPLATE.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="LLM-MODES.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                     </a>
             </nav>

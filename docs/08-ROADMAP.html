@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-61d2369b.js";
+            window.path_to_searchindex_js = "searchindex-f3722748.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-1553b04b.js"></script>
+        <script src="toc-56a6701d.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -408,6 +408,7 @@
 <li><strong><code>ic</code> CLI prototype:</strong> <code>ic mod init</code>, <code>ic mod check</code>, <code>ic mod run</code> — early tooling for Lua script development (full SDK in Phase 6a)</li>
 <li><strong><code>ic profile</code> CLI (D062):</strong> <code>ic profile save/list/activate/inspect/diff</code> — named mod compositions with switchable experience settings; modpack curators can save and compare configurations; profile fingerprint enables replay verification</li>
 <li><strong>Minimal Workshop (D030 early delivery):</strong> Central IC Workshop server + <code>ic mod publish</code> + <code>ic mod install</code> + basic in-game browser + auto-download on lobby join. Simple HTTP REST API, SQLite-backed. No federation, no replication, no promotion channels yet — those are Phase 6a</li>
+<li><strong>Standalone installer (D069 Layer 1):</strong> Platform-native installers for non-store distribution — NSIS <code>.exe</code> for Windows, <code>.dmg</code> for macOS, <code>.AppImage</code> for Linux. Handles binary placement, shortcuts, file associations (<code>.icrep</code>, <code>.icsave</code>, <code>ironcurtain://</code> URI scheme), and uninstaller registration. Portable mode checkbox creates <code>portable.marker</code>. Installer launches IC on completion → enters D069 First-Run Setup Wizard. CI pipeline builds installers automatically per release.</li>
 </ul>
 <h3 id="exit-criteria-4"><a class="header" href="#exit-criteria-4">Exit Criteria</a></h3>
 <ul>

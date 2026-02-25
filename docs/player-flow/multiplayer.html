@@ -35,10 +35,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-61d2369b.js";
+            window.path_to_searchindex_js = "../searchindex-f3722748.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-1553b04b.js"></script>
+        <script src="../toc-56a6701d.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -257,9 +257,100 @@
 <li>Click a game → Join Lobby (mod auto-download if needed, D030)</li>
 <li>In-progress games show [Spectate →] if spectating is enabled</li>
 <li>Trust indicators: ✓ Verified (bundled sources) vs. “Community” (user-added tracking servers)</li>
-<li>Filters: map name, mod, game status (waiting/in-progress), player count, ping range</li>
 <li>Sources configurable in Settings — merge view across official + community + OpenRA + CnCNet tracking servers</li>
 </ul>
+<p><strong>Server/room listing metadata</strong> — each listing in the game browser will expose the following fields. Not all fields are shown as columns in the default table view — some are visible on hover, in an expanded detail panel, or as filter/sort criteria.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Category</th><th>Field</th><th>Notes</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Identity</strong></td><td>Server/Room Name</td><td>User-chosen name</td></tr>
+<tr><td></td><td>Host Player Name</td><td>With verified badge if cryptographically verified (D052)</td></tr>
+<tr><td></td><td>Dedicated / Listen Server</td><td>Dedicated = standalone server; Listen = hosted by a player’s client</td></tr>
+<tr><td></td><td>Description (free-text)</td><td>Optional short description set by host (max ~200 chars)</td></tr>
+<tr><td></td><td>MOTD (Message of the Day)</td><td>Optional longer message shown on join or in detail panel</td></tr>
+<tr><td></td><td>Server URL / Rules Page</td><td>Link to community rules, Discord, website</td></tr>
+<tr><td></td><td>Tags / Keywords</td><td>Free-form tags for flexible filtering (inspired by Valve A2S); e.g., <code>newbies</code>, <code>no-rush-20</code>, <code>tournament</code>, <code>clan-war</code></td></tr>
+<tr><td><strong>Game state</strong></td><td>Status</td><td><code>Waiting</code> / <code>In-Game</code> / <code>Post-Game</code></td></tr>
+<tr><td></td><td>Lobby Phase (detail)</td><td>More granular: <code>open</code> / <code>filling</code> / <code>ready</code> / <code>countdown</code> / <code>in-game</code> / <code>post-game</code></td></tr>
+<tr><td></td><td>Playtime / Duration</td><td>How long the current game has been running (for in-progress games)</td></tr>
+<tr><td></td><td>Rejoinable</td><td>Whether a disconnected player can rejoin (important for lockstep)</td></tr>
+<tr><td></td><td>Replay Recording</td><td>Whether the match is being recorded as a <code>.icrep</code></td></tr>
+<tr><td><strong>Players</strong></td><td>Current Players / Max Players</td><td>e.g., “3/6”</td></tr>
+<tr><td></td><td>Team Format</td><td>Compact format: <code>1v1</code>, <code>2v2</code>, <code>3v3</code>, <code>FFA</code>, <code>2v2v2</code>, <code>Co-op</code></td></tr>
+<tr><td></td><td>AI Count + Difficulty</td><td>e.g., “2 AI (Hard)” — not just count</td></tr>
+<tr><td></td><td>Spectator Count / Spectator Slots</td><td>Whether spectators are allowed and current count</td></tr>
+<tr><td></td><td>Open Slots</td><td>Remaining player capacity</td></tr>
+<tr><td></td><td>Average Player Rating</td><td>Average Glicko-2 rating of joined players (AoE2 pattern — lets skilled players find competitive matches)</td></tr>
+<tr><td></td><td>Player Competitive Ranks</td><td>Rank tiers of joined players shown in detail panel</td></tr>
+<tr><td><strong>Map</strong></td><td>Map Name</td><td>Display name</td></tr>
+<tr><td></td><td>Map Preview / Thumbnail</td><td>Visual preview image</td></tr>
+<tr><td></td><td>Map Size</td><td>Dimensions or category (small/medium/large)</td></tr>
+<tr><td></td><td>Map Tileset / Theater</td><td>Temperate, Snow, Desert, etc. (C&amp;C visual theme)</td></tr>
+<tr><td></td><td>Map Type</td><td>Skirmish / Scenario / Random-generated</td></tr>
+<tr><td></td><td>Map Source</td><td>Built-in / Workshop / Custom (so clients know where to auto-download)</td></tr>
+<tr><td></td><td>Map Player Capacity</td><td>The map’s designed max players (may differ from server max)</td></tr>
+<tr><td><strong>Game rules</strong></td><td>Game Module</td><td>Red Alert, Tiberian Dawn, etc.</td></tr>
+<tr><td></td><td>Game Type / Mode</td><td>Casual, Competitive/Ranked, Co-op, Tournament, Custom</td></tr>
+<tr><td></td><td>Experience Preset</td><td>Which balance/AI/pathfinding preset is active (D033/D054)</td></tr>
+<tr><td></td><td>Victory Conditions</td><td>Destruction, capture, timed, scenario-specific</td></tr>
+<tr><td></td><td>Game Speed</td><td>Slow / Normal / Fast</td></tr>
+<tr><td></td><td>Starting Credits</td><td>Initial resource amount</td></tr>
+<tr><td></td><td>Fog of War Mode</td><td>Shroud / Explored / Revealed</td></tr>
+<tr><td></td><td>Crates</td><td>On / Off</td></tr>
+<tr><td></td><td>Superweapons</td><td>On / Off</td></tr>
+<tr><td></td><td>Tech Level</td><td>Starting tech level</td></tr>
+<tr><td></td><td>Viewable CVars (subset)</td><td>Host-selected subset of relevant configuration variables exposed to browser (from D064’s <code>server_config.toml</code>; not all ~200 parameters — only host-curated “most relevant” settings)</td></tr>
+<tr><td><strong>Mods &amp; version</strong></td><td>Engine Version</td><td>Exact IC build version</td></tr>
+<tr><td></td><td>Mod Name + Version</td><td>Active mods with version identifiers</td></tr>
+<tr><td></td><td>Mod Fingerprint / Content Hash</td><td>Integrity hash for map + mod content (Spring pattern — prevents join-then-desync)</td></tr>
+<tr><td></td><td>Mod Compatibility Indicator</td><td>Client-side computed: green (have everything) / yellow (auto-downloadable) / red (incompatible)</td></tr>
+<tr><td></td><td>Pure / Unmodded Flag</td><td>Single boolean: completely vanilla (Warzone pattern — instant competitive filter)</td></tr>
+<tr><td></td><td>Protocol Version</td><td>Client compatibility check (Luanti pattern: <code>proto_min</code>/<code>proto_max</code>)</td></tr>
+<tr><td><strong>Network</strong></td><td>Ping / Latency</td><td>Round-trip time measured from client</td></tr>
+<tr><td></td><td>Relay Server Region</td><td>Geographic location of the relay (e.g., EU-West, US-East)</td></tr>
+<tr><td></td><td>Relay Operator</td><td>Which community operates the relay</td></tr>
+<tr><td></td><td>Connection Type</td><td>Relayed / Direct / LAN</td></tr>
+<tr><td><strong>Trust &amp; access</strong></td><td>Trust Label</td><td><code>IC Certified</code> / <code>IC Casual</code> / <code>Cross-Engine Experimental</code> / <code>Foreign Engine</code> (D011)</td></tr>
+<tr><td></td><td>Public / Private</td><td>Open, password-protected, invite-only, or code-only</td></tr>
+<tr><td></td><td>Community Membership</td><td>Which community server(s) the game is listed on, with verified badges/icons/logos</td></tr>
+<tr><td></td><td>Community Tags</td><td>Official game, clan-specific, tournament bracket, etc.</td></tr>
+<tr><td></td><td>Custom Icons / Logos</td><td>Verified community branding; custom host icons (with abuse prevention — see D052)</td></tr>
+<tr><td></td><td>Minimum Rank Requirement</td><td>Entry barrier (Spring pattern — host can require minimum experience)</td></tr>
+<tr><td><strong>Communication</strong></td><td>Voice Chat</td><td>Enabled / Disabled (D059)</td></tr>
+<tr><td></td><td>Language</td><td>Global (Mixed), English, Russian, etc. — self-declared by host</td></tr>
+<tr><td></td><td>AllChat Policy</td><td>Whether cross-team chat is enabled</td></tr>
+<tr><td><strong>Tournament</strong></td><td>Tournament ID / Name</td><td>If part of an organized tournament</td></tr>
+<tr><td></td><td>Bracket Link</td><td>Link to tournament bracket</td></tr>
+<tr><td></td><td>Shoutcast / Stream URL</td><td>Link to a live stream of this game</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Filters &amp; sorting:</strong></p>
+<ul>
+<li>Filter by: game module (RA/TD), map name/size/type, mod (specific or “unmodded only”), game type (casual/competitive/co-op/tournament), player count, ping range, community, password-protected, voice enabled, language, trust label, has open slots, spectatable, compatible mods (green indicator), minimum/maximum average rating, tags (include/exclude)</li>
+<li>Sort by: any column (room name, host, players, map, ping, rating, game type)</li>
+<li>Auto-refresh on configurable interval</li>
+</ul>
+<p><strong>Client-side browser organization</strong> (persistent across sessions, stored in local SQLite per D034):</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Feature</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Favorites</strong></td><td>Bookmark servers/communities for quick access</td></tr>
+<tr><td><strong>History</strong></td><td>Recently visited servers</td></tr>
+<tr><td><strong>Blacklist</strong></td><td>Permanently hide servers (anti-abuse)</td></tr>
+<tr><td><strong>Friends’ Games</strong></td><td>Show games where friends are playing (if friends list implemented)</td></tr>
+<tr><td><strong>LAN</strong></td><td>Automatic local network discovery tab</td></tr>
+<tr><td><strong>Community Subscriptions</strong></td><td>Show games only from subscribed communities</td></tr>
+<tr><td><strong>Quick Join</strong></td><td>Auto-join best matching game based on saved preferences, ping, and rating</td></tr>
+</tbody>
+</table>
+</div>
 <h3 id="ranked-matchmaking-flow"><a class="header" href="#ranked-matchmaking-flow">Ranked Matchmaking Flow</a></h3>
 <pre><code>Multiplayer Hub → Find Match
 </code></pre>
@@ -340,6 +431,22 @@ Direct Connect → Enter IP
 <li><strong>Share</strong> — Copy join code (<code>IRON-7K3M</code>) or deep link for Discord/Steam.</li>
 <li><strong>Spectator slots</strong> — Visible if enabled. Join as spectator option.</li>
 <li><strong>Trust label</strong> — Lobby header and join dialog show trust/certification status (<code>IC Certified</code>, <code>IC Casual</code>, <code>Cross-Engine Experimental</code>, <code>Foreign Engine</code>) before Ready.</li>
+</ul>
+<p><strong>Additional lobby-visible metadata</strong> (shown in lobby header, detail panel, or game settings area):</p>
+<ul>
+<li><strong>Dedicated / Listen indicator</strong> — shows whether this is a dedicated server or a player-hosted listen server (with host account name)</li>
+<li><strong>MOTD (Message of the Day)</strong> — optional host-set message displayed on join (e.g., community rules, welcome text)</li>
+<li><strong>Description</strong> — optional free-text description visible in a detail panel</li>
+<li><strong>Voice chat status</strong> — enabled/disabled indicator with mic icon (D059)</li>
+<li><strong>Language</strong> — self-declared lobby language (Global/Mixed, English, Russian, etc.)</li>
+<li><strong>Victory conditions</strong> — destruction, capture, timed, scenario-specific</li>
+<li><strong>Superweapons</strong> — on/off toggle (classic C&amp;C setting, visible alongside crates/fog)</li>
+<li><strong>Tech level</strong> — starting tech level</li>
+<li><strong>Experience preset name</strong> — which named preset is active (D033/D054), shown alongside balance/speed</li>
+<li><strong>Game type badge</strong> — casual, competitive, co-op, tournament (visible in lobby header alongside trust label)</li>
+<li><strong>Community branding</strong> — verified community icons/logos in lobby header if the game is hosted under a specific community (D052)</li>
+<li><strong>Relay region</strong> — geographic location of the relay server (e.g., EU-West)</li>
+<li><strong>Replay recording indicator</strong> — whether the match will be recorded</li>
 </ul>
 <p><strong>Lobby → Game transition:</strong> Host clicks “Start Game” → all clients enter Loading state → per-player progress bars → 3-second countdown → InGame.</p>
 <h4 id="lobby-trust-labels--cross-engine-warnings-d011--07-cross-engine"><a class="header" href="#lobby-trust-labels--cross-engine-warnings-d011--07-cross-engine">Lobby Trust Labels &amp; Cross-Engine Warnings (D011 / <code>07-CROSS-ENGINE</code>)</a></h4>

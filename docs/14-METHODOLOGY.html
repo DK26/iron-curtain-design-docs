@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-61d2369b.js";
+            window.path_to_searchindex_js = "searchindex-f3722748.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-1553b04b.js"></script>
+        <script src="toc-56a6701d.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -722,6 +722,9 @@ Does NOT touch: ic-render, ic-net, ic-ui, ic-editor
 </li>
 <li>
 <p><strong>Log design changes in the decisions sub-documents.</strong> If a decision changes, don’t silently edit it — find the decision in the appropriate sub-file via <a href="09-DECISIONS.html">09-DECISIONS.md</a> and add a note: “Revised from X to Y because implementation revealed Z.” The decision log is a history, not just a current snapshot.</p>
+</li>
+<li>
+<p><strong>If implementation diverges from the original design, track it with full rationale — and open an issue.</strong> The implementation repo must locally document why it chose to diverge (in code comments, a design-gap tracking file, or both), and post a design-change issue in the design-doc repo with the complete rationale and proposed changes. See <code>src/tracking/external-code-project-bootstrap.md</code> § Design Change Escalation Workflow for the full process.</p>
 </li>
 <li>
 <p><strong>Community feedback triggers design review.</strong> If the community consistently reports that a design choice doesn’t work in practice, that’s data. Evaluate it against the philosophy principles, and if the design is wrong, update it. See <a href="13-PHILOSOPHY.html">13-PHILOSOPHY</a> principle #2: “Fun beats documentation — if it’s in the doc but plays poorly, cut it.”</p>

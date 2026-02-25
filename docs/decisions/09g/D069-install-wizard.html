@@ -35,10 +35,10 @@
             const path_to_root = "../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-61d2369b.js";
+            window.path_to_searchindex_js = "../../searchindex-f3722748.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../../toc-1553b04b.js"></script>
+        <script src="../../toc-56a6701d.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -294,6 +294,109 @@
 </ul>
 <h3 id="wizard-step-sequence-desktopstore-baseline"><a class="header" href="#wizard-step-sequence-desktopstore-baseline">Wizard Step Sequence (Desktop/Store Baseline)</a></h3>
 <p>The setup wizard is a UI flow inside <code>InMenus</code> (menu/UI-only state). It does not instantiate the sim.</p>
+<h4 id="0-mode-detection--profile-selection-pre-wizard-standalone-only"><a class="header" href="#0-mode-detection--profile-selection-pre-wizard-standalone-only">0. Mode Detection &amp; Profile Selection (Pre-Wizard, Standalone Only)</a></h4>
+<p>Before the setup wizard starts, the engine checks the launch context and presents the right dialog. This step is <strong>skipped entirely</strong> for store builds (Steam/GOG — always system mode) and when a <code>portable.marker</code> already exists (choice already made).</p>
+<p><strong>Detection logic:</strong></p>
+<pre><code>                    ┌──────────────┐
+                    │ Game launched │
+                    └──────┬───────┘
+                           │
+                    ┌──────▼───────────┐
+                    │ portable.marker   │  Yes → Portable mode, skip dialog
+                    │ exists?           ├──────────────────────────────┐
+                    └──────┬───────────┘                              │
+                           │ No                                       │
+                    ┌──────▼───────────┐                              │
+                    │ Store build?      │  Yes → System mode, skip    │
+                    │ (Steam/GOG/Epic)  ├────────────────────────┐    │
+                    └──────┬───────────┘                         │    │
+                           │ No (standalone)                     │    │
+                    ┌──────▼───────────┐                         │    │
+                    │ System profile    │                         │    │
+                    │ exists?           │                         │    │
+                    │ (%APPDATA%/IC)    │                         │    │
+                    └──────┬───────────┘                         │    │
+                       ┌───┴───┐                                 │    │
+                      Yes      No                                │    │
+                       │        │                                │    │
+                ┌──────▼──┐  ┌──▼────────┐                      │    │
+                │ Dialog A │  │ Dialog B  │                      │    │
+                │ (both    │  │ (fresh    │                      │    │
+                │  exist)  │  │  install) │                      │    │
+                └─────────┘  └──────────┘                       │    │
+                                                                ▼    ▼
+                                                          → Setup Wizard
+</code></pre>
+<p><strong>Dialog B — Fresh install (no system profile, no portable marker):</strong></p>
+<pre><code>┌──────────────────────────────────────────────────────────┐
+│  IRON CURTAIN                                            │
+│                                                          │
+│  How would you like to run the game?                     │
+│                                                          │
+│  ┌────────────────────────────────────────────────────┐  │
+│  │  Install on this system                            │  │
+│  │  Data stored in your user profile.                 │  │
+│  │  Best for your main gaming PC.                     │  │
+│  └────────────────────────────────────────────────────┘  │
+│                                                          │
+│  ┌────────────────────────────────────────────────────┐  │
+│  │  Run portable                                      │  │
+│  │  Everything stays in this folder.                  │  │
+│  │  Best for USB drives and shared computers.         │  │
+│  └────────────────────────────────────────────────────┘  │
+│                                                          │
+│  You can change this later in Settings → Data.           │
+└──────────────────────────────────────────────────────────┘
+</code></pre>
+<ul>
+<li>“Install on this system” → system mode, data in <code>%APPDATA%\IronCurtain\</code> (or XDG/Library equivalent)</li>
+<li>“Run portable” → creates <code>portable.marker</code> next to exe, data in <code>&lt;exe_dir&gt;\data\</code></li>
+</ul>
+<p><strong>Dialog A — System profile already exists (launched from a different location, e.g., USB drive):</strong></p>
+<pre><code>┌──────────────────────────────────────────────────────────┐
+│  IRON CURTAIN                                            │
+│                                                          │
+│  Found an existing profile on this system:               │
+│                                                          │
+│  ┌────────────────────────────────────────────────────┐  │
+│  │  CommanderZod                                      │  │
+│  │  Captain II (1623) · 342 matches · 23 achievements │  │
+│  │  Last played: March 14, 2027                       │  │
+│  └────────────────────────────────────────────────────┘  │
+│                                                          │
+│  ┌────────────────────────────────────────────────────┐  │
+│  │  Use my existing profile                           │  │
+│  │  Play using your system-installed data.            │  │
+│  └────────────────────────────────────────────────────┘  │
+│                                                          │
+│  ┌────────────────────────────────────────────────────┐  │
+│  │  Run portable (fresh)                              │  │
+│  │  Start fresh in this folder. System profile         │  │
+│  │  is not modified.                                  │  │
+│  └────────────────────────────────────────────────────┘  │
+│                                                          │
+│  ┌────────────────────────────────────────────────────┐  │
+│  │  Run portable (import my profile)                  │  │
+│  │  Copy your identity and settings into this folder. │  │
+│  │  Play anywhere with your existing profile.         │  │
+│  └────────────────────────────────────────────────────┘  │
+│                                                          │
+└──────────────────────────────────────────────────────────┘
+</code></pre>
+<ul>
+<li>“Use my existing profile” → system mode, uses existing <code>%APPDATA%\IronCurtain\</code> data</li>
+<li>“Run portable (fresh)” → creates <code>portable.marker</code>, creates empty <code>data/</code>, enters setup wizard as new player</li>
+<li>“Run portable (import my profile)” → creates <code>portable.marker</code>, copies <code>keys/</code>, <code>config.toml</code>, <code>profile.db</code>, <code>communities/*.db</code> from system profile into <code>&lt;exe_dir&gt;\data\</code>. Player has their identity, ratings, and settings on the USB drive. System profile is not modified.</li>
+</ul>
+<p><strong>Returning to portable with existing portable data:</strong></p>
+<p>If <code>portable.marker</code> exists AND <code>&lt;exe_dir&gt;\data\</code> has a profile AND a system profile also exists, the game does NOT show a dialog — it uses the portable profile (the marker file is the authoritative choice). If the player wants to switch, they can do so in Settings → Data.</p>
+<p><strong>UX rules for this dialog:</strong></p>
+<ul>
+<li>Shown once per location. After the player makes a choice, the dialog never appears again from that location (the choice is remembered via <code>portable.marker</code> presence or absence + <code>data/</code> directory existence).</li>
+<li>Store builds (Steam/GOG) skip this entirely — they always use system mode. Portable mode for store builds is still available via <code>IC_PORTABLE=1</code> env var or <code>--portable</code> flag for power users, but the dialog does not appear.</li>
+<li>The dialog is a minimal, clean window — no background shellmap, no loading. It appears before any heavy initialization, so it’s instant even on slow hardware.</li>
+<li>“You can change this later” is true: Settings → Data shows the current mode and allows switching (with data migration guidance).</li>
+</ul>
 <h4 id="1-welcome--setup-intent"><a class="header" href="#1-welcome--setup-intent">1. Welcome / Setup Intent</a></h4>
 <p>Actions:</p>
 <ul>
@@ -419,11 +522,96 @@
 <li>“Verify binary files” surfaces platform guidance where supported</li>
 <li>IC still owns content packs, source detection, optional media, and setup repair</li>
 </ul>
-<h4 id="standalone-desktop-windowsmacoslinux"><a class="header" href="#standalone-desktop-windowsmacoslinux">Standalone Desktop (Windows/macOS/Linux)</a></h4>
+<h4 id="standalone-desktop-installer-windowsmacoslinux"><a class="header" href="#standalone-desktop-installer-windowsmacoslinux">Standalone Desktop Installer (Windows/macOS/Linux)</a></h4>
+<p>For non-store distribution, IC ships a <strong>platform-native installer</strong> that handles binary placement, shortcuts, file associations, and uninstallation. The installer is minimal — it places files and gets out of the way. All content setup, identity creation, and game configuration happen in the IC First-Run Setup Wizard (Layer 2) on first launch.</p>
+<p><strong>Per-platform installer format:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Platform</th><th>Format</th><th>Tool</th><th>Why</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Windows</strong></td><td><code>.exe</code> (NSIS) or <code>.msi</code> (WiX)</td><td>NSIS (primary), WiX (enterprise/GPO)</td><td>NSIS is the standard for open-source game installers (OpenRA, Godot, Wesnoth). WiX for managed deployments. Both produce single-file installers with no runtime dependencies.</td></tr>
+<tr><td><strong>macOS</strong></td><td><code>.dmg</code> with drag-to-Applications</td><td><code>create-dmg</code> or <code>hdiutil</code></td><td>Standard macOS distribution. Drag <code>Iron Curtain.app</code> to <code>/Applications/</code>. No pkg installer needed — the app bundle is self-contained.</td></tr>
+<tr><td><strong>Linux</strong></td><td><code>.AppImage</code> (primary), <code>.deb</code>, <code>.rpm</code>, Flatpak</td><td><code>appimagetool</code>, <code>cargo-deb</code>, <code>cargo-rpm</code>, Flatpak manifest</td><td>AppImage is the universal “just run it” format. <code>.deb</code>/<code>.rpm</code> for distro package managers. Flatpak for sandboxed distribution (Flathub).</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Windows installer flow (NSIS):</strong></p>
+<pre><code>┌──────────────────────────────────────────────────────────┐
+│  IRON CURTAIN SETUP                                      │
+│                                                          │
+│  Welcome to Iron Curtain.                                │
+│                                                          │
+│  Install location:                                       │
+│  [C:\Games\IronCurtain\               ] [Browse...]      │
+│                                                          │
+│  ☑ Create desktop shortcut                               │
+│  ☑ Create Start Menu entry                               │
+│  ☑ Associate .icrep files (replays)                      │
+│  ☑ Associate .icsave files (save games)                  │
+│  ☐ Portable mode (all data stored next to the game)      │
+│                                                          │
+│  Space required: ~120 MB (engine only, no game assets)   │
+│  Game assets are set up on first launch.                 │
+│                                                          │
+│  [Install]                              [Cancel]         │
+└──────────────────────────────────────────────────────────┘
+</code></pre>
+<p><strong>What the installer does:</strong></p>
+<ol>
+<li>Copies game binaries, shipped YAML/Lua rules, <code>.sql</code> files, and docs to the install directory</li>
+<li>Creates Start Menu / desktop shortcuts</li>
+<li>Registers file associations (<code>.icrep</code>, <code>.icsave</code>, <code>ironcurtain://</code> URI scheme for deep links)</li>
+<li>Registers uninstaller in Add/Remove Programs</li>
+<li>If “Portable mode” is checked: creates <code>portable.marker</code> in the install directory (triggers <code>ic-paths</code> portable mode on first launch — see <code>architecture/crate-graph.md</code>)</li>
+<li>Launches Iron Curtain (optional checkbox: “Launch Iron Curtain after install”)</li>
+</ol>
+<p><strong>What the installer does NOT do:</strong></p>
 <ul>
-<li>lightweight bootstrap installer/package handles binary placement + shortcuts</li>
-<li>then launches D069 setup wizard</li>
-<li>optional advanced data-dir override / portable usage guidance (<code>IC_DATA_DIR</code>, <code>--data-dir</code>)</li>
+<li>Download or install game assets (that’s the in-app wizard’s job)</li>
+<li>Create user accounts or require online connectivity</li>
+<li>Install background services, auto-updaters, or system tray agents</li>
+<li>Modify system PATH or install global libraries</li>
+<li>Require administrator privileges (installs to user-writable directory by default; admin only needed for <code>Program Files</code> or system-wide file associations)</li>
+</ul>
+<p><strong>Uninstaller:</strong></p>
+<ul>
+<li>Removes game binaries, shipped content, shortcuts, file associations, and registry entries</li>
+<li><strong>Does not delete the data directory</strong> (<code>%APPDATA%\IronCurtain\</code> or <code>&lt;exe_dir&gt;\data\</code> in portable mode). Player data (saves, replays, keys, config) is preserved. The uninstaller shows: <code>"Your saves, replays, and settings are preserved in [path]. Delete this folder manually if you want to remove all data."</code></li>
+<li>This matches the pattern used by Steam (game files removed, save data preserved) and is critical for the “your data is yours” philosophy</li>
+</ul>
+<p><strong>macOS installer flow:</strong></p>
+<ul>
+<li><code>.dmg</code> opens with a background image showing <code>Iron Curtain.app</code> → drag to <code>Applications</code> folder</li>
+<li>First launch triggers Gatekeeper dialog (app is signed with a developer certificate or notarized; unsigned builds show the standard “open anyway” workflow)</li>
+<li>No separate uninstaller — drag app to Trash. Data in <code>~/Library/Application Support/IronCurtain/</code> persists (same principle as Windows)</li>
+</ul>
+<p><strong>Linux distribution:</strong></p>
+<ul>
+<li><strong>AppImage:</strong> Single file, no install. <code>chmod +x IronCurtain.AppImage &amp;&amp; ./IronCurtain.AppImage</code>. Desktop integration via <code>appimaged</code> or manual <code>.desktop</code> file. Ideal for portable / USB use.</li>
+<li><strong>Flatpak (Flathub):</strong> Sandboxed, auto-updated, desktop integration. <code>flatpak install flathub gg.ironcurtain.IronCurtain</code>. Data directory follows XDG within the Flatpak sandbox.</li>
+<li><strong><code>.deb</code> / <code>.rpm</code>:</strong> Traditional package manager install. Installs to <code>/usr/share/ironcurtain/</code>, creates <code>/usr/bin/ironcurtain</code> symlink, installs <code>.desktop</code> file and icons. Uninstall via <code>apt remove</code> / <code>dnf remove</code> — data directory preserved.</li>
+</ul>
+<p><strong>Auto-updater (standalone builds only):</strong></p>
+<ul>
+<li>Store builds (Steam/GOG) use platform auto-update — IC does not duplicate this</li>
+<li>Standalone builds check for updates on launch (HTTP GET to a version manifest endpoint, no background service)</li>
+<li>If a new version is available: non-intrusive main menu notification: <code>"Iron Curtain v0.6.0 is available. [Download] [Release Notes] [Later]"</code></li>
+<li>Download is a full installer package (not a delta patcher — keeps complexity low)</li>
+<li>No forced updates. No auto-restart. No nag screens. The player decides when to update.</li>
+<li>Update check can be disabled: <code>config.toml</code> → <code>[updates] check_on_launch = false</code></li>
+</ul>
+<p><strong>CI/CD integration:</strong></p>
+<ul>
+<li>Installers are built automatically in the CI pipeline for each release</li>
+<li>Windows: NSIS script in <code>installer/windows/ironcurtain.nsi</code></li>
+<li>macOS: <code>create-dmg</code> script in <code>installer/macos/build-dmg.sh</code></li>
+<li>Linux: AppImage recipe in <code>installer/linux/AppImageBuilder.yml</code>, Flatpak manifest in <code>installer/linux/gg.ironcurtain.IronCurtain.yml</code></li>
+<li>All installer scripts are in the repository and version-controlled</li>
+</ul>
+<p><strong>Relationship to D069 Layer 2:</strong> The standalone installer’s only job is to place files on disk. Everything else — identity, content sources, install presets, onboarding — is handled by the D069 First-Run Setup Wizard on first launch. The installer can optionally launch the game after installation, which immediately enters the wizard.</p>
+<ul>
 <li>no mandatory background service</li>
 </ul>
 <h4 id="steam-deck"><a class="header" href="#steam-deck">Steam Deck</a></h4>

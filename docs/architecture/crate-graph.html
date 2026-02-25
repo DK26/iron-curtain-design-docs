@@ -35,10 +35,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-61d2369b.js";
+            window.path_to_searchindex_js = "../searchindex-f3722748.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-1553b04b.js"></script>
+        <script src="../toc-56a6701d.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -408,6 +408,21 @@ pub struct AppDirs {
 
 pub enum PathMode { Platform, Portable }
 <span class="boring">}</span></code></pre>
+<p><strong>Additional override:</strong> <code>--data-dir &lt;path&gt;</code> CLI flag overrides the data directory location regardless of mode. This is useful for developers running multiple profiles or testing with different data sets. If <code>--data-dir</code> is set, <code>PathMode</code> is still reported as <code>Platform</code> or <code>Portable</code> based on the detection above — the override only changes <code>data_dir</code>, not the mode label.</p>
+<p><strong>Visibility:</strong> The current path mode is shown in:</p>
+<ul>
+<li>Settings → Data tab: <code>"Data location: C:\Games\IC\data\ (portable mode)"</code> or <code>"Data location: %APPDATA%\IronCurtain\ (standard)"</code></li>
+<li>Console: <code>ic_paths</code> command prints all resolved paths and the active mode</li>
+<li>First-launch wizard: if portable mode is detected, a brief note: <code>"Running in portable mode — all data is stored next to the game executable."</code></li>
+<li>Main menu footer (optional, subtle): a small <code>[P]</code> badge or <code>"Portable"</code> label if the player wants to see it (toggleable via Settings → Video → Show Mode Indicator)</li>
+</ul>
+<p><strong>Creating a portable installation:</strong> To convert a standard install into a portable one, a user just:</p>
+<ol>
+<li>Copies the game folder to a USB drive (or any location)</li>
+<li>Creates an empty <code>portable.marker</code> file next to the executable</li>
+<li>Launches the game — done</li>
+</ol>
+<p>No explicit init step needed. On first launch in portable mode, the engine auto-creates the <code>data/</code> directory and runs the first-launch wizard normally. If the user already has a platform install on the same machine, the wizard detects it and offers: <code>"Found existing IC data on this machine. [Import my settings &amp; identity] [Start fresh]"</code>. This replaces any need for a separate init command — the wizard handles everything, and the user doesn’t need to learn a CLI command to set up portable mode.</p>
 <p><strong>WASM:</strong> Browser builds return OPFS-backed virtual paths. Portable mode is not applicable — <code>PathMode::Platform</code> is always used. Mobile builds use the platform app sandbox unconditionally.</p>
 <p><strong>Phase:</strong> Phase 1 (required before any file I/O — asset loading, config, logs).</p>
 

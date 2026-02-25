@@ -35,10 +35,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-61d2369b.js";
+            window.path_to_searchindex_js = "../searchindex-f3722748.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-1553b04b.js"></script>
+        <script src="../toc-56a6701d.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -217,6 +217,7 @@
 <p><strong>Post-game elements:</strong></p>
 <ul>
 <li><strong>Stats comparison</strong> — Economy, production, combat, activity (APM/EPM). Graphs available on hover/click.</li>
+<li><strong>MVP Awards</strong> — Stat-based recognition cards highlighting top performers (see MVP Awards section below).</li>
 <li><strong>Rating update</strong> — Tier badge animation if promoted/demoted. Delta shown.</li>
 <li><strong>Chat</strong> — 30-second active period, auto-closes after 5 minutes.</li>
 <li><strong>Post-game learning</strong> (D065) — Rule-based tip analyzing the match (e.g., idle harvesters, low APM, no control groups used). Links to tutorial or replay annotation.</li>
@@ -226,6 +227,74 @@
 <li><strong>Main Menu</strong> → Return to main menu</li>
 <li><strong>Report Player</strong> → Report dialog (reason dropdown, optional text)</li>
 <li><strong>Post-play feedback pulse</strong> (optional, sampled) — quick “how was this?” prompt for mode/mod/campaign with skip/snooze controls</li>
+</ul>
+<h4 id="mvp-awards-post-game-recognition"><a class="header" href="#mvp-awards-post-game-recognition">MVP Awards (Post-Game Recognition)</a></h4>
+<p>After every multiplayer match (skirmish, ranked, co-op, team), the post-game screen will display stat-based MVP award cards recognizing standout performance. These are auto-calculated from match data — no player voting required.</p>
+<pre><code>┌──────────────────────────────────────────────────────────────┐
+│  MVP AWARDS                                                  │
+│                                                              │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐         │
+│  │ 🏆 MVP      │  │ ⚔ Warlord   │  │ 💰 Tycoon   │         │
+│  │ CommanderX  │  │ TankRush99  │  │ You         │         │
+│  │ Score: 4820 │  │ 142 kills   │  │ $68,200     │         │
+│  │             │  │ 23 K/D      │  │ harvested   │         │
+│  └─────────────┘  └─────────────┘  └─────────────┘         │
+│                                                              │
+│  Personal: 🛡 Iron Wall — lost only 12 units                │
+└──────────────────────────────────────────────────────────────┘
+</code></pre>
+<p><strong>Award categories</strong> — the engine selects 2–4 awards per match from the following categories, based on which stats are most exceptional relative to the match context. Not all awards appear every game — only standout performances are highlighted.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Category</th><th>Award Name</th><th>Criteria</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Overall</strong></td><td>MVP</td><td>Highest composite score (weighted: economy + combat + production + map control)</td></tr>
+<tr><td><strong>Economy</strong></td><td>Tycoon</td><td>Highest total resources harvested</td></tr>
+<tr><td></td><td>Efficient Commander</td><td>Best resource-to-army conversion ratio (least waste)</td></tr>
+<tr><td></td><td>Expansion Master</td><td>Fastest or most ore/refinery expansions</td></tr>
+<tr><td><strong>Combat</strong></td><td>Warlord</td><td>Most enemy units destroyed</td></tr>
+<tr><td></td><td>Iron Wall</td><td>Best unit preservation (lowest units lost relative to army size)</td></tr>
+<tr><td></td><td>Tank Buster</td><td>Most enemy vehicles/armor destroyed</td></tr>
+<tr><td></td><td>Air Superiority</td><td>Most enemy aircraft destroyed or air-to-ground kills</td></tr>
+<tr><td></td><td>First Strike</td><td>First player to destroy an enemy unit</td></tr>
+<tr><td></td><td>Decimator</td><td>Largest single engagement (most units destroyed in one battle)</td></tr>
+<tr><td><strong>Production</strong></td><td>War Machine</td><td>Most units produced</td></tr>
+<tr><td></td><td>Tech Rush</td><td>Fastest time to highest tech tier</td></tr>
+<tr><td></td><td>Builder</td><td>Most structures built</td></tr>
+<tr><td><strong>Strategic</strong></td><td>Blitzkrieg</td><td>Fastest victory (shortest match duration, only in decisive wins)</td></tr>
+<tr><td></td><td>Map Control</td><td>Highest average map vision / territory control</td></tr>
+<tr><td></td><td>Spy Master</td><td>Most intelligence gathered (scout actions, radar coverage)</td></tr>
+<tr><td></td><td>Saboteur</td><td>Most enemy structures destroyed</td></tr>
+<tr><td><strong>Team</strong> (team games)</td><td>Best Wingman</td><td>Most assist actions (shared vision, resource transfers, combined attacks)</td></tr>
+<tr><td></td><td>Team Backbone</td><td>Highest resource sharing / support to allies</td></tr>
+<tr><td></td><td>Last Stand</td><td>Survived longest after allies were eliminated</td></tr>
+<tr><td><strong>Co-op</strong> (D070)</td><td>Mission Critical</td><td>Highest objective completion contribution</td></tr>
+<tr><td></td><td>Guardian Angel</td><td>Most successful support/extraction actions (Commander role)</td></tr>
+<tr><td></td><td>Shadow Operative</td><td>Most field objectives completed (SpecOps role)</td></tr>
+<tr><td><strong>Fun / Flavor</strong></td><td>Overkill</td><td>Used superweapon when conventional forces would have sufficed</td></tr>
+<tr><td></td><td>Comeback King</td><td>Won after being behind by &gt;50% army value</td></tr>
+<tr><td></td><td>Untouchable</td><td>Won without losing a single structure</td></tr>
+<tr><td></td><td>Turtle</td><td>Longest time before first attack</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Award selection algorithm:</strong></p>
+<ol>
+<li>After match ends, compute all stat categories for all players</li>
+<li>For each category, check if any player’s stat is significantly above the match average (threshold: top percentile relative to match context, not absolute values)</li>
+<li>Select the top 2–4 most exceptional awards — prefer variety across categories (don’t show 3 combat awards)</li>
+<li>In 1v1: show 1–2 awards per player. In team games: show 3–4 total across all players. Overall MVP always shown if the match has 3+ players</li>
+<li>Each player also sees a <strong>personal award</strong> (their single best stat) even if they didn’t earn a match-wide award</li>
+</ol>
+<p><strong>Design rules:</strong></p>
+<ul>
+<li><strong>No effect on ranked rating.</strong> Awards are cosmetic recognition only — Glicko-2 rating changes are computed purely from win/loss (D055).</li>
+<li><strong>Profile-visible.</strong> Award counts are tracked in the player profile (D053) — e.g., “MVP ×47, Tycoon ×23, Iron Wall ×15.” Displayed as a stat line, not badges.</li>
+<li><strong>Moddable.</strong> Award definitions are YAML-driven (<code>awards.yaml</code>): name, icon, stat formula, threshold, flavor text. Modders can add game-module-specific awards (e.g., Tiberian Dawn: “Nod Commander” for most stealth unit kills). Workshop-publishable.</li>
+<li><strong>Anti-farming.</strong> Awards are only granted in matches that meet minimum thresholds: minimum match duration (&gt;3 minutes), minimum opponent count/difficulty, and no early surrenders. AI-only matches grant awards but they are tagged as <code>vs-AI</code> in the profile and tracked separately.</li>
+<li><strong>Replay-linked.</strong> Each award links to the replay moment that earned it (e.g., “Decimator” links to the tick of the largest battle). Clicking the award in the post-game screen jumps to that moment in the replay viewer.</li>
 </ul>
 <h4 id="post-play-feedback-prompt-modes--mods--campaigns-optional-d049--d053"><a class="header" href="#post-play-feedback-prompt-modes--mods--campaigns-optional-d049--d053">Post-Play Feedback Prompt (Modes / Mods / Campaigns; Optional D049 + D053)</a></h4>
 <p>The post-game screen may show a <strong>sampled, skippable</strong> feedback prompt. It is designed to help mode/mod/campaign authors improve content without blocking normal post-game actions.</p>

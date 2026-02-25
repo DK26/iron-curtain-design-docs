@@ -35,10 +35,10 @@
             const path_to_root = "../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-61d2369b.js";
+            window.path_to_searchindex_js = "../../searchindex-f3722748.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../../toc-1553b04b.js"></script>
+        <script src="../../toc-56a6701d.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -302,6 +302,18 @@ ic backup verify ic-backup-2027-03-15.zip     # Verify archive integrity without
 </table>
 </div>
 <p><strong>Default <code>ic backup create</code></strong> includes: <code>keys</code>, <code>profile</code>, <code>communities</code>, <code>achievements</code>, <code>config</code>, <code>saves</code>, <code>replays</code>, <code>screenshots</code>, <code>gameplay</code>. Excludes <code>workshop</code>, <code>mods</code>, <code>maps</code> (re-downloadable). Total size for a typical player: 200 MB – 2 GB.</p>
+<h3 id="database-query--export-ic-db-cli"><a class="header" href="#database-query--export-ic-db-cli">Database Query &amp; Export: <code>ic db</code> CLI</a></h3>
+<p>Beyond backup/restore, players and community tool developers can query, export, and optimize local SQLite databases directly. See D034 § “User-Facing Database Access” for the full design.</p>
+<pre><code>ic db list                                         # List all local .db files with sizes
+ic db query gameplay "SELECT * FROM v_win_rate_by_faction"  # Read-only SQL query
+ic db export gameplay matches --format csv &gt; matches.csv    # Export table/view to CSV or JSON
+ic db schema gameplay                              # Print full schema
+ic db optimize                                     # VACUUM + ANALYZE all databases (reclaim space)
+ic db open gameplay                                # Open in system SQLite browser
+ic db size                                         # Show disk usage per database
+</code></pre>
+<p>All queries are <strong>read-only</strong> (<code>SQLITE_OPEN_READONLY</code>). Pre-built SQL views (<code>v_win_rate_by_faction</code>, <code>v_recent_matches</code>, <code>v_economy_trends</code>, <code>v_unit_kd_ratio</code>, <code>v_apm_per_match</code>) ship with the schema and are available to both the CLI and external tools.</p>
+<p><code>ic db optimize</code> is particularly useful for portable mode / flash drive users — it runs <code>VACUUM</code> (defragment, reclaim space) + <code>ANALYZE</code> (rebuild index statistics) on all local databases. Also accessible from <code>Settings → Data → Optimize Databases</code> in the UI.</p>
 <h3 id="profile-export-json-data-portability"><a class="header" href="#profile-export-json-data-portability">Profile Export: JSON Data Portability</a></h3>
 <p>For GDPR Article 20 compliance and general good practice, IC provides a machine-readable profile export:</p>
 <pre><code>ic profile export                             # → &lt;data_dir&gt;/exports/profile-export-&lt;date&gt;.json
@@ -855,6 +867,80 @@ ic identity recover --passphrase  # Prompt for passphrase in addition to mnemoni
 </tbody>
 </table>
 </div>
+<h3 id="resilience-philosophy-hackable-but-unbreakable"><a class="header" href="#resilience-philosophy-hackable-but-unbreakable">Resilience Philosophy: Hackable but Unbreakable</a></h3>
+<p>IC gives users power over their data — open <code>.db</code> files, shipped <code>.sql</code> queries (D034), full CLI access, external tool compatibility. This is the “hacky in the good way” philosophy: transparent, moddable, empowering. But power without safety is dangerous. The design must ensure that <strong>no user action can permanently break the game</strong>, and that recovery from mistakes is always possible.</p>
+<p><strong>Principle:</strong> Enable everything. Protect against everything. If a user destroys something, the path back is obvious and fast.</p>
+<p><strong>What can a user break, and how do they recover?</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>What the user does</th><th>Impact</th><th>Recovery</th><th>Time to recover</th></tr>
+</thead>
+<tbody>
+<tr><td>Deletes <code>gameplay.db</code></td><td>Lose match history, stats, event log, replay catalog</td><td>Engine recreates empty database on next launch. Historical data lost but game works. Backup restores everything.</td><td>Instant (empty DB) or minutes (restore from backup)</td></tr>
+<tr><td>Deletes <code>profile.db</code></td><td>Lose friends list, settings, avatar, privacy prefs</td><td>Engine recreates with defaults. Identity key is separate (<code>keys/identity.key</code>). Community ratings survive (SCRs on server).</td><td>Instant (defaults) or minutes (restore)</td></tr>
+<tr><td>Deletes <code>communities/*.db</code></td><td>Lose local copies of ratings, match history, achievement proofs</td><td>Re-sync from community servers on next connect. SCRs re-downloaded automatically. No data permanently lost — servers are authoritative.</td><td>Seconds (automatic re-sync)</td></tr>
+<tr><td>Deletes <code>achievements.db</code></td><td>Lose local achievement proofs</td><td>Re-sync from community servers (SCR-backed achievements). Locally-tracked achievements lost unless backed up.</td><td>Seconds (SCR re-sync)</td></tr>
+<tr><td>Deletes <code>config.toml</code></td><td>Lose all settings (video, audio, controls, gameplay)</td><td>Engine recreates with defaults. First-launch wizard does NOT re-trigger (identity still exists). Performance profile re-detected from hardware.</td><td>Instant</td></tr>
+<tr><td>Deletes <code>keys/identity.key</code></td><td><strong>Critical</strong> — lose cryptographic identity</td><td>Recover via 24-word mnemonic seed phrase (regenerates identical keypair). If phrase was never saved: fresh identity, community admin can transfer records.</td><td>Minutes (mnemonic) or manual (admin transfer)</td></tr>
+<tr><td>Deletes entire <code>&lt;data_dir&gt;/</code></td><td>Lose everything local</td><td>Mnemonic phrase + community re-sync recovers identity + ratings + achievements. Backup file restores everything else. Without mnemonic or backup: fresh start, admin transfer possible.</td><td>Minutes to hours depending on method</td></tr>
+<tr><td>Corrupts a <code>.db</code> file (partial write, manual edit gone wrong)</td><td>Database fails integrity check</td><td>Engine runs <code>PRAGMA integrity_check</code> on startup. If corruption detected: renames corrupt file to <code>.db.corrupt</code>, creates fresh empty database, logs a warning, and offers restore from auto-snapshot.</td><td>Instant (auto-recovery with data loss notification)</td></tr>
+<tr><td>Modifies <code>.db</code> schema (adds/drops tables externally)</td><td>Schema migration detects mismatch</td><td>Migration system checks <code>user_version</code> pragma. If schema is ahead of engine version: refuse to open (data too new). If schema is behind or mangled: attempt migration. If migration fails: rename to <code>.db.damaged</code>, create fresh, offer restore.</td><td>Instant (auto-recovery)</td></tr>
+<tr><td>Modifies SCR records in <code>communities/*.db</code></td><td>Ed25519 signature verification fails on tampered records</td><td>Tampered SCRs are silently rejected. Community server re-sync replaces them with valid signed copies. No permanent damage — cryptographic signatures make tampering detectable and self-healing.</td><td>Seconds (automatic)</td></tr>
+<tr><td>Runs custom SQL that inserts bad data into <code>gameplay.db</code></td><td>Possible nonsense in stats, broken views</td><td>Engine validates data on read (unexpected values are skipped/logged). <code>ic db optimize</code> + schema migration can repair index corruption. Worst case: delete and recreate the file (loses history, game still works).</td><td>Seconds to minutes</td></tr>
+<tr><td>Deletes save files (<code>.icsave</code>)</td><td>Lose campaign progress</td><td>Re-downloadable from cloud sync if enabled. Otherwise, lost. Campaign can be replayed.</td><td>N/A (data loss, but game works)</td></tr>
+<tr><td>Deletes replay files (<code>.icrep</code>)</td><td>Lose match recordings</td><td>Non-critical. Game works fine. Not recoverable unless backed up.</td><td>N/A</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Automatic protection layers (always-on, no user action required):</strong></p>
+<ol>
+<li><strong>Auto-snapshot (daily):</strong> 3-day rotating critical backup (<code>keys/</code>, <code>profile.db</code>, <code>communities/*.db</code>, <code>achievements.db</code>, <code>config.toml</code>). ~5 MB. Runs silently during asset loading.</li>
+<li><strong>Database integrity check on startup:</strong> <code>PRAGMA integrity_check</code> on all databases. Corrupt files renamed, fresh databases created, user notified with restore offer.</li>
+<li><strong>Schema version validation:</strong> Forward-only migrations. Engine refuses to downgrade a database, preventing silent data loss from running an older version.</li>
+<li><strong>SCR tamper detection:</strong> Ed25519 signatures on all credential records. Tampered records automatically rejected and replaced on next community sync.</li>
+<li><strong>Fossilize-pattern writes:</strong> All database and save file writes use the append-safe pattern (temp file → fsync → atomic rename). A crash mid-write never corrupts the previous valid state.</li>
+<li><strong>Cloud sync (opt-in):</strong> Critical data uploaded on game exit and after matches. Restores automatically on new machine.</li>
+</ol>
+<p><strong>Beyond file deletion — other ways users can break things, and how the engine recovers:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>What the user does</th><th>Impact</th><th>Auto-Recovery</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Sets invalid config values</strong> (e.g., <code>volume = -50</code>, <code>relay.max_games = 999999</code>)</td><td>Parameter out of range</td><td>Engine clamps all config values to documented min/max ranges on load. Invalid values → clamped + console warning: <code>"relay.max_games clamped to 100 (was 999999)"</code>. Config file not rewritten — clamped value used in memory only. <code>ic server validate-config</code> reports all out-of-range values before launch.</td></tr>
+<tr><td><strong>Sets invalid cvar at runtime</strong> (<code>/set net.tick_rate -1</code>)</td><td>Cvar type/range mismatch</td><td>Each cvar has a typed schema (int with range, enum, bool, string with max length). Invalid <code>/set</code> commands → console error: <code>"net.tick_rate: value -1 out of range [1, 120]"</code>. Sim state never affected — rejected cvars are no-ops.</td></tr>
+<tr><td><strong>Edits YAML rules with invalid values</strong> (<code>health: -1000</code>, <code>cost: 0</code>)</td><td>Balance broken, potential panics</td><td>YAML deserialization validates numeric fields against per-field min/max constraints. Out-of-range → clamped + warning: <code>"HeavyTank.health clamped to 1 (was -1000)"</code>. Missing required fields use defaults. Malformed YAML (syntax error) → mod fails to load entirely, error shown in lobby with [Disable Mod] option.</td></tr>
+<tr><td><strong>Installs mod with circular dependencies</strong> (A→B→C→A)</td><td>Mod loading hangs</td><td>Dependency resolver runs cycle detection (DFS with visited set) before loading. Cycle detected → mod fails to load with clear error. Game continues without affected mods.</td></tr>
+<tr><td><strong>Installs corrupt <code>.icpkg</code> mod</strong> (truncated zip, missing manifest)</td><td>Mod fails to load</td><td>SHA-256 verification on download. Failed → auto-retry (up to 3 attempts from different P2P sources). Still corrupt → <code>"package corrupt, re-download required"</code> + [Re-Download]. <code>ic mod repair &lt;package&gt;</code> forces re-download + re-verification.</td></tr>
+<tr><td><strong>Modifies file during hot-reload</strong> (partial write)</td><td>Asset load reads garbage</td><td>Hot-reload debounces (200ms after last change). File fails to parse → previous version retained, console warning. SDK uses atomic temp-file-then-rename.</td></tr>
+<tr><td><strong>Changes balance rules mid-match via hot-reload</strong></td><td>Desync risk, fairness violation</td><td>Balance-affecting YAML rules locked at match start in multiplayer. Hot-reload of balance rules during a match rejected: <code>"Cannot hot-reload balance rules during active match."</code> Single-player allows it.</td></tr>
+<tr><td><strong>LLM returns garbage</strong> (invalid JSON, malformed YAML)</td><td>Mission generation fails</td><td>Validation pipeline: JSON parse error → retry with clarification (up to 3 attempts). YAML validation → reject + log. Numeric out-of-range → clamp. All retries fail → fallback to pre-generated template. Timeout (30s) → fallback. No LLM → pre-generated content only.</td></tr>
+<tr><td><strong>Removes USB flash drive mid-game</strong></td><td>No impact during gameplay</td><td>RAM Mode = zero disk dependency during gameplay. Game keeps running. At next flush point (match end/pause): if storage unavailable → Storage Recovery Dialog offers five options: reconnect + retry, save to different local location, save to cloud (if configured), save to community server (if available, encrypted, TTL-based), or continue without saving. See <code>10-PERFORMANCE.md</code> § Portable Mode Integration &amp; Storage Resilience.</td></tr>
+<tr><td><strong>Downgrades engine version</strong> (v0.5 DB opened by v0.3)</td><td>Schema mismatch</td><td><code>PRAGMA user_version</code> check on open. If schema &gt; engine version → refuse: <code>"gameplay.db was created by IC v0.5 (schema 12). This engine (v0.3, schema 8) cannot read it. Upgrade or restore from compatible backup."</code> Forward migrations automatic.</td></tr>
+<tr><td><strong>Restores backup from newer engine</strong></td><td>Schema mismatch</td><td><code>ic backup restore</code> checks <code>export_version</code> metadata. Backup version &gt; engine version → refuse with upgrade guidance. Same/older version → restore + forward migration.</td></tr>
+<tr><td><strong>Restore fails mid-way</strong> (disk full, power loss)</td><td>Partial restore</td><td>Restore is atomic: (1) backup current state to <code>.pre-restore/</code>, (2) extract to temp, (3) verify, (4) swap. Failure → original data untouched. Power loss during swap → next launch detects both dirs, offers: <code>"Restore interrupted. [Resume] [Keep current]"</code>.</td></tr>
+<tr><td><strong>Partial game asset install</strong> (missing .mix files)</td><td>Missing sprites/audio</td><td>Content readiness check at launch. Missing critical assets → error with resolution: <code>"Missing: redalert.mix. [Re-scan] [Browse] [Download]"</code>. Missing optional → warning, fallback (no voice lines, subtitle-only). <code>ic asset validate</code> checks all imports.</td></tr>
+<tr><td><strong>Decompression bomb</strong> (.shp/.vqa claiming huge size)</td><td>Memory exhaustion</td><td><code>ra-formats</code> parsers enforce caps: max sprite = 64 MB, max video frame = 16 MB, max .mix = 2 GB. Exceeds cap → parse error, file skipped.</td></tr>
+<tr><td><strong>Command injection via chat/cvar</strong> (player name with command syntax)</td><td>Possible command execution</td><td>All player-supplied strings are escaped before substitution into any command context. Chat messages are plain text only (D059). Cvar values are type-checked, never evaluated as commands.</td></tr>
+<tr><td><strong>WAL file orphaned after crash</strong></td><td>.db-wal/.db-shm files remain</td><td>On startup, engine opens all databases (triggering SQLite’s automatic WAL recovery). Orphaned WAL files are replayed and checkpointed. No user action needed — SQLite handles this natively.</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>CLI recovery commands:</strong></p>
+<pre><code>ic data health                    # Check integrity of all databases + critical files
+ic data repair                    # Run integrity_check + repair on all databases
+ic data repair gameplay           # Repair a specific database
+ic data reset gameplay            # Delete and recreate gameplay.db (fresh, empty)
+ic data reset config              # Reset config.toml to defaults
+ic data reset --all               # Reset everything except identity key (nuclear option)
+ic asset validate                 # Check all imported assets for corruption
+ic mod repair &lt;package&gt;           # Re-download and re-verify a corrupt mod package
+ic server validate-config &lt;path&gt;  # Validate server config ranges before launch
+</code></pre>
+<p><strong>Design principle:</strong> The game should never fail to launch. If any data file is missing, corrupt, or incompatible, the engine creates fresh defaults and continues. The only file whose loss requires user action is <code>keys/identity.key</code>, and that’s recoverable via the mnemonic phrase. Everything else is either re-downloadable, re-syncable, or recreatable with defaults.</p>
+<p><strong>The broader principle: hackable but unbreakable.</strong> IC gives users open <code>.db</code> files, shipped <code>.sql</code> queries (D034), full CLI access, hot-reload, console commands, moddable YAML/Lua/WASM, and direct filesystem access. Every exposed surface is designed so that: (1) invalid input is clamped, rejected, or replaced with defaults — never crashes the engine, (2) corrupted state is detected on startup and auto-recovered, (3) the path from “I broke something” to “everything works again” is at most one command or one click.</p>
 <h3 id="alternatives-considered"><a class="header" href="#alternatives-considered">Alternatives Considered</a></h3>
 <ul>
 <li><strong>Proprietary backup format with encryption</strong> (rejected — contradicts “standard formats only” principle; a ZIP file can be encrypted separately with standard tools if the player wants encryption)</li>

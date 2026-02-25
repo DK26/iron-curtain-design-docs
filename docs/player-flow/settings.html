@@ -35,10 +35,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-61d2369b.js";
+            window.path_to_searchindex_js = "../searchindex-f3722748.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-1553b04b.js"></script>
+        <script src="../toc-56a6701d.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -207,16 +207,88 @@
 <tr><th>Tab</th><th>Contents</th></tr>
 </thead>
 <tbody>
-<tr><td><strong>Video</strong></td><td>Resolution, fullscreen/windowed/borderless, render mode (Classic/HD/3D), zoom limits, UI scale, shroud style (hard/smooth edges), FPS limit, VSync. Theme selection (Classic/Remastered/Modern/community). Cutscene playback preference (<code>Auto</code> / <code>Original</code> / <code>Clean Remaster</code> / <code>AI Enhanced</code> / <code>Briefing Fallback</code>). Display language / subtitle language selection and UI text direction (<code>Auto</code>, <code>LTR</code>, <code>RTL</code>) test override for localization QA/creators. Cutscene subtitle/CC fallback policy (primary + secondary language chain, original-audio fallback behavior). Optional <code>Allow Machine-Translated Subtitles/CC Fallback</code> toggle (clearly labeled, trust-tagged, off by default unless user opts in).</td></tr>
+<tr><td><strong>Video</strong></td><td><strong>Performance Profile</strong> selector (Optimize for Performance / Optimize for Graphics / Recommended / Custom — see section below). Resolution, fullscreen/windowed/borderless, render mode (Classic/HD/3D), zoom limits, UI scale, shroud style (hard/smooth edges), FPS limit, VSync, texture filtering, particle density, unit detail LOD, weather effects. Theme selection (Classic/Remastered/Modern/community). Cutscene playback preference (<code>Auto</code> / <code>Original</code> / <code>Clean Remaster</code> / <code>AI Enhanced</code> / <code>Briefing Fallback</code>). Display language / subtitle language selection and UI text direction (<code>Auto</code>, <code>LTR</code>, <code>RTL</code>) test override for localization QA/creators. Cutscene subtitle/CC fallback policy (primary + secondary language chain, original-audio fallback behavior). Optional <code>Allow Machine-Translated Subtitles/CC Fallback</code> toggle (clearly labeled, trust-tagged, off by default unless user opts in).</td></tr>
 <tr><td><strong>Audio</strong></td><td>Master / Music / SFX / Voice / Ambient volume sliders. Music mode (Jukebox/Dynamic/Off). EVA voice. Spatial audio toggle. Voice-over preferences (D068): per-category selection/fallback for <code>EVA</code>, <code>Unit Responses</code>, and campaign/cutscene dialogue dubs where installed (<code>Auto</code> / specific language or style pack / <code>Off</code> where subtitle/CC fallback exists).</td></tr>
 <tr><td><strong>Controls</strong></td><td>Official input profiles by device: <code>Classic RA (KBM)</code>, <code>OpenRA (KBM)</code>, <code>Modern RTS (KBM)</code>, <code>Gamepad Default</code>, <code>Steam Deck Default</code>, plus <code>Custom</code> (profile diff). Full rebinding UI with category filters (Unit Commands, Production, Control Groups, Camera, Communication, UI/System, Debug). Mouse settings: edge scroll speed, scroll inversion, drag selection shape. Controller/Deck settings: deadzones, stick curves, cursor acceleration, radial behavior, gyro sensitivity (when available). Touch settings: handedness (mirror layout), touch target size, hold/drag thresholds, command rail behavior, camera bookmark dock preferences. Includes <code>Import</code>, <code>Export</code>, and <code>Share on Workshop</code> (config-profile packages with scope/diff preview), plus <code>View Controls Quick Reference</code> and <code>What's Changed in Controls</code> replay entry.</td></tr>
 <tr><td><strong>Gameplay</strong></td><td>Experience profile (one-click preset). Balance preset. Pathfinding preset. AI behavior preset. Full D033 QoL toggle list organized by category: Production, Commands, UI Feedback, Selection, Gameplay. Tutorial hint frequency, Controls Walkthrough prompts, and mobile Tempo Advisor warnings (client-only) also live here.</td></tr>
 <tr><td><strong>Social</strong></td><td>Voice settings: PTT key, input/output device, voice effect preset, mic test. Chat settings: profanity filter, emojis, auto-translated phrases. Privacy: who can spectate, who can friend-request, online status visibility, and <strong>campaign progress / benchmark sharing</strong> controls (D021/D052/D053).</td></tr>
 <tr><td><strong>LLM</strong></td><td>Provider cards (add/edit/remove LLM providers). Task routing table (which provider handles which task). Connection test. Community config import/export (D047).</td></tr>
-<tr><td><strong>Data</strong></td><td>Content sources (detected game installations, manual paths, re-scan). <strong>Installed Content Manager</strong> (install profiles like <code>Minimal Multiplayer</code> / <code>Campaign Core</code> / <code>Full</code>, optional media packs, media variant groups such as cutscenes <code>Original</code> / <code>Clean Remaster</code> / <code>AI Enhanced</code> and voice-over variants by language/style, language capability badges for media packs (<code>Audio</code>, <code>Subs</code>, <code>CC</code>), translation source/trust labels, size estimates, reclaimable space). <strong>Modify Installation / Repair &amp; Verify</strong> (D069 maintenance wizard re-entry). Data health summary. Backup/Restore buttons. Cloud sync toggle. Mod profile manager link. Storage usage. Export profile data (GDPR, D061). Recovery phrase viewer (“Show my 24-word phrase”).</td></tr>
+<tr><td><strong>Data</strong></td><td>Content sources (detected game installations, manual paths, re-scan). <strong>Installed Content Manager</strong> (install profiles like <code>Minimal Multiplayer</code> / <code>Campaign Core</code> / <code>Full</code>, optional media packs, media variant groups such as cutscenes <code>Original</code> / <code>Clean Remaster</code> / <code>AI Enhanced</code> and voice-over variants by language/style, language capability badges for media packs (<code>Audio</code>, <code>Subs</code>, <code>CC</code>), translation source/trust labels, size estimates, reclaimable space). <strong>Modify Installation / Repair &amp; Verify</strong> (D069 maintenance wizard re-entry). Data health summary. Backup/Restore buttons. Cloud sync toggle. Mod profile manager link. Storage usage. Export profile data (GDPR, D061). Recovery phrase viewer (“Show my 24-word phrase”). <strong>Database Management</strong> section: per-database size display, [Optimize Databases] button (VACUUM + ANALYZE — reclaim disk space, useful for portable/flash drive installs), [Open in DB Browser] per database, [Export to CSV/JSON] for tables/views, link to schema documentation. See D034 § User-Facing Database Access and D061 § <code>ic db</code> CLI.</td></tr>
 </tbody>
 </table>
 </div>
+<hr>
+<h3 id="performance-profile-settings--video-top-of-tab"><a class="header" href="#performance-profile-settings--video-top-of-tab">Performance Profile (Settings → Video, top of tab)</a></h3>
+<p>A single top-level selector that configures multiple subsystems at once — render quality, I/O policy, audio quality, and memory budgets. The engine auto-detects hardware at first launch and recommends a profile. Players can override at any time.</p>
+<pre><code>┌─────────────────────────────────────────────────────────────────┐
+│  SETTINGS → VIDEO                                               │
+│                                                                 │
+│  Performance Profile:  [Recommended ▾]                          │
+│                                                                 │
+│    ► Optimize for Performance                                   │
+│    ► Optimize for Graphics                                      │
+│    ► Recommended (balanced for your hardware)          ← auto   │
+│    ► Custom                                                     │
+│                                                                 │
+│  Detected: Intel i5-3320M, Intel HD 4000, 8 GB RAM, SSD        │
+│  Recommendation: Balanced — Classic render, medium effects      │
+│                                                                 │
+│  ─────────────────────────────────────────────────────────────  │
+│  (individual settings below, overridden by profile selection    │
+│   unless "Custom" is active)                                    │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre>
+<p><strong>Profile definitions:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Setting</th><th>Performance</th><th>Recommended (auto)</th><th>Graphics</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Render mode</strong></td><td>Classic (sprite-based)</td><td>Auto-selected by GPU capability</td><td>HD or 3D if hardware supports</td></tr>
+<tr><td><strong>Resolution</strong></td><td>Native (no supersampling)</td><td>Native</td><td>Native or supersampled</td></tr>
+<tr><td><strong>Post-FX</strong></td><td>None</td><td>Classic</td><td>Enhanced</td></tr>
+<tr><td><strong>Shadow style</strong></td><td>SpriteShadow</td><td>Auto</td><td>ProjectedShadow</td></tr>
+<tr><td><strong>FPS limit</strong></td><td>60</td><td>Monitor refresh rate</td><td>Uncapped / VSync</td></tr>
+<tr><td><strong>Zoom range</strong></td><td>Standard (less GPU load)</td><td>Standard</td><td>Extended</td></tr>
+<tr><td><strong>Audio quality</strong></td><td>Compressed, fewer channels</td><td>Auto</td><td>Full quality, spatial audio</td></tr>
+<tr><td><strong>I/O policy</strong></td><td><code>ram_first</code> (zero disk I/O during gameplay)</td><td><code>ram_first</code></td><td><code>ram_first</code></td></tr>
+<tr><td><strong>SQLite mode</strong></td><td>In-memory during gameplay</td><td>In-memory during gameplay</td><td>In-memory during gameplay</td></tr>
+<tr><td><strong>Texture filtering</strong></td><td>Nearest (pixel-perfect)</td><td>Bilinear</td><td>Anisotropic</td></tr>
+<tr><td><strong>Particle density</strong></td><td>Reduced</td><td>Normal</td><td>Full</td></tr>
+<tr><td><strong>Unit detail LOD</strong></td><td>Aggressive (fewer animation frames at distance)</td><td>Normal</td><td>Full (all frames at all distances)</td></tr>
+<tr><td><strong>Weather effects</strong></td><td>Minimal (sim-only, no visual particles)</td><td>Normal</td><td>Full (rain/snow/dust particles, screen effects)</td></tr>
+<tr><td><strong>UI scale</strong></td><td>Auto (readable on small screens)</td><td>Auto</td><td>Auto</td></tr>
+<tr><td><strong>Replay recording</strong></td><td>Buffered in RAM</td><td>Buffered in RAM</td><td>Buffered in RAM</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Design rules:</strong></p>
+<ul>
+<li><strong>Hardware auto-detection at first launch.</strong> The engine profiles GPU, CPU core count, RAM, and storage type (SSD vs HDD vs removable) via Bevy/wgpu adapter info and platform APIs. The recommended profile is computed from this — not a static mapping, but a rule-based selector (e.g., integrated GPU + &lt;6 GB RAM → Performance; discrete GPU + ≥16 GB RAM → Graphics).</li>
+<li><strong>Storage type detection matters.</strong> If the engine detects a USB/removable drive or a 5400 RPM HDD (via platform heuristics), the I/O policy defaults to <code>ram_first</code> regardless of profile. This ensures flash drive / portable mode users get smooth gameplay without manual configuration.</li>
+<li><strong>Profile is a starting point, not a cage.</strong> Selecting a profile sets all the values in the table above, but the player can then tweak individual settings. Changing any individual setting switches the profile label to “Custom” automatically.</li>
+<li><strong>Profile persists in <code>config.toml</code>.</strong> The selected profile name is saved alongside the individual values. On engine update, if a profile’s defaults change, the player sees a non-intrusive notification: “Your Performance Profile defaults were updated. [Review Changes] [Keep My Custom Settings].”</li>
+<li><strong>Not a gameplay setting.</strong> Performance profiles are purely client-side visual/I/O configuration. They never affect simulation, balance, or ranked eligibility. Two players in the same match can use different profiles — one on Performance, one on Graphics — with identical sim behavior.</li>
+<li><strong>Moddable.</strong> Profile definitions are YAML-driven. Modders or communities can publish custom profiles (e.g., “Tournament Standard” that locks specific settings for competitive play, or “Potato Mode” for extremely low-end hardware). Workshop-shareable as config-profile packages alongside D033 experience presets.</li>
+<li><strong>Console command access.</strong> <code>ic_perf_profile &lt;name&gt;</code> applies a profile from the command console (D058). <code>ic_perf_profile list</code> shows available profiles. <code>ic_perf_profile detect</code> re-runs hardware detection and recommends.</li>
+</ul>
+<p><strong>Relationship to other preset systems:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>System</th><th>What it controls</th><th>Scope</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Performance Profile</strong> (this)</td><td>Render quality, I/O policy, audio quality, visual effects</td><td>Client-side only, per-machine</td></tr>
+<tr><td><strong>Experience Profile</strong> (D033)</td><td>Balance, AI, pathfinding, QoL toggles</td><td>Gameplay, per-lobby</td></tr>
+<tr><td><strong>Render Mode</strong> (D048)</td><td>Camera projection, asset set, palette handling</td><td>Visual identity, switchable mid-game</td></tr>
+<tr><td><strong>Install Preset</strong> (D069)</td><td>Storage footprint, downloaded content</td><td>Data management</td></tr>
+<tr><td><strong>Mod Profile</strong> (D062)</td><td>Active mods + experience settings</td><td>Content composition</td></tr>
+</tbody>
+</table>
+</div>
+<p>These are orthogonal — a player can run Performance profile + OpenRA experience preset + Classic render mode + Campaign Core install preset simultaneously.</p>
 <hr>
 <h3 id="localization-directionality--rtl-display-behavior-settings--video--accessibility"><a class="header" href="#localization-directionality--rtl-display-behavior-settings--video--accessibility">Localization Directionality &amp; RTL Display Behavior (Settings → Video / Accessibility)</a></h3>
 <p>IC supports RTL languages (e.g., Arabic/Hebrew) as a <strong>text + layout</strong> feature, not only a font feature.</p>

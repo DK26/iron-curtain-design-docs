@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-61d2369b.js";
+            window.path_to_searchindex_js = "searchindex-f3722748.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-1553b04b.js"></script>
+        <script src="toc-56a6701d.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -434,6 +434,71 @@ impl StringInterner {
 <p><strong>Interning generalizes the <code>VersusTable</code> principle.</strong> The <code>VersusTable</code> flat array (documented above in Layer 2) already converts armor/weapon type enums to integer indices for O(1) lookup. String interning extends this approach to <em>every</em> string-keyed system — conditions, traits, mod paths, asset names — without requiring hardcoded enums. The <code>VersusTable</code> uses compile-time enum indices; <code>StringInterner</code> provides the same benefit for data-driven strings loaded from YAML.</p>
 <p><strong>What NOT to intern:</strong> Player-facing display strings (chat messages, player names, localization text). These are genuinely dynamic and not used in hot-path comparisons. Interning targets the <em>engine vocabulary</em> — the fixed set of identifiers that YAML rules, conditions, and mod APIs reference repeatedly.</p>
 <p><strong>Snapshot integration (D010):</strong> The <code>StringInterner</code> is part of the sim snapshot. When saving/loading, the intern table serializes alongside game state, ensuring that <code>InternedId</code> values remain stable across save/resume. Replays record the intern table at keyframes. This is the same approach Factorio uses for its prototype string IDs — resolved once during data loading, stable for the session lifetime.</p>
+<h3 id="global-allocator-mimalloc"><a class="header" href="#global-allocator-mimalloc">Global Allocator: mimalloc</a></h3>
+<p>The engine uses <strong>mimalloc</strong> (Microsoft, MIT license) as the global allocator on desktop and mobile targets. WASM uses Rust’s built-in dlmalloc (the default for <code>wasm32-unknown-unknown</code>).</p>
+<p><strong>Why mimalloc:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Factor</th><th>mimalloc</th><th>System allocator</th><th>jemalloc</th></tr>
+</thead>
+<tbody>
+<tr><td>Small-object speed</td><td>5x faster than glibc</td><td>Baseline</td><td>Good but slower than mimalloc</td></tr>
+<tr><td>Multi-threaded (Bevy/rayon)</td><td>Per-thread free lists, single-CAS cross-thread free</td><td>Contended on Linux</td><td>Good but higher RSS</td></tr>
+<tr><td>Fragmentation (60+ min sessions)</td><td>Good (temporal cadence, periodic coalescing)</td><td>Varies by platform</td><td>Best, but not enough to justify trade-offs</td></tr>
+<tr><td>RSS overhead</td><td>Low (~50% reduction vs glibc in some workloads)</td><td>Platform-dependent</td><td>Moderate (arena-per-thread)</td></tr>
+<tr><td>Windows support</td><td>Native</td><td>Native</td><td>Weak (caveats)</td></tr>
+<tr><td>WASM support</td><td>No</td><td>Yes (dlmalloc)</td><td>No</td></tr>
+<tr><td>License</td><td>MIT</td><td>N/A</td><td>BSD 2-clause</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Alternatives rejected:</strong></p>
+<ul>
+<li><strong>jemalloc:</strong> Better fragmentation resistance but weaker Windows support, no WASM, higher RSS on many-core machines, slower for small objects (Bevy’s dominant allocation pattern). Only advantage is profiling, which mimalloc’s built-in stats + the counting wrapper replicate.</li>
+<li><strong>tcmalloc (Google):</strong> Modern version is Linux-only. Does not meet cross-platform requirements.</li>
+<li><strong>rpmalloc (Embark Studios):</strong> Viable but Embark wound down operations. Less community momentum. No WASM support.</li>
+<li><strong>System allocator:</strong> 5x slower on Linux multi-threaded workloads. Unacceptable for Bevy’s parallel ECS scheduling.</li>
+</ul>
+<p><strong>Per-target allocator selection:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Target</th><th>Allocator</th><th>Rationale</th></tr>
+</thead>
+<tbody>
+<tr><td>Windows / macOS / Linux</td><td>mimalloc</td><td>Best small-object perf, low RSS, native cross-platform</td></tr>
+<tr><td>WASM</td><td>dlmalloc (Rust default)</td><td>Built-in, adequate for single-threaded WASM context</td></tr>
+<tr><td>iOS / Android</td><td>mimalloc (fallback: system)</td><td>mimalloc builds for both; system is safe fallback if build issues arise</td></tr>
+<tr><td>CI / Debug builds</td><td><code>CountingAllocator&lt;MiMalloc&gt;</code></td><td>Wraps mimalloc with per-tick allocation counting (feature-gated)</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Implementation pattern:</strong></p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>// ic-game/src/main.rs (or ic-app entry point)
+#[cfg(not(target_arch = "wasm32"))]
+#[global_allocator]
+static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
+// WASM targets fall through to Rust's default dlmalloc — no override needed.
+<span class="boring">}</span></code></pre>
+<p><strong>Allocation-counting wrapper for CI regression detection:</strong></p>
+<p>In CI/debug builds (behind a <code>counting-allocator</code> feature flag), a thin wrapper around mimalloc tracks per-tick allocation counts:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Wraps the inner allocator with atomic counters.
+/// Reset counters at tick boundary; assert both are 0 after tick_system() completes.
+/// Enabled only in CI/debug builds via feature flag.
+pub struct CountingAllocator&lt;A: GlobalAlloc&gt; {
+    inner: A,
+    alloc_count: AtomicU64,
+    dealloc_count: AtomicU64,
+}
+<span class="boring">}</span></code></pre>
+<p>This catches regressions where new code introduces heap allocations in the sim hot path. The benchmark <code>bench_tick_zero_allocations()</code> asserts that <code>alloc_count == 0</code> after a full tick with 1000 units — if it fails, someone added a heap allocation to a hot path.</p>
+<p><strong>Why the allocator matters less than it seems for IC:</strong> The sim (<code>ic-sim</code>) targets zero allocations during tick processing (Layer 5). The allocator’s impact is primarily on the loading phase (asset parsing, ECS setup, mod compilation), Bevy internals (archetype storage, system scheduling, renderer), menu/UI, and networking buffers. None of these affect simulation determinism. The allocator is not deterministic (pointer values vary across runs), but since <code>ic-sim</code> performs zero allocations during ticks, this is irrelevant for lockstep determinism.</p>
+<p><strong>mimalloc built-in diagnostics:</strong> Enable via <code>MI_STAT=2</code> environment variable for per-thread allocation statistics, peak RSS, segment usage. Useful for profiling the loading phase and identifying memory bloat without external tools.</p>
 <h2 id="layer-6-work-stealing-parallelism-bonus-scaling"><a class="header" href="#layer-6-work-stealing-parallelism-bonus-scaling">Layer 6: Work-Stealing Parallelism (Bonus Scaling)</a></h2>
 <p>After layers 1-5, the engine is already fast on a single core. Parallelism scales it further on better hardware.</p>
 <h3 id="how-bevy--rayon-work-stealing-operates"><a class="header" href="#how-bevy--rayon-work-stealing-operates">How Bevy + rayon Work-Stealing Operates</a></h3>
@@ -1430,9 +1495,286 @@ pub struct EntityBaseline {
 <tr><td><code>DoubleBuffered&lt;T&gt;</code> for fog, influence maps, global modifiers</td><td><code>02-ARCHITECTURE.md</code></td><td>Tick-consistent reads — all systems see same fog/modifier state within a tick</td></tr>
 <tr><td>Connection lifecycle uses type state (<code>Connection&lt;S&gt;</code>)</td><td><code>03-NETCODE.md</code></td><td>Compile-time prevention of invalid state transitions — zero runtime cost via <code>PhantomData</code></td></tr>
 <tr><td>Camera zoom/pan interpolation once per frame, not per entity</td><td><code>02-ARCHITECTURE.md</code></td><td>Frame-rate-independent exponential lerp on <code>GameCamera</code> resource — <code>powf()</code> once per frame</td></tr>
+<tr><td>Global allocator: mimalloc (desktop/mobile), dlmalloc (WASM)</td><td><code>10-PERFORMANCE.md</code></td><td>5x faster than glibc for small objects; per-thread free lists for Bevy/rayon; MIT license</td></tr>
+<tr><td>CI allocation counting: <code>CountingAllocator&lt;MiMalloc&gt;</code></td><td><code>10-PERFORMANCE.md</code></td><td>Feature-gated wrapper asserts zero allocations per tick; catches hot-path regressions</td></tr>
+<tr><td>RAM Mode (default): zero disk writes during gameplay</td><td><code>10-PERFORMANCE.md</code></td><td>All assets loaded to RAM pre-match; SQLite/replay/autosave buffered in RAM; flush at safe points only; storage resilience with cloud/community/local fallback</td></tr>
+<tr><td>Pre-match heap allocation: all gameplay memory allocated during loading screen</td><td><code>10-PERFORMANCE.md</code></td><td><code>malloc</code> during <code>tick_system()</code> is a performance bug; CI benchmark tracks per-tick allocation count</td></tr>
+<tr><td>In-memory SQLite during gameplay (<code>sqlite_in_memory_gameplay</code>)</td><td><code>10-PERFORMANCE.md</code></td><td>gameplay.db runs as <code>:memory:</code> during match; serialized to disk at match end and flush points</td></tr>
 </tbody>
 </table>
 </div>
+<h2 id="ram-mode"><a class="header" href="#ram-mode">RAM Mode</a></h2>
+<h3 id="what-it-is"><a class="header" href="#what-it-is">What It Is</a></h3>
+<p><strong>RAM Mode</strong> is the engine’s default runtime behavior: load everything into RAM before gameplay, perform zero disk I/O during gameplay, and flush to disk only at safe points (match end, pause, exit). The player never needs to enable it — it’s on by default for everyone.</p>
+<p>The name is user-facing. Settings, console, and documentation all call it “RAM Mode.” Internally, the I/O subsystem uses <code>IoPolicy::RamMode</code> as the default enum variant.</p>
+<h3 id="problem-disk-io-is-the-silent-performance-killer"><a class="header" href="#problem-disk-io-is-the-silent-performance-killer">Problem: Disk I/O Is the Silent Performance Killer</a></h3>
+<p>The engine targets a 2012 laptop with a slow 5400 RPM HDD. Flash drives (USB 2.0/3.0) are even worse for random I/O — sequential reads are acceptable, but random writes and fsyncs are catastrophic. Even on modern SSDs, unnecessary disk I/O during gameplay introduces variance that deterministic lockstep cannot tolerate.</p>
+<p>The existing design already isolates I/O from the game thread (background writers, ring buffers, deferred WAL checkpoints). RAM Mode extends that principle into a <strong>unified strategy</strong>: load everything into RAM before gameplay, perform zero disk writes during gameplay, and flush to disk at safe points.</p>
+<h3 id="io-moment-map"><a class="header" href="#io-moment-map">I/O Moment Map</a></h3>
+<p>Every disk I/O operation in the engine lifecycle, categorized by when it happens and how to minimize it:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Phase</th><th>I/O Operation</th><th>Current Design</th><th>RAM-First Optimization</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>First launch</strong></td><td>Content detection &amp; asset indexing</td><td>Scans known install paths</td><td>Index cached in SQLite after first scan; subsequent launches skip detection</td></tr>
+<tr><td><strong>Game start</strong></td><td>Asset loading (sprites, audio, maps, YAML rules)</td><td>Bevy async asset pipeline</td><td><strong>Load all game-session assets into RAM before match starts.</strong> Loading screen waits for full load. No streaming during gameplay</td></tr>
+<tr><td><strong>Game start</strong></td><td>Mod loading (YAML + Lua + WASM)</td><td>Parsed and compiled at load time</td><td>Keep compiled mod state in RAM for entire session</td></tr>
+<tr><td><strong>Game start</strong></td><td>SQLite databases (gameplay.db, profile)</td><td>On-disk with WAL mode</td><td><strong>Open in-memory (<code>:memory:</code>) by default; populate from on-disk file at load.</strong> Serialize back to disk at safe points</td></tr>
+<tr><td><strong>Gameplay</strong></td><td>Autosave (delta snapshot)</td><td>Background I/O thread, Fossilize pattern</td><td>Configurable: hold in RAM ring buffer, flush on configurable cycle or at match end</td></tr>
+<tr><td><strong>Gameplay</strong></td><td>Replay recording (.icrep)</td><td>Background writer via crossbeam channel</td><td>Configurable: buffer in RAM (default), flush periodically or at match end</td></tr>
+<tr><td><strong>Gameplay</strong></td><td>SQLite event writes (gameplay_events, telemetry)</td><td>Ring buffer → batch transaction on I/O thread</td><td><strong>In-memory SQLite by default during gameplay.</strong> Batch flush to on-disk file at configurable intervals or at match end</td></tr>
+<tr><td><strong>Gameplay</strong></td><td>WAL checkpoint</td><td>Suppressed during gameplay on HDD (existing)</td><td>Extend: suppress on all storage during gameplay; checkpoint at match end or during pauses</td></tr>
+<tr><td><strong>Gameplay</strong></td><td>Screenshot capture</td><td>PNG encode + write</td><td>Queue to background thread; buffer if I/O is slow</td></tr>
+<tr><td><strong>Match end</strong></td><td>Final replay flush</td><td>Writer flushes remaining frames + header</td><td>Synchronous flush at match end (acceptable — player sees post-game screen)</td></tr>
+<tr><td><strong>Match end</strong></td><td>SQLite serialize to disk</td><td>Not yet designed</td><td><strong>Mandatory dump: all in-memory SQLite databases serialized to on-disk files at match end</strong></td></tr>
+<tr><td><strong>Match end</strong></td><td>Autosave final</td><td>Fossilize pattern</td><td>Final save at match end is mandatory regardless of I/O mode</td></tr>
+<tr><td><strong>Post-game</strong></td><td>Stats computation, rating update</td><td>Reads from gameplay.db</td><td>Already in RAM if using in-memory SQLite</td></tr>
+<tr><td><strong>Menu / Lobby</strong></td><td>Workshop downloads, mod installs</td><td>Background P2P download</td><td>No gameplay impact — full disk I/O acceptable</td></tr>
+<tr><td><strong>Menu / Lobby</strong></td><td>Config saves, profile updates</td><td>SQLite + TOML writes</td><td>No gameplay impact — direct disk writes acceptable</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="default-io-policy-ram-first"><a class="header" href="#default-io-policy-ram-first">Default I/O Policy: RAM-First</a></h3>
+<p>The default behavior is: <strong>load everything you can into RAM, and only write to disk when the system is not actively running a match.</strong></p>
+<pre><code>┌─────────────────────────────────────────────────────────────────┐
+│  LOADING SCREEN (pre-match)                                     │
+│                                                                 │
+│  ✓ Map loaded (2.1 MB)                                          │
+│  ✓ Sprites loaded (18.4 MB)                                     │
+│  ✓ Audio loaded (12.7 MB)                                       │
+│  ✓ Rules compiled (0.3 MB)                                      │
+│  ✓ SQLite databases cached to RAM (1.2 MB)                      │
+│  ✓ Replay buffer pre-allocated (4 MB ring)                      │
+│                                                                 │
+│  Total session RAM: 38.7 MB / Budget: 200 MB                   │
+│  Ready to start — zero disk I/O during gameplay                  │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre>
+<p><strong>Why this is safe:</strong> The target is &lt;200 MB RAM for 1000 units (<a href="01-VISION.html">01-VISION</a>). Game assets for a Red Alert match are typically 30–50 MB total. Even on the 4 GB min-spec machine, loading everything into RAM leaves &gt;3.5 GB free for the OS and other applications.</p>
+<p><strong>When RAM is insufficient:</strong> If the system reports low available memory at load time (below a configurable threshold, default: 512 MB free after loading), the engine falls back to Bevy’s standard async asset streaming — loading assets on demand from disk. This is automatic, not a user setting. A one-time console warning is logged: <code>"Low memory: falling back to disk-streaming mode. Expect longer asset access times."</code></p>
+<h3 id="io-modes"><a class="header" href="#io-modes">I/O Modes</a></h3>
+<p>RAM Mode is the default. Alternative modes exist for edge cases where RAM Mode is not ideal.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Mode</th><th>Behavior</th><th>Default for</th><th>When to use</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>RAM Mode</strong> (default)</td><td>All gameplay data buffered in RAM. Zero disk I/O during matches. Flush at safe points.</td><td>All players (desktop, portable, store builds)</td><td>Normal gameplay. Works for everyone unless RAM is critically low.</td></tr>
+<tr><td><strong>Streaming Mode</strong></td><td>Write to disk continuously via background I/O threads. Existing behavior from the background-writer architecture.</td><td>Automatic fallback if RAM is insufficient</td><td>Systems with &lt;4 GB RAM and large mods where RAM budget is exhausted. Also useful for relay servers (long-running processes that need persistent writes).</td></tr>
+<tr><td><strong>Minimal Mode</strong></td><td>Like RAM Mode but also suppresses autosave during gameplay. Replay buffer is the only recovery mechanism.</td><td>Never auto-selected</td><td>Extreme low-RAM scenarios or when the player explicitly wants maximum RAM savings.</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Edge cases where RAM Mode falls back to Streaming Mode automatically:</strong></p>
+<ul>
+<li>Available RAM after loading is below 512 MB free (configurable threshold)</li>
+<li>I/O RAM budget (<code>io_ram_budget_mb</code>, default 64 MB) is exhausted during gameplay</li>
+<li>Relay server / dedicated server processes (long-running, need persistent writes — these use Streaming Mode by default)</li>
+</ul>
+<p><strong>The player does not need to choose.</strong> RAM Mode is always the default. The engine falls back to Streaming Mode automatically when needed, with a one-time console log. No user action required. Advanced users can override via config or console.</p>
+<h3 id="configurable-io-parameters"><a class="header" href="#configurable-io-parameters">Configurable I/O Parameters</a></h3>
+<p>These parameters are exposed via <code>config.toml</code> (D067) and console cvars (D058). They control disk write behavior <strong>during gameplay only</strong> — menu/lobby I/O is always direct-to-disk.</p>
+<pre><code class="language-toml">[io]
+# I/O mode during active gameplay.
+# "ram" (default): buffer all writes in RAM, flush at match end and safe points
+# "streaming": write to disk continuously via background threads
+# "minimal": like ram but also suppresses autosave during gameplay (replay-only recovery)
+mode = "ram"
+
+# How often in-RAM data is flushed to disk during gameplay (seconds).
+# 0 = only at match end and pause. Higher = more frequent but more I/O.
+# Only applies when mode = "ram".
+flush_interval_seconds = 0
+
+# Maximum RAM budget (MB) for buffered I/O (replay buffer + in-memory SQLite + autosave queue).
+# If exceeded, falls back to streaming mode. 0 = no limit (use available RAM).
+ram_budget_mb = 64
+
+# SQLite in-memory mode during gameplay.
+# true (default): gameplay.db runs as :memory: during match, serialized to disk at flush points.
+# false: standard WAL mode with background I/O thread.
+sqlite_in_memory = true
+
+# Replay write buffering.
+# true (default): replay frames buffered in RAM ring buffer, flushed at match end.
+# false: background writer streams to disk continuously.
+replay_buffer_in_ram = true
+
+# Autosave write policy during gameplay.
+# "deferred" (default): delta snapshots held in RAM, written to disk at flush points.
+# "immediate": written to disk immediately via background I/O thread.
+# "disabled": no autosave during gameplay (replay is the recovery mechanism).
+autosave_policy = "deferred"
+</code></pre>
+<h3 id="flush-points-safe-moments-to-write-to-disk"><a class="header" href="#flush-points-safe-moments-to-write-to-disk">Flush Points (Safe Moments to Write to Disk)</a></h3>
+<p>Disk writes during gameplay are batched and flushed only at <strong>safe points</strong> — moments where a brief I/O stall is invisible to the player:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Safe Point</th><th>When</th><th>What Gets Flushed</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Match end</strong> (mandatory)</td><td>Victory/defeat screen</td><td>Everything: replay, SQLite, autosave, screenshots</td></tr>
+<tr><td><strong>Player pause</strong></td><td>When any player pauses (multiplayer: all clients paused)</td><td>Autosave, SQLite events</td></tr>
+<tr><td><strong>Flush interval</strong></td><td>Every N seconds if <code>flush_interval_seconds &gt; 0</code></td><td>SQLite events, autosave (on background thread)</td></tr>
+<tr><td><strong>Lobby return</strong></td><td>When returning to menu/lobby</td><td>Full SQLite serialize, config saves</td></tr>
+<tr><td><strong>Application exit</strong></td><td>Normal shutdown</td><td>Everything — mandatory</td></tr>
+<tr><td><strong>Crash recovery</strong></td><td>On next launch</td><td>Detect incomplete in-memory state via replay; replay file is always valid up to last flushed frame</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Crash safety under RAM-first mode:</strong> If the game crashes during a match with <code>gameplay_write_policy = "ram_first"</code>, in-memory SQLite data (gameplay events, telemetry) from that match is lost. However:</p>
+<ul>
+<li>The replay file is always valid up to the last buffered frame (replay buffer flushed periodically even in RAM-first mode, at a minimum every 60 seconds)</li>
+<li>Autosave (if <code>deferred</code>, not <code>disabled</code>) is flushed at the same intervals</li>
+<li>Player profile, keys, and config are never held only in RAM — they are always on disk</li>
+<li>This trade-off is acceptable: gameplay event telemetry from a crashed match is low-value compared to smooth gameplay</li>
+</ul>
+<h3 id="portable-mode-integration--storage-resilience"><a class="header" href="#portable-mode-integration--storage-resilience">Portable Mode Integration &amp; Storage Resilience</a></h3>
+<p>Portable mode (defined in <code>architecture/crate-graph.md</code> § <code>ic-paths</code>) stores all data relative to the executable. When combined with RAM Mode, the engine runs smoothly from a USB flash drive — and survives the flash drive being temporarily removed.</p>
+<p><strong>The design test:</strong> If a player is running from a USB flash drive, momentarily removes it during gameplay, and plugs it back in, the game should keep running the entire time and correctly save state when the drive returns. If the drive has a problem, the game should offer to save state somewhere else.</p>
+<p><strong>Why this works:</strong> RAM Mode means the engine has zero dependency on the storage device during gameplay. All assets are in RAM. All databases are in-memory. All replay/autosave data is buffered. The flash drive is only needed at two moments: loading (before gameplay) and flushing (after gameplay). Between those two moments, the drive can be on the moon.</p>
+<p><strong>Lifecycle with storage resilience:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Phase</th><th>Storage needed?</th><th>What happens if storage is unavailable</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Loading screen</strong></td><td>Yes — sequential reads</td><td>Cannot proceed. If storage disappears mid-load: pause loading, show reconnection dialog.</td></tr>
+<tr><td><strong>Gameplay</strong></td><td>No</td><td>Game runs entirely from RAM. Storage status is irrelevant. No I/O errors possible because no I/O is attempted.</td></tr>
+<tr><td><strong>Flush point</strong> (match end, pause)</td><td>Yes — sequential writes</td><td>Attempt flush. If storage unavailable → Storage Recovery Dialog (see below).</td></tr>
+<tr><td><strong>Menu / Lobby</strong></td><td>Yes — direct reads/writes</td><td>If storage unavailable → Storage Recovery Dialog.</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Storage Recovery Dialog</strong> (shown when a flush or menu I/O fails):</p>
+<pre><code>┌──────────────────────────────────────────────────────────────┐
+│  STORAGE UNAVAILABLE                                         │
+│                                                              │
+│  Your game data is safe in memory.                           │
+│  The storage device is not accessible.                       │
+│                                                              │
+│  ┌────────────────────────────────────────────────────────┐  │
+│  │  Reconnect storage                                     │  │
+│  │  Plug your USB drive back in and click Retry.          │  │
+│  │  [Retry]                                               │  │
+│  └────────────────────────────────────────────────────────┘  │
+│                                                              │
+│  ┌────────────────────────────────────────────────────────┐  │
+│  │  Save to a different location                          │  │
+│  │  Choose another drive or folder on this computer.      │  │
+│  │  [Browse...]                                           │  │
+│  └────────────────────────────────────────────────────────┘  │
+│                                                              │
+│  ┌────────────────────────────────────────────────────────┐  │
+│  │  Save to cloud                                (if configured)
+│  │  Upload to Steam Cloud / configured provider.          │  │
+│  │  [Upload]                                              │  │
+│  └────────────────────────────────────────────────────────┘  │
+│                                                              │
+│  ┌────────────────────────────────────────────────────────┐  │
+│  │  Save to community server                     (if available)
+│  │  Temporarily store on Official IC Community.           │  │
+│  │  Data expires in 7 days. [Upload]                      │  │
+│  └────────────────────────────────────────────────────────┘  │
+│                                                              │
+│  ┌────────────────────────────────────────────────────────┐  │
+│  │  Continue without saving                               │  │
+│  │  Your data stays in memory. You can save later.        │  │
+│  │  If you close the game, unsaved data will be lost.     │  │
+│  └────────────────────────────────────────────────────────┘  │
+│                                                              │
+└──────────────────────────────────────────────────────────────┘
+</code></pre>
+<p>The dialog shows options based on what’s available — cloud and community options only appear if configured/connected.</p>
+<p><strong>“Save to a different location”</strong> behavior:</p>
+<ul>
+<li>Opens a folder browser. Player picks any writable location (another USB drive, the host PC’s desktop, a network drive).</li>
+<li>Engine writes all buffered data (replay, autosave, SQLite databases) to the chosen location as a self-contained <code>&lt;folder&gt;/ic-emergency-save/</code> directory.</li>
+<li>The emergency save includes everything needed to resume: <code>gameplay.db</code>, replay buffer, autosave snapshot, config, and keys.</li>
+<li>On next launch from the original portable location (when the drive is back), the engine detects the emergency save and offers: <code>"Found unsaved data from a previous session at [path]. [Import and merge] [Ignore]"</code>.</li>
+</ul>
+<p><strong>“Save to cloud”</strong> behavior (only shown if a cloud provider is configured — Steam Cloud, GOG Galaxy, or a custom provider via D061’s <code>PlatformCloudSync</code> trait):</p>
+<ul>
+<li>Uploads the emergency save package to the configured cloud provider.</li>
+<li>On next launch from any location, the engine detects the cloud emergency save during D061’s cloud sync step and offers to restore.</li>
+<li>Size limit: cloud emergency saves are capped at the critical-data set (~5–20 MB: keys, profile, community credentials, config, latest autosave). Full replay buffers are excluded from cloud upload due to size constraints.</li>
+</ul>
+<p><strong>“Save to community server”</strong> behavior (only shown if the player is connected to a community server that supports temporary storage):</p>
+<ul>
+<li>Uploads the emergency save package to the community server using the player’s Ed25519 identity for authentication.</li>
+<li>Community servers can optionally offer temporary personal storage for emergency saves. This is configured per-community in <code>server_config.toml</code>:</li>
+</ul>
+<pre><code class="language-toml">[emergency_storage]
+# Whether this community server accepts emergency save uploads from members.
+enabled = false
+# Maximum storage per player (bytes). Default: 20 MB.
+max_per_player_bytes = 20_971_520
+# How long emergency saves are retained before automatic cleanup (seconds).
+# Default: 7 days (604800 seconds).
+retention_seconds = 604800
+# Maximum total storage for all emergency saves (bytes). Default: 1 GB.
+max_total_bytes = 1_073_741_824
+</code></pre>
+<ul>
+<li>The player’s emergency save is encrypted with their Ed25519 public key before upload — only they can decrypt it. The community server stores opaque blobs, not readable player data.</li>
+<li>On next launch, if the player connects to the same community, the server offers: <code>"You have an emergency save from [date]. [Restore] [Delete]"</code>.</li>
+<li>After the retention period, the emergency save is automatically deleted. The player is notified on next connect if their save expired.</li>
+<li>This is an optional community service — communities choose to enable it. Official IC community servers will enable it by default with the standard limits.</li>
+</ul>
+<p><strong>“Retry” after reconnection:</strong></p>
+<ul>
+<li>Engine re-probes the original <code>data_dir</code> path.</li>
+<li>If accessible: runs <code>PRAGMA integrity_check</code> on all databases (WAL files may be stale), checkpoints WAL, then performs the normal flush. If integrity check fails on any database: uses the in-memory version (which is authoritative — the on-disk copy is stale) and rewrites the database via <code>VACUUM INTO</code>.</li>
+<li>If still inaccessible: dialog remains.</li>
+</ul>
+<p><strong>“Continue without saving”:</strong></p>
+<ul>
+<li>Game continues. Buffered data stays in RAM. Player can trigger a save later via Settings → Data or by exiting the game normally.</li>
+<li>A persistent status indicator appears in the corner: <code>"Unsaved — storage unavailable"</code> (dismissable but re-appears on next flush attempt).</li>
+<li>If the player exits the game with unsaved data: final confirmation dialog: <code>"You have unsaved game data. Exit anyway? [Save first (browse location)] [Exit without saving] [Cancel]"</code>.</li>
+</ul>
+<p><strong>Implementation notes:</strong></p>
+<ul>
+<li>Storage availability is checked only at flush points, not polled continuously. No background thread probing the USB drive every second.</li>
+<li>The check is a simple file operation (attempt to open a known file for writing). If it fails with an I/O error, the Storage Recovery Dialog appears.</li>
+<li>All of this is transparent to the sim — <code>ic-sim</code> never sees storage state. The storage resilience logic lives in <code>ic-game</code>’s I/O management layer.</li>
+</ul>
+<p><strong>Portable mode does not require separate I/O parameters.</strong> The default <code>ram_first</code> policy already handles slow/absent storage correctly. The storage recovery dialog is the same for all storage types — it just happens to be most useful for portable/USB users.</p>
+<h3 id="pre-match-heap-allocation-discipline"><a class="header" href="#pre-match-heap-allocation-discipline">Pre-Match Heap Allocation Discipline</a></h3>
+<p>All heap-allocated memory for gameplay should be allocated <strong>before the match starts</strong>, during the loading screen. This complements the existing zero-allocation hot path principle (Efficiency Pyramid Layer 5) with an explicit pre-allocation phase:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Resource</th><th>When Allocated</th><th>Lifetime</th></tr>
+</thead>
+<tbody>
+<tr><td>ECS component storage</td><td>Loading screen (Bevy <code>World</code> setup)</td><td>Entire match</td></tr>
+<tr><td>Scratch buffers (<code>TickScratch</code>)</td><td>Loading screen</td><td>Entire match (<code>.clear()</code> per tick, never deallocated)</td></tr>
+<tr><td>Pathfinding caches (flowfield, JPS open list)</td><td>Loading screen (sized to map dimensions)</td><td>Entire match</td></tr>
+<tr><td>Spatial index (<code>SpatialHash</code>)</td><td>Loading screen (sized to map dimensions)</td><td>Entire match</td></tr>
+<tr><td>String intern table</td><td>Loading screen (populated during YAML parse)</td><td>Entire session</td></tr>
+<tr><td>Replay write buffer</td><td>Loading screen (pre-sized ring buffer)</td><td>Entire match</td></tr>
+<tr><td>In-memory SQLite</td><td>Loading screen (populated from on-disk file)</td><td>Entire match</td></tr>
+<tr><td>Autosave buffer</td><td>Loading screen (pre-sized for max delta snapshot)</td><td>Entire match</td></tr>
+<tr><td>Audio decode buffers</td><td>Loading screen</td><td>Entire match</td></tr>
+<tr><td>Render buffers (sprite batches, etc.)</td><td>Loading screen (Bevy renderer init)</td><td>Entire match</td></tr>
+<tr><td>Fog of war / influence map (<code>DoubleBuffered&lt;T&gt;</code>)</td><td>Loading screen (sized to map grid)</td><td>Entire match</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Rule:</strong> If <code>malloc</code> is called during <code>tick_system()</code> or any system that runs between tick start and tick end, it is a performance bug. The only acceptable runtime allocations during gameplay are:</p>
+<ul>
+<li>Player chat messages (rare, small, outside sim)</li>
+<li>Network packet buffers (managed by <code>ic-net</code>, outside sim)</li>
+<li>Console command parsing (rare, user-initiated)</li>
+<li>Screenshot PNG encoding (background thread)</li>
+</ul>
+<p>This list is finite and auditable. A CI benchmark that tracks per-tick allocation count (via a custom allocator in test builds) will catch regressions.</p>
 
                     </main>
 

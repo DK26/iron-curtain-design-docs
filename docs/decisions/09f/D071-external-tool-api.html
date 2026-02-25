@@ -1,0 +1,811 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>D071 — External Tool API (ICRP) - Iron Curtain — Design Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Design docs for a Rust-native Red Alert RTS engine">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../../css/general-2459343d.css">
+        <link rel="stylesheet" href="../../css/chrome-ae938929.css">
+        <link rel="stylesheet" href="../../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../../searchindex-f3722748.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../../toc-56a6701d.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Iron Curtain — Design Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs/edit/main/src/decisions/09f/D071-external-tool-api.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h2 id="d071-external-tool-api--ic-remote-protocol-icrp"><a class="header" href="#d071-external-tool-api--ic-remote-protocol-icrp">D071: External Tool API — IC Remote Protocol (ICRP)</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th></th><th></th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Status</strong></td><td>Accepted</td></tr>
+<tr><td><strong>Phase</strong></td><td>Phase 2 (observer tier + HTTP), Phase 3 (WebSocket + auth + admin tier), Phase 5 (relay server API), Phase 6a (mod tier + MCP + LSP + Workshop tool packages)</td></tr>
+<tr><td><strong>Depends on</strong></td><td>D006 (pluggable networking), D010 (snapshottable state), D012 (order validation), D034 (SQLite), D058 (command console), D059 (communication)</td></tr>
+<tr><td><strong>Driver</strong></td><td>External tools (stream overlays, Discord bots, tournament software, coaching tools, AI training pipelines, accessibility aids, replay analyzers) need a safe, structured way to communicate with a running IC game without affecting simulation determinism or competitive integrity.</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="decision-capsule-llmrag-summary"><a class="header" href="#decision-capsule-llmrag-summary">Decision Capsule (LLM/RAG Summary)</a></h3>
+<ul>
+<li><strong>Status:</strong> Accepted</li>
+<li><strong>Phase:</strong> Multi-phase (observer → admin → mod → MCP/LSP)</li>
+<li><strong>Canonical for:</strong> External tool communication protocol, plugin permission model, tool API security, MCP/LSP integration</li>
+<li><strong>Scope:</strong> <code>ic-remote</code> crate (new), relay server API surface, tool permission tiers, Workshop tool packages</li>
+<li><strong>Decision:</strong> IC exposes a <strong>local JSON-RPC 2.0 API</strong> (the IC Remote Protocol — ICRP) over WebSocket (primary) and HTTP (fallback), with four permission tiers (observer/admin/mod/debug), event subscriptions, and fog-of-war-filtered state access. External tools never touch live sim state — they read from post-tick snapshots and write through the order pipeline.</li>
+<li><strong>Why:</strong> OpenRA has no external tool API, which severely limits its ecosystem. Every successful platform (Factorio RCON, Minecraft plugins, Source Engine SRCDS, Lichess API, OBS WebSocket) enables external tools. IC’s “hackable but unbreakable” philosophy demands this.</li>
+<li><strong>Non-goals:</strong> Replacing the in-process modding tiers (YAML/Lua/WASM). ICRP is for external processes, not in-game mods.</li>
+<li><strong>Invariants preserved:</strong> Simulation purity (invariant #1 — no I/O in <code>ic-sim</code>), determinism (external reads from snapshots, writes through order pipeline), competitive integrity (ranked mode restricts tool access).</li>
+<li><strong>Keywords:</strong> ICRP, JSON-RPC, WebSocket, external tools, plugin API, MCP, LSP, stream overlay, tournament tools, permission tiers, observer, admin</li>
+</ul>
+<h3 id="problem"><a class="header" href="#problem">Problem</a></h3>
+<p>IC has three in-process modding tiers (YAML, Lua, WASM) for gameplay modification, but no way for an <strong>external process</strong> to communicate with a running game. This means:</p>
+<ul>
+<li>Stream overlays cannot read live game state (army value, resources, APM)</li>
+<li>Discord bots cannot report match results in real time</li>
+<li>Tournament admin tools cannot manage matches programmatically</li>
+<li>AI training pipelines cannot observe games for reinforcement learning</li>
+<li>Coaching tools cannot provide real-time feedback</li>
+<li>Accessibility tools (screen readers, custom input devices) cannot integrate</li>
+<li>Community developers cannot build the ecosystem of tools that makes a platform thrive</li>
+</ul>
+<p><strong>OpenRA is the cautionary example.</strong> It has no external tool API. All tooling must either modify C# source and recompile, parse log files, or use the offline utility. This severely limits community innovation.</p>
+<h3 id="decision"><a class="header" href="#decision">Decision</a></h3>
+<p>IC exposes the <strong>IC Remote Protocol (ICRP)</strong> — a JSON-RPC 2.0 API accessible by external processes via local WebSocket and HTTP endpoints. The protocol is designed to be <strong>safe by default</strong> (fog-of-war filtered, rate-limited, permission-scoped) and <strong>determinism-preserving</strong> (reads from post-tick snapshots, writes through the order pipeline).</p>
+<h3 id="architecture"><a class="header" href="#architecture">Architecture</a></h3>
+<pre><code>┌─────────────────────────────────────────────────────────────────┐
+│  External Tools                                                 │
+│  (OBS overlay, Discord bot, tournament admin, AI trainer, ...)  │
+└────────┬──────────────┬──────────────┬──────────────────────────┘
+         │ WebSocket    │ HTTP         │ stdio
+         │ (primary)    │ (fallback)   │ (MCP/LSP)
+         ▼              ▼              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  Layer 1: Transport + Auth                                      │
+│  SHA-256 challenge (local) · OAuth 2.0 tokens (relay servers)  │
+│  Localhost-only by default · Rate limiting per connection       │
+├─────────────────────────────────────────────────────────────────┤
+│  Layer 2: ICRP — JSON-RPC 2.0 Methods                          │
+│  ic/state.* · ic/match.* · ic/admin.* · ic/chat.*              │
+│  ic/replay.* · ic/mod.* · ic/debug.*                           │
+├─────────────────────────────────────────────────────────────────┤
+│  Layer 3: Application Protocols (built on ICRP)                 │
+│  MCP server (LLM coaching) · LSP server (mod dev IDE)          │
+│  Workshop tool hosting · Relay admin API                        │
+├─────────────────────────────────────────────────────────────────┤
+│  Layer 4: State Boundary                                        │
+│  Reads: post-tick state snapshot (fog-filtered)                 │
+│  Writes: order pipeline (same as player input / network)        │
+│  ic-sim is NEVER accessed directly by ICRP                     │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre>
+<h3 id="permission-tiers"><a class="header" href="#permission-tiers">Permission Tiers</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Tier</th><th>Capabilities</th><th>Ranked mode</th><th>Auth required</th><th>Use cases</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>observer</strong></td><td>Read fog-filtered game state, subscribe to match events, query match metadata, read chat</td><td>Allowed (with optional configurable delay)</td><td>Challenge-response or none (localhost)</td><td>Stream overlays, stat trackers, spectator tools, Discord rich presence</td></tr>
+<tr><td><strong>admin</strong></td><td>All observer capabilities + server management (kick, pause, map change, settings), match lifecycle control</td><td>Server operators only</td><td>Challenge-response + admin token</td><td>Tournament tools, server admin panels, automated match management</td></tr>
+<tr><td><strong>mod</strong></td><td>All observer capabilities + execute mod-registered commands, inject sanctioned orders via mod API</td><td>Disabled in ranked</td><td>Challenge-response + mod permission approval</td><td>Workshop tools, custom game mode controllers, scenario triggers</td></tr>
+<tr><td><strong>debug</strong></td><td>Full ECS access via Bevy Remote Protocol (BRP) passthrough — raw component queries, entity inspection, profiling data</td><td>Disabled, dev builds only</td><td>None (dev builds are trusted)</td><td>Bevy Inspector, IC Editor, performance profiling, <code>ic-lsp</code></td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="transports"><a class="header" href="#transports">Transports</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Transport</th><th>When to use</th><th>Push support</th><th>Port</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>WebSocket</strong> (primary)</td><td>Real-time tools, overlays, live dashboards</td><td>Yes — server pushes subscribed events</td><td><code>ws://localhost:19710</code> (configurable)</td></tr>
+<tr><td><strong>HTTP</strong> (fallback)</td><td>Simple queries, <code>curl</code> scripting, CI pipelines</td><td>No — request/response only</td><td>Same port as WebSocket</td></tr>
+<tr><td><strong>stdio</strong></td><td>MCP server mode (LLM tools), LSP server mode (IDE)</td><td>Yes — bidirectional pipe</td><td>N/A (launched as subprocess)</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Why WebSocket over raw TCP:</strong> Web-based tools (OBS browser sources, web dashboards) can connect directly without a proxy. Every programming language has WebSocket client libraries. The framing protocol handles message boundaries — no need for custom length-prefix parsing.</p>
+<h3 id="wire-format-json-rpc-20"><a class="header" href="#wire-format-json-rpc-20">Wire Format: JSON-RPC 2.0</a></h3>
+<p>Chosen for alignment with:</p>
+<ul>
+<li><strong>Bevy Remote Protocol (BRP)</strong> — IC’s engine already speaks JSON-RPC 2.0</li>
+<li><strong>Model Context Protocol (MCP)</strong> — the emerging standard for LLM tool integration</li>
+<li><strong>Language Server Protocol (LSP)</strong> — the standard for IDE tool communication</li>
+</ul>
+<pre><code class="language-json">// Request: query game state
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "ic/state.query",
+  "params": {
+    "fields": ["players", "resources", "army_value", "game_time"],
+    "player": "CommanderZod"
+  }
+}
+
+// Response
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "game_time_ticks": 18432,
+    "players": [
+      {
+        "name": "CommanderZod",
+        "faction": "soviet",
+        "resources": 12450,
+        "army_value": 34200,
+        "units_alive": 87,
+        "structures": 12
+      }
+    ]
+  }
+}
+
+// Event subscription
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "ic/state.subscribe",
+  "params": {
+    "events": ["unit_destroyed", "building_placed", "match_end", "chat_message"],
+    "interval_ticks": 30
+  }
+}
+
+// Server-pushed event (notification — no id)
+{
+  "jsonrpc": "2.0",
+  "method": "ic/event",
+  "params": {
+    "type": "unit_destroyed",
+    "tick": 18433,
+    "data": {
+      "unit_type": "heavy_tank",
+      "owner": "CommanderZod",
+      "killed_by": "alice",
+      "position": [1024, 768]
+    }
+  }
+}
+</code></pre>
+<p><strong>Optional MessagePack encoding:</strong> For performance-sensitive tools (AI training pipelines), clients can request MessagePack binary encoding instead of JSON by setting <code>Accept: application/msgpack</code> in the WebSocket handshake. Same JSON-RPC 2.0 semantics, binary encoding.</p>
+<h3 id="method-namespaces"><a class="header" href="#method-namespaces">Method Namespaces</a></h3>
+<pre><code>ic/state.query          Read game state (fog-filtered for observer tier)
+ic/state.subscribe      Subscribe to state change events (push via WebSocket)
+ic/state.unsubscribe    Unsubscribe from events
+ic/state.snapshot       Get a full state snapshot (for replay/analysis tools)
+
+ic/match.info           Current match metadata (map, players, settings, trust label)
+ic/match.events         Subscribe to match lifecycle events (start, end, pause, player join/leave)
+ic/match.history        Query local match history (reads gameplay.db)
+
+ic/player.profile       Query player profile data (ratings, awards, stats)
+ic/player.style         Query player style profile (D042 behavioral data)
+
+ic/chat.send            Send a chat message (routed through normal chat pipeline)
+ic/chat.subscribe       Subscribe to chat messages
+
+ic/replay.list          List available replays
+ic/replay.load          Load a replay for analysis
+ic/replay.seek          Seek to a specific tick
+ic/replay.state         Query replay state at current tick
+
+ic/admin.kick           Kick a player (admin tier)
+ic/admin.pause          Pause/resume match (admin tier)
+ic/admin.settings       Query/modify server settings (admin tier)
+ic/admin.say            Send a server announcement (admin tier)
+
+ic/mod.command          Execute a mod-registered command (mod tier)
+ic/mod.order            Inject a sanctioned order via mod API (mod tier)
+
+ic/db.query             Run a read-only SQL query against local databases (D034)
+ic/db.schema            Get database schema information
+
+ic/debug.ecs.query      Raw Bevy ECS query (debug tier, dev builds only)
+ic/debug.ecs.get        Raw component access (debug tier)
+ic/debug.ecs.list       List registered components (debug tier)
+ic/debug.profile        Get profiling data (debug tier)
+</code></pre>
+<h3 id="determinism-safety"><a class="header" href="#determinism-safety">Determinism Safety</a></h3>
+<p><strong>The fundamental constraint:</strong> External tools MUST NOT affect simulation determinism. <code>ic-sim</code> has no I/O, no network awareness, and no floats. This is non-negotiable (invariant #1).</p>
+<p><strong>Read path:</strong> After each sim tick, the game extracts a serializable state snapshot (or diff) from <code>ic-sim</code> results. ICRP queries operate on this snapshot, never on live ECS components. This is the same data that feeds the replay system — the tool API is a different consumer of the same extraction.</p>
+<p><strong>Write path (admin/mod tiers only):</strong> Mutations do not directly modify ECS components. They are translated into <strong>orders</strong> that enter the normal input pipeline — the same pipeline that processes player commands and network messages. These orders are processed by the sim on the next tick, just like any other input. All clients process the same ordered set of inputs, preserving determinism.</p>
+<p><strong>Debug tier exception:</strong> In dev builds (never in multiplayer), the debug tier can directly query live ECS state via Bevy’s BRP. This is useful for the Bevy Inspector, profiling tools, and IC’s editor. Disabled by default; cannot be enabled in ranked matches.</p>
+<h3 id="security--competitive-integrity"><a class="header" href="#security--competitive-integrity">Security &amp; Competitive Integrity</a></h3>
+<p><strong>Threat model for a competitive RTS with an external API:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Threat</th><th>Mitigation</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Maphack</strong> (tool queries fog-hidden enemy state)</td><td>Observer tier only sees fog-of-war-filtered state — same view as the spectator stream. State snapshot explicitly excludes hidden enemy data for non-admin tiers.</td></tr>
+<tr><td><strong>Order injection</strong> (tool submits commands on behalf of a player)</td><td>Only admin and mod tiers can inject orders. In ranked matches, mod tier is disabled. Admin orders are logged and auditable.</td></tr>
+<tr><td><strong>Information leak</strong> (tool streams state to a coach during ranked)</td><td>Ranked mode: ICRP defaults to observer-with-delay (configurable, e.g., 2-minute spectator delay) or disabled entirely. Tournament organizers configure per-tournament.</td></tr>
+<tr><td><strong>DoS</strong> (tool floods API, degrades game performance)</td><td>Rate limiting: max requests per tick per connection (default: 10 for observer, 50 for admin). Max concurrent connections (default: 8). Request budget is per-tick, not per-second — tied to sim rate.</td></tr>
+<tr><td><strong>Unauthorized access</strong> (external process connects without permission)</td><td>Localhost-only binding by default. SHA-256 challenge-response auth (OBS WebSocket model). Remote connections (relay server) require OAuth 2.0 tokens.</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Ranked mode policy:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Setting</th><th>Default</th><th>Configurable by</th></tr>
+</thead>
+<tbody>
+<tr><td>ICRP enabled in ranked</td><td>Observer-only with delay</td><td>Tournament organizer via <code>server_config.toml</code></td></tr>
+<tr><td>Observer delay</td><td>120 seconds (2 minutes)</td><td>Tournament organizer</td></tr>
+<tr><td>Mod tier in ranked</td><td>Disabled</td><td>Cannot be overridden</td></tr>
+<tr><td>Debug tier in ranked</td><td>Disabled</td><td>Cannot be overridden</td></tr>
+<tr><td>Admin tier in ranked</td><td>Server operator only</td><td>N/A</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="authentication"><a class="header" href="#authentication">Authentication</a></h3>
+<p><strong>Local connections (game client):</strong> SHA-256 challenge-response during WebSocket handshake, modeled on OBS WebSocket protocol:</p>
+<ol>
+<li>Server sends <code>Hello</code> with <code>challenge</code> (random bytes) and <code>salt</code> (random bytes)</li>
+<li>Client computes <code>Base64(SHA256(Base64(SHA256(password + salt)) + challenge))</code></li>
+<li>Server verifies, grants requested permission tier</li>
+<li>Password configured in <code>config.toml</code> → <code>[remote] password = "..."</code> or auto-generated on first enable</li>
+</ol>
+<p><strong>Relay server connections:</strong> OAuth 2.0 bearer tokens. Community servers issue tokens with scoped permissions (D052). Tokens are created via the community admin panel or CLI (<code>ic server token create --tier admin --expires 24h</code>).</p>
+<p><strong>Localhost-only default:</strong> ICRP binds to <code>127.0.0.1</code> only. To accept remote connections (for relay server admin API), the operator must explicitly set <code>[remote] bind = "0.0.0.0"</code> in <code>server_config.toml</code>. This prevents accidental exposure.</p>
+<h3 id="event-subscriptions"><a class="header" href="#event-subscriptions">Event Subscriptions</a></h3>
+<p>Clients subscribe to event categories during or after connection (inspired by OBS WebSocket’s subscription bitmask):</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Category</th><th>Events</th><th>Observer</th><th>Admin</th><th>Mod</th><th>Debug</th></tr>
+</thead>
+<tbody>
+<tr><td><code>match</code></td><td>game_start, game_end, pause, resume, player_join, player_leave</td><td>Yes</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+<tr><td><code>combat</code></td><td>unit_destroyed, building_destroyed, engagement_start</td><td>Yes (fog-filtered)</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+<tr><td><code>economy</code></td><td>resource_harvested, building_placed, unit_produced</td><td>Yes (own player only)</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+<tr><td><code>chat</code></td><td>chat_message, ping, tactical_marker</td><td>Yes</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+<tr><td><code>admin</code></td><td>kick, ban, settings_change, server_status</td><td>No</td><td>Yes</td><td>No</td><td>Yes</td></tr>
+<tr><td><code>sim_state</code></td><td>per-tick state diff (position, health, resources)</td><td>Yes (fog-filtered, throttled)</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+<tr><td><code>telemetry</code></td><td>fps, tick_time, network_latency, memory_usage</td><td>No</td><td>Yes</td><td>No</td><td>Yes</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="application-protocols-built-on-icrp"><a class="header" href="#application-protocols-built-on-icrp">Application Protocols Built on ICRP</a></h3>
+<h4 id="mcp-server-llm-coaching--analysis"><a class="header" href="#mcp-server-llm-coaching--analysis">MCP Server (LLM Coaching &amp; Analysis)</a></h4>
+<p>IC can run as an MCP (Model Context Protocol) server, exposing game data to LLM tools for coaching, analysis, and content generation. The MCP server uses stdio transport (IC launches as a subprocess of the LLM client, or vice versa).</p>
+<p><strong>MCP Resources (data the LLM can read):</strong></p>
+<ul>
+<li>Match history, career stats, faction breakdown (from <code>gameplay.db</code>)</li>
+<li>Replay state at any tick (via <code>ic/replay.*</code> methods)</li>
+<li>Player style profile (D042 behavioral data)</li>
+<li>Build order patterns, economy trends</li>
+</ul>
+<p><strong>MCP Tools (functions the LLM can call):</strong></p>
+<ul>
+<li><code>analyze_replay</code> — analyze a completed replay for coaching insights</li>
+<li><code>suggest_build_order</code> — suggest builds based on opponent tendencies</li>
+<li><code>explain_unit_stats</code> — explain unit capabilities from YAML rules</li>
+<li><code>query_match_history</code> — query career stats with natural language</li>
+</ul>
+<p><strong>MCP Prompts (templated interactions):</strong></p>
+<ul>
+<li>“Coach me on this replay”</li>
+<li>“What went wrong in my last match?”</li>
+<li>“How do I counter [strategy]?”</li>
+</ul>
+<p>This extends IC’s existing BYOLLM design (D016/D047) with a standardized protocol that any MCP-compatible LLM client can use.</p>
+<h4 id="lsp-server-mod-development-ide"><a class="header" href="#lsp-server-mod-development-ide">LSP Server (Mod Development IDE)</a></h4>
+<p><code>ic-lsp</code> — a standalone binary providing Language Server Protocol support for IC mod development in VS Code, Neovim, Zed, and other LSP-compatible editors.</p>
+<p><strong>YAML mod files:</strong></p>
+<ul>
+<li>Schema-driven validation (unit stats, weapon definitions, faction configs)</li>
+<li>Autocompletion of trait names, field names, enum values</li>
+<li>Hover documentation (pulling from IC’s trait reference docs)</li>
+<li>Go-to-definition (jumping to parent templates in inheritance chains)</li>
+<li>Diagnostics (type errors, missing required fields, deprecated traits, out-of-range values)</li>
+</ul>
+<p><strong>Lua scripts:</strong></p>
+<ul>
+<li>Built on existing Lua LSP (sumneko/lua-language-server) with IC-specific extensions</li>
+<li>IC API completions (Campaign.<em>, Utils.</em>, Unit.* globals)</li>
+<li>Type annotations for IC’s Lua API</li>
+</ul>
+<p><strong>WASM interface types:</strong></p>
+<ul>
+<li>WIT definition browsing and validation</li>
+</ul>
+<p><strong>Implementation:</strong> Runs as a separate process, does not communicate with a running game. Reads mod files and IC’s schema definitions. Safe for determinism — purely static analysis.</p>
+<h4 id="relay-server-admin-api"><a class="header" href="#relay-server-admin-api">Relay Server Admin API</a></h4>
+<p>Community relay servers expose a subset of ICRP for remote management:</p>
+<pre><code>relay/status              Server status (player count, games, version, uptime)
+relay/games               List active games (same data as A2S/game browser)
+relay/admin.kick          Kick a player from a game
+relay/admin.ban           Ban by identity key
+relay/admin.announce      Server-wide announcement
+relay/admin.pause         Pause/resume a specific game
+relay/match.events        Subscribe to match lifecycle events (for bracket tools)
+relay/replay.download     Download a completed replay
+relay/config.get          Query server configuration
+relay/config.set          Modify runtime configuration (admin only)
+</code></pre>
+<p>Authenticated via OAuth 2.0 tokens (D052 community server credentials). Remote access requires explicit opt-in in <code>server_config.toml</code>.</p>
+<h3 id="workshop-tool-packages"><a class="header" href="#workshop-tool-packages">Workshop Tool Packages</a></h3>
+<p>External tools can be published to the Workshop as tool packages. A tool package contains:</p>
+<pre><code class="language-yaml"># tool.yaml — Workshop tool manifest
+name: "Live Stats Overlay"
+version: "1.2.0"
+author: "OverlayDev"
+description: "OBS browser source showing live army value, resources, and APM"
+tier: "observer"                    # Required permission tier
+transport: "websocket"              # How the tool connects
+entry_point: "overlay/index.html"   # For browser-based tools: served locally
+# — or —
+entry_point: "bin/stats-tool.exe"   # For native tools: launched as subprocess
+subscriptions:                      # Which event categories it needs
+  - "match"
+  - "economy"
+  - "combat"
+screenshots:
+  - "screenshots/overlay-preview.png"
+</code></pre>
+<p><strong>User experience:</strong> When installing a Workshop tool, the game shows its required permissions:</p>
+<pre><code>┌──────────────────────────────────────────────────────────────┐
+│  INSTALL TOOL: Live Stats Overlay                            │
+│                                                              │
+│  This tool requests:                                         │
+│    ✓ Observer access (read-only game state)                  │
+│    ✓ Match events, Economy events, Combat events             │
+│                                                              │
+│  This tool does NOT have:                                    │
+│    ✗ Admin access (cannot kick, pause, or manage server)     │
+│    ✗ Mod access (cannot inject commands or modify gameplay)  │
+│                                                              │
+│  In ranked matches: active with 2-minute delay               │
+│                                                              │
+│  [Install]  [Cancel]  [View Source]                          │
+└──────────────────────────────────────────────────────────────┘
+</code></pre>
+<h3 id="configuration"><a class="header" href="#configuration">Configuration</a></h3>
+<pre><code class="language-toml">[remote]
+# Whether ICRP is enabled. Default: true (observer tier always available locally).
+enabled = true
+
+# Network bind address. "127.0.0.1" = localhost only (default).
+# "0.0.0.0" = accept remote connections (relay servers only).
+bind = "127.0.0.1"
+
+# Port for WebSocket and HTTP endpoints.
+port = 19710
+
+# Authentication password for local connections.
+# Auto-generated on first enable if not set. Empty string = no auth (dev only).
+password = ""
+
+# Maximum concurrent tool connections.
+max_connections = 8
+
+# Observer tier delay in ranked matches (seconds). 0 = real-time (unranked only).
+ranked_observer_delay_seconds = 120
+
+# Whether mod tier is available (disabled in ranked regardless).
+mod_tier_enabled = true
+
+# Whether debug tier is available (dev builds only, never in release).
+debug_tier_enabled = false
+</code></pre>
+<h3 id="console-commands-d058"><a class="header" href="#console-commands-d058">Console Commands (D058)</a></h3>
+<pre><code>/remote status              Show ICRP status (enabled, port, connections, tiers)
+/remote connections         List connected tools with tier and subscription info
+/remote kick &lt;id&gt;           Disconnect a specific tool
+/remote password reset      Generate a new auth password
+/remote enable              Enable ICRP
+/remote disable             Disable ICRP (disconnects all tools)
+</code></pre>
+<h3 id="plugin-developer-sdk--libraries"><a class="header" href="#plugin-developer-sdk--libraries">Plugin Developer SDK &amp; Libraries</a></h3>
+<p>Building a tool for IC should take minutes to start, not hours. The project ships client libraries, templates, a mock server, and documentation so that plugin developers can focus on their tool logic, not on JSON-RPC plumbing.</p>
+<h4 id="official-client-libraries"><a class="header" href="#official-client-libraries">Official Client Libraries</a></h4>
+<p>IC maintains thin client libraries for the most common plugin development languages. Each library handles connection, authentication, method calls, and event subscription — the developer writes tool logic only.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Language</th><th>Package</th><th>Why this language</th><th>Maintained by</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Rust</strong></td><td><code>ic-remote-client</code> (crate)</td><td>Engine language. Highest-performance tools, WASM plugin compilation.</td><td>IC core team</td></tr>
+<tr><td><strong>Python</strong></td><td><code>ic-remote</code> (PyPI)</td><td>Most popular scripting language. Discord bots, data analysis, AI/ML pipelines, quick prototyping.</td><td>IC core team</td></tr>
+<tr><td><strong>TypeScript/JavaScript</strong></td><td><code>@ironcurtain/remote</code> (npm)</td><td>Browser overlays (OBS sources), web dashboards, Electron apps.</td><td>IC core team</td></tr>
+<tr><td><strong>C#</strong></td><td><code>IronCurtain.Remote</code> (NuGet)</td><td>OpenRA community is C#-native. Lowers barrier for existing C&amp;C modders.</td><td>Community-maintained, IC-endorsed</td></tr>
+<tr><td><strong>Go</strong></td><td><code>go-ic-remote</code></td><td>Server-side tools, Discord bots, tournament admin backends.</td><td>Community-maintained</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>What each library provides:</strong></p>
+<ul>
+<li><code>IcClient</code> — connect to ICRP (WebSocket or HTTP), handle auth handshake</li>
+<li><code>IcClient.call(method, params)</code> — send a JSON-RPC request, get typed response</li>
+<li><code>IcClient.subscribe(categories, callback)</code> — subscribe to event categories, receive push notifications</li>
+<li><code>IcClient.on_disconnect(callback)</code> — handle reconnection</li>
+<li>Typed method helpers: <code>client.query_state(fields)</code>, <code>client.match_info()</code>, <code>client.subscribe_combat()</code>, etc.</li>
+<li>Error handling with ICRP error codes</li>
+</ul>
+<p><strong>Example (Python):</strong></p>
+<pre><code class="language-python">from ic_remote import IcClient
+
+client = IcClient("ws://localhost:19710", password="my-password")
+client.connect()
+
+# Query game state
+state = client.query_state(fields=["players", "game_time"])
+for player in state.players:
+    print(f"{player.name}: {player.resources} credits, {player.army_value} army value")
+
+# Subscribe to combat events
+@client.on("unit_destroyed")
+def on_kill(event):
+    print(f"{event.killed_by} destroyed {event.owner}'s {event.unit_type}")
+
+client.listen()  # Block and process events
+</code></pre>
+<p><strong>Example (TypeScript — OBS browser source):</strong></p>
+<pre><code class="language-typescript">import { IcClient } from '@ironcurtain/remote';
+
+const client = new IcClient('ws://localhost:19710');
+await client.connect();
+
+client.subscribe(['combat', 'economy'], (event) =&gt; {
+  document.getElementById('army-value').textContent =
+    `Army: ${event.data.army_value}`;
+});
+</code></pre>
+<h4 id="starter-templates"><a class="header" href="#starter-templates">Starter Templates</a></h4>
+<p>Pre-built project templates for common plugin types, available via <code>ic tool init</code> CLI or Workshop download:</p>
+<pre><code>ic tool init --template stream-overlay    # HTML/CSS/JS overlay for OBS
+ic tool init --template discord-bot       # Python Discord bot reporting match results
+ic tool init --template stats-dashboard   # Web dashboard with live charts
+ic tool init --template replay-analyzer   # Python script processing .icrep files
+ic tool init --template tournament-admin  # Go server for bracket management
+ic tool init --template coaching-mcp      # Python MCP server for LLM coaching
+ic tool init --template lsp-extension     # VS Code extension using ic-lsp
+</code></pre>
+<p>Each template includes:</p>
+<ul>
+<li>Working example code with comments explaining each ICRP method used</li>
+<li><code>tool.yaml</code> manifest (pre-filled for the tool type)</li>
+<li>Build/run instructions</li>
+<li>Workshop publishing guide</li>
+</ul>
+<h4 id="mock-icrp-server-for-development"><a class="header" href="#mock-icrp-server-for-development">Mock ICRP Server for Development</a></h4>
+<p><code>ic-remote-mock</code> — a standalone binary that emulates a running IC game for plugin development. Developers can build and test tools without launching the full game.</p>
+<pre><code>ic-remote-mock --scenario skirmish-2v2    # Simulate a 2v2 skirmish with synthetic events
+ic-remote-mock --replay my-match.icrep    # Replay a real match, exposing ICRP events
+ic-remote-mock --static                   # Static state, no events (for UI development)
+ic-remote-mock --port 19710               # Custom port
+</code></pre>
+<p>The mock server:</p>
+<ul>
+<li>Generates realistic game events (unit production, combat, economy ticks) on a configurable timeline</li>
+<li>Supports all permission tiers (developer can test admin/mod methods without a real server)</li>
+<li>Can replay <code>.icrep</code> files, emitting the same ICRP events a real game would</li>
+<li>Ships as part of the IC SDK (Phase 6a)</li>
+</ul>
+<h4 id="plugin-developer-documentation"><a class="header" href="#plugin-developer-documentation">Plugin Developer Documentation</a></h4>
+<p>Shipped with the game and hosted online. Organized for different developer personas:</p>
+<pre><code>&lt;install_dir&gt;/docs/plugins/
+├── quickstart.md              # "Your first plugin in 5 minutes" (Python)
+├── api-reference/
+│   ├── methods.md             # Full ICRP method reference with examples
+│   ├── events.md              # Event types, payloads, and subscription categories
+│   ├── errors.md              # Error codes and troubleshooting
+│   ├── auth.md                # Authentication guide (local + relay)
+│   └── permissions.md         # Permission tiers and ranked mode restrictions
+├── guides/
+│   ├── stream-overlay.md      # Step-by-step: build an OBS overlay
+│   ├── discord-bot.md         # Step-by-step: build a Discord match reporter
+│   ├── replay-analysis.md     # Step-by-step: analyze replays with Python
+│   ├── tournament-tools.md    # Step-by-step: build tournament admin tools
+│   ├── mcp-coaching.md        # Step-by-step: build an MCP coaching tool
+│   ├── lsp-integration.md     # How to use ic-lsp in your editor
+│   └── workshop-publishing.md # How to package and publish your tool
+├── examples/
+│   ├── python/                # Complete working examples
+│   ├── typescript/
+│   ├── rust/
+│   └── csharp/
+└── specification/
+    ├── icrp-spec.md           # Formal ICRP protocol specification
+    ├── json-rpc-2.0.md        # JSON-RPC 2.0 reference (linked, not duplicated)
+    └── changelog.md           # Protocol version history and migration notes
+</code></pre>
+<p><strong>Key documentation principles:</strong></p>
+<ul>
+<li><strong>Every method has a working example</strong> in at least Python and TypeScript</li>
+<li><strong>Copy-paste ready</strong> — examples run as-is, not pseudo-code</li>
+<li><strong>Error-first</strong> — docs show what happens when things go wrong, not just the happy path</li>
+<li><strong>Versioned</strong> — docs are versioned alongside the engine. Each release notes protocol changes and migration steps. Breaking changes follow semver on the ICRP protocol version.</li>
+</ul>
+<h4 id="validation--testing-tools-for-plugin-authors"><a class="header" href="#validation--testing-tools-for-plugin-authors">Validation &amp; Testing Tools for Plugin Authors</a></h4>
+<pre><code>ic tool validate tool.yaml               # Validate manifest (permissions, subscriptions, entry point)
+ic tool test --mock skirmish-2v2         # Run tool against mock server, check for errors
+ic tool test --replay my-match.icrep     # Run tool against a real replay
+ic tool lint                             # Check for common mistakes (unhandled disconnects, missing error handling)
+ic tool package                          # Build Workshop-ready .icpkg
+ic tool publish                          # Publish to Workshop (requires account)
+</code></pre>
+<h4 id="protocol-versioning--stability"><a class="header" href="#protocol-versioning--stability">Protocol Versioning &amp; Stability</a></h4>
+<p>ICRP uses semantic versioning on the protocol itself (independent of the engine version):</p>
+<ul>
+<li><strong>Major version bump</strong> (e.g., v1 → v2): Breaking changes to method signatures or event payloads. Old clients may not work. Migration guide published.</li>
+<li><strong>Minor version bump</strong> (e.g., v1.0 → v1.1): New methods or event types added. Existing clients continue to work.</li>
+<li><strong>Patch version bump</strong> (e.g., v1.0.0 → v1.0.1): Bug fixes only. No API changes.</li>
+</ul>
+<p>The ICRP version is negotiated during the WebSocket handshake. Clients declare their supported version range; the server selects the highest mutually supported version. If no overlap exists, the connection is rejected with a clear error: <code>"ICRP version mismatch: client supports v1.0-v1.2, server requires v2.0+. Please update your tool."</code>.</p>
+<h3 id="alternatives-considered"><a class="header" href="#alternatives-considered">Alternatives Considered</a></h3>
+<ol>
+<li><strong>Source RCON protocol</strong> — Rejected. Unencrypted, binary format, no push support, no structured errors. Industry standard but outdated for modern tooling.</li>
+<li><strong>gRPC + Protobuf</strong> — Rejected. Excellent performance but poor browser compatibility (gRPC-web is clunky). JSON-RPC 2.0 is simpler, web-native, and aligns with BRP/MCP/LSP.</li>
+<li><strong>REST-only (no WebSocket)</strong> — Rejected. No push capability. Tools must poll, which wastes resources and adds latency. REST is the HTTP fallback, not the primary transport.</li>
+<li><strong>Shared memory / mmap</strong> — Rejected as primary protocol. Platform-specific, unsafe, hard to permission-scope. May be added as an opt-in high-performance channel for AI training in future phases.</li>
+<li><strong>Custom binary protocol</strong> — Rejected. No tooling ecosystem. Every tool author must write a custom parser. JSON-RPC 2.0 has libraries in every language.</li>
+<li><strong>No external API (OpenRA approach)</strong> — Rejected. This is the cautionary example. No API = no ecosystem = no community tools = platform stagnation.</li>
+</ol>
+<h3 id="cross-references"><a class="header" href="#cross-references">Cross-References</a></h3>
+<ul>
+<li><strong>D006 (Pluggable Networking):</strong> ICRP writes flow through the same order pipeline as network messages.</li>
+<li><strong>D010 (Snapshottable State):</strong> ICRP reads from the same state snapshots used by replays and save games.</li>
+<li><strong>D012 (Order Validation):</strong> ICRP-injected orders go through the same validation as player orders.</li>
+<li><strong>D016/D047 (LLM):</strong> MCP server extends BYOLLM with standardized protocol.</li>
+<li><strong>D034 (SQLite):</strong> <code>ic/db.query</code> exposes the same read-only query interface as <code>ic db</code> CLI.</li>
+<li><strong>D052 (Community Servers):</strong> Relay admin API uses D052’s OAuth token infrastructure.</li>
+<li><strong>D058 (Command Console):</strong> ICRP is the external extension of the console — same commands, different transport.</li>
+<li><strong>D059 (Communication):</strong> Chat messages sent via ICRP flow through the same pipeline as in-game chat.</li>
+<li><strong>06-SECURITY.md:</strong> ICRP threat model documented here; fog-of-war filtering is the primary maphack defense.</li>
+</ul>
+<h3 id="execution-overlay-mapping"><a class="header" href="#execution-overlay-mapping">Execution Overlay Mapping</a></h3>
+<ul>
+<li><strong>Milestone:</strong> Phase 2 (observer + HTTP), Phase 3 (WebSocket + auth), Phase 5 (relay API), Phase 6a (MCP + LSP + Workshop tools)</li>
+<li><strong>Priority:</strong> <code>P-Platform</code> (enables community ecosystem)</li>
+<li><strong>Feature Cluster:</strong> <code>M5.PLATFORM.EXTERNAL_TOOL_API</code></li>
+<li><strong>Depends on (hard):</strong>
+<ul>
+<li><code>ic-sim</code> state snapshot extraction (D010)</li>
+<li>Order pipeline (D006, D012)</li>
+<li>Console command system (D058)</li>
+</ul>
+</li>
+<li><strong>Depends on (soft):</strong>
+<ul>
+<li>Workshop infrastructure (D030) for tool package distribution</li>
+<li>Community server OAuth (D052) for relay admin API</li>
+<li>BYOLLM (D016/D047) for MCP server</li>
+</ul>
+</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../../decisions/09f/D057-llm-skill-library.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../../decisions/09g-interaction.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../../decisions/09f/D057-llm-skill-library.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../../decisions/09g-interaction.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../../mark-09e88c2c.min.js"></script>
+        <script src="../../searcher-c2a407aa.js"></script>
+
+        <script src="../../clipboard-1626706a.min.js"></script>
+        <script src="../../highlight-abc7f01d.js"></script>
+        <script src="../../book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

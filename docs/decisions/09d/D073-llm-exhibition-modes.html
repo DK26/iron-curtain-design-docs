@@ -1,0 +1,602 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>D073 — LLM Exhibition Modes - Iron Curtain — Design Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Design docs for a Rust-native Red Alert RTS engine">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../../css/general-2459343d.css">
+        <link rel="stylesheet" href="../../css/chrome-ae938929.css">
+        <link rel="stylesheet" href="../../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../../searchindex-f3722748.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../../toc-56a6701d.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Iron Curtain — Design Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs/edit/main/src/decisions/09d/D073-llm-exhibition-modes.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h2 id="d073-llm-exhibition-matches--prompt-coached-modes--spectacle-without-breaking-competitive-integrity"><a class="header" href="#d073-llm-exhibition-matches--prompt-coached-modes--spectacle-without-breaking-competitive-integrity">D073: LLM Exhibition Matches &amp; Prompt-Coached Modes — Spectacle Without Breaking Competitive Integrity</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th></th><th></th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Status</strong></td><td>Accepted</td></tr>
+<tr><td><strong>Phase</strong></td><td>Phase 7 (custom/local exhibition + prompt-coached modes + replay metadata/overlay support), Phase 7+ (showmatch spectator prompt queue hardening + tournament tooling polish). Never part of ranked matchmaking (D055).</td></tr>
+<tr><td><strong>Depends on</strong></td><td>D007 (relay), D010 (snapshottable state/replays), D012 (order validation), D034 (SQLite), D041 (AI trait/event log/fog view), D044 (LLM AI), D047 (LLM config manager/BYOLLM routing), D057 (skill library), D059 (communication + coach/observer rules), D071 (ICRP), D072 (server management), D055 (ranked policy)</td></tr>
+<tr><td><strong>Driver</strong></td><td>IC already supports LLM-controlled AI (D044), but it lacks a canonical match-level policy for LLM-vs-LLM exhibitions, human prompt-coached LLM play, and spectator-driven showmatches. Without a decision, communities will improvise modes that conflict with anti-coaching and competitive-integrity rules.</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="decision-capsule-llmrag-summary"><a class="header" href="#decision-capsule-llmrag-summary">Decision Capsule (LLM/RAG Summary)</a></h3>
+<ul>
+<li><strong>Status:</strong> Accepted</li>
+<li><strong>Phase:</strong> Phase 7 experimental/custom modes first, showmatch/tournament tooling polish later</li>
+<li><strong>Canonical for:</strong> Match-level policy for LLM-vs-LLM exhibition play, prompt-coached LLM matches, spectator prompt showmatches, trust labels, and replay/privacy defaults</li>
+<li><strong>Scope:</strong> <code>ic-ai</code>, <code>ic-llm</code>, <code>ic-ui</code>, <code>ic-net</code>, replay metadata/annotation capture, server policy/config; not a new sim/netcode architecture</li>
+<li><strong>Decision:</strong> IC supports three opt-in, non-ranked LLM match surfaces: <strong>LLM Exhibition</strong>, <strong>Prompt-Coached LLM</strong>, and <strong>Director/Showmatch Prompt</strong> modes. All preserve sim determinism by recording and replaying orders only; prompts and LLM plan text are optional replay annotations with explicit privacy controls.</li>
+<li><strong>Why:</strong> D044 already enables LLM AI behavior technically. D073 adds the social/tournament/server/replay policy layer so communities can safely run “LLM vs LLM” and “prompt duel” events without undermining D055 ranked integrity or D059 anti-coaching rules.</li>
+<li><strong>Non-goals:</strong> Ranked LLM assistance, hidden spectator coaching in competitive play, direct observer order injection, storing provider credentials or API keys in replays/logs</li>
+<li><strong>Invariants preserved:</strong> <code>ic-sim</code> remains pure (no LLM/network I/O), all gameplay effects still arrive as normal orders, fog/observer restrictions remain mode-dependent and explicit</li>
+<li><strong>Defaults / trust behavior:</strong> Ranked disables all LLM-assisted player-control modes; fair tournament prompt coaching uses coach-role vision only; omniscient spectator prompting is showmatch-only and trust-labeled</li>
+<li><strong>Replay / privacy behavior:</strong> Orders always recorded; LLM prompt text/reasoning capture is optional and strip/redact-able; API keys/tokens are never stored</li>
+<li><strong>Keywords:</strong> LLM vs LLM, exhibition mode, prompt duel, coach AI, spectator prompts, showmatch, BYOLLM, replay annotations, trust labels</li>
+</ul>
+<h3 id="problem"><a class="header" href="#problem">Problem</a></h3>
+<p>D044 solved the <strong>AI implementation</strong> problem:</p>
+<ul>
+<li><code>LlmOrchestratorAi</code> (LLM gives strategic guidance to a conventional AI)</li>
+<li><code>LlmPlayerAi</code> (experimental direct LLM control)</li>
+</ul>
+<p>It did <strong>not</strong> define the <strong>match governance</strong> problem:</p>
+<ul>
+<li>What is allowed in ranked, tournament, custom, and showmatch contexts?</li>
+<li>Can observers send instructions to an LLM-controlled side without violating D059 anti-coaching rules?</li>
+<li>How are prompts routed, rate-limited, and labeled for fairness?</li>
+<li>What gets recorded in replays (orders only vs prompt transcripts vs LLM reasoning)?</li>
+<li>How do tournament organizers and server operators expose these modes safely through D071/D072?</li>
+</ul>
+<p>Without a canonical policy, “fun exhibition features” become a trust-model footgun.</p>
+<h3 id="decision"><a class="header" href="#decision">Decision</a></h3>
+<p>Define a canonical family of opt-in LLM match surfaces built on D044:</p>
+<ol>
+<li><strong>LLM Exhibition Match</strong></li>
+<li><strong>Prompt-Coached LLM Match</strong> (includes “Prompt Duel” variants)</li>
+<li><strong>Director Prompt Showmatch</strong> (spectator-driven / audience-driven prompts)</li>
+</ol>
+<p>These are <strong>match policy + UI + replay + server controls</strong>, not new simulation or network architectures.</p>
+<h3 id="mode-taxonomy"><a class="header" href="#mode-taxonomy">Mode Taxonomy</a></h3>
+<h4 id="1-llm-exhibition-match-baseline"><a class="header" href="#1-llm-exhibition-match-baseline">1. LLM Exhibition Match (baseline)</a></h4>
+<ul>
+<li>One or more sides are controlled by <code>LlmOrchestratorAi</code> or <code>LlmPlayerAi</code> (D044)</li>
+<li>No human prompt input is required</li>
+<li>Primary use case: “watch GPT vs Claude/Ollama” style content, AI benchmarking, sandbox experimentation</li>
+<li>Eligible for local replay recording and replay sharing like any other match</li>
+</ul>
+<h4 id="2-prompt-coached-llm-match-fair-prompting"><a class="header" href="#2-prompt-coached-llm-match-fair-prompting">2. Prompt-Coached LLM Match (fair prompting)</a></h4>
+<ul>
+<li>Each participating LLM side can have a <strong>designated prompt coach seat</strong></li>
+<li>The coach submits strategic directives (text prompts / structured intents)</li>
+<li>The LLM remains the entity that turns context into gameplay orders</li>
+<li>The coach does <strong>not</strong> directly issue <code>PlayerOrder</code>s and is <strong>not</strong> a hidden spectator</li>
+<li>Fair-play default vision is <strong>team-shared vision only</strong> (same concept as D059 coach slot)</li>
+</ul>
+<p><strong>Player-facing variant names (recommended):</strong></p>
+<ul>
+<li><code>Prompt-Coached LLM</code></li>
+<li><code>Prompt Duel</code> (when both sides are prompt-only humans + their own LLMs)</li>
+</ul>
+<h4 id="3-director-prompt-showmatch-omniscient--audience-driven"><a class="header" href="#3-director-prompt-showmatch-omniscient--audience-driven">3. Director Prompt Showmatch (omniscient / audience-driven)</a></h4>
+<ul>
+<li>Observers (or a designated director/caster) can submit prompts to one or both LLM sides</li>
+<li>Prompt sources may use observer/spectator views (including delayed or full-map depending on event settings)</li>
+<li>This is explicitly <strong>showmatch / exhibition</strong> behavior, never fair competitive play</li>
+<li>Match is trust-labeled accordingly (explicit showmatch/non-competitive labeling)</li>
+</ul>
+<h3 id="match-policy-matrix-ranked-tournament-custom-showmatch"><a class="header" href="#match-policy-matrix-ranked-tournament-custom-showmatch">Match Policy Matrix (Ranked, Tournament, Custom, Showmatch)</a></h3>
+<p>This matrix is the canonical policy layer that resolves the “can observers/LLMs do X here?” questions.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Match Surface</th><th>D044 LLM AI Allowed?</th><th>Human Prompt Coach Seats?</th><th>Observer / Audience Prompts?</th><th>Vision Scope for Prompt Source</th><th>Competitive / Certification Status</th><th>Default Trust Label</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Ranked Matchmaking (D055)</strong></td><td><strong>No</strong> (for player-control assistance modes)</td><td><strong>No</strong></td><td><strong>No</strong></td><td>N/A</td><td>Ranked-certified path only</td><td><code>ranked_native</code></td></tr>
+<tr><td><strong>Tournament (fair / competitive)</strong></td><td>Organizer option (typically <code>LlmOrchestratorAi</code> only for dedicated exhibition brackets; not normal ranked equivalence)</td><td><strong>Yes</strong> (coach-style, explicit slot)</td><td><strong>No</strong></td><td>Team-shared vision only</td><td>Not ranked-certified unless no LLM/player assistance is active</td><td><code>tournament_fair</code> or <code>tournament_llm_exhibition</code></td></tr>
+<tr><td><strong>Custom / LAN / Community Casual</strong></td><td><strong>Yes</strong></td><td><strong>Yes</strong></td><td>Host option</td><td>Team-shared by default; observer/full-map only if host enables</td><td>Unranked</td><td><code>custom_llm</code> / <code>custom_prompt_coached</code></td></tr>
+<tr><td><strong>Showmatch / Broadcast Event</strong></td><td><strong>Yes</strong></td><td><strong>Yes</strong></td><td><strong>Yes</strong> (director/audience queue)</td><td>Organizer-defined (team-view, delayed spectator, or omniscient)</td><td>Explicitly non-ranked, non-certified</td><td><code>showmatch_director_prompt</code></td></tr>
+<tr><td><strong>Offline Sandbox / Replay Lab</strong></td><td><strong>Yes</strong></td><td><strong>Yes</strong></td><td>N/A (local user only)</td><td>User-defined</td><td>N/A</td><td><code>offline_llm_lab</code></td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Policy rule:</strong> if any mode grants omniscient or spectator-sourced prompts to a live side, the match is <strong>not</strong> a fair competitive result and must never be labeled/routed as ranked-equivalent.</p>
+<h3 id="prompt-roles-vision-scope-and-anti-coaching-rules"><a class="header" href="#prompt-roles-vision-scope-and-anti-coaching-rules">Prompt Roles, Vision Scope, and Anti-Coaching Rules</a></h3>
+<p>D059 already establishes anti-coaching and observer isolation. D073 extends this by making prompting a <strong>declared role</strong>, not a loophole.</p>
+<h4 id="prompt-source-roles"><a class="header" href="#prompt-source-roles">Prompt source roles</a></h4>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub enum LlmPromptRole {
+    /// Team-associated prompt source (fair mode). Mirrors D059 coach-slot intent.
+    Coach,
+    /// Organizer/caster/operator prompt source for a showmatch.
+    Director,
+    /// Audience participant submitting prompts into a moderated queue.
+    Audience,
+}
+
+pub enum PromptVisionScope {
+    /// Same view the coached side/team is entitled to (fair default).
+    TeamSharedVision,
+    /// Spectator view with organizer-defined delay (e.g., 120s).
+    DelayedSpectator { delay_seconds: u32 },
+    /// Full live observer view (showmatch only).
+    OmniscientObserver,
+}
+<span class="boring">}</span></code></pre>
+<h4 id="core-rules"><a class="header" href="#core-rules">Core rules</a></h4>
+<ul>
+<li><strong>Ranked:</strong> no prompt roles exist. Observer chat/voice isolation rules from D059 remain unchanged.</li>
+<li><strong>Fair tournament prompt coaching:</strong> prompt source must be a declared coach seat (D059-style role), not a generic observer.</li>
+<li><strong>Showmatch spectator prompting:</strong> allowed only under an explicit showmatch policy and trust label.</li>
+<li><strong>Prompt source vision must be shown in the UI</strong> (e.g., <code>Coach (Team Vision)</code> vs <code>Director (Omniscient)</code>), so viewers understand what kind of “intelligence” the LLM is receiving.</li>
+</ul>
+<h3 id="prompt-submission-pipeline-determinism-safe"><a class="header" href="#prompt-submission-pipeline-determinism-safe">Prompt Submission Pipeline (Determinism-Safe)</a></h3>
+<p>The key rule from D044 remains unchanged: the sim replays <strong>orders</strong>, not LLM calls.</p>
+<h4 id="determinism-model"><a class="header" href="#determinism-model">Determinism model</a></h4>
+<ol>
+<li>Prompt source submits a directive (UI or ICRP tool)</li>
+<li>Relay/server stamps sender role + timestamps + match policy metadata</li>
+<li>Designated LLM host for that side receives the directive</li>
+<li>LLM (<code>LlmOrchestratorAi</code> or <code>LlmPlayerAi</code>) incorporates it into its next consultation/decision prompt</li>
+<li>Resulting gameplay effects appear only as normal <code>PlayerOrder</code>s through the existing input/network pipeline</li>
+<li>Replay records deterministic order stream as usual (D010/D044)</li>
+</ol>
+<p><code>ic-sim</code> sees no LLM APIs, no prompt text, and no external tool transport.</p>
+<h4 id="prompt-directives-are-not-direct-unit-orders"><a class="header" href="#prompt-directives-are-not-direct-unit-orders">Prompt directives are not direct unit orders</a></h4>
+<p>Prompting is a <strong>strategy channel</strong>, not a hidden command channel.</p>
+<ul>
+<li>Allowed (examples):
+<ul>
+<li>“Switch to anti-air and scout north expansion”</li>
+<li>“Play greedily for 2 minutes, then timing push west”</li>
+<li>“Prioritize base defense; expect air harass”</li>
+</ul>
+</li>
+<li>Not the design goal in fair modes:
+<ul>
+<li>frame-perfect unit micro scripts</li>
+<li>direct hidden-intel exploitation</li>
+<li>unrestricted order injection (that is a separate D071 <code>mod</code>/admin concern and disabled in ranked)</li>
+</ul>
+</li>
+</ul>
+<h4 id="relayoperator-controls-rate-limits-and-moderation"><a class="header" href="#relayoperator-controls-rate-limits-and-moderation">Relay/operator controls (rate limits and moderation)</a></h4>
+<p>Prompt submission must be server-controlled, similar to D059 chat anti-spam and D071 request budgets:</p>
+<ul>
+<li>max prompt submissions per user/window (configurable)</li>
+<li>max prompt length (chars/tokens)</li>
+<li>queue length cap per side</li>
+<li>optional moderator approval for audience prompts (showmatch mode)</li>
+<li>audit log entries for accepted/rejected prompts in tournament/showmatch operations</li>
+</ul>
+<h3 id="prompt-coached-match-variants-including-player--llm-vs-player--llm"><a class="header" href="#prompt-coached-match-variants-including-player--llm-vs-player--llm">Prompt-Coached Match Variants (Including “Player + LLM vs Player + LLM”)</a></h3>
+<p>The user-proposed format maps cleanly to D073 as a <strong>Prompt Duel</strong> variant:</p>
+<ul>
+<li>Each side has:
+<ul>
+<li>one human prompt coach (or a shared coach team)</li>
+<li>one LLM-controlled side (<code>LlmOrchestratorAi</code> recommended for v1)</li>
+</ul>
+</li>
+<li>Human participants “play” through prompts only</li>
+<li>The LLM executes via D044 and emits orders</li>
+</ul>
+<h4 id="v1-recommendation"><a class="header" href="#v1-recommendation">v1 recommendation</a></h4>
+<p>Default to <strong><code>LlmOrchestratorAi</code> + inner AI</strong> rather than full <code>LlmPlayerAi</code> for prompt duel:</p>
+<ul>
+<li>more responsive under real-world BYOLLM latency</li>
+<li>better spectator experience (less idle time)</li>
+<li>easier to compare strategy quality rather than raw model micro latency</li>
+</ul>
+<p><code>LlmPlayerAi</code> remains an explicit experimental option for sandbox/showmatch content.</p>
+<h3 id="byollm-and-provider-routing-d047-integration"><a class="header" href="#byollm-and-provider-routing-d047-integration">BYOLLM and Provider Routing (D047 Integration)</a></h3>
+<p>D073 does not create a new LLM provider system. It reuses D016/D047:</p>
+<ul>
+<li>each LLM side uses a configured <code>LlmProvider</code></li>
+<li>per-task routing can assign faster local models to match-time prompting/orchestration</li>
+<li>prompt strategy profiles (D047) remain provider/model-specific</li>
+</ul>
+<h4 id="disclosure-and-replay-metadata-safe-subset-only"><a class="header" href="#disclosure-and-replay-metadata-safe-subset-only">Disclosure and replay metadata (safe subset only)</a></h4>
+<p>To make exhibitions understandable and reproducible without leaking secrets, IC records a safe metadata subset:</p>
+<ul>
+<li>provider alias/display name (e.g., <code>Local Ollama</code>, <code>OpenAI-compatible</code>)</li>
+<li>model name/id (if configured)</li>
+<li>prompt strategy profile id (D047)</li>
+<li>LLM mode (<code>orchestrator</code> vs <code>player</code>)</li>
+<li>skill library policy (<code>enabled</code>, <code>disabled</code>, <code>exhibition-tagged</code>)</li>
+</ul>
+<p><strong>Never recorded:</strong></p>
+<ul>
+<li>API keys</li>
+<li>OAuth tokens</li>
+<li>raw provider credentials</li>
+<li>local filesystem paths that reveal secrets</li>
+</ul>
+<h3 id="replay-recording-download-and-spectator-value"><a class="header" href="#replay-recording-download-and-spectator-value">Replay Recording, Download, and Spectator Value</a></h3>
+<p>D073 explicitly leans on the existing replay architecture rather than inventing a separate export:</p>
+<ul>
+<li>deterministic replay = initial state + order stream (D010/D044)</li>
+<li>server/community download paths = D071 <code>relay/replay.download</code> and D072 dashboard replay download</li>
+<li>local browsing/viewing = replay browser and replay viewer flows</li>
+</ul>
+<p>This means “LLM match as content” already inherits IC’s normal replay strengths:</p>
+<ul>
+<li>local playback</li>
+<li>shareable <code>.icrep</code></li>
+<li>signed replay support when played via relay (D007)</li>
+<li>analysis tooling via existing replay/event infrastructure</li>
+</ul>
+<h4 id="llm-spectator-overlays-live-and-replay"><a class="header" href="#llm-spectator-overlays-live-and-replay">LLM spectator overlays (live and replay)</a></h4>
+<p>D044 already defines observability for the current strategic plan and event log narrative. D073 standardizes when and how that becomes a viewer-facing mode feature:</p>
+<ul>
+<li>current LLM mode badge (<code>Orchestrator</code> / <code>LLM Player</code>)</li>
+<li>current plan summary (“AA focus, fortify north choke, expand soon”)</li>
+<li>prompt transcript panel (if recorded and enabled)</li>
+<li>prompt source badges (<code>Coach</code>, <code>Director</code>, <code>Audience</code>)</li>
+<li>vision scope badges (<code>Team Vision</code>, <code>Delayed Observer</code>, <code>Omniscient</code>)</li>
+<li>trust label banner (<code>Showmatch — Director Prompts Enabled</code>)</li>
+</ul>
+<h3 id="replay--privacy-rules-prompts--reasoning--metadata"><a class="header" href="#replay--privacy-rules-prompts--reasoning--metadata">Replay &amp; Privacy Rules (Prompts / Reasoning / Metadata)</a></h3>
+<p>Orders remain the canonical gameplay record. Everything else is optional annotation.</p>
+<h4 id="replay-privacy-matrix-llm-specific-additions"><a class="header" href="#replay-privacy-matrix-llm-specific-additions">Replay privacy matrix (LLM-specific additions)</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>LLM-Related Replay Data</th><th>Recorded by Default (Custom/Showmatch)</th><th>Public Share Default</th><th>Notes</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>LLM mode + trust label</strong></td><td>Yes</td><td>Yes</td><td>Needed to interpret the match and avoid misleading “competitive” framing</td></tr>
+<tr><td><strong>Provider/model/profile metadata (safe subset)</strong></td><td>Yes</td><td>Yes</td><td>No secrets/credentials</td></tr>
+<tr><td><strong>Accepted prompt timestamps + sender role</strong></td><td>Yes</td><td>Yes</td><td>Lightweight annotation; good for replay commentary and audits</td></tr>
+<tr><td><strong>Accepted prompt full text</strong></td><td>Custom: configurable (<code>off</code> default) / Showmatch: configurable (<code>on</code> recommended)</td><td>Off unless creator opts in</td><td>Entertainment value is high, but can reveal private strategy/team comms</td></tr>
+<tr><td><strong>Rejected/queued audience prompts</strong></td><td>No (default)</td><td>No</td><td>High noise + moderation/privacy risk; enable only for event archives</td></tr>
+<tr><td><strong>LLM raw reasoning text / chain-like verbose output</strong></td><td>No (default)</td><td>No</td><td>Privacy + prompt/IP leakage risk; prefer concise plan summaries</td></tr>
+<tr><td><strong>Plan summary / strategic updates</strong></td><td>Yes (summary form)</td><td>Yes</td><td>D044 observability value without leaking full prompt internals</td></tr>
+<tr><td><strong>API keys / tokens / credentials</strong></td><td>Never</td><td>Never</td><td>Hard prohibition</td></tr>
+</tbody>
+</table>
+</div>
+<h4 id="replay-privacy-controls"><a class="header" href="#replay-privacy-controls">Replay privacy controls</a></h4>
+<p>D073 adds LLM-specific controls analogous to D059 voice controls:</p>
+<ul>
+<li><code>replay.record_llm_annotations</code> (<code>off</code> / <code>summary</code> / <code>full_prompts</code>)</li>
+<li><code>replay.record_llm_reasoning</code> (<code>false</code> default; advanced/debug only)</li>
+<li><code>/replay strip-llm &lt;file&gt;</code> (remove all LLM annotation streams/metadata except trust label)</li>
+<li><code>/replay redact-prompts &lt;file&gt;</code> (keep timestamps/roles, remove prompt text)</li>
+</ul>
+<p><strong>Design rule:</strong> a replay must remain fully playable if all LLM annotations are stripped.</p>
+<h3 id="skill-library-integrity-d057--fair-vs-omniscient-inputs"><a class="header" href="#skill-library-integrity-d057--fair-vs-omniscient-inputs">Skill Library Integrity (D057) — Fair vs Omniscient Inputs</a></h3>
+<p>D057 skill accumulation should not quietly learn from contaminated contexts.</p>
+<h4 id="policy"><a class="header" href="#policy">Policy</a></h4>
+<ul>
+<li><strong>Fair prompt-coached matches</strong> (<code>Coach</code>, <code>TeamSharedVision</code>) may contribute to D057 skill verification if enabled</li>
+<li><strong>Director/audience/omniscient prompt modes</strong> are tagged as assisted/showmatch data and are excluded from automatic promotion to <code>Established</code>/<code>Proven</code> AI skills by default</li>
+<li>Operators/tools may still keep this data for entertainment analytics or experimental offline analysis</li>
+</ul>
+<p>This prevents “omniscient crowd coaching” from polluting the general-purpose strategy skill library.</p>
+<h3 id="server-and-tooling-integration-d071--d072"><a class="header" href="#server-and-tooling-integration-d071--d072">Server and Tooling Integration (D071 + D072)</a></h3>
+<p>D073 does not require a new remote-permission tier. It reuses existing boundaries:</p>
+<ul>
+<li><strong>In-client UI</strong> for local prompt seats and spectator controls</li>
+<li><strong>D071 <code>mod</code> tier / mode-registered commands</strong> for showmatch prompt tooling and integrations (disabled in ranked by D071 policy)</li>
+<li><strong>D072 dashboard + relay ops</strong> for replay download, trust-label visibility, and tournament operations</li>
+</ul>
+<h4 id="operator-facing-policy-knobs-spec-level"><a class="header" href="#operator-facing-policy-knobs-spec-level">Operator-facing policy knobs (spec-level)</a></h4>
+<pre><code class="language-toml">[llm_match_modes]
+enabled = true
+
+# Ranked remains hard-disabled for prompt/LLM assistance modes.
+allow_in_ranked = false
+
+# Custom/community defaults
+allow_prompt_coached = true
+allow_director_prompt_showmatch = false
+
+# Vision policy for showmatch prompts
+showmatch_prompt_vision = "delayed_observer" # team_shared | delayed_observer | omniscient
+showmatch_observer_delay_seconds = 120
+
+# Prompt spam control
+prompt_rate_limit_per_user = "1/10s"
+max_prompt_chars = 300
+max_prompt_queue_per_side = 20
+
+# Replay annotation capture
+replay_llm_annotations = "summary"          # off | summary | full_prompts
+replay_llm_reasoning = false
+</code></pre>
+<h3 id="uiux-rules-player-and-viewer-clarity"><a class="header" href="#uiux-rules-player-and-viewer-clarity">UI/UX Rules (Player and Viewer Clarity)</a></h3>
+<p>LLM match modes are only useful if the audience can tell what they are watching.</p>
+<h4 id="lobby--server-browser-labels"><a class="header" href="#lobby--server-browser-labels">Lobby / server browser labels</a></h4>
+<ul>
+<li>Match tiles must show an <strong>LLM mode badge</strong> when any side is LLM-controlled</li>
+<li>Prompt-coached and director-prompt matches must show a <strong>trust/integrity badge</strong></li>
+<li>Showmatch listings must never resemble ranked listings in color/icon language</li>
+</ul>
+<h4 id="in-match-disclosure"><a class="header" href="#in-match-disclosure">In-match disclosure</a></h4>
+<p>When a live match uses prompt coaching or director prompting, all participants and spectators should see:</p>
+<ul>
+<li>which sides are LLM-controlled</li>
+<li>which prompt roles are active</li>
+<li>prompt vision scope</li>
+<li>whether prompt text is being recorded for replay</li>
+</ul>
+<p>This mirrors D059’s consent/disclosure philosophy (voice recording) and anti-coaching clarity.</p>
+<h3 id="what-this-is-not"><a class="header" href="#what-this-is-not">What This Is Not</a></h3>
+<ul>
+<li><strong>Not ranked AI assistance.</strong> D055 ranked remains human-skill measurement.</li>
+<li><strong>Not a hidden observer-coaching backdoor.</strong> Observer prompting is showmatch-only and trust-labeled.</li>
+<li><strong>Not a requirement for replays.</strong> Replays work without any LLM annotation capture.</li>
+<li><strong>Not a replacement for D044.</strong> D044 defines the LLM AI implementations; D073 defines match policies and social surfaces around them.</li>
+</ul>
+<h3 id="alternatives-considered"><a class="header" href="#alternatives-considered">Alternatives Considered</a></h3>
+<ol>
+<li><strong>Allow prompt-coached LLM play in ranked</strong> (rejected — incompatible with D055 competitive integrity and D059 anti-coaching principles)</li>
+<li><strong>Treat prompts as direct <code>PlayerOrder</code> injections</strong> (rejected — blurs the strategy/prompt channel into hidden input automation; D071 already defines explicit admin/mod injection paths)</li>
+<li><strong>Allow generic observers to prompt live sides in all modes</strong> (rejected — covert coaching/multi-account abuse; only acceptable in explicit showmatch mode)</li>
+<li><strong>Record full prompts + full reasoning by default</strong> (rejected — privacy leakage, prompt/IP leakage, noisy replays; summary-first is the right default)</li>
+<li><strong>Record no LLM annotations at all</strong> (rejected — undermines the spectator/replay value proposition of LLM exhibitions and makes moderation/audit harder)</li>
+</ol>
+<h3 id="cross-references"><a class="header" href="#cross-references">Cross-References</a></h3>
+<ul>
+<li><strong>D044 (LLM AI):</strong> Supplies <code>LlmOrchestratorAi</code> and <code>LlmPlayerAi</code>; D073 wraps them in match policy</li>
+<li><strong>D047 (LLM Config Manager):</strong> BYOLLM provider routing, prompt strategy profiles, capability probing</li>
+<li><strong>D057 (Skill Library):</strong> D073 adds fairness tagging rules for skill promotion eligibility</li>
+<li><strong>D059 (Communication):</strong> Coach-slot semantics, observer anti-coaching, consent/disclosure philosophy</li>
+<li><strong>D071 (ICRP):</strong> External tooling and showmatch prompt integrations via existing permission model</li>
+<li><strong>D072 (Server Management):</strong> Operator workflow, dashboard visibility, replay download operations</li>
+<li><strong>D055 (Ranked):</strong> Hard exclusion of LLM-assisted player-control modes from ranked certification</li>
+</ul>
+<h3 id="execution-overlay-mapping"><a class="header" href="#execution-overlay-mapping">Execution Overlay Mapping</a></h3>
+<ul>
+<li><strong>Milestone:</strong> Phase 7 (<code>M7</code>) LLM ecosystem</li>
+<li><strong>Priority:</strong> <code>P-Platform</code> + <code>P-Experience</code> (community content + spectator value)</li>
+<li><strong>Feature Cluster:</strong> <code>M7.LLM.EXHIBITION_MODES</code></li>
+<li><strong>Depends on (hard):</strong>
+<ul>
+<li>D044 LLM AI implementations</li>
+<li>Replay capture/viewer infrastructure (D010 + replay format work)</li>
+<li>D059 role/observer communication policies</li>
+</ul>
+</li>
+<li><strong>Depends on (soft):</strong>
+<ul>
+<li>D071/D072 tooling for showmatch production workflows</li>
+<li>D057 skill-library fairness tagging / filtering</li>
+</ul>
+</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../../decisions/09d/D070-asymmetric-coop.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../../decisions/09e-community.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../../decisions/09d/D070-asymmetric-coop.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../../decisions/09e-community.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../../mark-09e88c2c.min.js"></script>
+        <script src="../../searcher-c2a407aa.js"></script>
+
+        <script src="../../clipboard-1626706a.min.js"></script>
+        <script src="../../highlight-abc7f01d.js"></script>
+        <script src="../../book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

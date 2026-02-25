@@ -1,0 +1,818 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>D072 — Server Management - Iron Curtain — Design Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Design docs for a Rust-native Red Alert RTS engine">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../../css/general-2459343d.css">
+        <link rel="stylesheet" href="../../css/chrome-ae938929.css">
+        <link rel="stylesheet" href="../../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../../searchindex-f3722748.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../../toc-56a6701d.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Iron Curtain — Design Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs/edit/main/src/decisions/09b/D072-server-management.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h2 id="d072-dedicated-server-management--simple-by-default-scalable-by-choice"><a class="header" href="#d072-dedicated-server-management--simple-by-default-scalable-by-choice">D072: Dedicated Server Management — Simple by Default, Scalable by Choice</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th></th><th></th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Status</strong></td><td>Accepted</td></tr>
+<tr><td><strong>Phase</strong></td><td>Phase 2 (<code>/health</code> + logging), Phase 5 (full CLI + web dashboard + in-game admin + scaling), Phase 6a (self-update + advanced monitoring)</td></tr>
+<tr><td><strong>Depends on</strong></td><td>D007 (relay server), D034 (SQLite), D052 (community servers), D058 (command console), D064 (server config), D071 (ICRP external tool API)</td></tr>
+<tr><td><strong>Driver</strong></td><td>Community server operators need to set up, configure, monitor, and manage dedicated servers with minimal friction. The typical operator is a technically-savvy community member on a $5 VPS, not a professional sysadmin.</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="decision-capsule-llmrag-summary"><a class="header" href="#decision-capsule-llmrag-summary">Decision Capsule (LLM/RAG Summary)</a></h3>
+<ul>
+<li><strong>Status:</strong> Accepted</li>
+<li><strong>Phase:</strong> Multi-phase (health+logging → full management → advanced ops)</li>
+<li><strong>Canonical for:</strong> Server lifecycle management, admin interfaces (CLI/web/in-game/remote), monitoring, scaling, deployment patterns</li>
+<li><strong>Decision:</strong> IC’s dedicated server is a <strong>single binary</strong> that handles everything — relay, matchmaking, workshop, administration — with five management interfaces: CLI, config file, built-in web dashboard, in-game admin, and ICRP remote commands. Complexity is opt-in. Scaling is horizontal (run more instances), not vertical (split one instance into containers).</li>
+<li><strong>Why:</strong> Zero of ten studied games ship a built-in web admin panel. Most require third-party tools, external databases, or complex setups. IC’s “$5 VPS operator” needs something that works in 60 seconds.</li>
+<li><strong>Non-goals:</strong> Microservice architecture, container orchestration as a requirement, managed hosting platform, proprietary admin tools</li>
+<li><strong>Keywords:</strong> dedicated server, server management, CLI, web dashboard, admin panel, monitoring, health endpoint, scaling, Docker, LAN party, deployment profiles</li>
+</ul>
+<h3 id="core-philosophy-just-a-binary"><a class="header" href="#core-philosophy-just-a-binary">Core Philosophy: Just a Binary</a></h3>
+<pre><code>$ ./ic-relay
+[INFO] Iron Curtain Relay Server v0.5.0
+[INFO] Config: server_config.toml (created with defaults)
+[INFO] Database: relay.db (created)
+[INFO] ICRP: ws://127.0.0.1:19710 (password auto-generated: AxK7mP2q)
+[INFO] Web dashboard: http://127.0.0.1:19710/dashboard
+[INFO] Health: http://127.0.0.1:19710/health
+[INFO] Game: udp://0.0.0.0:19711
+[INFO] Ready. Waiting for players.
+</code></pre>
+<p>That’s it. Download binary. Run it. Server is live. Config file created with sane defaults. Database created automatically. Dashboard accessible from a browser. No external dependencies. No database server. No container runtime. No package manager.</p>
+<p><strong>The SQLite principle applied to game servers:</strong> SQLite succeeded because it’s “just a file” — no DBA, no server process, no configuration. IC’s relay server succeeds because it’s “just a binary” — no Docker, no cloud account, no infrastructure team.</p>
+<h3 id="five-management-interfaces"><a class="header" href="#five-management-interfaces">Five Management Interfaces</a></h3>
+<p>Every server operation is accessible through multiple interfaces. The operator picks whichever fits their workflow. All interfaces call the same underlying functions — they are views into the same system, not separate systems.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Interface</th><th>Best for</th><th>Available from</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Config file</strong> (<code>server_config.toml</code>)</td><td>Initial setup, version-controlled infrastructure</td><td>Phase 0 (already designed, D064)</td></tr>
+<tr><td><strong>CLI</strong> (<code>ic server *</code>)</td><td>Automation, scripts, SSH sessions, CI/CD</td><td>Phase 5</td></tr>
+<tr><td><strong>Built-in Web Dashboard</strong></td><td>Visual monitoring, quick admin actions, LAN party management</td><td>Phase 5</td></tr>
+<tr><td><strong>In-Game Admin</strong></td><td>Playing admins who need to kick/pause/announce without alt-tabbing</td><td>Phase 5</td></tr>
+<tr><td><strong>ICRP Remote</strong> (D071)</td><td>External tools, Discord bots, tournament software, custom dashboards</td><td>Phase 5 (via D071)</td></tr>
+</tbody>
+</table>
+</div>
+<h4 id="1-config-file-server_configtoml"><a class="header" href="#1-config-file-server_configtoml">1. Config File (<code>server_config.toml</code>)</a></h4>
+<p>Already designed in D064. The single source of truth for server configuration. ~200 parameters across 14 subsystems. Key additions for server management:</p>
+<p><strong>Hot-reload categories:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Category</th><th>Hot-reloadable?</th><th>Examples</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Gameplay</strong></td><td>Between matches only</td><td>max_players, map_pool, game_speed</td></tr>
+<tr><td><strong>Administration</strong></td><td>Yes (immediate)</td><td>MOTD, rate limits, ban list, admin list</td></tr>
+<tr><td><strong>Network</strong></td><td>Restart required</td><td>bind address, port, protocol version</td></tr>
+<tr><td><strong>Database</strong></td><td>Restart required</td><td>database path, WAL settings</td></tr>
+</tbody>
+</table>
+</div>
+<p>The server watches <code>server_config.toml</code> for filesystem changes (via <code>notify</code> crate). When a hot-reloadable setting changes:</p>
+<ul>
+<li>Apply immediately</li>
+<li>Log: <code>[INFO] Config reloaded: motd changed, rate_limit_per_ip changed</code></li>
+<li>Emit ICRP event: <code>admin.config_changed</code></li>
+<li>If a restart-required setting changed: <code>[WARN] Setting 'bind' changed but requires restart</code></li>
+</ul>
+<p><strong>Deployment profiles</strong> (already in D064) switchable at runtime between matches:</p>
+<pre><code>ic server rcon 'profile tournament'
+&gt; Profile switched to 'tournament' (effective next match)
+</code></pre>
+<h4 id="2-cli-ic-server-"><a class="header" href="#2-cli-ic-server-">2. CLI (<code>ic server *</code>)</a></h4>
+<p>The <code>ic server</code> subcommand family manages server lifecycle. Inspired by LinuxGSM’s uniform interface, Docker CLI, and <code>systemctl</code>.</p>
+<pre><code># Lifecycle
+ic server start                        # Start relay (foreground, logs to stdout)
+ic server start --daemon               # Start as background process (PID file)
+ic server stop                         # Graceful shutdown (finish current tick, save state, flush DB)
+ic server restart                      # Stop + start (waits for current match to reach a safe point)
+ic server status                       # Print health summary (same data as /health)
+
+# Configuration
+ic server config validate              # Validate server_config.toml (check ranges, types, consistency)
+ic server config diff                  # Show differences from default config
+ic server config show                  # Print active config (including runtime overrides)
+
+# Administration
+ic server rcon "command"               # Send a single command to a running server via ICRP
+ic server console                      # Attach interactive console to running server (like docker attach)
+ic server token create --tier admin    # Create ICRP auth token for remote admin
+ic server token list                   # List active tokens
+ic server token revoke &lt;id&gt;            # Revoke a token
+
+# Data
+ic server backup create                # Snapshot SQLite DB + config to timestamped archive
+ic server backup list                  # List available backups
+ic server backup restore &lt;file&gt;        # Restore from backup
+ic server db query "SELECT ..."        # Read-only SQL query against server databases
+
+# Updates
+ic server update check                 # Check if newer version available
+ic server update apply                 # Download, verify signature, apply (backup current binary first)
+</code></pre>
+<p><strong><code>ic server console</code></strong> attaches an interactive REPL to a running server process. The operator types server commands directly — same commands available via ICRP, same commands available in the in-game console. Tab completion, command history, colored output.</p>
+<p><strong><code>ic server rcon</code></strong> is a one-shot command sender. Connects via ICRP (WebSocket), sends the command, prints the response, disconnects. Reads the ICRP password from <code>server_config.toml</code> or <code>IC_RCON_PASSWORD</code> env var. This makes the CLI itself an ICRP client — no separate protocol.</p>
+<h4 id="3-built-in-web-dashboard"><a class="header" href="#3-built-in-web-dashboard">3. Built-in Web Dashboard</a></h4>
+<p>A minimal, zero-dependency web dashboard embedded in the relay binary. Served on the ICRP HTTP port (default <code>http://localhost:19710/dashboard</code>). No Node.js, no npm, no build pipeline — the HTML/CSS/JS is compiled into the binary via Rust’s <code>include_str!</code>.</p>
+<pre><code>┌──────────────────────────────────────────────────────────────────┐
+│  IRON CURTAIN SERVER DASHBOARD              [admin ▾] [Logout]  │
+│                                                                  │
+│  ┌─ STATUS ──────────────────────────────────────────────────┐  │
+│  │  Server: My RA Server          Profile: competitive       │  │
+│  │  Version: 0.5.0                Uptime: 3d 14h 22m        │  │
+│  │  Players: 6/12                 Matches today: 47          │  │
+│  │  Tick rate: 30/30 tps          CPU: 12%  RAM: 142 MB     │  │
+│  └───────────────────────────────────────────────────────────┘  │
+│                                                                  │
+│  ┌─ ACTIVE MATCHES ─────────────────────────────────────────┐   │
+│  │  #42  soviet_vs_allies  Coastal Fortress  12:34  6 players│  │
+│  │       [Pause] [End Match] [Spectate]                      │  │
+│  └───────────────────────────────────────────────────────────┘  │
+│                                                                  │
+│  ┌─ PLAYERS ────────────────────────────────────────────────┐   │
+│  │  CommanderZod     Soviet  Captain II   ping: 23ms [Kick] │  │
+│  │  alice            Allied  Private I    ping: 45ms [Kick] │  │
+│  │  TankRush99       Soviet  Corporal     ping: 67ms [Kick] │  │
+│  └───────────────────────────────────────────────────────────┘  │
+│                                                                  │
+│  [Server Log]  [Config]  [Bans]  [Backups]  [Matches History]   │
+└──────────────────────────────────────────────────────────────────┘
+</code></pre>
+<p><strong>Dashboard pages:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Page</th><th>What it shows</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Status</strong> (home)</td><td>Server health, active matches, player count, tick rate, CPU/RAM, uptime</td></tr>
+<tr><td><strong>Players</strong></td><td>Connected players with ping, rating, kick/ban buttons, profile links</td></tr>
+<tr><td><strong>Matches</strong></td><td>Active and recent matches with map, players, duration, result, replay download</td></tr>
+<tr><td><strong>Server Log</strong></td><td>Live-tailing log viewer (last 500 lines, filterable by severity)</td></tr>
+<tr><td><strong>Config</strong></td><td>Current <code>server_config.toml</code> with inline editing for hot-reloadable fields. Restart-required fields are grayed with a note.</td></tr>
+<tr><td><strong>Bans</strong></td><td>Ban list management (add/remove/search)</td></tr>
+<tr><td><strong>Backups</strong></td><td>List backups, create new, download, restore</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Auth:</strong> Same ICRP challenge-response password as the API. The dashboard is a web client of ICRP — it makes the same JSON-RPC calls that any external tool would. Login page prompts for the ICRP password.</p>
+<p><strong>Why embed in the binary?</strong> The “$5 VPS operator” should not need to install a web framework, configure a reverse proxy, or manage a separate application. One binary serves the game AND the dashboard. The embedded web UI is ~200 KB of HTML/CSS/JS — negligible compared to the relay binary size.</p>
+<h4 id="4-in-game-admin-playing-admin"><a class="header" href="#4-in-game-admin-playing-admin">4. In-Game Admin (Playing Admin)</a></h4>
+<p>An admin who is playing in a match can manage the server without alt-tabbing or opening a browser. This uses the existing D058 command console with admin-scoped commands.</p>
+<p><strong>Admin identity:</strong> Admin list in <code>server_config.toml</code> references player identity keys (D052 Ed25519 public keys), not passwords:</p>
+<pre><code class="language-toml">[admin]
+# Players with admin privileges (by identity public key)
+admins = [
+    "ed25519:7f3a...b2c1",  # CommanderZod
+    "ed25519:a1d4...e8f2",  # ops_guy
+]
+
+# Players with moderator privileges (kick/mute, no config changes)
+moderators = [
+    "ed25519:c3b7...9a12",  # trusted_player
+]
+</code></pre>
+<p><strong>In-game admin commands</strong> (via <code>/</code> in chat or F12 console):</p>
+<pre><code>/admin kick &lt;player&gt; [reason]         # Kick a player
+/admin ban &lt;player&gt; &lt;duration&gt; [reason]  # Ban (1h, 1d, 7d, permanent)
+/admin mute &lt;player&gt; [duration]       # Mute in chat
+/admin pause                          # Pause match (all players see pause screen)
+/admin unpause                        # Resume
+/admin say "Server restarting in 5 minutes"  # Server-wide announcement
+/admin map &lt;name&gt;                     # Change map (between matches)
+/admin profile &lt;name&gt;                 # Switch deployment profile (between matches)
+/admin status                         # Show server health in console
+</code></pre>
+<p><strong>Admin vs moderator:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Action</th><th>Moderator</th><th>Admin</th></tr>
+</thead>
+<tbody>
+<tr><td>Kick player</td><td>Yes</td><td>Yes</td></tr>
+<tr><td>Mute player</td><td>Yes</td><td>Yes</td></tr>
+<tr><td>Ban player</td><td>No</td><td>Yes</td></tr>
+<tr><td>Pause/unpause</td><td>No</td><td>Yes</td></tr>
+<tr><td>Change map</td><td>No</td><td>Yes</td></tr>
+<tr><td>Change profile</td><td>No</td><td>Yes</td></tr>
+<tr><td>Server announcements</td><td>No</td><td>Yes</td></tr>
+<tr><td>View server status</td><td>Yes</td><td>Yes</td></tr>
+<tr><td>Modify config</td><td>No</td><td>Yes</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Visual indicator:</strong> Admins see a subtle <code>[A]</code> badge next to their name in the player list. Moderators see <code>[M]</code>. This is visible to all players — transparent authority.</p>
+<h4 id="5-icrp-remote-d071"><a class="header" href="#5-icrp-remote-d071">5. ICRP Remote (D071)</a></h4>
+<p>Already designed in D071. The <code>admin</code> tier of ICRP provides all server management operations over WebSocket/HTTP. External tools (Discord bots, tournament software, mobile apps) connect via ICRP.</p>
+<p>This interface is how the web dashboard, CLI <code>ic server rcon</code>, and third-party tools all communicate with the server. It is the canonical API — the other interfaces are UIs on top of it.</p>
+<h3 id="health-endpoint-health"><a class="header" href="#health-endpoint-health">Health Endpoint (<code>/health</code>)</a></h3>
+<p>A simple HTTP GET endpoint, zero-auth, rate-limited (1 req/sec). Returns server health as JSON:</p>
+<pre><code class="language-json">GET http://localhost:19710/health
+
+{
+  "status": "ok",
+  "version": "0.5.0",
+  "uptime_seconds": 307320,
+  "tick_rate": 30,
+  "tick_rate_target": 30,
+  "player_count": 6,
+  "player_max": 12,
+  "active_matches": 1,
+  "cpu_percent": 12.3,
+  "memory_mb": 142,
+  "db_size_mb": 8.2,
+  "profile": "competitive",
+  "game_module": "ra1"
+}
+</code></pre>
+<p>Enables: Uptime Kuma, Prometheus blackbox exporter, Kubernetes liveness probes, Discord bot status, Grafana dashboards, custom monitoring scripts — all without ICRP authentication.</p>
+<h3 id="structured-logging"><a class="header" href="#structured-logging">Structured Logging</a></h3>
+<p>Using Rust’s <code>tracing</code> crate with <code>tracing-subscriber</code> and <code>tracing-appender</code>:</p>
+<pre><code>2026-02-25T14:32:01.123Z INFO  [relay] Server started on 0.0.0.0:19710 (profile: competitive)
+2026-02-25T14:32:05.456Z INFO  [match] Match #42 started: 2v2 on Coastal Fortress
+2026-02-25T14:32:05.789Z INFO  [player] CommanderZod (key:7f3a..b2c1) joined match #42
+2026-02-25T14:33:12.001Z WARN  [tick] Tick budget exceeded: 72ms (budget: 33ms) on tick 1847
+2026-02-25T14:35:00.000Z INFO  [admin] CommanderZod (via:in-game) kicked griefer99 (reason: "griefing")
+2026-02-25T14:35:00.001Z ERROR [db] SQLite write failed: disk full
+</code></pre>
+<p><strong>Format:</strong> ISO 8601 timestamp, severity (TRACE/DEBUG/INFO/WARN/ERROR), module tag, message.</p>
+<p><strong>Output targets (configurable in <code>server_config.toml</code>):</strong></p>
+<pre><code class="language-toml">[logging]
+# Console output (stdout)
+console_level = "info"           # trace, debug, info, warn, error
+console_format = "human"         # "human" (colored, readable) or "json" (machine-parseable)
+
+# File output
+file_enabled = true
+file_path = "logs/relay.log"
+file_level = "debug"
+file_format = "json"             # JSON-lines for Loki/Datadog/Elasticsearch
+file_rotation = "daily"          # "daily", "hourly", or "size:100mb"
+file_retention_days = 30
+
+# ICRP subscription (live log tailing for web dashboard and tools)
+icrp_log_level = "info"
+</code></pre>
+<p><strong>Every admin action is logged with identity and interface:</strong></p>
+<pre><code class="language-json">{"timestamp":"2026-02-25T14:35:00.000Z","level":"INFO","module":"admin","message":"Player kicked","admin":"CommanderZod","admin_key":"7f3a..b2c1","interface":"in-game","target":"griefer99","reason":"griefing"}
+</code></pre>
+<p>This provides a complete audit trail regardless of which management interface was used.</p>
+<h3 id="scaling-run-more-instances"><a class="header" href="#scaling-run-more-instances">Scaling: Run More Instances</a></h3>
+<p>IC does not split a single server into microservices. A dedicated server is one process that handles everything. Scaling is horizontal — run more instances.</p>
+<p><strong>Why not microservices?</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Approach</th><th>Complexity</th><th>Benefit</th><th>IC verdict</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Single binary</strong> (IC default)</td><td>Minimal — one process, one config, one database</td><td>Handles 99% of community server use cases</td><td>Default. The $5 VPS path.</td></tr>
+<tr><td><strong>Multiple instances</strong> (horizontal scaling)</td><td>Low — same binary, different ports/configs</td><td>Handles high player counts by running more servers</td><td>Supported. Just run more copies.</td></tr>
+<tr><td><strong>Container per instance</strong> (Docker)</td><td>Medium — Dockerfile, volume mounts</td><td>Isolation, resource limits, easy deployment on cloud</td><td>Optional. Official Dockerfile provided.</td></tr>
+<tr><td><strong>Microservice split</strong> (relay + matchmaking + workshop as separate services)</td><td>High — service discovery, inter-service auth, distributed state</td><td>Only needed at massive scale (thousands of concurrent players)</td><td>Not designed for. If IC reaches this scale, it’s a future architecture decision.</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>How operators scale:</strong></p>
+<pre><code># LAN party (1 server, 12 players)
+./ic-relay
+
+# Small community (2-3 servers, 50 players)
+./ic-relay --config server1.toml --port 19711
+./ic-relay --config server2.toml --port 19712
+
+# Larger community (cloud, auto-scaling)
+# Use Docker Compose or Kubernetes with the official image
+docker compose up --scale relay=5
+</code></pre>
+<p><strong>Multiple instances share nothing.</strong> Each instance has its own <code>server_config.toml</code>, its own SQLite database, its own ICRP port. They do not communicate with each other directly. The community server infrastructure (D052) handles player routing — the matchmaking service knows which relay instances are available and directs players to ones with capacity.</p>
+<p><strong>Auto-scaling is the community’s responsibility, not the engine’s.</strong> IC provides the building blocks (health endpoint for load balancers, Docker image for orchestration, stateless-enough design for horizontal scaling). Kubernetes autoscaling, cloud VM provisioning, or manual <code>./ic-relay</code> launches are all valid — IC does not mandate an approach.</p>
+<h3 id="docker-support-optional-first-party"><a class="header" href="#docker-support-optional-first-party">Docker Support (Optional, First-Party)</a></h3>
+<p>An official Dockerfile and Docker Compose example are provided. They are maintained alongside the engine, not by the community.</p>
+<p><strong>Two image variants</strong> — operators choose based on their needs:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Variant</th><th>Base</th><th>Size</th><th>Use case</th></tr>
+</thead>
+<tbody>
+<tr><td><strong><code>relay:latest</code></strong> (scratch + musl)</td><td><code>scratch</code></td><td>~8-12 MB</td><td>Production. Minimum attack surface. No shell, no OS, no package manager. Just the binary.</td></tr>
+<tr><td><strong><code>relay:debug</code></strong></td><td><code>debian:bookworm-slim</code></td><td>~80 MB</td><td>Debugging. Includes shell, curl, sqlite3 CLI for troubleshooting.</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Production Dockerfile (scratch + musl static):</strong></p>
+<pre><code class="language-dockerfile"># Build stage — compile a fully static binary via musl
+FROM rust:latest AS builder
+RUN rustup target add x86_64-unknown-linux-musl
+RUN apt-get update &amp;&amp; apt-get install -y musl-tools
+WORKDIR /build
+COPY . .
+RUN cargo build --release --target x86_64-unknown-linux-musl --bin ic-relay
+# Strip debug symbols — saves ~50% binary size
+RUN strip target/x86_64-unknown-linux-musl/release/ic-relay
+
+# Runtime stage — scratch = empty container, just the binary
+FROM scratch
+COPY --from=builder /build/target/x86_64-unknown-linux-musl/release/ic-relay /ic-relay
+# Copy CA certificates for HTTPS (update checks, Workshop downloads)
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+# Non-root user (numeric UID since scratch has no /etc/passwd)
+USER 1000:1000
+VOLUME ["/data"]
+EXPOSE 19710/tcp 19711/udp
+ENTRYPOINT ["/ic-relay", "--data-dir", "/data"]
+</code></pre>
+<p><strong>Why scratch + musl:</strong></p>
+<ul>
+<li><strong>~8-12 MB image</strong> — the relay binary is the only file in the container. Compare: <code>debian:bookworm-slim</code> is ~80 MB before the binary. Most game server Docker images are 500 MB+.</li>
+<li><strong>Zero attack surface</strong> — no shell (<code>/bin/sh</code>), no package manager, no OS utilities. If an attacker compromises the relay process, there is nothing else in the container to exploit. No <code>curl</code>, no <code>wget</code>, no <code>apt-get</code>. This is the strongest possible container security posture.</li>
+<li><strong>Rust makes this possible</strong> — the musl target (<code>x86_64-unknown-linux-musl</code>) produces a fully statically-linked binary with no runtime dependencies. No glibc, no libssl, no shared libraries. The binary runs on any Linux kernel 3.2+.</li>
+<li><strong>SQLite works with musl</strong> — <code>rusqlite</code> compiles SQLite from source (bundled feature), so it links statically into the musl binary. No system SQLite dependency.</li>
+<li><strong>Fast startup</strong> — no OS init, no systemd, no shell parsing. Process 1 is the relay binary. Startup time is measured in milliseconds, not seconds.</li>
+</ul>
+<p><strong>Health check note:</strong> The <code>scratch</code> image has no <code>curl</code>, so the Dockerfile does not include a <code>HEALTHCHECK</code> command. Kubernetes and Docker Compose use the <code>/health</code> HTTP endpoint directly via their own health check mechanisms (Kubernetes <code>httpGet</code> probe, Docker Compose <code>test: ["CMD-SHELL", "wget -qO- http://localhost:19710/health || exit 1"]</code> if using the debug variant, or external monitoring).</p>
+<p><strong>Debug Dockerfile (for troubleshooting):</strong></p>
+<pre><code class="language-dockerfile">FROM debian:bookworm-slim
+RUN apt-get update &amp;&amp; apt-get install -y --no-install-recommends \
+    curl sqlite3 ca-certificates &amp;&amp; rm -rf /var/lib/apt/lists/*
+COPY ic-relay /usr/local/bin/ic-relay
+RUN useradd -m icserver
+USER icserver
+WORKDIR /data
+VOLUME ["/data"]
+EXPOSE 19710/tcp 19711/udp
+HEALTHCHECK --interval=30s --timeout=5s CMD curl -f http://localhost:19710/health || exit 1
+ENTRYPOINT ["ic-relay", "--data-dir", "/data"]
+</code></pre>
+<p>The debug image includes <code>curl</code> (for manual health checks), <code>sqlite3</code> (for inspecting the relay database), and a shell (for <code>docker exec -it</code> troubleshooting). Use it when diagnosing issues; switch to <code>relay:latest</code> (scratch) for production.</p>
+<p><strong>Multi-arch builds:</strong> CI produces images for <code>linux/amd64</code> and <code>linux/arm64</code> (ARM servers, Raspberry Pi 5, Oracle Cloud free tier ARM instances). The musl target supports both architectures. Both are published as a multi-arch manifest under the same tag.</p>
+<pre><code class="language-yaml"># docker-compose.yml — single server
+services:
+  relay:
+    image: ghcr.io/ironcurtain/relay:latest
+    ports:
+      - "19710:19710/tcp"    # ICRP + Web Dashboard
+      - "19711:19711/udp"    # Game traffic
+    volumes:
+      - ./data:/data         # Config + DB + logs + backups
+    environment:
+      - IC_RCON_PASSWORD=changeme
+    restart: unless-stopped
+</code></pre>
+<p><strong>Key design choices:</strong></p>
+<ul>
+<li>Non-root user inside container</li>
+<li>Single volume mount (<code>/data</code>) for all persistent state — config, database, logs, backups</li>
+<li>Environment variables override config file values (secrets via env, not in committed files)</li>
+<li>Built-in health check via <code>/health</code> endpoint</li>
+<li>No sidecar containers — one container = one server instance</li>
+</ul>
+<p><strong>Scaling with Docker Compose:</strong></p>
+<pre><code class="language-yaml"># docker-compose.yml — multiple servers
+services:
+  relay-1:
+    image: ghcr.io/ironcurtain/relay:latest
+    ports: ["19710:19710/tcp", "19711:19711/udp"]
+    volumes: ["./data/server1:/data"]
+    environment: { IC_RCON_PASSWORD: "pass1" }
+
+  relay-2:
+    image: ghcr.io/ironcurtain/relay:latest
+    ports: ["19720:19710/tcp", "19721:19711/udp"]
+    volumes: ["./data/server2:/data"]
+    environment: { IC_RCON_PASSWORD: "pass2" }
+</code></pre>
+<p>Each instance is independent. No service discovery, no inter-container networking, no shared state.</p>
+<h3 id="self-update-phase-6a"><a class="header" href="#self-update-phase-6a">Self-Update (Phase 6a)</a></h3>
+<p>The relay binary can check for and apply updates to itself. No external package manager needed.</p>
+<pre><code>ic server update check
+&gt; Current: v0.5.0  Latest: v0.5.2
+&gt; Changelog: https://ironcurtain.gg/releases/v0.5.2
+&gt; Type: patch (bug fixes only, no config changes)
+
+ic server update apply
+&gt; Downloading v0.5.2 (8 MB)...
+&gt; Verifying Ed25519 signature... OK
+&gt; Backing up current binary to ic-relay.v0.5.0.bak...
+&gt; Replacing binary...
+&gt; Update complete. Restart to activate: ic server restart
+</code></pre>
+<ul>
+<li><strong>Signed updates:</strong> Release binaries are signed with the project’s Ed25519 key. The relay verifies the signature before applying.</li>
+<li><strong>Backup before update:</strong> Current binary is renamed to <code>.bak</code> before replacement. If the new version fails to start, the operator can revert manually.</li>
+<li><strong>No forced updates:</strong> The operator decides when to update. <code>auto_update = true</code> in config checks on startup only — never mid-match.</li>
+<li><strong>Channel selection:</strong> <code>update_channel = "stable"</code> (default), <code>"beta"</code>, or <code>"nightly"</code> in config.</li>
+<li><strong>No auto-restart:</strong> Update downloads the binary but does not restart. The operator chooses when to restart (e.g., between matches, during maintenance window).</li>
+</ul>
+<h3 id="portable-server-mode"><a class="header" href="#portable-server-mode">Portable Server Mode</a></h3>
+<p>For LAN parties and temporary setups. Same <code>portable.marker</code> mechanism as the game client (see <code>ic-paths</code> in <code>architecture/crate-graph.md</code>):</p>
+<ol>
+<li>Copy the <code>ic-relay</code> binary to a USB drive or any folder</li>
+<li>Create an empty <code>portable.marker</code> file next to it</li>
+<li>Run <code>./ic-relay</code> — config, database, and logs are created in the same folder</li>
+</ol>
+<p><strong>LAN party enhancements:</strong></p>
+<ul>
+<li><strong>Auto-generated password:</strong> On first portable launch, ICRP password is generated and printed to console. The LAN admin types it into their browser to access the dashboard.</li>
+<li><strong>mDNS/Zeroconf:</strong> The server announces itself on the local network as <code>_ironcurtain._tcp.local</code>. Game clients on the same LAN discover it automatically in the server browser (Direct Connect → LAN tab).</li>
+</ul>
+<h3 id="kubernetes-operator-optional-phase-6a"><a class="header" href="#kubernetes-operator-optional-phase-6a">Kubernetes Operator (Optional, Phase 6a)</a></h3>
+<p>For communities that run on Kubernetes, IC provides a first-party <strong>Kubernetes Operator</strong> (<code>ic-operator</code>) that automates relay server lifecycle, scaling, and match routing. The operator is optional — it exists for cloud-native communities, not as a requirement.</p>
+<p><strong>What the operator manages:</strong></p>
+<pre><code class="language-yaml"># ironcurtain-cluster.yaml — Custom Resource Definition
+apiVersion: ironcurtain.gg/v1
+kind: IronCurtainCluster
+metadata:
+  name: my-community
+spec:
+  # How many relay instances to run
+  replicas:
+    min: 1
+    max: 10
+    # Scale based on player count across all instances
+    targetPlayersPerRelay: 16
+
+  # Which IC relay image to use
+  image: ghcr.io/ironcurtain/relay:0.5.0
+
+  # Deployment profile applied to all instances
+  profile: competitive
+
+  # Shared config (mounted as ConfigMap)
+  config:
+    server_name: "My Community"
+    game_module: ra1
+    max_players_per_instance: 16
+
+  # Persistent storage for each relay's SQLite DB
+  storage:
+    size: 1Gi
+    storageClass: standard
+
+  # Auto-update policy
+  update:
+    strategy: RollingUpdate
+    # Wait for active matches to end before draining a pod
+    drainPolicy: WaitForMatchEnd
+    # Maximum time to wait for a match to end before force-draining
+    drainTimeoutSeconds: 3600
+</code></pre>
+<p><strong>What the operator does:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Responsibility</th><th>How</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Scaling</strong></td><td>Watches <code>/health</code> endpoint on each relay pod. If <code>player_count / player_max &gt; 0.8</code> across all instances → spin up a new pod. If instances are idle → scale down (respecting <code>min</code>).</td></tr>
+<tr><td><strong>Match-aware draining</strong></td><td>Before terminating a pod (scale-down, update, node maintenance), the operator sends a <code>drain</code> signal via ICRP (<code>ic/admin.drain</code>). The relay stops accepting new matches but lets current matches finish. Only after all matches end (or drain timeout) does the pod terminate. No mid-match disconnects.</td></tr>
+<tr><td><strong>Rolling updates</strong></td><td>When the image tag changes, the operator updates pods one at a time. Each pod is drained (match-aware) before replacement. Zero-downtime updates.</td></tr>
+<tr><td><strong>Health monitoring</strong></td><td>Polls <code>/health</code> on each pod. Unhealthy pods (failed health check 3x) are restarted automatically. ICRP <code>admin.config_changed</code> events are watched for config drift detection.</td></tr>
+<tr><td><strong>Config distribution</strong></td><td><code>server_config.toml</code> stored as a Kubernetes ConfigMap, mounted into each pod. Config changes trigger hot-reload (the relay watches the mounted file). Secrets (RCON password, OAuth tokens) stored as Kubernetes Secrets.</td></tr>
+<tr><td><strong>Service discovery</strong></td><td>Creates a Kubernetes Service that load-balances game traffic across relay pods. The matchmaking service (D052) discovers available relays via the Service endpoint.</td></tr>
+<tr><td><strong>Observability</strong></td><td>Exposes Prometheus metrics from each relay’s <code>/health</code> data. ServiceMonitor CRD for automatic Prometheus scraping. Optional PodMonitor for per-pod metrics.</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Custom Resource status:</strong></p>
+<pre><code class="language-yaml">status:
+  readyReplicas: 3
+  totalPlayers: 28
+  totalMatches: 4
+  availableSlots: 20
+  conditions:
+    - type: Available
+      status: "True"
+    - type: Scaling
+      status: "False"
+    - type: Updating
+      status: "False"
+</code></pre>
+<p><strong>Match-aware pod lifecycle:</strong></p>
+<pre><code>Normal operation:
+  Pod receives players → hosts matches → reports health
+
+Scale-down / Update:
+  Operator marks pod for drain
+  → Pod stops accepting new matches (ICRP: ic/admin.drain)
+  → Existing matches continue normally
+  → Players in lobby are redirected to other pods
+  → All matches end naturally
+  → Pod terminates gracefully
+  → New pod starts (if update) or not (if scale-down)
+
+Emergency (pod crash):
+  Pod restarts automatically (Kubernetes)
+  → Players in active matches lose connection
+  → Clients auto-reconnect to another relay (if match was early enough for rejoin)
+  → Replay data up to last flush is preserved in PersistentVolume
+</code></pre>
+<p><strong>Operator implementation:</strong></p>
+<ul>
+<li>Written in Rust using <a href="https://github.com/kube-rs/kube"><code>kube-rs</code></a> (the standard Rust Kubernetes client)</li>
+<li>Ships as a single binary (<code>ic-operator</code>) + Helm chart</li>
+<li>CRD: <code>IronCurtainCluster</code> (manages relay fleet) + <code>IronCurtainRelay</code> (per-instance status, auto-generated)</li>
+<li>The operator itself is stateless — all state is in the CRDs and the relay pods’ SQLite databases</li>
+<li>RBAC: operator needs permissions to manage pods, services, configmaps, and the IC CRDs — nothing else</li>
+</ul>
+<p><strong>Helm chart:</strong></p>
+<pre><code>helm repo add ironcurtain https://charts.ironcurtain.gg
+helm install my-community ironcurtain/relay-cluster \
+  --set replicas.min=2 \
+  --set replicas.max=8 \
+  --set profile=competitive \
+  --set config.server_name="My Community"
+</code></pre>
+<p><strong>What the operator does NOT do:</strong></p>
+<ul>
+<li><strong>Does not manage game clients</strong> — only relay server pods</li>
+<li><strong>Does not replace the single-binary experience</strong> — operators who don’t use Kubernetes ignore it entirely</li>
+<li><strong>Does not introduce distributed state</strong> — each relay pod is independent with its own SQLite. The operator is a lifecycle manager, not a data coordinator</li>
+<li><strong>Does not require the operator for basic Kubernetes deployment</strong> — a plain Deployment + Service YAML works fine for static setups. The operator adds auto-scaling, match-aware draining, and rolling updates.</li>
+</ul>
+<p><strong>Why build a custom operator instead of using HPA?</strong></p>
+<p>Kubernetes HorizontalPodAutoscaler (HPA) can scale based on CPU/memory, but game servers need <strong>match-aware scaling</strong>:</p>
+<ul>
+<li>HPA would kill a pod mid-match during scale-down. The IC operator waits for matches to end.</li>
+<li>HPA doesn’t understand “players per relay.” The IC operator scales based on game-specific metrics.</li>
+<li>HPA can’t drain gracefully with lobby redirection. The IC operator uses ICRP to coordinate.</li>
+</ul>
+<p>Standard HPA still works for basic setups (scale on CPU). The operator is for communities that want zero-downtime, match-aware operations.</p>
+<h3 id="alternatives-considered"><a class="header" href="#alternatives-considered">Alternatives Considered</a></h3>
+<ol>
+<li><strong>Require Docker for all deployments</strong> — Rejected. Adds unnecessary complexity for the single-binary use case. Docker is an option, not a requirement.</li>
+<li><strong>Separate admin web application</strong> — Rejected. Requires installing a web framework, database connector, and reverse proxy. The embedded dashboard serves 90% of use cases with zero additional dependencies.</li>
+<li><strong>Microservice architecture</strong> (separate relay, matchmaking, workshop processes) — Rejected for default deployment. One binary handles everything. If IC reaches massive scale, a microservice split can be designed then — but it should not burden the 99% of operators who run one server for their community.</li>
+<li><strong>Custom admin protocol</strong> (not ICRP) — Rejected. The web dashboard, CLI, and third-party tools all speak ICRP. One protocol, one auth model, one audit trail.</li>
+<li><strong>Linux-only server</strong> — Rejected. The relay binary builds for Windows, macOS, and Linux. LAN party hosts may be on any OS.</li>
+</ol>
+<h3 id="cross-references"><a class="header" href="#cross-references">Cross-References</a></h3>
+<ul>
+<li><strong>D007 (Relay Server):</strong> The relay binary is the dedicated server. D072 defines how it’s managed.</li>
+<li><strong>D034 (SQLite):</strong> Server state lives in SQLite. Backup, query, and health operations use the same database.</li>
+<li><strong>D052 (Community Servers):</strong> Federation, OAuth tokens, and matchmaking are D052 concerns. D072 covers the single-instance management layer.</li>
+<li><strong>D058 (Command Console):</strong> In-game admin commands are D058 commands with admin permission flags.</li>
+<li><strong>D064 (Server Config):</strong> <code>server_config.toml</code> schema and deployment profiles are D064. D072 adds hot-reload, CLI, and web editing.</li>
+<li><strong>D071 (ICRP):</strong> The web dashboard, CLI, and remote admin all communicate via ICRP. D072 is the UX layer on top of D071.</li>
+<li><strong>15-SERVER-GUIDE.md:</strong> Operational best practices, deployment examples, and troubleshooting reference D072’s management interfaces.</li>
+</ul>
+<h3 id="execution-overlay-mapping"><a class="header" href="#execution-overlay-mapping">Execution Overlay Mapping</a></h3>
+<ul>
+<li><strong>Milestone:</strong> Phase 2 (<code>/health</code> + structured logging), Phase 5 (full CLI + web dashboard + in-game admin), Phase 6a (self-update + advanced monitoring)</li>
+<li><strong>Priority:</strong> <code>P-Core</code> (server management is required for multiplayer)</li>
+<li><strong>Feature Cluster:</strong> <code>M5.INFRA.SERVER_MANAGEMENT</code></li>
+<li><strong>Depends on (hard):</strong>
+<ul>
+<li>D007 relay server binary</li>
+<li>D064 server config schema</li>
+<li>D071 ICRP protocol</li>
+</ul>
+</li>
+<li><strong>Depends on (soft):</strong>
+<ul>
+<li>D052 community server federation (for multi-instance routing)</li>
+<li>D058 command console (for in-game admin)</li>
+</ul>
+</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../../decisions/09b/D060-netcode-params.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../../decisions/09c-modding.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../../decisions/09b/D060-netcode-params.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../../decisions/09c-modding.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../../mark-09e88c2c.min.js"></script>
+        <script src="../../searcher-c2a407aa.js"></script>
+
+        <script src="../../clipboard-1626706a.min.js"></script>
+        <script src="../../highlight-abc7f01d.js"></script>
+        <script src="../../book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

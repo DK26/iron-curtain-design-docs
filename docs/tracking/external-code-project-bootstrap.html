@@ -35,10 +35,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-61d2369b.js";
+            window.path_to_searchindex_js = "../searchindex-f3722748.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-1553b04b.js"></script>
+        <script src="../toc-56a6701d.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -280,6 +280,13 @@
 <li>concrete conflict/missing “how”</li>
 <li>proposed options and tradeoffs</li>
 <li>impact on milestones/dependencies/priority</li>
+</ul>
+</li>
+<li><strong>Document the divergence rationale locally in the implementation repo.</strong> The codebase that diverges must keep its own record of why — not just rely on an upstream issue. This includes:
+<ul>
+<li>a note in <code>docs/design-gap-requests/</code> or equivalent local tracking file</li>
+<li>inline code comments at the divergence point referencing the issue and rationale</li>
+<li>the full reasoning for why the original design was not followed</li>
 </ul>
 </li>
 <li>If work can proceed safely, implement a bounded temporary approach and label it:
