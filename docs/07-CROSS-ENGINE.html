@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-245f6587.js";
+            window.path_to_searchindex_js = "searchindex-da66c284.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-0698f107.js"></script>
+        <script src="toc-b6ee3c41.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -684,7 +684,7 @@ impl&lt;N: NetworkModel&gt; NetworkModel for ProtocolAdapter&lt;N&gt; {
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>// Native play — nothing special
-let game = GameLoop::new(sim, renderer, LockstepNetwork::new(server));
+let game = GameLoop::new(sim, renderer, RelayLockstepNetwork::new(server));
 
 // OpenRA-compatible play — just wrap the network
 let adapted = ProtocolAdapter {

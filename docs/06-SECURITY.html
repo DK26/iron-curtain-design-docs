@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-245f6587.js";
+            window.path_to_searchindex_js = "searchindex-da66c284.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-0698f107.js"></script>
+        <script src="toc-b6ee3c41.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -188,28 +188,29 @@
 <div class="table-wrapper">
 <table>
 <thead>
-<tr><th>Threat</th><th>Pure P2P Lockstep</th><th>Relay Server Lockstep</th><th>Authoritative Fog Server</th></tr>
+<tr><th>Threat</th><th>Relay Server Lockstep</th><th>Authoritative Fog Server</th></tr>
 </thead>
 <tbody>
-<tr><td>Maphack</td><td><strong>OPEN</strong></td><td><strong>OPEN</strong></td><td><strong>BLOCKED</strong> ✓</td></tr>
-<tr><td>Order injection</td><td>Sim rejects</td><td>Server rejects</td><td>Server rejects</td></tr>
-<tr><td>Order forgery</td><td>Ed25519 per-order sigs</td><td>Server stamps + sigs</td><td>Server stamps + sigs</td></tr>
-<tr><td>Lag switch</td><td><strong>OPEN</strong></td><td><strong>BLOCKED</strong> ✓</td><td><strong>BLOCKED</strong> ✓</td></tr>
-<tr><td>Eavesdropping</td><td>AEAD encrypted</td><td>TLS encrypted</td><td>TLS encrypted</td></tr>
-<tr><td>Packet forgery</td><td>AEAD rejects</td><td>TLS rejects</td><td>TLS rejects</td></tr>
-<tr><td>Protocol DoS</td><td>Rate limit + size caps</td><td>Relay absorbs + limits</td><td>Server absorbs + limits</td></tr>
-<tr><td>State saturation</td><td><strong>OPEN</strong></td><td>Rate caps ✓</td><td>Rate caps ✓</td></tr>
-<tr><td>Desync exploit</td><td>Possible</td><td>Server-only analysis</td><td>N/A</td></tr>
-<tr><td>Replay tampering</td><td><strong>OPEN</strong></td><td>Signed ✓</td><td>Signed ✓</td></tr>
-<tr><td>WASM mod cheating</td><td>Sandbox</td><td>Sandbox</td><td>Sandbox</td></tr>
-<tr><td>Reconciler abuse</td><td>N/A</td><td>N/A</td><td>Bounded + signed ✓</td></tr>
-<tr><td>Join code brute-force</td><td>Rate limit + expiry</td><td>Rate limit + expiry</td><td>Rate limit + expiry</td></tr>
-<tr><td>Tracking server abuse</td><td>Rate limit + validation</td><td>Rate limit + validation</td><td>Rate limit + validation</td></tr>
-<tr><td>Version mismatch</td><td>Handshake ✓</td><td>Handshake ✓</td><td>Handshake ✓</td></tr>
+<tr><td>Maphack</td><td><strong>OPEN</strong></td><td><strong>BLOCKED</strong> ✓</td></tr>
+<tr><td>Order injection</td><td>Server rejects</td><td>Server rejects</td></tr>
+<tr><td>Order forgery</td><td>Server stamps + sigs</td><td>Server stamps + sigs</td></tr>
+<tr><td>Lag switch</td><td><strong>BLOCKED</strong> ✓</td><td><strong>BLOCKED</strong> ✓</td></tr>
+<tr><td>Eavesdropping</td><td>TLS encrypted</td><td>TLS encrypted</td></tr>
+<tr><td>Packet forgery</td><td>TLS rejects</td><td>TLS rejects</td></tr>
+<tr><td>Protocol DoS</td><td>Relay absorbs + limits</td><td>Server absorbs + limits</td></tr>
+<tr><td>State saturation</td><td>Rate caps ✓</td><td>Rate caps ✓</td></tr>
+<tr><td>Desync exploit</td><td>Server-only analysis</td><td>N/A</td></tr>
+<tr><td>Replay tampering</td><td>Signed ✓</td><td>Signed ✓</td></tr>
+<tr><td>WASM mod cheating</td><td>Sandbox</td><td>Sandbox</td></tr>
+<tr><td>Reconciler abuse</td><td>N/A</td><td>Bounded + signed ✓</td></tr>
+<tr><td>Join code brute-force</td><td>Rate limit + expiry</td><td>Rate limit + expiry</td></tr>
+<tr><td>Tracking server abuse</td><td>Rate limit + validation</td><td>Rate limit + validation</td></tr>
+<tr><td>Version mismatch</td><td>Handshake ✓</td><td>Handshake ✓</td></tr>
 </tbody>
 </table>
 </div>
 <p><strong>Recommendation:</strong> Relay server is the minimum for ranked/competitive play. Fog-authoritative server for high-stakes tournaments.</p>
+<p><strong>Scope note:</strong> This threat matrix covers gameplay session transport. P2P in Workshop/content distribution (D049/D074) is a separate subsystem with its own trust model.</p>
 <p><strong>A note on lockstep and DoS resilience:</strong> Bryant &amp; Saiedian (2021) observe that deterministic lockstep is surprisingly the <em>best</em> architecture for resisting volumetric denial-of-service attacks. Because the simulation halts and awaits input from all clients before progressing, an attacker attempting to exhaust a victim’s bandwidth unintentionally introduces lag into their own experience as well. The relay server model adds further resilience — the relay absorbs attack traffic without forwarding it to clients.</p>
 <h2 id="vulnerability-1-maphack-architectural-limit"><a class="header" href="#vulnerability-1-maphack-architectural-limit">Vulnerability 1: Maphack (Architectural Limit)</a></h2>
 <h3 id="the-problem"><a class="header" href="#the-problem">The Problem</a></h3>
@@ -387,7 +388,7 @@ impl SignedReplay {
 <p>All corrections must be: signed by the authority, bounded to physically possible values, and rejectable if suspicious.</p>
 <h2 id="vulnerability-8-join-code-brute-forcing"><a class="header" href="#vulnerability-8-join-code-brute-forcing">Vulnerability 8: Join Code Brute-Forcing</a></h2>
 <h3 id="the-problem-7"><a class="header" href="#the-problem-7">The Problem</a></h3>
-<p>Join codes (e.g., <code>IRON-7K3M</code>) enable NAT-friendly P2P connections via a rendezvous server. If codes are short, an attacker can brute-force codes to join games uninvited — griefing lobbies or extracting connection info.</p>
+<p>Join codes (e.g., <code>IRON-7K3M</code>) enable NAT-friendly direct joins to player-hosted relays via a rendezvous server. If codes are short, an attacker can brute-force codes to join games uninvited — griefing lobbies or extracting connection info.</p>
 <p>A 4-character alphanumeric code has ~1.7 million combinations. At 1000 requests/second, exhausted in ~28 minutes. Shorter codes are worse.</p>
 <h3 id="mitigation-length--rate-limiting--expiry"><a class="header" href="#mitigation-length--rate-limiting--expiry">Mitigation: Length + Rate Limiting + Expiry</a></h3>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
@@ -475,7 +476,7 @@ impl GameLobby {
 <p><strong>Key:</strong> Check version during lobby join, not after game starts. The relay server and tracking server listings both include <code>VersionInfo</code> so incompatible games are filtered from the browser entirely.</p>
 <h2 id="vulnerability-11-speed-hack--clock-manipulation"><a class="header" href="#vulnerability-11-speed-hack--clock-manipulation">Vulnerability 11: Speed Hack / Clock Manipulation</a></h2>
 <h3 id="the-problem-10"><a class="header" href="#the-problem-10">The Problem</a></h3>
-<p>A cheating client runs the local simulation faster than real time—either by manipulating the system clock or by feeding artificial timing into the game loop. In a pure P2P lockstep model, every client agrees on a tick cadence, so a faster client could potentially submit orders slightly sooner, giving a micro-advantage in reaction time.</p>
+<p>A cheating client runs the local simulation faster than real time—either by manipulating the system clock or by feeding artificial timing into the game loop.</p>
 <h3 id="mitigation-relay-server-owns-the-clock"><a class="header" href="#mitigation-relay-server-owns-the-clock">Mitigation: Relay Server Owns the Clock</a></h3>
 <p>In <code>RelayLockstepNetwork</code>, the relay server is the sole time authority. It advances the game by broadcasting canonical tick boundaries. The client’s local clock is irrelevant—a client that “runs faster” just finishes processing sooner and waits for the next server tick. Orders submitted before the tick window opens are discarded.</p>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
@@ -506,7 +507,6 @@ impl GameLobby {
     }
 }
 <span class="boring">}</span></code></pre>
-<p><strong>For pure P2P (no relay):</strong> Speed hacks are harder to exploit because all clients must synchronize at each tick barrier — a client that runs faster simply idles. However, a desynced clock can cause subtle timing issues. This is another reason relay server is the recommended default for competitive play.</p>
 <h2 id="vulnerability-12-automation--scripting-botting"><a class="header" href="#vulnerability-12-automation--scripting-botting">Vulnerability 12: Automation / Scripting (Botting)</a></h2>
 <h3 id="the-problem-11"><a class="header" href="#the-problem-11">The Problem</a></h3>
 <p>External tools (macros, overlays, input injectors) automate micro-management with superhuman precision: perfect unit splitting, instant reaction to enemy attacks, pixel-perfect targeting at 10,000+ APM. This is indistinguishable from a skilled player at a protocol level — the client sends valid orders at valid times.</p>
@@ -680,7 +680,7 @@ impl RankingService {
     }
 }
 <span class="boring">}</span></code></pre>
-<p><strong>Key:</strong> Only relay-server-signed results update rankings. Direct P2P games can be played for fun but don’t affect ranked standings.</p>
+<p><strong>Key:</strong> Only relay-server-signed results update rankings.</p>
 <h2 id="vulnerability-14-transport-layer-attacks-eavesdropping--packet-forgery"><a class="header" href="#vulnerability-14-transport-layer-attacks-eavesdropping--packet-forgery">Vulnerability 14: Transport Layer Attacks (Eavesdropping &amp; Packet Forgery)</a></h2>
 <h3 id="the-problem-13"><a class="header" href="#the-problem-13">The Problem</a></h3>
 <p>If game traffic is unencrypted or weakly encrypted, any on-path observer (same WiFi, ISP, VPN provider) can read all game data and forge packets. C&amp;C Generals used XOR with a fixed starting key <code>0xFade</code> — this is not encryption. The key is hardcoded, the increment (<code>0x00000321</code>) is constant, and a comment in the source reads “just for fun” (see <code>Transport.cpp</code> lines 42-56). Any packet could be decrypted instantly even before the GPL source release. Combined with no packet authentication (the “validation” is a simple non-cryptographic CRC), an attacker had full read/write access to all game traffic.</p>
@@ -700,23 +700,12 @@ pub enum TransportSecurity {
     RelayTls {
         server_cert: Certificate,
         client_session_token: SessionToken,
-    },
-
-    /// Direct P2P: AES-256-GCM with X25519 key exchange.
-    /// Nonce derived from packet sequence number (GNS pattern — replay-proof).
-    /// Ed25519 identity key signs the X25519 ephemeral key (MITM-proof).
-    DirectAead {
-        peer_identity: Ed25519PublicKey,
-        session_cipher: Aes256Gcm,       // Negotiated via X25519
-        sequence_number: u64,             // Nonce = sequence number
-    },
 }
 <span class="boring">}</span></code></pre>
 <p><strong>Key design choices:</strong></p>
 <ul>
 <li><strong>Never roll custom crypto.</strong> Generals’ XOR is the cautionary example. Use established libraries (<code>rustls</code>, <code>snow</code> for noise protocol, <code>ring</code> for primitives).</li>
-<li><strong>Relay mode makes this simple.</strong> Clients open a TLS connection to the relay — standard web-grade encryption. The relay is the trust anchor.</li>
-<li><strong>Direct P2P uses AEAD.</strong> AES-256-GCM with X25519 key exchange, same as Valve’s GNS (see <code>03-NETCODE.md</code> § “Transport Encryption”). The connection establishment phase (join code / direct IP) exchanges Ed25519 identity keys that bind to ephemeral X25519 session keys. The noise protocol (<code>snow</code> crate) remains an option for the handshake layer.</li>
+<li><strong>Relay mode makes this simple.</strong> Clients open a TLS connection to the relay (dedicated or embedded) — standard web-grade encryption. The relay is the trust anchor.</li>
 <li><strong>Authenticated encryption.</strong> Every packet is both encrypted AND authenticated (ChaCha20-Poly1305 or AES-256-GCM). Tampering is detected and the packet is dropped. This eliminates the entire class of packet-modification attacks that Generals’ XOR+CRC allowed.</li>
 <li><strong>No encrypted passwords on the wire.</strong> Lobby authentication uses session tokens issued during TLS handshake. Generals transmitted “encrypted” passwords using trivially reversible bit manipulation (see <code>encrypt.cpp</code> — passwords truncated to 8 characters, then XOR’d). We use SRP or OAuth2 — passwords never leave the client.</li>
 </ul>
@@ -823,11 +812,9 @@ fn parse_command(reader: &amp;mut BoundedReader, cmd_type: u8) -&gt; Result&lt;N
 <blockquote>
 <p>For the full vulnerability catalog from Generals source code analysis, see <code>research/rts-netcode-security-vulnerabilities.md</code>.</p>
 </blockquote>
-<h2 id="vulnerability-16-order-source-authentication-p2p-forgery"><a class="header" href="#vulnerability-16-order-source-authentication-p2p-forgery">Vulnerability 16: Order Source Authentication (P2P Forgery)</a></h2>
+<h2 id="vulnerability-16-order-source-authentication"><a class="header" href="#vulnerability-16-order-source-authentication">Vulnerability 16: Order Source Authentication</a></h2>
 <h3 id="the-problem-15"><a class="header" href="#the-problem-15">The Problem</a></h3>
-<p>In relay mode, the relay server stamps each order with the authenticated sender’s player slot — forgery is prevented by the trusted relay. But in direct P2P modes (<code>LockstepNetwork</code>), orders contain a self-declared <code>playerID</code>. A malicious client can forge orders with another player’s ID, sending commands for units they don’t own.</p>
-<p>Generals’ <code>ConstructNetCommandMsgFromRawData</code> reads the player ID from the ‘P’ tag in the packet data with no validation against the source address. Any peer can claim to be any player.</p>
-<p>Order <em>validation</em> (D012) catches ownership violations — commanding units you don’t own is rejected deterministically. But without authentication, a malicious client can still forge valid orders <em>as</em> the victim player (e.g., ordering the victim’s units to walk into danger). Validation checks whether the <em>order</em> is legal for that player — it doesn’t check whether the <em>sender</em> is that player.</p>
+<p>The relay server stamps each order with the authenticated sender’s player slot — forgery is prevented by the trusted relay. Ed25519 per-order signing provides defense in depth: even if an attacker compromises the relay, forged orders are detectable.</p>
 <h3 id="mitigation-ed25519-per-order-signing"><a class="header" href="#mitigation-ed25519-per-order-signing">Mitigation: Ed25519 Per-Order Signing</a></h3>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -866,7 +853,7 @@ impl SessionAuth {
 <p><strong>Key design choices:</strong></p>
 <ul>
 <li><strong>Ephemeral session keys.</strong> Generated fresh for each game. No long-lived keys to steal. Key exchange happens during lobby setup over the encrypted channel (Vulnerability 14).</li>
-<li><strong>Defense in depth.</strong> Relay mode: relay validates signatures AND stamps orders. P2P mode: each client validates all peers’ signatures. Both: sim validates order legality (D012).</li>
+<li><strong>Defense in depth.</strong> Relay validates signatures AND stamps orders. Sim validates order legality (D012).</li>
 <li><strong>Overhead is minimal.</strong> Ed25519 signing is ~15,000 ops/second on a single core. At peak RTS APM (~300 orders/minute = 5/second), signature overhead is negligible.</li>
 <li><strong>Replays include signatures.</strong> The signed order chain in replays allows post-hoc verification that no orders were tampered with — useful for tournament dispute resolution.</li>
 </ul>
@@ -1161,7 +1148,7 @@ impl EwmaTrafficMonitor {
 <ul>
 <li><strong>Verified sources:</strong> Tracking servers bundled with the game client (official, OpenRA, CnCNet) display a verified badge. User-added tracking servers display “Community” or “Unverified” labels.</li>
 <li><strong>Relay trust:</strong> Games hosted on relays with known Ed25519 keys (from previously trusted sessions) show “Trusted relay.” Games on unknown relays show “Unknown relay — first connection.”</li>
-<li><strong>IP exposure warning:</strong> When connecting to a P2P game (direct IP, no relay), the UI warns: “Direct connection — your IP address will be visible to the host.”</li>
+<li><strong>IP exposure warning:</strong> When connecting directly to a player-hosted relay (direct IP), the UI warns: “Direct connection — your IP address may be visible to the host.”</li>
 </ul>
 <p><strong>Tracking server URL validation:</strong></p>
 <ul>
@@ -1733,10 +1720,10 @@ min_matches = 10
 <p><strong>Fork detection:</strong> Package uploads are compared against existing packages using structural similarity (file tree diff, asset hash overlap). Packages with &gt;80% overlap with an existing package are flagged as potential forks and require author justification.</p>
 <p><strong>Reputation decay:</strong> Inactive accounts’ ratings decay over time (weight halving every 6 months). This prevents abandoned sock-puppet networks from permanently inflating scores.</p>
 <p><strong>Phase:</strong> Reputation gaming defenses ship with Workshop moderation tools (M9). Anomaly detection is an M9 exit criterion.</p>
-<h2 id="vulnerability-53-p2p-replay-peer-attestation-gap"><a class="header" href="#vulnerability-53-p2p-replay-peer-attestation-gap">Vulnerability 53: P2P Replay Peer-Attestation Gap</a></h2>
+<h2 id="vulnerability-53-direct-peer-replay-peer-attestation-gap-deferred-optional-mode"><a class="header" href="#vulnerability-53-direct-peer-replay-peer-attestation-gap-deferred-optional-mode">Vulnerability 53: Direct-Peer Replay Peer-Attestation Gap (Deferred Optional Mode)</a></h2>
 <h3 id="the-problem-52"><a class="header" href="#the-problem-52">The Problem</a></h3>
 <p><strong>Severity: MEDIUM</strong></p>
-<p>In peer-to-peer modes (LAN, direct connect without relay), replays are recorded locally by each client. There is no mutual attestation — a player can modify their local replay to remove evidence of cheating or alter match outcomes. Since there is no relay server to act as a neutral observer, replay integrity depends entirely on the local client.</p>
+<p>In deferred direct-peer modes (for example, explicit LAN/experimental variants without relay authority), replays are recorded locally by each client. There is no mutual attestation — a player can modify their local replay to remove evidence of cheating or alter match outcomes. Since there is no relay server to act as a neutral observer, replay integrity depends entirely on the local client.</p>
 <h3 id="mitigation-15"><a class="header" href="#mitigation-15">Mitigation</a></h3>
 <p><strong>Peer-attested frame hashes:</strong> At the end of each sim tick, all peers exchange signed hashes of their current sim state (already required for desync detection). These signed hashes are recorded in each peer’s replay file, creating a cross-attestation chain.</p>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
@@ -1750,7 +1737,7 @@ min_matches = 10
 <span class="boring">}</span></code></pre>
 <p><strong>Replay reconciliation:</strong> When a dispute arises, replays from all peers can be compared. Frames where peer-attested hashes diverge from the replay’s recorded state indicate tampering. The attestation chain provides cryptographic proof of which peer’s replay was modified.</p>
 <p><strong>End-of-match summary signing:</strong> At match end, all peers sign a match summary (final score, duration, player list, final state hash). This summary is embedded in all replays and can be independently verified.</p>
-<p><strong>Phase:</strong> P2P replay attestation ships with P2P networking mode (Phase 4). Peer hash exchange is a Phase 4 exit criterion.</p>
+<p><strong>Phase:</strong> This ships only if a direct-peer gameplay mode is explicitly enabled by future decision. Peer hash exchange is the corresponding exit criterion for that mode.</p>
 <h2 id="vulnerability-54-anti-cheat-false-positive-rate-targets"><a class="header" href="#vulnerability-54-anti-cheat-false-positive-rate-targets">Vulnerability 54: Anti-Cheat False-Positive Rate Targets</a></h2>
 <h3 id="the-problem-53"><a class="header" href="#the-problem-53">The Problem</a></h3>
 <p><strong>Severity: MEDIUM</strong></p>
@@ -1863,7 +1850,7 @@ min_matches = 10
 <tbody>
 <tr><td>Maphack</td><td>Fog-authoritative server</td><td>Network model architecture</td></tr>
 <tr><td>Order injection</td><td>Deterministic validation in sim</td><td>Sim purity (invariant #1)</td></tr>
-<tr><td>Order forgery (P2P)</td><td>Ed25519 per-order signing</td><td>Session auth design</td></tr>
+<tr><td>Order forgery (direct-peer optional mode)</td><td>Ed25519 per-order signing</td><td>Session auth design</td></tr>
 <tr><td>Lag switch</td><td>Relay server owns the clock</td><td>Relay architecture (D007)</td></tr>
 <tr><td>Speed hack</td><td>Relay tick authority</td><td>Same as above</td></tr>
 <tr><td>State saturation</td><td>Time-budget pool + EWMA scoring + hard caps</td><td>OrderBudget + EwmaTrafficMonitor + relay</td></tr>
@@ -1913,14 +1900,14 @@ min_matches = 10
 <tr><td>Mod cross-probing</td><td>Namespace isolation + capability-gated IPC</td><td>WASM module isolation (V50)</td></tr>
 <tr><td>Supply chain update</td><td>Popularity quarantine + diff review + rollback</td><td>Workshop package quarantine (V51)</td></tr>
 <tr><td>Star-jacking</td><td>Rate limit + anomaly detection + fork detection</td><td>Workshop reputation defense (V52)</td></tr>
-<tr><td>P2P replay forgery</td><td>Peer-attested frame hashes + end-match signing</td><td>P2P replay attestation (V53)</td></tr>
+<tr><td>Direct-peer replay forgery (optional mode)</td><td>Peer-attested frame hashes + end-match signing</td><td>Direct-peer replay attestation (V53)</td></tr>
 <tr><td>False accusations</td><td>Tiered thresholds + calibration + graduated resp</td><td>Anti-cheat false-positive control (V54)</td></tr>
 <tr><td>Bug-as-cheat</td><td>Desync fingerprint + classification heuristic</td><td>Desync classification (V55)</td></tr>
 <tr><td>BiDi text injection</td><td>Unified sanitization pipeline + context registry</td><td>Text safety (V56)</td></tr>
 </tbody>
 </table>
 </div>
-<p><strong>No kernel-level anti-cheat.</strong> Open-source, cross-platform, no ring-0 drivers. We accept that lockstep RTS will always have a maphack risk in P2P/relay modes — the fog-authoritative server is the real answer for high-stakes play.</p>
+<p><strong>No kernel-level anti-cheat.</strong> Open-source, cross-platform, no ring-0 drivers. We accept that lockstep RTS will always have a maphack risk in client-sim modes — the fog-authoritative server is the real answer for high-stakes play.</p>
 <p><strong>Performance as anti-cheat.</strong> Our tick-time targets (&lt; 10ms on 8-core desktop) mean the relay server can run games at full speed with headroom for behavioral analysis. Stuttery servers with 40ms ticks can’t afford real-time order analysis — we can.</p>
 
                     </main>

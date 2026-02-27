@@ -35,10 +35,10 @@
             const path_to_root = "../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-245f6587.js";
+            window.path_to_searchindex_js = "../../searchindex-da66c284.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../../toc-0698f107.js"></script>
+        <script src="../../toc-b6ee3c41.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -181,7 +181,7 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h2 id="d008-sub-tick-timestamps-on-orders"><a class="header" href="#d008-sub-tick-timestamps-on-orders">D008: Sub-Tick Timestamps on Orders</a></h2>
-<p><strong>Revision note (2026-02-22):</strong> Revised to clarify trust semantics. Client-submitted sub-tick timestamps are treated as timing hints. In relay modes, the relay normalizes/clamps them into canonical sub-tick timestamps before broadcast using relay-owned timing calibration and skew bounds. In P2P mode, peers deterministically order by <code>(sub_tick_time, player_id)</code> with known fairness limitations.</p>
+<p><strong>Revision note (2026-02-22, updated 2026-02-27):</strong> Revised to clarify trust semantics. Client-submitted sub-tick timestamps are treated as timing hints. The relay (dedicated or embedded) normalizes/clamps them into canonical sub-tick timestamps before broadcast using relay-owned timing calibration and skew bounds.</p>
 <p><strong>Decision:</strong> Every order carries a sub-tick timestamp hint. Orders within a tick are processed in chronological order using a canonical timestamp ordering rule for the active <code>NetworkModel</code>.</p>
 <p><strong>Rationale (inspired by CS2):</strong></p>
 <ul>

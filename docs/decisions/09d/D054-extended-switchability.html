@@ -35,10 +35,10 @@
             const path_to_root = "../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-245f6587.js";
+            window.path_to_searchindex_js = "../../searchindex-da66c284.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../../toc-0698f107.js"></script>
+        <script src="../../toc-b6ee3c41.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -219,9 +219,9 @@
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// Abstracts a single bidirectional network channel beneath NetworkModel.
-/// Each Transport instance represents ONE connection (to a relay, or to a
-/// single peer in P2P). NetworkModel manages multiple Transport instances
-/// for multi-peer P2P; relay mode uses a single Transport to the relay.
+/// Each Transport instance represents ONE connection (typically to a relay;
+/// optionally to a single peer in deferred direct-peer modes). NetworkModel
+/// uses a single Transport instance for the relay connection (dedicated or embedded).
 ///
 /// Lives in ic-net. NetworkModel implementations are generic over Transport.
 ///
@@ -276,23 +276,20 @@ pub trait Transport: Send + Sync {
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// NetworkModel becomes generic over Transport.
-/// Existing code that constructs LockstepNetwork or RelayLockstepNetwork
+/// Existing code that constructs EmbeddedRelayNetwork or RelayLockstepNetwork
 /// now specifies a Transport. For desktop builds, this is UdpTransport.
 /// For WASM builds, this is WebSocketTransport.
 ///
-/// Relay mode: single Transport to the relay server.
-/// P2P mode: Vec&lt;T&gt; — one Transport per peer connection.
-pub struct LockstepNetwork&lt;T: Transport&gt; {
-    transport: T,       // relay mode: connection to relay
+/// Both relay modes use a single Transport to the relay.
+/// EmbeddedRelayNetwork composes RelayCore + RelayLockstepNetwork in-process;
+/// RelayLockstepNetwork is also used standalone by clients connecting to a
+/// dedicated relay. Connecting clients use the same type in both cases.
+pub struct RelayLockstepNetwork&lt;T: Transport&gt; {
+    transport: T,       // connection to relay (dedicated or embedded)
     // ... existing fields unchanged
 }
 
-pub struct P2PLockstepNetwork&lt;T: Transport&gt; {
-    peers: Vec&lt;T&gt;,      // one connection per peer
-    // ... existing fields unchanged
-}
-
-impl&lt;T: Transport&gt; NetworkModel for LockstepNetwork&lt;T&gt; {
+impl&lt;T: Transport&gt; NetworkModel for RelayLockstepNetwork&lt;T&gt; {
     // All existing logic unchanged. send()/recv() calls go through
     // self.transport instead of directly calling UdpSocket methods.
     // Reliability layer (sequence numbers, retransmit, frame resend)
@@ -304,7 +301,7 @@ impl&lt;T: Transport&gt; NetworkModel for LockstepNetwork&lt;T&gt; {
 <p><strong>Why no <code>is_reliable()</code> method?</strong> Adding reliability awareness to <code>Transport</code> would create conditional branches in <code>NetworkModel</code> — one code path for unreliable transports (full retransmit logic) and another for reliable ones (skip retransmit). This doubles the test matrix and creates subtle behavioral differences between deployment targets. Instead, <code>NetworkModel</code> always runs its full reliability layer. On reliable transports (WebSocket), retransmit timers never fire and the redundancy costs nothing at runtime. One code path, one test matrix, zero conditional complexity. This is the same approach used by ENet, Valve’s GameNetworkingSockets, and most serious game networking libraries.</p>
 <p><strong>Message lanes (from GNS):</strong> <code>NetworkModel</code> multiplexes multiple logical streams (lanes) over a single <code>Transport</code> connection — each with independent priority and weight. Lanes are a protocol-layer concern, not a transport-layer concern: <code>Transport</code> provides raw byte delivery; <code>NetworkModel</code> handles lane scheduling, priority draining, and per-lane buffering. See <code>03-NETCODE.md</code> § Message Lanes for the lane definitions (<code>Orders</code>, <code>Control</code>, <code>Chat</code>, <code>Voice</code>, <code>Bulk</code>) and scheduling policy. The lane system ensures time-critical orders are never delayed by chat traffic, voice data, or bulk data — a pattern validated by GNS’s configurable lane architecture (see <code>research/valve-github-analysis.md</code> § 1.4). The <code>Voice</code> lane (D059) carries relay-forwarded Opus VoIP frames as unreliable, best-effort traffic.</p>
 <p><strong>Transport encryption (from GNS):</strong> All multiplayer transports are encrypted with AES-256-GCM over an X25519 key exchange — the same cryptographic suite used by Valve’s GameNetworkingSockets and DTLS 1.3. Encryption sits between <code>Transport</code> and <code>NetworkModel</code>, transparent to both layers. Each connection generates an ephemeral Curve25519 keypair for forward secrecy; the symmetric key is never reused across sessions. After key exchange, the handshake is signed with the player’s Ed25519 identity key (D052) to bind the encrypted channel to a verified identity. The GCM nonce incorporates the packet sequence number, preventing replay attacks. See <code>03-NETCODE.md</code> § Transport Encryption for the full specification and <code>06-SECURITY.md</code> for the threat model. <code>MemoryTransport</code> (testing) and <code>LocalNetwork</code> (single-player) skip encryption.</p>
-<p><strong>Pluggable signaling (from GNS):</strong> Connection establishment is further decomposed into a <code>Signaling</code> trait — abstracting how peers exchange connection metadata (IP addresses, relay tokens, ICE candidates) before the <code>Transport</code> is established. This follows GNS’s <code>ISteamNetworkingConnectionSignaling</code> pattern. Different deployment contexts use different signaling: relay-brokered, rendezvous + hole-punch, direct IP, or WebRTC for browser builds. Adding a new connection method (e.g., Steamworks P2P, Epic Online Services) requires only a new <code>Signaling</code> implementation — no changes to <code>Transport</code> or <code>NetworkModel</code>. See <code>03-NETCODE.md</code> § Pluggable Signaling for trait definition and implementations.</p>
+<p><strong>Pluggable signaling (from GNS):</strong> Connection establishment is further decomposed into a <code>Signaling</code> trait — abstracting how participants exchange connection metadata (IP addresses, relay tokens, ICE candidates) before the <code>Transport</code> is established. This follows GNS’s <code>ISteamNetworkingConnectionSignaling</code> pattern. Different deployment contexts use different signaling: relay-brokered, rendezvous + hole-punch for hosted relays, direct IP to host/dedicated relay, or WebRTC for browser builds. Adding a new connection method (e.g., Steam Networking Sockets, Epic Online Services) requires only a new <code>Signaling</code> implementation — no changes to <code>Transport</code> or <code>NetworkModel</code>. See <code>03-NETCODE.md</code> § Pluggable Signaling for trait definition and implementations.</p>
 <p><strong>Why not abstract this earlier (D006/D041)?</strong> At D006 design time, browser multiplayer was a distant future target and raw UDP was the obvious choice. Invariant #10 (platform-agnostic) was added later, making the gap visible. D041 explicitly listed the transport layer in its inventory of <em>already-abstracted</em> concerns via <code>NetworkModel</code> — but <code>NetworkModel</code> abstracts the protocol, not the transport. This decision corrects that conflation.</p>
 <h3 id="2-signaturescheme--cryptographic-algorithm-abstraction"><a class="header" href="#2-signaturescheme--cryptographic-algorithm-abstraction">2. <code>SignatureScheme</code> — Cryptographic Algorithm Abstraction</a></h3>
 <p><strong>Risk level: HIGH.</strong> Ed25519 is hardcoded in ~15 callsites. NIST standardized ML-DSA (post-quantum signatures) in 2024 and recommends migration by ~2035. The engine’s 10+ year lifespan means a signature algorithm swap is probable, not speculative. More immediately: different deployment contexts may want different algorithms (Ed448 for higher security margin, ML-DSA-65 for post-quantum compliance).</p>

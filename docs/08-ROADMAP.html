@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-245f6587.js";
+            window.path_to_searchindex_js = "searchindex-da66c284.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-0698f107.js"></script>
+        <script src="toc-b6ee3c41.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -422,8 +422,8 @@
 <p><strong>Goal:</strong> Deterministic lockstep multiplayer with competitive infrastructure. Not just “multiplayer works” — multiplayer that’s worth switching from OpenRA for.</p>
 <h3 id="deliverables-5"><a class="header" href="#deliverables-5">Deliverables</a></h3>
 <ul>
-<li><code>LockstepNetwork</code> implementation (input delay model)</li>
-<li><code>RelayLockstepNetwork</code> implementation (relay server with time authority)</li>
+<li><code>EmbeddedRelayNetwork</code> implementation (listen server — host embeds <code>RelayCore</code>)</li>
+<li><code>RelayLockstepNetwork</code> implementation (dedicated relay with time authority)</li>
 <li>Desync detection and server-side debugging tools (killer feature)</li>
 <li>Lobby system, game browser, NAT traversal via relay</li>
 <li>Replay system (already enabled by Phase 2 architecture)</li>

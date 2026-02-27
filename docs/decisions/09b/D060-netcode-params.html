@@ -35,10 +35,10 @@
             const path_to_root = "../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-245f6587.js";
+            window.path_to_searchindex_js = "../../searchindex-da66c284.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../../toc-0698f107.js"></script>
+        <script src="../../toc-b6ee3c41.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -272,6 +272,7 @@
 <tr><td><strong>Sub-tick ordering</strong></td><td>Always on</td><td>Zero cost (~4 bytes/order + one sort of ≤5 items); produces visibly fairer outcomes in simultaneous-action edge cases; CS2 proved universal acceptance; no reason to toggle</td></tr>
 <tr><td><strong>Adaptive run-ahead</strong></td><td>Always on</td><td>Generals proved this works over 20 years; adapts to both RTT and FPS; synchronized via network command</td></tr>
 <tr><td><strong>Timing feedback</strong></td><td>Always on</td><td>Client self-calibrates order submission timing based on relay feedback; DDNet-proven pattern</td></tr>
+<tr><td><strong>Match QoS auto-profile</strong></td><td>Always on</td><td>Relay calibrates deadline/run-ahead at match start and adapts within bounded profiles. Gives better feel under real-world lag while preserving match-wide fairness semantics</td></tr>
 <tr><td><strong>Stall policy</strong></td><td>Never stall (relay drops late orders)</td><td>Core architectural decision; stalling punishes honest players for one player’s bad connection</td></tr>
 <tr><td><strong>Anti-lag-switch</strong></td><td>Always on</td><td>Relay owns the clock; non-negotiable for competitive integrity</td></tr>
 <tr><td><strong>Visual prediction</strong></td><td>Always on</td><td>Factorio lesson — removed the toggle in 0.14.0 because always-on was always better; cosmetic only (sim unchanged)</td></tr>
@@ -285,6 +286,60 @@
 <li><strong>Benefit:</strong> Fairer resolution of simultaneous events (engineer races, crate grabs, simultaneous attacks). “I clicked first, I won” matches player intuition.</li>
 <li><strong>Player experience:</strong> The mechanism is automatic (players don’t configure timestamps), but the outcome is <strong>very visible</strong> — who wins the engineer race, who grabs the contested crate, whose attack order resolves first. These moments define close games. Without sub-tick, ties are broken by player ID (always unfair to higher-numbered players) or packet arrival order (network-dependent randomness). With sub-tick, the player who acted first wins. That’s a gameplay experience players notice and care about.</li>
 <li><strong>If made optional:</strong> Would require two code paths in the sim (sorted vs. unsorted order processing), a deterministic fallback that’s always unfair to higher-numbered players (player ID tiebreak), and a lobby setting nobody understands. Ranked would mandate one mode anyway. CS2 faced zero community backlash — no one asked for “the old random tie-breaking.”</li>
+</ul>
+<h3 id="match-qos-auto-profile-fairness--feel"><a class="header" href="#match-qos-auto-profile-fairness--feel">Match QoS Auto-Profile (Fairness + Feel)</a></h3>
+<p>To avoid the “first 1-2 seconds feel wrong” problem and to improve playability under moderate lag, relay matches use an always-on <strong>Match QoS auto-profile</strong>:</p>
+<ol>
+<li><strong>Pre-match calibration during loading:</strong> collect short RTT/jitter samples for each player.</li>
+<li><strong>Profile-bounded initialization:</strong> derive one shared <code>tick_deadline</code> and one shared <code>run_ahead</code> for the match from the measured envelope, then clamp to policy bounds.</li>
+<li><strong>Bounded in-match adaptation:</strong> increase quickly on sustained late arrivals, decrease slowly after sustained stability (hysteresis).</li>
+<li><strong>Per-player assist only for submission timing:</strong> clients may use per-player send offsets, but fairness semantics stay match-global.</li>
+</ol>
+<p>The key guardrail is deliberate:</p>
+<ul>
+<li><strong>Never per-player fairness rules.</strong> Intra-tick ordering remains one canonical relay rule for all players.</li>
+<li><strong>Only per-player delivery assist.</strong> Individual timing offsets influence when a client sends, not how the relay ranks contested actions.</li>
+</ul>
+<p>Recommended policy envelopes:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Queue Type</th><th><code>tick_deadline_ms</code> envelope</th><th>Shared run-ahead envelope</th><th>Goal</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Ranked / Competitive</strong></td><td>90-140</td><td>3-5 ticks</td><td>Tight fairness and responsiveness; strict anti-abuse posture</td></tr>
+<tr><td><strong>Casual / Community</strong></td><td>120-220</td><td>4-7 ticks</td><td>Better tolerance for mixed/WiFi links; fewer late-drop frustrations</td></tr>
+</tbody>
+</table>
+</div>
+<p>These are policy bounds, not player settings. The relay auto-selects/adjusts inside them.</p>
+<p>At 30 tps (<code>tick_interval_ms ≈ 33.33</code>), these run-ahead envelopes are derived from <code>ceil(tick_deadline_ms / tick_interval_ms)</code> so delay and scheduling budgets stay internally consistent.</p>
+<p>Default QoS adaptation constants (per queue profile):</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Constant</th><th>Ranked / Competitive</th><th>Casual / Community</th></tr>
+</thead>
+<tbody>
+<tr><td>Initialization one-way clip (<code>one_way_clip_us</code>)</td><td>25 ms</td><td>80 ms</td></tr>
+<tr><td>Initialization jitter clip (<code>jitter_clip_us</code>)</td><td>12 ms</td><td>40 ms</td></tr>
+<tr><td>Safety margin (<code>safety_margin_us</code>)</td><td>8 ms</td><td>15 ms</td></tr>
+<tr><td>EWMA alpha (<code>ewma_alpha_q15</code>)</td><td>0.20</td><td>0.25</td></tr>
+<tr><td>Raise threshold (<code>raise_late_rate_bps</code>)</td><td>2.0%</td><td>3.5%</td></tr>
+<tr><td>Raise windows (<code>raise_windows</code>)</td><td>3</td><td>2</td></tr>
+<tr><td>Lower threshold (<code>lower_late_rate_bps</code>)</td><td>0.2%</td><td>0.5%</td></tr>
+<tr><td>Lower windows (<code>lower_windows</code>)</td><td>8</td><td>6</td></tr>
+<tr><td>Cooldown windows (<code>cooldown_windows</code>)</td><td>2</td><td>1</td></tr>
+<tr><td>Per-player influence cap (<code>per_player_influence_cap_bps</code>)</td><td>40%</td><td>60%</td></tr>
+</tbody>
+</table>
+</div>
+<p>Operational guardrails:</p>
+<ul>
+<li><strong>Outlier-resistant initialization:</strong> Use clipped percentile aggregation at match start, not raw worst-player values.</li>
+<li><strong>Abuse resistance:</strong> A player with repeated late bursts that do not correlate with RTT/jitter/loss cannot unilaterally push global delay up.</li>
+<li><strong>Auditability:</strong> Every QoS adjustment is recorded to replay metadata and relay telemetry.</li>
+<li><strong>Player feedback:</strong> Missed-deadline outcomes should be surfaced with concise in-game indicators to reduce perceived unfairness.</li>
 </ul>
 <h3 id="rationale"><a class="header" href="#rationale">Rationale</a></h3>
 <p><strong>Netcode parameters are not like graphics settings.</strong> Graphics preferences are subjective (some players prefer performance over visual quality). Netcode parameters have objectively correct values — or correct adaptive algorithms. Exposing the knob creates confusion:</p>

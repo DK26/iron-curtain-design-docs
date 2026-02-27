@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-245f6587.js";
+            window.path_to_searchindex_js = "searchindex-da66c284.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-0698f107.js"></script>
+        <script src="toc-b6ee3c41.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -372,11 +372,26 @@ max_games = 50
 </div>
 <p><strong>When to change these:</strong></p>
 <ul>
-<li><strong>Competitive league (low latency):</strong> Lower <code>tick_deadline_ms</code> to 100 for tighter timing. Only do this if your player base has reliably good connections.</li>
-<li><strong>Casual / high-latency regions:</strong> Raise <code>tick_deadline_ms</code> to 150–200 to tolerate higher ping.</li>
+<li><strong>Competitive league (low latency):</strong> Keep effective deadline behavior inside <code>90–140ms</code> envelope (D060). If running a fixed value, start around <code>110ms</code>.</li>
+<li><strong>Casual / high-latency regions:</strong> Keep effective deadline behavior inside <code>120–220ms</code> envelope (D060). If running a fixed value, start around <code>160ms</code>.</li>
 <li><strong>Training / debugging:</strong> Raise <code>tick_deadline_ms</code> to 500 and <code>reconnect_timeout_secs</code> to 300 for generous timeouts.</li>
 </ul>
 <p><strong>Recommendation:</strong> Leave <code>tick_deadline_ms</code> at 120 unless you have specific latency data for your player base. The adaptive run-ahead system handles most cases automatically.</p>
+<h4 id="qos-envelope-alignment-d060"><a class="header" href="#qos-envelope-alignment-d060">QoS Envelope Alignment (D060)</a></h4>
+<p>The relay’s match QoS auto-profile should stay within these envelopes:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Queue Type</th><th>Deadline Envelope</th><th>Shared Run-Ahead Envelope</th><th>Suggested Fixed Baseline (if auto-profile unavailable)</th></tr>
+</thead>
+<tbody>
+<tr><td>Ranked / Competitive</td><td>90–140 ms</td><td>3–5 ticks</td><td>110 ms</td></tr>
+<tr><td>Casual / Community</td><td>120–220 ms</td><td>4–7 ticks</td><td>160 ms</td></tr>
+<tr><td>Training / Debug</td><td>200–500 ms</td><td>6–15 ticks</td><td>300 ms</td></tr>
+</tbody>
+</table>
+</div>
+<p>If your runtime currently supports only a fixed <code>relay.tick_deadline_ms</code>, choose the baseline above and tune by observed late-order rate. If match auto-profile envelopes are available, prefer those and keep fixed overrides minimal.</p>
 <h4 id="catchup-reconnection-behavior"><a class="header" href="#catchup-reconnection-behavior">Catchup (Reconnection Behavior)</a></h4>
 <div class="table-wrapper">
 <table>
@@ -1184,9 +1199,9 @@ chown icrelay:icrelay server_config.toml
 <h4 id="players-experiencing-lag-with-default-settings"><a class="header" href="#players-experiencing-lag-with-default-settings">“Players experiencing lag with default settings”</a></h4>
 <p>Check your player base’s typical latency. If most players have &gt; 80ms ping:</p>
 <pre><code class="language-toml">[relay]
-tick_deadline_ms = 150     # or even 200 for high-latency regions
+tick_deadline_ms = 160     # casual/community baseline inside 120–220ms envelope
 </code></pre>
-<p>The adaptive run-ahead system handles most latency, but a tight tick deadline can cause unnecessary order drops for high-ping players.</p>
+<p>The adaptive run-ahead system handles most latency, but a tight tick deadline can cause unnecessary order drops for high-ping players. If this is a ranked environment, do not exceed ~140ms without evidence; if casual/community, 180–220ms is acceptable.</p>
 <h4 id="matchmaking-queues-are-too-long"><a class="header" href="#matchmaking-queues-are-too-long">“Matchmaking queues are too long”</a></h4>
 <p>Small population problem. Widen the search parameters:</p>
 <pre><code class="language-toml">[matchmaking]

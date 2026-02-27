@@ -35,10 +35,10 @@
             const path_to_root = "../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-245f6587.js";
+            window.path_to_searchindex_js = "../../searchindex-da66c284.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../../toc-0698f107.js"></script>
+        <script src="../../toc-b6ee3c41.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -862,7 +862,7 @@ fn matchmaking_tick(pool: &amp;mut Vec&lt;MatchmakingEntry&gt;, provider: &amp;d
 <p>Always available, zero external dependency. Type an IP address and port, connect. Works on LAN, works over internet with port forwarding. This is the escape hatch — if every server is down, two players with IP addresses can still play.</p>
 <pre><code>ic play connect 192.168.1.42:7400
 </code></pre>
-<p>For P2P lockstep (no relay), the host IS the connection target. For relay-hosted games, this is the relay’s address. No discovery mechanism needed — you already know where to go.</p>
+<p>If a deferred direct-peer gameplay mode is ever enabled (for example, explicit LAN/experimental variants without relay authority), the host is the connection target. For relay-hosted games (the default), this is the relay address. No discovery mechanism is needed when endpoints are already known.</p>
 <p><strong>Tier 1 — Room Codes (Among Us pattern, decentralized)</strong></p>
 <p>When a host creates a room on any relay or community server, the server assigns a short alphanumeric code. Share it verbally, paste it in Discord, text it to a friend.</p>
 <pre><code>Room code: TKR-4N7
@@ -1133,7 +1133,7 @@ All players ready → countdown → game starts
 </code></pre>
 <p><strong>The host-as-tracker model:</strong></p>
 <p>For relay-hosted games (the default), the relay IS the tracker — it already manages all connections in the room. It maintains an in-memory peer table: which players have which resources. When a new player joins and needs resources, the relay tells them which peers can seed. This is trivial — a <code>HashMap&lt;ResourceId, Vec&lt;PeerId&gt;&gt;</code> that lives only as long as the room exists.</p>
-<p>For P2P games (no relay, LAN): the host’s game client runs a minimal tracker. Same data structure, same protocol, just embedded in the game client instead of a separate relay process. The host was already acting as the game’s connection coordinator — adding resource tracking is marginal.</p>
+<p>For deferred direct-peer games (if enabled for explicit LAN/experimental use without relay authority): the host’s game client runs a minimal tracker. Same data structure, same protocol, just embedded in the game client instead of a separate relay process. The host is already acting as connection coordinator, so adding resource tracking is marginal.</p>
 <p><strong>Security model — preventing malicious content transfer:</strong></p>
 <p>The critical constraint: <strong>only Workshop-published resources can be shared in a lobby.</strong> The lobby declares resources by their Workshop identity (<code>publisher/package@version</code>), not by arbitrary file paths. The security chain:</p>
 <ol>
