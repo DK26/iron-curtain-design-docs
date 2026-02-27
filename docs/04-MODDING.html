@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-f3722748.js";
+            window.path_to_searchindex_js = "searchindex-245f6587.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-56a6701d.js"></script>
+        <script src="toc-0698f107.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -3061,7 +3061,7 @@ composition:
 <tbody>
 <tr><td><strong>YAML schema</strong> (unit fields, weapon fields, structure fields)</td><td>Stable within major version</td><td>Fields can be added (non-breaking). Renaming or removing a field requires a deprecation cycle: old name works for 2 minor versions with a warning, then errors.</td></tr>
 <tr><td><strong>Lua API globals</strong> (D024, 16 OpenRA-compatible globals + IC extensions)</td><td>Stable within major version</td><td>New globals can be added. Existing globals never change signature. Deprecated globals emit warnings for 2 minor versions.</td></tr>
-<tr><td><strong>WASM host functions</strong> (<code>ic_host_*</code> API)</td><td>Stable within major version</td><td>New host functions can be added. Existing function signatures never change. Deprecated functions continue to work with warnings.</td></tr>
+<tr><td><strong>WASM host functions</strong> (host function namespaces: <code>ic_render_*</code>, <code>ic_pathfind_*</code>, <code>ic_ai_*</code>, <code>ic_format_*</code>, etc.)</td><td>Stable within major version</td><td>New host functions can be added. Existing function signatures never change. Deprecated functions continue to work with warnings.</td></tr>
 <tr><td><strong>OpenRA aliases</strong> (D023 vocabulary layer)</td><td>Permanent</td><td>Aliases are never removed — they can only accumulate. An alias that worked in IC 0.3 works in IC 5.0.</td></tr>
 <tr><td><strong>Engine internals</strong> (Bevy systems, component layouts, crate APIs)</td><td>No guarantee</td><td>Can change freely between any versions. Mods never depend on these directly.</td></tr>
 </tbody>

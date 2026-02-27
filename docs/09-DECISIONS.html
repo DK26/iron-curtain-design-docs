@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-f3722748.js";
+            window.path_to_searchindex_js = "searchindex-245f6587.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-56a6701d.js"></script>
+        <script src="toc-0698f107.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -191,9 +191,9 @@
 <tr><th>Document</th><th>Scope</th><th>Decisions</th></tr>
 </thead>
 <tbody>
-<tr><td><a href="decisions/09a-foundation.html">Foundation &amp; Core</a></td><td>Language, framework, data formats, simulation invariants, core engine identity</td><td>D001–D003, D009, D010, D015, D017, D018, D039, D063, D064, D067</td></tr>
-<tr><td><a href="decisions/09b-networking.html">Networking &amp; Multiplayer</a></td><td>Network model, relay server, sub-tick ordering, community servers, ranked play</td><td>D006–D008, D011, D012, D052, D055, D060</td></tr>
-<tr><td><a href="decisions/09c-modding.html">Modding &amp; Compatibility</a></td><td>Scripting tiers, OpenRA compatibility, UI themes, mod profiles, licensing, export</td><td>D004, D005, D014, D023–D027, D032, D050, D051, D062, D066, D068</td></tr>
+<tr><td><a href="decisions/09a-foundation.html">Foundation &amp; Core</a></td><td>Language, framework, data formats, simulation invariants, core engine identity, crate extraction</td><td>D001–D003, D009, D010, D015, D017, D018, D039, D063, D064, D067, D076</td></tr>
+<tr><td><a href="decisions/09b-networking.html">Networking &amp; Multiplayer</a></td><td>Network model, relay server, sub-tick ordering, community servers, ranked play, community server bundle</td><td>D006–D008, D011, D012, D052, D055, D060, D074</td></tr>
+<tr><td><a href="decisions/09c-modding.html">Modding &amp; Compatibility</a></td><td>Scripting tiers, OpenRA compatibility, UI themes, mod profiles, licensing, export, Remastered format compat</td><td>D004, D005, D014, D023–D027, D032, D050, D051, D062, D066, D068, D075</td></tr>
 <tr><td><a href="decisions/09d-gameplay.html">Gameplay &amp; AI</a></td><td>Pathfinding, balance, QoL, AI systems, render modes, trait-abstracted subsystems, asymmetric co-op mode design, LLM exhibition/prompt-coached match modes</td><td>D013, D019, D021, D022, D028, D029, D033, D041–D045, D048, D054, D070, D073</td></tr>
 <tr><td><a href="decisions/09e-community.html">Community &amp; Platform</a></td><td>Workshop, telemetry, storage, achievements, governance, profiles, data portability</td><td>D030, D031, D034–D037, D046, D049, D053, D061</td></tr>
 <tr><td><a href="decisions/09f-tools.html">Tools &amp; Editor</a></td><td>LLM mission generation, scenario editor, asset studio, mod SDK, foreign replays, skill library</td><td>D016, D020, D038, D040, D047, D056, D057</td></tr>
@@ -282,6 +282,9 @@
 <tr><td>D071</td><td>External Tool API — IC Remote Protocol (ICRP)</td><td><a href="decisions/09f/D071-external-tool-api.html">Tools</a></td></tr>
 <tr><td>D072</td><td>Dedicated Server Management</td><td><a href="decisions/09b/D072-server-management.html">Networking</a></td></tr>
 <tr><td>D073</td><td>LLM Exhibition Matches &amp; Prompt-Coached Modes</td><td><a href="decisions/09d/D073-llm-exhibition-modes.html">Gameplay</a></td></tr>
+<tr><td>D074</td><td>Community Server — Unified Binary with Capability Flags</td><td><a href="decisions/09b/D074-community-server-bundle.html">Networking</a></td></tr>
+<tr><td>D075</td><td>Remastered Collection Format Compatibility</td><td><a href="decisions/09c/D075-remastered-format-compat.html">Modding</a></td></tr>
+<tr><td>D076</td><td>Standalone MIT/Apache-Licensed Crate Extraction Strategy</td><td><a href="decisions/09a/D076-standalone-crates.html">Foundation</a></td></tr>
 </tbody>
 </table>
 </div>
@@ -293,9 +296,9 @@
 <tr><th>ID</th><th>Topic</th><th>Needs Resolution By</th></tr>
 </thead>
 <tbody>
-<tr><td>P002</td><td>Fixed-point scale (256? 1024? match OpenRA’s 1024?)</td><td>Phase 2 start</td></tr>
-<tr><td>P003</td><td>Audio library choice + music integration design</td><td>Phase 3 start</td></tr>
-<tr><td>P004</td><td>Lobby/matchmaking wire format details (architecture resolved in D052)</td><td>Phase 5 start</td></tr>
+<tr><td><del>P002</del></td><td><del>Fixed-point scale</del> → <strong>Resolved: 1024</strong> (matches OpenRA WDist/WPos/WAngle). See <code>research/fixed-point-math-design.md</code></td><td>Resolved</td></tr>
+<tr><td><del>P003</del></td><td><del>Audio library choice + music integration design</del> → <strong>Resolved: Kira via <code>bevy_kira_audio</code></strong> — four-bus mixer (Music/SFX/Voice/Ambient), dynamic music FSM, EVA priority queue, sound pooling. See <code>research/audio-library-music-integration-design.md</code></td><td>Resolved</td></tr>
+<tr><td><del>P004</del></td><td><del>Lobby/matchmaking wire format details</del> → <strong>Resolved:</strong> Complete lobby/matchmaking/discovery wire protocol — CBOR framing, 40+ message types, server discovery (HTTPS seed + mDNS), matchmaking queue, SCR credential exchange, lobby→game transition. See <code>research/lobby-matchmaking-wire-protocol-design.md</code></td><td>Resolved</td></tr>
 </tbody>
 </table>
 </div>

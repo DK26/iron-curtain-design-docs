@@ -1,0 +1,570 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>IC Engine CODE-INDEX.md (Filled-In) - Iron Curtain — Design Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Design docs for a Rust-native Red Alert RTS engine">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../css/general-2459343d.css">
+        <link rel="stylesheet" href="../css/chrome-ae938929.css">
+        <link rel="stylesheet" href="../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../searchindex-245f6587.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc-0698f107.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Iron Curtain — Design Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs/edit/main/src/tracking/ic-engine-code-index.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="code-indexmd--iron-curtain-engine"><a class="header" href="#code-indexmd--iron-curtain-engine">CODE-INDEX.md — Iron Curtain Engine</a></h1>
+<blockquote>
+<p>Source code navigation index for humans and LLMs.
+Canonical design authority: <code>https://github.com/AE26/iron-curtain-design-docs</code> @ <code>HEAD</code></p>
+</blockquote>
+<h2 id="how-to-use-this-index"><a class="header" href="#how-to-use-this-index">How to Use This Index</a></h2>
+<ul>
+<li>Start with the <strong>Task Routing</strong> section to find the right subsystem</li>
+<li>Read the <strong>Subsystem Index</strong> entry before editing any crate</li>
+<li>Follow the <strong>Do Not Edit / Generated</strong> notes</li>
+<li>Use the linked tests/profiles as proof paths for changes</li>
+<li>If this index and the code disagree, the code is stale or this index needs updating — report it</li>
+</ul>
+<h2 id="current-scope--build-target"><a class="header" href="#current-scope--build-target">Current Scope / Build Target</a></h2>
+<ul>
+<li>Active milestone(s): <code>M1</code></li>
+<li>Active <code>G*</code> step(s): <code>G1</code> (asset parsing), <code>G2</code> (isometric render), <code>G3</code> (unit animation)</li>
+<li>Current focus area(s): RA resource loading pipeline → Bevy rendering slice</li>
+<li>Known blockers (<code>Pxxx</code> / external): none</li>
+</ul>
+<h2 id="task-routing-start-here-for-x"><a class="header" href="#task-routing-start-here-for-x">Task Routing (Start Here For X)</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>If you need to…</th><th>Start here</th><th>Then read</th><th>Avoid touching first</th></tr>
+</thead>
+<tbody>
+<tr><td>Parse RA1 assets (.mix, .shp, .pal, .aud)</td><td><code>crates/ra-formats/</code></td><td>format tests, <code>src/05-FORMATS.md</code></td><td>sim/net/render paths</td></tr>
+<tr><td>Implement deterministic sim behavior</td><td><code>crates/ic-sim/</code></td><td><code>ic-protocol/</code>, conformance tests</td><td>render/UI/net paths</td></tr>
+<tr><td>Work on netcode / relay timing</td><td><code>crates/ic-net/</code></td><td><code>ic-protocol/</code>, <code>src/03-NETCODE.md</code></td><td><code>ic-sim</code> internals</td></tr>
+<tr><td>Add UI/HUD feature</td><td><code>crates/ic-ui/</code></td><td><code>ic-render/</code>, <code>src/17-PLAYER-FLOW.md</code></td><td>core sim/net paths</td></tr>
+<tr><td>Add renderer feature (sprites, map, fog)</td><td><code>crates/ic-render/</code></td><td><code>ic-sim/</code> read-only state, Bevy docs</td><td>sim mutation, net internals</td></tr>
+<tr><td>Add audio/music/EVA</td><td><code>crates/ic-audio/</code></td><td><code>ra-formats/</code> for .aud parsing, Kira docs</td><td>sim/net/render internals</td></tr>
+<tr><td>Add Lua/WASM mod feature</td><td><code>crates/ic-script/</code></td><td><code>ic-sim/</code> trait surface, <code>src/04-MODDING.md</code></td><td>sim internals beyond trait API</td></tr>
+<tr><td>Add AI behavior</td><td><code>crates/ic-ai/</code></td><td><code>ic-sim/</code> read view, <code>ic-protocol/</code> orders</td><td>net/render/UI paths</td></tr>
+<tr><td>Add LLM integration feature</td><td><code>crates/ic-llm/</code></td><td><code>ic-sim/</code>, <code>ic-script/</code>, <code>src/decisions/09f/D016-llm-missions.md</code></td><td>core sim/net hot paths</td></tr>
+<tr><td>Fix pathfinding bug</td><td><code>crates/ic-sim/src/pathfinding/</code></td><td>conformance tests, map fixtures</td><td>unrelated gameplay systems</td></tr>
+<tr><td>Add editor/SDK feature</td><td><code>crates/ic-editor/</code></td><td><code>ic-render/</code>, <code>ic-sim/</code>, design docs D038/D040</td><td><code>ic-game</code> binary integration</td></tr>
+<tr><td>Resolve platform paths</td><td><code>crates/ic-paths/</code></td><td><code>src/architecture/install-layout.md</code></td><td>everything else</td></tr>
+<tr><td>Add/modify shared wire types</td><td><code>crates/ic-protocol/</code></td><td><code>ic-sim/</code> + <code>ic-net/</code> consumers</td><td>— (changes propagate widely)</td></tr>
+<tr><td>Set up game binary / orchestration</td><td><code>crates/ic-game/</code></td><td>all dependent crates, <code>src/architecture/game-loop.md</code></td><td>—</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="repository-map-top-level"><a class="header" href="#repository-map-top-level">Repository Map (Top-Level)</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Path</th><th>Role</th><th>Notes</th></tr>
+</thead>
+<tbody>
+<tr><td><code>crates/ic-protocol/</code></td><td>Shared wire types</td><td>Boundary crate between sim and net</td></tr>
+<tr><td><code>crates/ra-formats/</code></td><td>RA1 asset parsers</td><td>Standalone, no game dependencies</td></tr>
+<tr><td><code>crates/ic-paths/</code></td><td>Platform path resolution</td><td>Standalone, wraps <code>app-path</code></td></tr>
+<tr><td><code>crates/ic-sim/</code></td><td>Deterministic simulation</td><td>Pure, no I/O, no floats</td></tr>
+<tr><td><code>crates/ic-render/</code></td><td>Bevy isometric renderer</td><td>Reads sim state (read-only)</td></tr>
+<tr><td><code>crates/ic-ui/</code></td><td>Game UI chrome (egui)</td><td>Reads sim + render state</td></tr>
+<tr><td><code>crates/ic-audio/</code></td><td>Sound/music/EVA (Kira)</td><td>Reads ra-formats for .aud</td></tr>
+<tr><td><code>crates/ic-net/</code></td><td>Networking + relay server</td><td>RelayCore lib + relay binary</td></tr>
+<tr><td><code>crates/ic-script/</code></td><td>Lua + WASM mod runtimes</td><td>Sandboxed, capability-gated</td></tr>
+<tr><td><code>crates/ic-ai/</code></td><td>Skirmish AI</td><td>Reads sim state via fog-filtered view</td></tr>
+<tr><td><code>crates/ic-llm/</code></td><td>LLM integration</td><td>Adaptive missions, coaching</td></tr>
+<tr><td><code>crates/ic-editor/</code></td><td>SDK editor tools</td><td>Separate binary from ic-game</td></tr>
+<tr><td><code>crates/ic-game/</code></td><td>Main game binary</td><td>Orchestrates all systems</td></tr>
+<tr><td><code>tests/</code></td><td>Integration test suites</td><td>Conformance, replay, determinism</td></tr>
+<tr><td><code>assets/</code></td><td>Test fixtures and sample maps</td><td>Not shipped — test corpus only</td></tr>
+<tr><td><code>docs/</code></td><td>Implementation notes</td><td>Local docs, design-gap requests</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="subsystem-index-canonical-entries"><a class="header" href="#subsystem-index-canonical-entries">Subsystem Index (Canonical Entries)</a></h2>
+<h3 id="ic-protocol"><a class="header" href="#ic-protocol"><code>ic-protocol</code></a></h3>
+<ul>
+<li><strong>Path:</strong> <code>crates/ic-protocol/</code></li>
+<li><strong>Primary responsibility:</strong> Shared serializable types that cross the sim/net boundary</li>
+<li><strong>Does not own:</strong> game logic, network transport, rendering</li>
+<li><strong>Public interfaces / trait seams:</strong> <code>PlayerOrder</code>, <code>TimestampedOrder</code>, <code>TickOrders</code>, <code>MessageLane</code>, <code>FromClient&lt;T&gt;</code>, <code>FromServer&lt;T&gt;</code></li>
+<li><strong>Key files to read first:</strong> <code>src/lib.rs</code> (all public types)</li>
+<li><strong>Hot paths / perf-sensitive files:</strong> <code>TimestampedOrder</code> serialization (wire format, delta compression)</li>
+<li><strong>Generated files:</strong> none</li>
+<li><strong>Tests / verification entry points:</strong> unit tests for serialization round-trips</li>
+<li><strong>Related design decisions (<code>Dxxx</code>):</strong> D006, D008, D012</li>
+<li><strong>Related execution steps (<code>G*</code>):</strong> G6 (sim tick loop), G17 (online netcode)</li>
+<li><strong>Common change risks:</strong> changes propagate to both <code>ic-sim</code> and <code>ic-net</code> — coordinate carefully</li>
+<li><strong>Search hints:</strong> <code>PlayerOrder</code>, <code>TimestampedOrder</code>, <code>TickOrders</code>, <code>MessageLane</code></li>
+</ul>
+<h3 id="ra-formats"><a class="header" href="#ra-formats"><code>ra-formats</code></a></h3>
+<ul>
+<li><strong>Path:</strong> <code>crates/ra-formats/</code></li>
+<li><strong>Primary responsibility:</strong> Parse RA1 file formats (<code>.mix</code>, <code>.shp</code>, <code>.pal</code>, <code>.aud</code>, <code>.vqa</code>, MiniYAML)</li>
+<li><strong>Does not own:</strong> rendering, audio playback, game logic</li>
+<li><strong>Public interfaces / trait seams:</strong> asset loader functions, <code>MixArchive</code>, <code>ShpFrame</code>, <code>Palette</code>, MiniYAML parser</li>
+<li><strong>Key files to read first:</strong> <code>src/lib.rs</code>, <code>src/mix.rs</code>, <code>src/shp.rs</code></li>
+<li><strong>Hot paths / perf-sensitive files:</strong> <code>.mix</code> archive lookup (used during asset loading)</li>
+<li><strong>Generated files:</strong> none</li>
+<li><strong>Tests / verification entry points:</strong> format parsing tests against known-good RA1 corpus</li>
+<li><strong>Related design decisions (<code>Dxxx</code>):</strong> D003, D023, D025, D027, D075, D076</li>
+<li><strong>Related execution steps (<code>G*</code>):</strong> G1 (asset parsing)</li>
+<li><strong>Common change risks:</strong> format regressions against real RA1 assets; MiniYAML parser compatibility with OpenRA YAML</li>
+<li><strong>Search hints:</strong> <code>mix</code>, <code>shp</code>, <code>pal</code>, <code>aud</code>, <code>vqa</code>, <code>MiniYAML</code>, <code>palette</code></li>
+</ul>
+<h3 id="ic-paths"><a class="header" href="#ic-paths"><code>ic-paths</code></a></h3>
+<ul>
+<li><strong>Path:</strong> <code>crates/ic-paths/</code></li>
+<li><strong>Primary responsibility:</strong> Platform path resolution — XDG on Linux, APPDATA on Windows, portable mode via <code>portable.marker</code></li>
+<li><strong>Does not own:</strong> file I/O beyond path construction, asset loading</li>
+<li><strong>Public interfaces / trait seams:</strong> <code>AppDirs</code>, <code>PathMode::Platform</code> / <code>PathMode::Portable</code></li>
+<li><strong>Key files to read first:</strong> <code>src/lib.rs</code></li>
+<li><strong>Hot paths / perf-sensitive files:</strong> none (called once at startup)</li>
+<li><strong>Generated files:</strong> none</li>
+<li><strong>Tests / verification entry points:</strong> unit tests for path resolution on each platform</li>
+<li><strong>Related design decisions (<code>Dxxx</code>):</strong> D061</li>
+<li><strong>Related execution steps (<code>G*</code>):</strong> G1 (asset discovery)</li>
+<li><strong>Common change risks:</strong> platform-specific path bugs; portable mode detection</li>
+<li><strong>Search hints:</strong> <code>AppDirs</code>, <code>PathMode</code>, <code>portable.marker</code>, <code>XDG</code>, <code>APPDATA</code></li>
+</ul>
+<h3 id="ic-sim"><a class="header" href="#ic-sim"><code>ic-sim</code></a></h3>
+<ul>
+<li><strong>Path:</strong> <code>crates/ic-sim/</code></li>
+<li><strong>Primary responsibility:</strong> Pure deterministic simulation — game state evolution, fixed-point math, ECS world, order application</li>
+<li><strong>Does not own:</strong> rendering, networking, audio, UI, file I/O, system clock</li>
+<li><strong>Public interfaces / trait seams:</strong> <code>Simulation</code>, <code>SimReadView</code>, <code>SimSnapshot</code>, <code>DeltaSnapshot</code>, <code>GameModule</code> trait, <code>FogProvider</code> trait, <code>OrderValidator</code> trait, <code>AiStrategy</code> trait, <code>WorldPos</code>, <code>CellPos</code>, <code>SimCoord</code>, <code>UnitTag</code>, <code>Health</code>, <code>Mobile</code>, <code>Armament</code>, <code>Building</code>, <code>Selectable</code></li>
+<li><strong>Key files to read first:</strong> <code>src/lib.rs</code> (public API), <code>src/simulation.rs</code>, <code>src/types.rs</code> (newtypes)</li>
+<li><strong>Hot paths / perf-sensitive files:</strong> <code>src/simulation.rs</code> (tick loop — runs 15x/sec), <code>src/pathfinding/</code> (hundreds of queries/tick), <code>src/combat.rs</code> (weapon fire, hit detection), <code>src/movement.rs</code> (unit movement), <code>src/spatial/</code> (spatial indexing queries)</li>
+<li><strong>Generated files:</strong> none</li>
+<li><strong>Tests / verification entry points:</strong> determinism conformance tests (same input → same output across platforms), unit tests per system, replay-based regression tests</li>
+<li><strong>Related design decisions (<code>Dxxx</code>):</strong> D009, D010, D012, D013, D015, D018, D022, D028, D029, D041, D045</li>
+<li><strong>Related execution steps (<code>G*</code>):</strong> G6 (tick loop), G7 (pathfinding), G8 (combat), G9 (projectiles), G10 (death/destruction), G11 (victory/failure)</li>
+<li><strong>Common change risks:</strong> <strong>determinism regressions</strong> (any non-deterministic operation breaks lockstep for all players), allocations in hot loops, hidden I/O, float usage, HashMap usage</li>
+<li><strong>Search hints:</strong> <code>Simulation</code>, <code>apply_tick</code>, <code>SimReadView</code>, <code>GameModule</code>, <code>FogProvider</code>, <code>OrderValidator</code>, <code>WorldPos</code>, <code>SimCoord</code>, <code>fixed_point</code></li>
+</ul>
+<h3 id="ic-render"><a class="header" href="#ic-render"><code>ic-render</code></a></h3>
+<ul>
+<li><strong>Path:</strong> <code>crates/ic-render/</code></li>
+<li><strong>Primary responsibility:</strong> Bevy isometric map rendering, sprite animation, camera control, fog-of-war visualization, render mode toggles (D048)</li>
+<li><strong>Does not own:</strong> game logic, sim state mutation, audio</li>
+<li><strong>Public interfaces / trait seams:</strong> Bevy render systems, camera controller, sprite animation pipeline</li>
+<li><strong>Key files to read first:</strong> <code>src/lib.rs</code>, <code>src/map.rs</code>, <code>src/sprites.rs</code>, <code>src/camera.rs</code></li>
+<li><strong>Hot paths / perf-sensitive files:</strong> sprite batching, fog rendering, terrain draw calls</li>
+<li><strong>Generated files:</strong> none</li>
+<li><strong>Tests / verification entry points:</strong> visual regression tests (screenshot comparison), render benchmark</li>
+<li><strong>Related design decisions (<code>Dxxx</code>):</strong> D002, D003, D048</li>
+<li><strong>Related execution steps (<code>G*</code>):</strong> G2 (isometric render), G3 (unit animation), G15 (RA “feel” pass)</li>
+<li><strong>Common change risks:</strong> Bevy API changes, GPU compatibility, frame budget overruns</li>
+<li><strong>Search hints:</strong> <code>bevy</code>, <code>sprite</code>, <code>isometric</code>, <code>camera</code>, <code>fog</code>, <code>render_mode</code></li>
+</ul>
+<h3 id="ic-ui"><a class="header" href="#ic-ui"><code>ic-ui</code></a></h3>
+<ul>
+<li><strong>Path:</strong> <code>crates/ic-ui/</code></li>
+<li><strong>Primary responsibility:</strong> Game UI chrome — sidebar, power bar, minimap, selection panel, menus, settings. Reads SQLite for player analytics (D034)</li>
+<li><strong>Does not own:</strong> sim state mutation, rendering pipeline, audio</li>
+<li><strong>Public interfaces / trait seams:</strong> UI systems, <code>PlayerOrder</code> emission from UI actions</li>
+<li><strong>Key files to read first:</strong> <code>src/lib.rs</code>, <code>src/sidebar.rs</code>, <code>src/selection.rs</code></li>
+<li><strong>Hot paths / perf-sensitive files:</strong> minimap updates, selection rectangle drawing</li>
+<li><strong>Generated files:</strong> none</li>
+<li><strong>Tests / verification entry points:</strong> UI interaction tests, layout regression tests</li>
+<li><strong>Related design decisions (<code>Dxxx</code>):</strong> D032, D033, D034, D036, D053, D065</li>
+<li><strong>Related execution steps (<code>G*</code>):</strong> G4 (cursor/hit-test), G5 (selection), G12 (mission-end UX)</li>
+<li><strong>Common change risks:</strong> UX drift from design docs, platform adaptation gaps (desktop vs touch)</li>
+<li><strong>Search hints:</strong> <code>sidebar</code>, <code>selection</code>, <code>minimap</code>, <code>power_bar</code>, <code>menu</code>, <code>egui</code></li>
+</ul>
+<h3 id="ic-audio"><a class="header" href="#ic-audio"><code>ic-audio</code></a></h3>
+<ul>
+<li><strong>Path:</strong> <code>crates/ic-audio/</code></li>
+<li><strong>Primary responsibility:</strong> Sound effects, music jukebox, EVA voice notifications via Kira audio backend</li>
+<li><strong>Does not own:</strong> .aud file parsing (that’s <code>ra-formats</code>), sim logic, rendering</li>
+<li><strong>Public interfaces / trait seams:</strong> <code>CombatAudioEvent</code>, <code>EvaNotification</code>, <code>MusicStateChange</code>, jukebox state machine</li>
+<li><strong>Key files to read first:</strong> <code>src/lib.rs</code>, <code>src/jukebox.rs</code>, <code>src/eva.rs</code></li>
+<li><strong>Hot paths / perf-sensitive files:</strong> concurrent sound effect mixing (combat scenes with many units)</li>
+<li><strong>Generated files:</strong> none</li>
+<li><strong>Tests / verification entry points:</strong> audio event trigger tests, jukebox state machine tests</li>
+<li><strong>Related design decisions (<code>Dxxx</code>):</strong> D003 (P003 resolved: Kira via <code>bevy_kira_audio</code>)</li>
+<li><strong>Related execution steps (<code>G*</code>):</strong> G13 (EVA/VO), G15 (RA “feel” pass)</li>
+<li><strong>Common change risks:</strong> audio latency, platform-specific backend issues</li>
+<li><strong>Search hints:</strong> <code>kira</code>, <code>eva</code>, <code>jukebox</code>, <code>CombatAudioEvent</code>, <code>MusicStateChange</code></li>
+</ul>
+<h3 id="ic-net"><a class="header" href="#ic-net"><code>ic-net</code></a></h3>
+<ul>
+<li><strong>Path:</strong> <code>crates/ic-net/</code></li>
+<li><strong>Primary responsibility:</strong> <code>NetworkModel</code> implementations, <code>RelayCore</code> library, relay-server binary, timing normalization, delta compression, sub-tick fairness (D008), order rate control (D060)</li>
+<li><strong>Does not own:</strong> sim state mutation, order validation logic (that’s <code>ic-sim</code>), rendering</li>
+<li><strong>Public interfaces / trait seams:</strong> <code>NetworkModel</code> trait, <code>RelayCore</code>, <code>Connection&lt;S&gt;</code> (typestate: <code>Disconnected</code> → <code>Handshaking</code> → <code>Authenticated</code> → <code>InGame</code>), <code>ClientMetrics</code>, <code>TimingFeedback</code>, <code>OrderBudget</code>, <code>AckVector</code></li>
+<li><strong>Key files to read first:</strong> <code>src/lib.rs</code>, <code>src/relay_core.rs</code>, <code>src/network_model.rs</code></li>
+<li><strong>Hot paths / perf-sensitive files:</strong> order serialization/delta compression (TLV wire format), relay tick broadcast, timing normalization</li>
+<li><strong>Generated files:</strong> none</li>
+<li><strong>Tests / verification entry points:</strong> relay integration tests, timing fairness tests, delta compression round-trip tests, rate-limit boundary tests</li>
+<li><strong>Related design decisions (<code>Dxxx</code>):</strong> D006, D007, D008, D011, D052, D055, D060, D072</li>
+<li><strong>Related execution steps (<code>G*</code>):</strong> G17 (minimal online), G20 (multiplayer productization)</li>
+<li><strong>Common change risks:</strong> trust boundary violations (relay must not leak fog-hidden state), fairness drift in timing normalization, timestamp handling mismatches between platforms</li>
+<li><strong>Search hints:</strong> <code>NetworkModel</code>, <code>RelayCore</code>, <code>Connection</code>, <code>TimestampedOrder</code>, <code>delta</code>, <code>relay</code>, <code>lockstep</code></li>
+</ul>
+<h3 id="ic-script"><a class="header" href="#ic-script"><code>ic-script</code></a></h3>
+<ul>
+<li><strong>Path:</strong> <code>crates/ic-script/</code></li>
+<li><strong>Primary responsibility:</strong> Lua (<code>mlua</code>) and WASM (<code>wasmtime</code>) mod runtimes with deterministic sandboxing and capability-based API</li>
+<li><strong>Does not own:</strong> sim internals beyond the trait API surface, asset loading</li>
+<li><strong>Public interfaces / trait seams:</strong> <code>ScriptRuntime</code>, <code>LuaState</code>, <code>WasmInstance</code>, <code>WasmSandbox&lt;S&gt;</code> (typestate: <code>Loading</code> → <code>Ready</code> → <code>Executing</code> → <code>Terminated</code>), capability tokens</li>
+<li><strong>Key files to read first:</strong> <code>src/lib.rs</code>, <code>src/lua.rs</code>, <code>src/wasm.rs</code>, <code>src/capabilities.rs</code></li>
+<li><strong>Hot paths / perf-sensitive files:</strong> Lua function calls per tick (mission scripts), WASM host call boundary</li>
+<li><strong>Generated files:</strong> none</li>
+<li><strong>Tests / verification entry points:</strong> sandbox escape tests, determinism tests (same script → same output), API surface tests</li>
+<li><strong>Related design decisions (<code>Dxxx</code>):</strong> D004, D005, D023, D024, D025, D026</li>
+<li><strong>Related execution steps (<code>G*</code>):</strong> G18 (campaign runtime), G19 (campaign completeness)</li>
+<li><strong>Common change risks:</strong> sandbox escape vulnerabilities, determinism regressions in WASM (NaN canonicalization), API surface creep exposing fog-hidden data</li>
+<li><strong>Search hints:</strong> <code>lua</code>, <code>wasm</code>, <code>mlua</code>, <code>wasmtime</code>, <code>ScriptRuntime</code>, <code>capability</code>, <code>sandbox</code></li>
+</ul>
+<h3 id="ic-ai"><a class="header" href="#ic-ai"><code>ic-ai</code></a></h3>
+<ul>
+<li><strong>Path:</strong> <code>crates/ic-ai/</code></li>
+<li><strong>Primary responsibility:</strong> Skirmish AI — <code>PersonalityDrivenAi</code>, economy/production/military managers, adaptive difficulty. Reads SQLite (D034) for player analytics</li>
+<li><strong>Does not own:</strong> sim state mutation (emits <code>PlayerOrder</code> through <code>AiStrategy</code> trait), rendering, networking</li>
+<li><strong>Public interfaces / trait seams:</strong> <code>AiStrategy</code> trait, <code>PersonalityDrivenAi</code>, <code>AiDifficulty</code> enum, personality config</li>
+<li><strong>Key files to read first:</strong> <code>src/lib.rs</code>, <code>src/personality.rs</code>, <code>src/strategy.rs</code></li>
+<li><strong>Hot paths / perf-sensitive files:</strong> <code>decide()</code> function — must complete within &lt;0.5ms for 500 units (D043 budget)</li>
+<li><strong>Generated files:</strong> none</li>
+<li><strong>Tests / verification entry points:</strong> AI decision tests, performance benchmarks, replay-based AI regression tests</li>
+<li><strong>Related design decisions (<code>Dxxx</code>):</strong> D041, D042, D043, D044, D045</li>
+<li><strong>Related execution steps (<code>G*</code>):</strong> G16 (basic AI for M3 skirmish), G19 (campaign AI maturity)</li>
+<li><strong>Common change risks:</strong> performance budget overruns, fog-filter bypass (AI must use <code>FogFilteredView</code>, not raw sim state)</li>
+<li><strong>Search hints:</strong> <code>AiStrategy</code>, <code>PersonalityDrivenAi</code>, <code>EconomyManager</code>, <code>ProductionManager</code>, <code>MilitaryManager</code></li>
+</ul>
+<h3 id="ic-llm"><a class="header" href="#ic-llm"><code>ic-llm</code></a></h3>
+<ul>
+<li><strong>Path:</strong> <code>crates/ic-llm/</code></li>
+<li><strong>Primary responsibility:</strong> LLM integration — adaptive mission generation (D016), LLM-enhanced AI coaching (D044), exhibition modes (D073), provider configuration (D047). Reads SQLite (D034) for personalization</li>
+<li><strong>Does not own:</strong> sim logic, rendering, core gameplay</li>
+<li><strong>Public interfaces / trait seams:</strong> LLM prompt pipelines, provider abstraction, skill library (D057)</li>
+<li><strong>Key files to read first:</strong> <code>src/lib.rs</code>, <code>src/provider.rs</code>, <code>src/mission_gen.rs</code></li>
+<li><strong>Hot paths / perf-sensitive files:</strong> none (LLM calls are async, not frame-budget-sensitive)</li>
+<li><strong>Generated files:</strong> none</li>
+<li><strong>Tests / verification entry points:</strong> prompt template tests, validation pipeline tests, mock provider tests</li>
+<li><strong>Related design decisions (<code>Dxxx</code>):</strong> D016, D044, D047, D057, D073</li>
+<li><strong>Related execution steps (<code>G*</code>):</strong> M11 (ecosystem polish, optional AI/LLM)</li>
+<li><strong>Common change risks:</strong> provider API changes, prompt injection vulnerabilities, cost overruns from unthrottled LLM calls</li>
+<li><strong>Search hints:</strong> <code>llm</code>, <code>provider</code>, <code>mission_gen</code>, <code>skill_library</code>, <code>prompt</code>, <code>D016</code>, <code>D047</code></li>
+</ul>
+<h3 id="ic-editor"><a class="header" href="#ic-editor"><code>ic-editor</code></a></h3>
+<ul>
+<li><strong>Path:</strong> <code>crates/ic-editor/</code></li>
+<li><strong>Primary responsibility:</strong> SDK tools — scenario editor (D038), asset studio (D040), campaign editor. Separate binary from <code>ic-game</code></li>
+<li><strong>Does not own:</strong> runtime gameplay, multiplayer, shipping game binary</li>
+<li><strong>Public interfaces / trait seams:</strong> editor UI systems, content authoring pipeline</li>
+<li><strong>Key files to read first:</strong> <code>src/lib.rs</code>, <code>src/scenario.rs</code>, <code>src/asset_studio.rs</code></li>
+<li><strong>Hot paths / perf-sensitive files:</strong> map rendering in editor (shares <code>ic-render</code>)</li>
+<li><strong>Generated files:</strong> none</li>
+<li><strong>Tests / verification entry points:</strong> editor workflow tests, asset import/export round-trip tests</li>
+<li><strong>Related design decisions (<code>Dxxx</code>):</strong> D038, D040</li>
+<li><strong>Related execution steps (<code>G*</code>):</strong> G22 (full SDK editor), M9–M10</li>
+<li><strong>Common change risks:</strong> drift from game runtime behavior (editor and game must agree on sim rules)</li>
+<li><strong>Search hints:</strong> <code>editor</code>, <code>scenario</code>, <code>asset_studio</code>, <code>campaign_editor</code></li>
+</ul>
+<h3 id="ic-game"><a class="header" href="#ic-game"><code>ic-game</code></a></h3>
+<ul>
+<li><strong>Path:</strong> <code>crates/ic-game/</code></li>
+<li><strong>Primary responsibility:</strong> Main game client binary — Bevy app setup, ECS scheduling, system orchestration, ties sim + render + UI + audio + net together</li>
+<li><strong>Does not own:</strong> individual subsystem logic (delegates to crate APIs)</li>
+<li><strong>Public interfaces / trait seams:</strong> <code>GameLoop&lt;N, I&gt;</code> orchestrator, Bevy <code>App</code> builder, observer systems for audio/UI events</li>
+<li><strong>Key files to read first:</strong> <code>src/main.rs</code>, <code>src/app.rs</code>, <code>src/game_loop.rs</code></li>
+<li><strong>Hot paths / perf-sensitive files:</strong> frame loop (Bevy schedule), sim tick dispatch</li>
+<li><strong>Generated files:</strong> none</li>
+<li><strong>Tests / verification entry points:</strong> integration tests (full game loop with <code>LocalNetwork</code> + <code>ReplayPlayback</code>)</li>
+<li><strong>Related design decisions (<code>Dxxx</code>):</strong> D002, D006 (generic game loop), D054 (async architecture)</li>
+<li><strong>Related execution steps (<code>G*</code>):</strong> G2+ (progressively integrates all systems)</li>
+<li><strong>Common change risks:</strong> system ordering bugs in Bevy schedule, frame budget overruns</li>
+<li><strong>Search hints:</strong> <code>GameLoop</code>, <code>bevy::App</code>, <code>main</code>, <code>schedule</code>, <code>observer</code></li>
+</ul>
+<h2 id="cross-cutting-boundaries-must-respect"><a class="header" href="#cross-cutting-boundaries-must-respect">Cross-Cutting Boundaries (Must Respect)</a></h2>
+<p>These rules prevent accidental architecture violations. Breaking them is a blocking code review issue.</p>
+<ol>
+<li><strong><code>ic-sim</code> must not import <code>ic-net</code>, <code>ic-render</code>, <code>ic-ui</code>, <code>ic-audio</code>, or <code>ic-editor</code></strong> — sim is pure and isolated</li>
+<li><strong><code>ic-net</code> must not import <code>ic-sim</code></strong> — they share only <code>ic-protocol</code></li>
+<li><strong><code>ic-game</code> must not import <code>ic-editor</code></strong> — separate binaries, shared libraries only</li>
+<li><strong><code>ic-sim</code> must not perform I/O</strong> — no file reads, no network calls, no system clock</li>
+<li><strong><code>ic-sim</code> must not use <code>f32</code>/<code>f64</code>/<code>HashMap</code>/<code>HashSet</code></strong> — determinism invariant enforced by CI</li>
+<li><strong>UI must not mutate authoritative sim state</strong> — emit <code>PlayerOrder</code>, never write to <code>Simulation</code> directly</li>
+<li><strong>Protocol types are the shared boundary</strong> — do not duplicate wire structs across crates</li>
+<li><strong>AI must use <code>FogFilteredView</code></strong> — never access raw sim state (prevents accidental maphack in AI)</li>
+<li><strong>WASM mods use capability-gated API only</strong> — host controls what data mods can see</li>
+</ol>
+<h2 id="generated--vendored--third-party-areas"><a class="header" href="#generated--vendored--third-party-areas">Generated / Vendored / Third-Party Areas</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Path</th><th>Type</th><th>Edit policy</th></tr>
+</thead>
+<tbody>
+<tr><td><code>target/</code></td><td>Build output</td><td>Do not commit, gitignored</td></tr>
+<tr><td><code>assets/test-corpus/</code></td><td>RA1 test fixtures</td><td>Replace via test scripts, do not hand-edit binary assets</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="implementation-evidence-paths"><a class="header" href="#implementation-evidence-paths">Implementation Evidence Paths</a></h2>
+<p>Where to attach proof when claiming progress:</p>
+<ul>
+<li>Unit tests: <code>cargo test --workspace</code></li>
+<li>Integration tests: <code>tests/</code> directory, <code>cargo test --test &lt;name&gt;</code></li>
+<li>Determinism conformance: <code>tests/determinism/</code> (replay-based, cross-platform)</li>
+<li>Replay/demo artifacts: <code>tests/fixtures/replays/</code></li>
+<li>Perf profiles/flamegraphs: <code>benches/</code>, Tracy/Superluminal captures in <code>docs/profiles/</code></li>
+<li>Manual verification notes: <code>docs/implementation-notes/</code></li>
+</ul>
+<h2 id="design-gap-escalation-when-code-and-docs-disagree"><a class="header" href="#design-gap-escalation-when-code-and-docs-disagree">Design Gap Escalation (When Code and Docs Disagree)</a></h2>
+<p>If implementation reveals a conflict with canonical design docs:</p>
+<ol>
+<li>Record the code path and failing assumption</li>
+<li>Link the affected <code>Dxxx</code> / canonical doc path</li>
+<li>Open a design-gap/design-change issue in the design-doc repo</li>
+<li>Document the divergence locally in <code>docs/design-gap-requests/</code></li>
+<li>Mark local workaround as <code>implementation placeholder</code> or <code>blocked on Pxxx</code></li>
+</ol>
+<h2 id="maintenance-rules"><a class="header" href="#maintenance-rules">Maintenance Rules</a></h2>
+<ul>
+<li>Update this file in the same change set when:
+<ul>
+<li>code layout changes (new crate, moved files, renamed modules)</li>
+<li>ownership boundaries move</li>
+<li>new major subsystem is added</li>
+<li>active milestone/G* focus changes materially</li>
+</ul>
+</li>
+<li>Keep “Task Routing” and “Subsystem Index” current — these are the highest-value sections for agents and new contributors</li>
+<li>Review this index at each milestone boundary</li>
+</ul>
+<h2 id="execution-overlay-mapping"><a class="header" href="#execution-overlay-mapping">Execution Overlay Mapping</a></h2>
+<ul>
+<li><strong>Milestone:</strong> <code>M0</code></li>
+<li><strong>Priority:</strong> <code>P-Core</code></li>
+<li><strong>Feature Cluster:</strong> <code>M0.OPS.EXTERNAL_CODE_REPO_BOOTSTRAP_AND_NAVIGATION_TEMPLATES</code></li>
+<li><strong>Depends on:</strong> <code>M0.CORE.TRACKER_FOUNDATION</code>, <code>M0.CORE.DEP_GRAPH_SCHEMA</code></li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../tracking/ic-engine-agents.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../tracking/rtl-bidi-qa-corpus.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../tracking/ic-engine-agents.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../tracking/rtl-bidi-qa-corpus.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../mark-09e88c2c.min.js"></script>
+        <script src="../searcher-c2a407aa.js"></script>
+
+        <script src="../clipboard-1626706a.min.js"></script>
+        <script src="../highlight-abc7f01d.js"></script>
+        <script src="../book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

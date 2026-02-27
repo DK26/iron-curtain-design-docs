@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-f3722748.js";
+            window.path_to_searchindex_js = "searchindex-245f6587.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-56a6701d.js"></script>
+        <script src="toc-0698f107.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -590,6 +590,9 @@ pub struct OrderBatcher {
 <span class="boring">}</span></code></pre>
 <p>Unlike TCP’s Nagle algorithm (which flushes on receiving an ACK — coupling send timing to network conditions), IC flushes on a fixed tick cadence. This gives deterministic, predictable send timing: all orders within a tick window are batched into one packet, sent at the tick boundary. At 30 tps, this means at most ~33ms of batching delay — well within the adaptive run-ahead window and invisible to the player. The technique is validated by Valve’s GNS batching strategy (see <code>research/valve-github-analysis.md</code> § 1.7).</p>
 <h3 id="wire-format-delta-compressed-tlv-from-cc-generals"><a class="header" href="#wire-format-delta-compressed-tlv-from-cc-generals">Wire Format: Delta-Compressed TLV (from C&amp;C Generals)</a></h3>
+<blockquote>
+<p><strong>Byte-level wire protocol specification:</strong> The complete relay wire protocol — order serialization byte layout, relay frame format, sub-tick normalization algorithm, adaptive run-ahead formula, desync recovery protocol, transport encryption frame, connection handshake, and relay state machine — is specified in <code>research/relay-wire-protocol-design.md</code>.</p>
+</blockquote>
 <p>Inspired by C&amp;C Generals’ <code>NetPacket</code> format (see <code>research/generals-zero-hour-netcode-analysis.md</code>), the native wire format uses delta-compressed tag-length-value (TLV) encoding:</p>
 <ul>
 <li><strong>Tag bytes</strong> — single ASCII byte identifies the field: <code>T</code>ype, <code>K</code>(tic<strong>K</strong>), <code>P</code>layer, <code>S</code>ub-tick, <code>D</code>ata</li>
@@ -1536,7 +1539,7 @@ relay:
 <li><strong><code>relay-server</code> binary</strong> — standalone headless process that hosts multiple concurrent games. Not Bevy, no ECS. Uses <code>RelayCore</code> + async I/O (tokio). This is the “dedicated server” for community hosting, server rooms, and Raspberry Pis.</li>
 <li><strong>Game client</strong> — <code>EmbeddedRelayNetwork</code> wraps <code>RelayCore</code> inside the game process. The host player runs the relay and plays simultaneously. Uses Bevy’s async task system for I/O. This is the “Host Game” button.</li>
 </ul>
-<p>Both share <code>ic-protocol</code> for order serialization. Both are developed in Phase 5 alongside the multiplayer client code.</p>
+<p>Both share <code>ic-protocol</code> for order serialization. Both are developed in Phase 5 alongside the multiplayer client code. For the full async runtime architecture (tokio thread bridge for Bevy binaries, WASM portability, <code>IoBridge</code> trait), see <code>architecture/crate-graph.md</code> § “Async Architecture: Dual-Runtime with Channel Bridge.”</p>
 <h3 id="failure-modes"><a class="header" href="#failure-modes">Failure Modes</a></h3>
 <div class="table-wrapper">
 <table>

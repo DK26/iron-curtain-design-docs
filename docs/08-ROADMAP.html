@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-f3722748.js";
+            window.path_to_searchindex_js = "searchindex-245f6587.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-56a6701d.js"></script>
+        <script src="toc-0698f107.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -390,7 +390,7 @@
 <li><strong>Player style profile building (D042):</strong> <code>ic-ai</code> aggregates <code>gameplay_events</code> into <code>PlayerStyleProfile</code> per player; <code>StyleDrivenAi</code> (AiStrategy impl) mimics a specific player’s tendencies in skirmish; “Challenge My Weakness” training mode targets the local player’s weakest matchups; <code>player_profiles</code> + <code>training_sessions</code> SQLite tables; progress tracking across training sessions</li>
 <li><strong>FMV cutscene playback</strong> between missions (original <code>.vqa</code> briefings and victory/defeat sequences)</li>
 <li><strong>Full Allied and Soviet campaigns</strong> for Red Alert, playable start to finish</li>
-<li><strong>Commander School tutorial campaign (D065):</strong> 10 branching Lua-scripted tutorial missions (movement → combat → building → economy → defense → controls → combined arms → first skirmish) using D021 campaign graph; failure branches to remedial missions; <code>Tutorial</code> Lua global API (ShowHint, WaitForAction, FocusArea, HighlightUI); tutorial AI difficulty tier below D043 Easy; experience-profile-aware content adaptation (D033); skippable at every point</li>
+<li><strong>Commander School tutorial campaign (D065):</strong> 6 branching Lua-scripted tutorial missions (combat → building → economy → shortcuts → capstone skirmish → multiplayer intro) using D021 campaign graph; failure branches to remedial missions; <code>Tutorial</code> Lua global API (ShowHint, WaitForAction, FocusArea, HighlightUI); tutorial AI difficulty tier below D043 Easy; experience-profile-aware content adaptation (D033); skippable at every point; unit counters, defense, tech tree, and advanced tactics left for player discovery through play</li>
 <li><strong>Skill assessment &amp; difficulty recommendation (D065):</strong> 2-minute interactive exercise measuring selection speed, camera use, and combat efficiency; calibrates adaptive pacing engine and recommends initial AI difficulty for skirmish lobby; <code>PlayerSkillEstimate</code> in SQLite <code>player.db</code></li>
 <li><strong>Post-game learning system (D065):</strong> Rule-based tips on post-game stats screen (YAML-driven pattern matching on <code>gameplay_events</code>); 1–3 tips per game (positive + improvement); “Learn more” links to tutorial missions; adaptive pacing adjusts tip frequency based on player engagement</li>
 <li><strong>Campaign pedagogical pacing (D065):</strong> Allied/Soviet mission design guidelines for gradual mechanic introduction; tutorial EVA voice lines for first encounters (first refinery, first barracks, first tech center); conditional on tutorial completion status</li>

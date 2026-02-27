@@ -35,10 +35,10 @@
             const path_to_root = "../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-f3722748.js";
+            window.path_to_searchindex_js = "../../searchindex-245f6587.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../../toc-56a6701d.js"></script>
+        <script src="../../toc-0698f107.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -206,7 +206,7 @@
 <li><strong>Invariants preserved:</strong> <code>ic-sim</code> remains pure (no LLM/network I/O), all gameplay effects still arrive as normal orders, fog/observer restrictions remain mode-dependent and explicit</li>
 <li><strong>Defaults / trust behavior:</strong> Ranked disables all LLM-assisted player-control modes; fair tournament prompt coaching uses coach-role vision only; omniscient spectator prompting is showmatch-only and trust-labeled</li>
 <li><strong>Replay / privacy behavior:</strong> Orders always recorded; LLM prompt text/reasoning capture is optional and strip/redact-able; API keys/tokens are never stored</li>
-<li><strong>Keywords:</strong> LLM vs LLM, exhibition mode, prompt duel, coach AI, spectator prompts, showmatch, BYOLLM, replay annotations, trust labels</li>
+<li><strong>Keywords:</strong> LLM vs LLM, exhibition mode, prompt duel, coach AI, spectator prompts, showmatch, BYOLLM, replay annotations, trust labels, BYO-LLM fight night, live AI battle, spectator AI</li>
 </ul>
 <h3 id="problem"><a class="header" href="#problem">Problem</a></h3>
 <p>D044 solved the <strong>AI implementation</strong> problem:</p>
@@ -498,6 +498,52 @@ replay_llm_reasoning = false
 <li>whether prompt text is being recorded for replay</li>
 </ul>
 <p>This mirrors D059’s consent/disclosure philosophy (voice recording) and anti-coaching clarity.</p>
+<h3 id="experimental-byo-llm-fight-night-live-spectator-ai-battles"><a class="header" href="#experimental-byo-llm-fight-night-live-spectator-ai-battles">Experimental: BYO-LLM Fight Night (Live Spectator AI Battles)</a></h3>
+<p>An explicit experimental format built on the D073 policy stack: community events where players <strong>bring their own LLM configuration</strong> and pit them against each other in front of a live audience.</p>
+<h4 id="concept"><a class="header" href="#concept">Concept</a></h4>
+<p>Think Twitch-style “whose AI is better” events:</p>
+<ol>
+<li>Each contestant registers an LLM setup: provider, model, prompt strategy profile (D047), optional system prompt / persona</li>
+<li>Contestants are matched (bracket, round-robin, or challenge format)</li>
+<li>The match runs live with spectator overlays showing each LLM’s current plan summary, prompt role badges, and model identity</li>
+<li>Audience watches in real-time via spectator mode or stream, seeing both sides’ strategic reasoning unfold</li>
+</ol>
+<p>The format naturally creates community content, rivalry, and iterative improvement loops as players refine their prompts and model choices between events.</p>
+<h4 id="how-it-maps-to-d073-infrastructure"><a class="header" href="#how-it-maps-to-d073-infrastructure">How It Maps to D073 Infrastructure</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Fight Night Element</th><th>D073 Mechanism</th><th>Notes</th></tr>
+</thead>
+<tbody>
+<tr><td>Player submits LLM config</td><td>D047 <code>LlmProvider</code> + prompt strategy profile</td><td>Player brings their own API key / local model</td></tr>
+<tr><td>LLM controls a side</td><td>D044 <code>LlmOrchestratorAi</code> (recommended v1)</td><td><code>LlmPlayerAi</code> as experimental opt-in</td></tr>
+<tr><td>Live audience viewing</td><td>D073 spectator overlays + trust labels</td><td>Plan summary panel, model badge, mode banner</td></tr>
+<tr><td>Match governance</td><td><code>LLM Exhibition Match</code> policy (mode 1)</td><td>No prompt coaching — pure LLM vs LLM</td></tr>
+<tr><td>Prompted variant</td><td><code>Prompt Duel</code> policy (mode 2)</td><td>Each player coaches their own LLM live</td></tr>
+<tr><td>Replay / VOD</td><td>Standard replay + LLM annotation capture</td><td>Shareable <code>.icrep</code> with optional prompt transcript</td></tr>
+<tr><td>Tournament ops</td><td>D071 ICRP + D072 dashboard</td><td>Bracket management, match scheduling, replay archive</td></tr>
+</tbody>
+</table>
+</div>
+<h4 id="experimental-scope-and-constraints"><a class="header" href="#experimental-scope-and-constraints">Experimental Scope and Constraints</a></h4>
+<ul>
+<li><strong>Phase 7 experimental feature</strong> — ships alongside general D073 modes, not separately</li>
+<li><strong>Never ranked</strong> — D055 exclusion applies unconditionally</li>
+<li><strong>BYOLLM only</strong> — IC does not provide or host LLM inference; players bring their own provider/key</li>
+<li><strong>No credential sharing</strong> — each contestant’s API keys stay local to their client; the relay never sees them</li>
+<li><strong>Latency fairness is best-effort</strong> — local Ollama vs cloud API latency differences are inherent to the format and part of the meta (choosing fast models matters); consider optional per-turn time budgets as a future fairness knob</li>
+<li><strong>Skill library (D057) eligibility</strong> — pure LLM-vs-LLM exhibition results may feed D057 with <code>exhibition</code> tag; omniscient/audience-prompted variants are excluded from skill promotion per D073 policy</li>
+</ul>
+<h4 id="community-event-tooling-future-post-v1"><a class="header" href="#community-event-tooling-future-post-v1">Community Event Tooling (Future, Post-v1)</a></h4>
+<ul>
+<li>Bracket/tournament management via D071 ICRP commands</li>
+<li>Automated match scheduling and result recording</li>
+<li>Leaderboard / Elo-style rating for registered LLM configs (community-run, not official ranked)</li>
+<li>“Fight card” lobby UI showing upcoming matches, contestant LLM identities, and past records</li>
+<li>Highlight reel / clip generation from replay annotations</li>
+</ul>
+<p>These are community-driven extensions, not core engine features. IC provides the match policy, replay infrastructure, and ICRP tooling surface; communities build the event layer on top.</p>
 <h3 id="what-this-is-not"><a class="header" href="#what-this-is-not">What This Is Not</a></h3>
 <ul>
 <li><strong>Not ranked AI assistance.</strong> D055 ranked remains human-skill measurement.</li>

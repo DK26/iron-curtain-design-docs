@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-f3722748.js";
+            window.path_to_searchindex_js = "searchindex-245f6587.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-56a6701d.js"></script>
+        <script src="toc-0698f107.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -232,8 +232,12 @@
     hidden: ObfuscatedStore,     // Encrypted, scattered, decoy entries
 }
 <span class="boring">}</span></code></pre>
-<p><strong>Actual solution: Fog-Authoritative Server</strong>
-Server runs full sim, sends each client only entities they can see. Breaks pure lockstep. Requires server compute per game.</p>
+<p><strong>Actual solution: Fog-Authoritative Server</strong></p>
+<blockquote>
+<p><strong>Full design specification:</strong> For the complete FogAuth server-side sim loop, visibility computation, entity state delta wire format (byte-level), Fiedler priority accumulator algorithm, bandwidth budget model, client reconciler, and deployment cost analysis, see <code>research/fog-authoritative-server-design.md</code>.</p>
+<p><strong>FogAuth wire format:</strong> Complete byte-level entity delta format (EntityEnter/Update/Leave with offset tables), bandwidth budget constants (64 KB/s, 2184 bytes/tick, capacity estimates per delta type), and Fiedler priority accumulator algorithm (1024-scale tier constants, staleness bonus formula, starvation timing guarantees) are specified in <code>research/fog-authoritative-server-design.md</code>.</p>
+</blockquote>
+<p>Server runs full sim, sends each client only entities they can see. Breaks pure lockstep. Requires server compute per game.</p>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>pub struct FogAuthoritativeNetwork {

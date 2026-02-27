@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-f3722748.js";
+            window.path_to_searchindex_js = "searchindex-245f6587.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-56a6701d.js"></script>
+        <script src="toc-0698f107.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -190,6 +190,25 @@
 <li>Provides OpenRA mod compatibility as the zero-cost migration path</li>
 <li>Is <strong>game-agnostic at the engine layer</strong> — built for the C&amp;C community but designed to power any classic RTS (D039). Ships with Red Alert (default) and Tiberian Dawn as built-in game modules; RA2, Tiberian Sun, and community-created games are future modules on the same engine (RA2 is a future community goal, not a scheduled deliverable)</li>
 </ul>
+<h2 id="project-philosophy-classical-foundation-experimental-ambition"><a class="header" href="#project-philosophy-classical-foundation-experimental-ambition">Project Philosophy: Classical Foundation, Experimental Ambition</a></h2>
+<p>Iron Curtain delivers two things that are non-negotiable:</p>
+<ol>
+<li><strong>The classical Red Alert experience.</strong> The game plays like Red Alert. The units, the feel, the pace — faithful to the original.</li>
+<li><strong>The OpenRA experience.</strong> Existing mods work. Competitive play works. The 18 years of community investment carries forward.</li>
+</ol>
+<p>That is the foundation, and it ships complete.</p>
+<p>On top of that foundation, IC explores ideas and features that push the genre forward — not as replacements for the classical experience, but as additions alongside it:</p>
+<ul>
+<li>Deterministic desync diagnosis that pinpoints the exact tick and entity that diverged</li>
+<li>A P2P Workshop with federated community servers and cross-community trust signals</li>
+<li>Three-tier modding (YAML → Lua → WASM) where total conversions are hot-loadable modules</li>
+<li>A unified community server binary where a $5 VPS hosts an entire community</li>
+<li>Fog-authoritative server mode for maphack-proof competitive play</li>
+<li>Ranked matchmaking with relay-signed match results and Ed25519 replay chains</li>
+<li>Branching campaigns with persistent unit rosters and veterancy carry-over</li>
+</ul>
+<p>These features are designed, built, and shipped — but they are also tested against reality. Community feedback and real-world usage decide what stays as-is, what evolves, and what gets rethought. IC treats its own designs as hypotheses: strong enough to commit to, honest enough to revise.</p>
+<p><strong>IC does not defer hard problems or bend around limitations.</strong> If the best available library doesn’t fit, IC builds its own. If a standard protocol doesn’t cover the use case, IC extends it. If a security model requires architectural commitment, that commitment is made upfront. The default stance is to define the standard, not to adopt someone else’s compromise. But “no compromise on engineering” does not mean “no listening to the community” — the two reinforce each other.</p>
 <h2 id="community-pain-points-we-address"><a class="header" href="#community-pain-points-we-address">Community Pain Points We Address</a></h2>
 <p>These are the most frequently reported frustrations from the C&amp;C community — sourced from OpenRA’s issue tracker (135+ desync issues alone), competitive player feedback (15+ RAGL seasons), modder forums, and the Remastered Collection’s reception. Every architectural decision in this document traces back to at least one of these. This section exists so that anyone reading this document for the first time understands <em>why</em> the engine is designed the way it is.</p>
 <h3 id="critical--for-players"><a class="header" href="#critical--for-players">Critical — For Players</a></h3>
@@ -265,6 +284,16 @@ OpenRA’s map editor handles terrain and actor placement but not mission logic 
 <p>Campaigns are directed graphs of missions, not linear sequences. Each mission can have multiple outcomes (“won with bridge intact” vs “won but bridge destroyed”) that lead to different next missions. Failure doesn’t end the campaign — defeat is another branch. Surviving units, veterancy, and equipment carry over between missions. Continuous flow: briefing → mission → debrief → next mission, no exit-to-menu between levels. Inspired by Operation Flashpoint.</p>
 <p><strong>Optional LLM-Generated Missions (BYOLLM — power-user feature)</strong></p>
 <p>For players who want more content: an optional in-game interface where players describe a scenario in natural language and receive a fully playable mission — map layout, objectives, enemy AI, triggers, briefing text. Generated content is standard YAML + Lua, fully editable and shareable. Requires the player to configure their own LLM provider (local or cloud) — the engine never ships or requires a specific model. Every feature works fully without an LLM configured.</p>
+<p><strong>The “One More Prompt” effect.</strong> Civilization is famous for “one more turn” — the compulsion loop where every turn ends with a reason to play the next one. IC’s LLM features are designed to create the same pull, but for content creation: <strong>“one more prompt.”</strong></p>
+<p>The generative campaign system (D016) is the primary driver. After each mission, the LLM inspects the battle report — what happened, who survived, what was lost — and generates the next mission as a direct reaction to the player’s choices. The debrief ends with a narrative hook: Sonya’s loyalty is cracking, Morrison is moving armor south, the bridge you lost three missions ago is now the enemy’s supply line. The player doesn’t just want to play the next mission — they want to <em>see what the LLM does with what just happened.</em> That curiosity is the loop.</p>
+<p>But the effect extends beyond campaigns:</p>
+<ul>
+<li><strong>“What if I describe THIS scenario?”</strong> — Single mission generation turns a text prompt into a playable map. The gap between idea and play is seconds. Players who would never build a mission in an editor will generate dozens.</li>
+<li><strong>“What if I pit GPT against Claude?”</strong> — LLM exhibition matches (D073) let players set up AI-vs-AI battles with different models, strategies, and personalities. Each match plays out differently. The spectacle is endlessly variable.</li>
+<li><strong>“What if I coach it differently this time?”</strong> — Prompt-coached matches (D073) let players give real-time strategic guidance to an LLM-controlled army. Same starting conditions, different prompt, different outcome.</li>
+<li><strong>“What if I try a Soviet pulp sci-fi campaign with high moral complexity?”</strong> — The parameter space for generative campaigns is vast. Different faction, different tone, different story style, different difficulty curve — each combination produces a fundamentally different experience.</li>
+</ul>
+<p>The compulsion comes from the same place as Civilization’s: the system is responsive enough that every output creates a reason to try another input. The difference is that in Civ, the loop is “I wonder what happens next turn.” In IC, the loop is “I wonder what happens if I say <em>this</em>.”</p>
 <p><strong>Rendering: Classic First, Modding Possibilities Beyond</strong></p>
 <p>The core rendering goal is to <strong>faithfully reproduce the classic Red Alert isometric aesthetic</strong> — the same sprites, the same feel. HD sprite support is planned so modders can provide higher-resolution assets alongside the originals.</p>
 <p>Because the engine builds on Bevy’s rendering stack (which includes a full 2D and 3D pipeline via wgpu), modders gain access to capabilities far beyond the classic look — if they choose to use them:</p>

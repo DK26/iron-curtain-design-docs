@@ -35,10 +35,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-f3722748.js";
+            window.path_to_searchindex_js = "../searchindex-245f6587.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-56a6701d.js"></script>
+        <script src="../toc-0698f107.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -185,7 +185,26 @@
 <h3 id="layer-1--commander-school"><a class="header" href="#layer-1--commander-school">Layer 1 — Commander School</a></h3>
 <pre><code>Main Menu → Campaign → Commander School
 </code></pre>
-<p>A dedicated 10-mission tutorial campaign using the D021 branching graph system. Teaches: camera, selection, movement, combat, building, harvesting, tech tree, control groups, multiplayer basics, advanced tactics, and camera bookmarks. Branching allows skipping known topics. Tutorial AI opponents are below Easy difficulty. The campaign content is shared across desktop and touch platforms; prompt wording and UI highlights adapt to <code>InputCapabilities</code>/<code>ScreenClass</code>.</p>
+<p>A focused 6-mission tutorial campaign using the D021 branching graph system, structured around <strong>dopamine-first design</strong>: achievement first, theory second. The player blows things up in mission 01 (learning camera and selection <em>during</em> combat), then builds because they want more units, then learns economy because they ran out of money. Boring fundamentals are taught <em>between</em> exciting moments, never as prerequisites.</p>
+<p>The tutorial covers only the basics — navigation, core features, buttons, and shortcuts. Unit counters, defense strategy, tech tree exploration, superweapons, and advanced tactics are deliberately left for the player to discover through skirmish and multiplayer.</p>
+<p>Each mission also weaves in <strong>IC-specific features</strong> that have no equivalent in classic Red Alert — attack-move, rally points, parallel factories, unit stances, weather effects, veterancy, smart box-select, and render mode toggle. Hint wording adapts by experience profile: veterans see “IC adds rally points” while newcomers see “Right-click to set a rally point.” This ensures returning RA players understand what’s <em>different</em> while newcomers learn everything fresh.</p>
+<p><strong>Mission flow (dopamine-first order):</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>#</th><th>Mission</th><th>Dopamine Moment</th><th>Fundamental Taught</th><th>IC Feature Woven In</th></tr>
+</thead>
+<tbody>
+<tr><td>01</td><td>First Blood</td><td>Explosions in 30 seconds</td><td>Camera, selection, attack</td><td>Attack-move</td></tr>
+<tr><td>02</td><td>Build Your Army</td><td>Deploying units you built</td><td>Construction, power, production</td><td>Rally points, parallel factories</td></tr>
+<tr><td>03</td><td>Supply Line</td><td>First ore delivery</td><td>Economy, harvesting</td><td>Smart box-select</td></tr>
+<tr><td>04</td><td>Command &amp; Control</td><td>Multi-group attack feels effortless</td><td>Control groups, hotkeys, bookmarks</td><td>Unit stances, render toggle (F1)</td></tr>
+<tr><td>05</td><td>Iron Curtain Rising</td><td>Winning a real skirmish</td><td>Everything integrated (capstone)</td><td>Weather effects, veterancy</td></tr>
+<tr><td>06</td><td>Multiplayer Intro</td><td>First online interaction</td><td>Lobbies, chat, etiquette</td><td>Balance presets, experience profiles</td></tr>
+</tbody>
+</table>
+</div>
+<p>Every mission awards an achievement on completion (D036). Branching allows skipping known topics. Tutorial AI opponents are below Easy difficulty. The campaign content is shared across desktop and touch platforms; prompt wording and UI highlights adapt to <code>InputCapabilities</code>/<code>ScreenClass</code>. The tutorial teaches game mechanics, gameplay, options, buttons, and shortcuts — everything else is for the player to discover through play.</p>
 <h3 id="layer-2--contextual-hints"><a class="header" href="#layer-2--contextual-hints">Layer 2 — Contextual Hints</a></h3>
 <p>Appear throughout the game as translucent overlay callouts at the point of need:</p>
 <pre><code>┌──────────────────────────────────────────┐
@@ -196,7 +215,8 @@
 │                                  again]  │
 └──────────────────────────────────────────┘
 </code></pre>
-<p>YAML-driven triggers, adaptive suppression (hints shown less frequently as the player demonstrates mastery), experience-profile-aware (different hints for vanilla vs. OpenRA vs. Remastered veterans). Hint text is rendered from semantic action prompts, so desktop can say “Right-click to move” while touch devices render “Tap ground to move” for the same hint definition.</p>
+<p>YAML-driven triggers, adaptive suppression (hints shown less frequently as the player demonstrates mastery), experience-profile-aware (different hints for vanilla vs. OpenRA vs. Remastered veterans). A dedicated <strong>IC new features</strong> hint category surfaces IC-specific mechanics (rally points, attack-move, unit stances, weather, veterancy, parallel factories, smart selection, render toggle) at point of need — enabled by default for all profiles including veterans. Hint text is rendered from semantic action prompts, so desktop can say “Right-click to move” while touch devices render “Tap ground to move” for the same hint definition.</p>
+<p><strong>Feature Smart Tips:</strong> The same Layer 2 hint pipeline extends to non-gameplay screens — Workshop, Settings, Player Profile, and Main Menu — using UI-context triggers (<code>ui_screen_enter</code>, <code>ui_element_focus</code>, <code>ui_screen_idle</code>, <code>ui_feature_unused</code>). These tips explain features in plain language for users encountering them for the first time: what Workshop categories mean, how mod profiles work, what experience profiles do, etc. A dedicated <code>feature_discovery</code> hint category (default On for all profiles) replaces the old milestone-based Progressive Feature Discovery system. See D065 § Feature Smart Tips for the full YAML catalog.</p>
 <h3 id="layer-3--new-player-pipeline"><a class="header" href="#layer-3--new-player-pipeline">Layer 3 — New Player Pipeline</a></h3>
 <p>The first-launch self-identification screen (shown earlier) feeds into:</p>
 <ul>

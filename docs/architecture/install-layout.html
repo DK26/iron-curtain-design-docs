@@ -35,10 +35,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-f3722748.js";
+            window.path_to_searchindex_js = "../searchindex-245f6587.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-56a6701d.js"></script>
+        <script src="../toc-0698f107.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -191,7 +191,7 @@
 <p><strong>Same vocabulary, same directories.</strong> OpenRA uses <code>rules/</code>, <code>sequences/</code>, <code>chrome/</code>, <code>maps/</code>, <code>audio/</code>, <code>scripts/</code>. IC uses the same directory names for the same purposes. An OpenRA modder opening IC’s <code>mods/ra/</code> directory knows where everything is.</p>
 </li>
 <li>
-<p><strong>Separate binaries for separate roles.</strong> Game client, dedicated server, CLI tool, and SDK editor are separate executables — like OpenRA ships <code>OpenRA.exe</code>, <code>OpenRA.Server.exe</code>, and <code>OpenRA.Utility.exe</code>. A server operator never needs the renderer. A modder using the SDK never needs the multiplayer client. Each has its own binary, sharing library crates underneath.</p>
+<p><strong>Separate binaries for separate roles, GUI-first for players.</strong> Game client and SDK editor are <strong>GUI applications</strong> — players and modders interact through windowed interfaces, never through a terminal. The dedicated server is a <strong>CLI daemon</strong> for headless operation. The <code>ic</code> utility is a <strong>developer CLI</strong> for automation and CI/CD. Like OpenRA ships <code>OpenRA.exe</code>, <code>OpenRA.Server.exe</code>, and <code>OpenRA.Utility.exe</code> — each role gets the interface natural to its audience. See <code>crate-graph.md</code> § “Binary Architecture: GUI-First Design” for the full breakdown.</p>
 </li>
 <li>
 <p><strong>Flat and scannable.</strong> No deep nesting for its own sake. A modder looking at <code>mods/ra/</code> should see the high-level structure in a single <code>ls</code>. Subdirectories within <code>rules/</code> organize by category (units, structures, weapons) — the same pattern OpenRA uses.</p>
@@ -203,10 +203,10 @@
 <h3 id="install-directory-shipped-product"><a class="header" href="#install-directory-shipped-product">Install Directory (Shipped Product)</a></h3>
 <p>What an end user sees after installing Iron Curtain:</p>
 <pre><code>iron-curtain/
-├── iron-curtain[.exe]              # Game client (ic-game binary)
-├── ic-server[.exe]                 # Relay / dedicated server (ic-net binary)
-├── ic[.exe]                        # CLI tool (mod, backup, export, profile, server commands)
-├── ic-editor[.exe]                 # SDK: scenario editor, asset studio, campaign editor (D038+D040)
+├── iron-curtain[.exe]              # Game client — GUI application (ic-game binary)
+├── ic-server[.exe]                 # Relay / dedicated server — CLI daemon (ic-net binary)
+├── ic[.exe]                        # Developer/modder utility — CLI tool (mod, CI/CD, diagnostics)
+├── ic-editor[.exe]                 # SDK — GUI application: scenario editor, asset studio (D038+D040)
 ├── mods/                           # Game modules + content — the heart of the project
 │   ├── common/                     # Shared resources used by all C&amp;C-family modules
 │   │   ├── mod.yaml                #   manifest (declares shared chrome, cursors, etc.)
@@ -243,7 +243,7 @@
 <li><strong><code>mods/common/</code></strong> is directly analogous to OpenRA’s <code>mods/common/</code>. Shared assets, chrome, and cursor definitions used across all C&amp;C-family game modules. Community game modules (Dune 2000, RA2) can depend on it or provide their own.</li>
 <li><strong><code>mods/ra/</code></strong> is a mod. It uses the same <code>mod.yaml</code> schema, the same <code>rules/</code> structure, and the same <code>sequences/</code> format as a community mod. There is no “privileged” version of this directory — the engine treats it identically to <code>&lt;data_dir&gt;/mods/my-total-conversion/</code>. This means every modder can read the game’s own data as a working example.</li>
 <li><strong>Every YAML file in <code>mods/ra/rules/</code> is editable.</strong> Want to change tank cost? Open <code>rules/units/vehicles.yaml</code>, find <code>medium_tank</code>, change <code>cost: 800</code> to <code>cost: 750</code>. The same workflow as OpenRA — except the YAML is standard-compliant and serde-typed.</li>
-<li><strong>The CLI (<code>ic</code>) is the Swiss Army knife.</strong> <code>ic mod init</code>, <code>ic mod check</code>, <code>ic mod test</code>, <code>ic mod publish</code>, <code>ic backup create</code>, <code>ic export</code>, <code>ic server validate-config</code>. One binary, consistent subcommands — no separate tools to discover.</li>
+<li><strong>The CLI (<code>ic</code>) is the modder/operator Swiss Army knife.</strong> <code>ic mod init</code>, <code>ic mod check</code>, <code>ic mod test</code>, <code>ic mod publish</code>, <code>ic backup create</code>, <code>ic export</code>, <code>ic server validate-config</code>. One binary, consistent subcommands — aimed at modders, server operators, and CI/CD pipelines. Players never need it — every player-facing action has a GUI equivalent in the game client or SDK editor.</li>
 </ul>
 <h3 id="source-repository-contributor-layout"><a class="header" href="#source-repository-contributor-layout">Source Repository (Contributor Layout)</a></h3>
 <p>What a contributor sees after cloning the repository:</p>

@@ -35,10 +35,10 @@
             const path_to_root = "../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-f3722748.js";
+            window.path_to_searchindex_js = "../../searchindex-245f6587.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../../toc-56a6701d.js"></script>
+        <script src="../../toc-0698f107.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -198,6 +198,7 @@
 <p><strong>Relay failure policy:</strong> If a relay dies mid-match, ranked/competitive matches do <strong>not</strong> silently fail over to a different authority path (e.g., ad-hoc P2P) because that breaks certification and trust assumptions. Ranked follows the degraded-certification / void policy in <code>06-SECURITY.md</code> (V32). Casual/custom games may offer unranked continuation via reconnect or fallback if all participants support it.</p>
 <p><strong>Validated by:</strong> C&amp;C Generals/Zero Hour’s “packet router” — a client-side star topology where one player collected and rebroadcast all commands. IC’s embedded relay improves on this pattern: the host’s orders go through <code>RelayCore</code>‘s sub-tick pipeline like everyone else’s (no peeking, no priority), eliminating the host advantage that Generals had. The dedicated server mode further eliminates any hosting-related advantage. See <code>research/generals-zero-hour-netcode-analysis.md</code>. Further validated by Valve’s GameNetworkingSockets (GNS), which defaults to relay (Valve SDR — Steam Datagram Relay) for all connections, including P2P-capable scenarios. GNS’s rationale mirrors ours: relay eliminates NAT traversal headaches, provides consistent latency measurement, and blocks IP-level attacks. The GNS architecture also validates encrypting all relay traffic (AES-GCM-256 + Curve25519) — see D054 § Transport encryption. See <code>research/valve-github-analysis.md</code>. Additionally validated by Embark Studios’ <strong>Quilkin</strong> — a production Rust UDP proxy for game servers (1,510★, Apache 2.0, co-developed with Google Cloud Gaming). Quilkin provides a concrete implementation of relay-as-filter-chain: session routing via token-based connection IDs, QCMP latency measurement for server selection, composable filter pipeline (Capture → Firewall → RateLimit → TokenRouter), and full OTEL observability. Quilkin’s production deployment on Tokio + tonic confirms that async Rust handles game relay traffic at scale. See <code>research/embark-studios-rust-gamedev-analysis.md</code>.</p>
 <p><strong>Cross-engine hosting:</strong> When IC’s relay hosts a cross-engine match (e.g., OpenRA clients joining an IC server), IC can still provide meaningful relay-layer protections (time authority for the hosted session path, transport/rate-limit defenses, logging/replay signing, and protocol sanity checks after <code>OrderCodec</code> translation). However, this does <strong>not</strong> automatically confer full native IC competitive integrity guarantees to foreign clients/sims. Trust and anti-cheat capability are mode-specific and depend on the compatibility level (<code>07-CROSS-ENGINE.md</code> § “Cross-Engine Trust &amp; Anti-Cheat Capability Matrix”). In practice, “join IC’s server” is usually more observable and better bounded than “IC joins foreign server,” but cross-engine live play remains unranked/experimental by default unless separately certified.</p>
+<p><strong>Wire protocol specification:</strong> The complete byte-level relay wire protocol — order serialization, frame format, sub-tick normalization, adaptive run-ahead, desync recovery, encryption, connection handshake, and relay state machine — is specified in <code>research/relay-wire-protocol-design.md</code>.</p>
 <p><strong>Alternatives available:</strong> Pure P2P lockstep, fog-authoritative server, rollback — all implementable as <code>NetworkModel</code> variants.</p>
 <hr>
 <hr>

@@ -1,0 +1,594 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Platform Capabilities - Iron Curtain — Design Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Design docs for a Rust-native Red Alert RTS engine">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="favicon-8114d1fc.png">
+        <link rel="stylesheet" href="css/variables-8adf115d.css">
+        <link rel="stylesheet" href="css/general-2459343d.css">
+        <link rel="stylesheet" href="css/chrome-ae938929.css">
+        <link rel="stylesheet" href="css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "searchindex-245f6587.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc-0698f107.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Iron Curtain — Design Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs/edit/main/src/CAPABILITIES.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="iron-curtain--platform-capabilities"><a class="header" href="#iron-curtain--platform-capabilities">Iron Curtain — Platform Capabilities</a></h1>
+<blockquote>
+<p>Everything you get when you choose Iron Curtain as your RTS platform — whether you’re a player, a modder, a map maker, or building a total conversion.</p>
+</blockquote>
+<h2 id="for-players"><a class="header" href="#for-players">For Players</a></h2>
+<h3 id="gameplay-modes"><a class="header" href="#gameplay-modes">Gameplay Modes</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Mode</th><th>What You Get</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Campaign (Allied + Soviet)</strong></td><td>All original Red Alert missions fully playable with branching outcomes, unit roster persistence, veterancy carry-over, and optional hero progression (D021)</td></tr>
+<tr><td><strong>Skirmish vs AI</strong></td><td>Up to 8 players/AI on any map; AI difficulty (Easy–Brutal) with distinct personality profiles (Classic Westwood, OpenRA, IC Default); mix different AI personalities in the same match (D043)</td></tr>
+<tr><td><strong>Ranked Multiplayer</strong></td><td>Glicko-2 rating with seasonal tiers (Conscript → Supreme Commander), per-queue ratings (1v1, 2v2, FFA), map veto system, placement matches, escalating cooldowns (D055)</td></tr>
+<tr><td><strong>Casual Multiplayer</strong></td><td>Game browser, Among Us-style room codes (IRON-XXXX), QR join for LAN/streaming, Discord/Steam deep links, auto-download missing mods on join (D030)</td></tr>
+<tr><td><strong>Asymmetric Co-op</strong></td><td>Commander + Field Ops roles with separate HUDs, support request system (CAS, Recon, Reinforcements, Extraction), and War-Effort Board pacing (D070)</td></tr>
+<tr><td><strong>Generative Campaigns (BYOLLM)</strong></td><td>Describe a campaign in plain text → LLM generates branching missions, briefings, AI behavior, and narrative that adapts to your play (D016)</td></tr>
+<tr><td><strong>LLM Exhibition</strong></td><td>BYO-LLM Fight Night (AI vs AI), Prompt Duel (guide AI with strategy prompts), Director Showmatch (audience-driven spectacle) (D073)</td></tr>
+<tr><td><strong>Spectating</strong></td><td>Mid-game join, configurable broadcast delay, observer panels (Army/Production/Economy/Score/APM), directed camera AI, community observer UI layouts via Workshop</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="the-red-alert-experience--faithful-and-enhanced"><a class="header" href="#the-red-alert-experience--faithful-and-enhanced">The Red Alert Experience — Faithful and Enhanced</a></h3>
+<p>IC recreates the Red Alert feel using values verified against EA source code, then adds quality-of-life features that don’t break the classic identity:</p>
+<p><strong>Faithfully Recreated:</strong></p>
+<ul>
+<li>Palette-indexed sprite rendering with all original SHP draw modes (shadow, ghost, predator)</li>
+<li>Isometric 14-layer Z-order (terrain → shadows → buildings → units → aircraft → projectiles → effects → UI)</li>
+<li>Credit counter with ticking animation, power bar with green/yellow/red states</li>
+<li>EVA voice system with priority queuing (rare notifications don’t get lost)</li>
+<li>Unit voice pools with no-immediate-repeat selection</li>
+<li>Dynamic music (combat/build/victory transitions honoring Frank Klepacki’s intent)</li>
+</ul>
+<p><strong>IC Enhancements (New Features With No Classic RA Equivalent):</strong></p>
+<ul>
+<li>Attack-move (default on), rally points, parallel factories, unit stances (Aggressive/Defensive/Hold/Return Fire)</li>
+<li>Smart box-select (harvesters deprioritized), camera bookmarks (F5-F8)</li>
+<li>Dynamic weather system affecting movement and terrain passability (D022)</li>
+<li>Veterancy promotions with visible rank indicators and stat bonuses</li>
+<li>Render mode toggle (F1): Classic / HD / 3D — switchable mid-game (D048)</li>
+</ul>
+<h3 id="customization--play-your-way"><a class="header" href="#customization--play-your-way">Customization — Play Your Way</a></h3>
+<p>IC doesn’t force one way to play. Every axis is independently composable:</p>
+<p><strong>Balance Presets (D019):</strong></p>
+<ul>
+<li>Classic (original EA values — frozen, never changes)</li>
+<li>OpenRA (tracks upstream OpenRA balance patches)</li>
+<li>Remastered Collection</li>
+<li>IC Default (patched once per ranked season based on telemetry)</li>
+<li>Custom (player-editable YAML)</li>
+</ul>
+<p><strong>Experience Profiles (D033):</strong></p>
+<ul>
+<li>Vanilla RA, OpenRA, Remastered, or Iron Curtain — each bundles balance + theme + QoL + AI + pathfinding + render mode</li>
+<li>Override any individual axis in the lobby</li>
+<li>Create and share custom profiles via Workshop</li>
+</ul>
+<p><strong>Quality of Life Toggles (D033):</strong></p>
+<ul>
+<li>Production: attack-move, waypoint queue, multi-queue, rally points, parallel factories</li>
+<li>Commands: force-fire, force-move, guard, scatter, unit stances</li>
+<li>UI: health bars, range circles, build radius, target lines, selection outline</li>
+<li>Selection: box shape (diamond/rectangle), smart type cycling</li>
+<li>All individually toggleable, not locked to presets</li>
+</ul>
+<p><strong>Pathfinding Variants (D045):</strong></p>
+<ul>
+<li>Remastered (original feel), OpenRA (improved A*), IC Default (flowfield + ORCA-lite hybrid)</li>
+<li>Per-lobby selection, mod-extensible via WASM</li>
+</ul>
+<p><strong>AI Personality &amp; Difficulty (D043):</strong></p>
+<ul>
+<li>Two-axis tuning: engine scaling (resource bonuses) + behavioral personality (aggression, expansion, tech preference)</li>
+<li>Mix different personalities in the same match</li>
+<li>Replay-based behavioral mimicry: AI learns from your replays</li>
+</ul>
+<h3 id="multiplayer-infrastructure"><a class="header" href="#multiplayer-infrastructure">Multiplayer Infrastructure</a></h3>
+<ul>
+<li><strong>Relay servers</strong> eliminate lag-switching and host advantage — relay owns the clock (D007)</li>
+<li><strong>Sub-tick fairness</strong> — orders from faster and slower players processed fairly (D008)</li>
+<li><strong>Adaptive run-ahead</strong> — client predicts during lag, corrects without rubber-banding</li>
+<li><strong>Encrypted transport</strong> — all traffic encrypted and authenticated (TLS/QUIC)</li>
+<li><strong>Community servers</strong> — anyone can host their own relay, matchmaking, and workshop servers with federated trust (D052)</li>
+<li><strong>Cross-engine browser</strong> — see OpenRA and CnCNet games from the IC client (D011)</li>
+<li><strong>Portable identity</strong> — 24-word recovery phrase; restore on any machine (D061)</li>
+</ul>
+<h3 id="replays--analysis"><a class="header" href="#replays--analysis">Replays &amp; Analysis</a></h3>
+<ul>
+<li><strong>Auto-recording</strong> of all matches with Match ID system</li>
+<li><strong>Arbitrary seeking</strong> (forward and backward) via keyframe re-simulation</li>
+<li><strong>5 camera modes:</strong> free, player perspective, follow unit, directed (AI auto-follows action), drone cinematic</li>
+<li><strong>Observer overlays:</strong> army composition, production queues, economy, powers, score, APM</li>
+<li><strong>Heatmaps:</strong> unit death, combat, camera attention, economy</li>
+<li><strong>Graphs:</strong> army value, income, unspent resources, APM — all clickable (jump to that moment)</li>
+<li><strong>Video export</strong> (WebM) with cinematic camera path editor, lens controls, letterbox</li>
+<li><strong>Foreign replay import</strong> — play OpenRA <code>.orarep</code> and Remastered replays with divergence tracking (D056)</li>
+<li><strong>Anonymization</strong> for sharing (strip names, voice, chat)</li>
+</ul>
+<h3 id="workshop--content"><a class="header" href="#workshop--content">Workshop &amp; Content</a></h3>
+<ul>
+<li><strong>Browse and install</strong> maps, mods, campaigns, themes, AI presets, music, sprites, voice packs, and more</li>
+<li><strong>One-click mod profiles</strong> — save different mod combinations, switch instantly</li>
+<li><strong>Auto-download on lobby join</strong> — missing content installs automatically (P2P preferred, HTTP fallback)</li>
+<li><strong>Mod fingerprint</strong> — SHA-256 hash ensures all players have identical rules</li>
+<li><strong>Federated mirrors</strong> — official server, community mirrors, local directories; works offline with bundles</li>
+</ul>
+<h3 id="tutorial--onboarding-d065"><a class="header" href="#tutorial--onboarding-d065">Tutorial &amp; Onboarding (D065)</a></h3>
+<ul>
+<li><strong>Commander School</strong> — 6-mission dopamine-first tutorial campaign (blow things up first, learn economy later)</li>
+<li><strong>IC-aware hints</strong> — veterans see “IC adds rally points,” newcomers see “Right-click to set a rally point”</li>
+<li><strong>Feature Smart Tips</strong> — non-intrusive contextual tips on Workshop, Settings, Profile, and Main Menu screens</li>
+<li><strong>Adaptive pacing</strong> — hint frequency scales with demonstrated skill</li>
+<li><strong>Post-game learning</strong> — “You had 15 idle harvester seconds” with replay moment links</li>
+</ul>
+<h3 id="platform-support"><a class="header" href="#platform-support">Platform Support</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Platform</th><th>Status</th></tr>
+</thead>
+<tbody>
+<tr><td>Windows, macOS, Linux</td><td>Full desktop support</td></tr>
+<tr><td>Steam Deck</td><td>Gamepad controls, touchpad, gyro, shoulder-button PTT</td></tr>
+<tr><td>Browser (WASM)</td><td>Full game playable in browser with WebRTC VoIP</td></tr>
+<tr><td>Tablet</td><td>Touch-optimized sidebar, command rail, camera bookmark dock</td></tr>
+<tr><td>Phone</td><td>Bottom-bar layout, build drawer, compact minimap, tempo advisory</td></tr>
+<tr><td>Portable mode</td><td>USB-stick deployment, no installation required</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="for-modders--content-creators"><a class="header" href="#for-modders--content-creators">For Modders &amp; Content Creators</a></h2>
+<h3 id="three-tier-modding-system"><a class="header" href="#three-tier-modding-system">Three-Tier Modding System</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Tier</th><th>Tool</th><th>What You Can Do</th><th>Skill Required</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Tier 1: YAML</strong></td><td>Text editor</td><td>Unit stats, weapons, buildings, factions, balance presets, UI themes, terrain, achievements</td><td>None — edit values in plain text</td></tr>
+<tr><td><strong>Tier 2: Lua</strong></td><td>Text editor + SDK</td><td>Mission scripting, campaign logic, AI behavior, weather control, custom triggers, tutorial sequences</td><td>Basic scripting</td></tr>
+<tr><td><strong>Tier 3: WASM</strong></td><td>Rust/C/AssemblyScript</td><td>Custom mechanics, new components, total conversions, custom pathfinding, custom export targets</td><td>Programming</td></tr>
+</tbody>
+</table>
+</div>
+<p>Each tier is optional and sandboxed. No C# runtime. No engine recompilation. No forking.</p>
+<h3 id="openra-compatibility--bring-your-existing-work"><a class="header" href="#openra-compatibility--bring-your-existing-work">OpenRA Compatibility — Bring Your Existing Work</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Feature</th><th>What It Means</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>MiniYAML loading</strong> (D025)</td><td>OpenRA <code>rules.yaml</code> files load directly — no conversion required</td></tr>
+<tr><td><strong>Mod manifest parsing</strong> (D026)</td><td>OpenRA <code>mod.yaml</code> recognized natively; <code>ic mod import</code> for permanent migration</td></tr>
+<tr><td><strong>Vocabulary aliases</strong> (D023)</td><td>OpenRA trait names (<code>Armament</code>, <code>Valued</code>, <code>Buildable</code>) accepted as aliases</td></tr>
+<tr><td><strong>Replay import</strong> (D056)</td><td>OpenRA <code>.orarep</code> files play back with divergence tracking</td></tr>
+<tr><td><strong>Lua API superset</strong> (D024)</td><td>All 16 OpenRA Lua globals work identically; IC adds 11 more (Campaign, Weather, Layer, SubMap, Region, Var, Workshop, LLM, Achievement, Tutorial, Ai)</td></tr>
+<tr><td><strong>C# assembly handling</strong> (D026)</td><td>C# DLLs flagged with warnings; affected units get placeholder rendering</td></tr>
+<tr><td><strong>Cross-engine browser</strong> (D011)</td><td>IC games appear in OpenRA/CnCNet browser and vice versa</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="scenario-editor-sdk--d038"><a class="header" href="#scenario-editor-sdk--d038">Scenario Editor (SDK — D038)</a></h3>
+<p>A full visual mission editor inspired by OFP’s mission editor and Arma 3’s Eden Editor:</p>
+<p><strong>12 editing modes:</strong> Terrain (paint tiles/resources/cliffs/water), Entities (place units/buildings/props), Groups (squad organization), Triggers (area-based conditional logic), Waypoints (OFP F4-style visual route authoring), Connections (visual trigger/waypoint linking), Modules (30+ drag-and-drop logic blocks), Regions (named spatial zones), Layers (dynamic mission expansion), Portals (sub-map transitions), Scripts (Lua file browser/editor), Campaign (mission graph wiring)</p>
+<p><strong>Key capabilities:</strong></p>
+<ul>
+<li><strong>Simple/Advanced mode</strong> — same data model, different UI complexity; beginners place units in minutes, advanced users add triggers and scripting</li>
+<li><strong>Entity placement</strong> with double-click, naming (variable names for scripts), faction assignment, probability of presence, condition of presence, veterancy, health, inline Lua init scripts</li>
+<li><strong>Trigger system</strong> — area-based with conditions (unit present/destroyed/captured/built), min/mid/max randomized timers, repeatable/one-shot, Lua escape hatch for custom conditions</li>
+<li><strong>Module system</strong> — 30+ pre-built logic nodes: Wave Spawner, Patrol Route, Guard Position, Reinforcements, Destroy Target, Capture Building, Defend Position, Escort Convoy, Weather Change, Camera Pan, Cinematic Sequence, Map Segment Unlock, Sub-Scenario Portal, Tutorial Step, Spectator Bookmark, and more</li>
+<li><strong>Waypoints</strong> — visual route authoring with types (Move, Attack, Guard, Patrol, Harvest, Script, Wait), synchronization lines for multi-group coordination, route naming for script reference</li>
+<li><strong>Mission outcomes</strong> — named outcome triggers (<code>Mission.Complete("victory_bridge_intact")</code>) wired to campaign branch graph</li>
+<li><strong>Compositions</strong> — reusable prefabs (base layouts, defensive formations, scripted encounters) saved and shared via Workshop</li>
+<li><strong>Preview / Test / Validate / Publish</strong> toolbar — Test launches real game runtime; Validate checks rules asynchronously; Publish Readiness aggregates all warnings</li>
+<li><strong>Git-first collaboration</strong> — stable content IDs, canonical serialization, semantic diff/merge helpers</li>
+<li><strong>Undo/redo + autosave</strong> with crash recovery</li>
+<li><strong>Interactive guided tours</strong> — 10 built-in step-by-step walkthroughs with spotlight overlay and validation (D038)</li>
+<li><strong>F1 context help</strong> — opens authoring manual page for any selected element</li>
+</ul>
+<h3 id="asset-studio-sdk--d040"><a class="header" href="#asset-studio-sdk--d040">Asset Studio (SDK — D040)</a></h3>
+<p>XCC Mixer replacement with visual editing — no command-line tools needed:</p>
+<ul>
+<li><strong>Browse</strong> .mix/.big/.oramap archives with extraction</li>
+<li><strong>View</strong> sprites (.shp/.png with palette), palettes (.pal), terrain tiles (.tmp), audio (.aud/.wav/.ogg), video (.vqa/.mp4/.webm), 3D models (.gltf/.vxl)</li>
+<li><strong>Edit</strong> palettes (remap, faction colors, hue shifts), sprite sheets (reorder frames, adjust timing, composite layers), terrain tiles (connectivity rules, transitions), chrome/themes (9-slice panels, live menu preview)</li>
+<li><strong>Convert</strong> bidirectionally: SHP ↔ PNG, AUD ↔ WAV, VQA ↔ WebM</li>
+<li><strong>Import</strong> PNG → palette-quantized SHP; GLTF → game models with LODs; fonts → bitmap sheets</li>
+<li><strong>Batch operations</strong> — bulk palette remap, resize, re-export across assets</li>
+<li><strong>Diff/compare</strong> — side-by-side version comparison with pixel-diff highlights</li>
+<li><strong>Hot-reload bridge</strong> — edit assets, see changes in running game immediately</li>
+<li><strong>Provenance metadata</strong> — track source, author, license, modification history per asset</li>
+<li><strong>Optional LLM-assisted generation</strong> (Phase 7) — describe a unit → LLM generates sprite sheet → iterate</li>
+</ul>
+<h3 id="campaign-system-d021"><a class="header" href="#campaign-system-d021">Campaign System (D021)</a></h3>
+<ul>
+<li><strong>Branching graph structure</strong> — missions linked by named outcomes, not linear lists</li>
+<li><strong>Multiple outcomes per mission</strong> — win/loss/partial each branch differently</li>
+<li><strong>No mandatory game-over</strong> — designer controls what happens on defeat (retry, fallback, consequences)</li>
+<li><strong>Unit roster persistence</strong> — surviving units carry forward with veterancy, kills, equipment</li>
+<li><strong>Campaign variables</strong> — Lua-accessible flags, counters, and state that persist across missions</li>
+<li><strong>Hero progression</strong> (optional) — XP, levels, skill trees, loadouts per named character</li>
+<li><strong>Intermission screens</strong> — Hero Sheets, Skill Choice, Armory/Loadout between missions</li>
+<li><strong>Campaign Graph Editor</strong> in SDK — visual node-and-edge editing, drag missions, label outcomes, validate branches</li>
+</ul>
+<h3 id="export-to-other-engines-d066"><a class="header" href="#export-to-other-engines-d066">Export to Other Engines (D066)</a></h3>
+<p>IC scenarios can be exported to other Red Alert implementations:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Target</th><th>Output</th><th>Fidelity</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>IC Native</strong></td><td><code>.icscn</code> / <code>.iccampaign</code></td><td>Full</td></tr>
+<tr><td><strong>OpenRA</strong></td><td><code>.oramap</code> ZIP + MiniYAML rules + <code>mod.yaml</code></td><td>High (IC-only features degrade with warnings)</td></tr>
+<tr><td><strong>Original Red Alert</strong></td><td><code>rules.ini</code> + <code>.bin</code> + <code>.mpr</code> + <code>.shp</code>/<code>.pal</code>/<code>.aud</code>/<code>.mix</code></td><td>Moderate (complex triggers downcompile via pattern matching)</td></tr>
+</tbody>
+</table>
+</div>
+<ul>
+<li><strong>Export-safe authoring mode</strong> — live fidelity indicators (green/yellow/red) per entity/trigger</li>
+<li><strong>Pattern-based trigger downcompilation</strong> — <code>Trigger.AfterDelay()</code> → RA1 timed trigger, <code>Trigger.OnKilled()</code> → destroyed trigger, etc.</li>
+<li><strong>Extensible export targets</strong> — community can add Tiberian Sun, RA2, Remastered via WASM plugins</li>
+<li><strong>CLI export</strong> — <code>ic export --target openra|ra1 mission.yaml -o ./output/</code></li>
+</ul>
+<p><strong>The vision:</strong> IC becomes the tool the C&amp;C community uses to create content for <em>any</em> C&amp;C engine, not just IC itself.</p>
+<h3 id="workshop-distribution-d030"><a class="header" href="#workshop-distribution-d030">Workshop Distribution (D030)</a></h3>
+<ul>
+<li><strong>Publish</strong> maps, mods, campaigns, themes, AI presets, music, sprites, voice packs, script libraries, observer layouts, camera paths, LLM configs</li>
+<li><strong>Versioning</strong> — semver with dependency ranges (Cargo-style); lockfile for reproducible installs</li>
+<li><strong>Licensing</strong> — SPDX identifiers with <code>ic mod audit</code> for compatibility checking</li>
+<li><strong>Channels</strong> — dev / beta / release with promotion between channels</li>
+<li><strong>P2P distribution</strong> — BitTorrent/WebTorrent for large packages; HTTP fallback</li>
+<li><strong>Community mirrors</strong> — run your own Workshop server; federation with official</li>
+<li><strong>Offline bundles</strong> — export resources as portable archives for LAN parties</li>
+<li><strong>CI/CD integration</strong> — headless publishing via scoped API tokens; tag-based automation</li>
+<li><strong>CLI:</strong> <code>ic mod install</code>, <code>ic mod update</code>, <code>ic mod tree</code>, <code>ic mod audit</code>, <code>ic mod publish</code></li>
+</ul>
+<h3 id="llm-powered-creator-tools-optional-byollm--d016"><a class="header" href="#llm-powered-creator-tools-optional-byollm--d016">LLM-Powered Creator Tools (Optional, BYOLLM — D016)</a></h3>
+<ul>
+<li><strong>Single mission generation</strong> — text prompt → terrain, objectives, AI behavior, triggers, briefing</li>
+<li><strong>Campaign generation</strong> — text description → full branching multi-mission campaign</li>
+<li><strong>Natural language intent</strong> — “Soviet campaign, disgraced colonel, Eastern Front” → pre-filled campaign parameters</li>
+<li><strong>Replay-to-scenario extraction</strong> — convert replay into playable mission with optional LLM-generated narrative</li>
+<li><strong>Player-aware generation</strong> — LLM reads your match history for personalized missions</li>
+<li><strong>LLM Orchestrator AI</strong> — strategic wrapper around conventional AI; AI handles micro</li>
+<li><strong>Skill Library</strong> (D057) — persistent store of verified LLM outputs; promotes quality over time</li>
+</ul>
+<hr>
+<h2 id="for-engine-developers--researchers"><a class="header" href="#for-engine-developers--researchers">For Engine Developers &amp; Researchers</a></h2>
+<h3 id="deterministic-simulation-core"><a class="header" href="#deterministic-simulation-core">Deterministic Simulation Core</a></h3>
+<ul>
+<li><strong>Fixed-point math only</strong> (<code>i32</code>/<code>i64</code>, scale 1024) — no floats in sim; identical results on all platforms</li>
+<li><strong>No I/O in sim</strong> — pure state evolution; no file, network, or clock access</li>
+<li><strong>No HashMap/HashSet</strong> — <code>BTreeMap</code>/<code>BTreeSet</code>/<code>IndexMap</code> only; deterministic iteration</li>
+<li><strong>Snapshottable state</strong> — full game state serializable for replays, save/load, crash recovery, delta encoding (D010)</li>
+<li><strong>External Sim API</strong> — <code>ic-sim</code> is a public library crate: <code>new()</code>, <code>step()</code>, <code>inject_orders()</code>, <code>query_state()</code>, <code>snapshot()</code>, <code>restore()</code></li>
+<li><strong>Use cases:</strong> AI bot tournaments, academic research, automated testing, replay analysis tools</li>
+</ul>
+<h3 id="pluggable-architecture-14-trait-seams--d041"><a class="header" href="#pluggable-architecture-14-trait-seams--d041">Pluggable Architecture (14+ Trait Seams — D041)</a></h3>
+<p>Every major subsystem is abstracted behind a trait — swap algorithms without forking:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Trait</th><th>Built-In Implementations</th><th>What You Can Swap</th></tr>
+</thead>
+<tbody>
+<tr><td><code>NetworkModel</code></td><td>Relay lockstep, local, replay playback</td><td>Network transport</td></tr>
+<tr><td><code>Pathfinder</code></td><td>JPS+flowfield, A* grid, navmesh</td><td>Movement algorithm</td></tr>
+<tr><td><code>SpatialIndex</code></td><td>Grid hash, BVH, R-tree</td><td>Range query structure</td></tr>
+<tr><td><code>FogProvider</code></td><td>Radius (RA1), elevation LOS (RA2/TS)</td><td>Visibility model</td></tr>
+<tr><td><code>DamageResolver</code></td><td>Standard (RA1), shield-first (RA2), sub-object (Generals)</td><td>Damage calculation</td></tr>
+<tr><td><code>AiStrategy</code></td><td>Personality-driven, planning, neural net</td><td>AI decision-making</td></tr>
+<tr><td><code>OrderValidator</code></td><td>Standard ownership/affordability</td><td>Rule enforcement</td></tr>
+<tr><td><code>RankingProvider</code></td><td>Glicko-2, Elo, TrueSkill</td><td>Rating algorithm</td></tr>
+<tr><td><code>Renderable</code></td><td>Sprite (2D), voxel, mesh (3D)</td><td>Visual representation</td></tr>
+<tr><td><code>GameModule</code></td><td>RA1, TD, D2K, custom</td><td>Entire game ruleset</td></tr>
+<tr><td><code>InputSource</code></td><td>Mouse/KB, touch, gamepad, AI</td><td>Input device</td></tr>
+<tr><td><code>Transport</code></td><td>TCP, QUIC, WebSocket, WebRTC</td><td>Wire protocol</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="multi-game-engine"><a class="header" href="#multi-game-engine">Multi-Game Engine</a></h3>
+<p>IC is not hardcoded for Red Alert. The <code>GameModule</code> trait defines everything game-specific:</p>
+<ul>
+<li>Components, systems, and scheduling</li>
+<li>Fog model, damage model, pathfinding</li>
+<li>AI defaults, order validation</li>
+<li>Each module (RA1, TD, RA2, D2K, custom) registers its own rules</li>
+<li>Same engine binary runs different games via module selection</li>
+</ul>
+<h3 id="performance"><a class="header" href="#performance">Performance</a></h3>
+<ul>
+<li><strong>Render-sim split</strong> — simulation at 15 Hz, rendering at 60+ FPS with interpolation</li>
+<li><strong>Zero-allocation hot paths</strong> — string interning, object pooling, pre-allocated buffers</li>
+<li><strong>Delta encoding</strong> — property-level change tracking; baselines (Quake 3 pattern) reduce snapshot payloads ~90%</li>
+<li><strong>Amortized staggered updates</strong> — fog, AI, and pathfinding spread across multiple ticks</li>
+<li><strong>Multi-layer pathfinding</strong> — hierarchical sectors + JPS + flowfield + ORCA-lite avoidance</li>
+<li><strong>GPU compatibility tiers</strong> — auto-detection; playable on 12-year-old hardware</li>
+</ul>
+<h3 id="security--anti-cheat"><a class="header" href="#security--anti-cheat">Security &amp; Anti-Cheat</a></h3>
+<ul>
+<li><strong>Relay time authority</strong> — server owns the clock; lag-switch impossible (D007)</li>
+<li><strong>Deterministic order validation</strong> — all clients agree on accept/reject; cheated orders rejected identically (D012)</li>
+<li><strong>Capability-based WASM sandbox</strong> — mods cannot access filesystem, network, or raw memory (D005)</li>
+<li><strong>Signed replay hash chain</strong> — Ed25519 signing; tampering detected (D010)</li>
+<li><strong>Mandatory transport encryption</strong> — AEAD on all network traffic</li>
+<li><strong>Bounded reconciler corrections</strong> — state corrections validated before application</li>
+</ul>
+<h3 id="observability"><a class="header" href="#observability">Observability</a></h3>
+<ul>
+<li><strong>Unified OTEL telemetry</strong> — client, relay, tracking, AI all emit structured events (D031)</li>
+<li><strong>Desync diagnostics</strong> — Merkle tree pinpoints divergence to exact system/entity</li>
+<li><strong>Background replay writer</strong> — crash-safe, zero frame-time impact</li>
+<li><strong>Diagnostic overlay</strong> — FPS, latency, order rate, path cache stats in-game</li>
+</ul>
+<h3 id="community-infrastructure"><a class="header" href="#community-infrastructure">Community Infrastructure</a></h3>
+<ul>
+<li><strong>Self-hostable relay, matchmaking, and workshop servers</strong> (D052)</li>
+<li><strong>Ed25519 signed credential records</strong> — portable reputation across communities</li>
+<li><strong>Transparency logs</strong> — server publishes signed operation log for accountability</li>
+<li><strong>Federated architecture</strong> — communities interoperate with official infrastructure</li>
+<li><strong>Server configuration</strong> via <code>server_config.toml</code> with deployment guide (Chapter 15)</li>
+</ul>
+<hr>
+<h2 id="quick-comparison"><a class="header" href="#quick-comparison">Quick Comparison</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Capability</th><th>OpenRA</th><th>Remastered</th><th><strong>Iron Curtain</strong></th></tr>
+</thead>
+<tbody>
+<tr><td>Open source</td><td>Yes</td><td>No</td><td>Yes</td></tr>
+<tr><td>Branching campaigns</td><td>No</td><td>No</td><td><strong>Yes (D021)</strong></td></tr>
+<tr><td>Balance presets (switchable)</td><td>No (one balance)</td><td>No</td><td><strong>Yes — Classic/OpenRA/Remastered/IC/Custom (D019)</strong></td></tr>
+<tr><td>Relay server (no host advantage)</td><td>No (P2P)</td><td>No (P2P)</td><td><strong>Yes (D007)</strong></td></tr>
+<tr><td>Ranked matchmaking</td><td>Community</td><td>No</td><td><strong>Built-in Glicko-2 (D055)</strong></td></tr>
+<tr><td>Mod workshop with dependencies</td><td>No</td><td>Steam Workshop</td><td><strong>Federated with semver, P2P, offline (D030)</strong></td></tr>
+<tr><td>Scenario editor</td><td>Map editor only</td><td>No</td><td><strong>Full OFP-inspired mission editor (D038)</strong></td></tr>
+<tr><td>Asset studio</td><td>No</td><td>No</td><td><strong>Visual sprite/palette/terrain/audio editor (D040)</strong></td></tr>
+<tr><td>Export to other engines</td><td>N/A</td><td>N/A</td><td><strong>OpenRA + RA1 export with fidelity warnings (D066)</strong></td></tr>
+<tr><td>LLM-generated missions</td><td>No</td><td>No</td><td><strong>BYOLLM — text → playable campaigns (D016)</strong></td></tr>
+<tr><td>Multi-game engine</td><td>RA1/TD/TS/D2K (separate mods)</td><td>RA1 + TD only</td><td><strong>GameModule trait — any RTS (D018)</strong></td></tr>
+<tr><td>Weather system</td><td>No</td><td>No</td><td><strong>Dynamic with gameplay effects (D022)</strong></td></tr>
+<tr><td>Render mode toggle</td><td>No</td><td>Toggle (Classic/HD)</td><td><strong>Classic/HD/3D — mid-game (D048)</strong></td></tr>
+<tr><td>Tutorial system</td><td>Wiki link</td><td>Basic tooltips</td><td><strong>5-layer onboarding (D065)</strong></td></tr>
+<tr><td>Mobile/browser</td><td>No</td><td>No</td><td><strong>Phone, tablet, browser WASM, Steam Deck</strong></td></tr>
+<tr><td>Voice chat</td><td>No</td><td>No</td><td><strong>Built-in WebRTC/Opus (D059)</strong></td></tr>
+<tr><td>Asymmetric co-op</td><td>No</td><td>No</td><td><strong>Commander + Field Ops roles (D070)</strong></td></tr>
+</tbody>
+</table>
+</div>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="OVERVIEW.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="LLM-INDEX.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="OVERVIEW.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="LLM-INDEX.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr-ef4e11c1.min.js"></script>
+        <script src="mark-09e88c2c.min.js"></script>
+        <script src="searcher-c2a407aa.js"></script>
+
+        <script src="clipboard-1626706a.min.js"></script>
+        <script src="highlight-abc7f01d.js"></script>
+        <script src="book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

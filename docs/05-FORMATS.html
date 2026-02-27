@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-f3722748.js";
+            window.path_to_searchindex_js = "searchindex-245f6587.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-56a6701d.js"></script>
+        <script src="toc-0698f107.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -195,6 +195,23 @@
 <tr><td><code>.pal</code></td><td>Color palettes</td><td>Raw 768 bytes (256 × RGB), no header. Components in 6-bit VGA range (0–63), not 8-bit. Convert to 8-bit via left-shift by 2. Multiple palettes per scenario (temperate, snow, interior, etc.)</td></tr>
 <tr><td><code>.aud</code></td><td>Audio</td><td>Westwood IMA ADPCM compressed. 12-byte <code>AUDHeaderType</code>: sample rate (Hz), compressed/uncompressed sizes, flags (stereo/16-bit), compression ID. Codec uses dual 1424-entry lookup tables (<code>IndexTable</code>/<code>DiffTable</code>) for 4-bit-nibble decoding. Read + write: Asset Studio (D040) converts .aud ↔ .wav/.ogg so modders can extract original sounds for remixing and convert custom recordings to classic AUD format</td></tr>
 <tr><td><code>.vqa</code></td><td>Video</td><td>VQ vector quantization cutscenes. Chunk-based IFF structure (WVQA/VQHD/FINF/VQFR/VQFK). Codebook blocks (4×2 or 4×4 pixels), LCW-compressed frames, interleaved audio (PCM/Westwood ADPCM/IMA ADPCM). Read + write: Asset Studio (D040) converts .vqa ↔ .mp4/.webm for campaign creators</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="remastered-collection-formats-petroglyph"><a class="header" href="#remastered-collection-formats-petroglyph">Remastered Collection Formats (Petroglyph)</a></h3>
+<p>HD asset formats from the C&amp;C Remastered Collection (EA, 2020). Format definitions derived from the GPL v3 C++ DLL source and community documentation. See <a href="decisions/09c/D075-remastered-format-compat.html">D075</a> for full import pipeline and legal model.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Format</th><th>Purpose</th><th>Notes</th></tr>
+</thead>
+<tbody>
+<tr><td><code>.meg</code></td><td>Archive container</td><td>Petroglyph archive format (from Empire at War lineage). Header + file table + packed data. Read-only in <code>ra-formats</code>. Community tools: OS Big Editor, OpenSage.</td></tr>
+<tr><td><code>.tga+.meta</code></td><td>HD sprite sheets</td><td>32-bit RGBA TGA “megasheets” — all frames of a unit/building composited into one large atlas. Paired <code>.meta</code> JSON file provides per-frame geometry: <code>{"size":[w,h],"crop":[x,y,w,h]}</code>. Player colors use chroma-key green (HSV hue ~110) instead of palette indices.</td></tr>
+<tr><td><code>.dds</code></td><td>GPU textures</td><td>DirectDraw Surface (BC1/BC3/BC7). Terrain, UI chrome, effects. Convert to KTX2 or PNG at import time.</td></tr>
+<tr><td><code>.bk2</code></td><td>HD video (Bink2)</td><td>Proprietary RAD Game Tools codec. Cutscenes and briefings. Converted to WebM (VP9) at import time — IC does not ship a Bink2 runtime decoder.</td></tr>
+<tr><td><code>.wav</code> (HD)</td><td>Remixed audio</td><td>Standard WAV containers (Microsoft ADPCM). Plays natively in IC’s Kira audio pipeline. No conversion needed.</td></tr>
+<tr><td><code>.pgm</code></td><td>Map package</td><td>MEG file with different extension. Contains map + preview image + metadata. Reuse <code>MegArchive</code> parser.</td></tr>
 </tbody>
 </table>
 </div>

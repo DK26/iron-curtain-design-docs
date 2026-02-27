@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-f3722748.js";
+            window.path_to_searchindex_js = "searchindex-245f6587.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-56a6701d.js"></script>
+        <script src="toc-0698f107.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -181,7 +181,7 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="02--core-architecture"><a class="header" href="#02--core-architecture">02 — Core Architecture</a></h1>
-<p><strong>Keywords:</strong> architecture, crate boundaries, <code>ic-sim</code>, <code>ic-net</code>, <code>ic-protocol</code>, <code>GameLoop&lt;N, I&gt;</code>, <code>NetworkModel</code>, <code>InputSource</code>, deterministic simulation, Bevy, platform-agnostic design, game modules</p>
+<p><strong>Keywords:</strong> architecture, crate boundaries, <code>ic-sim</code>, <code>ic-net</code>, <code>ic-protocol</code>, <code>GameLoop&lt;N, I&gt;</code>, <code>NetworkModel</code>, <code>InputSource</code>, deterministic simulation, Bevy, platform-agnostic design, game modules, async runtime, tokio, bevy_tasks, IoBridge, WASM portability, GUI-first binary design</p>
 <h2 id="decision-bevy"><a class="header" href="#decision-bevy">Decision: Bevy</a></h2>
 <p><strong>Rationale (revised — see D002 in <code>decisions/09a-foundation.md</code>):</strong></p>
 <ul>
@@ -203,7 +203,7 @@
 <tr><td>Rendering</td><td><code>bevy_render</code> + <code>wgpu</code></td><td>Custom isometric sprite passes; 3D pipeline available to modders</td></tr>
 <tr><td>ECS</td><td><code>bevy_ecs</code></td><td>Archetypes, system scheduling, change detection</td></tr>
 <tr><td>Asset I/O</td><td><code>bevy_asset</code></td><td>Hot-reloading, platform-agnostic (WASM/mobile-safe)</td></tr>
-<tr><td>Audio</td><td><code>bevy_audio</code></td><td>Platform-routed; <code>ic-audio</code> wraps for .aud/.ogg/EVA</td></tr>
+<tr><td>Audio</td><td>Kira via <code>bevy_kira_audio</code></td><td>Four-bus mixer (Music/SFX/Voice/Ambient); <code>ic-audio</code> wraps for .aud/.ogg/EVA. See <code>research/audio-library-music-integration-design.md</code></td></tr>
 <tr><td>Dev tools</td><td><code>egui</code> via <code>bevy_egui</code></td><td>Immediate-mode debug overlays</td></tr>
 <tr><td>Scripting</td><td><code>mlua</code> (Bevy resource)</td><td>Lua embedding, integrated as non-send resource</td></tr>
 <tr><td>Mod runtime</td><td><code>wasmtime</code> / <code>wasmer</code></td><td>WASM sandboxed execution (Bevy system, not Bevy plugin)</td></tr>
@@ -563,7 +563,7 @@ pub trait OrderValidator: Send + Sync {
 <tr><td>QoL &amp; Gameplay Behavior Toggles (D033)</td><td><a href="architecture/qol-toggles.html">qol-toggles.md</a></td></tr>
 <tr><td>Red Alert Experience Recreation Strategy</td><td><a href="architecture/ra-experience.html">ra-experience.md</a></td></tr>
 <tr><td>First Runnable — Bevy Loading Red Alert Resources</td><td><a href="architecture/first-runnable.html">first-runnable.md</a></td></tr>
-<tr><td>Crate Dependency Graph</td><td><a href="architecture/crate-graph.html">crate-graph.md</a></td></tr>
+<tr><td>Crate Dependency Graph, Binary Architecture &amp; Async Runtime</td><td><a href="architecture/crate-graph.html">crate-graph.md</a></td></tr>
 <tr><td>Install &amp; Source Layout</td><td><a href="architecture/install-layout.html">install-layout.md</a></td></tr>
 <tr><td>IC SDK &amp; Editor Architecture (D038 + D040)</td><td><a href="architecture/sdk-editor.html">sdk-editor.md</a></td></tr>
 <tr><td>Multi-Game Extensibility (Game Modules)</td><td><a href="architecture/multi-game.html">multi-game.md</a></td></tr>

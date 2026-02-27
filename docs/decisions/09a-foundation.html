@@ -35,10 +35,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-f3722748.js";
+            window.path_to_searchindex_js = "../searchindex-245f6587.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-56a6701d.js"></script>
+        <script src="../toc-0698f107.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -181,7 +181,19 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="decision-log--foundation--core"><a class="header" href="#decision-log--foundation--core">Decision Log — Foundation &amp; Core</a></h1>
-<p>Language, framework, data formats, simulation invariants, and core engine identity.</p>
+<p>Language, framework, data formats, simulation invariants, core engine identity, and crate extraction.</p>
+<hr>
+<h3 id="standalone-decision-files-09a"><a class="header" href="#standalone-decision-files-09a">Standalone Decision Files (09a/)</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Decision</th><th>Title</th><th>File</th></tr>
+</thead>
+<tbody>
+<tr><td>D076</td><td>Standalone MIT/Apache-Licensed Crate Extraction Strategy</td><td><a href="09a/D076-standalone-crates.html">D076</a></td></tr>
+</tbody>
+</table>
+</div>
 <hr>
 <h2 id="d001-language--rust"><a class="header" href="#d001-language--rust">D001: Language — Rust</a></h2>
 <p><strong>Decision:</strong> Build the engine in Rust.</p>
@@ -284,6 +296,9 @@
 <li>Original Red Alert used integer math — proven approach</li>
 <li>OpenRA uses <code>WDist</code>/<code>WPos</code>/<code>WAngle</code> with 1024 subdivisions — same principle</li>
 </ul>
+<blockquote>
+<p><strong>P002 resolved:</strong> Scale factor = <strong>1024</strong> (matching OpenRA). Full type library (<code>Fixed</code>, <code>WorldPos</code>, <code>WAngle</code>), trig tables, CORDIC atan2, Newton sqrt, modifier arithmetic, and determinism guarantees: see <code>research/fixed-point-math-design.md</code>.</p>
+</blockquote>
 <hr>
 <hr>
 <h2 id="d010-simulation--snapshottable-state"><a class="header" href="#d010-simulation--snapshottable-state">D010: Simulation — Snapshottable State</a></h2>

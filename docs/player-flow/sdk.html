@@ -35,10 +35,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-f3722748.js";
+            window.path_to_searchindex_js = "../searchindex-245f6587.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-56a6701d.js"></script>
+        <script src="../toc-0698f107.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -202,6 +202,8 @@
 │                                                          │
 │  ► Preferences                                           │
 │  ► Documentation                                         │
+│                                                          │
+│  New to the SDK?  [Start Guided Tour]                    │
 └──────────────────────────────────────────────────────────┘
 </code></pre>
 <p><strong>SDK Documentation</strong> (<code>D037</code>/<code>D038</code>, authoring manual):</p>
@@ -215,7 +217,7 @@
 <pre><code>SDK → New Scenario / Open File
 </code></pre>
 <pre><code>┌──────────────────────────────────────────────────────────────────────────┐
-│ [Scenario Editor] [Asset Studio] [Campaign Editor]                      │
+│ [Scenario Editor] [Asset Studio] [Campaign Editor]              [? Tour] │
 │ [Preview] [Test ▼] [Validate] [Publish]   Git: main • 4 changed           │
 │                               validation: Stale • Simple Mode             │
 ├──────────┬───────────────────────────────┬───────────────────────────────┤
@@ -236,7 +238,7 @@
 </code></pre>
 <p><strong>Key features:</strong></p>
 <ul>
-<li>8 editing modes: Terrain, Entities, Triggers, Waypoints, Modules, Regions, Scripts, Layers</li>
+<li>12 editing modes: Terrain, Entities, Groups, Triggers, Waypoints, Connections, Modules, Regions, Layers, Portals, Scripts, Campaign</li>
 <li>Simple/Advanced toggle (hides ~15 features without data loss)</li>
 <li>Entity palette: search-as-you-type, 48×48 thumbnails, favorites, recently placed</li>
 <li>Trigger editor: visual condition/action builder with countdown timers</li>
@@ -252,6 +254,10 @@
 <li>Undo/Redo: command pattern, autosave</li>
 <li>Export-safe authoring mode (D066): live fidelity indicators, feature gating for cross-engine compatibility</li>
 <li>Migration Workbench entry point: “Upgrade Project” (preview in 6a, apply+rollback in 6b)</li>
+<li>Interactive guided tours (D038) for each tool — step-by-step walkthroughs with spotlight overlay, action validation, and resumable progress. 10 tours ship with the SDK; modders can add more via Workshop</li>
+<li>Visual waypoint authoring (D038 Waypoints Mode) — click to place named waypoint sequences on the map with route display, waypoint types (Move, Attack, Guard, Patrol, Harvest, Script, Wait), and OFP-style synchronization lines for multi-group coordination</li>
+<li>Named mission outcomes (D038) — wire scenario triggers to campaign branch outcomes (<code>Mission.Complete("outcome_name")</code>)</li>
+<li>Export to OpenRA and original RA formats (D066) — export-safe authoring mode with live fidelity indicators, trigger downcompilation, and extensible export targets</li>
 </ul>
 <p><strong>Example: Publish Readiness (AI Cutscene Variant Pack)</strong></p>
 <p>When a creator publishes a campaign or media pack that includes AI-assisted cutscene remasters, Publish Readiness surfaces provenance/labeling checks alongside normal validation results:</p>

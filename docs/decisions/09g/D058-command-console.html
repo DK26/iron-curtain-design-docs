@@ -35,10 +35,10 @@
             const path_to_root = "../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-f3722748.js";
+            window.path_to_searchindex_js = "../../searchindex-245f6587.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../../toc-56a6701d.js"></script>
+        <script src="../../toc-0698f107.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -1475,6 +1475,8 @@ config.td.toml                # TD-specific overrides (optional)
 <li><strong>NOT available in competitive/ranked play.</strong> Dev commands are gated behind DeveloperMode (V44). The chat system and non-dev commands work in ranked; the Lua console and dev commands do not. Normal console commands (<code>/move</code>, <code>/build</code>, etc.) are treated as GUI-equivalent inputs — they produce the same <code>PlayerOrder</code> and are governed by D033 QoL toggles. See “Competitive Integrity in Multiplayer” above for the full framework: order rate monitoring, input source tracking, ranked restrictions, and tournament mode.</li>
 <li><strong>NOT a server management panel.</strong> Server administration beyond kick/ban/config should use external tools (web panels, RCON protocol). The in-game commands cover in-match operations only.</li>
 </ul>
+<h3 id="gui-first-application-design-cross-reference"><a class="header" href="#gui-first-application-design-cross-reference">GUI-First Application Design (Cross-Reference)</a></h3>
+<p>The in-game command console is part of the game client’s GUI — not a separate terminal. IC’s binary architecture is documented in <code>architecture/crate-graph.md</code> § “Binary Architecture: GUI-First Design.” The key principle: the game client (<code>iron-curtain[.exe]</code>) is a <strong>GUI application</strong> that launches into a windowed menu. The <code>ic</code> CLI is a separate developer/modder utility. Players never need a terminal. The command console (<code>/help</code>, <code>/speed 2x</code>) is an in-game overlay — a text field inside the game window, not a shell prompt. CI-1 (Console = GUI parity) ensures every console command has a GUI equivalent.</p>
 <h3 id="alternatives-considered"><a class="header" href="#alternatives-considered">Alternatives Considered</a></h3>
 <ul>
 <li><strong>Separate console only, no chat integration</strong> (rejected — Source Engine’s model works for FPS games where chat is secondary, but RTS players use chat heavily during matches; forcing tilde-switch for commands is friction. Factorio and Minecraft prove unified is better for games where chat and commands coexist.)</li>

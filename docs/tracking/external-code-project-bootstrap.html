@@ -35,10 +35,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-f3722748.js";
+            window.path_to_searchindex_js = "../searchindex-245f6587.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-56a6701d.js"></script>
+        <script src="../toc-0698f107.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -352,6 +352,13 @@
 <li><code>perf-risk</code></li>
 <li><code>security-policy-gate</code></li>
 </ul>
+<h2 id="ready-to-copy-filled-in-versions"><a class="header" href="#ready-to-copy-filled-in-versions">Ready-to-Copy Filled-In Versions</a></h2>
+<p>For the <strong>IC engine/game repository</strong> (primary Rust codebase), pre-filled versions of both templates are available — all placeholders replaced with IC-specific details:</p>
+<ul>
+<li><strong><code>tracking/ic-engine-agents.md</code></strong> — filled-in <code>AGENTS.md</code> with architectural invariants, crate workspace, build commands, milestone targets, and LLM/agent rules</li>
+<li><strong><code>tracking/ic-engine-code-index.md</code></strong> — filled-in <code>CODE-INDEX.md</code> with task routing table, all 13 crate subsystem entries, cross-cutting boundaries, and evidence paths</li>
+</ul>
+<p>Copy these into a new IC engine repo and update the baseline revision pin. For non-engine repos (relay server, tools, prototypes), use the generic templates and fill in the placeholders.</p>
 <h2 id="acceptance-criteria-bootstrap-complete"><a class="header" href="#acceptance-criteria-bootstrap-complete">Acceptance Criteria (Bootstrap Complete)</a></h2>
 <p>A new external code repo is considered design-aligned only when:</p>
 <ul>

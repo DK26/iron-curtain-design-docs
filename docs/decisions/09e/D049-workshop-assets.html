@@ -35,10 +35,10 @@
             const path_to_root = "../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-f3722748.js";
+            window.path_to_searchindex_js = "../../searchindex-245f6587.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../../toc-56a6701d.js"></script>
+        <script src="../../toc-0698f107.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -468,6 +468,12 @@ radials:
 <p><strong>Storage / distribution note:</strong> Config profiles are typically tiny (&lt;100 KB), so HTTP delivery is sufficient; P2P remains supported by the generic <code>.icpkg</code> pipeline but is not required for good UX.</p>
 <p><strong>D070 asymmetric co-op packaging note:</strong> <code>Commander &amp; Field Ops</code> scenarios/templates (D070) are published as ordinary scenario/template content packages through the same D030/D049 pipeline. They do <strong>not</strong> receive special network/runtime privileges from Workshop packaging; role permissions, support requests, and asymmetric HUD behavior are validated at scenario/runtime layers (D038/D059/D070), not granted by package type.</p>
 <h3 id="p2p-distribution-bittorrentwebtorrent"><a class="header" href="#p2p-distribution-bittorrentwebtorrent">P2P Distribution (BitTorrent/WebTorrent)</a></h3>
+<blockquote>
+<p><strong>Wire protocol specification:</strong> For the byte-level BT wire protocol, piece picker algorithm, choking strategy, authenticated announce, WebRTC signaling, <code>icpkg</code> binary header, and DHT design, see <code>research/p2p-engine-protocol-design.md</code>.</p>
+</blockquote>
+<blockquote>
+<p><strong>P2P piece mapping:</strong> The complete BitTorrent piece mapping for .icpkg packages — piece size, chunking, manifest-only fetch, CAS/BT interaction — is specified in <code>research/p2p-engine-protocol-design.md</code> § 10.</p>
+</blockquote>
 <p><strong>The cost problem:</strong> A popular 500MB mod downloaded 10,000 times generates 5TB of egress. At CDN rates ($0.01–0.09/GB), that’s $50–450/month — per mod. For a community project sustained by donations, centralized hosting is financially unsustainable at scale. A BitTorrent tracker VPS costs $5–20/month regardless of popularity.</p>
 <p><strong>The solution:</strong> Workshop distribution uses the <strong>BitTorrent protocol</strong> for large packages, with HTTP direct download as fallback. The Workshop server acts as both metadata registry (SQLite, lightweight) and BitTorrent tracker (peer coordination, lightweight). Actual content transfer happens peer-to-peer between players who have the package.</p>
 <p><strong>How it works:</strong></p>

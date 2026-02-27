@@ -35,10 +35,10 @@
             const path_to_root = "../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-f3722748.js";
+            window.path_to_searchindex_js = "../../searchindex-245f6587.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../../toc-56a6701d.js"></script>
+        <script src="../../toc-0698f107.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -301,8 +301,85 @@ Between consultations:
     }
 }
 <span class="boring">}</span></code></pre>
+<p><strong><code>StrategicPlan</code> — the LLM’s output structure:</strong></p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// The structured output the LLM returns from each consultation.
+/// Parsed from JSON/YAML, validated, then translated into set_parameter() calls.
+pub struct StrategicPlan {
+    pub priority_targets: Vec&lt;StrategicTarget&gt;,
+    pub build_focus: BuildFocus,
+    pub economic_guidance: EconomicGuidance,
+    pub risk_assessment: RiskAssessment,
+    pub confidence: u16,             // 0-1000 (fixed-point), LLM's self-assessed confidence
+    pub reasoning: String,           // LLM's explanation (for debug overlay / spectator)
+}
+
+pub struct StrategicTarget {
+    pub target_type: TargetType,
+    pub position: Option&lt;WorldPos&gt;,  // approximate target location, if known
+    pub priority: u8,                // 1-10 (10 = highest)
+    pub description: String,         // "Destroy enemy expansion at [80,30]"
+}
+
+pub enum TargetType {
+    Attack,       // assault enemy position
+    Defend,       // fortify own position
+    Scout,        // explore unknown area
+    Expand,       // build new base/expansion
+    Harass,       // hit-and-run on enemy economy
+    Retreat,      // pull back from untenable position
+}
+
+pub enum BuildFocus {
+    AntiArmor,    // prioritize anti-tank units
+    AntiAir,      // prioritize AA capability
+    Naval,        // prioritize naval forces
+    Economy,      // prioritize harvesters, refineries, expansion
+    Tech,         // prioritize tech tree advancement
+    Mixed,        // balanced production
+    Infantry,     // prioritize infantry mass
+    AirPower,     // prioritize aircraft
+}
+
+pub struct EconomicGuidance {
+    pub expand: bool,                // should we build a new expansion?
+    pub harvester_target: u8,        // desired number of active harvesters
+    pub sell_structures: Vec&lt;String&gt;,// structures to sell for emergency funds
+    pub priority_builds: Vec&lt;String&gt;,// structures to build next, in order
+}
+
+pub struct RiskAssessment {
+    pub threat_level: ThreatLevel,
+    pub expected_attack_direction: Option&lt;String&gt;, // "north", "east", etc.
+    pub recommended_defense: Option&lt;String&gt;,       // "build SAM sites", "add pillboxes at choke"
+    pub time_pressure: TimePressure,               // how urgent is action?
+}
+
+pub enum ThreatLevel { Low, Medium, High, Critical }
+pub enum TimePressure { None, Low, Medium, Urgent, Immediate }
+<span class="boring">}</span></code></pre>
+<p><strong>StrategicPlan → <code>set_parameter()</code> mapping:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>StrategicPlan field</th><th>Inner AI parameter</th><th>Example value</th></tr>
+</thead>
+<tbody>
+<tr><td><code>build_focus: AntiAir</code></td><td><code>tech_priority_aa</code></td><td>80</td></tr>
+<tr><td><code>build_focus: Economy</code></td><td><code>expansion_priority</code></td><td>90</td></tr>
+<tr><td><code>risk_assessment.threat_level: Critical</code></td><td><code>aggression</code></td><td>20 (defensive)</td></tr>
+<tr><td><code>risk_assessment.threat_level: Low</code></td><td><code>aggression</code></td><td>75 (aggressive)</td></tr>
+<tr><td><code>economic_guidance.expand: true</code></td><td><code>expansion_priority</code></td><td>85</td></tr>
+<tr><td><code>economic_guidance.harvester_target: 6</code></td><td><code>harvester_count_target</code></td><td>6</td></tr>
+<tr><td><code>priority_targets[0].target_type: Attack</code></td><td><code>attack_target_x</code>, <code>attack_target_y</code></td><td>WorldPos coords</td></tr>
+<tr><td><code>priority_targets[0].target_type: Scout</code></td><td><code>scout_priority</code></td><td>80</td></tr>
+<tr><td><code>time_pressure: Immediate</code></td><td><code>reaction_urgency</code></td><td>100</td></tr>
+</tbody>
+</table>
+</div>
 <p><strong>How StrategicPlan reaches the inner AI:</strong></p>
-<p>The orchestrator translates <code>StrategicPlan</code> fields into <code>set_parameter()</code> calls on the inner AI (D041). For example:</p>
+<p>The orchestrator translates <code>StrategicPlan</code> fields into <code>set_parameter()</code> calls on the inner AI (D041) using the mapping table above. For example:</p>
 <ul>
 <li>“Switch to anti-air production” → <code>set_parameter("tech_priority_aa", 80)</code></li>
 <li>“Be more aggressive” → <code>set_parameter("aggression", 75)</code></li>
@@ -409,6 +486,9 @@ pub struct LlmPlayerAi {
 <li>The <code>AiStrategy</code> trait, <code>AiEventLog</code>, and <code>FogFilteredView</code> infrastructure are all model-agnostic — they serve whatever LLM capability exists at runtime</li>
 </ul>
 <p>The architecture is deliberately designed not to stand in the way of full LLM control becoming practical. Every piece needed for “LLM makes every small decision” already exists in the trait design — the only bottleneck is LLM speed and quality, which are external constraints that improve over time.</p>
+<blockquote>
+<p><strong>Prompt and schema specification:</strong> For the concrete game state → prompt serialization format, orchestrator response schema, coaching prompt template, prompt strategy profile integration (D047), and error recovery prompts, see <code>research/llm-generation-schemas.md</code>.</p>
+</blockquote>
 <h3 id="crate-boundaries"><a class="header" href="#crate-boundaries">Crate Boundaries</a></h3>
 <div class="table-wrapper">
 <table>

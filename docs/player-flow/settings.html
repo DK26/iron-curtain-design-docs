@@ -35,10 +35,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-f3722748.js";
+            window.path_to_searchindex_js = "../searchindex-245f6587.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-56a6701d.js"></script>
+        <script src="../toc-0698f107.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -424,6 +424,95 @@
 <li>Optional packs can be skipped without breaking campaign core (D068 fallback rules)</li>
 <li>The same flow is reachable from no-dead-end guidance panels when missing/corrupt content is detected</li>
 </ul>
+<hr>
+<h3 id="byollm-feature-discovery-prompt-settings--llm-and-contextual"><a class="header" href="#byollm-feature-discovery-prompt-settings--llm-and-contextual">BYOLLM Feature Discovery Prompt (Settings → LLM, and contextual)</a></h3>
+<p>IC does not require an LLM to play, but connecting one unlocks a significant set of optional features. Rather than letting players discover these features piecemeal (or never), a <strong>one-time discovery prompt</strong> appears at a natural moment to show what becomes available.</p>
+<h4 id="trigger-conditions-show-once-dismissible"><a class="header" href="#trigger-conditions-show-once-dismissible">Trigger Conditions (show once, dismissible)</a></h4>
+<p>The prompt appears <strong>once</strong> when any of the following first occurs:</p>
+<ul>
+<li>Player navigates to Settings → LLM for the first time</li>
+<li>Player encounters a no-dead-end guidance panel for an LLM-gated feature (e.g., Generative Campaign, AI Coaching)</li>
+<li>Player completes their first campaign mission or first 3 skirmish games (engaged enough to benefit from extended features)</li>
+</ul>
+<p>The prompt is a single, skippable panel — not a modal gate. Dismissing it records <code>llm_discovery_prompt_shown = true</code> locally (D034) and never re-triggers. The player can always find the same information at Settings → LLM → “What does BYOLLM unlock?”</p>
+<h4 id="panel-design"><a class="header" href="#panel-design">Panel Design</a></h4>
+<pre><code>┌─────────────────────────────────────────────────────────────────┐
+│  EXTEND YOUR GAME WITH AI                            [Dismiss ×]│
+│                                                                 │
+│  Iron Curtain supports Bring-Your-Own-LLM — connect your own   │
+│  AI provider (local or cloud) to unlock optional features:      │
+│                                                                 │
+│  CAMPAIGNS &amp; MISSIONS                                           │
+│  ● Generative Campaigns — AI-authored campaigns from a text     │
+│    description ("Soviet colonel redemption arc on the Eastern   │
+│    Front") with branching paths and persistent characters       │
+│  ● Procedural Missions — one-off AI-generated scenarios with    │
+│    dynamic objectives and terrain                               │
+│                                                                 │
+│  AI OPPONENTS &amp; COACHING                                        │
+│  ● LLM Orchestrator AI — strategic AI advisor that guides       │
+│    conventional AI with human-like strategic reasoning           │
+│  ● Post-Match Coaching — AI analysis of your replays with       │
+│    personalized improvement suggestions                         │
+│  ● Behavioral Profiles — AI-powered analysis of your playstyle  │
+│    with targeted practice recommendations                       │
+│                                                                 │
+│  EXHIBITION &amp; SPECTACLE                                         │
+│  ● BYO-LLM Fight Night — pit your AI config against others     │
+│    in live spectated matches (whose AI is better?)              │
+│  ● Prompt Duel — coach your LLM in real-time strategy battles  │
+│  ● Director Showmatch — audience-driven AI spectacle events    │
+│                                                                 │
+│  CREATOR TOOLS (SDK)                                            │
+│  ● AI-Assisted Scenario Editing — intelligent suggestions for   │
+│    trigger logic, unit placement, and mission flow              │
+│  ● Asset Generation — AI-assisted sprite, portrait, and map     │
+│    element creation with provenance tracking                    │
+│  ● Campaign Briefing Generation — AI-written briefings that     │
+│    match your campaign's tone and characters                    │
+│                                                                 │
+│  ─────────────────────────────────────────────────────────────  │
+│                                                                 │
+│  Works with: Ollama (free, local), OpenAI, Anthropic, or any   │
+│  OpenAI-compatible API. Your keys stay on your machine.         │
+│                                                                 │
+│  [Set Up LLM Provider →]  [Browse Community Configs →]  [Later] │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre>
+<h4 id="design-rules"><a class="header" href="#design-rules">Design Rules</a></h4>
+<ul>
+<li><strong>Never blocks gameplay.</strong> The panel is informational and fully dismissible. No feature outside the LLM tab requires LLM configuration to function.</li>
+<li><strong>No upsell language.</strong> The tone is “here’s what exists” not “you’re missing out.” The panel describes capabilities, not deficiencies.</li>
+<li><strong>BYOLLM principle preserved.</strong> IC never provides, recommends, or prices a specific provider. The panel lists compatibility categories (local, cloud, compatible APIs) without endorsement.</li>
+<li><strong>Community configs reduce friction.</strong> The [Browse Community Configs →] button links to the Workshop LLM Configurations category (D047/D030), where community-tested setups with performance notes and cost estimates are shared.</li>
+<li><strong>One-time only.</strong> The prompt respects the player’s attention. If dismissed, it stays dismissed. Settings → LLM always has the feature list accessible via a “What does BYOLLM unlock?” link for players who want to revisit it.</li>
+<li><strong>Platform-responsive.</strong> On small screens (Phone/Tablet <code>ScreenClass</code>), the panel uses a scrollable list rather than the full grid layout. On TV/Deck, navigation follows the standard D-pad flow.</li>
+</ul>
+<h4 id="contextual-mini-prompts-no-dead-end-integration"><a class="header" href="#contextual-mini-prompts-no-dead-end-integration">Contextual Mini-Prompts (No-Dead-End Integration)</a></h4>
+<p>In addition to the one-time discovery panel, individual LLM-gated features show a concise contextual prompt when accessed without a configured provider. These reuse the existing no-dead-end pattern (UX Principle 3) with a consistent format:</p>
+<pre><code>┌─────────────────────────────────────────────────────────────────┐
+│  This feature uses an AI provider (BYOLLM)                      │
+│                                                                 │
+│  {Feature description, 1-2 sentences}                           │
+│                                                                 │
+│  [Set Up LLM Provider →]  [Browse Community Configs →]          │
+│  [See All BYOLLM Features →]                                    │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre>
+<p>The [See All BYOLLM Features →] link opens the full discovery panel, giving context for players who encounter it feature-by-feature rather than through settings.</p>
+<h4 id="cross-references"><a class="header" href="#cross-references">Cross-References</a></h4>
+<ul>
+<li><strong>D047 (LLM Config Manager):</strong> Target of [Set Up LLM Provider →] — the LLM Manager UI</li>
+<li><strong>D016 (LLM Missions):</strong> Generative campaigns and procedural missions</li>
+<li><strong>D044 (LLM AI):</strong> LLM Orchestrator AI and LLM Player AI</li>
+<li><strong>D042 (Behavioral Profiles):</strong> AI-powered playstyle analysis</li>
+<li><strong>D073 (LLM Exhibition):</strong> BYO-LLM Fight Night, Prompt Duel, Director Showmatch</li>
+<li><strong>D057 (Skill Library):</strong> AI editor assistance</li>
+<li><strong>D040 (Asset Studio):</strong> AI-assisted asset creation</li>
+<li><strong>D030 (Workshop):</strong> Community LLM config sharing</li>
+</ul>
+<h3 id="feature-smart-tips-d065-layer-2"><a class="header" href="#feature-smart-tips-d065-layer-2">Feature Smart Tips (D065 Layer 2)</a></h3>
+<p>First-visit and contextual tips appear on Settings screens via the <code>feature_discovery</code> hint category. Tips cover: what experience profiles do, how performance profiles work, how input profiles map to other RTS games, and how to manage hint category preferences. See D065 § Feature Smart Tips (<code>hints/feature-tips.yaml</code>) for the full hint catalog and trigger definitions.</p>
 
                     </main>
 

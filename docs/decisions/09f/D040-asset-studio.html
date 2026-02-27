@@ -35,10 +35,10 @@
             const path_to_root = "../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-f3722748.js";
+            window.path_to_searchindex_js = "../../searchindex-245f6587.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../../toc-56a6701d.js"></script>
+        <script src="../../toc-0698f107.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -281,6 +281,7 @@
 <tr><td>RA2 / TS</td><td>.mix</td><td>.shp, .vxl (voxels)</td><td>.hva (voxel anim)</td><td>.pal</td><td>.aud</td><td>.bik</td><td>Community-documented (XCC, Ares, Phobos)</td></tr>
 <tr><td>Generals / ZH</td><td>.big</td><td>—</td><td>.w3d (3D meshes)</td><td>—</td><td>—</td><td>.bik</td><td>EA GPL release — fully open</td></tr>
 <tr><td>OpenRA</td><td>.oramap (ZIP)</td><td>.png</td><td>—</td><td>.pal</td><td>.wav/.ogg</td><td>—</td><td>Open source</td></tr>
+<tr><td>Remastered</td><td>.meg</td><td>.tga+.meta (HD megasheets)</td><td>—</td><td>—</td><td>.wav</td><td>.bk2</td><td>EA GPL (C++ DLL) + proprietary HD assets. See <a href="../09c/D075-remastered-format-compat.html">D075</a></td></tr>
 <tr><td>IC native</td><td>—</td><td>.png, sprite sheets</td><td>.glb/.gltf</td><td>.pal, .yaml</td><td>.wav/.ogg/.mp3</td><td>.mp4/.webm</td><td>Our format</td></tr>
 </tbody>
 </table>
@@ -426,9 +427,15 @@ pub struct AiGenerationMeta {
 <tr><td>.wav/.ogg → .aud</td><td>Import</td><td>Convert custom audio recordings to classic Westwood AUD format (IMA ADPCM compressed) for authentic retro sound or OpenRA mod compatibility</td><td>6a</td></tr>
 <tr><td>.wav/.ogg/.mp3 passthrough</td><td>Native</td><td>Modern audio formats play natively — no conversion required. Mod creators can use .wav/.ogg/.mp3 directly for sound effects, music, and EVA lines.</td><td>3</td></tr>
 <tr><td>Theme YAML ↔ visual</td><td>Bidirectional</td><td>Edit themes visually or as YAML — changes sync both ways</td><td>6a</td></tr>
+<tr><td>.meg → extract</td><td>Export</td><td>Extract Remastered Collection MEG archives (sprites, audio, video, UI)</td><td>2</td></tr>
+<tr><td>.tga+.meta → IC sprites</td><td>Import</td><td>Split Remastered HD megasheets into per-frame IC sprite sheets with chroma-key→remap conversion</td><td>2/6a</td></tr>
+<tr><td>.bk2 → .webm</td><td>Import</td><td>Convert Remastered Bink2 cutscenes to WebM (VP9) at import time</td><td>6a</td></tr>
 </tbody>
 </table>
 </div>
+<blockquote>
+<p><strong>Remastered Collection import:</strong> The “Import Remastered Installation” wizard (D075) provides a guided workflow for importing HD assets from a user’s purchased Remastered Collection. See <a href="../09c/D075-remastered-format-compat.html">D075</a> for format details, import pipeline, and legal model.</p>
+</blockquote>
 <p><strong>ra-formats write support:</strong> Currently <code>ra-formats</code> is read-only (parse .mix, .shp, .pal, .vqa, .aud). The Asset Studio requires write support — generating .shp from frames, writing .pal files, encoding .vqa video, encoding .aud audio, optionally packing .mix archives. This is an additive extension to <code>ra-formats</code> (no redesign of existing parsers), but non-trivial engineering: .shp writing requires correct header generation, frame offset tables, and optional LCW/RLE compression; .vqa encoding requires VQ codebook generation and frame differencing; .aud encoding requires IMA ADPCM compression with correct <code>AUDHeaderType</code> generation and <code>IndexTable</code>/<code>DiffTable</code> lookup table application; .mix packing requires building the file index and CRC hash table. All encoders reference the EA GPL source code implementations directly (see <code>05-FORMATS.md</code> § Binary Format Codec Reference). Budget accordingly in Phase 6a.</p>
 <p><strong>Video pipeline:</strong> The game engine natively plays .mp4 and .webm via standard media decoders (platform-provided or bundled). Campaign creators can use modern formats directly — no conversion needed. The .vqa ↔ .mp4/.webm conversion in the Asset Studio is for creators who <em>want</em> the classic C&amp;C aesthetic (palette-quantized, low-res FMV look), who need to extract and remix original EA cutscenes, or who want to produce optional remaster variant packs (D068) from preserved source material. The conversion pipeline lives in <code>ra-formats</code> (VQA codec) + <code>ic-editor</code> (UI, preview, trim/crop tools). Someone recording a briefing with a webcam or screen recorder imports their .mp4, previews it in the Video Playback module’s display modes (fullscreen, radar_comm, picture_in_picture), optionally converts to .vqa for retro feel, and publishes via Workshop (D030). Someone remastering classic RA1 briefings can extract <code>.vqa</code> to <code>.mp4</code>, perform restoration/enhancement (traditional or AI-assisted), validate subtitle/audio sync and display-mode previews in Asset Studio, then publish the result as a clearly labeled optional presentation variant pack instead of replacing the originals.</p>
 <p><strong>Audio pipeline:</strong> The game engine natively plays .wav, .ogg, and .mp3 via standard audio decoders (Bevy audio plugin + platform codecs). Modern formats are the recommended choice for new content — .ogg for music and voice lines (good compression, no licensing issues), .wav for short sound effects (zero decode latency). The .aud ↔ .wav/.ogg conversion in the Asset Studio is for creators who need to extract and remix original EA audio (hundreds of classic sound effects, EVA voice lines, and Hell March variations) or who want to encode custom audio in classic AUD format for OpenRA mod compatibility. The conversion pipeline lives in <code>ra-formats</code> (AUD codec — IMA ADPCM encode/decode using the original Westwood <code>IndexTable</code>/<code>DiffTable</code> from the EA GPL source) + <code>ic-editor</code> (UI, waveform preview, trim/normalize/fade tools). Someone recording custom EVA voice lines imports their .wav files, previews with waveform visualization, normalizes volume, optionally converts to .aud for classic feel or keeps as .ogg for modern mods, and publishes via Workshop (D030). Batch conversion handles entire sound libraries — extract all 200+ RA1 sound effects to .wav in one operation.</p>
