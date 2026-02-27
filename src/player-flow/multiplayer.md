@@ -46,6 +46,10 @@ Main Menu → Multiplayer
 
 Additionally: **QR Code** scanning (mobile/tablet) and **Deep Links** (Discord/Steam invites) resolve to the Join Code path.
 
+### Network Experience Help
+
+For a player-focused explanation of relay/sub-tick timing and practical optimization tips, see [network-experience.md](network-experience.md).
+
 ### Game Browser
 
 ```

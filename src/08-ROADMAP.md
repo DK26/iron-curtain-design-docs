@@ -234,8 +234,8 @@ Units moving, shooting, dying — headless sim + rendered. Record replay file. P
 **Goal:** Deterministic lockstep multiplayer with competitive infrastructure. Not just "multiplayer works" — multiplayer that's worth switching from OpenRA for.
 
 ### Deliverables
-- `LockstepNetwork` implementation (input delay model)
-- `RelayLockstepNetwork` implementation (relay server with time authority)
+- `EmbeddedRelayNetwork` implementation (listen server — host embeds `RelayCore`)
+- `RelayLockstepNetwork` implementation (dedicated relay with time authority)
 - Desync detection and server-side debugging tools (killer feature)
 - Lobby system, game browser, NAT traversal via relay
 - Replay system (already enabled by Phase 2 architecture)

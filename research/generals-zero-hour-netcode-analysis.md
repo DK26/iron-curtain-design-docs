@@ -99,7 +99,6 @@ The "cushion" is measured at the packet router by comparing `executionFrame - cu
 
 **High.** Even with our relay server design, adaptive run-ahead matters because:
 - The relay needs to decide its tick deadline (how long to wait for orders)
-- For P2P `LockstepNetwork`, this is essential
 - Client FPS awareness prevents slow machines from causing stalls
 - The `RunAheadMetrics` command pattern maps cleanly to our `NetworkDiagnostics`
 
@@ -297,7 +296,7 @@ When a player appears disconnected:
 
 ### IC Applicability
 
-**Medium for P2P, lower for relay.** Our relay server already knows who's late (it has direct connections to all players). But for the `LockstepNetwork` (P2P) implementation, blame attribution is useful. And even with relay, the voting/graceful-disconnect protocol is valuable for competitive integrity — it gives remaining players agency rather than just dropping them.
+**Low — relay handles this.** Our relay server already knows who's late (it has direct connections to all players). The voting/graceful-disconnect protocol is still valuable for competitive integrity — it gives remaining players agency rather than just dropping them.
 
 ## Finding 6: Packet Router with Failover (Validates Our Design)
 
@@ -386,9 +385,9 @@ Generals uses memory pools for all network objects (`MEMORY_POOL_GLUE_WITH_USERL
 
 | Finding                              | Value       | Affects                                  | Phase   |
 | ------------------------------------ | ----------- | ---------------------------------------- | ------- |
-| Adaptive run-ahead (latency + FPS)   | High        | `LockstepNetwork`, relay tick deadline   | Phase 5 |
+| Adaptive run-ahead (latency + FPS)   | High        | Relay tick deadline, QoS auto-profile    | Phase 5 |
 | Three-state frame readiness + resend | Medium-High | All UDP `NetworkModel` impls             | Phase 5 |
 | Delta-compressed wire format         | Medium      | `OrderCodec` / `NativeCodec`             | Phase 5 |
 | Debug network simulation tools       | Medium      | All `NetworkModel` impls, dev tooling    | Phase 2 |
-| Disconnect blame attribution         | Medium      | `LockstepNetwork`, competitive integrity | Phase 5 |
+| Disconnect blame attribution         | Low         | Relay-handled, competitive integrity     | Phase 5 |
 | Packet router validates relay design | Validation  | Confirms D007 was the right call         | —       |

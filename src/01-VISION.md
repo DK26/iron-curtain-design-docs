@@ -236,7 +236,7 @@ Our anti-cheat emerges from the architecture — not from kernel drivers or inva
 | **Replay tampering** | Ed25519 hash chain                    | Tampered replay fails signature verification — `06-SECURITY.md` V6     |
 | **WASM mod abuse**   | Capability sandbox                    | `get_visible_units()` only, no `get_all_units()` — `06-SECURITY.md` V5 |
 
-**Philosophy:** No kernel-level anti-cheat (no Vanguard/EAC). We're open-source and cross-platform — intrusive anti-cheat contradicts our values and doesn't work on Linux/WASM. We accept that lockstep has inherent maphack risk in P2P modes. The fog-authoritative server is the real answer for high-stakes play.
+**Philosophy:** No kernel-level anti-cheat (no Vanguard/EAC). We're open-source and cross-platform — intrusive anti-cheat contradicts our values and doesn't work on Linux/WASM. We accept that lockstep has inherent maphack risk (every client runs the full sim). The fog-authoritative server is the real answer for high-stakes play.
 
 ### Performance as Competitive Advantage
 

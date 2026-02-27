@@ -719,7 +719,7 @@ Always available, zero external dependency. Type an IP address and port, connect
 ic play connect 192.168.1.42:7400
 ```
 
-For P2P lockstep (no relay), the host IS the connection target. For relay-hosted games, this is the relay's address. No discovery mechanism needed — you already know where to go.
+If a deferred direct-peer gameplay mode is ever enabled (for example, explicit LAN/experimental variants without relay authority), the host is the connection target. For relay-hosted games (the default), this is the relay address. No discovery mechanism is needed when endpoints are already known.
 
 **Tier 1 — Room Codes (Among Us pattern, decentralized)**
 
@@ -1039,7 +1039,7 @@ All players ready → countdown → game starts
 
 For relay-hosted games (the default), the relay IS the tracker — it already manages all connections in the room. It maintains an in-memory peer table: which players have which resources. When a new player joins and needs resources, the relay tells them which peers can seed. This is trivial — a `HashMap<ResourceId, Vec<PeerId>>` that lives only as long as the room exists.
 
-For P2P games (no relay, LAN): the host's game client runs a minimal tracker. Same data structure, same protocol, just embedded in the game client instead of a separate relay process. The host was already acting as the game's connection coordinator — adding resource tracking is marginal.
+For deferred direct-peer games (if enabled for explicit LAN/experimental use without relay authority): the host's game client runs a minimal tracker. Same data structure, same protocol, just embedded in the game client instead of a separate relay process. The host is already acting as connection coordinator, so adding resource tracking is marginal.
 
 **Security model — preventing malicious content transfer:**
 
@@ -1552,4 +1552,3 @@ All three consumers use Ed25519, the same rotation record format, and the same v
 ---
 
 ---
-

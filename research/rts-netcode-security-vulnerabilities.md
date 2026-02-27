@@ -340,7 +340,7 @@ msg->setExecutionFrame(frame);  // NULL dereference if unknown type
 
 **Source:** Inherent to deterministic lockstep
 
-**Problem:** All clients have complete game state in memory. Fog of war is a rendering filter only. Any memory reading tool can expose the full map. This affects every lockstep RTS: StarCraft, Age of Empires, OpenRA, and would affect Iron Curtain in its default `LockstepNetwork` / `RelayLockstepNetwork` modes.
+**Problem:** All clients have complete game state in memory. Fog of war is a rendering filter only. Any memory reading tool can expose the full map. This affects every lockstep RTS: StarCraft, Age of Empires, OpenRA, and would affect Iron Curtain in its `RelayLockstepNetwork` / `EmbeddedRelayNetwork` modes.
 
 **Iron Curtain mitigation:** 
 - Default: Memory obfuscation (raises the bar for casual cheats)
@@ -550,7 +550,7 @@ Introduces **"state saturation"** — a lag-based attack where animation canceli
 | Sub-tick fairness prevents timing exploits      | CS2 sub-tick timestamps (D008)             | Already designed                                                                             |
 | Chain-reactive mod effects overwhelming clients | WASM sandbox resource limits               | Addressed: `WasmExecutionLimits` with per-tick instruction budget, entity spawn caps         |
 | Dead by Daylight latency exploitation           | Relay-owned clock + behavioral analysis    | Already mitigated                                                                            |
-| Lockstep resists volumetric DoS                 | `LockstepNetwork` / `RelayLockstepNetwork` | Security advantage: attacker's lag hurts themselves too                                      |
+| Lockstep resists volumetric DoS                 | `RelayLockstepNetwork` / `EmbeddedRelayNetwork` | Security advantage: attacker's lag hurts themselves too                                   |
 | DOOM floating-point drift across hardware       | Fixed-point math, no floats in sim (D009)  | Validates our determinism approach — DOOM's P2P had this exact bug                           |
 | StarCraft II intermediary store-and-forward     | Relay server architecture (D007)           | SC2 evolved from pure P2P to intermediary server — same as our relay                         |
 | Fortnite player-perspective object scoping      | `FogAuthoritativeNetwork` (future)         | Validates our fog-authoritative design — same concept                                        |

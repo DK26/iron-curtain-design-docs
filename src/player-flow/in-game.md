@@ -330,3 +330,13 @@ Client-side auto-generated alerts (D059), toggled via D033:
 - **Superweapon Warning** — Enemy superweapon nearing completion
 
 These appear as brief pings on the minimap with EVA voice cues. Fog-of-war filtered (no intel the player shouldn't have).
+
+### Network Timing Feedback (Player-Facing)
+
+When an order misses the relay deadline, the UI shows a compact informational toast near the command feedback area:
+
+- `Late order (+N ms)` for local missed-deadline orders
+- Aggregated/rate-limited (max once every ~3 seconds) to avoid spam
+- Informational only — no gameplay or fairness-rule changes
+
+This helps players understand outcome timing in contested moments without exposing low-level netcode controls.

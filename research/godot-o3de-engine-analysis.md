@@ -367,7 +367,7 @@ O3DE has a sophisticated multi-layer networking stack:
 
 1. **Godot's `MultiplayerAPI` trait pattern directly validates IC's `NetworkModel` trait (D006).** The design is nearly identical:
    - Godot: `MultiplayerAPI` → `SceneMultiplayer` (default) or custom impl
-   - IC: `NetworkModel` → `LockstepNetwork` (default), `RollbackNetwork` (future), or custom
+   - IC: `NetworkModel` → `RelayLockstepNetwork` (default), `RollbackNetwork` (future), or custom
 
 2. **O3DE's transport/game-networking split maps exactly to IC's `ic-net` / `ic-protocol` boundary.** `AzNetworking` ≈ transport layer in `ic-net`. `Multiplayer Gem` ≈ game-level protocol in `ic-protocol`. IC's design already separates these cleanly.
 

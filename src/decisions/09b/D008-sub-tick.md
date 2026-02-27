@@ -1,6 +1,6 @@
 ## D008: Sub-Tick Timestamps on Orders
 
-**Revision note (2026-02-22):** Revised to clarify trust semantics. Client-submitted sub-tick timestamps are treated as timing hints. In relay modes, the relay normalizes/clamps them into canonical sub-tick timestamps before broadcast using relay-owned timing calibration and skew bounds. In P2P mode, peers deterministically order by `(sub_tick_time, player_id)` with known fairness limitations.
+**Revision note (2026-02-22, updated 2026-02-27):** Revised to clarify trust semantics. Client-submitted sub-tick timestamps are treated as timing hints. The relay (dedicated or embedded) normalizes/clamps them into canonical sub-tick timestamps before broadcast using relay-owned timing calibration and skew bounds.
 
 **Decision:** Every order carries a sub-tick timestamp hint. Orders within a tick are processed in chronological order using a canonical timestamp ordering rule for the active `NetworkModel`.
 

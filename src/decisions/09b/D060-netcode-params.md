@@ -86,6 +86,7 @@ These are diagnostic and testing tools, not gameplay knobs. The `DEV_ONLY` flag 
 | **Sub-tick ordering**  | Always on                             | Zero cost (~4 bytes/order + one sort of ≤5 items); produces visibly fairer outcomes in simultaneous-action edge cases; CS2 proved universal acceptance; no reason to toggle                                                                                                                                                                                                                                                                                                                                                                                                          |
 | **Adaptive run-ahead** | Always on                             | Generals proved this works over 20 years; adapts to both RTT and FPS; synchronized via network command                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | **Timing feedback**    | Always on                             | Client self-calibrates order submission timing based on relay feedback; DDNet-proven pattern                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| **Match QoS auto-profile** | Always on | Relay calibrates deadline/run-ahead at match start and adapts within bounded profiles. Gives better feel under real-world lag while preserving match-wide fairness semantics |
 | **Stall policy**       | Never stall (relay drops late orders) | Core architectural decision; stalling punishes honest players for one player's bad connection                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | **Anti-lag-switch**    | Always on                             | Relay owns the clock; non-negotiable for competitive integrity                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | **Visual prediction**  | Always on                             | Factorio lesson — removed the toggle in 0.14.0 because always-on was always better; cosmetic only (sim unchanged)                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
@@ -98,6 +99,52 @@ Sub-tick order fairness (D008) is **always-on** — not a configurable feature:
 - **Benefit:** Fairer resolution of simultaneous events (engineer races, crate grabs, simultaneous attacks). "I clicked first, I won" matches player intuition.
 - **Player experience:** The mechanism is automatic (players don't configure timestamps), but the outcome is **very visible** — who wins the engineer race, who grabs the contested crate, whose attack order resolves first. These moments define close games. Without sub-tick, ties are broken by player ID (always unfair to higher-numbered players) or packet arrival order (network-dependent randomness). With sub-tick, the player who acted first wins. That's a gameplay experience players notice and care about.
 - **If made optional:** Would require two code paths in the sim (sorted vs. unsorted order processing), a deterministic fallback that's always unfair to higher-numbered players (player ID tiebreak), and a lobby setting nobody understands. Ranked would mandate one mode anyway. CS2 faced zero community backlash — no one asked for "the old random tie-breaking."
+
+### Match QoS Auto-Profile (Fairness + Feel)
+
+To avoid the "first 1-2 seconds feel wrong" problem and to improve playability under moderate lag, relay matches use an always-on **Match QoS auto-profile**:
+
+1. **Pre-match calibration during loading:** collect short RTT/jitter samples for each player.
+2. **Profile-bounded initialization:** derive one shared `tick_deadline` and one shared `run_ahead` for the match from the measured envelope, then clamp to policy bounds.
+3. **Bounded in-match adaptation:** increase quickly on sustained late arrivals, decrease slowly after sustained stability (hysteresis).
+4. **Per-player assist only for submission timing:** clients may use per-player send offsets, but fairness semantics stay match-global.
+
+The key guardrail is deliberate:
+- **Never per-player fairness rules.** Intra-tick ordering remains one canonical relay rule for all players.
+- **Only per-player delivery assist.** Individual timing offsets influence when a client sends, not how the relay ranks contested actions.
+
+Recommended policy envelopes:
+
+| Queue Type | `tick_deadline_ms` envelope | Shared run-ahead envelope | Goal |
+| ---------- | ---------------------------- | ------------------------- | ---- |
+| **Ranked / Competitive** | 90-140 | 3-5 ticks | Tight fairness and responsiveness; strict anti-abuse posture |
+| **Casual / Community**   | 120-220 | 4-7 ticks | Better tolerance for mixed/WiFi links; fewer late-drop frustrations |
+
+These are policy bounds, not player settings. The relay auto-selects/adjusts inside them.
+
+At 30 tps (`tick_interval_ms ≈ 33.33`), these run-ahead envelopes are derived from `ceil(tick_deadline_ms / tick_interval_ms)` so delay and scheduling budgets stay internally consistent.
+
+Default QoS adaptation constants (per queue profile):
+
+| Constant | Ranked / Competitive | Casual / Community |
+| -------- | -------------------- | ------------------ |
+| Initialization one-way clip (`one_way_clip_us`) | 25 ms | 80 ms |
+| Initialization jitter clip (`jitter_clip_us`) | 12 ms | 40 ms |
+| Safety margin (`safety_margin_us`) | 8 ms | 15 ms |
+| EWMA alpha (`ewma_alpha_q15`) | 0.20 | 0.25 |
+| Raise threshold (`raise_late_rate_bps`) | 2.0% | 3.5% |
+| Raise windows (`raise_windows`) | 3 | 2 |
+| Lower threshold (`lower_late_rate_bps`) | 0.2% | 0.5% |
+| Lower windows (`lower_windows`) | 8 | 6 |
+| Cooldown windows (`cooldown_windows`) | 2 | 1 |
+| Per-player influence cap (`per_player_influence_cap_bps`) | 40% | 60% |
+
+Operational guardrails:
+
+- **Outlier-resistant initialization:** Use clipped percentile aggregation at match start, not raw worst-player values.
+- **Abuse resistance:** A player with repeated late bursts that do not correlate with RTT/jitter/loss cannot unilaterally push global delay up.
+- **Auditability:** Every QoS adjustment is recorded to replay metadata and relay telemetry.
+- **Player feedback:** Missed-deadline outcomes should be surfaced with concise in-game indicators to reduce perceived unfairness.
 
 ### Rationale
 

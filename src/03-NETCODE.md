@@ -2,7 +2,9 @@
 
 ## Our Netcode
 
-Iron Curtain ships **one default gameplay netcode** today: relay-assisted deterministic lockstep with sub-tick order fairness. This is the recommended production path, not a buffet of equal options in the normal player UX. The `NetworkModel` trait still exists for more than testing: it lets us run single-player and replay modes cleanly, support multiple deployments (dedicated relay / embedded relay / P2P LAN), and preserve the ability to introduce deferred compatibility bridges or replace the default netcode under explicitly deferred milestones (for example `M7+` interop experiments or `M11` optional architecture work) if evidence warrants it (e.g., cross-engine interop experiments, architectural flaws discovered in production). Those paths require explicit decision/tracker placement and are not part of `M4` exit criteria.
+Iron Curtain ships **one default gameplay netcode** today: relay-assisted deterministic lockstep with sub-tick order fairness. This is the recommended production path, not a buffet of equal options in the normal player UX. The `NetworkModel` trait still exists for more than testing: it lets us run single-player and replay modes cleanly, support multiple deployments (dedicated relay / embedded relay), and preserve the ability to introduce deferred compatibility bridges or replace the default netcode under explicitly deferred milestones (for example `M7+` interop experiments or `M11` optional architecture work) if evidence warrants it (e.g., cross-engine interop experiments, architectural flaws discovered in production). Those paths require explicit decision/tracker placement and are not part of `M4` exit criteria.
+
+Scope note: in this chapter, "P2P" refers only to direct gameplay transport (a deferred/optional mode), not Workshop/content distribution. Workshop P2P remains in scope via D049/D074.
 
 **Keywords:** netcode, relay lockstep, `NetworkModel`, sub-tick timestamps, reconnection, desync debugging, replay determinism, compatibility bridge, ranked authority, relay server
 
@@ -54,8 +56,9 @@ impl TickOrders {
     /// CS2-style: process in chronological order within the tick.
     /// Uses a caller-provided scratch buffer to avoid per-tick heap allocation.
     /// The buffer is cleared and reused each tick (see TickScratch pattern in 10-PERFORMANCE.md).
-    /// Tie-break by player ID so equal timestamps remain deterministic in P2P/LAN modes
-    /// (relay modes may already emit canonical normalized timestamps, but the helper stays safe).
+    /// Tie-break by player ID so equal timestamps remain deterministic if a
+    /// deferred non-relay mode is ever enabled. Relay modes already emit
+    /// canonical normalized timestamps, but the helper remains safe.
     pub fn chronological<'a>(&'a self, scratch: &'a mut Vec<&'a TimestampedOrder>) -> &'a [&'a TimestampedOrder] {
         scratch.clear();
         scratch.extend(self.orders.iter());
@@ -96,7 +99,7 @@ This design was validated by C&C Generals/Zero Hour's "packet router" — a clie
 
 Further validated by Embark Studios' **Quilkin** (1,510★, Apache 2.0, co-developed with Google Cloud Gaming) — a production UDP proxy for game servers built in Rust. Quilkin implements the relay as a **composable filter chain**: each packet passes through an ordered pipeline of filters (Capture → Firewall → RateLimit → TokenRouter → Timestamp → Debug), and filters can be added, removed, or reordered without touching routing logic. IC's relay should adopt this composable architecture: order validation → sub-tick timestamps → replay recording → anti-cheat → forwarding, each implemented as an independent filter. See `research/embark-studios-rust-gamedev-analysis.md` § Quilkin.
 
-For small games (2-3 players) on LAN or with direct connectivity, the same netcode runs without a relay via P2P lockstep (see "The NetworkModel Trait" section below for deployment modes).
+For small games on LAN, the host's game client embeds `RelayCore` as a listen server (see "The NetworkModel Trait" section below for deployment modes).
 
 ### RelayCore: Library, Not Just a Binary
 
@@ -140,11 +143,12 @@ impl RelayCore {
 
 This creates three relay deployment modes:
 
-| Mode                 | Who Runs RelayCore                             | Who Plays                    | Relay Quality                                | Use Case                              |
-| -------------------- | ---------------------------------------------- | ---------------------------- | -------------------------------------------- | ------------------------------------- |
-| **Dedicated server** | Standalone binary (`relay-server`)             | All clients connect remotely | Full sub-tick, multi-game, neutral authority | Server rooms, Pi, competitive, ranked |
-| **Listen server**    | Game client embeds it (`EmbeddedRelayNetwork`) | Host plays + others connect  | Full sub-tick, single game, host plays       | Casual, community, "Host Game" button |
-| **P2P direct**       | Nobody — no relay                              | All clients peer directly    | No time authority, client-side sorting       | LAN, ≤3 players                       |
+| Mode                 | Who Runs RelayCore                             | Who Plays                    | Relay Quality                                | QoS Calibration                                    | Use Case                              |
+| -------------------- | ---------------------------------------------- | ---------------------------- | -------------------------------------------- | -------------------------------------------------- | ------------------------------------- |
+| **Dedicated server** | Standalone binary (`relay-server`)             | All clients connect remotely | Full sub-tick, multi-game, neutral authority | Full (relay-driven calibration + bounded auto-tune) | Server rooms, Pi, competitive, ranked |
+| **Listen server**    | Game client embeds it (`EmbeddedRelayNetwork`) | Host plays + others connect  | Full sub-tick, single game, host plays       | Full (same `RelayCore` calibration pipeline)        | Casual, community, LAN, "Host Game" button |
+
+**What "relay-only" means for players.** Every multiplayer game runs through a relay — but the relay can be the host's own machine. A player clicking "Host Game" runs `RelayCore` locally; friends connect via join code, direct IP, or game browser. No external server, no account, no infrastructure. This is the same player experience as direct P2P ("I host, you join, we play") with the addition of neutral timing, anti-cheat, and signed replays that raw P2P cannot provide. The only scenario requiring external infrastructure is ranked/competitive play, where the matchmaking system routes through a dedicated relay on trusted infrastructure so neither player is the host.
 
 **Listen server vs. Generals' star topology.** C&C Generals used a star topology where the host player collected and rebroadcast orders — but the host had **host advantage**: zero self-latency, ability to peek at orders before broadcasting. With IC's embedded `RelayCore`, the host's own orders go through the same `RelayCore` pipeline as everyone else's. Clients submit sub-tick timestamp *hints* from local clocks; the relay converts them into relay-canonical timestamps using the same normalization logic for every player. The host doesn't get a privileged code path.
 
@@ -269,8 +273,6 @@ The relay maintains a per-player timing calibration (offset/skew estimate + jitt
 
 Orders with repeated timestamp claims outside the allowed skew budget are treated as suspicious (telemetry + anti-abuse scoring; optional strike escalation in ranked relay deployments). This preserves the fairness benefit of sub-tick ordering while preventing "I clicked first" spoofing by client clock manipulation.
 
-In **P2P lockstep**, there is no neutral time authority, so this normalization is not possible. P2P keeps the deterministic `(sub_tick_time, player_id)` ordering rule and explicitly accepts reduced fairness (acceptable for LAN/small-group play).
-
 ### Adaptive Run-Ahead (from C&C Generals)
 
 Every lockstep RTS has inherent input delay — the game schedules your order a few ticks into the future so remote players' orders have time to arrive:
@@ -287,7 +289,7 @@ We adopt this pattern:
 
 ```rust
 /// Sent periodically by each client to report its performance characteristics.
-/// The relay server (or P2P host) uses this to adjust the tick deadline.
+/// The relay authority (embedded or dedicated) uses this to adjust the tick deadline.
 pub struct ClientMetrics {
     pub avg_latency_us: u32,      // Rolling average RTT to relay/host (microseconds)
     pub avg_fps: u16,             // Client's current rendering frame rate
@@ -298,7 +300,7 @@ pub struct ClientMetrics {
 
 Why FPS matters: a player running at 15 FPS needs roughly 67ms to process and display each frame. If run-ahead is only 2 ticks (66ms at 30 tps), they have zero margin — any network jitter causes a stall. By incorporating FPS into the adaptive algorithm, we prevent slow machines from dragging down the experience for everyone.
 
-For the relay deployment, `ClientMetrics` informs the relay's tick deadline calculation. For P2P lockstep, all clients agree on a shared run-ahead value (just like Generals' synchronized `RUNAHEAD` command).
+`ClientMetrics` informs the relay's tick deadline calculation. The embedded relay and dedicated relay both use the same adaptive algorithm.
 
 #### Input Timing Feedback (from DDNet)
 
@@ -315,6 +317,116 @@ pub struct TimingFeedback {
 ```
 
 The client uses this feedback to adjust when it submits orders — if orders are consistently arriving just barely before the deadline, the client shifts submission earlier. If orders are arriving far too early (wasting buffer), the client can relax. This is a feedback loop that converges toward optimal submission timing without the relay needing to adjust global tick deadlines, reducing the number of late drops for marginal connections.
+
+#### Match-Start Calibration
+
+The adaptive run-ahead and sub-tick normalization algorithms converge during play — but convergence takes time. Without calibration, the first few seconds of a match use generic defaults (e.g., 3-tick run-ahead for everyone, zero clock offset estimate), which may under- or over-buffer for the actual latency profile of the players in this match. This creates a brief window where orders are more likely to arrive late (stall-risk) or where sub-tick normalization is less accurate (fairness-risk).
+
+To eliminate this convergence period, the relay runs a **calibration handshake** during the loading screen — a phase all players already wait through (map loading, asset sync, per-player progress bars):
+
+```rust
+/// Calibration results computed during loading screen.
+/// Used to seed adaptive algorithms with match-specific values
+/// instead of generic defaults.
+pub struct MatchCalibration {
+    pub per_player: Vec<PlayerCalibration>,
+    pub shared_initial_run_ahead: u8, // one value for the whole match
+    pub initial_tick_deadline_us: u32, // derived from match-wide latency envelope
+    pub qos_profile: MatchQosProfile,  // selected by queue type (ranked/casual)
+}
+
+pub struct PlayerCalibration {
+    pub player: PlayerId,
+    pub median_rtt_us: u32,         // median of N RTT samples
+    pub jitter_us: u32,             // RTT variance (P95 - P5)
+    pub estimated_one_way_us: u32,  // median_rtt / 2 (initial estimate)
+    pub submit_offset_us: i32,      // client-side send offset (timing assist only)
+}
+
+pub struct MatchQosProfile {
+    pub deadline_min_us: u32,      // floor for fairness/anti-abuse
+    pub deadline_max_us: u32,      // ceiling for responsiveness
+    pub run_ahead_min_ticks: u8,   // lower bound for shared run-ahead
+    pub run_ahead_max_ticks: u8,   // upper bound for shared run-ahead
+    pub max_step_per_update: u8,   // usually 1 tick per adjustment window
+    pub hysteresis_windows: u8,    // consecutive windows before lowering delay
+    pub one_way_clip_us: u32,      // outlier clip above median one-way during init
+    pub jitter_clip_us: u32,       // outlier clip above median jitter during init
+    pub safety_margin_us: u32,     // fixed buffer added to initial deadline
+    pub ewma_alpha_q15: u16,       // EWMA smoothing (0..32767 => 0.0..1.0)
+    pub raise_late_rate_bps: u16,  // raise threshold in basis points (100 = 1.0%)
+    pub lower_late_rate_bps: u16,  // lower threshold in basis points
+    pub raise_windows: u8,         // consecutive windows above raise threshold
+    pub lower_windows: u8,         // consecutive windows below lower threshold
+    pub cooldown_windows: u8,      // minimum windows between adjustments
+    pub per_player_influence_cap_bps: u16, // cap one player's influence on global raise
+}
+```
+
+**Calibration sequence** (runs in parallel with map loading — adds zero wait time):
+
+1. **During loading screen:** The relay exchanges 15–20 ping packets with each client over ~2 seconds (spread across the loading phase). These are lightweight `CalibrationPing`/`CalibrationPong` packets — no game data, just timing.
+2. **Relay computes per-player calibration:** Median RTT, jitter estimate, initial one-way delay estimate (RTT/2), and each player's `submit_offset_us`.
+3. **Relay computes robust match envelope:** Use per-player `one_way_p95` and `jitter_p95`, then clip outliers before deriving the candidate deadline:
+
+   `clipped_one_way_i = min(one_way_p95_i, median_one_way_p95 + one_way_clip_us)`
+
+   `clipped_jitter_i = min(jitter_p95_i, median_jitter_p95 + jitter_clip_us)`
+
+   `candidate_deadline_us = p90(clipped_one_way_i) + (2 * p90(clipped_jitter_i)) + safety_margin_us`
+
+   This avoids one unstable player forcing a large global delay jump at match start.
+
+4. **Relay clamps to profile bounds:** Clamp `candidate_deadline_us` to `qos_profile.deadline_min_us..=deadline_max_us`.
+5. **Relay derives one shared run-ahead:** `shared_initial_run_ahead = ceil(initial_tick_deadline_us / tick_interval_us)`, clamped to `run_ahead_min_ticks..=run_ahead_max_ticks`.
+6. **Relay seeds timestamp normalization + broadcasts calibration:** Per-player `ClockCalibration` starts with measured offsets, and all clients receive the same `shared_initial_run_ahead`.
+
+**After the first tick:** The normal adaptive algorithms (rolling latency history, `ClientMetrics`, `TimingFeedback`) take over and continue refining. The calibration is just the seed — it ensures the adaptive system starts near the correct operating point instead of hunting for it during early gameplay.
+
+**Why this matters for fairness:** Without calibration, the relay's sub-tick normalization offset for each player starts at zero. For the first ~1–2 seconds (until enough RTT samples accumulate), a 150ms-ping player's timestamps are not properly normalized — they're treated as if they had zero latency, systematically losing ties to low-ping players. With calibration, normalization is accurate from tick one.
+
+#### In-Match QoS Auto-Tuning (Bounded)
+
+Calibration seeds the system; bounded adaptation keeps it stable:
+
+- **Update window:** Every `timing_feedback_interval` ticks (default 30).
+- **EWMA smoothing:** Use `ewma_alpha_q15` (default 0.20 ranked, 0.25 casual) to smooth late-rate noise.
+- **Increase quickly:** If EWMA late-rate exceeds `raise_late_rate_bps` for `raise_windows` consecutive windows (default ranked: 2.0% for 3 windows), increase shared run-ahead by at most `max_step_per_update` (default 1 tick) and increase deadline by at most 10ms per update.
+- **Decrease slowly:** Only decrease when EWMA late-rate stays below `lower_late_rate_bps` and arrival cushion remains healthy for `lower_windows` consecutive windows (default ranked: 0.2% for 8 windows).
+- **Cooldown:** Enforce `cooldown_windows` between adjustments (default ranked: 2 windows).
+- **Global fairness rule:** `shared_run_ahead` and `tick_deadline` are match-global values, never per-player. Per-player logic only adjusts `submit_offset_us` (when to send), not order priority semantics.
+- **Bounded by profile:** No adaptation can exceed `MatchQosProfile` min/max limits.
+- **Anti-abuse guardrails:** Per-player influence on raise decisions is capped by `per_player_influence_cap_bps` (default ranked: 40%). Players with repeated "late without matching RTT/jitter/loss evidence" patterns are flagged and excluded from adaptation math for a cooling period, while anti-lag-switch strikes continue.
+
+This achieves the intended tradeoff: resilient feel up to a defined lag envelope while preserving deterministic fairness and anti-lag-switch guarantees.
+
+#### QoS Audit Trail (Replay + Telemetry)
+
+Every QoS adjustment is recorded as a deterministic control event so fairness disputes can be audited post-match:
+
+```rust
+pub struct QosAdjustmentEvent {
+    pub tick: u64,
+    pub old_deadline_us: u32,
+    pub new_deadline_us: u32,
+    pub old_run_ahead: u8,
+    pub new_run_ahead: u8,
+    pub late_rate_bps_ewma: u16,
+    pub reason: QosAdjustReason, // RaiseLateRate | LowerStableWindow | AdminOverride
+}
+```
+
+Events are emitted to replay metadata and relay telemetry (`relay.qos.adjust`) with the same values.
+
+#### Player-Facing Timing Feedback
+
+Fairness is objective, but frustration is subjective. The client should surface concise timing outcomes:
+
+- When a local order misses deadline: show a small non-intrusive indicator, e.g., `Late order (+34ms)`.
+- Rate-limit to avoid spam (for example, max once every 3 seconds with aggregation).
+- Keep this informational only; it does not alter sim outcomes.
+
+This directly addresses "I clicked first" confusion without introducing per-player fairness exceptions.
 
 ### Anti-Lag-Switch
 
@@ -469,7 +581,7 @@ Unlike TCP's Nagle algorithm (which flushes on receiving an ACK — coupling sen
 
 ### Wire Format: Delta-Compressed TLV (from C&C Generals)
 
-> **Byte-level wire protocol specification:** The complete relay wire protocol — order serialization byte layout, relay frame format, sub-tick normalization algorithm, adaptive run-ahead formula, desync recovery protocol, transport encryption frame, connection handshake, and relay state machine — is specified in `research/relay-wire-protocol-design.md`.
+> **Wire protocol status:** `research/relay-wire-protocol-design.md` is the detailed protocol design draft. Normative policy bounds/defaults live in this chapter and `decisions/09b/D060-netcode-params.md`. If there is any mismatch, the decision docs are authoritative until the protocol draft is refreshed.
 
 Inspired by C&C Generals' `NetPacket` format (see `research/generals-zero-hour-netcode-analysis.md`), the native wire format uses delta-compressed tag-length-value (TLV) encoding:
 
@@ -556,7 +668,7 @@ Every tick, each client hashes their sim state. But a full `state_hash()` over t
 - **Primary: RNG state comparison.** Every sync frame, clients exchange their deterministic RNG seed. If the RNG diverges, the sim has diverged — this catches ~99% of desyncs at near-zero cost. The RNG is advanced by every stochastic sim operation (combat rolls, scatter patterns, AI decisions), so any state divergence quickly contaminates it.
 - **Fallback: Full state hash.** Periodically (every N ticks, configurable — default 120, ~4 seconds at 30 tps) or when RNG drift is detected, compute and compare a full `state_hash()`. This catches the rare case where a desync affects only deterministic state that doesn't touch the RNG.
 
-The relay server (or P2P peers) compares hashes. On mismatch → desync detected at a specific tick. Because the sim is snapshottable (D010), dump full state and diff to pinpoint exact divergence — entity by entity, component by component.
+The relay authority compares hashes. On mismatch → desync detected at a specific tick. Because the sim is snapshottable (D010), dump full state and diff to pinpoint exact divergence — entity by entity, component by component.
 
 #### Merkle Tree State Hashing (Phase 2+)
 
@@ -650,7 +762,7 @@ pub struct DesyncDebugReport {
 }
 ```
 
-In P2P mode, the host collects reports from all peers. For offline diagnosis, the report is written to `desync_report_{game_seed}_{tick}.json` alongside the snapshot files.
+For offline diagnosis, the report is written to `desync_report_{game_seed}_{tick}.json` alongside the snapshot files.
 
 #### Serialization Test Mode (Determinism Verification)
 
@@ -715,20 +827,14 @@ Graceful disconnection is a first-class protocol concern, not an afterthought. I
 
 **With relay:** The relay server detects disconnection via heartbeat timeout and notifies all clients of the specific tick on which the player is removed. All clients process the removal on the same tick — deterministic.
 
-**P2P (without relay):** When a player appears unresponsive:
-1. **Ping verification** — all players ping the suspect to confirm unreachability (prevents false blame from asymmetric routing)
-2. **Blame attribution** — ping results determine who is actually disconnected vs. who is just slow
-3. **Coordinated removal** — remaining players agree on a specific tick number to remove the disconnected player, ensuring all sims stay synchronized
-4. **Historical frame buffer** — recent frame data is preserved so if the disconnecting player was also the packet router (P2P star topology), other players can recover missed frames
-
 For competitive/ranked games, disconnect blame feeds into the match result: the blamed player takes the loss; remaining players can optionally continue or end the match without penalty.
 
 ### Reconnection
 
 A disconnected player can rejoin a game in progress. This uses the same snapshottable sim (D010) that enables save games and replays:
 
-1. **Reconnecting client contacts the relay** (or host in P2P). The relay verifies identity via the session key established at game start.
-2. **Relay/host coordinates state transfer.** In P2P, the host is the snapshot source. In relay mode, the relay does **not** run the sim, so it selects a **snapshot donor** from active clients (typically a healthy, low-latency peer) and requests a transfer at a known tick boundary.
+1. **Reconnecting client contacts the relay authority** (embedded or dedicated). The relay verifies identity via the session key established at game start.
+2. **Relay coordinates state transfer.** The relay does **not** run the sim, so it selects a **snapshot donor** from active clients (typically a healthy, low-latency peer) and requests a transfer at a known tick boundary.
 3. **Donor creates snapshot** of its current sim state and streams it (via relay in relay mode) to the reconnecting client. Any pending orders queued during the snapshot are sent alongside it (from OpenTTD: `NetworkSyncCommandQueue`), closing the gap between snapshot creation and delivery.
 4. **Snapshot verification before load.** The reconnecting client verifies the snapshot tick/hash against relay-coordinated sync data (latest agreed sync hash, or an out-of-band sync check requested by the relay immediately before transfer). If verification fails, the relay retries with a different donor or aborts reconnection.
 5. **Client loads the snapshot** and enters a catchup state, processing ticks at accelerated speed until it reaches the current tick.
@@ -891,6 +997,8 @@ pub trait NetworkModel: Send + Sync {
 }
 ```
 
+**Trait shape note:** This trait is lockstep-shaped — `poll_tick()` returns confirmed orders or nothing, matching lockstep's "wait, then advance" pattern. All shipping implementations fit naturally. See § "Deferred Optional Architectures" for how this constrains non-lockstep experiments (M11).
+
 ### Deployment Modes
 
 The same netcode runs in five modes. The first two are utility adapters (no network involved). The last three are real multiplayer deployments of the same protocol:
@@ -899,17 +1007,15 @@ The same netcode runs in five modes. The first two are utility adapters (no netw
 | ---------------------- | ------------------------------------------------- | ------------------------------------- | ------- |
 | `LocalNetwork`         | Pass-through — orders go straight to sim          | Single player, automated tests        | Phase 2 |
 | `ReplayPlayback`       | File reader — feeds saved orders into sim         | Watching replays                      | Phase 2 |
-| `LockstepNetwork`      | P2P deployment (no relay)                         | LAN, ≤3 players, direct IP            | Phase 5 |
-| `EmbeddedRelayNetwork` | Listen server — host embeds `RelayCore` and plays | Casual, community, "Host Game" button | Phase 5 |
+| `EmbeddedRelayNetwork` | Listen server — host embeds `RelayCore` and plays | Casual, community, LAN, "Host Game" button | Phase 5 |
 | `RelayLockstepNetwork` | Dedicated relay (recommended for online)          | Internet multiplayer, ranked          | Phase 5 |
 
-`LockstepNetwork`, `EmbeddedRelayNetwork`, and `RelayLockstepNetwork` implement the same netcode. The differences are topology and trust:
+`EmbeddedRelayNetwork` and `RelayLockstepNetwork` implement the same netcode. The differences are topology and trust:
 
-- **`LockstepNetwork`** — P2P direct connections (full mesh for 2-3 players). No relay, no time authority. Simplest, best for LAN.
-- **`EmbeddedRelayNetwork`** — the host's game client runs `RelayCore` (see above) as a listen server. Other players connect to the host. Full sub-tick ordering, anti-lag-switch, and replay signing — same as a dedicated relay. The host plays normally while serving. Ideal for casual/community play: "Host Game" button, zero external infrastructure.
+- **`EmbeddedRelayNetwork`** — the host's game client runs `RelayCore` (see above) as a listen server. Other players connect to the host. Full sub-tick ordering, anti-lag-switch, and replay signing — same as a dedicated relay. The host plays normally while serving. Ideal for casual/community/LAN play: "Host Game" button, zero external infrastructure.
 - **`RelayLockstepNetwork`** — clients connect to a standalone relay server on trusted infrastructure. Required for ranked/competitive play (host can't be trusted with relay authority). Recommended for internet play.
 
-All three use adaptive run-ahead, frame resilience, delta-compressed TLV, and Ed25519 signing. The two relay-based modes (`EmbeddedRelayNetwork` and `RelayLockstepNetwork`) share identical `RelayCore` logic — connecting clients use `RelayLockstepNetwork` in both cases and cannot distinguish between them.
+Both use adaptive run-ahead, frame resilience, delta-compressed TLV, and Ed25519 signing. They share identical `RelayCore` logic — connecting clients use `RelayLockstepNetwork` in both cases and cannot distinguish between an embedded or dedicated relay.
 
 These deployments are the current lockstep family. The `NetworkModel` trait intentionally keeps room for deferred non-default implementations (e.g., bridge adapters, rollback experiments, fog-authoritative tournament servers) without changing sim code or invalidating the architectural boundary. Those paths are optional and not part of `M4` exit criteria.
 
@@ -972,7 +1078,7 @@ impl<B: ProtocolBridge> NetworkModel for NetcodeBridgeModel<B> {
 
 **Practical expectation:** Early bridge modes are most likely to ship (if ever) as **observer/replay/discovery** integrations first, then limited casual play experiments, with strict capability constraints. Competitive/ranked bridge play would require a separate explicit decision and a much stronger certification story.
 
-**Sub-tick ordering in P2P:** Without a neutral relay, there is no central time authority. Instead, each client sorts orders deterministically by `(sub_tick_time, player_id)` — the player ID tiebreaker ensures all clients produce the same canonical order even with identical timestamps. This is slightly less fair than relay ordering (clock skew between peers can bias who "clicked first"), but acceptable for LAN/small-group play where latencies are low. The relay-based modes (embedded or dedicated) eliminate this issue entirely with neutral time authority, and additionally provide lag-switch protection, NAT traversal, and signed replays.
+**Sub-tick ordering in deferred direct-peer modes:** If a direct-peer gameplay mode is introduced later (deferred), it will not have neutral time authority. It must therefore use deterministic `(sub_tick_time, player_id)` ordering and explicitly accept reduced fairness under clock skew. This tradeoff is only defensible for explicit low-infra scenarios (for example, LAN experiments), not as the default competitive path.
 
 ### Single-Player: Zero Delay
 
@@ -1035,17 +1141,19 @@ impl BackgroundReplayWriter {
 
 The background thread writes frames incrementally — the `.icrep` file is always valid (see `05-FORMATS.md` § Replay File Format). If the game crashes, the replay up to the last flushed frame is recoverable. On game end, the writer flushes remaining frames, writes the final header (total ticks, final state hash), and closes the file.
 
-## Deferred Optional Architectures
+## Deferred Optional Architectures (Not Shipping)
 
-The `NetworkModel` trait also keeps the door open for fundamentally different networking approaches as deferred optional work. These are NOT the same netcode — they are genuinely different architectures with different trade-offs. They are outside `M4` and `M7` core lockstep productization scope unless promoted by a separate explicit decision and execution-overlay placement.
+The `NetworkModel` trait preserves architectural escape hatches for fundamentally different networking approaches. **None of these are part of the shipping netcode.** IC ships one netcode: relay-assisted deterministic lockstep with sub-tick ordering. Everything above this section — sub-tick, QoS calibration, timing feedback, adaptive run-ahead, never-stall relay, visual prediction — is part of that single integrated lockstep system.
 
-### Fog-Authoritative Server (anti-maphack)
+These deferred architectures are outside `M4` and `M7` core lockstep scope. They would require a separate explicit decision and execution-overlay placement to become active work.
 
-Server runs full sim, sends each client only entities they should see. Breaks pure lockstep (clients run partial sims), requires server compute per game. Uses Fiedler's priority accumulator (2015) for bandwidth-bounded entity updates — units in combat are highest priority, distant static structures are deferred but eventually sent. See `06-SECURITY.md` § Vulnerability 1 for the full design including entity prioritization and traffic class segregation.
+### Fog-Authoritative Server (anti-maphack, `P-Optional` / `M11`)
 
-### Rollback / GGPO-Style (experimental)
+Server runs full sim, sends each client only visible entities. Eliminates maphack architecturally. Requires server compute per game. See `06-SECURITY.md` § Vulnerability 1 and `research/fog-authoritative-server-design.md` for the full design.
 
-Requires snapshottable sim (already designed via D010). Client predicts with local input, rolls back on misprediction. Expensive for RTS (re-simulating hundreds of entities), but feasible with Rust's performance. See GGPO documentation for reference implementation.
+### Rollback / GGPO-Style (`P-Optional` / `M11`)
+
+Client predicts with local input, rolls back on misprediction. Requires snapshottable sim (D010 — already designed). Rollback and lockstep are **alternative architectures, never mixed** — none of the lockstep features above (sub-tick, calibration, timing feedback, run-ahead) would exist in a rollback `NetworkModel`. The current `NetworkModel` trait is lockstep-shaped (`poll_tick()` returns confirmed-or-nothing); rollback would need trait extension or game loop restructuring in `ic-game`. `ic-sim` stays untouched (invariant #2). Stormgate (2024) proved RTS rollback is production-viable at 64 tps; delta rollback (Dehaene, 2024) reduces snapshot cost to ~5% via Bevy `Changed<T>` change detection. Full analysis in `research/stormgate-rollback-relay-landscape-analysis.md`.
 
 ### Cross-Engine Protocol Adapter
 
@@ -1135,15 +1243,15 @@ Connection method is a concern *below* the `NetworkModel`. By the time a `Networ
 Discovery (tracking server / join code / direct IP / QR)
   → Signaling (pluggable — see below)
     → Transport::connect() (UdpTransport, WebSocketTransport, etc.)
-      → NetworkModel constructed over Transport (LockstepNetwork<T> or RelayLockstepNetwork<T>)
+      → NetworkModel constructed over Transport (EmbeddedRelayNetwork<T> or RelayLockstepNetwork<T>)
         → Game loop runs — sim doesn't know or care how connection happened
 ```
 
-The transport layer is abstracted behind a `Transport` trait (D054). Each `Transport` instance represents a single bidirectional channel (point-to-point). `NetworkModel` implementations are generic over `Transport` — relay mode uses one `Transport` to the relay, P2P mode uses one `Transport` per peer. This enables different physical transports per platform — raw UDP (connected socket) on desktop, WebSocket in the browser, `MemoryTransport` in tests — without conditional branches in `NetworkModel`. The protocol layer always runs its own reliability; on reliable transports the retransmit logic becomes a no-op. See `decisions/09d/D054-extended-switchability.md` for the full trait definition and implementation inventory.
+The transport layer is abstracted behind a `Transport` trait (D054). Each `Transport` instance represents a single bidirectional channel (point-to-point). `NetworkModel` implementations are generic over `Transport` — both relay modes use one `Transport` to the relay. This enables different physical transports per platform — raw UDP (connected socket) on desktop, WebSocket in the browser, `MemoryTransport` in tests — without conditional branches in `NetworkModel`. The protocol layer always runs its own reliability; on reliable transports the retransmit logic becomes a no-op. See `decisions/09d/D054-extended-switchability.md` for the full trait definition and implementation inventory.
 
 ### Commit-Reveal Game Seed
 
-The initial RNG seed that determines all stochastic outcomes (combat rolls, scatter patterns, AI decisions) must not be controllable by any single player. A host who chooses the seed can pre-compute favorable outcomes (e.g., "with seed 0xDEAD, my first tank shot always crits"). This is a known exploit in P2P games and was identified in Hypersomnia's security analysis (see `research/veloren-hypersomnia-openbw-ddnet-netcode-analysis.md`).
+The initial RNG seed that determines all stochastic outcomes (combat rolls, scatter patterns, AI decisions) must not be controllable by any single player. A host who chooses the seed can pre-compute favorable outcomes (e.g., "with seed 0xDEAD, my first tank shot always crits"). This is a known exploit in direct-peer lockstep designs and was identified in Hypersomnia's security analysis (see `research/veloren-hypersomnia-openbw-ddnet-netcode-analysis.md`).
 
 IC uses a **commit-reveal protocol** to generate the game seed collaboratively:
 
@@ -1156,7 +1264,7 @@ pub struct SeedCommitment {
 }
 
 /// Phase 2: After all commitments are collected, each player reveals their contribution.
-/// The relay (or all peers in P2P) verify reveal matches commitment.
+/// The relay verifies reveal matches commitment.
 pub struct SeedReveal {
     pub player: PlayerId,
     pub contribution: [u8; 32],  // The actual random bytes
@@ -1180,7 +1288,7 @@ fn compute_game_seed(reveals: &[SeedReveal]) -> u64 {
 
 **Relay mode:** The relay server collects all commitments, then broadcasts them, then collects all reveals, then broadcasts the final seed. A player who fails to reveal within the timeout is kicked (they were trying to abort after seeing others' commitments).
 
-**P2P mode:** All peers exchange commitments via the mesh, then reveals. The protocol is the same — just decentralized.
+**Listen server:** The embedded relay collects all commitments and reveals, following the same protocol as a dedicated relay.
 
 **Single-player:** Skip commit-reveal. The client generates the seed directly.
 
@@ -1214,7 +1322,7 @@ This follows the same encryption model as Valve's GameNetworkingSockets (AES-GCM
 
 ### Pluggable Signaling (from Valve GNS)
 
-**Signaling** is the mechanism by which two peers exchange connection metadata (IP addresses, relay tokens, ICE candidates) before the transport connection is established. Valve's GNS abstracts signaling behind `ISteamNetworkingConnectionSignaling` — a trait that decouples the connection establishment mechanism from the transport.
+**Signaling** is the mechanism by which participants exchange connection metadata (IP addresses, relay tokens, ICE candidates) before the transport connection is established. Valve's GNS abstracts signaling behind `ISteamNetworkingConnectionSignaling` — a trait that decouples the connection establishment mechanism from the transport.
 
 IC adopts this pattern. Signaling is abstracted behind a trait in `ic-net`:
 
@@ -1224,8 +1332,6 @@ IC adopts this pattern. Signaling is abstracted behind a trait in `ic-net`:
 ///
 /// Different deployment contexts use different signaling:
 /// - Relay mode: relay server brokers the introduction
-/// - P2P with rendezvous: lightweight rendezvous server
-/// - P2P direct: out-of-band (IP shared via join code, QR, etc.)
 /// - Browser (WASM): WebRTC signaling server
 ///
 /// The trait is async — signaling involves network I/O and may take
@@ -1243,7 +1349,7 @@ pub enum SignalingMessage {
     Offer { transport_info: TransportInfo, identity_key: [u8; 32] },
     /// Answer to an offer — includes selected transport, public key.
     Answer { transport_info: TransportInfo, identity_key: [u8; 32] },
-    /// ICE candidate for NAT traversal (P2P only).
+    /// ICE candidate for NAT traversal when hole-punching is used.
     IceCandidate { candidate: String },
     /// Connection rejected (lobby full, banned, etc.).
     Reject { reason: String },
@@ -1255,12 +1361,12 @@ pub enum SignalingMessage {
 | Implementation        | Mechanism                      | When Used                   | Phase  |
 | --------------------- | ------------------------------ | --------------------------- | ------ |
 | `RelaySignaling`      | Relay server brokers           | Relay multiplayer (default) | 5      |
-| `RendezvousSignaling` | Lightweight rendezvous + punch | Join code / QR P2P          | 5      |
-| `DirectSignaling`     | Out-of-band (no server)        | Direct IP, LAN              | 5      |
-| `WebRtcSignaling`     | WebRTC signaling server        | Browser WASM P2P            | Future |
+| `RendezvousSignaling` | Lightweight rendezvous + punch | Join code / QR to hosted relay | 5   |
+| `DirectSignaling`     | Out-of-band (no server)        | Direct IP to host/dedicated relay | 5 |
+| `WebRtcSignaling`     | WebRTC signaling server        | Browser WASM hosted sessions | Future |
 | `MemorySignaling`     | In-process channels            | Tests                       | 2      |
 
-This decoupling means adding a new connection method (e.g., Steam P2P via Steamworks, Epic Online Services relay) requires only implementing `Signaling`, not modifying `NetworkModel` or `Transport`. The GNS precedent validates this — GNS users can plug in custom signaling for non-Steam platforms while keeping the same transport and reliability layer.
+This decoupling means adding a new connection method (e.g., Steam Networking Sockets or Epic Online Services signaling backends) requires only implementing `Signaling`, not modifying `NetworkModel` or `Transport`. The GNS precedent validates this — GNS users can plug in custom signaling for non-Steam platforms while keeping the same transport and reliability layer.
 
 ### Direct IP
 
@@ -1272,7 +1378,7 @@ Classic approach. Host shares `IP:port`, other player connects.
 
 ### Join Code (Recommended for Casual)
 
-Host contacts a lightweight rendezvous server. Server assigns a short code (e.g., `IRON-7K3M`). Joiner sends code to same server. Server brokers a UDP hole-punch between both players.
+Host contacts a lightweight rendezvous server. Server assigns a short code (e.g., `IRON-7K3M`). Joiner sends code to same server. Server brokers a UDP hole-punch between the host relay endpoint and the joiner.
 
 ```
 ┌────────┐     1. register     ┌──────────────┐     2. resolve    ┌────────┐
@@ -1280,7 +1386,7 @@ Host contacts a lightweight rendezvous server. Server assigns a short code (e.g.
 │        │ ◀── code: IRON-7K3M│    Server     │  code: IRON-7K3M──▶       │
 │        │     3. hole-punch   │  (stateless)  │  3. hole-punch   │        │
 │        │ ◀═══════════════════╪══════════════════════════════════▶│        │
-└────────┘    direct P2P conn  └──────────────┘                   └────────┘
+└────────┘   conn to host relay  └──────────────┘                └────────┘
 ```
 
 - No port forwarding needed (UDP hole-punch works through most NATs)
@@ -1294,7 +1400,7 @@ Same as join code, encoded as QR. Player scans from phone → opens game client 
 
 ### Via Relay Server
 
-When direct P2P fails (symmetric NAT, corporate firewalls), fall back to the relay server. Connection through relay also provides lag-switch protection and sub-tick ordering as a bonus.
+When direct host connectivity fails (symmetric NAT, corporate firewalls), fall back to a dedicated relay server route. Both paths remain relay-authoritative.
 
 ### Via Tracking Server
 
@@ -1568,29 +1674,26 @@ The architecture supports N players with no structural changes. Every design ele
 | **Relay server**      | Collects from 2, broadcasts to 2 | Collects from N, broadcasts to N | Linear in N. Bandwidth is tiny (orders are small)                      |
 | **Desync detection**  | Compare 2 hashes                 | Compare N hashes                 | Trivial — one hash per player per tick                                 |
 | **Input delay**       | Tuned to worst of 2 connections  | Tuned to worst of N connections  | **Real bottleneck** — one laggy player affects everyone                |
-| **Direct P2P**        | 1 connection                     | N×(N-1)/2 mesh connections       | Mesh doesn't scale. Use star topology or relay for >4 players          |
 
-### P2P Topology for Multi-Player
+### Relay Topology for Multi-Player
 
-Direct P2P lockstep with 2-3 players uses a full mesh (everyone connects to everyone). Beyond that, use the embedded relay (listen server) or a dedicated relay:
+All multiplayer uses a relay (embedded or dedicated). Both topologies are star-shaped:
 
 ```
-2-3 players: full mesh (P2P, no relay)
-  A ↔ B ↔ C ↔ A
-
-4+ players: embedded relay (listen server — host runs RelayCore and plays)
+Embedded relay (listen server — host runs RelayCore and plays)
   B → A ← C        A = host + RelayCore, full sub-tick ordering
       ↑             Host's orders go through same pipeline as everyone's
       D
 
-4+ players: dedicated relay server (recommended for competitive)
+Dedicated relay server (recommended for competitive)
   B → R ← C        R = standalone relay binary, trusted infrastructure
       ↑             No player has hosting advantage
       D
 ```
 
-For 4+ players, a relay (embedded or dedicated) is strongly recommended. Both modes solve:
+Both modes provide:
 - Sub-tick ordering with neutral time authority
+- Match-start QoS calibration + bounded auto-tuning
 - Lag-switch protection for all players
 - Replay signing
 
@@ -1635,3 +1738,543 @@ No hard architectural limit. Practical limits:
 - **Lockstep input delay** — scales with the worst connection among N players. Beyond ~8 players, the slowest player's latency dominates everyone's experience.
 - **Order volume** — N players generating orders simultaneously. Still tiny bandwidth (orders are small structs, not state).
 - **Sim cost** — more players = more units = more computation. The efficiency pyramid handles this up to the hardware's limit.
+
+## System Wiring: Integration Proof
+
+This section proves that all netcode components defined above wire together into a coherent system. Every type referenced below is either defined earlier in this chapter, in a cross-referenced file, or newly introduced here to fill an explicit gap.
+
+**Existing types referenced (not redefined):**
+
+| Type | Defined In | Crate |
+|------|-----------|-------|
+| `PlayerOrder`, `TimestampedOrder`, `TickOrders`, `PlayerId` | This chapter § "The Protocol" | `ic-protocol` |
+| `NetworkModel` trait | This chapter § "The NetworkModel Trait" | `ic-net` |
+| `RelayCore` | This chapter § "RelayCore: Library, Not Just a Binary" | `ic-net` |
+| `ClientMetrics` | This chapter § "Adaptive Run-Ahead" | `ic-net` |
+| `TimingFeedback` | This chapter § "Input Timing Feedback" | `ic-net` |
+| `MatchCalibration`, `PlayerCalibration`, `MatchQosProfile` | This chapter § "Match-Start Calibration" | `ic-net` |
+| `QosAdjustmentEvent` | This chapter § "QoS Audit Trail" | `ic-net` |
+| `ClockCalibration` | `research/relay-wire-protocol-design.md` | `ic-net` |
+| `TransportCrypto` | This chapter § "Transport Encryption" | `ic-net` |
+| `OrderBatcher` | This chapter § "Order Batching" | `ic-net` |
+| `AckVector` | This chapter § "Selective Acknowledgment" | `ic-net` |
+| `DesyncDebugLevel` | This chapter § "Desync Debugging" | `ic-net` |
+| `Transport` trait | `decisions/09d/D054-extended-switchability.md` | `ic-net` |
+| `RelayLockstepNetwork<T>` (struct header) | `decisions/09d/D054-extended-switchability.md` | `ic-net` |
+| `GameLoop<N, I>` (struct + `frame()`) | `architecture/game-loop.md` | `ic-game` |
+| `ReadyCheckState`, `MatchOutcome` | `netcode/match-lifecycle.md` | `ic-net` |
+
+### ClientMetrics / PlayerMetrics Resolution
+
+`ClientMetrics` (defined above in § "Adaptive Run-Ahead") is the client-submitted report — it carries what the client knows about its own performance. The relay combines this with relay-observed timing data to produce `PlayerMetrics`, which is what `compute_run_ahead()` and QoS adaptation operate on:
+
+```rust
+/// Relay-side per-player metrics — combines client-reported ClientMetrics
+/// with relay-observed timing data. Lives in ic-net (relay_core module).
+/// compute_run_ahead() and evaluate_qos_window() operate on this.
+pub struct PlayerMetrics {
+    // From ClientMetrics (client-reported):
+    pub avg_latency_us: u32,
+    pub avg_fps: u16,
+    pub arrival_cushion: i16,
+    pub tick_processing_us: u32,
+    // Relay-observed (not client-reported):
+    pub jitter_us: u32,                // computed from arrival time variance
+    pub late_count_window: u16,        // late orders in current QoS window
+    pub ewma_late_rate_bps: u16,       // EWMA-smoothed late rate (basis points)
+}
+
+impl PlayerMetrics {
+    /// Merge a fresh ClientMetrics report into this relay-side aggregate.
+    fn update_from_client(&mut self, cm: &ClientMetrics) {
+        self.avg_latency_us = cm.avg_latency_us;
+        self.avg_fps = cm.avg_fps;
+        self.arrival_cushion = cm.arrival_cushion;
+        self.tick_processing_us = cm.tick_processing_us;
+    }
+}
+```
+
+### CalibrationPing / CalibrationPong
+
+These lightweight packet types are exchanged during the loading screen (§ "Match-Start Calibration" steps 1–2). 15–20 round trips over ~2 seconds, in parallel with map loading:
+
+```rust
+/// Sent by relay during loading screen. Lightweight timing probe.
+pub struct CalibrationPing {
+    pub seq: u16,                // sequence number (0..19)
+    pub relay_send_us: u64,      // relay wall-clock at send (microseconds)
+}
+
+/// Client response. Echoes relay timestamp, adds client-side timing.
+pub struct CalibrationPong {
+    pub seq: u16,                // echoed from ping
+    pub relay_send_us: u64,      // echoed from ping
+    pub client_recv_us: u64,     // client wall-clock at receive
+    pub client_send_us: u64,     // client wall-clock at send (captures processing delay)
+}
+```
+
+The relay derives `median_rtt_us`, `jitter_us`, and `estimated_one_way_us` per player from these samples, then feeds them into `MatchCalibration` (§ "Match-Start Calibration" step 3).
+
+### EncryptedTransport\<T\>: Transport Encryption Wrapper
+
+`TransportCrypto` (defined in § "Transport Encryption") wraps any `Transport` implementation (D054), sitting between Transport and NetworkModel as described in the prose:
+
+```rust
+/// Encryption layer between Transport and NetworkModel.
+/// Wraps any Transport, encrypting outbound and decrypting inbound.
+/// MemoryTransport (testing) and LocalNetwork (single-player) skip this.
+pub struct EncryptedTransport<T: Transport> {
+    inner: T,
+    crypto: TransportCrypto,  // defined in § "Transport Encryption"
+}
+
+impl<T: Transport> Transport for EncryptedTransport<T> {
+    fn send(&mut self, data: &[u8]) -> Result<(), TransportError> {
+        let ciphertext = self.crypto.encrypt(data)?;  // AES-256-GCM
+        self.inner.send(&ciphertext)
+    }
+
+    fn recv(&mut self, buf: &mut [u8]) -> Result<Option<usize>, TransportError> {
+        let mut cipher_buf = [0u8; MAX_PACKET_SIZE];
+        match self.inner.recv(&mut cipher_buf)? {
+            None => Ok(None),
+            Some(len) => {
+                let plaintext = self.crypto.decrypt(&cipher_buf[..len])?;
+                buf[..plaintext.len()].copy_from_slice(&plaintext);
+                Ok(Some(plaintext.len()))
+            }
+        }
+    }
+
+    fn max_payload(&self) -> usize {
+        self.inner.max_payload() - AEAD_OVERHEAD  // 16-byte tag
+    }
+
+    fn connect(&mut self, target: &Endpoint) -> Result<(), TransportError> {
+        self.inner.connect(target)?;
+        // X25519 key exchange → derive AES-256-GCM session key
+        // Ed25519 identity binding (D052) signs handshake transcript
+        self.crypto = TransportCrypto::negotiate(&mut self.inner)?;
+        Ok(())
+    }
+
+    fn disconnect(&mut self) { self.inner.disconnect(); }
+}
+```
+
+### RelayLockstepNetwork\<T\>: NetworkModel Implementation
+
+The struct header is defined in D054. Here are the method bodies proving `NetworkModel` integration with `Transport`, the order batcher, frame decoding, and timing feedback:
+
+```rust
+/// Full fields for the client-side relay connection.
+/// Struct header is in D054; fields shown here for integration clarity.
+pub struct RelayLockstepNetwork<T: Transport> {
+    transport: T,
+    codec: NativeCodec,                          // OrderCodec impl (§ "Wire Format")
+    batcher: OrderBatcher,                       // § "Order Batching"
+    reliability: AckVector,                      // § "Selective Acknowledgment"
+    inbound_ticks: VecDeque<TickOrders>,         // confirmed ticks from relay
+    submit_offset_us: i32,                       // adjusted by TimingFeedback
+    status: NetworkStatus,
+    diagnostics: NetworkDiagnostics,
+}
+
+impl<T: Transport> NetworkModel for RelayLockstepNetwork<T> {
+    fn submit_order(&mut self, order: TimestampedOrder) {
+        // Adjust submission time by timing feedback offset
+        let adjusted = TimestampedOrder {
+            sub_tick_time: order.sub_tick_time,  // hint only — relay normalizes
+            ..order
+        };
+        self.batcher.push(adjusted);
+    }
+
+    fn poll_tick(&mut self) -> Option<TickOrders> {
+        // 1. Flush batched outbound orders
+        if self.batcher.should_flush() {
+            let batch = self.batcher.drain();
+            let encoded = self.codec.encode_batch(&batch);
+            self.transport.send(&encoded).ok();
+        }
+
+        // 2. Receive from transport (non-blocking)
+        let mut buf = [0u8; MAX_PACKET_SIZE];
+        while let Ok(Some(len)) = self.transport.recv(&mut buf) {
+            match self.codec.decode_frame(&buf[..len]) {
+                Frame::TickOrders(tick_orders) => {
+                    self.inbound_ticks.push_back(tick_orders);
+                }
+                Frame::TimingFeedback(fb) => {
+                    self.apply_timing_feedback(fb);
+                }
+                Frame::DesyncDetected { tick } => {
+                    self.status = NetworkStatus::DesyncDetected(tick);
+                }
+                Frame::Ack(ack) => {
+                    self.reliability.process_ack(ack);
+                }
+                _ => {}
+            }
+        }
+
+        // 3. Return next confirmed tick
+        self.inbound_ticks.pop_front()
+    }
+
+    fn report_sync_hash(&mut self, tick: u64, hash: u64) {
+        let encoded = self.codec.encode_frame(&Frame::SyncHash { tick, hash });
+        self.transport.send(&encoded).ok();
+    }
+
+    fn status(&self) -> NetworkStatus { self.status.clone() }
+    fn diagnostics(&self) -> NetworkDiagnostics { self.diagnostics.clone() }
+}
+
+impl<T: Transport> RelayLockstepNetwork<T> {
+    /// Adjust local order submission timing based on relay feedback.
+    fn apply_timing_feedback(&mut self, fb: TimingFeedback) {
+        if fb.late_count > 0 {
+            // Orders arriving late — shift submission earlier
+            self.submit_offset_us -= fb.recommended_offset_us.min(5_000);
+        } else if fb.early_us > 20_000 {
+            // Orders arriving very early — relax by 1ms
+            self.submit_offset_us += 1_000;
+        }
+        self.diagnostics.last_timing_feedback = Some(fb);
+    }
+}
+```
+
+### RelayCore: Accepting Calibration and Seeding State
+
+Shows `MatchCalibration` (§ "Match-Start Calibration") entering `RelayCore`, proving the calibration → relay wiring:
+
+```rust
+impl RelayCore {
+    /// Called after calibration handshake completes, before tick 0.
+    /// Seeds all adaptive algorithms with match-specific measurements
+    /// instead of generic defaults.
+    pub fn apply_calibration(&mut self, cal: MatchCalibration) {
+        // Seed per-player clock calibration from CalibrationPing/Pong results
+        for pc in &cal.per_player {
+            self.clock_calibration.insert(pc.player, ClockCalibration {
+                offset_us: pc.estimated_one_way_us as i64,
+                ewma_offset_us: pc.estimated_one_way_us as i64,
+                jitter_us: pc.jitter_us,
+                sample_count: 0,
+                last_update_us: 0,
+                suspicious_count: 0,
+            });
+            // Seed per-player submit offset (timing assist, not fairness)
+            self.player_metrics.insert(pc.player, PlayerMetrics {
+                avg_latency_us: pc.median_rtt_us / 2,
+                jitter_us: pc.jitter_us,
+                ..Default::default()
+            });
+        }
+
+        // Set match-global timing from calibration envelope
+        self.run_ahead = cal.shared_initial_run_ahead;
+        self.tick_deadline_us = cal.initial_tick_deadline_us;
+        self.qos_profile = cal.qos_profile;
+
+        // Initialize QoS adaptation state
+        self.qos_state = QosAdaptationState::default();
+    }
+}
+```
+
+### QoS Adaptation: State and Per-Window Evaluation
+
+Who holds the EWMA state and what triggers the adaptation loop:
+
+```rust
+/// Held by RelayCore. Updated every timing_feedback_interval ticks (default 30).
+pub struct QosAdaptationState {
+    pub ewma_late_rate_bps: u16,       // EWMA-smoothed late rate (basis points)
+    pub consecutive_raise_windows: u8,  // windows above raise threshold
+    pub consecutive_lower_windows: u8,  // windows below lower threshold
+    pub cooldown_remaining: u8,         // windows until next adjustment allowed
+}
+
+impl RelayCore {
+    /// Called every timing_feedback_interval ticks.
+    /// Evaluates whether to adjust match-global run-ahead / tick deadline.
+    /// Returns a QosAdjustmentEvent if an adjustment was made (for replay + telemetry).
+    fn evaluate_qos_window(&mut self) -> Option<QosAdjustmentEvent> {
+        let qp = &self.qos_profile;
+
+        // 1. Compute raw late rate across all players this window
+        let raw_late_bps = if self.window_total_orders > 0 {
+            ((self.window_total_late as u32) * 10_000
+                / (self.window_total_orders as u32)) as u16
+        } else { 0 };
+
+        // 2. EWMA smooth (fixed-point: alpha = ewma_alpha_q15 / 32768)
+        let alpha = qp.ewma_alpha_q15 as u32;
+        let qs = &mut self.qos_state;
+        qs.ewma_late_rate_bps = ((alpha * raw_late_bps as u32
+            + (32768 - alpha) * qs.ewma_late_rate_bps as u32) / 32768) as u16;
+
+        // 3. Cooldown check
+        if qs.cooldown_remaining > 0 {
+            qs.cooldown_remaining -= 1;
+            self.reset_window_counters();
+            return None;
+        }
+
+        let old_deadline = self.tick_deadline_us;
+        let old_run_ahead = self.run_ahead;
+
+        // 4. Raise check: EWMA above threshold for N consecutive windows
+        if qs.ewma_late_rate_bps > qp.raise_late_rate_bps {
+            qs.consecutive_raise_windows += 1;
+            qs.consecutive_lower_windows = 0;
+            if qs.consecutive_raise_windows >= qp.raise_windows {
+                self.tick_deadline_us = (self.tick_deadline_us + 10_000)
+                    .min(qp.deadline_max_us);
+                self.run_ahead = (self.run_ahead + 1)
+                    .min(qp.run_ahead_max_ticks);
+                qs.cooldown_remaining = qp.cooldown_windows;
+                qs.consecutive_raise_windows = 0;
+            }
+        }
+        // 5. Lower check: EWMA below threshold for N consecutive windows
+        else if qs.ewma_late_rate_bps < qp.lower_late_rate_bps {
+            qs.consecutive_lower_windows += 1;
+            qs.consecutive_raise_windows = 0;
+            if qs.consecutive_lower_windows >= qp.lower_windows {
+                self.tick_deadline_us = (self.tick_deadline_us - 5_000)
+                    .max(qp.deadline_min_us);
+                self.run_ahead = (self.run_ahead - 1)
+                    .max(qp.run_ahead_min_ticks);
+                qs.cooldown_remaining = qp.cooldown_windows;
+                qs.consecutive_lower_windows = 0;
+            }
+        } else {
+            qs.consecutive_raise_windows = 0;
+            qs.consecutive_lower_windows = 0;
+        }
+
+        self.reset_window_counters();
+
+        // 6. Emit event if anything changed
+        if self.tick_deadline_us != old_deadline || self.run_ahead != old_run_ahead {
+            Some(QosAdjustmentEvent {
+                tick: self.tick,
+                old_deadline_us: old_deadline,
+                new_deadline_us: self.tick_deadline_us,
+                old_run_ahead,
+                new_run_ahead: self.run_ahead,
+                late_rate_bps_ewma: qs.ewma_late_rate_bps,
+                reason: if self.run_ahead > old_run_ahead {
+                    QosAdjustReason::RaiseLateRate
+                } else {
+                    QosAdjustReason::LowerStableWindow
+                },
+            })
+        } else { None }
+    }
+}
+```
+
+### TimingFeedback: Relay Computes, Client Consumes
+
+The relay side of the feedback loop (client consumption shown in `RelayLockstepNetwork::apply_timing_feedback()` above):
+
+```rust
+impl RelayCore {
+    /// Compute per-player TimingFeedback from this QoS window's arrival data.
+    /// Called every timing_feedback_interval ticks, once per player.
+    fn compute_timing_feedback(&self, player: PlayerId) -> TimingFeedback {
+        let pm = &self.player_metrics[&player];
+        let stats = &self.arrival_stats[&player];
+        TimingFeedback {
+            early_us: stats.avg_early_us(),
+            late_us: stats.avg_late_us(),
+            recommended_offset_us: stats.recommended_adjustment_us(),
+            late_count: pm.late_count_window,
+        }
+    }
+}
+```
+
+### Desync Detection Wiring
+
+Shows the relay collecting and comparing sync hashes from all clients (§ "Desync Detection" describes the protocol; this shows the code path):
+
+```rust
+impl RelayCore {
+    /// Called when a client reports its sync hash for a completed tick.
+    pub fn receive_sync_hash(&mut self, player: PlayerId, tick: u64, hash: u64) {
+        let entry = self.sync_hashes.entry(tick).or_default();
+        entry.insert(player, hash);
+
+        // All players reported for this tick?
+        if entry.len() == self.player_count {
+            let first = *entry.values().next().unwrap();
+            let all_agree = entry.values().all(|&h| h == first);
+
+            if !all_agree {
+                self.broadcast(Frame::DesyncDetected { tick });
+                if self.desync_debug_level > DesyncDebugLevel::Off {
+                    self.broadcast(Frame::DesyncDebugRequest {
+                        tick,
+                        level: self.desync_debug_level,
+                    });
+                }
+            }
+            // Prune old entries (keep last ~4 seconds at 30 tps)
+            self.sync_hashes.retain(|&t, _| t > tick.saturating_sub(120));
+        }
+    }
+}
+```
+
+### Match Lifecycle: Connected End-to-End
+
+The capstone: relay-side session lifecycle and client-side match lifecycle showing how every component wires together through a full match.
+
+**Relay side:**
+
+```rust
+/// Top-level relay match session — shows how all relay-side components
+/// connect through the full lobby → gameplay → post-game lifecycle.
+pub fn run_relay_session(relay: &mut RelayCore, transport: &mut RelayTransportLayer) {
+    // ── Phase 1: Lobby ──
+    // Accept connections (Connection<Connecting> → Authenticated → InLobby).
+    // Ready-check state machine: WaitingForAccept → MapVeto → Loading.
+
+    // ── Phase 2: Loading + Calibration (parallel) ──
+    // Exchange CalibrationPing/CalibrationPong with each client (~2 seconds).
+    let calibration = relay.run_calibration(transport);
+    // Seed adaptive algorithms with match-specific measurements:
+    relay.apply_calibration(calibration);
+    // Wait for all clients to report loading complete.
+
+    // ── Phase 3: Commit-reveal game seed ──
+    // Collect SeedCommitment → broadcast → collect SeedReveal → compute_game_seed()
+    let seed = relay.run_seed_exchange(transport);
+    relay.broadcast(Frame::GameSeed(seed));
+
+    // ── Phase 4: Countdown → tick 0 ──
+
+    // ── Phase 5: Gameplay tick loop ──
+    loop {
+        // a. Collect orders from all clients within tick deadline
+        //    Late orders → PlayerOrder::Idle + anti-lag-switch strike
+        relay.collect_orders_until_deadline(transport);
+
+        // b. Sub-tick sort + filter chain → canonical TickOrders
+        let tick_orders = relay.finalize_tick();
+
+        // c. Broadcast canonical TickOrders to all clients + observers
+        transport.broadcast(&tick_orders);
+
+        // d. Sync hashes arrive asynchronously — relay.receive_sync_hash() handles comparison
+
+        // e. Every timing_feedback_interval ticks: QoS evaluation + timing feedback
+        if relay.tick % relay.timing_feedback_interval == 0 {
+            if let Some(event) = relay.evaluate_qos_window() {
+                relay.replay_writer.record_qos_event(&event);
+            }
+            for player in relay.players() {
+                let fb = relay.compute_timing_feedback(player);
+                transport.send_to(player, &Frame::TimingFeedback(fb));
+            }
+        }
+
+        // f. Check termination (MatchOutcome from match-lifecycle.md)
+        if let Some(outcome) = relay.check_match_end() {
+            relay.broadcast(Frame::MatchEnd(outcome));
+            break;
+        }
+
+        relay.tick += 1;
+    }
+
+    // ── Phase 6: Post-game ──
+    // Broadcast CertifiedMatchResult (Ed25519-signed).
+    // 30-second post-game lobby for stats/chat.
+    // BackgroundReplayWriter finalizes and flushes .icrep file.
+    // Connections close.
+}
+```
+
+**Client side:**
+
+```rust
+/// Client-side match lifecycle — shows how GameLoop<N, I> integrates
+/// with RelayLockstepNetwork and the transport layer.
+/// GameLoop struct and frame() method are defined in architecture/game-loop.md.
+pub fn run_client_match<T: Transport>(
+    mut transport: EncryptedTransport<T>,
+    input: impl InputSource,
+    local_player: PlayerId,
+    rules: GameRules,
+) {
+    // 1. Transport is already connected + encrypted (signaling + key exchange)
+
+    // 2. Respond to CalibrationPing → CalibrationPong during loading
+    //    (handled by the pre-game connection layer)
+
+    // 3. Participate in seed commit-reveal
+    let seed = participate_in_seed_exchange(&mut transport, local_player);
+
+    // 4. Construct NetworkModel over encrypted transport
+    let network = RelayLockstepNetwork::new(transport);
+
+    // 5. Construct GameLoop (defined in architecture/game-loop.md)
+    let mut game_loop = GameLoop {
+        sim: Simulation::new(seed, rules),
+        renderer: Renderer::new(),
+        network,
+        input,
+        local_player,
+        order_buf: Vec::new(),
+    };
+
+    // 6. Frame loop — GameLoop::frame() handles the core cycle:
+    //    drain input → submit_order() → poll_tick() → sim.apply_tick()
+    //    → report_sync_hash() → renderer.draw()
+    while game_loop.network.status() == NetworkStatus::Active {
+        game_loop.frame();
+    }
+
+    // 7. Post-game: display CertifiedMatchResult, save replay, return to menu
+}
+```
+
+**Connection topology — complete data flow through one tick:**
+
+```
+Client A                     Relay (RelayCore)                Client B
+────────                     ────────────────                ────────
+input.drain_orders()
+  → TimestampedOrder
+    → OrderBatcher.push()
+      → Transport.send()
+        ─── encrypted UDP ──▶  receive_order()
+                                normalize_timestamp()    ◀── encrypted UDP ───
+                                check_skew()                  (Client B's orders)
+                                order_budget.try_consume()
+                                finalize_tick()
+                                  → sub-tick sort
+                                  → filter chain
+                                  → canonical TickOrders
+                              broadcast(TickOrders)
+        ◀── encrypted UDP ──  ─── encrypted UDP ──▶
+      Transport.recv()                               Transport.recv()
+    codec.decode_frame()                             codec.decode_frame()
+  poll_tick() → Some(TickOrders)                     poll_tick() → Some(TickOrders)
+sim.apply_tick(&tick_orders)                         sim.apply_tick(&tick_orders)
+sim.state_hash()                                     sim.state_hash()
+  → report_sync_hash()                                → report_sync_hash()
+        ─── encrypted UDP ──▶  receive_sync_hash()   ◀── encrypted UDP ───
+                                compare hashes
+                                (if mismatch → DesyncDetected)
+renderer.draw()                                      renderer.draw()
+```

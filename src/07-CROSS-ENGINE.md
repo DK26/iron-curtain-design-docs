@@ -545,7 +545,7 @@ impl<N: NetworkModel> NetworkModel for ProtocolAdapter<N> {
 
 ```rust
 // Native play — nothing special
-let game = GameLoop::new(sim, renderer, LockstepNetwork::new(server));
+let game = GameLoop::new(sim, renderer, RelayLockstepNetwork::new(server));
 
 // OpenRA-compatible play — just wrap the network
 let adapted = ProtocolAdapter {

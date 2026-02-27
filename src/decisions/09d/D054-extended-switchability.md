@@ -38,9 +38,9 @@ But connection establishment hardcodes UDP. A `Transport` trait makes this expli
 
 ```rust
 /// Abstracts a single bidirectional network channel beneath NetworkModel.
-/// Each Transport instance represents ONE connection (to a relay, or to a
-/// single peer in P2P). NetworkModel manages multiple Transport instances
-/// for multi-peer P2P; relay mode uses a single Transport to the relay.
+/// Each Transport instance represents ONE connection (typically to a relay;
+/// optionally to a single peer in deferred direct-peer modes). NetworkModel
+/// uses a single Transport instance for the relay connection (dedicated or embedded).
 ///
 /// Lives in ic-net. NetworkModel implementations are generic over Transport.
 ///
@@ -91,23 +91,20 @@ pub trait Transport: Send + Sync {
 
 ```rust
 /// NetworkModel becomes generic over Transport.
-/// Existing code that constructs LockstepNetwork or RelayLockstepNetwork
+/// Existing code that constructs EmbeddedRelayNetwork or RelayLockstepNetwork
 /// now specifies a Transport. For desktop builds, this is UdpTransport.
 /// For WASM builds, this is WebSocketTransport.
 ///
-/// Relay mode: single Transport to the relay server.
-/// P2P mode: Vec<T> — one Transport per peer connection.
-pub struct LockstepNetwork<T: Transport> {
-    transport: T,       // relay mode: connection to relay
+/// Both relay modes use a single Transport to the relay.
+/// EmbeddedRelayNetwork composes RelayCore + RelayLockstepNetwork in-process;
+/// RelayLockstepNetwork is also used standalone by clients connecting to a
+/// dedicated relay. Connecting clients use the same type in both cases.
+pub struct RelayLockstepNetwork<T: Transport> {
+    transport: T,       // connection to relay (dedicated or embedded)
     // ... existing fields unchanged
 }
 
-pub struct P2PLockstepNetwork<T: Transport> {
-    peers: Vec<T>,      // one connection per peer
-    // ... existing fields unchanged
-}
-
-impl<T: Transport> NetworkModel for LockstepNetwork<T> {
+impl<T: Transport> NetworkModel for RelayLockstepNetwork<T> {
     // All existing logic unchanged. send()/recv() calls go through
     // self.transport instead of directly calling UdpSocket methods.
     // Reliability layer (sequence numbers, retransmit, frame resend)
@@ -124,7 +121,7 @@ impl<T: Transport> NetworkModel for LockstepNetwork<T> {
 
 **Transport encryption (from GNS):** All multiplayer transports are encrypted with AES-256-GCM over an X25519 key exchange — the same cryptographic suite used by Valve's GameNetworkingSockets and DTLS 1.3. Encryption sits between `Transport` and `NetworkModel`, transparent to both layers. Each connection generates an ephemeral Curve25519 keypair for forward secrecy; the symmetric key is never reused across sessions. After key exchange, the handshake is signed with the player's Ed25519 identity key (D052) to bind the encrypted channel to a verified identity. The GCM nonce incorporates the packet sequence number, preventing replay attacks. See `03-NETCODE.md` § Transport Encryption for the full specification and `06-SECURITY.md` for the threat model. `MemoryTransport` (testing) and `LocalNetwork` (single-player) skip encryption.
 
-**Pluggable signaling (from GNS):** Connection establishment is further decomposed into a `Signaling` trait — abstracting how peers exchange connection metadata (IP addresses, relay tokens, ICE candidates) before the `Transport` is established. This follows GNS's `ISteamNetworkingConnectionSignaling` pattern. Different deployment contexts use different signaling: relay-brokered, rendezvous + hole-punch, direct IP, or WebRTC for browser builds. Adding a new connection method (e.g., Steamworks P2P, Epic Online Services) requires only a new `Signaling` implementation — no changes to `Transport` or `NetworkModel`. See `03-NETCODE.md` § Pluggable Signaling for trait definition and implementations.
+**Pluggable signaling (from GNS):** Connection establishment is further decomposed into a `Signaling` trait — abstracting how participants exchange connection metadata (IP addresses, relay tokens, ICE candidates) before the `Transport` is established. This follows GNS's `ISteamNetworkingConnectionSignaling` pattern. Different deployment contexts use different signaling: relay-brokered, rendezvous + hole-punch for hosted relays, direct IP to host/dedicated relay, or WebRTC for browser builds. Adding a new connection method (e.g., Steam Networking Sockets, Epic Online Services) requires only a new `Signaling` implementation — no changes to `Transport` or `NetworkModel`. See `03-NETCODE.md` § Pluggable Signaling for trait definition and implementations.
 
 **Why not abstract this earlier (D006/D041)?** At D006 design time, browser multiplayer was a distant future target and raw UDP was the obvious choice. Invariant #10 (platform-agnostic) was added later, making the gap visible. D041 explicitly listed the transport layer in its inventory of *already-abstracted* concerns via `NetworkModel` — but `NetworkModel` abstracts the protocol, not the transport. This decision corrects that conflation.
 
@@ -373,4 +370,3 @@ This audit explicitly confirmed that the following remain correctly un-abstracte
 ---
 
 ---
-

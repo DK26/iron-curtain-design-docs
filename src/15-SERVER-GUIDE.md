@@ -203,11 +203,23 @@ The relay server accepts player connections, orders and forwards game data betwe
 
 **When to change these:**
 
-- **Competitive league (low latency):** Lower `tick_deadline_ms` to 100 for tighter timing. Only do this if your player base has reliably good connections.
-- **Casual / high-latency regions:** Raise `tick_deadline_ms` to 150–200 to tolerate higher ping.
+- **Competitive league (low latency):** Keep effective deadline behavior inside `90–140ms` envelope (D060). If running a fixed value, start around `110ms`.
+- **Casual / high-latency regions:** Keep effective deadline behavior inside `120–220ms` envelope (D060). If running a fixed value, start around `160ms`.
 - **Training / debugging:** Raise `tick_deadline_ms` to 500 and `reconnect_timeout_secs` to 300 for generous timeouts.
 
 **Recommendation:** Leave `tick_deadline_ms` at 120 unless you have specific latency data for your player base. The adaptive run-ahead system handles most cases automatically.
+
+#### QoS Envelope Alignment (D060)
+
+The relay's match QoS auto-profile should stay within these envelopes:
+
+| Queue Type | Deadline Envelope | Shared Run-Ahead Envelope | Suggested Fixed Baseline (if auto-profile unavailable) |
+| ---------- | ----------------- | ------------------------- | ------------------------------------------------------- |
+| Ranked / Competitive | 90–140 ms | 3–5 ticks | 110 ms |
+| Casual / Community | 120–220 ms | 4–7 ticks | 160 ms |
+| Training / Debug | 200–500 ms | 6–15 ticks | 300 ms |
+
+If your runtime currently supports only a fixed `relay.tick_deadline_ms`, choose the baseline above and tune by observed late-order rate. If match auto-profile envelopes are available, prefer those and keep fixed overrides minimal.
 
 #### Catchup (Reconnection Behavior)
 
@@ -984,10 +996,10 @@ Check your player base's typical latency. If most players have > 80ms ping:
 
 ```toml
 [relay]
-tick_deadline_ms = 150     # or even 200 for high-latency regions
+tick_deadline_ms = 160     # casual/community baseline inside 120–220ms envelope
 ```
 
-The adaptive run-ahead system handles most latency, but a tight tick deadline can cause unnecessary order drops for high-ping players.
+The adaptive run-ahead system handles most latency, but a tight tick deadline can cause unnecessary order drops for high-ping players. If this is a ranked environment, do not exceed ~140ms without evidence; if casual/community, 180–220ms is acceptable.
 
 #### "Matchmaking queues are too long"
 

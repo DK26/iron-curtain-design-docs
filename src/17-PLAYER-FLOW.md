@@ -125,11 +125,13 @@ Every screen in this document exists within one of these states. The sim ECS wor
 | Main Menu | [main-menu.md](player-flow/main-menu.md) |
 | Single Player | [single-player.md](player-flow/single-player.md) |
 | Multiplayer | [multiplayer.md](player-flow/multiplayer.md) |
+| Network Experience Guide | [network-experience.md](player-flow/network-experience.md) |
 | In-Game | [in-game.md](player-flow/in-game.md) |
 | Post-Game | [post-game.md](player-flow/post-game.md) |
 | Replays | [replays.md](player-flow/replays.md) |
 | Workshop | [workshop.md](player-flow/workshop.md) |
 | Settings | [settings.md](player-flow/settings.md) |
+| LLM Provider Setup Guide | [llm-setup-guide.md](player-flow/llm-setup-guide.md) |
 | Player Profile | [player-profile.md](player-flow/player-profile.md) |
 | Encyclopedia | [encyclopedia.md](player-flow/encyclopedia.md) |
 | Tutorial & New Player Experience | [tutorial.md](player-flow/tutorial.md) |

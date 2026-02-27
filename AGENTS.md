@@ -262,6 +262,7 @@ These are not design decisions — they are operational/legal tasks tied to spec
 ### Version Control
 - **Never run `git commit`, `git push`, or any command that creates or modifies commits.** A commit is the maintainer's signature that the changes are correct. Only the maintainer can make that determination. Agents edit files; the maintainer reviews, commits, and pushes.
 - You may run read-only git commands (`git status`, `git diff`, `git log`, etc.) to understand the current state of the repository.
+- **Do not change index/staging state unless explicitly requested by the maintainer for that exact action.** This includes `git add`, `git restore --staged`, `git reset` (any mode), `git rm --cached`, and any equivalent staging/unstaging operation. Agents edit working-tree files only.
 
 ### mdbook
 - **Never run `mdbook build`, `mdbook serve`, or any mdbook command.** The book is built manually by the maintainer when ready. Only edit the markdown source files in `src/`.
@@ -409,6 +410,7 @@ Projects we actively study. Detailed analysis in `research/` and design docs.
 - **Wube Software (Factorio):** https://github.com/wube/factorio-data — "Game is a mod" architecture, three-phase data loading, deterministic multiplayer with mods; see `research/mojang-wube-modding-analysis.md`
 - **Ranked matchmaking systems (CS2, SC2, LoL, Valorant, Dota 2, OW2, AoE4, C&C Remastered):** Cross-game competitive ranking analysis; see `research/ranked-matchmaking-analysis.md`
 - **uBlock Origin:** https://github.com/gorhill/uBlock (GPL-3.0) — Token-dispatch fast-path matching, flat-array struct-of-arrays data layout, BidiTrie compact trie, community filter list trust tiers, three-layer cheapest-first evaluation, allow/block priority realms; see `research/ublock-origin-pattern-matching-analysis.md`
+- **Stormgate / SnowPlay (Frost Giant Studios):** First RTS with rollback netcode (64 tps, ~1,300 units); SnowPlay sim library decoupled from UE5; Hathora serverless relay hosting (1M CCU tested); GDC 2024 talk; see `research/stormgate-rollback-relay-landscape-analysis.md`
 
 ### Internal Design Studies
 
@@ -425,3 +427,5 @@ Algorithm-level designs that prove out architectural decisions with concrete spe
 - **Audio library + music integration (P003 resolution):** Kira via `bevy_kira_audio`, four-bus mixer (Music/SFX/Voice/Ambient), dynamic music FSM (5 moods), EVA priority queue, sound pooling, WASM constraints, format pipeline; see `research/audio-library-music-integration-design.md`
 - **Lobby/matchmaking wire protocol (P004 resolution):** CBOR-framed lobby/matchmaking/discovery protocol, 40+ message types, server discovery (HTTPS seed + mDNS), matchmaking queue with degradation, SCR credential exchange, lobby→game transition, security model; see `research/lobby-matchmaking-wire-protocol-design.md`
 - **BAR/Recoil architecture:** Comprehensive engine study (networking, Lua, widget system, lobby, graphics); see `research/bar-comprehensive-architecture-study.md`
+- **Stormgate rollback + RTS relay landscape:** Stormgate/SnowPlay rollback architecture, delta rollback cost-reduction technique, commercial RTS relay catalog (AoE2:DE, SC2, WC3:R, PA), IC tradeoff analysis; see `research/stormgate-rollback-relay-landscape-analysis.md`
+- **BYOLLM implementation spec:** LlmProvider trait (full async signature), async execution model (non-blocking game loop integration), provider wiring (TaskRouter, ProviderFactory, CredentialStore), gap fills (error handling, token counting, rate limiting, SituationSignature matching), complete Ollama+Orchestrator prototype with runnable test harness, 6-phase implementation roadmap; see `research/byollm-implementation-spec.md`

@@ -26,6 +26,7 @@ Keywords: milestone overlay, dependency map, progress tracker, design status, im
 2. Read **Recommended Next Milestone Path** to see the currently preferred execution order.
 3. Use the **Decision Tracker** to map any `Dxxx` to the milestone(s) it primarily unlocks.
 4. Use [`tracking/milestone-dependency-map.md`](tracking/milestone-dependency-map.md) for the detailed DAG, feature clusters, and dependency edges.
+5. Use [`tracking/netcode-research-alignment-audit-2026-02-27.md`](tracking/netcode-research-alignment-audit-2026-02-27.md) for the recorded netcode policy-vs-research reasoning trail and drift log.
 
 ## Status Legend (Design vs Code)
 

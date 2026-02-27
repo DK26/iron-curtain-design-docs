@@ -153,7 +153,7 @@ iron-curtain/                       # Cargo workspace root
 │   │   └── src/
 │   │       ├── lib.rs
 │   │       ├── network_model.rs    #   NetworkModel trait (D006)
-│   │       ├── lockstep.rs         #   LockstepNetwork implementation
+│   │       ├── relay_lockstep.rs    #   EmbeddedRelayNetwork + RelayLockstepNetwork
 │   │       ├── local.rs            #   LocalNetwork (testing, single-player)
 │   │       ├── relay_core.rs       #   RelayCore library (D007)
 │   │       └── bin/

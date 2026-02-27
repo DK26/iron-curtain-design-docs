@@ -22,9 +22,9 @@
 
 **Cross-engine hosting:** When IC's relay hosts a cross-engine match (e.g., OpenRA clients joining an IC server), IC can still provide meaningful relay-layer protections (time authority for the hosted session path, transport/rate-limit defenses, logging/replay signing, and protocol sanity checks after `OrderCodec` translation). However, this does **not** automatically confer full native IC competitive integrity guarantees to foreign clients/sims. Trust and anti-cheat capability are mode-specific and depend on the compatibility level (`07-CROSS-ENGINE.md` § "Cross-Engine Trust & Anti-Cheat Capability Matrix"). In practice, "join IC's server" is usually more observable and better bounded than "IC joins foreign server," but cross-engine live play remains unranked/experimental by default unless separately certified.
 
-**Wire protocol specification:** The complete byte-level relay wire protocol — order serialization, frame format, sub-tick normalization, adaptive run-ahead, desync recovery, encryption, connection handshake, and relay state machine — is specified in `research/relay-wire-protocol-design.md`.
+**Wire protocol status:** `research/relay-wire-protocol-design.md` contains the detailed protocol design draft. Normative relay policy defaults/bounds are defined by `03-NETCODE.md` and D060; if drift exists, those decision docs take precedence until the protocol draft is refreshed.
 
-**Alternatives available:** Pure P2P lockstep, fog-authoritative server, rollback — all implementable as `NetworkModel` variants.
+**Alternatives available:** Fog-authoritative server, rollback — all implementable as `NetworkModel` variants.
 
 ---
 
